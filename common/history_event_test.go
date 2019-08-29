@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xdc
+package common
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"runtime/debug"
-	"testing"
 )
 
 type (
@@ -49,11 +49,6 @@ func (s *historyEventTestSuit) SetupTest() {
 
 // This is a sample about how to use the generator
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-		}
-	}()
 
 	totalBranchNumber := 2
 	currentBranch := totalBranchNumber

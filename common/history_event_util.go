@@ -18,12 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xdc
+package common
 
 import (
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"reflect"
 	"time"
 )
@@ -81,6 +80,7 @@ func NewHistoryAttributesGenerator(
 	domain,
 	identity string,
 ) HistoryAttributesGenerator {
+
 	return &HistoryAttributesGeneratorImpl{
 		decisionTaskAttempts:                    int64(0),
 		timerIDs:                                make(map[string]bool),
@@ -107,7 +107,12 @@ func NewHistoryAttributesGenerator(
 }
 
 // GenerateHistoryEvents is to generator batches of history events
-func (h *HistoryAttributesGeneratorImpl) GenerateHistoryEvents(batches []NDCTestBatch, startEventID, version int64) []*shared.History {
+func (h *HistoryAttributesGeneratorImpl) GenerateHistoryEvents(
+	batches []NDCTestBatch,
+	startEventID int64,
+	version int64,
+) []*shared.History {
+
 	history := make([]*shared.History, 0, len(batches))
 	eventID := startEventID
 
@@ -134,31 +139,31 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionStarted.Ptr()
 		historyEvent.WorkflowExecutionStartedEventAttributes = &shared.WorkflowExecutionStartedEventAttributes{
 			WorkflowType: &shared.WorkflowType{
-				Name: common.StringPtr(h.workflowType),
+				Name: StringPtr(h.workflowType),
 			},
 			TaskList: &shared.TaskList{
-				Name: common.StringPtr(h.taskList),
+				Name: StringPtr(h.taskList),
 				Kind: shared.TaskListKindNormal.Ptr(),
 			},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
-			Identity:                            common.StringPtr(h.identity),
-			FirstExecutionRunId:                 common.StringPtr(h.runID),
+			ExecutionStartToCloseTimeoutSeconds: Int32Ptr(timeout),
+			TaskStartToCloseTimeoutSeconds:      Int32Ptr(timeout),
+			Identity:                            StringPtr(h.identity),
+			FirstExecutionRunId:                 StringPtr(h.runID),
 		}
 	case shared.EventTypeWorkflowExecutionCompleted.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionCompleted.Ptr()
 		historyEvent.WorkflowExecutionCompletedEventAttributes = &shared.WorkflowExecutionCompletedEventAttributes{
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
 		}
 	case shared.EventTypeWorkflowExecutionFailed.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionFailed.Ptr()
 		historyEvent.WorkflowExecutionFailedEventAttributes = &shared.WorkflowExecutionFailedEventAttributes{
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
 		}
 	case shared.EventTypeWorkflowExecutionTerminated.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionTerminated.Ptr()
 		historyEvent.WorkflowExecutionTerminatedEventAttributes = &shared.WorkflowExecutionTerminatedEventAttributes{
-			Identity: common.StringPtr(h.identity),
+			Identity: StringPtr(h.identity),
 		}
 	case shared.EventTypeWorkflowExecutionTimedOut.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionTimedOut.Ptr()
@@ -168,99 +173,99 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 	case shared.EventTypeWorkflowExecutionCancelRequested.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionCancelRequested.Ptr()
 		historyEvent.WorkflowExecutionCancelRequestedEventAttributes = &shared.WorkflowExecutionCancelRequestedEventAttributes{
-			Cause:                    common.StringPtr(cause),
-			ExternalInitiatedEventId: common.Int64Ptr(10),
+			Cause:                    StringPtr(cause),
+			ExternalInitiatedEventId: Int64Ptr(10),
 			ExternalWorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(h.workflowID),
-				RunId:      common.StringPtr(h.runID),
+				WorkflowId: StringPtr(h.workflowID),
+				RunId:      StringPtr(h.runID),
 			},
-			Identity: common.StringPtr(h.identity),
+			Identity: StringPtr(h.identity),
 		}
 	case shared.EventTypeWorkflowExecutionCanceled.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionCanceled.Ptr()
 		historyEvent.WorkflowExecutionCanceledEventAttributes = &shared.WorkflowExecutionCanceledEventAttributes{
-			DecisionTaskCompletedEventId: common.Int64Ptr(eventID - 1),
+			DecisionTaskCompletedEventId: Int64Ptr(eventID - 1),
 		}
 	case shared.EventTypeWorkflowExecutionContinuedAsNew.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionContinuedAsNew.Ptr()
 		historyEvent.WorkflowExecutionContinuedAsNewEventAttributes = &shared.WorkflowExecutionContinuedAsNewEventAttributes{
-			NewExecutionRunId: common.StringPtr(h.runID),
+			NewExecutionRunId: StringPtr(h.runID),
 			WorkflowType: &shared.WorkflowType{
-				Name: common.StringPtr(h.workflowType),
+				Name: StringPtr(h.workflowType),
 			},
 			TaskList: &shared.TaskList{
-				Name: common.StringPtr(h.taskList),
+				Name: StringPtr(h.taskList),
 				Kind: shared.TaskListKindNormal.Ptr(),
 			},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
-			DecisionTaskCompletedEventId:        common.Int64Ptr(eventID - 1),
+			ExecutionStartToCloseTimeoutSeconds: Int32Ptr(timeout),
+			TaskStartToCloseTimeoutSeconds:      Int32Ptr(timeout),
+			DecisionTaskCompletedEventId:        Int64Ptr(eventID - 1),
 			Initiator:                           shared.ContinueAsNewInitiatorDecider.Ptr(),
 		}
 	case shared.EventTypeWorkflowExecutionSignaled.String():
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionSignaled.Ptr()
 		historyEvent.WorkflowExecutionSignaledEventAttributes = &shared.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr(signal),
-			Identity:   common.StringPtr(h.identity),
+			SignalName: StringPtr(signal),
+			Identity:   StringPtr(h.identity),
 		}
 	case shared.EventTypeDecisionTaskScheduled.String():
 		historyEvent.EventType = shared.EventTypeDecisionTaskScheduled.Ptr()
 		historyEvent.DecisionTaskScheduledEventAttributes = &shared.DecisionTaskScheduledEventAttributes{
 			TaskList: &shared.TaskList{
-				Name: common.StringPtr(h.taskList),
+				Name: StringPtr(h.taskList),
 				Kind: shared.TaskListKindNormal.Ptr(),
 			},
-			StartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			Attempt:                    common.Int64Ptr(h.decisionTaskAttempts),
+			StartToCloseTimeoutSeconds: Int32Ptr(timeout),
+			Attempt:                    Int64Ptr(h.decisionTaskAttempts),
 		}
 		h.decisionTaskScheduleEventID = eventID
 	case shared.EventTypeDecisionTaskStarted.String():
 		historyEvent.EventType = shared.EventTypeDecisionTaskStarted.Ptr()
 		historyEvent.DecisionTaskStartedEventAttributes = &shared.DecisionTaskStartedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(h.decisionTaskScheduleEventID),
-			Identity:         common.StringPtr(h.identity),
-			RequestId:        common.StringPtr(uuid.New()),
+			ScheduledEventId: Int64Ptr(h.decisionTaskScheduleEventID),
+			Identity:         StringPtr(h.identity),
+			RequestId:        StringPtr(uuid.New()),
 		}
 		h.decisionTaskStartEventID = eventID
 	case shared.EventTypeDecisionTaskTimedOut.String():
 		historyEvent.EventType = shared.EventTypeDecisionTaskTimedOut.Ptr()
 		historyEvent.DecisionTaskTimedOutEventAttributes = &shared.DecisionTaskTimedOutEventAttributes{
-			ScheduledEventId: common.Int64Ptr(h.decisionTaskScheduleEventID),
-			StartedEventId:   common.Int64Ptr(h.decisionTaskStartEventID),
+			ScheduledEventId: Int64Ptr(h.decisionTaskScheduleEventID),
+			StartedEventId:   Int64Ptr(h.decisionTaskStartEventID),
 			TimeoutType:      shared.TimeoutTypeScheduleToStart.Ptr(),
 		}
 		h.decisionTaskAttempts++
 	case shared.EventTypeDecisionTaskFailed.String():
 		historyEvent.EventType = shared.EventTypeDecisionTaskFailed.Ptr()
 		historyEvent.DecisionTaskFailedEventAttributes = &shared.DecisionTaskFailedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(h.decisionTaskScheduleEventID),
-			StartedEventId:   common.Int64Ptr(h.decisionTaskStartEventID),
-			Cause:            common.DecisionTaskFailedCausePtr(shared.DecisionTaskFailedCauseUnhandledDecision),
-			Identity:         common.StringPtr(h.identity),
-			BaseRunId:        common.StringPtr(h.runID),
+			ScheduledEventId: Int64Ptr(h.decisionTaskScheduleEventID),
+			StartedEventId:   Int64Ptr(h.decisionTaskStartEventID),
+			Cause:            DecisionTaskFailedCausePtr(shared.DecisionTaskFailedCauseUnhandledDecision),
+			Identity:         StringPtr(h.identity),
+			BaseRunId:        StringPtr(h.runID),
 		}
 		h.decisionTaskAttempts++
 	case shared.EventTypeDecisionTaskCompleted.String():
 		historyEvent.EventType = shared.EventTypeDecisionTaskCompleted.Ptr()
 		h.decisionTaskAttempts = 0
 		historyEvent.DecisionTaskCompletedEventAttributes = &shared.DecisionTaskCompletedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(h.decisionTaskScheduleEventID),
-			StartedEventId:   common.Int64Ptr(h.decisionTaskStartEventID),
-			Identity:         common.StringPtr(h.identity),
-			BinaryChecksum:   common.StringPtr(checksum),
+			ScheduledEventId: Int64Ptr(h.decisionTaskScheduleEventID),
+			StartedEventId:   Int64Ptr(h.decisionTaskStartEventID),
+			Identity:         StringPtr(h.identity),
+			BinaryChecksum:   StringPtr(checksum),
 		}
 		h.decisionTaskCompleteEventID = eventID
 	case shared.EventTypeActivityTaskScheduled.String():
 		historyEvent.EventType = shared.EventTypeActivityTaskScheduled.Ptr()
 		historyEvent.ActivityTaskScheduledEventAttributes = &shared.ActivityTaskScheduledEventAttributes{
-			ActivityId:                    common.StringPtr(uuid.New()),
-			ActivityType:                  common.ActivityTypePtr(shared.ActivityType{Name: common.StringPtr("activity")}),
-			Domain:                        common.StringPtr(h.domain),
-			TaskList:                      common.TaskListPtr(shared.TaskList{Name: common.StringPtr(h.taskList), Kind: common.TaskListKindPtr(shared.TaskListKindNormal)}),
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
-			StartToCloseTimeoutSeconds:    common.Int32Ptr(timeout),
-			DecisionTaskCompletedEventId:  common.Int64Ptr(h.decisionTaskCompleteEventID),
+			ActivityId:                    StringPtr(uuid.New()),
+			ActivityType:                  ActivityTypePtr(shared.ActivityType{Name: StringPtr("activity")}),
+			Domain:                        StringPtr(h.domain),
+			TaskList:                      TaskListPtr(shared.TaskList{Name: StringPtr(h.taskList), Kind: TaskListKindPtr(shared.TaskListKindNormal)}),
+			ScheduleToCloseTimeoutSeconds: Int32Ptr(timeout),
+			ScheduleToStartTimeoutSeconds: Int32Ptr(timeout),
+			StartToCloseTimeoutSeconds:    Int32Ptr(timeout),
+			DecisionTaskCompletedEventId:  Int64Ptr(h.decisionTaskCompleteEventID),
 		}
 		h.activityScheduleEventIDs[eventID] = true
 	case shared.EventTypeActivityTaskStarted.String():
@@ -272,10 +277,10 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeActivityTaskStarted.Ptr()
 		historyEvent.ActivityTaskStartedEventAttributes = &shared.ActivityTaskStartedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(activityScheduleEventID),
-			Identity:         common.StringPtr(h.identity),
-			RequestId:        common.StringPtr(uuid.New()),
-			Attempt:          common.Int32Ptr(0),
+			ScheduledEventId: Int64Ptr(activityScheduleEventID),
+			Identity:         StringPtr(h.identity),
+			RequestId:        StringPtr(uuid.New()),
+			Attempt:          Int32Ptr(0),
 		}
 		h.activityStartEventIDs[eventID] = activityScheduleEventID
 	case shared.EventTypeActivityTaskCompleted.String():
@@ -288,9 +293,9 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeActivityTaskCompleted.Ptr()
 		historyEvent.ActivityTaskCompletedEventAttributes = &shared.ActivityTaskCompletedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(activityScheduleEventID),
-			StartedEventId:   common.Int64Ptr(activityStartEventID),
-			Identity:         common.StringPtr(h.identity),
+			ScheduledEventId: Int64Ptr(activityScheduleEventID),
+			StartedEventId:   Int64Ptr(activityStartEventID),
+			Identity:         StringPtr(h.identity),
 		}
 	case shared.EventTypeActivityTaskTimedOut.String():
 		if len(h.activityStartEventIDs) == 0 {
@@ -302,9 +307,9 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeActivityTaskTimedOut.Ptr()
 		historyEvent.ActivityTaskTimedOutEventAttributes = &shared.ActivityTaskTimedOutEventAttributes{
-			ScheduledEventId: common.Int64Ptr(activityScheduleEventID),
-			StartedEventId:   common.Int64Ptr(activityStartEventID),
-			TimeoutType:      common.TimeoutTypePtr(shared.TimeoutTypeScheduleToClose),
+			ScheduledEventId: Int64Ptr(activityScheduleEventID),
+			StartedEventId:   Int64Ptr(activityStartEventID),
+			TimeoutType:      TimeoutTypePtr(shared.TimeoutTypeScheduleToClose),
 		}
 	case shared.EventTypeActivityTaskFailed.String():
 		if len(h.activityStartEventIDs) == 0 {
@@ -316,16 +321,16 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeActivityTaskFailed.Ptr()
 		historyEvent.ActivityTaskFailedEventAttributes = &shared.ActivityTaskFailedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(activityScheduleEventID),
-			StartedEventId:   common.Int64Ptr(activityStartEventID),
-			Identity:         common.StringPtr(h.identity),
-			Reason:           common.StringPtr(reason),
+			ScheduledEventId: Int64Ptr(activityScheduleEventID),
+			StartedEventId:   Int64Ptr(activityStartEventID),
+			Identity:         StringPtr(h.identity),
+			Reason:           StringPtr(reason),
 		}
 	case shared.EventTypeActivityTaskCancelRequested.String():
 		historyEvent.EventType = shared.EventTypeActivityTaskCancelRequested.Ptr()
 		historyEvent.ActivityTaskCancelRequestedEventAttributes = &shared.ActivityTaskCancelRequestedEventAttributes{
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
-			ActivityId:                   common.StringPtr(uuid.New()),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
+			ActivityId:                   StringPtr(uuid.New()),
 		}
 		h.activityCancelRequestEventIDs[eventID] = h.decisionTaskCompleteEventID
 	case shared.EventTypeActivityTaskCanceled.String():
@@ -344,10 +349,10 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeActivityTaskCanceled.Ptr()
 		historyEvent.ActivityTaskCanceledEventAttributes = &shared.ActivityTaskCanceledEventAttributes{
-			LatestCancelRequestedEventId: common.Int64Ptr(activityCancelRequestEventID),
-			ScheduledEventId:             common.Int64Ptr(activityScheduleEventID),
-			StartedEventId:               common.Int64Ptr(activityStartEventID),
-			Identity:                     common.StringPtr(h.identity),
+			LatestCancelRequestedEventId: Int64Ptr(activityCancelRequestEventID),
+			ScheduledEventId:             Int64Ptr(activityScheduleEventID),
+			StartedEventId:               Int64Ptr(activityStartEventID),
+			Identity:                     StringPtr(h.identity),
 		}
 	case shared.EventTypeRequestCancelActivityTaskFailed.String():
 		if len(h.activityCancelRequestEventIDs) == 0 {
@@ -359,16 +364,16 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeRequestCancelActivityTaskFailed.Ptr()
 		historyEvent.RequestCancelActivityTaskFailedEventAttributes = &shared.RequestCancelActivityTaskFailedEventAttributes{
-			ActivityId:                   common.StringPtr(uuid.New()),
-			DecisionTaskCompletedEventId: common.Int64Ptr(completeEventID),
+			ActivityId:                   StringPtr(uuid.New()),
+			DecisionTaskCompletedEventId: Int64Ptr(completeEventID),
 		}
 	case shared.EventTypeTimerStarted.String():
 		historyEvent.EventType = shared.EventTypeTimerStarted.Ptr()
 		timerID := uuid.New()
 		historyEvent.TimerStartedEventAttributes = &shared.TimerStartedEventAttributes{
-			TimerId:                      common.StringPtr(timerID),
-			StartToFireTimeoutSeconds:    common.Int64Ptr(10),
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
+			TimerId:                      StringPtr(timerID),
+			StartToFireTimeoutSeconds:    Int64Ptr(10),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
 		}
 		h.timerStartEventIDs[eventID] = true
 		h.timerIDs[timerID] = true
@@ -387,8 +392,8 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 		delete(h.timerStartEventIDs, timerStartEventID)
 
 		historyEvent.TimerFiredEventAttributes = &shared.TimerFiredEventAttributes{
-			TimerId:        common.StringPtr(timerID),
-			StartedEventId: common.Int64Ptr(timerStartEventID),
+			TimerId:        StringPtr(timerID),
+			StartedEventId: Int64Ptr(timerStartEventID),
 		}
 	case shared.EventTypeTimerCanceled.String():
 		historyEvent.EventType = shared.EventTypeTimerCanceled.Ptr()
@@ -404,21 +409,21 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 		delete(h.timerStartEventIDs, timerStartEventID)
 
 		historyEvent.TimerCanceledEventAttributes = &shared.TimerCanceledEventAttributes{
-			TimerId:                      common.StringPtr(timerID),
-			StartedEventId:               common.Int64Ptr(timerStartEventID),
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
-			Identity:                     common.StringPtr(h.identity),
+			TimerId:                      StringPtr(timerID),
+			StartedEventId:               Int64Ptr(timerStartEventID),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
+			Identity:                     StringPtr(h.identity),
 		}
 	case shared.EventTypeStartChildWorkflowExecutionInitiated.String():
 		historyEvent.EventType = shared.EventTypeStartChildWorkflowExecutionInitiated.Ptr()
 		historyEvent.StartChildWorkflowExecutionInitiatedEventAttributes = &shared.StartChildWorkflowExecutionInitiatedEventAttributes{
-			Domain:                              common.StringPtr(h.domain),
-			WorkflowId:                          common.StringPtr(childWorkflowPrefix + h.workflowID),
-			WorkflowType:                        common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			TaskList:                            common.TaskListPtr(shared.TaskList{Name: common.StringPtr(h.taskList), Kind: common.TaskListKindPtr(shared.TaskListKindNormal)}),
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
-			DecisionTaskCompletedEventId:        common.Int64Ptr(h.decisionTaskCompleteEventID),
+			Domain:                              StringPtr(h.domain),
+			WorkflowId:                          StringPtr(childWorkflowPrefix + h.workflowID),
+			WorkflowType:                        WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			TaskList:                            TaskListPtr(shared.TaskList{Name: StringPtr(h.taskList), Kind: TaskListKindPtr(shared.TaskListKindNormal)}),
+			ExecutionStartToCloseTimeoutSeconds: Int32Ptr(timeout),
+			TaskStartToCloseTimeoutSeconds:      Int32Ptr(timeout),
+			DecisionTaskCompletedEventId:        Int64Ptr(h.decisionTaskCompleteEventID),
 			WorkflowIdReusePolicy:               shared.WorkflowIdReusePolicyRejectDuplicate.Ptr(),
 		}
 		h.childWorkflowInitialEventIDs[eventID] = h.decisionTaskCompleteEventID
@@ -432,12 +437,12 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeStartChildWorkflowExecutionFailed.Ptr()
 		historyEvent.StartChildWorkflowExecutionFailedEventAttributes = &shared.StartChildWorkflowExecutionFailedEventAttributes{
-			Domain:                       common.StringPtr(h.domain),
-			WorkflowId:                   common.StringPtr(childWorkflowPrefix + h.workflowID),
-			WorkflowType:                 common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
+			Domain:                       StringPtr(h.domain),
+			WorkflowId:                   StringPtr(childWorkflowPrefix + h.workflowID),
+			WorkflowType:                 WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
 			Cause:                        shared.ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning.Ptr(),
-			InitiatedEventId:             common.Int64Ptr(childWorkflowInitialEventID),
-			DecisionTaskCompletedEventId: common.Int64Ptr(completeEventID),
+			InitiatedEventId:             Int64Ptr(childWorkflowInitialEventID),
+			DecisionTaskCompletedEventId: Int64Ptr(completeEventID),
 		}
 	case shared.EventTypeChildWorkflowExecutionStarted.String():
 		if len(h.childWorkflowInitialEventIDs) == 0 {
@@ -449,12 +454,12 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 		runID := uuid.New()
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionStarted.Ptr()
 		historyEvent.ChildWorkflowExecutionStartedEventAttributes = &shared.ChildWorkflowExecutionStartedEventAttributes{
-			Domain:           common.StringPtr(h.domain),
-			WorkflowType:     common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			InitiatedEventId: common.Int64Ptr(childWorkflowInitialEventID),
+			Domain:           StringPtr(h.domain),
+			WorkflowType:     WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			InitiatedEventId: Int64Ptr(childWorkflowInitialEventID),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(childWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(runID),
+				WorkflowId: StringPtr(childWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(runID),
 			},
 		}
 		h.childWorkflowStartEventIDs[eventID] = childWorkflowInitialEventID
@@ -475,14 +480,14 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionCompleted.Ptr()
 		historyEvent.ChildWorkflowExecutionCompletedEventAttributes = &shared.ChildWorkflowExecutionCompletedEventAttributes{
-			Domain:           common.StringPtr(h.domain),
-			WorkflowType:     common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			InitiatedEventId: common.Int64Ptr(childWorkflowInitialEventID),
+			Domain:           StringPtr(h.domain),
+			WorkflowType:     WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			InitiatedEventId: Int64Ptr(childWorkflowInitialEventID),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(childWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(runID),
+				WorkflowId: StringPtr(childWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(runID),
 			},
-			StartedEventId: common.Int64Ptr(childWorkflowStartEventID),
+			StartedEventId: Int64Ptr(childWorkflowStartEventID),
 		}
 	case shared.EventTypeChildWorkflowExecutionTimedOut.String():
 		if len(h.childWorkflowStartEventIDs) == 0 {
@@ -500,15 +505,15 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionTimedOut.Ptr()
 		historyEvent.ChildWorkflowExecutionTimedOutEventAttributes = &shared.ChildWorkflowExecutionTimedOutEventAttributes{
-			Domain:           common.StringPtr(h.domain),
-			WorkflowType:     common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			InitiatedEventId: common.Int64Ptr(childWorkflowInitialEventID),
+			Domain:           StringPtr(h.domain),
+			WorkflowType:     WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			InitiatedEventId: Int64Ptr(childWorkflowInitialEventID),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(childWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(runID),
+				WorkflowId: StringPtr(childWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(runID),
 			},
-			StartedEventId: common.Int64Ptr(childWorkflowStartEventID),
-			TimeoutType:    common.TimeoutTypePtr(shared.TimeoutTypeScheduleToClose),
+			StartedEventId: Int64Ptr(childWorkflowStartEventID),
+			TimeoutType:    TimeoutTypePtr(shared.TimeoutTypeScheduleToClose),
 		}
 	case shared.EventTypeChildWorkflowExecutionTerminated.String():
 
@@ -527,14 +532,14 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionTerminated.Ptr()
 		historyEvent.ChildWorkflowExecutionTerminatedEventAttributes = &shared.ChildWorkflowExecutionTerminatedEventAttributes{
-			Domain:           common.StringPtr(h.domain),
-			WorkflowType:     common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			InitiatedEventId: common.Int64Ptr(childWorkflowInitialEventID),
+			Domain:           StringPtr(h.domain),
+			WorkflowType:     WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			InitiatedEventId: Int64Ptr(childWorkflowInitialEventID),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(childWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(runID),
+				WorkflowId: StringPtr(childWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(runID),
 			},
-			StartedEventId: common.Int64Ptr(childWorkflowStartEventID),
+			StartedEventId: Int64Ptr(childWorkflowStartEventID),
 		}
 	case shared.EventTypeChildWorkflowExecutionFailed.String():
 		if len(h.childWorkflowStartEventIDs) == 0 {
@@ -552,14 +557,14 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionFailed.Ptr()
 		historyEvent.ChildWorkflowExecutionFailedEventAttributes = &shared.ChildWorkflowExecutionFailedEventAttributes{
-			Domain:           common.StringPtr(h.domain),
-			WorkflowType:     common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			InitiatedEventId: common.Int64Ptr(childWorkflowInitialEventID),
+			Domain:           StringPtr(h.domain),
+			WorkflowType:     WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			InitiatedEventId: Int64Ptr(childWorkflowInitialEventID),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(childWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(runID),
+				WorkflowId: StringPtr(childWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(runID),
 			},
-			StartedEventId: common.Int64Ptr(childWorkflowStartEventID),
+			StartedEventId: Int64Ptr(childWorkflowStartEventID),
 		}
 	case shared.EventTypeChildWorkflowExecutionCanceled.String():
 		if len(h.childWorkflowStartEventIDs) == 0 {
@@ -577,26 +582,26 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionCanceled.Ptr()
 		historyEvent.ChildWorkflowExecutionCanceledEventAttributes = &shared.ChildWorkflowExecutionCanceledEventAttributes{
-			Domain:           common.StringPtr(h.domain),
-			WorkflowType:     common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(childWorkflowPrefix + h.workflowType)}),
-			InitiatedEventId: common.Int64Ptr(childWorkflowInitialEventID),
+			Domain:           StringPtr(h.domain),
+			WorkflowType:     WorkflowTypePtr(shared.WorkflowType{Name: StringPtr(childWorkflowPrefix + h.workflowType)}),
+			InitiatedEventId: Int64Ptr(childWorkflowInitialEventID),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(childWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(runID),
+				WorkflowId: StringPtr(childWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(runID),
 			},
-			StartedEventId: common.Int64Ptr(childWorkflowStartEventID),
+			StartedEventId: Int64Ptr(childWorkflowStartEventID),
 		}
 	case shared.EventTypeSignalExternalWorkflowExecutionInitiated.String():
 		historyEvent.EventType = shared.EventTypeSignalExternalWorkflowExecutionInitiated.Ptr()
 		historyEvent.SignalExternalWorkflowExecutionInitiatedEventAttributes = &shared.SignalExternalWorkflowExecutionInitiatedEventAttributes{
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
-			Domain:                       common.StringPtr(h.domain),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
+			Domain:                       StringPtr(h.domain),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(externalWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(uuid.New()),
+				WorkflowId: StringPtr(externalWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(uuid.New()),
 			},
-			SignalName:        common.StringPtr("signal"),
-			ChildWorkflowOnly: common.BoolPtr(false),
+			SignalName:        StringPtr("signal"),
+			ChildWorkflowOnly: BoolPtr(false),
 		}
 		h.signalExternalWorkflowEventIDs[eventID] = h.decisionTaskCompleteEventID
 	case shared.EventTypeSignalExternalWorkflowExecutionFailed.String():
@@ -609,14 +614,14 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeSignalExternalWorkflowExecutionFailed.Ptr()
 		historyEvent.SignalExternalWorkflowExecutionFailedEventAttributes = &shared.SignalExternalWorkflowExecutionFailedEventAttributes{
-			Cause:                        common.SignalExternalWorkflowExecutionFailedCausePtr(shared.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution),
-			DecisionTaskCompletedEventId: common.Int64Ptr(completeEventID),
-			Domain:                       common.StringPtr(h.domain),
+			Cause:                        SignalExternalWorkflowExecutionFailedCausePtr(shared.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution),
+			DecisionTaskCompletedEventId: Int64Ptr(completeEventID),
+			Domain:                       StringPtr(h.domain),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(externalWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(uuid.New()),
+				WorkflowId: StringPtr(externalWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(uuid.New()),
 			},
-			InitiatedEventId: common.Int64Ptr(signalExternalWorkflowEventID),
+			InitiatedEventId: Int64Ptr(signalExternalWorkflowEventID),
 		}
 	case shared.EventTypeExternalWorkflowExecutionSignaled.String():
 		if len(h.signalExternalWorkflowEventIDs) == 0 {
@@ -627,23 +632,23 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeExternalWorkflowExecutionSignaled.Ptr()
 		historyEvent.ExternalWorkflowExecutionSignaledEventAttributes = &shared.ExternalWorkflowExecutionSignaledEventAttributes{
-			InitiatedEventId: common.Int64Ptr(signalExternalWorkflowEventID),
-			Domain:           common.StringPtr(h.domain),
+			InitiatedEventId: Int64Ptr(signalExternalWorkflowEventID),
+			Domain:           StringPtr(h.domain),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(externalWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(uuid.New()),
+				WorkflowId: StringPtr(externalWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(uuid.New()),
 			},
 		}
 	case shared.EventTypeRequestCancelExternalWorkflowExecutionInitiated.String():
 		historyEvent.EventType = shared.EventTypeRequestCancelExternalWorkflowExecutionInitiated.Ptr()
 		historyEvent.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes = &shared.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
-			DecisionTaskCompletedEventId: common.Int64Ptr(h.decisionTaskCompleteEventID),
-			Domain:                       common.StringPtr(h.domain),
+			DecisionTaskCompletedEventId: Int64Ptr(h.decisionTaskCompleteEventID),
+			Domain:                       StringPtr(h.domain),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(externalWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(uuid.New()),
+				WorkflowId: StringPtr(externalWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(uuid.New()),
 			},
-			ChildWorkflowOnly: common.BoolPtr(false),
+			ChildWorkflowOnly: BoolPtr(false),
 		}
 		h.requestExternalWorkflowCanceledEventIDs[eventID] = h.decisionTaskCompleteEventID
 	case shared.EventTypeRequestCancelExternalWorkflowExecutionFailed.String():
@@ -656,14 +661,14 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeRequestCancelExternalWorkflowExecutionFailed.Ptr()
 		historyEvent.RequestCancelExternalWorkflowExecutionFailedEventAttributes = &shared.RequestCancelExternalWorkflowExecutionFailedEventAttributes{
-			Cause:                        common.CancelExternalWorkflowExecutionFailedCausePtr(shared.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution),
-			DecisionTaskCompletedEventId: common.Int64Ptr(completeEventID),
-			Domain:                       common.StringPtr(h.domain),
+			Cause:                        CancelExternalWorkflowExecutionFailedCausePtr(shared.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution),
+			DecisionTaskCompletedEventId: Int64Ptr(completeEventID),
+			Domain:                       StringPtr(h.domain),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(externalWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(uuid.New()),
+				WorkflowId: StringPtr(externalWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(uuid.New()),
 			},
-			InitiatedEventId: common.Int64Ptr(requestExternalWorkflowCanceledEventID),
+			InitiatedEventId: Int64Ptr(requestExternalWorkflowCanceledEventID),
 		}
 	case shared.EventTypeExternalWorkflowExecutionCancelRequested.String():
 		if len(h.requestExternalWorkflowCanceledEventIDs) == 0 {
@@ -674,11 +679,11 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 		historyEvent.EventType = shared.EventTypeExternalWorkflowExecutionCancelRequested.Ptr()
 		historyEvent.ExternalWorkflowExecutionCancelRequestedEventAttributes = &shared.ExternalWorkflowExecutionCancelRequestedEventAttributes{
-			InitiatedEventId: common.Int64Ptr(requestExternalWorkflowCanceledEventID),
-			Domain:           common.StringPtr(h.domain),
+			InitiatedEventId: Int64Ptr(requestExternalWorkflowCanceledEventID),
+			Domain:           StringPtr(h.domain),
 			WorkflowExecution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(externalWorkflowPrefix + h.workflowID),
-				RunId:      common.StringPtr(uuid.New()),
+				WorkflowId: StringPtr(externalWorkflowPrefix + h.workflowID),
+				RunId:      StringPtr(uuid.New()),
 			},
 		}
 	}
@@ -687,10 +692,10 @@ func (h *HistoryAttributesGeneratorImpl) generateEventAttribute(vertex Vertex, e
 
 func getDefaultHistoryEvent(eventID, version int64) *shared.HistoryEvent {
 	return &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(time.Now().Unix()),
-		TaskId:    common.Int64Ptr(common.EmptyEventTaskID),
-		Version:   common.Int64Ptr(version),
+		EventId:   Int64Ptr(eventID),
+		Timestamp: Int64Ptr(time.Now().Unix()),
+		TaskId:    Int64Ptr(EmptyEventTaskID),
+		Version:   Int64Ptr(version),
 	}
 }
 
