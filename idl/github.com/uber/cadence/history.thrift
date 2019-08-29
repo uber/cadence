@@ -745,7 +745,7 @@ service HistoryService {
 	  3: shared.EntityNotExistsError entityNotExistError,
 	  4: shared.QueryFailedError queryFailedError,
 	  5: shared.LimitExceededError limitExceededError,
-      6: shared.ServiceBusyError serviceBusyError,
-      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+	  6: shared.ServiceBusyError serviceBusyError,
+	  7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
 	)
 }

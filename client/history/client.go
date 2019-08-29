@@ -694,7 +694,8 @@ func (c *clientImpl) SyncActivity(
 func (c *clientImpl) QueryWorkflow(
 	ctx context.Context,
 	request *h.QueryWorkflowRequest,
-	opts ...yarpc.CallOption) (*h.QueryWorkflowResponse, error) {
+	opts ...yarpc.CallOption,
+) (*h.QueryWorkflowResponse, error) {
 	client, err := c.getClientForWorkflowID(request.Execution.GetWorkflowId())
 	if err != nil {
 		return nil, err

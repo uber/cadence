@@ -584,9 +584,9 @@ func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
 ) (*h.QueryWorkflowResponse, error) {
-	context, release, retError := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-	if retError != nil {
-		return nil, retError
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	if err != nil {
+		return nil, err
 	}
 	queryRegistry := context.getQueryRegistry()
 	release(nil)
