@@ -39,7 +39,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/test"
+	test "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 	"go.uber.org/zap"
