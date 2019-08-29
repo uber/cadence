@@ -703,7 +703,7 @@ func getDefaultHistoryEvent(eventID, version int64) *shared.HistoryEvent {
 
 // InitializeHistoryEventGenerator initializes the history event generator
 func InitializeHistoryEventGenerator() Generator {
-	generator := NewEventGenerator()
+	generator := NewEventGenerator(time.Now().UnixNano())
 
 	//Functions
 	notPendingDecisionTask := func() bool {
