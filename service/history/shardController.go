@@ -202,7 +202,7 @@ func (c *shardController) getEngineForShard(shardID int) (Engine, error) {
 }
 
 func (c *shardController) removeEngineForShard(shardID int) {
-	sw := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.RemoveEngineManualIntervention)
+	sw := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.RemoveEngineForShardLatency)
 	defer sw.Stop()
 	item, _ := c.removeHistoryShardItem(shardID)
 	if item != nil {
