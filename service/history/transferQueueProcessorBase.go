@@ -21,12 +21,14 @@
 package history
 
 import (
+	"context"
 	"time"
 
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -300,7 +302,39 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 		SearchAttributes:   searchAttributes,
 	}
 
-	return t.visibilityMgr.RecordWorkflowExecutionClosed(request)
+	if err := t.visibilityMgr.RecordWorkflowExecutionClosed(request); err != nil {
+		return err
+	}
+
+	clusterConfiguredForArchival := t.shard.GetService().GetArchivalMetadata().GetVisibilityConfig().ClusterConfiguredForArchival()
+	domainConfiguredForArchival := domainEntry.GetConfig().VisibilityArchivalStatus == workflow.ArchivalStatusEnabled
+	if clusterConfiguredForArchival && domainConfiguredForArchival {
+		archiveURI, err := archiver.NewURI(domainEntry.GetConfig().VisibilityArchivalURI)
+		if err != nil {
+			return err
+		}
+		visibilityArchiver, err := t.shard.GetService().GetArchiverProvider().GetVisibilityArchiver(archiveURI.Scheme(), common.HistoryServiceName)
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), t.shard.GetConfig().TransferProcessorVisibilityArchivalTimeLimit())
+		defer cancel()
+		return visibilityArchiver.Archive(ctx, archiveURI, &archiver.ArchiveVisibilityRequest{
+			DomainID:           domainID,
+			WorkflowID:         execution.GetWorkflowId(),
+			RunID:              execution.GetRunId(),
+			WorkflowTypeName:   workflowTypeName,
+			StartTimestamp:     startTimeUnixNano,
+			ExecutionTimestamp: executionTimeUnixNano,
+			CloseTimestamp:     endTimeUnixNano,
+			CloseStatus:        closeStatus,
+			HistoryLength:      historyLength,
+			Memo:               visibilityMemo,
+			SearchAttributes:   searchAttributes,
+		})
+	}
+
+	return nil
 }
 
 // Argument startEvent is to save additional call of msBuilder.GetStartEvent

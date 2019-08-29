@@ -102,6 +102,7 @@ type Config struct {
 	TransferProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
 	TransferProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorCompleteTransferInterval           dynamicconfig.DurationPropertyFn
+	TransferProcessorVisibilityArchivalTimeLimit        dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskBatchSize                               dynamicconfig.IntPropertyFn
@@ -221,6 +222,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		TransferProcessorUpdateAckInterval:                    dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 30*time.Second),
 		TransferProcessorUpdateAckIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.TransferProcessorUpdateAckIntervalJitterCoefficient, 0.15),
 		TransferProcessorCompleteTransferInterval:             dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 60*time.Second),
+		TransferProcessorVisibilityArchivalTimeLimit:          dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 1*time.Second),
 		ReplicatorTaskBatchSize:                               dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
 		ReplicatorTaskWorkerCount:                             dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
 		ReplicatorTaskMaxRetryCount:                           dc.GetIntProperty(dynamicconfig.ReplicatorTaskMaxRetryCount, 100),
