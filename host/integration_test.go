@@ -840,6 +840,12 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 
 }
 
+func (s *integrationSuite) TestLoop() {
+	for i := 0; i < 100; i++ {
+		s.TestCronWorkflow()
+	}
+}
+
 func (s *integrationSuite) TestCronWorkflow() {
 	id := "integration-wf-cron-test"
 	wt := "integration-wf-cron-type"
@@ -1017,9 +1023,14 @@ func (s *integrationSuite) TestCronWorkflow() {
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		// Roundup to compare on the precision of seconds
+		fmt.Printf("Last start time:%v $$ execution time: %v $$ close time: %v \n", time.Unix(0, lastExecution.GetStartTime()), time.Unix(0, lastExecution.GetExecutionTime()), time.Unix(0, lastExecution.GetCloseTime()))
+		fmt.Printf("New start time:%v $$ execution time: %v $$ close time: %v \n", time.Unix(0, executionInfo.GetStartTime()), time.Unix(0, executionInfo.GetExecutionTime()), time.Unix(0, executionInfo.GetCloseTime()))
+
 		expectedBackoff := executionInfo.GetExecutionTime()/1000000000 - lastExecution.GetExecutionTime()/1000000000
+		// We are using different time source and the close time and start time can be different
+		executionTimeDiff := executionInfo.GetStartTime()/1000000000 - lastExecution.GetCloseTime()/1000000000
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(expectedBackoff)%(targetBackoffDuration.Nanoseconds()/1000000000))
+		s.Equal(int64(0), int64(expectedBackoff-executionTimeDiff)%(targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
 }
@@ -1965,8 +1976,10 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		executionInfo := closedExecutions[i]
 		// Round up the time precision to seconds
 		expectedBackoff := executionInfo.GetExecutionTime()/1000000000 - lastExecution.GetExecutionTime()/1000000000
+		// We are using different time source and the close time and start time can be different
+		executionTimeDiff := executionInfo.GetStartTime()/1000000000 - lastExecution.GetCloseTime()/1000000000
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(expectedBackoff)/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
+		s.Equal(int64(0), int64(expectedBackoff-executionTimeDiff)/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
 }
