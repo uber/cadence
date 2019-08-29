@@ -45,16 +45,27 @@ const (
 	tlScannerWFTypeName           = "cadence-sys-tl-scanner-workflow"
 	tlScannerTaskListName         = "cadence-sys-tl-scanner-tasklist-0"
 	taskListScavengerActivityName = "cadence-sys-tl-scanner-scvg-activity"
+
+	historyScannerWFID           = "cadence-sys-history-scanner"
+	historyScannerWFTypeName     = "cadence-sys-history-scanner-workflow"
+	historyScannerTaskListName   = "cadence-sys-history-scanner-tasklist-0"
+	historyScavengerActivityName = "cadence-sys-tl-scanner-scvg-activity"
 )
 
 var (
 	tlScavengerHBInterval = 10 * time.Second
 
-	tlScavengerActivityRetryPolicy = cadence.RetryPolicy{
+	activityRetryPolicy = cadence.RetryPolicy{
 		InitialInterval:    10 * time.Second,
 		BackoffCoefficient: 1.7,
 		MaximumInterval:    5 * time.Minute,
 		ExpirationInterval: infiniteDuration,
+	}
+	activityOptions = workflow.ActivityOptions{
+		ScheduleToStartTimeout: 5 * time.Minute,
+		StartToCloseTimeout:    infiniteDuration,
+		HeartbeatTimeout:       5 * time.Minute,
+		RetryPolicy:            &activityRetryPolicy,
 	}
 	tlScannerWFStartOptions = cclient.StartWorkflowOptions{
 		ID:                           tlScannerWFID,
@@ -63,23 +74,37 @@ var (
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		CronSchedule:                 "0 */12 * * *",
 	}
+	historyScannerWFStartOptions = cclient.StartWorkflowOptions{
+		ID:                           historyScannerWFID,
+		TaskList:                     historyScannerTaskListName,
+		ExecutionStartToCloseTimeout: infiniteDuration,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+	}
 )
 
 func init() {
 	workflow.RegisterWithOptions(TaskListScannerWorkflow, workflow.RegisterOptions{Name: tlScannerWFTypeName})
+	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
 	activity.RegisterWithOptions(TaskListScavengerActivity, activity.RegisterOptions{Name: taskListScavengerActivityName})
+	activity.RegisterWithOptions(HistoryScavengerActivity, activity.RegisterOptions{Name: historyScavengerActivityName})
 }
 
 // TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon
 func TaskListScannerWorkflow(ctx workflow.Context) error {
-	opts := workflow.ActivityOptions{
-		ScheduleToStartTimeout: 5 * time.Minute,
-		StartToCloseTimeout:    infiniteDuration,
-		HeartbeatTimeout:       5 * time.Minute,
-		RetryPolicy:            &tlScavengerActivityRetryPolicy,
-	}
-	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, opts), taskListScavengerActivityName)
+
+	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), taskListScavengerActivityName)
 	return future.Get(ctx, nil)
+}
+
+// HistoryScannerWorkflow is the workflow that runs the history scanner background daemon
+func HistoryScannerWorkflow(ctx workflow.Context) error {
+	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), historyScavengerActivityName)
+	return future.Get(ctx, nil)
+}
+
+// HistoryScavengerActivity is the activity that runs history scavenger
+func HistoryScavengerActivity(aCtx context.Context) error {
+
 }
 
 // TaskListScavengerActivity is the activity that runs task list scavenger

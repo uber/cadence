@@ -126,39 +126,39 @@ func (s *Scanner) Start() error {
 	}
 
 	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL {
-		go s.startWorkflowWithRetry()
+		go s.startWorkflowWithRetry(tlScannerWFStartOptions, tlScannerWFTypeName)
 	} else if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeCassandra {
-		//
+		go s.startWorkflowWithRetry(historyScannerWFStartOptions, historyScannerWFTypeName)
 	}
 
 	worker := worker.New(s.context.sdkClient, common.SystemLocalDomainName, tlScannerTaskListName, workerOpts)
 	return worker.Start()
 }
 
-func (s *Scanner) startWorkflowWithRetry() error {
+func (s *Scanner) startWorkflowWithRetry(options cclient.StartWorkflowOptions, wfType string) error {
 	client := cclient.NewClient(s.context.sdkClient, common.SystemLocalDomainName, &cclient.Options{})
 	policy := backoff.NewExponentialRetryPolicy(time.Second)
 	policy.SetMaximumInterval(time.Minute)
 	policy.SetExpirationInterval(backoff.NoInterval)
 	return backoff.Retry(func() error {
-		return s.startWorkflow(client)
+		return s.startWorkflow(client, options, wfType)
 	}, policy, func(err error) bool {
 		return true
 	})
 }
 
-func (s *Scanner) startWorkflow(client cclient.Client) error {
+func (s *Scanner) startWorkflow(client cclient.Client, options cclient.StartWorkflowOptions, wfType string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	_, err := client.StartWorkflow(ctx, tlScannerWFStartOptions, tlScannerWFTypeName)
+	_, err := client.StartWorkflow(ctx, options, wfType)
 	cancel()
 	if err != nil {
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {
 			return nil
 		}
-		s.context.logger.Error("error starting scanner workflow", tag.Error(err))
+		s.context.logger.Error("error starting "+wfType+" workflow", tag.Error(err))
 		return err
 	}
-	s.context.logger.Info("Scanner workflow successfully started")
+	s.context.logger.Info(wfType + " workflow successfully started")
 	return nil
 }
 
