@@ -531,11 +531,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-<<<<<<< HEAD
-	procedures := make([]transport.Procedure, 0, 29)
-=======
-	procedures := make([]transport.Procedure, 0, 28)
->>>>>>> Add query API
+	procedures := make([]transport.Procedure, 0, 30)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
