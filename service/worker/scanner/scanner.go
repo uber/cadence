@@ -124,7 +124,13 @@ func (s *Scanner) Start() error {
 		MaxConcurrentDecisionTaskExecutionSize: maxConcurrentDecisionTaskExecutionSize,
 		BackgroundActivityContext:              context.WithValue(context.Background(), scannerContextKey, s.context),
 	}
-	go s.startWorkflowWithRetry()
+
+	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL {
+		go s.startWorkflowWithRetry()
+	} else if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeCassandra {
+		//
+	}
+
 	worker := worker.New(s.context.sdkClient, common.SystemLocalDomainName, tlScannerTaskListName, workerOpts)
 	return worker.Start()
 }
