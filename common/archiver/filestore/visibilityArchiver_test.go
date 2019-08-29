@@ -58,7 +58,6 @@ type visibilityArchiverSuite struct {
 
 func TestVisibilityArchiverSuite(t *testing.T) {
 	suite.Run(t, new(visibilityArchiverSuite))
-
 }
 
 func (s *visibilityArchiverSuite) SetupSuite() {
@@ -113,7 +112,18 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_InvalidURI() {
 	visibilityArchiver := s.newTestVisibilityArchiver()
 	URI, err := archiver.NewURI("wrongscheme://")
 	s.NoError(err)
-	err = visibilityArchiver.Archive(context.Background(), URI, &archiver.ArchiveVisibilityRequest{})
+	request := &archiver.ArchiveVisibilityRequest{
+		DomainID:           testDomainID,
+		WorkflowID:         testWorkflowID,
+		RunID:              testRunID,
+		WorkflowTypeName:   testWorkflowTypeName,
+		StartTimestamp:     int64(0), // workflow without backoff
+		ExecutionTimestamp: time.Now().UnixNano(),
+		CloseTimestamp:     time.Now().UnixNano(),
+		CloseStatus:        shared.WorkflowExecutionCloseStatusFailed,
+		HistoryLength:      int64(101),
+	}
+	err = visibilityArchiver.Archive(context.Background(), URI, request)
 	s.Error(err)
 }
 
@@ -307,7 +317,13 @@ func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidURI() {
 	visibilityArchiver := s.newTestVisibilityArchiver()
 	URI, err := archiver.NewURI("wrongscheme://")
 	s.NoError(err)
-	response, err := visibilityArchiver.Query(context.Background(), URI, &archiver.QueryVisibilityRequest{})
+	request := &archiver.QueryVisibilityRequest{
+		DomainID:          testDomainID,
+		EarliestCloseTime: int64(1),
+		LatestCloseTime:   int64(101),
+		PageSize:          1,
+	}
+	response, err := visibilityArchiver.Query(context.Background(), URI, request)
 	s.Error(err)
 	s.Nil(response)
 }
