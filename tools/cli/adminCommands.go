@@ -366,37 +366,18 @@ func AdminGetShardID(c *cli.Context) {
 func AdminRemoveTask(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
-	sid := c.Int(FlagShardID)
-	taskID := c.Int64(FlagRemoveTaskID)
-	typeID := c.Int(FlagRemoveTypeID)
-	fmt.Println("adminRemoveTask", sid, taskID, typeID)
-	if !c.IsSet(FlagShardID) {
-		ErrorAndExit("shard_id is needed", nil)
-		return
-	}
-	if !c.IsSet(FlagRemoveTaskID) {
-		ErrorAndExit("task_id is needed", nil)
-		return
-	}
-	if !c.IsSet(FlagRemoveTypeID) {
-		ErrorAndExit("type_id id is needed", nil)
-		return
-	}
+	sid := getRequiredIntOption(c, FlagShardID)
+	taskID := getRequiredInt64Option(c, FlagRemoveTaskID)
+	typeID := getRequiredIntOption(c, FlagRemoveTypeID)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	req := &shared.RemoveTaskRequest{}
 
-	if c.IsSet(FlagShardID) {
-		req.ShardID = common.Int32Ptr(int32(sid))
-	}
-	if c.IsSet(FlagRemoveTaskID) {
-		req.TaskID = common.Int64Ptr(int64(taskID))
-	}
-	if c.IsSet(FlagRemoveTypeID) {
-		req.Type = common.Int32Ptr(int32(typeID))
-	}
+	req.ShardID = common.Int32Ptr(int32(sid))
+	req.TaskID = common.Int64Ptr(int64(taskID))
+	req.Type = common.Int32Ptr(int32(typeID))
 
 	err := adminClient.RemoveTask(ctx, req)
 	if err != nil {
@@ -407,22 +388,13 @@ func AdminRemoveTask(c *cli.Context) {
 // AdminShardManagement describes history host
 func AdminShardManagement(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
-
-	sid := c.Int(FlagShardID)
-
-	if !c.IsSet(FlagShardID) {
-		ErrorAndExit("shard id is needed", nil)
-		return
-	}
+	sid := getRequiredIntOption(c, FlagShardID)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	req := &shared.CloseShardRequest{}
-
-	if c.IsSet(FlagShardID) {
-		req.ShardID = common.Int32Ptr(int32(sid))
-	}
+	req.ShardID = common.Int32Ptr(int32(sid))
 
 	err := adminClient.CloseShard(ctx, req)
 	if err != nil {
