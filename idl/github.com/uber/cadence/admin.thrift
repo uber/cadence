@@ -47,14 +47,14 @@ service AdminService {
       3: shared.AccessDeniedError     accessDeniedError,
     )
 
-  shared.CloseShardResponse CloseShardTask(1: shared.CloseShardRequest request)
+  void CloseShard(1: shared.CloseShardRequest request)
     throws (
       1: shared.BadRequestError       badRequestError,
       2: shared.InternalServiceError  internalServiceError,
       3: shared.AccessDeniedError     accessDeniedError,
     )
 
-  shared.RemoveTaskReponse RemoveTask(1: shared.RemoveTaskRequest request)
+  void RemoveTask(1: shared.RemoveTaskRequest request)
     throws (
       1: shared.BadRequestError       badRequestError,
       2: shared.InternalServiceError  internalServiceError,

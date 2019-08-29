@@ -1687,26 +1687,26 @@ GetFailureReasonLoop:
 	}
 }
 
-func (d *cassandraPersistence) DeleteTaskExecution(request *p.DeleteTaskExecutionRequest) error {
+func (d *cassandraPersistence) DeleteTask(request *p.DeleteTaskRequest) error {
 	var domainID, workflowID, runID string
 	switch request.Type {
-	case 2: // Transfer task
+	case rowTypeTransferTask:
 		domainID = rowTypeTransferDomainID
 		workflowID = rowTypeTransferWorkflowID
 		runID = rowTypeTransferRunID
 
-	case 3: // Timer task
+	case rowTypeTimerTask:
 		domainID = rowTypeTimerDomainID
 		workflowID = rowTypeTimerWorkflowID
 		runID = rowTypeTimerRunID
 
-	case 4: // replication task
+	case rowTypeReplicationTask:
 		domainID = rowTypeReplicationDomainID
 		workflowID = rowTypeReplicationWorkflowID
 		runID = rowTypeReplicationRunID
 
 	default:
-		return fmt.Errorf("DeleteTaskExecution type id is not one of 2 (transfer task), 3 (timer task), 4 (replication task) ")
+		return fmt.Errorf("DeleteTask type id is not one of 2 (transfer task), 3 (timer task), 4 (replication task) ")
 
 	}
 
@@ -1723,11 +1723,11 @@ func (d *cassandraPersistence) DeleteTaskExecution(request *p.DeleteTaskExecutio
 	if err != nil {
 		if isThrottlingError(err) {
 			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteTaskExecution operation failed. Error: %v", err),
+				Message: fmt.Sprintf("DeleteTask operation failed. Error: %v", err),
 			}
 		}
 		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteTaskExecution operation failed. Error: %v", err),
+			Message: fmt.Sprintf("DeleteTask operation failed. Error: %v", err),
 		}
 	}
 

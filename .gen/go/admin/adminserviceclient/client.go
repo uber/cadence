@@ -44,11 +44,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
-	CloseShardTask(
+	CloseShard(
 		ctx context.Context,
 		Request *shared.CloseShardRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.CloseShardResponse, error)
+	) error
 
 	DescribeHistoryHost(
 		ctx context.Context,
@@ -72,7 +72,7 @@ type Interface interface {
 		ctx context.Context,
 		Request *shared.RemoveTaskRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.RemoveTaskReponse, error)
+	) error
 }
 
 // New builds a new client for the AdminService service.
@@ -122,13 +122,13 @@ func (c client) AddSearchAttribute(
 	return
 }
 
-func (c client) CloseShardTask(
+func (c client) CloseShard(
 	ctx context.Context,
 	_Request *shared.CloseShardRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.CloseShardResponse, err error) {
+) (err error) {
 
-	args := admin.AdminService_CloseShardTask_Helper.Args(_Request)
+	args := admin.AdminService_CloseShard_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -136,12 +136,12 @@ func (c client) CloseShardTask(
 		return
 	}
 
-	var result admin.AdminService_CloseShardTask_Result
+	var result admin.AdminService_CloseShard_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = admin.AdminService_CloseShardTask_Helper.UnwrapResponse(&result)
+	err = admin.AdminService_CloseShard_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -218,7 +218,7 @@ func (c client) RemoveTask(
 	ctx context.Context,
 	_Request *shared.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.RemoveTaskReponse, err error) {
+) (err error) {
 
 	args := admin.AdminService_RemoveTask_Helper.Args(_Request)
 
@@ -233,6 +233,6 @@ func (c client) RemoveTask(
 		return
 	}
 
-	success, err = admin.AdminService_RemoveTask_Helper.UnwrapResponse(&result)
+	err = admin.AdminService_RemoveTask_Helper.UnwrapResponse(&result)
 	return
 }

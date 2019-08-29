@@ -156,53 +156,47 @@ func (c *clientImpl) DescribeHistoryHost(
 func (c *clientImpl) RemoveTask(
 	ctx context.Context,
 	request *workflow.RemoveTaskRequest,
-	opts ...yarpc.CallOption) (*workflow.RemoveTaskReponse, error) {
+	opts ...yarpc.CallOption) error {
 	var err error
 	var client historyserviceclient.Interface
 	if request.ShardID != nil {
 		client, err = c.getClientForShardID(int(request.GetShardID()))
 	}
-	var response *workflow.RemoveTaskReponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.RemoveTask(ctx, request, opts...)
+		err = client.RemoveTask(ctx, request, opts...)
 		return err
 	}
 
 	err = c.executeWithRedirect(ctx, client, op)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return err
 }
 
-func (c *clientImpl) CloseShardTask(
+func (c *clientImpl) CloseShard(
 	ctx context.Context,
 	request *workflow.CloseShardRequest,
-	opts ...yarpc.CallOption) (*workflow.CloseShardResponse, error) {
+	opts ...yarpc.CallOption) error {
 
 	var err error
 	var client historyserviceclient.Interface
 	if request.ShardID != nil {
 		client, err = c.getClientForShardID(int(request.GetShardID()))
 	}
-	var response *workflow.CloseShardResponse
-
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.CloseShardTask(ctx, request, opts...)
+		err = client.CloseShard(ctx, request, opts...)
 		return err
 	}
 
 	err = c.executeWithRedirect(ctx, client, op)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return response, nil
+	return nil
 }
 
 func (c *clientImpl) DescribeMutableState(

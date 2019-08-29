@@ -37,10 +37,10 @@ import (
 
 // Interface is the server-side interface for the HistoryService service.
 type Interface interface {
-	CloseShardTask(
+	CloseShard(
 		ctx context.Context,
 		Request *shared.CloseShardRequest,
-	) (*shared.CloseShardResponse, error)
+	) error
 
 	DescribeHistoryHost(
 		ctx context.Context,
@@ -95,7 +95,7 @@ type Interface interface {
 	RemoveTask(
 		ctx context.Context,
 		Request *shared.RemoveTaskRequest,
-	) (*shared.RemoveTaskReponse, error)
+	) error
 
 	ReplicateEvents(
 		ctx context.Context,
@@ -195,13 +195,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
-				Name: "CloseShardTask",
+				Name: "CloseShard",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.CloseShardTask),
+					Unary: thrift.UnaryHandler(h.CloseShard),
 				},
-				Signature:    "CloseShardTask(Request *shared.CloseShardRequest) (*shared.CloseShardResponse)",
+				Signature:    "CloseShard(Request *shared.CloseShardRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -322,7 +322,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.RemoveTask),
 				},
-				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest) (*shared.RemoveTaskReponse)",
+				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -522,16 +522,16 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) CloseShardTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_CloseShardTask_Args
+func (h handler) CloseShard(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_CloseShard_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.CloseShardTask(ctx, args.Request)
+	err := h.impl.CloseShard(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := history.HistoryService_CloseShardTask_Helper.WrapResponse(success, err)
+	result, err := history.HistoryService_CloseShard_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {
@@ -737,10 +737,10 @@ func (h handler) RemoveTask(ctx context.Context, body wire.Value) (thrift.Respon
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.RemoveTask(ctx, args.Request)
+	err := h.impl.RemoveTask(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := history.HistoryService_RemoveTask_Helper.WrapResponse(success, err)
+	result, err := history.HistoryService_RemoveTask_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

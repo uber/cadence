@@ -41,10 +41,10 @@ type Interface interface {
 		Request *admin.AddSearchAttributeRequest,
 	) error
 
-	CloseShardTask(
+	CloseShard(
 		ctx context.Context,
 		Request *shared.CloseShardRequest,
-	) (*shared.CloseShardResponse, error)
+	) error
 
 	DescribeHistoryHost(
 		ctx context.Context,
@@ -64,7 +64,7 @@ type Interface interface {
 	RemoveTask(
 		ctx context.Context,
 		Request *shared.RemoveTaskRequest,
-	) (*shared.RemoveTaskReponse, error)
+	) error
 }
 
 // New prepares an implementation of the AdminService service for
@@ -90,13 +90,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "CloseShardTask",
+				Name: "CloseShard",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.CloseShardTask),
+					Unary: thrift.UnaryHandler(h.CloseShard),
 				},
-				Signature:    "CloseShardTask(Request *shared.CloseShardRequest) (*shared.CloseShardResponse)",
+				Signature:    "CloseShard(Request *shared.CloseShardRequest)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -140,7 +140,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.RemoveTask),
 				},
-				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest) (*shared.RemoveTaskReponse)",
+				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest)",
 				ThriftModule: admin.ThriftModule,
 			},
 		},
@@ -172,16 +172,16 @@ func (h handler) AddSearchAttribute(ctx context.Context, body wire.Value) (thrif
 	return response, err
 }
 
-func (h handler) CloseShardTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args admin.AdminService_CloseShardTask_Args
+func (h handler) CloseShard(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_CloseShard_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.CloseShardTask(ctx, args.Request)
+	err := h.impl.CloseShard(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := admin.AdminService_CloseShardTask_Helper.WrapResponse(success, err)
+	result, err := admin.AdminService_CloseShard_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {
@@ -254,10 +254,10 @@ func (h handler) RemoveTask(ctx context.Context, body wire.Value) (thrift.Respon
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.RemoveTask(ctx, args.Request)
+	err := h.impl.RemoveTask(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := admin.AdminService_RemoveTask_Helper.WrapResponse(success, err)
+	result, err := admin.AdminService_RemoveTask_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

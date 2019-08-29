@@ -1444,17 +1444,8 @@ struct RemoveTaskRequest {
   30: optional i64 (js.type = "Long")   taskID
 }
 
-struct RemoveTaskReponse {
-  10: optional string               status
-}
-
 struct CloseShardRequest {
   10: optional i32               shardID
-}
-
-//At least two of the parameters needs to be provided
-struct CloseShardResponse {
-  10: optional string               status
 }
 
 struct DescribeHistoryHostResponse{

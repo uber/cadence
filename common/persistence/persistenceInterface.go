@@ -84,7 +84,7 @@ type (
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
 
 		// Remove corrupted task
-		DeleteTaskExecution(request *DeleteTaskExecutionRequest) error
+		DeleteTask(request *DeleteTaskRequest) error
 	}
 
 	// HistoryStore is used to manage Workflow Execution HistoryEventBatch for Persistence layer

@@ -673,38 +673,30 @@ func (h *Handler) DescribeHistoryHost(ctx context.Context,
 }
 
 // RemoveTask returns information about the internal states of a history host
-func (h *Handler) RemoveTask(ctx context.Context,
-	request *gen.RemoveTaskRequest) (resp *gen.RemoveTaskReponse, retError error) {
-	executionMgr, err := h.executionMgrFactory.NewExecutionManager(int(*request.ShardID))
+func (h *Handler) RemoveTask(
+	ctx context.Context,
+	request *gen.RemoveTaskRequest,
+) (retError error) {
+	executionMgr, err := h.executionMgrFactory.NewExecutionManager(int(request.GetShardID()))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	deleteTaskRequest := &persistence.DeleteTaskExecutionRequest{
-		TaskID:  int64(*request.TaskID),
-		Type:    int(*request.Type),
-		ShardID: int(*request.ShardID),
+	deleteTaskRequest := &persistence.DeleteTaskRequest{
+		TaskID:  request.GetTaskID(),
+		Type:    int(request.GetType()),
+		ShardID: int(request.GetShardID()),
 	}
-	status := "closed OK"
-	err = executionMgr.DeleteTaskExecution(deleteTaskRequest)
-	if err != nil {
-		status = fmt.Sprintf("error while removing task: %v", err)
-	}
-	resp = &gen.RemoveTaskReponse{
-		Status: &status,
-	}
-	return resp, err
+	err = executionMgr.DeleteTask(deleteTaskRequest)
+	return err
 }
 
 // CloseShardTask returns information about the internal states of a history host
-func (h *Handler) CloseShardTask(ctx context.Context,
-	request *gen.CloseShardRequest) (resp *gen.CloseShardResponse, retError error) {
-	h.controller.removeEngineForShard(int(*request.ShardID))
-	status := "Engine removed OK"
-
-	resp = &gen.CloseShardResponse{
-		Status: &status,
-	}
-	return resp, nil
+func (h *Handler) CloseShard(
+	ctx context.Context,
+	request *gen.CloseShardRequest,
+) (retError error) {
+	h.controller.removeEngineForShard(int(request.GetShardID()))
+	return nil
 }
 
 // DescribeMutableState - returns the internal analysis of workflow execution state

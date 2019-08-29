@@ -78,36 +78,34 @@ func (c *retryableClient) DescribeHistoryHost(
 	return resp, err
 }
 
-func (c *retryableClient) CloseShardTask(
+func (c *retryableClient) CloseShard(
 	ctx context.Context,
 	request *shared.CloseShardRequest,
-	opts ...yarpc.CallOption) (*shared.CloseShardResponse, error) {
+	opts ...yarpc.CallOption) error {
 
-	var resp *shared.CloseShardResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.CloseShardTask(ctx, request, opts...)
+		err = c.client.CloseShard(ctx, request, opts...)
 		return err
 	}
 
 	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+	return err
 }
 
 func (c *retryableClient) RemoveTask(
 	ctx context.Context,
 	request *shared.RemoveTaskRequest,
-	opts ...yarpc.CallOption) (*shared.RemoveTaskReponse, error) {
+	opts ...yarpc.CallOption) error {
 
-	var resp *shared.RemoveTaskReponse
 	op := func() error {
 		var err error
-		resp, err = c.client.RemoveTask(ctx, request, opts...)
+		err = c.client.RemoveTask(ctx, request, opts...)
 		return err
 	}
 
 	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+	return err
 }
 
 func (c *retryableClient) DescribeMutableState(

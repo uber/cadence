@@ -698,9 +698,9 @@ service HistoryService {
     )
 
  /**
- * CloseShardTask returns information status of adding skip transfer task
+ * CloseShard close the shard
  **/
- shared.CloseShardResponse CloseShardTask(1: shared.CloseShardRequest request)
+ void CloseShard(1: shared.CloseShardRequest request)
     throws (
     1: shared.BadRequestError badRequestError,
     2: shared.InternalServiceError internalServiceError,
@@ -708,9 +708,9 @@ service HistoryService {
     )
 
   /**
-  * RemoveTask returns information status of adding skip transfer task
+  * RemoveTask remove task based on type, taskid, shardid
   **/
-  shared.RemoveTaskReponse RemoveTask(1: shared.RemoveTaskRequest request)
+  void RemoveTask(1: shared.RemoveTaskRequest request)
      throws (
      1: shared.BadRequestError badRequestError,
      2: shared.InternalServiceError internalServiceError,

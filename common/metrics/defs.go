@@ -147,7 +147,7 @@ const (
 	PersistenceDeleteWorkflowExecutionScope
 	// PersistenceDeleteCurrentWorkflowExecutionScope tracks DeleteCurrentWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteCurrentWorkflowExecutionScope
-	// PersistenceDeleteTaskExecutionScope tracks RemoveTask calls made by service to persistence layer
+	// PersistenceDeleteTaskScope tracks RemoveTask calls made by service to persistence layer
 	PersistenceDeleteTaskScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
 	PersistenceGetCurrentExecutionScope

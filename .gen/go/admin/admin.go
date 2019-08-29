@@ -1559,14 +1559,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "9eb2c9d7f0c540d18cd8bfd0d77201b3e291ace9",
+	SHA1:     "82b7ca0371394313ca7da19e03df4ed862ce90cb",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.CloseShardResponse CloseShardTask(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.RemoveTaskReponse RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -2113,14 +2113,14 @@ func (v *AdminService_AddSearchAttribute_Result) EnvelopeType() wire.EnvelopeTyp
 	return wire.Reply
 }
 
-// AdminService_CloseShardTask_Args represents the arguments for the AdminService.CloseShardTask function.
+// AdminService_CloseShard_Args represents the arguments for the AdminService.CloseShard function.
 //
-// The arguments for CloseShardTask are sent and received over the wire as this struct.
-type AdminService_CloseShardTask_Args struct {
+// The arguments for CloseShard are sent and received over the wire as this struct.
+type AdminService_CloseShard_Args struct {
 	Request *shared.CloseShardRequest `json:"request,omitempty"`
 }
 
-// ToWire translates a AdminService_CloseShardTask_Args struct into a Thrift-level intermediate
+// ToWire translates a AdminService_CloseShard_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -2135,7 +2135,7 @@ type AdminService_CloseShardTask_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *AdminService_CloseShardTask_Args) ToWire() (wire.Value, error) {
+func (v *AdminService_CloseShard_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -2161,11 +2161,11 @@ func _CloseShardRequest_Read(w wire.Value) (*shared.CloseShardRequest, error) {
 	return &v, err
 }
 
-// FromWire deserializes a AdminService_CloseShardTask_Args struct from its Thrift-level
+// FromWire deserializes a AdminService_CloseShard_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a AdminService_CloseShardTask_Args struct
+// An error is returned if we were unable to build a AdminService_CloseShard_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -2173,12 +2173,12 @@ func _CloseShardRequest_Read(w wire.Value) (*shared.CloseShardRequest, error) {
 //     return nil, err
 //   }
 //
-//   var v AdminService_CloseShardTask_Args
+//   var v AdminService_CloseShard_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *AdminService_CloseShardTask_Args) FromWire(w wire.Value) error {
+func (v *AdminService_CloseShard_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -2197,9 +2197,9 @@ func (v *AdminService_CloseShardTask_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a AdminService_CloseShardTask_Args
+// String returns a readable string representation of a AdminService_CloseShard_Args
 // struct.
-func (v *AdminService_CloseShardTask_Args) String() string {
+func (v *AdminService_CloseShard_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -2211,14 +2211,14 @@ func (v *AdminService_CloseShardTask_Args) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("AdminService_CloseShardTask_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("AdminService_CloseShard_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this AdminService_CloseShardTask_Args match the
-// provided AdminService_CloseShardTask_Args.
+// Equals returns true if all the fields of this AdminService_CloseShard_Args match the
+// provided AdminService_CloseShard_Args.
 //
 // This function performs a deep comparison.
-func (v *AdminService_CloseShardTask_Args) Equals(rhs *AdminService_CloseShardTask_Args) bool {
+func (v *AdminService_CloseShard_Args) Equals(rhs *AdminService_CloseShard_Args) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -2232,8 +2232,8 @@ func (v *AdminService_CloseShardTask_Args) Equals(rhs *AdminService_CloseShardTa
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of AdminService_CloseShardTask_Args.
-func (v *AdminService_CloseShardTask_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of AdminService_CloseShard_Args.
+func (v *AdminService_CloseShard_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -2245,7 +2245,7 @@ func (v *AdminService_CloseShardTask_Args) MarshalLogObject(enc zapcore.ObjectEn
 
 // GetRequest returns the value of Request if it is set or its
 // zero value if it is unset.
-func (v *AdminService_CloseShardTask_Args) GetRequest() (o *shared.CloseShardRequest) {
+func (v *AdminService_CloseShard_Args) GetRequest() (o *shared.CloseShardRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
@@ -2254,80 +2254,81 @@ func (v *AdminService_CloseShardTask_Args) GetRequest() (o *shared.CloseShardReq
 }
 
 // IsSetRequest returns true if Request is not nil.
-func (v *AdminService_CloseShardTask_Args) IsSetRequest() bool {
+func (v *AdminService_CloseShard_Args) IsSetRequest() bool {
 	return v != nil && v.Request != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "CloseShardTask" for this struct.
-func (v *AdminService_CloseShardTask_Args) MethodName() string {
-	return "CloseShardTask"
+// This will always be "CloseShard" for this struct.
+func (v *AdminService_CloseShard_Args) MethodName() string {
+	return "CloseShard"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *AdminService_CloseShardTask_Args) EnvelopeType() wire.EnvelopeType {
+func (v *AdminService_CloseShard_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// AdminService_CloseShardTask_Helper provides functions that aid in handling the
-// parameters and return values of the AdminService.CloseShardTask
+// AdminService_CloseShard_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.CloseShard
 // function.
-var AdminService_CloseShardTask_Helper = struct {
-	// Args accepts the parameters of CloseShardTask in-order and returns
+var AdminService_CloseShard_Helper = struct {
+	// Args accepts the parameters of CloseShard in-order and returns
 	// the arguments struct for the function.
 	Args func(
 		request *shared.CloseShardRequest,
-	) *AdminService_CloseShardTask_Args
+	) *AdminService_CloseShard_Args
 
 	// IsException returns true if the given error can be thrown
-	// by CloseShardTask.
+	// by CloseShard.
 	//
-	// An error can be thrown by CloseShardTask only if the
+	// An error can be thrown by CloseShard only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for CloseShardTask
-	// given its return value and error.
+	// WrapResponse returns the result struct for CloseShard
+	// given the error returned by it. The provided error may
+	// be nil if CloseShard did not fail.
 	//
-	// This allows mapping values and errors returned by
-	// CloseShardTask into a serializable result struct.
-	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by CloseShardTask
+	// This allows mapping errors returned by CloseShard into a
+	// serializable result struct. WrapResponse returns a
+	// non-nil error if the provided error cannot be thrown by
+	// CloseShard
 	//
-	//   value, err := CloseShardTask(args)
-	//   result, err := AdminService_CloseShardTask_Helper.WrapResponse(value, err)
+	//   err := CloseShard(args)
+	//   result, err := AdminService_CloseShard_Helper.WrapResponse(err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from CloseShardTask: %v", err)
+	//     return fmt.Errorf("unexpected error from CloseShard: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.CloseShardResponse, error) (*AdminService_CloseShardTask_Result, error)
+	WrapResponse func(error) (*AdminService_CloseShard_Result, error)
 
-	// UnwrapResponse takes the result struct for CloseShardTask
-	// and returns the value or error returned by it.
+	// UnwrapResponse takes the result struct for CloseShard
+	// and returns the erorr returned by it (if any).
 	//
-	// The error is non-nil only if CloseShardTask threw an
+	// The error is non-nil only if CloseShard threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := AdminService_CloseShardTask_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*AdminService_CloseShardTask_Result) (*shared.CloseShardResponse, error)
+	//   err := AdminService_CloseShard_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_CloseShard_Result) error
 }{}
 
 func init() {
-	AdminService_CloseShardTask_Helper.Args = func(
+	AdminService_CloseShard_Helper.Args = func(
 		request *shared.CloseShardRequest,
-	) *AdminService_CloseShardTask_Args {
-		return &AdminService_CloseShardTask_Args{
+	) *AdminService_CloseShard_Args {
+		return &AdminService_CloseShard_Args{
 			Request: request,
 		}
 	}
 
-	AdminService_CloseShardTask_Helper.IsException = func(err error) bool {
+	AdminService_CloseShard_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -2340,32 +2341,32 @@ func init() {
 		}
 	}
 
-	AdminService_CloseShardTask_Helper.WrapResponse = func(success *shared.CloseShardResponse, err error) (*AdminService_CloseShardTask_Result, error) {
+	AdminService_CloseShard_Helper.WrapResponse = func(err error) (*AdminService_CloseShard_Result, error) {
 		if err == nil {
-			return &AdminService_CloseShardTask_Result{Success: success}, nil
+			return &AdminService_CloseShard_Result{}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_CloseShardTask_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_CloseShard_Result.BadRequestError")
 			}
-			return &AdminService_CloseShardTask_Result{BadRequestError: e}, nil
+			return &AdminService_CloseShard_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_CloseShardTask_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_CloseShard_Result.InternalServiceError")
 			}
-			return &AdminService_CloseShardTask_Result{InternalServiceError: e}, nil
+			return &AdminService_CloseShard_Result{InternalServiceError: e}, nil
 		case *shared.AccessDeniedError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_CloseShardTask_Result.AccessDeniedError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_CloseShard_Result.AccessDeniedError")
 			}
-			return &AdminService_CloseShardTask_Result{AccessDeniedError: e}, nil
+			return &AdminService_CloseShard_Result{AccessDeniedError: e}, nil
 		}
 
 		return nil, err
 	}
-	AdminService_CloseShardTask_Helper.UnwrapResponse = func(result *AdminService_CloseShardTask_Result) (success *shared.CloseShardResponse, err error) {
+	AdminService_CloseShard_Helper.UnwrapResponse = func(result *AdminService_CloseShard_Result) (err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -2378,32 +2379,21 @@ func init() {
 			err = result.AccessDeniedError
 			return
 		}
-
-		if result.Success != nil {
-			success = result.Success
-			return
-		}
-
-		err = errors.New("expected a non-void result")
 		return
 	}
 
 }
 
-// AdminService_CloseShardTask_Result represents the result of a AdminService.CloseShardTask function call.
+// AdminService_CloseShard_Result represents the result of a AdminService.CloseShard function call.
 //
-// The result of a CloseShardTask execution is sent and received over the wire as this struct.
-//
-// Success is set only if the function did not throw an exception.
-type AdminService_CloseShardTask_Result struct {
-	// Value returned by CloseShardTask after a successful execution.
-	Success              *shared.CloseShardResponse   `json:"success,omitempty"`
+// The result of a CloseShard execution is sent and received over the wire as this struct.
+type AdminService_CloseShard_Result struct {
 	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
 	AccessDeniedError    *shared.AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
-// ToWire translates a AdminService_CloseShardTask_Result struct into a Thrift-level intermediate
+// ToWire translates a AdminService_CloseShard_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -2418,22 +2408,14 @@ type AdminService_CloseShardTask_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *AdminService_CloseShardTask_Result) ToWire() (wire.Value, error) {
+func (v *AdminService_CloseShard_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.Success != nil {
-		w, err = v.Success.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 0, Value: w}
-		i++
-	}
 	if v.BadRequestError != nil {
 		w, err = v.BadRequestError.ToWire()
 		if err != nil {
@@ -2459,17 +2441,11 @@ func (v *AdminService_CloseShardTask_Result) ToWire() (wire.Value, error) {
 		i++
 	}
 
-	if i != 1 {
-		return wire.Value{}, fmt.Errorf("AdminService_CloseShardTask_Result should have exactly one field: got %v fields", i)
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_CloseShard_Result should have at most one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _CloseShardResponse_Read(w wire.Value) (*shared.CloseShardResponse, error) {
-	var v shared.CloseShardResponse
-	err := v.FromWire(w)
-	return &v, err
 }
 
 func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
@@ -2478,11 +2454,11 @@ func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
 	return &v, err
 }
 
-// FromWire deserializes a AdminService_CloseShardTask_Result struct from its Thrift-level
+// FromWire deserializes a AdminService_CloseShard_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a AdminService_CloseShardTask_Result struct
+// An error is returned if we were unable to build a AdminService_CloseShard_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -2490,24 +2466,16 @@ func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
 //     return nil, err
 //   }
 //
-//   var v AdminService_CloseShardTask_Result
+//   var v AdminService_CloseShard_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *AdminService_CloseShardTask_Result) FromWire(w wire.Value) error {
+func (v *AdminService_CloseShard_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 0:
-			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _CloseShardResponse_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
 		case 1:
 			if field.Value.Type() == wire.TStruct {
 				v.BadRequestError, err = _BadRequestError_Read(field.Value)
@@ -2536,9 +2504,6 @@ func (v *AdminService_CloseShardTask_Result) FromWire(w wire.Value) error {
 	}
 
 	count := 0
-	if v.Success != nil {
-		count++
-	}
 	if v.BadRequestError != nil {
 		count++
 	}
@@ -2548,26 +2513,22 @@ func (v *AdminService_CloseShardTask_Result) FromWire(w wire.Value) error {
 	if v.AccessDeniedError != nil {
 		count++
 	}
-	if count != 1 {
-		return fmt.Errorf("AdminService_CloseShardTask_Result should have exactly one field: got %v fields", count)
+	if count > 1 {
+		return fmt.Errorf("AdminService_CloseShard_Result should have at most one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a AdminService_CloseShardTask_Result
+// String returns a readable string representation of a AdminService_CloseShard_Result
 // struct.
-func (v *AdminService_CloseShardTask_Result) String() string {
+func (v *AdminService_CloseShard_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [3]string
 	i := 0
-	if v.Success != nil {
-		fields[i] = fmt.Sprintf("Success: %v", v.Success)
-		i++
-	}
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
 		i++
@@ -2581,20 +2542,17 @@ func (v *AdminService_CloseShardTask_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("AdminService_CloseShardTask_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("AdminService_CloseShard_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this AdminService_CloseShardTask_Result match the
-// provided AdminService_CloseShardTask_Result.
+// Equals returns true if all the fields of this AdminService_CloseShard_Result match the
+// provided AdminService_CloseShard_Result.
 //
 // This function performs a deep comparison.
-func (v *AdminService_CloseShardTask_Result) Equals(rhs *AdminService_CloseShardTask_Result) bool {
+func (v *AdminService_CloseShard_Result) Equals(rhs *AdminService_CloseShard_Result) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
-		return false
-	}
-	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
 		return false
 	}
 	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
@@ -2611,13 +2569,10 @@ func (v *AdminService_CloseShardTask_Result) Equals(rhs *AdminService_CloseShard
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of AdminService_CloseShardTask_Result.
-func (v *AdminService_CloseShardTask_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of AdminService_CloseShard_Result.
+func (v *AdminService_CloseShard_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
-	}
-	if v.Success != nil {
-		err = multierr.Append(err, enc.AddObject("success", v.Success))
 	}
 	if v.BadRequestError != nil {
 		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
@@ -2631,24 +2586,9 @@ func (v *AdminService_CloseShardTask_Result) MarshalLogObject(enc zapcore.Object
 	return err
 }
 
-// GetSuccess returns the value of Success if it is set or its
-// zero value if it is unset.
-func (v *AdminService_CloseShardTask_Result) GetSuccess() (o *shared.CloseShardResponse) {
-	if v != nil && v.Success != nil {
-		return v.Success
-	}
-
-	return
-}
-
-// IsSetSuccess returns true if Success is not nil.
-func (v *AdminService_CloseShardTask_Result) IsSetSuccess() bool {
-	return v != nil && v.Success != nil
-}
-
 // GetBadRequestError returns the value of BadRequestError if it is set or its
 // zero value if it is unset.
-func (v *AdminService_CloseShardTask_Result) GetBadRequestError() (o *shared.BadRequestError) {
+func (v *AdminService_CloseShard_Result) GetBadRequestError() (o *shared.BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2657,13 +2597,13 @@ func (v *AdminService_CloseShardTask_Result) GetBadRequestError() (o *shared.Bad
 }
 
 // IsSetBadRequestError returns true if BadRequestError is not nil.
-func (v *AdminService_CloseShardTask_Result) IsSetBadRequestError() bool {
+func (v *AdminService_CloseShard_Result) IsSetBadRequestError() bool {
 	return v != nil && v.BadRequestError != nil
 }
 
 // GetInternalServiceError returns the value of InternalServiceError if it is set or its
 // zero value if it is unset.
-func (v *AdminService_CloseShardTask_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+func (v *AdminService_CloseShard_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2672,13 +2612,13 @@ func (v *AdminService_CloseShardTask_Result) GetInternalServiceError() (o *share
 }
 
 // IsSetInternalServiceError returns true if InternalServiceError is not nil.
-func (v *AdminService_CloseShardTask_Result) IsSetInternalServiceError() bool {
+func (v *AdminService_CloseShard_Result) IsSetInternalServiceError() bool {
 	return v != nil && v.InternalServiceError != nil
 }
 
 // GetAccessDeniedError returns the value of AccessDeniedError if it is set or its
 // zero value if it is unset.
-func (v *AdminService_CloseShardTask_Result) GetAccessDeniedError() (o *shared.AccessDeniedError) {
+func (v *AdminService_CloseShard_Result) GetAccessDeniedError() (o *shared.AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
@@ -2687,22 +2627,22 @@ func (v *AdminService_CloseShardTask_Result) GetAccessDeniedError() (o *shared.A
 }
 
 // IsSetAccessDeniedError returns true if AccessDeniedError is not nil.
-func (v *AdminService_CloseShardTask_Result) IsSetAccessDeniedError() bool {
+func (v *AdminService_CloseShard_Result) IsSetAccessDeniedError() bool {
 	return v != nil && v.AccessDeniedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "CloseShardTask" for this struct.
-func (v *AdminService_CloseShardTask_Result) MethodName() string {
-	return "CloseShardTask"
+// This will always be "CloseShard" for this struct.
+func (v *AdminService_CloseShard_Result) MethodName() string {
+	return "CloseShard"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *AdminService_CloseShardTask_Result) EnvelopeType() wire.EnvelopeType {
+func (v *AdminService_CloseShard_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
@@ -4764,30 +4704,31 @@ var AdminService_RemoveTask_Helper = struct {
 	IsException func(error) bool
 
 	// WrapResponse returns the result struct for RemoveTask
-	// given its return value and error.
+	// given the error returned by it. The provided error may
+	// be nil if RemoveTask did not fail.
 	//
-	// This allows mapping values and errors returned by
-	// RemoveTask into a serializable result struct.
-	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by RemoveTask
+	// This allows mapping errors returned by RemoveTask into a
+	// serializable result struct. WrapResponse returns a
+	// non-nil error if the provided error cannot be thrown by
+	// RemoveTask
 	//
-	//   value, err := RemoveTask(args)
-	//   result, err := AdminService_RemoveTask_Helper.WrapResponse(value, err)
+	//   err := RemoveTask(args)
+	//   result, err := AdminService_RemoveTask_Helper.WrapResponse(err)
 	//   if err != nil {
 	//     return fmt.Errorf("unexpected error from RemoveTask: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.RemoveTaskReponse, error) (*AdminService_RemoveTask_Result, error)
+	WrapResponse func(error) (*AdminService_RemoveTask_Result, error)
 
 	// UnwrapResponse takes the result struct for RemoveTask
-	// and returns the value or error returned by it.
+	// and returns the erorr returned by it (if any).
 	//
 	// The error is non-nil only if RemoveTask threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := AdminService_RemoveTask_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*AdminService_RemoveTask_Result) (*shared.RemoveTaskReponse, error)
+	//   err := AdminService_RemoveTask_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_RemoveTask_Result) error
 }{}
 
 func init() {
@@ -4812,9 +4753,9 @@ func init() {
 		}
 	}
 
-	AdminService_RemoveTask_Helper.WrapResponse = func(success *shared.RemoveTaskReponse, err error) (*AdminService_RemoveTask_Result, error) {
+	AdminService_RemoveTask_Helper.WrapResponse = func(err error) (*AdminService_RemoveTask_Result, error) {
 		if err == nil {
-			return &AdminService_RemoveTask_Result{Success: success}, nil
+			return &AdminService_RemoveTask_Result{}, nil
 		}
 
 		switch e := err.(type) {
@@ -4837,7 +4778,7 @@ func init() {
 
 		return nil, err
 	}
-	AdminService_RemoveTask_Helper.UnwrapResponse = func(result *AdminService_RemoveTask_Result) (success *shared.RemoveTaskReponse, err error) {
+	AdminService_RemoveTask_Helper.UnwrapResponse = func(result *AdminService_RemoveTask_Result) (err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -4850,13 +4791,6 @@ func init() {
 			err = result.AccessDeniedError
 			return
 		}
-
-		if result.Success != nil {
-			success = result.Success
-			return
-		}
-
-		err = errors.New("expected a non-void result")
 		return
 	}
 
@@ -4865,11 +4799,7 @@ func init() {
 // AdminService_RemoveTask_Result represents the result of a AdminService.RemoveTask function call.
 //
 // The result of a RemoveTask execution is sent and received over the wire as this struct.
-//
-// Success is set only if the function did not throw an exception.
 type AdminService_RemoveTask_Result struct {
-	// Value returned by RemoveTask after a successful execution.
-	Success              *shared.RemoveTaskReponse    `json:"success,omitempty"`
 	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
 	AccessDeniedError    *shared.AccessDeniedError    `json:"accessDeniedError,omitempty"`
@@ -4892,20 +4822,12 @@ type AdminService_RemoveTask_Result struct {
 //   }
 func (v *AdminService_RemoveTask_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.Success != nil {
-		w, err = v.Success.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 0, Value: w}
-		i++
-	}
 	if v.BadRequestError != nil {
 		w, err = v.BadRequestError.ToWire()
 		if err != nil {
@@ -4931,17 +4853,11 @@ func (v *AdminService_RemoveTask_Result) ToWire() (wire.Value, error) {
 		i++
 	}
 
-	if i != 1 {
-		return wire.Value{}, fmt.Errorf("AdminService_RemoveTask_Result should have exactly one field: got %v fields", i)
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_RemoveTask_Result should have at most one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _RemoveTaskReponse_Read(w wire.Value) (*shared.RemoveTaskReponse, error) {
-	var v shared.RemoveTaskReponse
-	err := v.FromWire(w)
-	return &v, err
 }
 
 // FromWire deserializes a AdminService_RemoveTask_Result struct from its Thrift-level
@@ -4966,14 +4882,6 @@ func (v *AdminService_RemoveTask_Result) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 0:
-			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _RemoveTaskReponse_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
 		case 1:
 			if field.Value.Type() == wire.TStruct {
 				v.BadRequestError, err = _BadRequestError_Read(field.Value)
@@ -5002,9 +4910,6 @@ func (v *AdminService_RemoveTask_Result) FromWire(w wire.Value) error {
 	}
 
 	count := 0
-	if v.Success != nil {
-		count++
-	}
 	if v.BadRequestError != nil {
 		count++
 	}
@@ -5014,8 +4919,8 @@ func (v *AdminService_RemoveTask_Result) FromWire(w wire.Value) error {
 	if v.AccessDeniedError != nil {
 		count++
 	}
-	if count != 1 {
-		return fmt.Errorf("AdminService_RemoveTask_Result should have exactly one field: got %v fields", count)
+	if count > 1 {
+		return fmt.Errorf("AdminService_RemoveTask_Result should have at most one field: got %v fields", count)
 	}
 
 	return nil
@@ -5028,12 +4933,8 @@ func (v *AdminService_RemoveTask_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [3]string
 	i := 0
-	if v.Success != nil {
-		fields[i] = fmt.Sprintf("Success: %v", v.Success)
-		i++
-	}
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
 		i++
@@ -5060,9 +4961,6 @@ func (v *AdminService_RemoveTask_Result) Equals(rhs *AdminService_RemoveTask_Res
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
-		return false
-	}
 	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
 		return false
 	}
@@ -5082,9 +4980,6 @@ func (v *AdminService_RemoveTask_Result) MarshalLogObject(enc zapcore.ObjectEnco
 	if v == nil {
 		return nil
 	}
-	if v.Success != nil {
-		err = multierr.Append(err, enc.AddObject("success", v.Success))
-	}
 	if v.BadRequestError != nil {
 		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
 	}
@@ -5095,21 +4990,6 @@ func (v *AdminService_RemoveTask_Result) MarshalLogObject(enc zapcore.ObjectEnco
 		err = multierr.Append(err, enc.AddObject("accessDeniedError", v.AccessDeniedError))
 	}
 	return err
-}
-
-// GetSuccess returns the value of Success if it is set or its
-// zero value if it is unset.
-func (v *AdminService_RemoveTask_Result) GetSuccess() (o *shared.RemoveTaskReponse) {
-	if v != nil && v.Success != nil {
-		return v.Success
-	}
-
-	return
-}
-
-// IsSetSuccess returns true if Success is not nil.
-func (v *AdminService_RemoveTask_Result) IsSetSuccess() bool {
-	return v != nil && v.Success != nil
 }
 
 // GetBadRequestError returns the value of BadRequestError if it is set or its

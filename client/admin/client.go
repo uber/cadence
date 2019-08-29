@@ -91,32 +91,32 @@ func (c *clientImpl) RemoveTask(
 	ctx context.Context,
 	request *shared.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
-) (*shared.RemoveTaskReponse, error) {
+) error {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.RemoveTask(ctx, request, opts...)
 }
 
-func (c *clientImpl) CloseShardTask(
+func (c *clientImpl) CloseShard(
 	ctx context.Context,
 	request *shared.CloseShardRequest,
 	opts ...yarpc.CallOption,
-) (*shared.CloseShardResponse, error) {
+) error {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return client.CloseShardTask(ctx, request, opts...)
+	return client.CloseShard(ctx, request, opts...)
 }
 
 func (c *clientImpl) DescribeWorkflowExecution(

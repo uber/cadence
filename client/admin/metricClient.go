@@ -83,36 +83,36 @@ func (c *metricClient) RemoveTask(
 	ctx context.Context,
 	request *shared.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
-) (*shared.RemoveTaskReponse, error) {
+) error {
 
 	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)
-	resp, err := c.client.RemoveTask(ctx, request, opts...)
+	err := c.client.RemoveTask(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientFailures)
 	}
-	return resp, err
+	return err
 }
 
-func (c *metricClient) CloseShardTask(
+func (c *metricClient) CloseShard(
 	ctx context.Context,
 	request *shared.CloseShardRequest,
 	opts ...yarpc.CallOption,
-) (*shared.CloseShardResponse, error) {
+) error {
 
 	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)
-	resp, err := c.client.CloseShardTask(ctx, request, opts...)
+	err := c.client.CloseShard(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientFailures)
 	}
-	return resp, err
+	return err
 }
 
 func (c *metricClient) DescribeWorkflowExecution(

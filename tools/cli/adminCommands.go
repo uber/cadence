@@ -398,11 +398,10 @@ func AdminRemoveTask(c *cli.Context) {
 		req.Type = common.Int32Ptr(int32(typeID))
 	}
 
-	resp, err := adminClient.RemoveTask(ctx, req)
+	err := adminClient.RemoveTask(ctx, req)
 	if err != nil {
 		ErrorAndExit("Remove task has failed", err)
 	}
-	prettyPrintJSONObject(resp)
 }
 
 // AdminShardManagement describes history host
@@ -425,11 +424,10 @@ func AdminShardManagement(c *cli.Context) {
 		req.ShardID = common.Int32Ptr(int32(sid))
 	}
 
-	resp, err := adminClient.CloseShardTask(ctx, req)
+	err := adminClient.CloseShard(ctx, req)
 	if err != nil {
 		ErrorAndExit("Close shard task has failed", err)
 	}
-	prettyPrintJSONObject(resp)
 }
 
 // AdminDescribeHistoryHost describes history host

@@ -837,9 +837,9 @@ type (
 		RunID      string
 	}
 
-	// DeleteTaskExecutionRequest is used to detele a task that corrupted and need to be removed
+	// DeleteTaskRequest is used to detele a task that corrupted and need to be removed
 	// 	e.g. corrupted history event batch, eventID is not continouous
-	DeleteTaskExecutionRequest struct {
+	DeleteTaskRequest struct {
 		TaskID  int64
 		Type    int
 		ShardID int
@@ -1433,7 +1433,7 @@ type (
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
 
 		// Remove Task due to corrupted data
-		DeleteTaskExecution(request *DeleteTaskExecutionRequest) error
+		DeleteTask(request *DeleteTaskRequest) error
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard

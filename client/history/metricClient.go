@@ -74,19 +74,19 @@ func (c *metricClient) DescribeHistoryHost(
 func (c *metricClient) RemoveTask(
 	context context.Context,
 	request *shared.RemoveTaskRequest,
-	opts ...yarpc.CallOption) (*shared.RemoveTaskReponse, error) {
-	resp, err := c.client.RemoveTask(context, request, opts...)
+	opts ...yarpc.CallOption) error {
+	err := c.client.RemoveTask(context, request, opts...)
 
-	return resp, err
+	return err
 }
 
-func (c *metricClient) CloseShardTask(
+func (c *metricClient) CloseShard(
 	context context.Context,
 	request *shared.CloseShardRequest,
-	opts ...yarpc.CallOption) (*shared.CloseShardResponse, error) {
-	resp, err := c.client.CloseShardTask(context, request, opts...)
+	opts ...yarpc.CallOption) error {
+	err := c.client.CloseShard(context, request, opts...)
 
-	return resp, err
+	return err
 }
 
 func (c *metricClient) DescribeMutableState(

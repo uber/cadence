@@ -66,37 +66,35 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
-// CloseShardTask responds to a CloseShardTask call based on the mock expectations. This
+// CloseShard responds to a CloseShard call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().CloseShardTask(gomock.Any(), ...).Return(...)
-// 	... := client.CloseShardTask(...)
-func (m *MockClient) CloseShardTask(
+// 	client.EXPECT().CloseShard(gomock.Any(), ...).Return(...)
+// 	... := client.CloseShard(...)
+func (m *MockClient) CloseShard(
 	ctx context.Context,
 	_Request *shared.CloseShardRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.CloseShardResponse, err error) {
+) (err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "CloseShardTask", args...)
-	success, _ = ret[i].(*shared.CloseShardResponse)
-	i++
+	ret := m.ctrl.Call(m, "CloseShard", args...)
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) CloseShardTask(
+func (mr *_MockClientRecorder) CloseShard(
 	ctx interface{},
 	_Request interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "CloseShardTask", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "CloseShard", args...)
 }
 
 // DescribeHistoryHost responds to a DescribeHistoryHost call based on the mock expectations. This
@@ -435,7 +433,7 @@ func (m *MockClient) RemoveTask(
 	ctx context.Context,
 	_Request *shared.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.RemoveTaskReponse, err error) {
+) (err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -443,8 +441,6 @@ func (m *MockClient) RemoveTask(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "RemoveTask", args...)
-	success, _ = ret[i].(*shared.RemoveTaskReponse)
-	i++
 	err, _ = ret[i].(error)
 	return
 }
