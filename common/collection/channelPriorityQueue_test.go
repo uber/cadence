@@ -46,8 +46,13 @@ func TestChannelPriorityQueue(t *testing.T) {
 
 	queue.Close()
 
-	shutdown = queue.Add(1, 20)
-	assert.False(t, shutdown)
+	// once we close the channel we should get shutdown at least once
+	for {
+		shutdown = queue.Add(1, 20)
+		if !shutdown {
+			break
+		}
+	}
 
 	item, ok = queue.Remove()
 	assert.Nil(t, item)
