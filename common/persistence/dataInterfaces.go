@@ -637,6 +637,7 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
+		ParentClosePolicy     workflow.ParentClosePolicy
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
@@ -834,6 +835,14 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+	}
+
+	// DeleteTaskRequest is used to detele a task that corrupted and need to be removed
+	// 	e.g. corrupted history event batch, eventID is not continouous
+	DeleteTaskRequest struct {
+		TaskID  int64
+		Type    int
+		ShardID int
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
@@ -1343,8 +1352,9 @@ type (
 		BranchToken []byte
 	}
 
-	// ForkingInProgressBranch is part of GetHistoryTreeResponse
-	ForkingInProgressBranch struct {
+	// HistoryBranchDetail contains detailed information of a branch
+	HistoryBranchDetail struct {
+		TreeID   string
 		BranchID string
 		ForkTime time.Time
 		Info     string
@@ -1354,7 +1364,23 @@ type (
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
 		Branches                  []*workflow.HistoryBranch
-		ForkingInProgressBranches []ForkingInProgressBranch
+		ForkingInProgressBranches []HistoryBranchDetail
+	}
+
+	// GetAllHistoryTreeBranchesRequest is a request of GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesRequest struct {
+		// pagination token
+		NextPageToken []byte
+		// maximum number of branches returned per page
+		PageSize int
+	}
+
+	// GetAllHistoryTreeBranchesResponse is a response to GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesResponse struct {
+		// pagination token
+		NextPageToken []byte
+		// all branches of all trees
+		Branches []HistoryBranchDetail
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
@@ -1405,6 +1431,9 @@ type (
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+
+		// Remove Task due to corrupted data
+		DeleteTask(request *DeleteTaskRequest) error
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
@@ -1477,6 +1506,8 @@ type (
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		// GetAllHistoryTreeBranches returns all branches of all trees
+		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities

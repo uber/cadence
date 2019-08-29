@@ -450,7 +450,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 	workflowTypeName := executionInfo.WorkflowTypeName
 	workflowStartTimestamp := executionInfo.StartTimestamp.UnixNano()
 	workflowCloseTimestamp := wfCloseTime
-	workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+	workflowCloseStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := msBuilder.GetNextEventID() - 1
 
 	startEvent, ok := msBuilder.GetStartEvent()
@@ -835,7 +835,6 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(
 				// Use the same request ID to dedupe StartWorkflowExecution calls
 				RequestId:             common.StringPtr(ci.CreateRequestID),
 				WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
-				ChildPolicy:           attributes.ChildPolicy,
 				RetryPolicy:           attributes.RetryPolicy,
 				CronSchedule:          attributes.CronSchedule,
 				Memo:                  attributes.Memo,
@@ -1216,9 +1215,14 @@ func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(
 				return &workflow.EntityNotExistsError{Message: "Pending request cancellation not found."}
 			}
 
-			_, err := msBuilder.AddExternalWorkflowExecutionCancelRequested(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddExternalWorkflowExecutionCancelRequested(
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
 				request.CancelRequest.WorkflowExecution.GetRunId(),
 			)
@@ -1245,9 +1249,14 @@ func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(
 				return &workflow.EntityNotExistsError{Message: "Pending signal request not found."}
 			}
 
-			_, err := msBuilder.AddExternalWorkflowExecutionSignaled(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddExternalWorkflowExecutionSignaled(
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
 				request.SignalRequest.WorkflowExecution.GetRunId(),
 				request.SignalRequest.Control)
@@ -1274,10 +1283,15 @@ func (t *transferQueueActiveProcessorImpl) requestCancelFailed(
 				return &workflow.EntityNotExistsError{Message: "Pending request cancellation not found."}
 			}
 
-			_, err := msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 				common.EmptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
 				request.CancelRequest.WorkflowExecution.GetRunId(),
 				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
@@ -1304,10 +1318,15 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(
 				return &workflow.EntityNotExistsError{Message: "Pending signal request not found."}
 			}
 
-			_, err := msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
 				common.EmptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
 				request.SignalRequest.WorkflowExecution.GetRunId(),
 				request.SignalRequest.Control,
@@ -1353,26 +1372,4 @@ func (t *transferQueueActiveProcessorImpl) SignalExecutionWithRetry(
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-}
-
-func getWorkflowExecutionCloseStatus(
-	status int,
-) workflow.WorkflowExecutionCloseStatus {
-
-	switch status {
-	case persistence.WorkflowCloseStatusCompleted:
-		return workflow.WorkflowExecutionCloseStatusCompleted
-	case persistence.WorkflowCloseStatusFailed:
-		return workflow.WorkflowExecutionCloseStatusFailed
-	case persistence.WorkflowCloseStatusCanceled:
-		return workflow.WorkflowExecutionCloseStatusCanceled
-	case persistence.WorkflowCloseStatusTerminated:
-		return workflow.WorkflowExecutionCloseStatusTerminated
-	case persistence.WorkflowCloseStatusContinuedAsNew:
-		return workflow.WorkflowExecutionCloseStatusContinuedAsNew
-	case persistence.WorkflowCloseStatusTimedOut:
-		return workflow.WorkflowExecutionCloseStatusTimedOut
-	default:
-		panic("Invalid value for enum WorkflowExecutionCloseStatus")
-	}
 }

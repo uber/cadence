@@ -344,6 +344,15 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTimerTask(r
 	return err
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) DeleteTask(request *DeleteTaskRequest) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.DeleteTask(request)
+	return err
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }
@@ -730,5 +739,13 @@ func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(request *GetHisto
 		return nil, ErrPersistenceLimitExceeded
 	}
 	response, err := p.persistence.GetHistoryTree(request)
+	return response, err
+}
+
+func (p *historyV2RateLimitedPersistenceClient) GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	response, err := p.persistence.GetAllHistoryTreeBranches(request)
 	return response, err
 }

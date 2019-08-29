@@ -442,6 +442,19 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteTimerTask(request *Ran
 	return err
 }
 
+func (p *workflowExecutionPersistenceClient) DeleteTask(request *DeleteTaskRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteTaskScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteTaskScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteTask(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceRangeCompleteTimerTaskScope, err)
+	}
+
+	return err
+}
+
 func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
 	case *WorkflowExecutionAlreadyStartedError:
@@ -1124,6 +1137,17 @@ func (p *historyV2PersistenceClient) CompleteForkBranch(request *CompleteForkBra
 		p.updateErrorMetric(metrics.PersistenceCompleteForkBranchScope, err)
 	}
 	return err
+}
+
+func (p *historyV2PersistenceClient) GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceLatency)
+	response, err := p.persistence.GetAllHistoryTreeBranches(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetAllHistoryTreeBranchesScope, err)
+	}
+	return response, err
 }
 
 // GetHistoryTree returns all branch information of a tree
