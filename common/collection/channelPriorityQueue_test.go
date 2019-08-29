@@ -18,45 +18,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package filestore
+package collection
 
 import (
-	"context"
-	"errors"
+	"math/rand"
+	"testing"
 
-	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/stretchr/testify/assert"
 )
 
-type (
-	visibilityArchiver struct{}
-)
+func TestChannelPriorityQueue(t *testing.T) {
+	queue := NewChannelPriorityQueue(1)
 
-// NewVisibilityArchiver creates a new archiver.VisibilityArchiver based on filestore
-func NewVisibilityArchiver(
-	_ *archiver.VisibilityBootstrapContainer,
-	_ *config.FilestoreVisibilityArchiver,
-) archiver.VisibilityArchiver {
-	return &visibilityArchiver{}
+	err := queue.Add(1, 20)
+	assert.NoError(t, err)
+
+	err = queue.Add(0, 10)
+	assert.NoError(t, err)
+
+	item, ok := queue.Remove()
+	assert.Equal(t, 10, item)
+	assert.True(t, ok)
+
+	item, ok = queue.Remove()
+	assert.Equal(t, 20, item)
+	assert.True(t, ok)
+
+	err = queue.Add(2, 20)
+	assert.Error(t, err)
+
+	queue.Destroy()
+
+	item, ok = queue.Remove()
+	assert.Nil(t, item)
+	assert.False(t, ok)
 }
 
-func (v *visibilityArchiver) Archive(
-	ctx context.Context,
-	URI archiver.URI,
-	request *archiver.ArchiveVisibilityRequest,
-	opts ...archiver.ArchiveOption,
-) error {
-	return errors.New("method Archive() is not implemented")
+func BenchmarkChannelPriorityQueue(b *testing.B) {
+	queue := NewChannelPriorityQueue(100)
+
+	for i := 0; i < 10; i++ {
+		go sendChannelQueue(queue)
+	}
+
+	for n := 0; n < b.N; n++ {
+		queue.Remove()
+	}
 }
 
-func (v *visibilityArchiver) Query(
-	ctx context.Context,
-	URI archiver.URI,
-	request *archiver.QueryVisibilityRequest,
-) (*archiver.QueryVisibilityResponse, error) {
-	return nil, errors.New("method Query() is not implemented")
-}
-
-func (v *visibilityArchiver) ValidateURI(URI archiver.URI) error {
-	return errors.New("method ValidateURI() is not implemented")
+func sendChannelQueue(queue PriorityQueue) {
+	for {
+		priority := rand.Int() % numPriorities
+		queue.Add(priority, struct{}{})
+	}
 }
