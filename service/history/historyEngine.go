@@ -578,6 +578,13 @@ func (e *historyEngineImpl) GetMutableState(
 	return response, nil
 }
 
+func (e *historyEngineImpl) QueryWorkflow(
+	ctx ctx.Context,
+	request *h.QueryWorkflowRequest,
+) (*h.QueryWorkflowResponse, error) {
+	return nil, nil
+}
+
 func (e *historyEngineImpl) getMutableState(
 	ctx ctx.Context,
 	domainID string,

@@ -810,6 +810,8 @@ const (
 	SessionCountStatsScope
 	// HistoryResetWorkflowExecutionScope tracks ResetWorkflowExecution API calls received by service
 	HistoryResetWorkflowExecutionScope
+	// HistoryQueryWorkflowScope tracks QueryWorkflow API calls received by service
+	HistoryQueryWorkflowScope
 	// HistoryProcessDeleteHistoryEventScope tracks ProcessDeleteHistoryEvent processing calls
 	HistoryProcessDeleteHistoryEventScope
 	// WorkflowCompletionStatsScope tracks workflow completion updates
@@ -1161,6 +1163,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRemoveSignalMutableStateScope:                   {operation: "RemoveSignalMutableState"},
 		HistoryTerminateWorkflowExecutionScope:                 {operation: "TerminateWorkflowExecution"},
 		HistoryResetWorkflowExecutionScope:                     {operation: "ResetWorkflowExecution"},
+		HistoryQueryWorkflowScope:                              {operation: "QueryWorkflow"},
 		HistoryProcessDeleteHistoryEventScope:                  {operation: "ProcessDeleteHistoryEvent"},
 		HistoryScheduleDecisionTaskScope:                       {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:              {operation: "RecordChildExecutionCompleted"},
