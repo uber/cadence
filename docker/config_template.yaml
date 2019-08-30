@@ -32,6 +32,7 @@ persistence:
                 connectProtocol: "tcp"
                 user: {{ default .Env.MYSQL_USER "" }}
                 password: {{ default .Env.MYSQL_PWD "" }}
+                connectAttributes: {{ default .Env.MYSQL_CONNECT_ATTRS "{}" }}
         visibility:
             sql:
                 driverName: "mysql"
@@ -40,6 +41,7 @@ persistence:
                 connectProtocol: "tcp"
                 user: {{ default .Env.MYSQL_USER "" }}
                 password: {{ default .Env.MYSQL_PWD "" }}
+                connectAttributes: {{ default .Env.MYSQL_CONNECT_ATTRS "{}" }}
         {{- end }}
         {{- if eq $es "true" }}
         es-visibility:
