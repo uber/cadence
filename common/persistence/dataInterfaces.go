@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -2426,4 +2427,16 @@ func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]b
 		return nil, err
 	}
 	return token, nil
+}
+
+func BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID string) string {
+	return fmt.Sprintf("%v:%v:%v", domainID, workflowID, runID)
+}
+
+func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID string, err error) {
+	ss := strings.Split(info, ":")
+	if len(ss) != 3 {
+		return "", "", "", fmt.Errorf("not able to split info for  %s", info)
+	}
+	return ss[0], ss[1], ss[2], nil
 }

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/service/worker/scanner/history"
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
@@ -32,7 +33,15 @@ import (
 	"go.uber.org/cadence/workflow"
 )
 
-type contextKey int
+type (
+	contextKey int
+	// HistoryScavengerActivityHeartbeatDetails is the heartbeat detail for HistoryScavengerActivity
+	HistoryScavengerActivityHeartbeatDetails struct {
+		NextPageToken []byte
+		CurrentPage   int
+		DeletedCount  int
+	}
+)
 
 const (
 	scannerContextKey = contextKey(0)
@@ -103,8 +112,19 @@ func HistoryScannerWorkflow(ctx workflow.Context) error {
 }
 
 // HistoryScavengerActivity is the activity that runs history scavenger
-func HistoryScavengerActivity(aCtx context.Context) error {
+func HistoryScavengerActivity(aCtx context.Context) (HistoryScavengerActivityHeartbeatDetails, error) {
+	ctx := aCtx.Value(scannerContextKey).(scannerContext)
+	rps := ctx.cfg.PersistenceMaxQPS()
 
+	hbd := HistoryScavengerActivityHeartbeatDetails{}
+	if activity.HasHeartbeatDetails(aCtx) {
+		if err := activity.GetHeartbeatDetails(aCtx, &hbd); err != nil {
+			ctx.logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
+		}
+	}
+
+	scavenger := history.NewScavenger(ctx.historyDB, rps, ctx.sdkClient, hbd, ctx.metricsClient, ctx.logger)
+	return scavenger.Run()
 }
 
 // TaskListScavengerActivity is the activity that runs task list scavenger

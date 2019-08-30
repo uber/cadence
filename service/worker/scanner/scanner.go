@@ -72,6 +72,7 @@ type (
 	scannerContext struct {
 		taskDB        p.TaskManager
 		domainDB      p.MetadataManager
+		historyDB     p.HistoryV2Manager
 		cfg           Config
 		sdkClient     workflowserviceclient.Interface
 		metricsClient metrics.Client
@@ -173,7 +174,12 @@ func (s *Scanner) buildContext() error {
 	if err != nil {
 		return err
 	}
+	historyDB, err := pFactory.NewHistoryV2Manager()
+	if err != nil {
+		return err
+	}
 	s.context.taskDB = taskDB
 	s.context.domainDB = domainDB
+	s.context.historyDB = historyDB
 	return nil
 }
