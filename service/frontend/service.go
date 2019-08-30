@@ -177,7 +177,12 @@ func (s *Service) Start() {
 		visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
 			nil, base.GetMetricsClient(), log)
 	}
-	visibility := persistence.NewVisibilityManagerWrapper(visibilityFromDB, visibilityFromES, s.config.EnableReadVisibilityFromES)
+	visibility := persistence.NewVisibilityManagerWrapper(
+		visibilityFromDB,
+		visibilityFromES,
+		s.config.EnableReadVisibilityFromES,
+		dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
+	)
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {

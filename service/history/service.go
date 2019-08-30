@@ -49,7 +49,6 @@ type Config struct {
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
 	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
 	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
 	AdvancedVisibilityWritingMode   dynamicconfig.StringPropertyFn
 	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
 	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
@@ -173,7 +172,7 @@ const (
 )
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType string) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                                        numberOfShards,
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
@@ -185,8 +184,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
 		MaxAutoResetPoints:                                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints, defaultHistoryMaxAutoResetPoints),
 		MaxDecisionStartToCloseSeconds:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseSeconds, 240),
-		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, false), // deprecated, please use AdvancedVisibilityWritingMode
-		AdvancedVisibilityWritingMode:                         dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff),
+		AdvancedVisibilityWritingMode:                         dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist)),
 		EmitShardDiffLog:                                      dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog, false),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
@@ -285,7 +283,8 @@ type Service struct {
 func NewService(params *service.BootstrapParams) common.Daemon {
 	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 		params.PersistenceConfig.NumHistoryShards,
-		params.PersistenceConfig.DefaultStoreType())
+		params.PersistenceConfig.DefaultStoreType(),
+		params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 	return &Service{
@@ -343,7 +342,12 @@ func (s *Service) Start() {
 		esVisibility = espersistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
 			s.metricsClient, log)
 	}
-	visibility = persistence.NewVisibilityManagerWrapper(visibility, esVisibility, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false))
+	visibility = persistence.NewVisibilityManagerWrapper(
+		visibility,
+		esVisibility,
+		dynamicconfig.GetBoolPropertyFnFilteredByDomain(false), // history visibility never read
+		s.config.AdvancedVisibilityWritingMode,
+	)
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
