@@ -2416,6 +2416,13 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
+	// special handling of ExecutionTime for cron or retry
+	for _, execution := range archiverResponse.Executions {
+		if execution.GetExecutionTime() == 0 {
+			execution.ExecutionTime = common.Int64Ptr(execution.GetStartTime())
+		}
+	}
+
 	return &gen.ListArchivedWorkflowExecutionsResponse{
 		Executions:    archiverResponse.Executions,
 		NextPageToken: archiverResponse.NextPageToken,
