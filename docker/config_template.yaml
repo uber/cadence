@@ -33,6 +33,7 @@ persistence:
                 user: {{ default .Env.MYSQL_USER "" }}
                 password: {{ default .Env.MYSQL_PWD "" }}
                 connectAttributes: {{ default .Env.MYSQL_CONNECT_ATTRS "{}" }}
+                transactionIsolationAttrName: {{ default .Env.MYSQL_TX_ISOLATION_ATTR_NAME "" }}
         visibility:
             sql:
                 driverName: "mysql"
@@ -42,6 +43,7 @@ persistence:
                 user: {{ default .Env.MYSQL_USER "" }}
                 password: {{ default .Env.MYSQL_PWD "" }}
                 connectAttributes: {{ default .Env.MYSQL_CONNECT_ATTRS "{}" }}
+                transactionIsolationAttrName: {{ default .Env.MYSQL_TX_ISOLATION_ATTR_NAME "" }}
         {{- end }}
         {{- if eq $es "true" }}
         es-visibility:

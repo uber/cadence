@@ -88,7 +88,15 @@ func buildDSNAttrs(cfg *config.SQL) string {
 	// only override isolation level if not specified
 	if !hasAttr(attrs, isolationLevelAttrName) &&
 		!hasAttr(attrs, isolationLevelAttrNameLegacy) {
-		attrs[isolationLevelAttrName] = defaultIsolationLevel
+
+		var attrName string
+		if cfg.TransactionIsolationAttrName == "" {
+			attrName = isolationLevelAttrName
+		} else {
+			attrName = cfg.TransactionIsolationAttrName
+		}
+
+		attrs[attrName] = defaultIsolationLevel
 	}
 
 	// these attrs are always overriden

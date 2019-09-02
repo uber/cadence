@@ -108,6 +108,19 @@ func (s *StoreTestSuite) TestBuildDSN() {
 			outIsolationVal: "'repeatable-read'",
 			outURLPath:      "test:pass@tcp(192.168.0.1:3306)/db1?",
 		},
+		{
+			in: config.SQL{
+				User:                         "test",
+				Password:                     "pass",
+				ConnectProtocol:              "tcp",
+				ConnectAddr:                  "192.168.0.1:3306",
+				DatabaseName:                 "db1",
+				TransactionIsolationAttrName: "tx_isolation",
+			},
+			outIsolationKey: "tx_isolation",
+			outIsolationVal: "'READ-COMMITTED'",
+			outURLPath:      "test:pass@tcp(192.168.0.1:3306)/db1?",
+		},
 	}
 
 	for _, tc := range testCases {

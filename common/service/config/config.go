@@ -216,6 +216,10 @@ type (
 		// NumShards is the number of storage shards to use for tables
 		// in a sharded sql database. The default value for this param is 1
 		NumShards int `yaml:"nShards"`
+		// Name to use for the transaction isolation level connection attribute.
+		// Defaults to "transaction_isolation".
+		// This is ignored if "transaction_isolation" or "tx_isolation" is included in "ConnectAttributes"
+		TransactionIsolationAttrName string `yaml:"transactionIsolationAttrName"`
 	}
 
 	// Replicator describes the configuration of replicator
