@@ -127,6 +127,7 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 			if time.Now().Add(-cleanUpThreshold).Before(br.ForkTime) {
 				batchCount--
 				skips++
+				s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSkipCount)
 				continue
 			}
 
@@ -135,6 +136,7 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 				batchCount--
 				errorsOnSplitting++
 				s.logger.Error("unable to parse the history cleanup info", tag.DetailInfo(br.Info))
+				s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
 				continue
 			}
 
@@ -157,8 +159,10 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 			select {
 			case err := <-respCh:
 				if err == nil {
+					s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSuccessCount)
 					succCount++
 				} else {
+					s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
 					errCount++
 				}
 				if succCount+errCount == batchCount {
@@ -175,10 +179,6 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 		s.hbd.ErrorCount += errCount + errorsOnSplitting
 		s.hbd.SkipCount += skips
 		activity.RecordHeartbeat(ctx, s.hbd)
-
-		s.metrics.AddCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSuccessCount, int64(succCount))
-		s.metrics.AddCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount, int64(errCount+errorsOnSplitting))
-		s.metrics.AddCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSkipCount, int64(skips))
 
 		if len(s.hbd.NextPageToken) == 0 {
 			break
