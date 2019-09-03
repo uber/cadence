@@ -22,10 +22,10 @@ package scanner
 
 import (
 	"context"
-	"github.com/uber/cadence/client"
 	"time"
 
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"

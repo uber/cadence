@@ -22,6 +22,8 @@ package history
 
 import (
 	"context"
+	"time"
+
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -32,7 +34,6 @@ import (
 	"github.com/uber/cadence/service/worker/scanner"
 	"go.uber.org/cadence/activity"
 	"golang.org/x/time/rate"
-	"time"
 )
 
 type (
