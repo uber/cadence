@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/scanner"
@@ -120,11 +121,10 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 		}
 
 		skips := 0
-		errsSplit := 0
+		errorsOnSplitting := 0
 		// send all tasks
 		for _, br := range resp.Branches {
 			if time.Now().Add(-cleanUpThreshold).Before(br.ForkTime) {
-				//metric
 				batchCount--
 				skips++
 				continue
@@ -132,9 +132,9 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 
 			domainID, wid, rid, err := p.SplitHistoryGarbageCleanupInfo(br.Info)
 			if err != nil {
-				//metric, log
 				batchCount--
-				errsSplit++
+				errorsOnSplitting++
+				s.logger.Error("unable to parse the history cleanup info", tag.DetailInfo(br.Info))
 				continue
 			}
 
@@ -171,10 +171,14 @@ func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHe
 
 		s.hbd.CurrentPage++
 		s.hbd.NextPageToken = resp.NextPageToken
-		s.hbd.SkipCount += succCount
-		s.hbd.ErrorCount += errCount + errsSplit
+		s.hbd.SuccCount += succCount
+		s.hbd.ErrorCount += errCount + errorsOnSplitting
 		s.hbd.SkipCount += skips
 		activity.RecordHeartbeat(ctx, s.hbd)
+
+		s.metrics.AddCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSuccessCount, int64(succCount))
+		s.metrics.AddCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount, int64(errCount+errorsOnSplitting))
+		s.metrics.AddCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSkipCount, int64(skips))
 
 		if len(s.hbd.NextPageToken) == 0 {
 			break
@@ -198,11 +202,13 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 			err := s.limiter.Wait(ctx)
 			if err != nil {
 				respCh <- err
+				s.logger.Error("encounter error when wait for rate limiter",
+					getTaskLoggingTags(err, task)...)
 				continue
 			}
 
 			// this checks if the mutableState still exists
-			// if not then delete the history branch
+			// if not then the history branch is garbage, we need to delete the history branch
 			_, err = s.workflowClient.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
 				DomainUUID: common.StringPtr(task.domainID),
 				Execution: &shared.WorkflowExecution{
@@ -213,10 +219,12 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 
 			if err != nil {
 				if _, ok := err.(*shared.EntityNotExistsError); ok {
-					//delete history
+					//deleting history branch
 					branchToken, err := p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)
 					if err != nil {
 						respCh <- err
+						s.logger.Error("encounter error when creating branch token",
+							getTaskLoggingTags(err, task)...)
 						continue
 					}
 
@@ -229,18 +237,45 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 					})
 					if err != nil {
 						respCh <- err
-						continue
+						s.logger.Error("encounter error when deleting garbage history branch",
+							getTaskLoggingTags(err, task)...)
 					} else {
 						// deleted garbage
+						s.logger.Info("deleted history garbage",
+							getTaskLoggingTags(nil, task)...)
+
+						respCh <- nil
 					}
 				} else {
+					s.logger.Error("encounter error when describing the mutable state",
+						getTaskLoggingTags(err, task)...)
 					respCh <- err
-					continue
 				}
 			} else {
 				// no garbage
 				respCh <- nil
 			}
+		}
+	}
+}
+
+func getTaskLoggingTags(err error, task taskDetail) []tag.Tag {
+	if err != nil {
+		return []tag.Tag{
+			tag.Error(err),
+			tag.WorkflowDomainID(task.domainID),
+			tag.WorkflowID(task.workflowID),
+			tag.WorkflowRunID(task.runID),
+			tag.WorkflowTreeID(task.treeID),
+			tag.WorkflowBranchID(task.branchID),
+		}
+	} else {
+		return []tag.Tag{
+			tag.WorkflowDomainID(task.domainID),
+			tag.WorkflowID(task.workflowID),
+			tag.WorkflowRunID(task.runID),
+			tag.WorkflowTreeID(task.treeID),
+			tag.WorkflowBranchID(task.branchID),
 		}
 	}
 }
