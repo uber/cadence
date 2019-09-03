@@ -2372,6 +2372,10 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(&gen.BadRequestError{Message: "Cluster is not configured for visibility archival"}, scope)
 	}
 
+	if !wh.GetArchivalMetadata().GetVisibilityConfig().ReadEnabled() {
+		return nil, wh.error(&gen.BadRequestError{Message: "Cluster is not configured for reading archived visibility records"}, scope)
+	}
+
 	entry, err := wh.domainCache.GetDomain(listRequest.GetDomain())
 	if err != nil {
 		return nil, wh.error(err, scope)
