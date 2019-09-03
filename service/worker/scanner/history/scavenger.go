@@ -42,7 +42,7 @@ type (
 	Scavenger struct {
 		db             p.HistoryV2Manager
 		workflowClient historyserviceclient.Interface
-		hbd            scanner.HistoryScavengerActivityHeartbeatDetails
+		hbd            scanner.ScavengerHeartbeatDetails
 		rps            int
 		limiter        *rate.Limiter
 		metrics        metrics.Client
@@ -57,7 +57,7 @@ type (
 		branchID   string
 
 		// passing along the current heartbeat details to make heartbeat within a task so that it won't timeout
-		hbd scanner.HistoryScavengerActivityHeartbeatDetails
+		hbd scanner.ScavengerHeartbeatDetails
 	}
 )
 
@@ -80,7 +80,7 @@ func NewScavenger(
 	db p.HistoryV2Manager,
 	rps int,
 	client historyserviceclient.Interface,
-	hbd scanner.HistoryScavengerActivityHeartbeatDetails,
+	hbd scanner.ScavengerHeartbeatDetails,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) *Scavenger {
@@ -99,7 +99,7 @@ func NewScavenger(
 }
 
 // Start starts the scavenger
-func (s *Scavenger) Run(ctx context.Context) (scanner.HistoryScavengerActivityHeartbeatDetails, error) {
+func (s *Scavenger) Run(ctx context.Context) (scanner.ScavengerHeartbeatDetails, error) {
 	taskCh := make(chan taskDetail, pageSize)
 	respCh := make(chan error, pageSize)
 	concurrency := s.rps/rpsPerConcurrency + 1

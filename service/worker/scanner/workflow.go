@@ -35,8 +35,8 @@ import (
 
 type (
 	contextKey int
-	// HistoryScavengerActivityHeartbeatDetails is the heartbeat detail for HistoryScavengerActivity
-	HistoryScavengerActivityHeartbeatDetails struct {
+	// ScavengerHeartbeatDetails is the heartbeat detail for HistoryScavengerActivity
+	ScavengerHeartbeatDetails struct {
 		NextPageToken []byte
 		CurrentPage   int
 		SkipCount     int
@@ -114,11 +114,11 @@ func HistoryScannerWorkflow(ctx workflow.Context) error {
 }
 
 // HistoryScavengerActivity is the activity that runs history scavenger
-func HistoryScavengerActivity(aCtx context.Context) (HistoryScavengerActivityHeartbeatDetails, error) {
+func HistoryScavengerActivity(aCtx context.Context) (ScavengerHeartbeatDetails, error) {
 	ctx := aCtx.Value(scannerContextKey).(scannerContext)
 	rps := ctx.cfg.PersistenceMaxQPS()
 
-	hbd := HistoryScavengerActivityHeartbeatDetails{}
+	hbd := ScavengerHeartbeatDetails{}
 	if activity.HasHeartbeatDetails(aCtx) {
 		if err := activity.GetHeartbeatDetails(aCtx, &hbd); err != nil {
 			ctx.logger.Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
