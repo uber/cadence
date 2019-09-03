@@ -32,17 +32,25 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/worker/scanner"
 	"go.uber.org/cadence/activity"
 	"golang.org/x/time/rate"
 )
 
 type (
+	// ScavengerHeartbeatDetails is the heartbeat detail for HistoryScavengerActivity
+	ScavengerHeartbeatDetails struct {
+		NextPageToken []byte
+		CurrentPage   int
+		SkipCount     int
+		ErrorCount    int
+		SuccCount     int
+	}
+
 	// Scavenger is the type that holds the state for history scavenger daemon
 	Scavenger struct {
 		db             p.HistoryV2Manager
 		workflowClient historyserviceclient.Interface
-		hbd            scanner.ScavengerHeartbeatDetails
+		hbd            ScavengerHeartbeatDetails
 		rps            int
 		limiter        *rate.Limiter
 		metrics        metrics.Client
@@ -57,7 +65,7 @@ type (
 		branchID   string
 
 		// passing along the current heartbeat details to make heartbeat within a task so that it won't timeout
-		hbd scanner.ScavengerHeartbeatDetails
+		hbd ScavengerHeartbeatDetails
 	}
 )
 
@@ -80,7 +88,7 @@ func NewScavenger(
 	db p.HistoryV2Manager,
 	rps int,
 	client historyserviceclient.Interface,
-	hbd scanner.ScavengerHeartbeatDetails,
+	hbd ScavengerHeartbeatDetails,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) *Scavenger {
@@ -99,7 +107,7 @@ func NewScavenger(
 }
 
 // Start starts the scavenger
-func (s *Scavenger) Run(ctx context.Context) (scanner.ScavengerHeartbeatDetails, error) {
+func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) {
 	taskCh := make(chan taskDetail, pageSize)
 	respCh := make(chan error, pageSize)
 	concurrency := s.rps/rpsPerConcurrency + 1
