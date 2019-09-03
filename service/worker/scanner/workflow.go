@@ -39,7 +39,9 @@ type (
 	HistoryScavengerActivityHeartbeatDetails struct {
 		NextPageToken []byte
 		CurrentPage   int
-		DeletedCount  int
+		SkipCount     int
+		ErrorCount    int
+		SuccCount     int
 	}
 )
 
@@ -123,8 +125,8 @@ func HistoryScavengerActivity(aCtx context.Context) (HistoryScavengerActivityHea
 		}
 	}
 
-	scavenger := history.NewScavenger(ctx.historyDB, rps, ctx.sdkClient, hbd, ctx.metricsClient, ctx.logger)
-	return scavenger.Run()
+	scavenger := history.NewScavenger(ctx.historyDB, rps, ctx.clientBean.GetHistoryClient(), hbd, ctx.metricsClient, ctx.logger)
+	return scavenger.Run(aCtx)
 }
 
 // TaskListScavengerActivity is the activity that runs task list scavenger

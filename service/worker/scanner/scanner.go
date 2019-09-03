@@ -22,6 +22,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/uber/cadence/client"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -60,6 +61,8 @@ type (
 		Config Config
 		// SDKClient is an instance of cadence sdk client
 		SDKClient workflowserviceclient.Interface
+		// clientBean is an instance of ClientBean
+		ClientBean client.Bean
 		// MetricsClient is an instance of metrics object for emitting stats
 		MetricsClient metrics.Client
 		Logger        log.Logger
@@ -75,6 +78,7 @@ type (
 		historyDB     p.HistoryV2Manager
 		cfg           Config
 		sdkClient     workflowserviceclient.Interface
+		clientBean    client.Bean
 		metricsClient metrics.Client
 		tallyScope    tally.Scope
 		logger        log.Logger
@@ -105,6 +109,7 @@ func New(params *BootstrapParams) *Scanner {
 		context: scannerContext{
 			cfg:           cfg,
 			sdkClient:     params.SDKClient,
+			clientBean:    params.ClientBean,
 			metricsClient: params.MetricsClient,
 			tallyScope:    params.TallyScope,
 			zapLogger:     zapLogger,

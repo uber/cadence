@@ -2409,6 +2409,20 @@ func NewHistoryBranchToken(treeID string) ([]byte, error) {
 	return token, nil
 }
 
+// NewHistoryBranchTokenByBranchID return a new branch token with treeID/branchID
+func NewHistoryBranchTokenByBranchID(treeID, branchID string) ([]byte, error) {
+	bi := &workflow.HistoryBranch{
+		TreeID:    &treeID,
+		BranchID:  &branchID,
+		Ancestors: []*workflow.HistoryBranchRange{},
+	}
+	token, err := internalThriftEncoder.Encode(bi)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
 // NewHistoryBranchTokenFromAnother make up a branchToken
 func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]byte, error) {
 	var branch workflow.HistoryBranch

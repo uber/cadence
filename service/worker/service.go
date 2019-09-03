@@ -197,6 +197,7 @@ func (s *Service) startScanner(base service.Service) {
 	params := &scanner.BootstrapParams{
 		Config:        *s.config.ScannerCfg,
 		SDKClient:     s.params.PublicClient,
+		ClientBean:    base.GetClientBean(),
 		MetricsClient: s.metricsClient,
 		Logger:        s.logger,
 		TallyScope:    s.params.MetricScope,
