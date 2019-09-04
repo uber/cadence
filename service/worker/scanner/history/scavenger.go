@@ -48,13 +48,14 @@ type (
 
 	// Scavenger is the type that holds the state for history scavenger daemon
 	Scavenger struct {
-		db             p.HistoryV2Manager
-		workflowClient historyserviceclient.Interface
-		hbd            ScavengerHeartbeatDetails
-		rps            int
-		limiter        *rate.Limiter
-		metrics        metrics.Client
-		logger         log.Logger
+		db       p.HistoryV2Manager
+		client   historyserviceclient.Interface
+		hbd      ScavengerHeartbeatDetails
+		rps      int
+		limiter  *rate.Limiter
+		metrics  metrics.Client
+		logger   log.Logger
+		isInTest bool
 	}
 
 	taskDetail struct {
@@ -96,13 +97,13 @@ func NewScavenger(
 	rateLimiter := rate.NewLimiter(rate.Limit(rps), rps)
 
 	return &Scavenger{
-		db:             db,
-		workflowClient: client,
-		hbd:            hbd,
-		rps:            rps,
-		limiter:        rateLimiter,
-		metrics:        metricsClient,
-		logger:         logger,
+		db:      db,
+		client:  client,
+		hbd:     hbd,
+		rps:     rps,
+		limiter: rateLimiter,
+		metrics: metricsClient,
+		logger:  logger,
 	}
 }
 
@@ -118,15 +119,13 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 	for {
 		resp, err := s.db.GetAllHistoryTreeBranches(&p.GetAllHistoryTreeBranchesRequest{
+			PageSize:pageSize,
 			NextPageToken: s.hbd.NextPageToken,
 		})
 		if err != nil {
 			return s.hbd, err
 		}
 		batchCount := len(resp.Branches)
-		if batchCount <= 0 {
-			break
-		}
 
 		skips := 0
 		errorsOnSplitting := 0
@@ -161,23 +160,25 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 		succCount := 0
 		errCount := 0
-		// wait for counters indicate this batch is done
-	Loop:
-		for {
-			select {
-			case err := <-respCh:
-				if err == nil {
-					s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSuccessCount)
-					succCount++
-				} else {
-					s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
-					errCount++
+		if batchCount > 0{
+			// wait for counters indicate this batch is done
+		Loop:
+			for {
+				select {
+				case err := <-respCh:
+					if err == nil {
+						s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSuccessCount)
+						succCount++
+					} else {
+						s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
+						errCount++
+					}
+					if succCount+errCount == batchCount {
+						break Loop
+					}
+				case <-ctx.Done():
+					return s.hbd, ctx.Err()
 				}
-				if succCount+errCount == batchCount {
-					break Loop
-				}
-			case <-ctx.Done():
-				return s.hbd, ctx.Err()
 			}
 		}
 
@@ -186,7 +187,9 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 		s.hbd.SuccCount += succCount
 		s.hbd.ErrorCount += errCount + errorsOnSplitting
 		s.hbd.SkipCount += skips
-		activity.RecordHeartbeat(ctx, s.hbd)
+		if !s.isInTest{
+			activity.RecordHeartbeat(ctx, s.hbd)
+		}
 
 		if len(s.hbd.NextPageToken) == 0 {
 			break
@@ -205,7 +208,9 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 				return
 			}
 
-			activity.RecordHeartbeat(ctx, s.hbd)
+			if !s.isInTest{
+				activity.RecordHeartbeat(ctx, s.hbd)
+			}
 
 			err := s.limiter.Wait(ctx)
 			if err != nil {
@@ -217,7 +222,7 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 
 			// this checks if the mutableState still exists
 			// if not then the history branch is garbage, we need to delete the history branch
-			_, err = s.workflowClient.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
+			_, err = s.client.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
 				DomainUUID: common.StringPtr(task.domainID),
 				Execution: &shared.WorkflowExecution{
 					WorkflowId: common.StringPtr(task.workflowID),
