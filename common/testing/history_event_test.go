@@ -22,7 +22,6 @@ package testing
 
 import (
 	"fmt"
-	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -50,37 +49,22 @@ func (s *historyEventTestSuit) SetupTest() {
 
 // This is a sample about how to use the generator
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
-
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-		}
-	}()
-
-	totalBranchNumber := 2
-	currentBranch := totalBranchNumber
-	root := &NDCTestBranch{
-		Batches: make([]NDCTestBatch, 0),
-	}
-	curr := root
-	//eventRanches := make([][]Vertex, 0, totalBranchNumber)
-	for currentBranch > 0 {
-		for s.generator.HasNextVertex() {
-			events := s.generator.GetNextVertices()
-			newBatch := NDCTestBatch{
-				Events: events,
-			}
-			curr.Batches = append(curr.Batches, newBatch)
-			for _, e := range events {
-				fmt.Println(e.GetName())
-				fmt.Println(e.GetData().(*shared.HistoryEvent).GetEventId())
-			}
-		}
-		currentBranch--
-		if currentBranch > 0 {
-			resetIdx := s.generator.RandomResetToResetPoint()
-			curr = root.Split(resetIdx)
+	for s.generator.HasNextVertex() {
+		events := s.generator.GetNextVertices()
+		for _, e := range events {
+			fmt.Println(e.GetName())
+			fmt.Println(e.GetData().(*shared.HistoryEvent).GetEventId())
 		}
 	}
 	s.NotEmpty(s.generator.ListGeneratedVertices())
+
+	newGenerator := s.generator.RandomResetToResetPoint()
+	for newGenerator.HasNextVertex() {
+		events := newGenerator.GetNextVertices()
+		for _, e := range events {
+			fmt.Println(e.GetName())
+			fmt.Println(e.GetData().(*shared.HistoryEvent).GetEventId())
+		}
+	}
+	s.NotEmpty(newGenerator.ListGeneratedVertices())
 }

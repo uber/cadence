@@ -62,6 +62,7 @@ type (
 		exitVertices        map[Vertex]bool
 		randomEntryVertices []Vertex
 		dice                *rand.Rand
+		seed                int64
 		canDoBatch          func([]Vertex) bool
 		resetPoints         []ResetPoint
 		resetCount          int64
@@ -102,6 +103,7 @@ func NewEventGenerator(
 		exitVertices:        make(map[Vertex]bool),
 		randomEntryVertices: make([]Vertex, 0),
 		dice:                rand.New(rand.NewSource(seed)),
+		seed:                seed,
 		canDoBatch:          defaultBatchFunc,
 		resetPoints:         make([]ResetPoint, 0),
 		resetCount:          0,
@@ -199,27 +201,45 @@ func (g *EventGenerator) ListResetPoint() []ResetPoint {
 }
 
 // RandomResetToResetPoint randomly pick a reset point and reset the event generator to the point
-func (g *EventGenerator) RandomResetToResetPoint() int {
+func (g *EventGenerator) RandomResetToResetPoint() Generator {
 
 	// Random reset does not reset to index 0
 	nextIdx := g.dice.Intn(len(g.resetPoints)-1) + 1
-	g.ResetToResetPoint(nextIdx)
-	return nextIdx
+	return g.ResetToResetPoint(nextIdx)
 }
 
 // ResetToResetPoint resets to the corresponding reset point based on the input reset point index
 func (g *EventGenerator) ResetToResetPoint(
 	index int,
-) {
+) Generator {
 
 	if index >= len(g.resetPoints) {
 		panic("The reset point does not exist.")
 	}
 	toReset := g.resetPoints[index]
-	g.previousVertices = toReset.previousVertices
-	g.leafVertices = toReset.leafVertices
-	g.resetPoints = g.resetPoints[index:]
-	g.resetCount++
+	previousVertices := make([]Vertex, len(toReset.previousVertices))
+	copy(previousVertices, toReset.previousVertices)
+	leafVertices := make([]Vertex, len(toReset.leafVertices))
+	copy(leafVertices, toReset.leafVertices)
+	entryVertices := make([]Vertex, len(g.entryVertices))
+	copy(entryVertices, g.entryVertices)
+	randomEntryVertices := make([]Vertex, len(g.randomEntryVertices))
+	copy(randomEntryVertices, g.randomEntryVertices)
+	resetPoints := make([]ResetPoint, len(g.resetPoints[index:]))
+	copy(resetPoints, g.resetPoints[index:])
+	return &EventGenerator{
+		connections:         copyConnections(g.connections),
+		previousVertices:    previousVertices,
+		leafVertices:        leafVertices,
+		entryVertices:       entryVertices,
+		exitVertices:        copyExitVertices(g.exitVertices),
+		randomEntryVertices: randomEntryVertices,
+		dice:                rand.New(rand.NewSource(g.seed)),
+		seed:                g.seed,
+		canDoBatch:          g.canDoBatch,
+		resetPoints:         resetPoints,
+		resetCount:          g.resetCount + 1,
+	}
 }
 
 // SetBatchGenerationRule sets a function to determine next generated batch of history events

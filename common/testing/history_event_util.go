@@ -995,11 +995,37 @@ func InitializeHistoryEventGenerator(
 	return generator
 }
 
-func getDefaultHistoryEvent(eventID, version int64) *shared.HistoryEvent {
+func getDefaultHistoryEvent(
+	eventID int64,
+	version int64,
+) *shared.HistoryEvent {
+
 	return &shared.HistoryEvent{
 		EventId:   common.Int64Ptr(eventID),
 		Timestamp: common.Int64Ptr(time.Now().Unix()),
 		TaskId:    common.Int64Ptr(common.EmptyEventTaskID),
 		Version:   common.Int64Ptr(version),
 	}
+}
+
+func copyConnections(
+	originalMap map[Vertex][]Edge,
+) map[Vertex][]Edge {
+
+	newMap := make(map[Vertex][]Edge)
+	for key, value := range originalMap {
+		newMap[key] = value
+	}
+	return newMap
+}
+
+func copyExitVertices(
+	originalMap map[Vertex]bool,
+) map[Vertex]bool {
+
+	newMap := make(map[Vertex]bool)
+	for key, value := range originalMap {
+		newMap[key] = value
+	}
+	return newMap
 }

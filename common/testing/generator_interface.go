@@ -55,9 +55,9 @@ type (
 		// ListResetPoint lists all available reset points
 		ListResetPoint() []ResetPoint
 		// RandomResetToResetPoint randomly pick a reset point to reset and return the reset point index
-		RandomResetToResetPoint() int
+		RandomResetToResetPoint() Generator
 		// ResetToResetPoint resets the generator to a reset point
-		ResetToResetPoint(int)
+		ResetToResetPoint(int) Generator
 		// SetBatchGenerationRule sets a function that used in GetNextVertex to return batch result
 		SetBatchGenerationRule(func([]Vertex) bool)
 	}
