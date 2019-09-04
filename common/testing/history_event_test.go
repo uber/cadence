@@ -22,9 +22,11 @@ package testing
 
 import (
 	"fmt"
+	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/shared"
 )
 
 type (
@@ -49,6 +51,12 @@ func (s *historyEventTestSuit) SetupTest() {
 // This is a sample about how to use the generator
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
+		}
+	}()
+
 	totalBranchNumber := 2
 	currentBranch := totalBranchNumber
 	root := &NDCTestBranch{
@@ -65,6 +73,7 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 			curr.Batches = append(curr.Batches, newBatch)
 			for _, e := range events {
 				fmt.Println(e.GetName())
+				fmt.Println(e.GetData().(*shared.HistoryEvent).GetEventId())
 			}
 		}
 		currentBranch--
@@ -74,20 +83,4 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 		}
 	}
 	s.NotEmpty(s.generator.ListGeneratedVertices())
-	queue := []*NDCTestBranch{root}
-	for len(queue) > 0 {
-		b := queue[0]
-		queue = queue[1:]
-		for _, batch := range b.Batches {
-			for _, event := range batch.Events {
-				fmt.Println(event.GetName())
-			}
-		}
-		queue = append(queue, b.Next...)
-	}
-
-	// Generator one branch of history events
-	batches := []NDCTestBatch{}
-	batches = append(batches, root.Batches...)
-	batches = append(batches, root.Next[0].Batches...)
 }

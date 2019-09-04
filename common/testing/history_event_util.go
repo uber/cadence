@@ -29,20 +29,19 @@ import (
 )
 
 const (
-	timeout                = int32(1)
-	cause                  = "NDC test"
-	signal                 = "NDC signal"
-	checksum               = "NDC checksum"
-	childWorkflowPrefix    = "child-"
-	externalWorkflowPrefix = "external-"
-	reason                 = "NDC reason"
-	defaultVersion         = 1
-	workflowType           = "test-workflow-type"
-	taskList               = "taskList"
-	identity               = "identity"
-	decisionTaskAttempts   = 0
-	childWorkflowID        = "child-workflowID"
-	externalWorkflowID     = "external-workflowID"
+	timeout              = int32(1)
+	cause                = "NDC test"
+	signal               = "NDC signal"
+	checksum             = "NDC checksum"
+	childWorkflowPrefix  = "child-"
+	reason               = "NDC reason"
+	defaultVersion       = 1
+	workflowType         = "test-workflow-type"
+	taskList             = "taskList"
+	identity             = "identity"
+	decisionTaskAttempts = 0
+	childWorkflowID      = "child-workflowID"
+	externalWorkflowID   = "external-workflowID"
 )
 
 // InitializeHistoryEventGenerator initializes the history event generator
@@ -89,21 +88,6 @@ func InitializeHistoryEventGenerator(
 		}
 		return count > 0
 	}
-	hasPendingStartActivity := func() bool {
-		count := 0
-		for _, e := range generator.ListGeneratedVertices() {
-			switch e.GetName() {
-			case shared.EventTypeActivityTaskStarted.String():
-				count++
-			case shared.EventTypeActivityTaskCanceled.String(),
-				shared.EventTypeActivityTaskFailed.String(),
-				shared.EventTypeActivityTaskTimedOut.String(),
-				shared.EventTypeActivityTaskCompleted.String():
-				count--
-			}
-		}
-		return count > 0
-	}
 	canDoBatch := func(history []Vertex) bool {
 		if len(history) == 0 {
 			return true
@@ -136,9 +120,12 @@ func InitializeHistoryEventGenerator(
 	decisionModel := NewHistoryEventModel()
 	decisionSchedule := NewHistoryEventVertex(shared.EventTypeDecisionTaskScheduled.String())
 	decisionSchedule.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeDecisionTaskScheduled.Ptr()
 		historyEvent.DecisionTaskScheduledEventAttributes = &shared.DecisionTaskScheduledEventAttributes{
 			TaskList: &shared.TaskList{
@@ -153,9 +140,12 @@ func InitializeHistoryEventGenerator(
 	decisionStart := NewHistoryEventVertex(shared.EventTypeDecisionTaskStarted.String())
 	decisionStart.SetIsStrictOnNextVertex(true)
 	decisionStart.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeDecisionTaskStarted.Ptr()
 		historyEvent.DecisionTaskStartedEventAttributes = &shared.DecisionTaskStartedEventAttributes{
 			ScheduledEventId: lastEvent.EventId,
@@ -166,9 +156,12 @@ func InitializeHistoryEventGenerator(
 	})
 	decisionFail := NewHistoryEventVertex(shared.EventTypeDecisionTaskFailed.String())
 	decisionFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeDecisionTaskFailed.Ptr()
 		historyEvent.DecisionTaskFailedEventAttributes = &shared.DecisionTaskFailedEventAttributes{
 			ScheduledEventId: lastEvent.GetDecisionTaskStartedEventAttributes().ScheduledEventId,
@@ -181,9 +174,12 @@ func InitializeHistoryEventGenerator(
 	})
 	decisionTimedOut := NewHistoryEventVertex(shared.EventTypeDecisionTaskTimedOut.String())
 	decisionTimedOut.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeDecisionTaskTimedOut.Ptr()
 		historyEvent.DecisionTaskTimedOutEventAttributes = &shared.DecisionTaskTimedOutEventAttributes{
 			ScheduledEventId: lastEvent.GetDecisionTaskStartedEventAttributes().ScheduledEventId,
@@ -194,9 +190,12 @@ func InitializeHistoryEventGenerator(
 	})
 	decisionComplete := NewHistoryEventVertex(shared.EventTypeDecisionTaskCompleted.String())
 	decisionComplete.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeDecisionTaskCompleted.Ptr()
 		historyEvent.DecisionTaskCompletedEventAttributes = &shared.DecisionTaskCompletedEventAttributes{
 			ScheduledEventId: lastEvent.GetDecisionTaskStartedEventAttributes().ScheduledEventId,
@@ -221,9 +220,10 @@ func InitializeHistoryEventGenerator(
 
 	//Setup workflow model
 	workflowModel := NewHistoryEventModel()
+
 	workflowStart := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionStarted.String())
 	workflowStart.SetDataFunc(func(input ...interface{}) interface{} {
-		historyEvent := getDefaultHistoryEvent(0, defaultVersion)
+		historyEvent := getDefaultHistoryEvent(1, defaultVersion)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionStarted.Ptr()
 		historyEvent.WorkflowExecutionStartedEventAttributes = &shared.WorkflowExecutionStartedEventAttributes{
 			WorkflowType: &shared.WorkflowType{
@@ -242,9 +242,12 @@ func InitializeHistoryEventGenerator(
 	})
 	workflowSignal := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionSignaled.String())
 	workflowSignal.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionSignaled.Ptr()
 		historyEvent.WorkflowExecutionSignaledEventAttributes = &shared.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr(signal),
@@ -253,12 +256,52 @@ func InitializeHistoryEventGenerator(
 		return historyEvent
 	})
 	workflowComplete := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionCompleted.String())
+	workflowComplete.SetDataFunc(func(input ...interface{}) interface{} {
+		lastEvent := input[0].(*shared.HistoryEvent)
+		eventID := lastEvent.GetEventId() + input[1].(int64)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
+		historyEvent.EventType = shared.EventTypeWorkflowExecutionCompleted.Ptr()
+		historyEvent.WorkflowExecutionCompletedEventAttributes = &shared.WorkflowExecutionCompletedEventAttributes{
+			DecisionTaskCompletedEventId: lastEvent.EventId,
+		}
+		return historyEvent
+	})
 	continueAsNew := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionContinuedAsNew.String())
+	continueAsNew.SetDataFunc(func(input ...interface{}) interface{} {
+		lastEvent := input[0].(*shared.HistoryEvent)
+		eventID := lastEvent.GetEventId() + input[1].(int64)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
+		historyEvent.EventType = shared.EventTypeWorkflowExecutionContinuedAsNew.Ptr()
+		historyEvent.WorkflowExecutionContinuedAsNewEventAttributes = &shared.WorkflowExecutionContinuedAsNewEventAttributes{
+			NewExecutionRunId: common.StringPtr(uuid.New()),
+			WorkflowType: &shared.WorkflowType{
+				Name: common.StringPtr(workflowType),
+			},
+			TaskList: &shared.TaskList{
+				Name: common.StringPtr(taskList),
+				Kind: shared.TaskListKindNormal.Ptr(),
+			},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
+			DecisionTaskCompletedEventId:        common.Int64Ptr(eventID - 1),
+			Initiator:                           shared.ContinueAsNewInitiatorDecider.Ptr(),
+		}
+		return historyEvent
+	})
 	workflowFail := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionFailed.String())
 	workflowFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionFailed.Ptr()
 		historyEvent.WorkflowExecutionFailedEventAttributes = &shared.WorkflowExecutionFailedEventAttributes{
 			DecisionTaskCompletedEventId: lastEvent.EventId,
@@ -267,9 +310,12 @@ func InitializeHistoryEventGenerator(
 	})
 	workflowCancel := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionCanceled.String())
 	workflowCancel.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionCanceled.Ptr()
 		historyEvent.WorkflowExecutionCanceledEventAttributes = &shared.WorkflowExecutionCanceledEventAttributes{
 			DecisionTaskCompletedEventId: lastEvent.EventId,
@@ -278,9 +324,12 @@ func InitializeHistoryEventGenerator(
 	})
 	workflowCancelRequest := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionCancelRequested.String())
 	workflowCancelRequest.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionCancelRequested.Ptr()
 		historyEvent.WorkflowExecutionCancelRequestedEventAttributes = &shared.WorkflowExecutionCancelRequestedEventAttributes{
 			Cause:                    common.StringPtr(""),
@@ -295,9 +344,12 @@ func InitializeHistoryEventGenerator(
 	})
 	workflowTerminate := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionTerminated.String())
 	workflowTerminate.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionTerminated.Ptr()
 		historyEvent.WorkflowExecutionTerminatedEventAttributes = &shared.WorkflowExecutionTerminatedEventAttributes{
 			Identity: common.StringPtr(identity),
@@ -307,9 +359,12 @@ func InitializeHistoryEventGenerator(
 	})
 	workflowTimedOut := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionTimedOut.String())
 	workflowTimedOut.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionTimedOut.Ptr()
 		historyEvent.WorkflowExecutionTimedOutEventAttributes = &shared.WorkflowExecutionTimedOutEventAttributes{
 			TimeoutType: shared.TimeoutTypeStartToClose.Ptr(),
@@ -335,9 +390,12 @@ func InitializeHistoryEventGenerator(
 	activityModel := NewHistoryEventModel()
 	activitySchedule := NewHistoryEventVertex(shared.EventTypeActivityTaskScheduled.String())
 	activitySchedule.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskScheduled.Ptr()
 		historyEvent.ActivityTaskScheduledEventAttributes = &shared.ActivityTaskScheduledEventAttributes{
 			ActivityId: common.StringPtr(uuid.New()),
@@ -358,9 +416,12 @@ func InitializeHistoryEventGenerator(
 	})
 	activityStart := NewHistoryEventVertex(shared.EventTypeActivityTaskStarted.String())
 	activityStart.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskStarted.Ptr()
 		historyEvent.ActivityTaskStartedEventAttributes = &shared.ActivityTaskStartedEventAttributes{
 			ScheduledEventId: lastEvent.EventId,
@@ -372,9 +433,12 @@ func InitializeHistoryEventGenerator(
 	})
 	activityComplete := NewHistoryEventVertex(shared.EventTypeActivityTaskCompleted.String())
 	activityComplete.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskCompleted.Ptr()
 		historyEvent.ActivityTaskCompletedEventAttributes = &shared.ActivityTaskCompletedEventAttributes{
 			ScheduledEventId: lastEvent.GetActivityTaskStartedEventAttributes().ScheduledEventId,
@@ -385,9 +449,12 @@ func InitializeHistoryEventGenerator(
 	})
 	activityFail := NewHistoryEventVertex(shared.EventTypeActivityTaskFailed.String())
 	activityFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskFailed.Ptr()
 		historyEvent.ActivityTaskFailedEventAttributes = &shared.ActivityTaskFailedEventAttributes{
 			ScheduledEventId: lastEvent.GetActivityTaskStartedEventAttributes().ScheduledEventId,
@@ -399,9 +466,12 @@ func InitializeHistoryEventGenerator(
 	})
 	activityTimedOut := NewHistoryEventVertex(shared.EventTypeActivityTaskTimedOut.String())
 	activityTimedOut.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskTimedOut.Ptr()
 		historyEvent.ActivityTaskTimedOutEventAttributes = &shared.ActivityTaskTimedOutEventAttributes{
 			ScheduledEventId: lastEvent.GetActivityTaskStartedEventAttributes().ScheduledEventId,
@@ -412,9 +482,12 @@ func InitializeHistoryEventGenerator(
 	})
 	activityCancelRequest := NewHistoryEventVertex(shared.EventTypeActivityTaskCancelRequested.String())
 	activityCancelRequest.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskCancelRequested.Ptr()
 		historyEvent.ActivityTaskCancelRequestedEventAttributes = &shared.ActivityTaskCancelRequestedEventAttributes{
 			DecisionTaskCompletedEventId: lastEvent.GetActivityTaskScheduledEventAttributes().DecisionTaskCompletedEventId,
@@ -424,23 +497,29 @@ func InitializeHistoryEventGenerator(
 	})
 	activityCancel := NewHistoryEventVertex(shared.EventTypeActivityTaskCanceled.String())
 	activityCancel.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeActivityTaskCanceled.Ptr()
 		historyEvent.ActivityTaskCanceledEventAttributes = &shared.ActivityTaskCanceledEventAttributes{
 			LatestCancelRequestedEventId: lastEvent.EventId,
-			ScheduledEventId:             lastEvent.GetActivityTaskCanceledEventAttributes().ScheduledEventId,
-			StartedEventId:               lastEvent.GetActivityTaskCanceledEventAttributes().StartedEventId,
+			ScheduledEventId:             lastEvent.EventId,
+			StartedEventId:               lastEvent.EventId,
 			Identity:                     common.StringPtr(identity),
 		}
 		return historyEvent
 	})
 	activityCancelRequestFail := NewHistoryEventVertex(shared.EventTypeRequestCancelActivityTaskFailed.String())
 	activityCancelRequestFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeRequestCancelActivityTaskFailed.Ptr()
 		historyEvent.RequestCancelActivityTaskFailedEventAttributes = &shared.RequestCancelActivityTaskFailedEventAttributes{
 			ActivityId:                   common.StringPtr(uuid.New()),
@@ -471,30 +550,31 @@ func InitializeHistoryEventGenerator(
 	activityCancelToDecisionSchedule := NewHistoryEventEdge(activityCancel, decisionSchedule)
 	activityCancelToDecisionSchedule.SetCondition(notPendingDecisionTask)
 
-	activityScheduleToActivityCancelRequest := NewHistoryEventEdge(activitySchedule, activityCancelRequest)
-	activityScheduleToActivityCancelRequest.SetCondition(hasPendingActivity)
+	// TODO: bypass activity cancel request event. Support this event later.
+	//activityScheduleToActivityCancelRequest := NewHistoryEventEdge(activitySchedule, activityCancelRequest)
+	//activityScheduleToActivityCancelRequest.SetCondition(hasPendingActivity)
 	activityCancelReqToCancel := NewHistoryEventEdge(activityCancelRequest, activityCancel)
 	activityCancelReqToCancel.SetCondition(hasPendingActivity)
 
 	activityCancelReqToCancelFail := NewHistoryEventEdge(activityCancelRequest, activityCancelRequestFail)
 	activityCancelRequestFailToDecisionSchedule := NewHistoryEventEdge(activityCancelRequestFail, decisionSchedule)
 	activityCancelRequestFailToDecisionSchedule.SetCondition(notPendingDecisionTask)
-	decisionCompleteToActivityCancelRequest := NewHistoryEventEdge(decisionComplete, activityCancelRequest)
-	decisionCompleteToActivityCancelRequest.SetCondition(hasPendingStartActivity)
 
 	activityModel.AddEdge(decisionCompleteToATSchedule, activityScheduleToStart, activityStartToComplete,
 		activityStartToFail, activityStartToTimedOut, decisionCompleteToATSchedule, activityCompleteToDecisionSchedule,
-		activityFailToDecisionSchedule, activityTimedOutToDecisionSchedule, activityScheduleToActivityCancelRequest,
-		activityCancelReqToCancel, activityCancelReqToCancelFail, activityCancelToDecisionSchedule,
-		decisionCompleteToActivityCancelRequest, activityCancelRequestFailToDecisionSchedule)
+		activityFailToDecisionSchedule, activityTimedOutToDecisionSchedule, activityCancelReqToCancel,
+		activityCancelReqToCancelFail, activityCancelToDecisionSchedule, activityCancelRequestFailToDecisionSchedule)
 
 	//Setup timer model
 	timerModel := NewHistoryEventModel()
 	timerStart := NewHistoryEventVertex(shared.EventTypeTimerStarted.String())
 	timerStart.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeTimerStarted.Ptr()
 		historyEvent.TimerStartedEventAttributes = &shared.TimerStartedEventAttributes{
 			TimerId:                      common.StringPtr(uuid.New()),
@@ -505,9 +585,12 @@ func InitializeHistoryEventGenerator(
 	})
 	timerFired := NewHistoryEventVertex(shared.EventTypeTimerFired.String())
 	timerFired.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeTimerFired.Ptr()
 		historyEvent.TimerFiredEventAttributes = &shared.TimerFiredEventAttributes{
 			TimerId:        lastEvent.GetTimerStartedEventAttributes().TimerId,
@@ -517,9 +600,12 @@ func InitializeHistoryEventGenerator(
 	})
 	timerCancel := NewHistoryEventVertex(shared.EventTypeTimerCanceled.String())
 	timerCancel.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeTimerCanceled.Ptr()
 		historyEvent.TimerCanceledEventAttributes = &shared.TimerCanceledEventAttributes{
 			TimerId:                      lastEvent.GetTimerStartedEventAttributes().TimerId,
@@ -543,9 +629,12 @@ func InitializeHistoryEventGenerator(
 	childWorkflowModel := NewHistoryEventModel()
 	childWorkflowInitial := NewHistoryEventVertex(shared.EventTypeStartChildWorkflowExecutionInitiated.String())
 	childWorkflowInitial.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeStartChildWorkflowExecutionInitiated.Ptr()
 		historyEvent.StartChildWorkflowExecutionInitiatedEventAttributes = &shared.StartChildWorkflowExecutionInitiatedEventAttributes{
 			Domain:     common.StringPtr(domain),
@@ -566,9 +655,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowInitialFail := NewHistoryEventVertex(shared.EventTypeStartChildWorkflowExecutionFailed.String())
 	childWorkflowInitialFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeStartChildWorkflowExecutionFailed.Ptr()
 		historyEvent.StartChildWorkflowExecutionFailedEventAttributes = &shared.StartChildWorkflowExecutionFailedEventAttributes{
 			Domain:     common.StringPtr(domain),
@@ -584,9 +676,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowStart := NewHistoryEventVertex(shared.EventTypeChildWorkflowExecutionStarted.String())
 	childWorkflowStart.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionStarted.Ptr()
 		historyEvent.ChildWorkflowExecutionStartedEventAttributes = &shared.ChildWorkflowExecutionStartedEventAttributes{
 			Domain: common.StringPtr(domain),
@@ -603,9 +698,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowCancel := NewHistoryEventVertex(shared.EventTypeChildWorkflowExecutionCanceled.String())
 	childWorkflowCancel.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionCanceled.Ptr()
 		historyEvent.ChildWorkflowExecutionCanceledEventAttributes = &shared.ChildWorkflowExecutionCanceledEventAttributes{
 			Domain: common.StringPtr(domain),
@@ -623,9 +721,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowComplete := NewHistoryEventVertex(shared.EventTypeChildWorkflowExecutionCompleted.String())
 	childWorkflowComplete.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionCompleted.Ptr()
 		historyEvent.ChildWorkflowExecutionCompletedEventAttributes = &shared.ChildWorkflowExecutionCompletedEventAttributes{
 			Domain: common.StringPtr(domain),
@@ -643,9 +744,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowFail := NewHistoryEventVertex(shared.EventTypeChildWorkflowExecutionFailed.String())
 	childWorkflowFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionFailed.Ptr()
 		historyEvent.ChildWorkflowExecutionFailedEventAttributes = &shared.ChildWorkflowExecutionFailedEventAttributes{
 			Domain: common.StringPtr(domain),
@@ -663,9 +767,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowTerminate := NewHistoryEventVertex(shared.EventTypeChildWorkflowExecutionTerminated.String())
 	childWorkflowTerminate.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionTerminated.Ptr()
 		historyEvent.ChildWorkflowExecutionTerminatedEventAttributes = &shared.ChildWorkflowExecutionTerminatedEventAttributes{
 			Domain: common.StringPtr(domain),
@@ -683,9 +790,12 @@ func InitializeHistoryEventGenerator(
 	})
 	childWorkflowTimedOut := NewHistoryEventVertex(shared.EventTypeChildWorkflowExecutionTimedOut.String())
 	childWorkflowTimedOut.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeChildWorkflowExecutionTimedOut.Ptr()
 		historyEvent.ChildWorkflowExecutionTimedOutEventAttributes = &shared.ChildWorkflowExecutionTimedOutEventAttributes{
 			Domain: common.StringPtr(domain),
@@ -732,9 +842,12 @@ func InitializeHistoryEventGenerator(
 	externalWorkflowModel := NewHistoryEventModel()
 	externalWorkflowSignal := NewHistoryEventVertex(shared.EventTypeSignalExternalWorkflowExecutionInitiated.String())
 	externalWorkflowSignal.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeSignalExternalWorkflowExecutionInitiated.Ptr()
 		historyEvent.SignalExternalWorkflowExecutionInitiatedEventAttributes = &shared.SignalExternalWorkflowExecutionInitiatedEventAttributes{
 			DecisionTaskCompletedEventId: lastEvent.EventId,
@@ -750,9 +863,12 @@ func InitializeHistoryEventGenerator(
 	})
 	externalWorkflowSignalFailed := NewHistoryEventVertex(shared.EventTypeSignalExternalWorkflowExecutionFailed.String())
 	externalWorkflowSignalFailed.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeSignalExternalWorkflowExecutionFailed.Ptr()
 		historyEvent.SignalExternalWorkflowExecutionFailedEventAttributes = &shared.SignalExternalWorkflowExecutionFailedEventAttributes{
 			Cause:                        common.SignalExternalWorkflowExecutionFailedCausePtr(shared.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution),
@@ -768,9 +884,12 @@ func InitializeHistoryEventGenerator(
 	})
 	externalWorkflowSignaled := NewHistoryEventVertex(shared.EventTypeExternalWorkflowExecutionSignaled.String())
 	externalWorkflowSignaled.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeExternalWorkflowExecutionSignaled.Ptr()
 		historyEvent.ExternalWorkflowExecutionSignaledEventAttributes = &shared.ExternalWorkflowExecutionSignaledEventAttributes{
 			InitiatedEventId: lastEvent.EventId,
@@ -784,9 +903,12 @@ func InitializeHistoryEventGenerator(
 	})
 	externalWorkflowCancel := NewHistoryEventVertex(shared.EventTypeRequestCancelExternalWorkflowExecutionInitiated.String())
 	externalWorkflowCancel.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeRequestCancelExternalWorkflowExecutionInitiated.Ptr()
 		historyEvent.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes =
 			&shared.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
@@ -802,9 +924,12 @@ func InitializeHistoryEventGenerator(
 	})
 	externalWorkflowCancelFail := NewHistoryEventVertex(shared.EventTypeRequestCancelExternalWorkflowExecutionFailed.String())
 	externalWorkflowCancelFail.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeRequestCancelExternalWorkflowExecutionFailed.Ptr()
 		historyEvent.RequestCancelExternalWorkflowExecutionFailedEventAttributes = &shared.RequestCancelExternalWorkflowExecutionFailedEventAttributes{
 			Cause:                        common.CancelExternalWorkflowExecutionFailedCausePtr(shared.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution),
@@ -820,9 +945,12 @@ func InitializeHistoryEventGenerator(
 	})
 	externalWorkflowCanceled := NewHistoryEventVertex(shared.EventTypeExternalWorkflowExecutionCancelRequested.String())
 	externalWorkflowCanceled.SetDataFunc(func(input ...interface{}) interface{} {
-		lastEvent := input[0].(shared.HistoryEvent)
+		lastEvent := input[0].(*shared.HistoryEvent)
 		eventID := lastEvent.GetEventId() + input[1].(int64)
-		historyEvent := getDefaultHistoryEvent(eventID, defaultVersion)
+		versionBump := input[2].(int64)
+		subVersion := input[3].(int64)
+		version := lastEvent.GetVersion() + versionBump + subVersion
+		historyEvent := getDefaultHistoryEvent(eventID, version)
 		historyEvent.EventType = shared.EventTypeExternalWorkflowExecutionCancelRequested.Ptr()
 		historyEvent.ExternalWorkflowExecutionCancelRequestedEventAttributes = &shared.ExternalWorkflowExecutionCancelRequestedEventAttributes{
 			InitiatedEventId: lastEvent.EventId,
