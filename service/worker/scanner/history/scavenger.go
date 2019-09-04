@@ -119,7 +119,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 	for {
 		resp, err := s.db.GetAllHistoryTreeBranches(&p.GetAllHistoryTreeBranchesRequest{
-			PageSize:pageSize,
+			PageSize:      pageSize,
 			NextPageToken: s.hbd.NextPageToken,
 		})
 		if err != nil {
@@ -160,7 +160,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 		succCount := 0
 		errCount := 0
-		if batchCount > 0{
+		if batchCount > 0 {
 			// wait for counters indicate this batch is done
 		Loop:
 			for {
@@ -187,7 +187,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 		s.hbd.SuccCount += succCount
 		s.hbd.ErrorCount += errCount + errorsOnSplitting
 		s.hbd.SkipCount += skips
-		if !s.isInTest{
+		if !s.isInTest {
 			activity.RecordHeartbeat(ctx, s.hbd)
 		}
 
@@ -208,7 +208,7 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 				return
 			}
 
-			if !s.isInTest{
+			if !s.isInTest {
 				activity.RecordHeartbeat(ctx, s.hbd)
 			}
 
@@ -233,7 +233,8 @@ func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDeta
 			if err != nil {
 				if _, ok := err.(*shared.EntityNotExistsError); ok {
 					//deleting history branch
-					branchToken, err := p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)
+					var branchToken []byte
+					branchToken, err = p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)
 					if err != nil {
 						respCh <- err
 						s.logger.Error("encounter error when creating branch token",
