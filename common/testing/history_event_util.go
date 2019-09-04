@@ -41,15 +41,16 @@ const (
 	taskList               = "taskList"
 	identity               = "identity"
 	decisionTaskAttempts   = 0
-	domain                 = "NDC domain"
 	childWorkflowID        = "child-workflowID"
 	externalWorkflowID     = "external-workflowID"
 )
 
 // InitializeHistoryEventGenerator initializes the history event generator
-func InitializeHistoryEventGenerator() Generator {
-	generator := NewEventGenerator(time.Now().UnixNano())
+func InitializeHistoryEventGenerator(
+	domain string,
+) Generator {
 
+	generator := NewEventGenerator(time.Now().UnixNano())
 	//Functions
 	notPendingDecisionTask := func() bool {
 		count := 0

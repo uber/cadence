@@ -39,7 +39,7 @@ func TestHistoryEventTestSuite(t *testing.T) {
 }
 
 func (s *historyEventTestSuit) SetupSuite() {
-	s.generator = InitializeHistoryEventGenerator()
+	s.generator = InitializeHistoryEventGenerator("domain")
 }
 
 func (s *historyEventTestSuit) SetupTest() {
