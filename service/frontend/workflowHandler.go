@@ -2343,29 +2343,8 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if listRequest.CloseTimeFilter == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "CloseTimeFilter is required"}, scope)
-	}
-
-	if listRequest.CloseTimeFilter.EarliestTime == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in CloseTimeFilter is required"}, scope)
-	}
-
-	if listRequest.CloseTimeFilter.LatestTime == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in CloseTimeFilter is required"}, scope)
-	}
-
-	if listRequest.CloseTimeFilter.GetEarliestTime() > listRequest.CloseTimeFilter.GetLatestTime() {
-		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in CloseTimeFilter should not be larger than LatestTime"}, scope)
-	}
-
-	if listRequest.GetMaximumPageSize() <= 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
-	}
-
-	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
-		return nil, wh.error(&gen.BadRequestError{
-			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
+	if listRequest.GetPageSize() <= 0 {
+		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
 	if !wh.GetArchivalMetadata().GetVisibilityConfig().ClusterConfiguredForArchival() {
@@ -2395,24 +2374,11 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	executionFilter := shared.WorkflowExecutionFilter{}
-	if listRequest.ExecutionFilter != nil {
-		executionFilter = *listRequest.ExecutionFilter
-	}
-	typeFilter := shared.WorkflowTypeFilter{}
-	if listRequest.TypeFilter != nil {
-		typeFilter = *listRequest.TypeFilter
-	}
 	archiverRequest := &archiver.QueryVisibilityRequest{
-		DomainID:          entry.GetInfo().ID,
-		EarliestCloseTime: listRequest.CloseTimeFilter.GetEarliestTime(),
-		LatestCloseTime:   listRequest.CloseTimeFilter.GetLatestTime(),
-		PageSize:          int(listRequest.GetMaximumPageSize()),
-		NextPageToken:     listRequest.NextPageToken,
-		WorkflowID:        executionFilter.WorkflowId,
-		RunID:             executionFilter.RunId,
-		WorkflowTypeName:  typeFilter.Name,
-		CloseStatus:       listRequest.StatusFilter,
+		DomainID:      entry.GetInfo().ID,
+		PageSize:      int(listRequest.GetPageSize()),
+		NextPageToken: listRequest.NextPageToken,
+		Query:         listRequest.GetQuery(),
 	}
 
 	archiverResponse, err := visibilityArchiver.Query(ctx, URI, archiverRequest)

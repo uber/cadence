@@ -1185,7 +1185,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_ClusterNotConf
 	wh := s.getWorkflowHandlerWithParams(mService, config, &mocks.MetadataManager{})
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
-	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsRequest())
+	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1198,7 +1198,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_DomainCacheEnt
 	wh := s.getWorkflowHandlerWithParams(s.mockService, config, mMetadataManager)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
-	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsRequest())
+	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1219,7 +1219,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_DomainNotConfi
 	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
-	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsRequest())
+	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	fmt.Println(err)
 	s.Error(err)
@@ -1241,7 +1241,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidURI() {
 	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
-	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsRequest())
+	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1265,7 +1265,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Success() {
 	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
-	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsRequest())
+	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.NotNil(resp)
 	fmt.Println(err)
 	s.NoError(err)
@@ -1501,13 +1501,10 @@ func getHistoryRequest(nextPageToken []byte) *shared.GetWorkflowExecutionHistory
 	}
 }
 
-func listArchivedWorkflowExecutionsRequest() *shared.ListArchivedWorkflowExecutionsRequest {
+func listArchivedWorkflowExecutionsTestRequest() *shared.ListArchivedWorkflowExecutionsRequest {
 	return &shared.ListArchivedWorkflowExecutionsRequest{
-		Domain:          common.StringPtr("domain name"),
-		MaximumPageSize: common.Int32Ptr(10),
-		CloseTimeFilter: &shared.StartTimeFilter{
-			EarliestTime: common.Int64Ptr(0),
-			LatestTime:   common.Int64Ptr(1000),
-		},
+		Domain:   common.StringPtr("some random domain name"),
+		PageSize: common.Int32Ptr(10),
+		Query:    common.StringPtr("some random query string"),
 	}
 }

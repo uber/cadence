@@ -1315,12 +1315,9 @@ struct ListWorkflowExecutionsResponse {
 
 struct ListArchivedWorkflowExecutionsRequest {
   10: optional string domain
-  20: optional i32 maximumPageSize
+  20: optional i32 pageSize
   30: optional binary nextPageToken
-  40: optional StartTimeFilter CloseTimeFilter
-  50: optional WorkflowExecutionFilter executionFilter
-  60: optional WorkflowTypeFilter typeFilter
-  70: optional WorkflowExecutionCloseStatus statusFilter 
+  40: optional string query
 }
 
 struct ListArchivedWorkflowExecutionsResponse {

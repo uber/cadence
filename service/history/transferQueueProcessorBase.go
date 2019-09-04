@@ -29,8 +29,10 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -249,6 +251,7 @@ func (t *transferQueueProcessorBase) upsertWorkflowExecution(
 }
 
 func (t *transferQueueProcessorBase) recordWorkflowClosed(
+	scope metrics.Scope,
 	domainID string,
 	execution workflow.WorkflowExecution,
 	workflowTypeName string,
@@ -260,7 +263,7 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 	taskID int64,
 	visibilityMemo *workflow.Memo,
 	searchAttributes map[string][]byte,
-) error {
+) (err error) {
 
 	// Record closing in visibility store
 	retentionSeconds := int64(0)
@@ -302,39 +305,61 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 		SearchAttributes:   searchAttributes,
 	}
 
-	if err := t.visibilityMgr.RecordWorkflowExecutionClosed(request); err != nil {
+	if err = t.visibilityMgr.RecordWorkflowExecutionClosed(request); err != nil {
 		return err
 	}
 
 	clusterConfiguredForArchival := t.shard.GetService().GetArchivalMetadata().GetVisibilityConfig().ClusterConfiguredForArchival()
 	domainConfiguredForArchival := domainEntry.GetConfig().VisibilityArchivalStatus == workflow.ArchivalStatusEnabled
 	if clusterConfiguredForArchival && domainConfiguredForArchival {
-		archiveURI, err := archiver.NewURI(domainEntry.GetConfig().VisibilityArchivalURI)
-		if err != nil {
-			return err
-		}
-		visibilityArchiver, err := t.shard.GetService().GetArchiverProvider().GetVisibilityArchiver(archiveURI.Scheme(), common.HistoryServiceName)
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), t.shard.GetConfig().TransferProcessorVisibilityArchivalTimeLimit())
-		defer cancel()
-		return visibilityArchiver.Archive(ctx, archiveURI, &archiver.ArchiveVisibilityRequest{
-			DomainID:           domainID,
-			WorkflowID:         execution.GetWorkflowId(),
-			RunID:              execution.GetRunId(),
-			WorkflowTypeName:   workflowTypeName,
-			StartTimestamp:     startTimeUnixNano,
-			ExecutionTimestamp: executionTimeUnixNano,
-			CloseTimestamp:     endTimeUnixNano,
-			CloseStatus:        closeStatus,
-			HistoryLength:      historyLength,
-			Memo:               visibilityMemo,
-			SearchAttributes:   searchAttributes,
-		})
+		return t.archiveVisibility(
+			scope,
+			domainEntry,
+			&archiver.ArchiveVisibilityRequest{
+				DomainID:           domainID,
+				WorkflowID:         execution.GetWorkflowId(),
+				RunID:              execution.GetRunId(),
+				WorkflowTypeName:   workflowTypeName,
+				StartTimestamp:     startTimeUnixNano,
+				ExecutionTimestamp: executionTimeUnixNano,
+				CloseTimestamp:     endTimeUnixNano,
+				CloseStatus:        closeStatus,
+				HistoryLength:      historyLength,
+				Memo:               visibilityMemo,
+				SearchAttributes:   searchAttributes,
+			},
+		)
 	}
 
 	return nil
+}
+
+func (t *transferQueueProcessorBase) archiveVisibility(
+	scope metrics.Scope,
+	domainEntry *cache.DomainCacheEntry,
+	request *archiver.ArchiveVisibilityRequest,
+) (err error) {
+	scope.IncCounter(metrics.ArchiveVisibilityAttemptCount)
+	defer func() {
+		if err != nil {
+			scope.IncCounter(metrics.ArchiveVisibilityFailedCount)
+		}
+	}()
+
+	archiveURI, err := archiver.NewURI(domainEntry.GetConfig().VisibilityArchivalURI)
+	if err != nil {
+		return err
+	}
+
+	visibilityArchiver, err := t.shard.GetService().GetArchiverProvider().GetVisibilityArchiver(archiveURI.Scheme(), common.HistoryServiceName)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), t.shard.GetConfig().TransferProcessorVisibilityArchivalTimeLimit())
+	defer cancel()
+
+	return visibilityArchiver.Archive(ctx, archiveURI, request)
 }
 
 // Argument startEvent is to save additional call of msBuilder.GetStartEvent
