@@ -75,6 +75,12 @@ type (
 		// MaxNextVertex means the max neighbors can branch out from this vertex
 		SetMaxNextVertex(int)
 		GetMaxNextVertex() int
+
+		// SetVertexDataFunc sets a function to generate end vertex data
+		SetDataFunc(func(...interface{}) interface{})
+		GetDataFunc() func(...interface{}) interface{}
+		GenerateData(...interface{}) interface{}
+		GetData() interface{}
 	}
 
 	// Edge is the connection between two vertices

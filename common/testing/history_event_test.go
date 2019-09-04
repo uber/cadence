@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -91,14 +90,4 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 	batches := []NDCTestBatch{}
 	batches = append(batches, root.Batches...)
 	batches = append(batches, root.Next[0].Batches...)
-	identity := "test-event-generator"
-	wid := uuid.New()
-	rid := uuid.New()
-	wt := "event-generator-workflow-type"
-	tl := "event-generator-taskList"
-	domain := "event-generator"
-	domainID := uuid.New()
-	attributeGenerator := NewHistoryAttributesGenerator(wid, rid, tl, wt, domain, domainID, identity)
-	history := attributeGenerator.GenerateHistoryEvents(batches, 1, 100)
-	s.NotEmpty(history)
 }

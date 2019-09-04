@@ -42,6 +42,8 @@ type (
 		name                 string
 		isStrictOnNextVertex bool
 		maxNextGeneration    int
+		dataFunc             func(...interface{}) interface{}
+		data                 interface{}
 	}
 
 	// HistoryEventModel is a graph represents relationships among history event types
@@ -274,6 +276,7 @@ func (g *EventGenerator) getEntryVertex() Vertex {
 	nextRange := len(g.entryVertices)
 	nextIdx := g.dice.Intn(nextRange)
 	vertex := g.entryVertices[nextIdx]
+	vertex.GenerateData(nil)
 	return vertex
 }
 
@@ -285,6 +288,8 @@ func (g *EventGenerator) getRandomVertex() Vertex {
 	nextRange := len(g.randomEntryVertices)
 	nextIdx := g.dice.Intn(nextRange)
 	vertex := g.randomEntryVertices[nextIdx]
+	lastEvent := g.previousVertices[len(g.previousVertices)-1]
+	vertex.GenerateData(lastEvent.GetData(), int64(1))
 	return vertex
 }
 
@@ -335,10 +340,11 @@ func (g *EventGenerator) randomNextVertex(
 ) []Vertex {
 
 	nextVertex := g.leafVertices[nextVertexIdx]
-	count := g.dice.Intn(nextVertex.GetMaxNextVertex()) + 1
+	count := g.dice.Intn(nextVertex.GetMaxNextVertex()) + 2
 	res := make([]Vertex, 0)
-	for i := 0; i < count; i++ {
+	for i := 1; i < count; i++ {
 		endVertex := g.pickRandomVertex(nextVertex)
+		endVertex.GenerateData(nextVertex.GetData(), int64(i))
 		res = append(res, endVertex)
 		if _, ok := g.exitVertices[endVertex]; ok {
 			res = []Vertex{endVertex}
@@ -493,6 +499,35 @@ func (he *HistoryEventVertex) SetMaxNextVertex(
 func (he HistoryEventVertex) GetMaxNextVertex() int {
 
 	return he.maxNextGeneration
+}
+
+// SetDataFunc sets the data generation function
+func (he HistoryEventVertex) SetDataFunc(dataFunc func(...interface{}) interface{}) {
+
+	he.dataFunc = dataFunc
+}
+
+// GetDataFunc returns the data generation function
+func (he HistoryEventVertex) GetDataFunc() func(...interface{}) interface{} {
+
+	return he.dataFunc
+}
+
+// GenerateData generates the data and return
+func (he HistoryEventVertex) GenerateData(input ...interface{}) interface{} {
+
+	if he.dataFunc == nil {
+		return nil
+	}
+
+	he.data = he.dataFunc(input)
+	return he.data
+}
+
+// GetData return the vertex data
+func (he HistoryEventVertex) GetData() interface{} {
+
+	return he.data
 }
 
 // NewHistoryEventModel initials new history event model
