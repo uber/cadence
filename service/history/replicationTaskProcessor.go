@@ -136,8 +136,19 @@ func (p *ReplicationTaskProcessor) processorLoop() {
 	p.lastProcessedMessageID = p.shard.GetClusterReplicationLevel(p.sourceCluster)
 	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
 
+	defer func() {
+		p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
+	}()
+
 Loop:
 	for {
+		// for each iteration, do close check first
+		select {
+		case <-p.done:
+			return
+		default:
+		}
+
 		respChan := make(chan *r.ReplicationMessages, 1)
 		// TODO: when we support prefetching, LastRetrivedMessageId can be different than LastProcessedMessageId
 		p.requestChan <- &request{
@@ -185,7 +196,6 @@ Loop:
 			scope.UpdateGauge(metrics.LastRetrievedMessageID, float64(p.lastRetrievedMessageID))
 			p.noTaskBackoffRetrier.Reset()
 		case <-p.done:
-			p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
 			return
 		}
 	}
