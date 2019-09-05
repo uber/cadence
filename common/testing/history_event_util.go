@@ -50,7 +50,7 @@ func InitializeHistoryEventGenerator(
 ) Generator {
 
 	generator := NewEventGenerator(time.Now().UnixNano())
-	//Functions
+	// Functions
 	notPendingDecisionTask := func() bool {
 		count := 0
 		for _, e := range generator.ListGeneratedVertices() {
@@ -116,7 +116,7 @@ func InitializeHistoryEventGenerator(
 		return true
 	}
 
-	//Setup decision task model
+	// Setup decision task model
 	decisionModel := NewHistoryEventModel()
 	decisionSchedule := NewHistoryEventVertex(shared.EventTypeDecisionTaskScheduled.String())
 	decisionSchedule.SetDataFunc(func(input ...interface{}) interface{} {
@@ -218,7 +218,7 @@ func InitializeHistoryEventGenerator(
 	decisionModel.AddEdge(decisionScheduleToStart, decisionStartToComplete, decisionStartToFail, decisionStartToTimedOut,
 		decisionFailToSchedule, decisionTimedOutToSchedule)
 
-	//Setup workflow model
+	// Setup workflow model
 	workflowModel := NewHistoryEventModel()
 
 	workflowStart := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionStarted.String())
@@ -386,7 +386,7 @@ func InitializeHistoryEventGenerator(
 	workflowModel.AddEdge(workflowStartToSignal, workflowStartToDecisionSchedule, workflowSignalToDecisionSchedule,
 		decisionCompleteToCAN, decisionCompleteToWorkflowComplete, decisionCompleteToWorkflowFailed, workflowCancelRequestToCancel)
 
-	//Setup activity model
+	// Setup activity model
 	activityModel := NewHistoryEventModel()
 	activitySchedule := NewHistoryEventVertex(shared.EventTypeActivityTaskScheduled.String())
 	activitySchedule.SetDataFunc(func(input ...interface{}) interface{} {
@@ -565,7 +565,7 @@ func InitializeHistoryEventGenerator(
 		activityFailToDecisionSchedule, activityTimedOutToDecisionSchedule, activityCancelReqToCancel,
 		activityCancelReqToCancelFail, activityCancelToDecisionSchedule, activityCancelRequestFailToDecisionSchedule)
 
-	//Setup timer model
+	// Setup timer model
 	timerModel := NewHistoryEventModel()
 	timerStart := NewHistoryEventVertex(shared.EventTypeTimerStarted.String())
 	timerStart.SetDataFunc(func(input ...interface{}) interface{} {
@@ -625,7 +625,7 @@ func InitializeHistoryEventGenerator(
 	timerCancelToDecisionSchedule.SetCondition(notPendingDecisionTask)
 	timerModel.AddEdge(timerStartToFire, timerStartToCancel, decisionCompleteToTimerStart, timerFiredToDecisionSchedule, timerCancelToDecisionSchedule)
 
-	//Setup child workflow model
+	// Setup child workflow model
 	childWorkflowModel := NewHistoryEventModel()
 	childWorkflowInitial := NewHistoryEventVertex(shared.EventTypeStartChildWorkflowExecutionInitiated.String())
 	childWorkflowInitial.SetDataFunc(func(input ...interface{}) interface{} {
@@ -838,7 +838,7 @@ func InitializeHistoryEventGenerator(
 		childWorkflowCompleteToDecisionSchedule, childWorkflowTerminateToDecisionSchedule, childWorkflowTimedOutToDecisionSchedule,
 		childWorkflowInitialFailToDecisionSchedule)
 
-	//Setup external workflow model
+	// Setup external workflow model
 	externalWorkflowModel := NewHistoryEventModel()
 	externalWorkflowSignal := NewHistoryEventVertex(shared.EventTypeSignalExternalWorkflowExecutionInitiated.String())
 	externalWorkflowSignal.SetDataFunc(func(input ...interface{}) interface{} {
@@ -981,11 +981,11 @@ func InitializeHistoryEventGenerator(
 		externalWorkflowSignaledToDecisionSchedule, externalWorkflowSignalFailedToDecisionSchedule,
 		externalWorkflowCanceledToDecisionSchedule, externalWorkflowCancelFailToDecisionSchedule)
 
-	//Config event generator
+	// Config event generator
 	generator.SetBatchGenerationRule(canDoBatch)
 	generator.AddInitialEntryVertex(workflowStart)
 	generator.AddExitVertex(workflowComplete, workflowFail, workflowTerminate, workflowTimedOut, continueAsNew)
-	//generator.AddRandomEntryVertex(workflowSignal, workflowTerminate, workflowTimedOut)
+	// generator.AddRandomEntryVertex(workflowSignal, workflowTerminate, workflowTimedOut)
 	generator.AddModel(decisionModel)
 	generator.AddModel(workflowModel)
 	generator.AddModel(activityModel)
