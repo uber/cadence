@@ -817,6 +817,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				}
 				if ai.LastFailureReason != "" {
 					p.LastFailureReason = common.StringPtr(ai.LastFailureReason)
+					p.LastFailureDetails = ai.LastFailureDetails
 				}
 				if ai.LastWorkerIdentity != "" {
 					p.LastWorkerIdentity = common.StringPtr(ai.LastWorkerIdentity)
@@ -1074,7 +1075,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			}
 
 			postActions := &updateWorkflowAction{}
-			ok, err := msBuilder.RetryActivity(ai, req.FailedRequest.GetReason())
+			ok, err := msBuilder.RetryActivity(ai, req.FailedRequest.GetReason(), req.FailedRequest.GetDetails())
 			if err != nil {
 				return nil, err
 			}
