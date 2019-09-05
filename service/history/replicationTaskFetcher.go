@@ -158,6 +158,8 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 	timer := time.NewTimer(jitter.JitDuration(time.Duration(f.config.AggregationIntervalSecs)*time.Second, f.config.TimerJitterCoefficient))
 
 	requestByShard := make(map[int32]*request)
+
+Loop:
 	for {
 		select {
 		case request := <-f.requestChan:
@@ -170,14 +172,14 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 				f.logger.Error("Get replication task request already exist for shard.")
 				close(req.respChan)
 			}
-
 			requestByShard[request.token.GetShardID()] = request
+
 		case <-timer.C:
 			if len(requestByShard) == 0 {
 				// We don't receive tasks from previous fetch so processors are all sleeping.
 				f.logger.Debug("Skip fetching as no processor is asking for tasks.")
 				timer.Reset(jitter.JitDuration(time.Duration(f.config.AggregationIntervalSecs)*time.Second, f.config.TimerJitterCoefficient))
-				continue
+				continue Loop
 			}
 
 			// When timer fires, we collect all the requests we have so far and attempt to send them to remote.
@@ -193,7 +195,7 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 			if err != nil {
 				f.logger.Error("Failed to get replication tasks", tag.Error(err))
 				timer.Reset(jitter.JitDuration(time.Duration(f.config.ErrorRetryWaitSecs)*time.Second, f.config.TimerJitterCoefficient))
-				continue
+				continue Loop
 			}
 
 			f.logger.Debug("Successfully fetched replication tasks.", tag.Counter(len(response.MessagesByShard)))
@@ -206,6 +208,7 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 			}
 
 			timer.Reset(jitter.JitDuration(time.Duration(f.config.AggregationIntervalSecs)*time.Second, f.config.TimerJitterCoefficient))
+
 		case <-f.done:
 			timer.Stop()
 			return
