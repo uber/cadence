@@ -518,38 +518,51 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 }
 
 func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(domainName, domainUUID string, children map[int64]*persistence.ChildExecutionInfo) error {
+	scope := t.metricsClient.Scope(metrics.TransferActiveTaskCloseExecutionScope)
+
 	if t.shard.GetConfig().EnableParentClosePolicyWorker() && len(children) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
 
 	} else {
 		for _, child := range children {
 			var err error
 			switch child.ParentClosePolicy {
+			case workflow.ParentClosePolicyAbandon:
+				//no-op
+				continue
 			case workflow.ParentClosePolicyTerminate:
 				err = t.historyClient.TerminateWorkflowExecution(nil, &h.TerminateWorkflowExecutionRequest{
 					DomainUUID: common.StringPtr(domainUUID),
 					TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
-						Domain:            common.StringPtr(domainName),
-						WorkflowExecution: &workflow.WorkflowExecution{},
-						Reason:            common.StringPtr("by parent close policy"),
-						Identity:          common.StringPtr(identityHistoryService),
+						Domain: common.StringPtr(domainName),
+						WorkflowExecution: &workflow.WorkflowExecution{
+							WorkflowId: common.StringPtr(child.StartedWorkflowID),
+							RunId:      common.StringPtr(child.StartedRunID),
+						},
+						Reason:   common.StringPtr("by parent close policy"),
+						Identity: common.StringPtr(identityHistoryService),
 					},
 				})
 			case workflow.ParentClosePolicyRequestCancel:
 				err = t.historyClient.RequestCancelWorkflowExecution(nil, &h.RequestCancelWorkflowExecutionRequest{
 					DomainUUID: common.StringPtr(domainUUID),
 					CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-						Domain:            common.StringPtr(domainName),
-						WorkflowExecution: &workflow.WorkflowExecution{},
-						Identity:          common.StringPtr(identityHistoryService),
+						Domain: common.StringPtr(domainName),
+						WorkflowExecution: &workflow.WorkflowExecution{
+							WorkflowId: common.StringPtr(child.StartedWorkflowID),
+							RunId:      common.StringPtr(child.StartedRunID),
+						},
+						Identity: common.StringPtr(identityHistoryService),
 					},
 				})
 			}
 
 			if err != nil {
 				if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+					scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 					return err
 				}
 			}
+			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 		}
 	}
 	return nil

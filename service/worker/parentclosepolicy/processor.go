@@ -30,22 +30,15 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/worker"
 )
 
 type (
-	// Config defines the configuration for batcher
-	Config struct {
-		AdminOperationToken dynamicconfig.StringPropertyFn
-	}
-
 	// BootstrapParams contains the set of params needed to bootstrap
-	// the batcher sub-system
+	// the sub-system
 	BootstrapParams struct {
 		// Config contains the configuration for scanner
-		Config Config
 		// ServiceClient is an instance of cadence service client
 		ServiceClient workflowserviceclient.Interface
 		// MetricsClient is an instance of metrics object for emitting stats
@@ -57,10 +50,8 @@ type (
 		ClientBean client.Bean
 	}
 
-	// Batcher is the background sub-system that execute workflow for batch operations
-	// It is also the context object that get's passed around within the scanner workflows / activities
-	Batcher struct {
-		cfg           Config
+	// Processor is the background sub-system that execute workflow for ParentClosePolicy
+	Processor struct {
 		svcClient     workflowserviceclient.Interface
 		clientBean    client.Bean
 		metricsClient metrics.Client
@@ -69,11 +60,9 @@ type (
 	}
 )
 
-// New returns a new instance of batcher daemon Batcher
-func New(params *BootstrapParams) *Batcher {
-	cfg := params.Config
-	return &Batcher{
-		cfg:           cfg,
+// New returns a new instance as daemon
+func New(params *BootstrapParams) *Processor {
+	return &Processor{
 		svcClient:     params.ServiceClient,
 		metricsClient: params.MetricsClient,
 		tallyScope:    params.TallyScope,
@@ -83,14 +72,13 @@ func New(params *BootstrapParams) *Batcher {
 }
 
 // Start starts the scanner
-func (s *Batcher) Start() error {
-	// start worker for batch operation workflows
-	ctx := context.WithValue(context.Background(), batcherContextKey, s)
+func (s *Processor) Start() error {
+	ctx := context.WithValue(context.Background(), processorContextKey, s)
 	workerOpts := worker.Options{
 		MetricsScope:              s.tallyScope,
 		BackgroundActivityContext: ctx,
 		Tracer:                    opentracing.GlobalTracer(),
 	}
-	batchWorker := worker.New(s.svcClient, common.SystemLocalDomainName, BatcherTaskListName, workerOpts)
-	return batchWorker.Start()
+	processorWorker := worker.New(s.svcClient, common.SystemLocalDomainName, processorTaskListName, workerOpts)
+	return processorWorker.Start()
 }
