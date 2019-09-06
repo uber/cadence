@@ -138,6 +138,11 @@ type Config struct {
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 	// whether or not using Terminate as default ParentClosePolicy, otherwise use Abandon for backward compatibility
 	UseTerminateAsDefaultParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
+	// whether or not enable system workers for processing parent close policy task
+	EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
+	// parent close policy will be processed by sys workers(if enabled) if
+	// the number of children greater than or equal to this threshold
+	ParentClosePolicyThreshold dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// Archival settings
 	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
