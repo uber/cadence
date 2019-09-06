@@ -134,61 +134,55 @@ func (s *nDCIntegrationTestSuite) TestSingleBranch() {
 	tasklist := "event-generator-taskList"
 
 	historyClient := s.active.GetHistoryClient()
-
+	print := func(value interface{}) string {
+		bytes, _ := json.MarshalIndent(value, "", "  ")
+		return string(bytes)
+	}
 	versions := []int64{101, 1, 201}
 	for _, version := range versions {
 		runID := uuid.New()
 
-		root := &test.NDCTestBranch{
-			Batches: make([]test.NDCTestBatch, 0),
-		}
+		historyBatch := []*shared.History{}
 		s.generator.Reset()
 		fmt.Printf("##########\n")
 		for s.generator.HasNextVertex() {
 			events := s.generator.GetNextVertices()
-			newBatch := test.NDCTestBatch{
-				Events: events,
+			history := &shared.History{}
+			for _, event := range events {
+				history.Events = append(history.Events, event.GetData().(*shared.HistoryEvent))
 			}
-			root.Batches = append(root.Batches, newBatch)
+			historyBatch = append(historyBatch, history)
 		}
 
 		// TODO temporary code to generate version history
 		//  we should generate version as part of modeled based testing
 		versionHistory := persistence.NewVersionHistory(nil, nil)
-		for _, batch := range root.Batches {
+		for _, batch := range historyBatch {
 			for _, event := range batch.Events {
-				print := func(value interface{}) string {
-					bytes, _ := json.MarshalIndent(value, "", "  ")
-					return string(bytes)
-				}
 				fmt.Printf("++++++++++\n")
-				fmt.Printf("## SEEING:\n%v\n.", print(event.GetData().(*shared.HistoryEvent)))
+				fmt.Printf("## SEEING:\n%v\n.", print(event))
 				fmt.Printf("++++++++++\n")
 				err := versionHistory.AddOrUpdateItem(
 					persistence.NewVersionHistoryItem(
-						event.GetData().(*shared.HistoryEvent).GetEventId(),
-						event.GetData().(*shared.HistoryEvent).GetVersion(),
+						event.GetEventId(),
+						event.GetVersion(),
 					))
 				s.NoError(err)
 			}
 		}
 
-		for _, batch := range root.Batches {
+		for _, batch := range historyBatch {
 
 			// TODO temporary code to generate first event & version history
 			//  we should generate these as part of modeled based testing
-			lastEvent := batch.Events[len(batch.Events)-1].GetData().(*shared.HistoryEvent)
+			lastEvent := batch.Events[len(batch.Events)-1]
 			newRunEventBlob, newRunVersionHistory := s.generateNewRunHistory(
 				lastEvent, s.domainName, workflowID, runID, version, workflowType, tasklist,
 			)
 
 			// must serialize events batch after attempt on continue as new as generateNewRunHistory will
 			// modify the NewExecutionRunId attr
-			var events []*shared.HistoryEvent
-			for _, event := range batch.Events {
-				events = append(events, event.GetData().(*shared.HistoryEvent))
-			}
-			eventBlob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+			eventBlob, err := s.serializer.SerializeBatchEvents(batch.Events, common.EncodingTypeThriftRW)
 			s.NoError(err)
 
 			err = historyClient.ReplicateEventsV2(s.createContext(), &history.ReplicateEventsV2Request{
@@ -226,15 +220,15 @@ func (s *nDCIntegrationTestSuite) TestSingleBranch() {
 
 		// compare origin events with replicated events
 		batchIndex := 0
-		batch := root.Batches[batchIndex].Events
+		batch := historyBatch[batchIndex].Events
 		eventIndex := 0
 		for _, event := range replicatedHistory.GetHistory().GetEvents() {
 			if eventIndex >= len(batch) {
 				batchIndex++
-				batch = root.Batches[batchIndex].Events
+				batch = historyBatch[batchIndex].Events
 				eventIndex = 0
 			}
-			originEvent := batch[eventIndex].GetData().(shared.HistoryEvent)
+			originEvent := batch[eventIndex]
 			eventIndex++
 			s.Equal(originEvent.GetEventType().String(), event.GetEventType().String(), "The replicated event and the origin event are not the same")
 		}
