@@ -35,7 +35,6 @@ const (
 	checksum             = "NDC checksum"
 	childWorkflowPrefix  = "child-"
 	reason               = "NDC reason"
-	defaultVersion       = 1
 	workflowType         = "test-workflow-type"
 	taskList             = "taskList"
 	identity             = "identity"
@@ -47,6 +46,7 @@ const (
 // InitializeHistoryEventGenerator initializes the history event generator
 func InitializeHistoryEventGenerator(
 	domain string,
+	version int64,
 ) Generator {
 
 	generator := NewEventGenerator(time.Now().UnixNano())
@@ -223,7 +223,7 @@ func InitializeHistoryEventGenerator(
 
 	workflowStart := NewHistoryEventVertex(shared.EventTypeWorkflowExecutionStarted.String())
 	workflowStart.SetDataFunc(func(input ...interface{}) interface{} {
-		historyEvent := getDefaultHistoryEvent(1, defaultVersion)
+		historyEvent := getDefaultHistoryEvent(1, version)
 		historyEvent.EventType = shared.EventTypeWorkflowExecutionStarted.Ptr()
 		historyEvent.WorkflowExecutionStartedEventAttributes = &shared.WorkflowExecutionStartedEventAttributes{
 			WorkflowType: &shared.WorkflowType{
@@ -1003,7 +1003,7 @@ func getDefaultHistoryEvent(
 	return &shared.HistoryEvent{
 		EventId:   common.Int64Ptr(eventID),
 		Timestamp: common.Int64Ptr(time.Now().Unix()),
-		TaskId:    common.Int64Ptr(common.EmptyEventTaskID),
+		TaskId:    common.Int64Ptr(eventID),
 		Version:   common.Int64Ptr(version),
 	}
 }

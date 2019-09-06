@@ -113,7 +113,7 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 
 	s.registerDomain()
 
-	s.generator = test.InitializeHistoryEventGenerator(s.domainName)
+	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 101)
 }
 
 func (s *nDCIntegrationTestSuite) SetupTest() {
@@ -138,101 +138,100 @@ func (s *nDCIntegrationTestSuite) TestSingleBranch() {
 		bytes, _ := json.MarshalIndent(value, "", "  ")
 		return string(bytes)
 	}
-	versions := []int64{101, 1, 201}
-	for _, version := range versions {
-		runID := uuid.New()
-
-		historyBatch := []*shared.History{}
-		s.generator.Reset()
-		fmt.Printf("##########\n")
-		for s.generator.HasNextVertex() {
-			events := s.generator.GetNextVertices()
-			history := &shared.History{}
-			for _, event := range events {
-				history.Events = append(history.Events, event.GetData().(*shared.HistoryEvent))
-			}
-			historyBatch = append(historyBatch, history)
+	//versions := []int64{101, 1, 201}
+	//for _, version := range versions {
+	runID := uuid.New()
+	historyBatch := []*shared.History{}
+	s.generator.Reset()
+	fmt.Printf("##########\n")
+	for s.generator.HasNextVertex() {
+		events := s.generator.GetNextVertices()
+		history := &shared.History{}
+		for _, event := range events {
+			history.Events = append(history.Events, event.GetData().(*shared.HistoryEvent))
 		}
+		historyBatch = append(historyBatch, history)
+	}
 
-		// TODO temporary code to generate version history
-		//  we should generate version as part of modeled based testing
-		versionHistory := persistence.NewVersionHistory(nil, nil)
-		for _, batch := range historyBatch {
-			for _, event := range batch.Events {
-				fmt.Printf("++++++++++\n")
-				fmt.Printf("## SEEING:\n%v\n.", print(event))
-				fmt.Printf("++++++++++\n")
-				err := versionHistory.AddOrUpdateItem(
-					persistence.NewVersionHistoryItem(
-						event.GetEventId(),
-						event.GetVersion(),
-					))
-				s.NoError(err)
-			}
-		}
-
-		for _, batch := range historyBatch {
-
-			// TODO temporary code to generate first event & version history
-			//  we should generate these as part of modeled based testing
-			lastEvent := batch.Events[len(batch.Events)-1]
-			newRunEventBlob, newRunVersionHistory := s.generateNewRunHistory(
-				lastEvent, s.domainName, workflowID, runID, version, workflowType, tasklist,
-			)
-
-			// must serialize events batch after attempt on continue as new as generateNewRunHistory will
-			// modify the NewExecutionRunId attr
-			eventBlob, err := s.serializer.SerializeBatchEvents(batch.Events, common.EncodingTypeThriftRW)
+	// TODO temporary code to generate version history
+	//  we should generate version as part of modeled based testing
+	versionHistory := persistence.NewVersionHistory(nil, nil)
+	for _, batch := range historyBatch {
+		for _, event := range batch.Events {
+			fmt.Printf("++++++++++\n")
+			fmt.Printf("## SEEING:\n%v\n.", print(event))
+			fmt.Printf("++++++++++\n")
+			err := versionHistory.AddOrUpdateItem(
+				persistence.NewVersionHistoryItem(
+					event.GetEventId(),
+					event.GetVersion(),
+				))
 			s.NoError(err)
-
-			err = historyClient.ReplicateEventsV2(s.createContext(), &history.ReplicateEventsV2Request{
-				DomainUUID: common.StringPtr(s.domainID),
-				WorkflowExecution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
-				},
-				VersionHistoryItems:       s.toThriftVersionHistoryItems(versionHistory),
-				Events:                    s.toThriftDataBlob(eventBlob),
-				NewRunVersionHistoryItems: s.toThriftVersionHistoryItems(newRunVersionHistory),
-				NewRunEvents:              s.toThriftDataBlob(newRunEventBlob),
-				ResetWorkflow:             common.BoolPtr(false),
-			})
-			s.Nil(err, "Failed to replicate history event")
-		}
-
-		// get replicated history events from passive side
-		passiveClient := s.active.GetFrontendClient()
-		replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(
-			s.createContext(),
-			&shared.GetWorkflowExecutionHistoryRequest{
-				Domain: common.StringPtr(s.domainName),
-				Execution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
-				},
-				MaximumPageSize:        common.Int32Ptr(1000),
-				NextPageToken:          nil,
-				WaitForNewEvent:        common.BoolPtr(false),
-				HistoryEventFilterType: shared.HistoryEventFilterTypeAllEvent.Ptr(),
-			},
-		)
-		s.Nil(err, "Failed to get history event from passive side")
-
-		// compare origin events with replicated events
-		batchIndex := 0
-		batch := historyBatch[batchIndex].Events
-		eventIndex := 0
-		for _, event := range replicatedHistory.GetHistory().GetEvents() {
-			if eventIndex >= len(batch) {
-				batchIndex++
-				batch = historyBatch[batchIndex].Events
-				eventIndex = 0
-			}
-			originEvent := batch[eventIndex]
-			eventIndex++
-			s.Equal(originEvent.GetEventType().String(), event.GetEventType().String(), "The replicated event and the origin event are not the same")
 		}
 	}
+
+	for _, batch := range historyBatch {
+
+		// TODO temporary code to generate first event & version history
+		//  we should generate these as part of modeled based testing
+		lastEvent := batch.Events[len(batch.Events)-1]
+		newRunEventBlob, newRunVersionHistory := s.generateNewRunHistory(
+			lastEvent, s.domainName, workflowID, runID, 101, workflowType, tasklist,
+		)
+
+		// must serialize events batch after attempt on continue as new as generateNewRunHistory will
+		// modify the NewExecutionRunId attr
+		eventBlob, err := s.serializer.SerializeBatchEvents(batch.Events, common.EncodingTypeThriftRW)
+		s.NoError(err)
+
+		err = historyClient.ReplicateEventsV2(s.createContext(), &history.ReplicateEventsV2Request{
+			DomainUUID: common.StringPtr(s.domainID),
+			WorkflowExecution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
+			VersionHistoryItems:       s.toThriftVersionHistoryItems(versionHistory),
+			Events:                    s.toThriftDataBlob(eventBlob),
+			NewRunVersionHistoryItems: s.toThriftVersionHistoryItems(newRunVersionHistory),
+			NewRunEvents:              s.toThriftDataBlob(newRunEventBlob),
+			ResetWorkflow:             common.BoolPtr(false),
+		})
+		s.Nil(err, "Failed to replicate history event")
+	}
+
+	// get replicated history events from passive side
+	passiveClient := s.active.GetFrontendClient()
+	replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(
+		s.createContext(),
+		&shared.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
+			MaximumPageSize:        common.Int32Ptr(1000),
+			NextPageToken:          nil,
+			WaitForNewEvent:        common.BoolPtr(false),
+			HistoryEventFilterType: shared.HistoryEventFilterTypeAllEvent.Ptr(),
+		},
+	)
+	s.Nil(err, "Failed to get history event from passive side")
+
+	// compare origin events with replicated events
+	batchIndex := 0
+	batch := historyBatch[batchIndex].Events
+	eventIndex := 0
+	for _, event := range replicatedHistory.GetHistory().GetEvents() {
+		if eventIndex >= len(batch) {
+			batchIndex++
+			batch = historyBatch[batchIndex].Events
+			eventIndex = 0
+		}
+		originEvent := batch[eventIndex]
+		eventIndex++
+		s.Equal(originEvent.GetEventType().String(), event.GetEventType().String(), "The replicated event and the origin event are not the same")
+	}
+	//}
 }
 
 func (s *nDCIntegrationTestSuite) registerDomain() {
