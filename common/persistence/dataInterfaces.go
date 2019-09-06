@@ -2449,8 +2449,13 @@ func BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID string) string {
 
 func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID string, err error) {
 	ss := strings.Split(info, ":")
-	if len(ss) != 3 {
+	// workflowID can contain ":" so len(ss) can be greater than 3
+	if len(ss) < 3 {
 		return "", "", "", fmt.Errorf("not able to split info for  %s", info)
 	}
-	return ss[0], ss[1], ss[2], nil
+	domainID = ss[0]
+	runID = ss[len(ss)-1]
+	workflowEnd := len(info) - len(runID) - 1
+	workflowID = info[len(domainID) +1 :workflowEnd]
+	return
 }
