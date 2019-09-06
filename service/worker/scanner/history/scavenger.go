@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -198,7 +198,11 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 	return s.hbd, nil
 }
 
-func (s *Scavenger) startTaskProcessor(ctx context.Context, taskCh chan taskDetail, respCh chan error) {
+func (s *Scavenger) startTaskProcessor(
+	ctx context.Context,
+	taskCh chan taskDetail,
+	respCh chan error,
+) {
 	for {
 		select {
 		case <-ctx.Done():

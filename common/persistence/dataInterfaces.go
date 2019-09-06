@@ -143,6 +143,8 @@ const (
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
 )
 
+const numItemsInGarbageInfo = 3
+
 type (
 	// InvalidPersistenceRequestError represents invalid request to persistence
 	InvalidPersistenceRequestError struct {
@@ -2450,12 +2452,12 @@ func BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID string) string {
 func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID string, err error) {
 	ss := strings.Split(info, ":")
 	// workflowID can contain ":" so len(ss) can be greater than 3
-	if len(ss) < 3 {
+	if len(ss) < numItemsInGarbageInfo {
 		return "", "", "", fmt.Errorf("not able to split info for  %s", info)
 	}
 	domainID = ss[0]
 	runID = ss[len(ss)-1]
 	workflowEnd := len(info) - len(runID) - 1
-	workflowID = info[len(domainID) +1 :workflowEnd]
+	workflowID = info[len(domainID)+1 : workflowEnd]
 	return
 }
