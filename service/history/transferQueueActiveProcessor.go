@@ -23,7 +23,6 @@ package history
 import (
 	ctx "context"
 	"fmt"
-
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -460,6 +459,8 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := executionInfo.SearchAttributes
+	domainName := msBuilder.GetDomainName()
+	children := msBuilder.GetPendingChildExecutionInfos()
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -505,7 +506,53 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 			err = nil
 		}
 	}
+
+	if err != nil {
+		return err
+	}
+
+	if len(children) > 0 {
+		err = t.processParentClosePolicy(domainName, domainID, children)
+	}
 	return err
+}
+
+func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(domainName, domainUUID string, children map[int64]*persistence.ChildExecutionInfo) error {
+	if t.shard.GetConfig().EnableParentClosePolicyWorker() && len(children) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
+
+	} else {
+		for _, child := range children {
+			var err error
+			switch child.ParentClosePolicy {
+			case workflow.ParentClosePolicyTerminate:
+				err = t.historyClient.TerminateWorkflowExecution(nil, &h.TerminateWorkflowExecutionRequest{
+					DomainUUID: common.StringPtr(domainUUID),
+					TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
+						Domain:            common.StringPtr(domainName),
+						WorkflowExecution: &workflow.WorkflowExecution{},
+						Reason:            common.StringPtr("by parent close policy"),
+						Identity:          common.StringPtr(identityHistoryService),
+					},
+				})
+			case workflow.ParentClosePolicyRequestCancel:
+				err = t.historyClient.RequestCancelWorkflowExecution(nil, &h.RequestCancelWorkflowExecutionRequest{
+					DomainUUID: common.StringPtr(domainUUID),
+					CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+						Domain:            common.StringPtr(domainName),
+						WorkflowExecution: &workflow.WorkflowExecution{},
+						Identity:          common.StringPtr(identityHistoryService),
+					},
+				})
+			}
+
+			if err != nil {
+				if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (t *transferQueueActiveProcessorImpl) processCancelExecution(
