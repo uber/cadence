@@ -187,6 +187,7 @@ var keys = map[Key]string{
 	StickyTTL:                                             "history.stickyTTL",
 	DecisionHeartbeatTimeout:                              "history.decisionHeartbeatTimeout",
 	ParentClosePolicyThreshold:                            "history.parentClosePolicyThreshold",
+	NumParentClosePolicySystemWorkflows:                   "history.numParentClosePolicySystemWorkflows",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
@@ -494,6 +495,8 @@ const (
 	// ParentClosePolicyThreshold decides that parent close policy will be processed by sys workers(if enabled) if
 	// the number of children greater than or equal to this threshold
 	ParentClosePolicyThreshold
+	// NumParentClosePolicySystemWorkflows is key for number of parentClosePolicy system workflows running in total
+	NumParentClosePolicySystemWorkflows
 
 	// HistoryThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	HistoryThrottledLogRPS
