@@ -80,7 +80,6 @@ COVER_ROOT                 := $(BUILD)/coverage
 UNIT_COVER_FILE            := $(COVER_ROOT)/unit_cover.out
 INTEG_COVER_FILE           := $(COVER_ROOT)/integ_$(PERSISTENCE_TYPE)$(EV2_TEST)_cover.out
 INTEG_XDC_COVER_FILE       := $(COVER_ROOT)/integ_xdc_$(PERSISTENCE_TYPE)_cover.out
-
 INTEG_CASS_COVER_FILE      := $(COVER_ROOT)/integ_cassandra_cover.out
 INTEG_CASS_EV2_COVER_FILE  := $(COVER_ROOT)/integ_cassandra_ev2_cover.out
 INTEG_XDC_CASS_COVER_FILE  := $(COVER_ROOT)/integ_xdc_cassandra_cover.out
