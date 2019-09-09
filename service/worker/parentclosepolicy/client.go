@@ -37,7 +37,7 @@ type (
 
 	// Client is used to archive workflow histories
 	Client interface {
-		SendParentClosePolicyRequest(context.Context, Request) error
+		SendParentClosePolicyRequest(Request) error
 	}
 
 	clientImpl struct {
@@ -49,7 +49,7 @@ type (
 )
 
 const (
-	signalTimeout    = 5 * time.Second
+	signalTimeout    = 400 * time.Millisecond
 	workflowIDPrefix = "parent-close-policy-workflow"
 )
 
@@ -68,7 +68,7 @@ func NewClient(
 	}
 }
 
-func (c *clientImpl) SendParentClosePolicyRequest(ctx context.Context, request Request) error {
+func (c *clientImpl) SendParentClosePolicyRequest(request Request) error {
 	randomID := rand.Intn(c.numWorkflows)
 	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, randomID)
 	workflowOptions := cclient.StartWorkflowOptions{

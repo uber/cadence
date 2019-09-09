@@ -545,7 +545,7 @@ func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(domainName, 
 			DomainUUID: domainUUID,
 			Executions: executions,
 		}
-		err := t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx.Background(), request)
+		err := t.parentClosePolicyClient.SendParentClosePolicyRequest(request)
 		if err != nil {
 			return err
 		}
