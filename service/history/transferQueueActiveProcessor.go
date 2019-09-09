@@ -533,6 +533,10 @@ func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(domainName, 
 	if t.shard.GetConfig().EnableParentClosePolicyWorker() && len(children) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
 		executions := make([]parentclosepolicy.RequestDetail, 0, len(children))
 		for _, ch := range children {
+			if ch.ParentClosePolicy == workflow.ParentClosePolicyAbandon {
+				continue
+			}
+
 			executions = append(executions, parentclosepolicy.RequestDetail{
 				WorkflowID: ch.StartedWorkflowID,
 				RunID:      ch.StartedRunID,

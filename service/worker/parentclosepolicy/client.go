@@ -48,6 +48,8 @@ type (
 	}
 )
 
+var _ Client = (*clientImpl)(nil)
+
 const (
 	signalTimeout    = 400 * time.Millisecond
 	workflowIDPrefix = "parent-close-policy-workflow"
