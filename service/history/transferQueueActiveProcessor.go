@@ -35,22 +35,24 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
 
 const identityHistoryService = "history-service"
 
 type (
 	transferQueueActiveProcessorImpl struct {
-		currentClusterName string
-		shard              ShardContext
-		historyService     *historyEngineImpl
-		options            *QueueProcessorOptions
-		historyClient      history.Client
-		cache              *historyCache
-		transferTaskFilter queueTaskFilter
-		logger             log.Logger
-		metricsClient      metrics.Client
-		maxReadAckLevel    maxReadAckLevel
+		currentClusterName      string
+		shard                   ShardContext
+		historyService          *historyEngineImpl
+		options                 *QueueProcessorOptions
+		historyClient           history.Client
+		cache                   *historyCache
+		transferTaskFilter      queueTaskFilter
+		logger                  log.Logger
+		metricsClient           metrics.Client
+		parentClosePolicyClient parentclosepolicy.Client
+		maxReadAckLevel         maxReadAckLevel
 		*transferQueueProcessorBase
 		*queueProcessorBase
 		queueAckMgr
@@ -99,14 +101,18 @@ func newTransferQueueActiveProcessor(
 		return nil
 	}
 
+	parentClosePolicyClient := parentclosepolicy.NewClient(shard.GetMetricsClient(), shard.GetLogger(), historyService.publicClient)
+
 	processor := &transferQueueActiveProcessorImpl{
-		currentClusterName: currentClusterName,
-		shard:              shard,
-		historyService:     historyService,
-		options:            options,
-		historyClient:      historyClient,
-		logger:             logger,
-		metricsClient:      historyService.metricsClient,
+		currentClusterName:      currentClusterName,
+		shard:                   shard,
+		historyService:          historyService,
+		options:                 options,
+		historyClient:           historyClient,
+		logger:                  logger,
+		metricsClient:           historyService.metricsClient,
+		parentClosePolicyClient: parentClosePolicyClient,
+
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
@@ -521,7 +527,24 @@ func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(domainName, 
 	scope := t.metricsClient.Scope(metrics.TransferActiveTaskCloseExecutionScope)
 
 	if t.shard.GetConfig().EnableParentClosePolicyWorker() && len(children) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
+		executions := make([]parentclosepolicy.RequestDetail, 0, len(children))
+		for _, ch := range children {
+			executions = append(executions, parentclosepolicy.RequestDetail{
+				WorkflowID: ch.StartedWorkflowID,
+				RunID:      ch.StartedRunID,
+				Policy:     ch.ParentClosePolicy,
+			})
+		}
 
+		request := parentclosepolicy.Request{
+			DomainName: domainName,
+			DomainUUID: domainUUID,
+			Executions: executions,
+		}
+		err := t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx.Background(), request, t.shard.GetConfig().NumberOfShards)
+		if err != nil {
+			return err
+		}
 	} else {
 		for _, child := range children {
 			var err error
