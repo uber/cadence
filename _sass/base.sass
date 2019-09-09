@@ -103,6 +103,20 @@ header.top-bar
     fill: white
     height: 50px
     width: 50px
+    &:hover, &:focus
+      fill: $primary-color
+  svg.github
+    fill: white
+    height: 32px
+    width: 32px
+    &:hover, &:focus
+      fill: $primary-color
+  svg.docker
+    fill: white
+    height: 36px
+    width: 36px
+    &:hover, &:focus
+      fill: $primary-color
   nav
     display: flex
     align-items: stretch
@@ -115,6 +129,14 @@ header.top-bar
         color: $primary-color
       &.join-slack
         padding: 0
+      &.github-link
+        padding-top: 8px
+        padding-left: 1px
+        padding-right: 1px
+        padding-bottom: 0
+      &.docker-link
+        padding-top: 6px
+        padding-bottom: 0
 
   .doc-search
     position: relative

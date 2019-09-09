@@ -1,4 +1,14 @@
 <head>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-139839961-1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-139839961-1');
+  </script>
+
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
 
@@ -6,6 +16,7 @@
   {% assign timestamp = site.time | date: '%s' %}
   <link rel="stylesheet" href="{{ "/assets/cadence.css?" | append: timestamp | absolute_url }}">
   <link rel="shortcut icon" href="{{ "/assets/favicon.ico" | absolute_url }}" type="image/x-icon">
+  <link rel="stylesheet" href="{{ "/assets/tour.css" | absolute_url }}">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
