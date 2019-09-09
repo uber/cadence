@@ -101,7 +101,11 @@ func newTransferQueueActiveProcessor(
 		return nil
 	}
 
-	parentClosePolicyClient := parentclosepolicy.NewClient(shard.GetMetricsClient(), shard.GetLogger(), historyService.publicClient)
+	parentClosePolicyClient := parentclosepolicy.NewClient(
+		shard.GetMetricsClient(),
+		shard.GetLogger(),
+		historyService.publicClient,
+		shard.GetConfig().NumParentClosePolicySystemWorkflows())
 
 	processor := &transferQueueActiveProcessorImpl{
 		currentClusterName:      currentClusterName,
@@ -541,7 +545,7 @@ func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(domainName, 
 			DomainUUID: domainUUID,
 			Executions: executions,
 		}
-		err := t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx.Background(), request, t.shard.GetConfig().NumberOfShards)
+		err := t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx.Background(), request)
 		if err != nil {
 			return err
 		}

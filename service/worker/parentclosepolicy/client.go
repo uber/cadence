@@ -23,6 +23,7 @@ package parentclosepolicy
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -36,13 +37,14 @@ type (
 
 	// Client is used to archive workflow histories
 	Client interface {
-		SendParentClosePolicyRequest(context.Context, Request, int) error
+		SendParentClosePolicyRequest(context.Context, Request) error
 	}
 
 	clientImpl struct {
 		metricsClient metrics.Client
 		logger        log.Logger
 		cadenceClient cclient.Client
+		numWorkflows  int
 	}
 )
 
@@ -56,15 +58,18 @@ func NewClient(
 	metricsClient metrics.Client,
 	logger log.Logger,
 	publicClient workflowserviceclient.Interface,
+	numWorkflows int,
 ) Client {
 	return &clientImpl{
 		metricsClient: metricsClient,
 		logger:        logger,
 		cadenceClient: cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
+		numWorkflows:  numWorkflows,
 	}
 }
 
-func (c *clientImpl) SendParentClosePolicyRequest(ctx context.Context, request Request, randomID int) error {
+func (c *clientImpl) SendParentClosePolicyRequest(ctx context.Context, request Request) error {
+	randomID := rand.Intn(c.numWorkflows)
 	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, randomID)
 	workflowOptions := cclient.StartWorkflowOptions{
 		ID:                              workflowID,
