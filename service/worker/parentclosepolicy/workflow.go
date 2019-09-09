@@ -47,19 +47,6 @@ const (
 )
 
 type (
-
-	// HeartBeatDetails is the struct for heartbeat details
-	HeartBeatDetails struct {
-		PageToken   []byte
-		CurrentPage int
-		// This is just an estimation for visibility
-		TotalEstimate int64
-		// Number of workflows processed successfully
-		SuccessCount int
-		// Number of workflows that give up due to errors.
-		ErrorCount int
-	}
-
 	RequestDetail struct {
 		WorkflowID string
 		RunID      string
