@@ -147,13 +147,13 @@ func MyWorkflow(ctx workflow.Context, input string) error {
         "CustomIntField": 1,
         "CustomBoolField": true,
     }
-    worklfow.UpsertSearchAttributes(ctx, attr1)
+    workflow.UpsertSearchAttributes(ctx, attr1)
 
     attr2 := map[string]interface{}{
         "CustomIntField": 2,
         "CustomKeywordField": "seattle",
     }
-    worklfow.UpsertSearchAttributes(ctx, attr2)
+    workflow.UpsertSearchAttributes(ctx, attr2)
 }
 ```
 
@@ -171,9 +171,9 @@ There is no support for removing a field. To achieve a similar effect, set the f
 
 Use `workflow.GetInfo` to get current search attributes.
 
-### ContinueAsNew
+### ContinueAsNew and Cron
 
-When performing a [ContinueAsNew](07_goclient/09_continueasnew), search attributes (and memo) will be carried over to the new run by default.
+When performing a [ContinueAsNew](07_goclient/09_continueasnew) or using [Cron](07_goclient/16_distributed_cron), search attributes (and memo) will be carried over to the new run by default.
 
 ## Query Capabilities
 
@@ -193,21 +193,24 @@ Note that you will only see workflows from one domain when querying.
 
 These can be found by using the CLI get-search-attr command or the GetSearchAttributes API. The names and types are as follows:
 
-- CloseStatus = INT
-- CloseTime = INT
-- CustomBoolField = BOOL
-- CustomDatetimeField | DATETIME
-- CustomDoubleField = DOUBLE
-- CustomIntField = INT
-- CustomKeywordField = KEYWORD
-- CustomStringField = STRING
-- DomainID = KEYWORD
-- ExecutionTime = INT
-- HistoryLength = INT
-- RunID = KEYWORD
-- StartTime = INT
-- WorkflowID = KEYWORD
-- WorkflowType = KEYWORD
+| KEY                 | VALUE TYPE |
+| ------------------- | ---------- |
+| CloseStatus         | INT        |
+| CloseTime           | INT        |
+| CustomBoolField     | DOUBLE     |
+| CustomDatetimeField | DATETIME   |
+| CustomDomain        | KEYWORD    |
+| CustomDoubleField   | BOOL       |
+| CustomIntField      | INT        |
+| CustomKeywordField  | KEYWORD    |
+| CustomStringField   | STRING     |
+| DomainID            | KEYWORD    |
+| ExecutionTime       | INT        |
+| HistoryLength       | INT        |
+| RunID               | KEYWORD    |
+| StartTime           | INT        |
+| WorkflowID          | KEYWORD    |
+| WorkflowType        | KEYWORD    |
 
 There are some special considerations for these attributes:
 
