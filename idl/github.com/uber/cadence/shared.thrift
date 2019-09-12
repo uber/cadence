@@ -1559,3 +1559,10 @@ struct VersionHistories{
   10: optional i32 currentVersionHistoryIndex
   20: optional list<VersionHistory> histories
 }
+
+// ReapplyEventsRequest is the request for reapply events API
+struct ReapplyEventsRequest{
+  10: optional string domainUUID
+  20: optional WorkflowExecution workflowExecution
+  30: optional DataBlob events
+}
