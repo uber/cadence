@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -48,6 +49,9 @@ type (
 		metricsClient         metrics.Client
 		options               *QueueProcessorOptions
 		logger                log.Logger
+		retryPolicy           backoff.RetryPolicy
+		// This is the batch size used by pull based RPC replicator.
+		fetchTasksBatchSize int
 		*queueProcessorBase
 		queueAckMgr
 
@@ -92,6 +96,10 @@ func newReplicatorQueueProcessor(
 		return true, nil
 	}
 
+	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
+	retryPolicy.SetMaximumAttempts(10)
+	retryPolicy.SetBackoffCoefficient(1)
+
 	processor := &replicatorQueueProcessorImpl{
 		currentClusterNamer:   currentClusterName,
 		shard:                 shard,
@@ -104,10 +112,12 @@ func newReplicatorQueueProcessor(
 		metricsClient:         shard.GetMetricsClient(),
 		options:               options,
 		logger:                logger,
+		retryPolicy:           retryPolicy,
+		fetchTasksBatchSize:   config.ReplicatorProcessorFetchTasksBatchSize(),
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetReplicatorAckLevel(), logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, historyCache, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 
@@ -116,6 +126,10 @@ func newReplicatorQueueProcessor(
 
 func (p *replicatorQueueProcessorImpl) getTaskFilter() queueTaskFilter {
 	return p.replicationTaskFilter
+}
+
+func (p *replicatorQueueProcessorImpl) complete(qTask queueTaskInfo) {
+	p.queueProcessorBase.complete(qTask)
 }
 
 func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo, shouldProcessTask bool) (int, error) {
@@ -243,6 +257,7 @@ func (p *replicatorQueueProcessorImpl) getSyncActivityTask(task *persistence.Rep
 			Attempt:            common.Int32Ptr(activityInfo.Attempt),
 			LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
 			LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
+			LastFailureDetails: activityInfo.LastFailureDetails,
 		},
 	}
 
@@ -305,9 +320,15 @@ func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetCluster
 }
 
 // GenerateReplicationTask generate replication task
-func GenerateReplicationTask(targetClusters []string, task *persistence.ReplicationTaskInfo,
-	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger log.Logger, history *shared.History, shardID *int,
+func GenerateReplicationTask(
+	targetClusters []string,
+	task *persistence.ReplicationTaskInfo,
+	historyMgr persistence.HistoryManager,
+	historyV2Mgr persistence.HistoryV2Manager,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	history *shared.History,
+	shardID *int,
 ) (*replicator.ReplicationTask, error) {
 	var err error
 	if history == nil {
@@ -372,10 +393,14 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 }
 
 func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {
+	return p.readTasksWithBatchSize(readLevel, p.options.BatchSize())
+}
+
+func (p *replicatorQueueProcessorImpl) readTasksWithBatchSize(readLevel int64, batchSize int) ([]queueTaskInfo, bool, error) {
 	response, err := p.executionMgr.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
 		ReadLevel:    readLevel,
 		MaxReadLevel: p.shard.GetTransferMaxReadLevel(),
-		BatchSize:    p.options.BatchSize(),
+		BatchSize:    batchSize,
 	})
 
 	if err != nil {
@@ -414,10 +439,21 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 }
 
 // GetAllHistory return history
-func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger log.Logger, byBatch bool,
-	domainID string, workflowID string, runID string, firstEventID int64,
-	nextEventID int64, eventStoreVersion int32, branchToken []byte, shardID *int) (*shared.History, []*shared.History, error) {
+func GetAllHistory(
+	historyMgr persistence.HistoryManager,
+	historyV2Mgr persistence.HistoryV2Manager,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	byBatch bool,
+	domainID string,
+	workflowID string,
+	runID string,
+	firstEventID int64,
+	nextEventID int64,
+	eventStoreVersion int32,
+	branchToken []byte,
+	shardID *int,
+) (*shared.History, []*shared.History, error) {
 
 	// overall result
 	historyEvents := []*shared.HistoryEvent{}
@@ -552,23 +588,51 @@ func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) ma
 }
 
 func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.ReplicationMessages, error) {
-	taskInfoList, hasMore, err := p.readTasks(readLevel)
+	taskInfoList, hasMore, err := p.readTasksWithBatchSize(readLevel, p.fetchTasksBatchSize)
 	if err != nil {
 		return nil, err
 	}
 
 	var replicationTasks []*replicator.ReplicationTask
 	for _, taskInfo := range taskInfoList {
-		readLevel = taskInfo.GetTaskID()
-		replicationTask, err := p.toReplicationTask(taskInfo)
-		if err != nil {
-			return nil, err
+		var replicationTask *replicator.ReplicationTask
+		op := func() error {
+			var err error
+			replicationTask, err = p.toReplicationTask(taskInfo)
+			return err
 		}
 
+		err = backoff.Retry(op, p.retryPolicy, common.IsPersistenceTransientError)
+		if err != nil {
+			p.logger.Debug("Failed to get replication task. Return what we have so far.", tag.Error(err))
+			hasMore = true
+			break
+		}
+
+		readLevel = taskInfo.GetTaskID()
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
 	}
+
+	// Note this is a very rough indicator of how much the remote DC is behind on this shard.
+	p.metricsClient.RecordTimer(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.ReplicationTasksLag,
+		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
+	)
+
+	p.metricsClient.RecordTimer(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.ReplicationTasksFetched,
+		time.Duration(len(taskInfoList)),
+	)
+
+	p.metricsClient.RecordTimer(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.ReplicationTasksReturned,
+		time.Duration(len(replicationTasks)),
+	)
 
 	return &replicator.ReplicationMessages{
 		ReplicationTasks:      replicationTasks,

@@ -82,6 +82,9 @@ type (
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+
+		// Remove corrupted task
+		DeleteTask(request *DeleteTaskRequest) error
 	}
 
 	// HistoryStore is used to manage Workflow Execution HistoryEventBatch for Persistence layer
@@ -119,6 +122,8 @@ type (
 		CompleteForkBranch(request *InternalCompleteForkBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		// GetAllHistoryTreeBranches returns all branches of all trees
+		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// VisibilityStore is the store interface for visibility
@@ -274,6 +279,7 @@ type (
 		NonRetriableErrors []string
 		LastFailureReason  string
 		LastWorkerIdentity string
+		LastFailureDetails []byte
 		// Not written to database - This is used only for deduping heartbeat timer creation
 		LastHeartbeatTimeoutVisibility int64
 	}
@@ -291,6 +297,7 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
+		ParentClosePolicy     workflow.ParentClosePolicy
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution for Persistence Interface
@@ -487,6 +494,10 @@ type (
 		PageSize int
 		// Pagination token
 		NextPageToken []byte
+		// LastNodeID is the last known node ID attached to a history node
+		LastNodeID int64
+		// LastTransactionID is the last known transaction ID attached to a history node
+		LastTransactionID int64
 		// Used in sharded data stores to identify which shard to use
 		ShardID int
 	}
@@ -507,6 +518,10 @@ type (
 		History []*DataBlob
 		// Pagination token
 		NextPageToken []byte
+		// LastNodeID is the last known node ID attached to a history node
+		LastNodeID int64
+		// LastTransactionID is the last known transaction ID attached to a history node
+		LastTransactionID int64
 	}
 
 	// VisibilityWorkflowExecutionInfo is visibility info for internal response

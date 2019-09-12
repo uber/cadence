@@ -114,7 +114,8 @@ type (
 			baseRunID string,
 			baseRunNextEventID int64,
 		) (retError error)
-		getWorkflowWatcher() WorkflowWatcher
+
+		getQueryRegistry() QueryRegistry
 	}
 )
 
@@ -133,7 +134,7 @@ type (
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
-		watcher         WorkflowWatcher
+		queryRegistry   QueryRegistry
 	}
 )
 
@@ -150,7 +151,6 @@ func newWorkflowExecutionContext(
 	executionManager persistence.ExecutionManager,
 	logger log.Logger,
 ) *workflowExecutionContextImpl {
-
 	lg := logger.WithTags(
 		tag.WorkflowID(execution.GetWorkflowId()),
 		tag.WorkflowRunID(execution.GetRunId()),
@@ -170,7 +170,7 @@ func newWorkflowExecutionContext(
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
-		watcher: NewWorkflowWatcher(),
+		queryRegistry: NewQueryRegistry(),
 	}
 }
 
@@ -503,12 +503,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	// TODO remove updateCondition in favor of condition in mutable state
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
-	c.watcher.Publish(&WatcherSnapshot{
-		CloseStatus: c.msBuilder.GetExecutionInfo().CloseStatus,
-	})
-
 	// for any change in the workflow, send a event
-	// TODO: @andrewjdawson2016 remove historyEventNotifier once plumbing for MutableStatePubSub is finished
 	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
@@ -516,6 +511,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		c.msBuilder.GetNextEventID(),
 		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
+		c.msBuilder.GetExecutionInfo().CloseStatus,
 	))
 
 	// notify current workflow tasks
@@ -649,7 +645,7 @@ func (c *workflowExecutionContextImpl) persistFirstWorkflowEvents(
 		execution,
 		&persistence.AppendHistoryNodesRequest{
 			IsNewBranch: true,
-			Info:        historyGarbageCleanupInfo(domainID, workflowID, runID),
+			Info:        persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID),
 			BranchToken: branchToken,
 			Events:      events,
 			// TransactionID is set by shard context
@@ -1011,6 +1007,6 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) getWorkflowWatcher() WorkflowWatcher {
-	return c.watcher
+func (c *workflowExecutionContextImpl) getQueryRegistry() QueryRegistry {
+	return c.queryRegistry
 }

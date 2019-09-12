@@ -60,7 +60,7 @@ func (m *executionManagerImpl) GetShardID() int {
 	return m.persistence.GetShardID()
 }
 
-//The below three APIs are related to serialization/deserialization
+// The below three APIs are related to serialization/deserialization
 func (m *executionManagerImpl) GetWorkflowExecution(
 	request *GetWorkflowExecutionRequest,
 ) (*GetWorkflowExecutionResponse, error) {
@@ -220,6 +220,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			CreateRequestID:       v.CreateRequestID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
+			ParentClosePolicy:     v.ParentClosePolicy,
 		}
 
 		// Needed for backward compatibility reason.
@@ -286,6 +287,7 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 			NonRetriableErrors:             v.NonRetriableErrors,
 			LastFailureReason:              v.LastFailureReason,
 			LastWorkerIdentity:             v.LastWorkerIdentity,
+			LastFailureDetails:             v.LastFailureDetails,
 			LastHeartbeatTimeoutVisibility: v.LastHeartbeatTimeoutVisibility,
 		}
 		newInfos[k] = a
@@ -347,6 +349,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 			StartedRunID:          v.StartedRunID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
+			ParentClosePolicy:     v.ParentClosePolicy,
 		}
 		newInfos = append(newInfos, i)
 	}
@@ -401,6 +404,7 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 			NonRetriableErrors:             v.NonRetriableErrors,
 			LastFailureReason:              v.LastFailureReason,
 			LastWorkerIdentity:             v.LastWorkerIdentity,
+			LastFailureDetails:             v.LastFailureDetails,
 			LastHeartbeatTimeoutVisibility: v.LastHeartbeatTimeoutVisibility,
 		}
 		newInfos = append(newInfos, i)
@@ -670,6 +674,12 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 
 		Condition: input.Condition,
 	}, nil
+}
+
+func (m *executionManagerImpl) DeleteTask(
+	request *DeleteTaskRequest,
+) error {
+	return m.persistence.DeleteTask(request)
 }
 
 func (m *executionManagerImpl) DeleteWorkflowExecution(

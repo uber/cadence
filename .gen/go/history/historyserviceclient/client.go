@@ -39,6 +39,12 @@ import (
 
 // Interface is a client for the HistoryService service.
 type Interface interface {
+	CloseShard(
+		ctx context.Context,
+		Request *shared.CloseShardRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	DescribeHistoryHost(
 		ctx context.Context,
 		Request *shared.DescribeHistoryHostRequest,
@@ -69,6 +75,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetReplicationMessagesResponse, error)
 
+	QueryWorkflow(
+		ctx context.Context,
+		QueryRequest *history.QueryWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) (*history.QueryWorkflowResponse, error)
+
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
 		HeartbeatRequest *history.RecordActivityTaskHeartbeatRequest,
@@ -96,6 +108,12 @@ type Interface interface {
 	RemoveSignalMutableState(
 		ctx context.Context,
 		RemoveRequest *history.RemoveSignalMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	RemoveTask(
+		ctx context.Context,
+		Request *shared.RemoveTaskRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -226,6 +244,29 @@ type client struct {
 	c thrift.Client
 }
 
+func (c client) CloseShard(
+	ctx context.Context,
+	_Request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_CloseShard_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_CloseShard_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_CloseShard_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) DescribeHistoryHost(
 	ctx context.Context,
 	_Request *shared.DescribeHistoryHostRequest,
@@ -341,6 +382,29 @@ func (c client) GetReplicationMessages(
 	return
 }
 
+func (c client) QueryWorkflow(
+	ctx context.Context,
+	_QueryRequest *history.QueryWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *history.QueryWorkflowResponse, err error) {
+
+	args := history.HistoryService_QueryWorkflow_Helper.Args(_QueryRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_QueryWorkflow_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_QueryWorkflow_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	_HeartbeatRequest *history.RecordActivityTaskHeartbeatRequest,
@@ -453,6 +517,29 @@ func (c client) RemoveSignalMutableState(
 	}
 
 	err = history.HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RemoveTask(
+	ctx context.Context,
+	_Request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_RemoveTask_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RemoveTask_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_RemoveTask_Helper.UnwrapResponse(&result)
 	return
 }
 

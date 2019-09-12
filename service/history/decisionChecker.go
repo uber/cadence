@@ -517,6 +517,11 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 		attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(executionInfo.DecisionTimeoutValue)
 	}
 
+	// Check next run decision task delay
+	if attributes.GetBackoffStartIntervalInSeconds() < 0 {
+		return &workflow.BadRequestError{Message: "BackoffStartInterval is less than 0."}
+	}
+
 	domainEntry, err := v.domainCache.GetDomainByID(executionInfo.DomainID)
 	if err != nil {
 		return err
@@ -548,10 +553,6 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 
 	if attributes.WorkflowType == nil || attributes.WorkflowType.GetName() == "" {
 		return &workflow.BadRequestError{Message: "Required field WorkflowType is not set on decision."}
-	}
-
-	if attributes.ChildPolicy == nil {
-		return &workflow.BadRequestError{Message: "Required field ChildPolicy is not set on decision."}
 	}
 
 	if len(attributes.GetDomain()) > v.maxIDLengthLimit {

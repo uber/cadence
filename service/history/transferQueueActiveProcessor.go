@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
@@ -110,12 +111,19 @@ func newTransferQueueActiveProcessor(
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
+			shard,
+			options,
+			visibilityMgr,
+			matchingClient,
+			maxReadAckLevel,
+			updateTransferAckLevel,
+			transferQueueShutdown,
+			logger,
 		),
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(currentClusterName), logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, historyService.historyCache, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 
@@ -200,7 +208,7 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, minLevel, logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, historyService.historyCache, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 	return updateTransferAckLevel, processor
@@ -212,6 +220,10 @@ func (t *transferQueueActiveProcessorImpl) getTaskFilter() queueTaskFilter {
 
 func (t *transferQueueActiveProcessorImpl) notifyNewTask() {
 	t.queueProcessorBase.notifyNewTask()
+}
+
+func (t *transferQueueActiveProcessorImpl) complete(qTask queueTaskInfo) {
+	t.queueProcessorBase.complete(qTask)
 }
 
 func (t *transferQueueActiveProcessorImpl) process(
@@ -355,12 +367,12 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(
 		return nil
 	}
 
-	di, found := msBuilder.GetPendingDecision(task.ScheduleID)
+	decision, found := msBuilder.GetDecisionInfo(task.ScheduleID)
 	if !found {
 		t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(task.ScheduleID), tag.TaskType(persistence.TransferTaskTypeDecisionTask))
 		return nil
 	}
-	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, di.Version, task.Version, task)
+	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, decision.Version, task.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -438,7 +450,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 	workflowTypeName := executionInfo.WorkflowTypeName
 	workflowStartTimestamp := executionInfo.StartTimestamp.UnixNano()
 	workflowCloseTimestamp := wfCloseTime
-	workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+	workflowCloseStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := msBuilder.GetNextEventID() - 1
 
 	startEvent, ok := msBuilder.GetStartEvent()
@@ -452,9 +464,19 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
+	scope := t.metricsClient.Scope(metrics.TransferActiveTaskCloseExecutionScope)
 	err = t.recordWorkflowClosed(
-		domainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp.UnixNano(),
-		workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, task.GetTaskID(), visibilityMemo,
+		scope,
+		domainID,
+		execution,
+		workflowTypeName,
+		workflowStartTimestamp,
+		workflowExecutionTimestamp.UnixNano(),
+		workflowCloseTimestamp,
+		workflowCloseStatus,
+		workflowHistoryLength,
+		task.GetTaskID(),
+		visibilityMemo,
 		searchAttr,
 	)
 	if err != nil {
@@ -823,7 +845,6 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(
 				// Use the same request ID to dedupe StartWorkflowExecution calls
 				RequestId:             common.StringPtr(ci.CreateRequestID),
 				WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
-				ChildPolicy:           attributes.ChildPolicy,
 				RetryPolicy:           attributes.RetryPolicy,
 				CronSchedule:          attributes.CronSchedule,
 				Memo:                  attributes.Memo,
@@ -1204,9 +1225,14 @@ func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(
 				return &workflow.EntityNotExistsError{Message: "Pending request cancellation not found."}
 			}
 
-			_, err := msBuilder.AddExternalWorkflowExecutionCancelRequested(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddExternalWorkflowExecutionCancelRequested(
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
 				request.CancelRequest.WorkflowExecution.GetRunId(),
 			)
@@ -1233,9 +1259,14 @@ func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(
 				return &workflow.EntityNotExistsError{Message: "Pending signal request not found."}
 			}
 
-			_, err := msBuilder.AddExternalWorkflowExecutionSignaled(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddExternalWorkflowExecutionSignaled(
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
 				request.SignalRequest.WorkflowExecution.GetRunId(),
 				request.SignalRequest.Control)
@@ -1262,10 +1293,15 @@ func (t *transferQueueActiveProcessorImpl) requestCancelFailed(
 				return &workflow.EntityNotExistsError{Message: "Pending request cancellation not found."}
 			}
 
-			_, err := msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 				common.EmptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
 				request.CancelRequest.WorkflowExecution.GetRunId(),
 				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
@@ -1292,10 +1328,15 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(
 				return &workflow.EntityNotExistsError{Message: "Pending signal request not found."}
 			}
 
-			_, err := msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
+			domainEntry, err := t.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+			if err != nil {
+				return &workflow.EntityNotExistsError{Message: "Request Domain not found."}
+			}
+
+			_, err = msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
 				common.EmptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
+				domainEntry.GetInfo().Name,
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
 				request.SignalRequest.WorkflowExecution.GetRunId(),
 				request.SignalRequest.Control,
@@ -1317,24 +1358,18 @@ func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
 		return err
 	}
 
-	var transferTasks []persistence.Task
-	var timerTasks []persistence.Task
 	if err := action(msBuilder); err != nil {
 		return err
 	}
 
 	if createDecisionTask {
 		// Create a transfer task to schedule a decision task
-		err := scheduleDecision(msBuilder, t.shard.GetTimeSource(), t.logger)
+		err := scheduleDecision(msBuilder)
 		if err != nil {
 			return err
 		}
 	}
 
-	// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
-	// the history and try the operation again.
-	msBuilder.AddTransferTasks(transferTasks...)
-	msBuilder.AddTimerTasks(timerTasks...)
 	return context.updateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
 }
 
@@ -1347,26 +1382,4 @@ func (t *transferQueueActiveProcessorImpl) SignalExecutionWithRetry(
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-}
-
-func getWorkflowExecutionCloseStatus(
-	status int,
-) workflow.WorkflowExecutionCloseStatus {
-
-	switch status {
-	case persistence.WorkflowCloseStatusCompleted:
-		return workflow.WorkflowExecutionCloseStatusCompleted
-	case persistence.WorkflowCloseStatusFailed:
-		return workflow.WorkflowExecutionCloseStatusFailed
-	case persistence.WorkflowCloseStatusCanceled:
-		return workflow.WorkflowExecutionCloseStatusCanceled
-	case persistence.WorkflowCloseStatusTerminated:
-		return workflow.WorkflowExecutionCloseStatusTerminated
-	case persistence.WorkflowCloseStatusContinuedAsNew:
-		return workflow.WorkflowExecutionCloseStatusContinuedAsNew
-	case persistence.WorkflowCloseStatusTimedOut:
-		return workflow.WorkflowExecutionCloseStatusTimedOut
-	default:
-		panic("Invalid value for enum WorkflowExecutionCloseStatus")
-	}
 }

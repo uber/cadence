@@ -672,6 +672,33 @@ func (h *Handler) DescribeHistoryHost(ctx context.Context,
 	return resp, nil
 }
 
+// RemoveTask returns information about the internal states of a history host
+func (h *Handler) RemoveTask(
+	ctx context.Context,
+	request *gen.RemoveTaskRequest,
+) (retError error) {
+	executionMgr, err := h.executionMgrFactory.NewExecutionManager(int(request.GetShardID()))
+	if err != nil {
+		return err
+	}
+	deleteTaskRequest := &persistence.DeleteTaskRequest{
+		TaskID:  request.GetTaskID(),
+		Type:    int(request.GetType()),
+		ShardID: int(request.GetShardID()),
+	}
+	err = executionMgr.DeleteTask(deleteTaskRequest)
+	return err
+}
+
+// CloseShard returns information about the internal states of a history host
+func (h *Handler) CloseShard(
+	ctx context.Context,
+	request *gen.CloseShardRequest,
+) (retError error) {
+	h.controller.removeEngineForShard(int(request.GetShardID()))
+	return nil
+}
+
 // DescribeMutableState - returns the internal analysis of workflow execution state
 func (h *Handler) DescribeMutableState(ctx context.Context,
 	request *hist.DescribeMutableStateRequest) (resp *hist.DescribeMutableStateResponse, retError error) {
@@ -993,6 +1020,42 @@ func (h *Handler) ResetWorkflowExecution(ctx context.Context,
 	return resp, nil
 }
 
+// QueryWorkflow queries a workflow.
+func (h *Handler) QueryWorkflow(
+	ctx context.Context,
+	request *hist.QueryWorkflowRequest,
+) (resp *hist.QueryWorkflowResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope := metrics.HistoryQueryWorkflowScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	domainID := request.GetDomainUUID()
+	if domainID == "" {
+		return nil, h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok := h.rateLimiter.Allow(); !ok {
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+
+	workflowID := request.GetExecution().GetWorkflowId()
+	engine, err1 := h.controller.GetEngine(workflowID)
+	if err1 != nil {
+		return nil, h.error(err1, scope, domainID, workflowID)
+	}
+
+	resp, err2 := engine.QueryWorkflow(ctx, request)
+	if err2 != nil {
+		return nil, h.error(err2, scope, domainID, workflowID)
+	}
+
+	return resp, nil
+}
+
 // ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
 // used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
 // child execution without creating the decision task and then calls this API after updating the mutable state of
@@ -1265,7 +1328,16 @@ func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.Sy
 func (h *Handler) GetReplicationMessages(
 	ctx context.Context,
 	request *r.GetReplicationMessagesRequest,
-) (*r.GetReplicationMessagesResponse, error) {
+) (resp *r.GetReplicationMessagesResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	h.GetLogger().Debug("Received GetReplicationMessages call.")
+
+	scope := metrics.HistoryGetReplicationMessagesScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
 
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
@@ -1277,13 +1349,13 @@ func (h *Handler) GetReplicationMessages(
 
 			engine, err := h.controller.getEngineForShard(int(token.GetShardID()))
 			if err != nil {
-				h.GetLogger().Warn("history engine not found for shard", tag.Error(err))
+				h.GetLogger().Warn("History engine not found for shard", tag.Error(err))
 				return
 			}
 
 			tasks, err := engine.GetReplicationMessages(ctx, token.GetLastRetrivedMessageId())
 			if err != nil {
-				h.GetLogger().Warn("failed to get replication tasks for shard", tag.Error(err))
+				h.GetLogger().Warn("Failed to get replication tasks for shard", tag.Error(err))
 				return
 			}
 
@@ -1300,6 +1372,8 @@ func (h *Handler) GetReplicationMessages(
 		messagesByShard[shardID] = tasks
 		return true
 	})
+
+	h.GetLogger().Debug("GetReplicationMessages succeeded.")
 
 	return &r.GetReplicationMessagesResponse{MessagesByShard: messagesByShard}, nil
 }

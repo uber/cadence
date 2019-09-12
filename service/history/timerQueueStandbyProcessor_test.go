@@ -166,7 +166,14 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockShard.SetEngine(h)
 	s.mockHistoryEngine = h
 	s.clusterName = cluster.TestAlternativeClusterName
-	s.timerQueueStandbyProcessor = newTimerQueueStandbyProcessor(s.mockShard, h, s.clusterName, newTaskAllocator(s.mockShard), s.mockHistoryRereplicator, s.logger)
+	s.timerQueueStandbyProcessor = newTimerQueueStandbyProcessor(
+		s.mockShard,
+		h,
+		s.clusterName,
+		newTaskAllocator(s.mockShard),
+		s.mockHistoryRereplicator,
+		s.logger,
+	)
 
 	s.domainID = validDomainID
 	s.domainEntry = cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: s.domainID}, &persistence.DomainConfig{}, "", nil)

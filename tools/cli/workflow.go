@@ -149,9 +149,19 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
+			Name:    "scan",
+			Aliases: []string{"sc", "scanall"},
+			Usage: "scan workflow executions (need to enable Cadence server on ElasticSearch). " +
+				"It will be faster than listall, but result are not sorted.",
+			Flags: getFlagsForScan(),
+			Action: func(c *cli.Context) {
+				ScanAllWorkflow(c)
+			},
+		},
+		{
 			Name:    "count",
 			Aliases: []string{"cnt"},
-			Usage:   "count number of workflow executions (only work with ElasticSearch)",
+			Usage:   "count number of workflow executions (need to enable Cadence server on ElasticSearch)",
 			Flags:   getFlagsForCount(),
 			Action: func(c *cli.Context) {
 				CountWorkflow(c)
@@ -245,12 +255,17 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
-			Name:  "reset-batch",
-			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+			Name: "reset-batch",
+			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ",") +
+				"batch source is from input file or visibility query.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagInputFileWithAlias,
 					Usage: "Input file to use for resetting, one workflow per line of WorkflowID and RunID. RunID is optional, default to current runID if not specified. ",
+				},
+				cli.StringFlag{
+					Name:  FlagListQueryWithAlias,
+					Usage: "visibility query to get workflows to reset",
 				},
 				cli.StringFlag{
 					Name:  FlagExcludeFile,

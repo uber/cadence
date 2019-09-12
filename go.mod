@@ -69,15 +69,15 @@ require (
 	github.com/uber-go/kafka-client v0.2.2
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/uber-go/tally v3.3.11+incompatible
-	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
-	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
+	github.com/uber/jaeger-client-go v2.15.0+incompatible // indirect
+	github.com/uber/jaeger-lib v1.5.0 // indirect
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.14.0
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fastjson v1.4.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.uber.org/atomic v1.4.0
-	go.uber.org/cadence v0.0.0-20190702231331-27b0ba2bc456
+	go.uber.org/cadence v0.9.1-0.20190819173509-c3cd9f8f9745
 	go.uber.org/dig v1.7.0 // indirect
 	go.uber.org/fx v1.9.0 // indirect
 	go.uber.org/goleak v0.10.0 // indirect

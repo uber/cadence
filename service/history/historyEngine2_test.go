@@ -34,6 +34,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/history/historyservicetest"
+	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -58,10 +60,10 @@ type (
 		// not merely log an error
 		*require.Assertions
 		historyEngine            *historyEngineImpl
-		mockCtrl                 *gomock.Controller
-		mockMatchingClient       *mocks.MatchingClient
+		controller               *gomock.Controller
 		mockArchivalClient       *archiver.ClientMock
-		mockHistoryClient        *mocks.HistoryClient
+		mockMatchingClient       *matchingservicetest.MockClient
+		mockHistoryClient        *historyservicetest.MockClient
 		mockMetadataMgr          *mocks.MetadataManager
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockExecutionMgr         *mocks.ExecutionManager
@@ -103,10 +105,10 @@ func (s *engine2Suite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	shardID := 0
-	s.mockCtrl = gomock.NewController(s.T())
-	s.mockMatchingClient = &mocks.MatchingClient{}
+	s.controller = gomock.NewController(s.T())
 	s.mockArchivalClient = &archiver.ClientMock{}
-	s.mockHistoryClient = &mocks.HistoryClient{}
+	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
+	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -152,7 +154,7 @@ func (s *engine2Suite) SetupTest() {
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.mockCtrl)
+	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
@@ -185,8 +187,7 @@ func (s *engine2Suite) SetupTest() {
 }
 
 func (s *engine2Suite) TearDownTest() {
-	s.mockCtrl.Finish()
-	s.mockMatchingClient.AssertExpectations(s.T())
+	s.controller.Finish()
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
@@ -1129,7 +1130,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	s.Equal(int64(6), executionBuilder.GetExecutionInfo().NextEventID)
 	s.Equal(int64(3), executionBuilder.GetExecutionInfo().LastProcessedEvent)
 	s.Equal(p.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
-	s.False(executionBuilder.HasPendingDecisionTask())
+	s.False(executionBuilder.HasPendingDecision())
 }
 
 func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
@@ -1192,7 +1193,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		CloseStatus:      p.WorkflowCloseStatusNone,
 		LastWriteVersion: lastWriteVersion,
 	}).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
@@ -1243,7 +1243,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		CloseStatus:      p.WorkflowCloseStatusNone,
 		LastWriteVersion: lastWriteVersion,
 	}).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
@@ -1275,51 +1274,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 	if _, ok := err.(*workflow.WorkflowExecutionAlreadyStartedError); !ok {
 		s.Fail("return err is not *shared.WorkflowExecutionAlreadyStartedError")
 	}
-	s.Nil(resp)
-}
-
-func (s *engine2Suite) TestStartWorkflowExecution_TimeoutError() {
-	domainID := validDomainID
-	workflowID := "workflowID"
-	workflowType := "workflowType"
-	taskList := "testTaskList"
-	identity := "testIdentity"
-
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, &p.TimeoutError{
-		Msg: "random message",
-	}).Once()
-	// NOTE: should not delete history for timeout because timeout is unknown instead of failure
-	//s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
-		&p.GetDomainResponse{
-			Info:   &p.DomainInfo{ID: domainID},
-			Config: &p.DomainConfig{Retention: 1},
-			ReplicationConfig: &p.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*p.ClusterReplicationConfig{
-					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
-				},
-			},
-			TableVersion: p.DomainTableVersionV1,
-		},
-		nil,
-	)
-
-	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-			Identity:                            common.StringPtr(identity),
-			RequestId:                           common.StringPtr("newRequestID"),
-		},
-	})
-	s.True(p.IsTimeoutError(err))
 	s.Nil(resp)
 }
 
@@ -1379,8 +1333,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 						request.PreviousLastWriteVersion == lastWriteVersion
 				}),
 			).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
-		} else {
-			s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 		}
 
 		resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
@@ -1476,8 +1428,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 							request.PreviousLastWriteVersion == lastWriteVersion
 					}),
 				).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
-			} else {
-				s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 			}
 
 			resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
@@ -1779,7 +1729,6 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, workflowAlreadyStartedErr).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
@@ -1846,7 +1795,6 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, workflowAlreadyStartedErr).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},

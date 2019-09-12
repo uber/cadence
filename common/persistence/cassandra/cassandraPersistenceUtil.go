@@ -1161,6 +1161,7 @@ func updateActivityInfos(
 			a.NonRetriableErrors,
 			a.LastFailureReason,
 			a.LastWorkerIdentity,
+			a.LastFailureDetails,
 			scheduleEncoding,
 			shardID,
 			rowTypeExecution,
@@ -1326,6 +1327,7 @@ func updateChildExecutionInfos(
 			initiatedEncoding,
 			c.DomainName,
 			c.WorkflowTypeName,
+			int32(c.ParentClosePolicy),
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1390,6 +1392,7 @@ func updateRequestCancelInfos(
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
+			c.InitiatedEventBatchID,
 			c.CancelRequestID,
 			shardID,
 			rowTypeExecution,
@@ -1449,6 +1452,7 @@ func updateSignalInfos(
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
+			c.InitiatedEventBatchID,
 			c.SignalRequestID,
 			c.SignalName,
 			c.Input,
@@ -1976,6 +1980,8 @@ func createActivityInfo(
 			info.LastFailureReason = v.(string)
 		case "last_worker_identity":
 			info.LastWorkerIdentity = v.(string)
+		case "last_failure_details":
+			info.LastFailureDetails = v.([]byte)
 		case "event_data_encoding":
 			sharedEncoding = common.EncodingType(v.(string))
 		}
@@ -2043,6 +2049,8 @@ func createChildExecutionInfo(
 			info.DomainName = v.(string)
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
+		case "parent_close_policy":
+			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int))
 		}
 	}
 	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
@@ -2061,6 +2069,8 @@ func createRequestCancelInfo(
 			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
+		case "initiated_event_batch_id":
+			info.InitiatedEventBatchID = v.(int64)
 		case "cancel_request_id":
 			info.CancelRequestID = v.(string)
 		}
@@ -2080,6 +2090,8 @@ func createSignalInfo(
 			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
+		case "initiated_event_batch_id":
+			info.InitiatedEventBatchID = v.(int64)
 		case "signal_request_id":
 			info.SignalRequestID = v.(gocql.UUID).String()
 		case "signal_name":
@@ -2138,6 +2150,7 @@ func resetActivityInfoMap(
 		aInfo["non_retriable_errors"] = a.NonRetriableErrors
 		aInfo["last_failure_reason"] = a.LastFailureReason
 		aInfo["last_worker_identity"] = a.LastWorkerIdentity
+		aInfo["last_failure_details"] = a.LastFailureDetails
 
 		aMap[a.ScheduleID] = aInfo
 	}
@@ -2192,6 +2205,7 @@ func resetChildExecutionInfoMap(
 		cInfo["started_run_id"] = startedRunID
 		cInfo["domain_name"] = c.DomainName
 		cInfo["workflow_type_name"] = c.WorkflowTypeName
+		cInfo["parent_close_policy"] = int32(c.ParentClosePolicy)
 
 		cMap[c.InitiatedID] = cInfo
 	}
@@ -2208,6 +2222,7 @@ func resetRequestCancelInfoMap(
 		rcInfo := make(map[string]interface{})
 		rcInfo["version"] = rc.Version
 		rcInfo["initiated_id"] = rc.InitiatedID
+		rcInfo["initiated_event_batch_id"] = rc.InitiatedEventBatchID
 		rcInfo["cancel_request_id"] = rc.CancelRequestID
 
 		rcMap[rc.InitiatedID] = rcInfo
@@ -2225,6 +2240,7 @@ func resetSignalInfoMap(
 		sInfo := make(map[string]interface{})
 		sInfo["version"] = s.Version
 		sInfo["initiated_id"] = s.InitiatedID
+		sInfo["initiated_event_batch_id"] = s.InitiatedEventBatchID
 		sInfo["signal_request_id"] = s.SignalRequestID
 		sInfo["signal_name"] = s.SignalName
 		sInfo["input"] = s.Input
