@@ -42,17 +42,19 @@ const (
 	// processorWFTypeName is the workflow type
 	processorWFTypeName   = "cadence-sys-parent-close-policy-workflow"
 	processorActivityName = "cadence-sys-parent-close-policy-activity"
-	InfiniteDuration      = 20 * 365 * 24 * time.Hour
-	ProcessorChannelName  = "ParentClosePolicyProcessorChannelName"
+	infiniteDuration      = 20 * 365 * 24 * time.Hour
+	processorChannelName  = "ParentClosePolicyProcessorChannelName"
 )
 
 type (
+	// RequestDetail defines detail of each workflow to process
 	RequestDetail struct {
 		WorkflowID string
 		RunID      string
 		Policy     shared.ParentClosePolicy
 	}
 
+	// Request defines the request for parent close policy
 	Request struct {
 		Executions []RequestDetail
 		DomainName string
@@ -65,7 +67,7 @@ var (
 		InitialInterval:    10 * time.Second,
 		BackoffCoefficient: 1.7,
 		MaximumInterval:    5 * time.Minute,
-		ExpirationInterval: InfiniteDuration,
+		ExpirationInterval: infiniteDuration,
 	}
 
 	activityOptions = workflow.ActivityOptions{
@@ -82,7 +84,7 @@ func init() {
 
 // ProcessorWorkflow is the workflow that performs actions for ParentClosePolicy
 func ProcessorWorkflow(ctx workflow.Context) error {
-	requestCh := workflow.GetSignalChannel(ctx, ProcessorChannelName)
+	requestCh := workflow.GetSignalChannel(ctx, processorChannelName)
 	for {
 		var request Request
 		if !requestCh.ReceiveAsync(&request) {

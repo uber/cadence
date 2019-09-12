@@ -76,12 +76,12 @@ func (c *clientImpl) SendParentClosePolicyRequest(request Request) error {
 	workflowOptions := cclient.StartWorkflowOptions{
 		ID:                              workflowID,
 		TaskList:                        processorTaskListName,
-		ExecutionStartToCloseTimeout:    InfiniteDuration,
+		ExecutionStartToCloseTimeout:    infiniteDuration,
 		DecisionTaskStartToCloseTimeout: time.Minute,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
 	signalCtx, cancel := context.WithTimeout(context.Background(), signalTimeout)
 	defer cancel()
-	_, err := c.cadenceClient.SignalWithStartWorkflow(signalCtx, workflowID, ProcessorChannelName, request, workflowOptions, processorWFTypeName, nil)
+	_, err := c.cadenceClient.SignalWithStartWorkflow(signalCtx, workflowID, processorChannelName, request, workflowOptions, processorWFTypeName, nil)
 	return err
 }
