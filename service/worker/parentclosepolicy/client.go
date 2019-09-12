@@ -35,7 +35,7 @@ import (
 
 type (
 
-	// Client is used to archive workflow histories
+	// Client is used to send request to processor workflow
 	Client interface {
 		SendParentClosePolicyRequest(Request) error
 	}
