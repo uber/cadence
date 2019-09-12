@@ -102,18 +102,6 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		return nil, err
 	}
 
-	currentClusterInfo := clusterMetadata.GetAllClusterInfo()[clusterMetadata.GetCurrentClusterName()]
-	dispatcher, err := dispatcherProvider.Get(currentClusterInfo.RPCName, currentClusterInfo.RPCAddress)
-	frontendClient, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
-		currentClusterInfo.RPCName,
-		frontend.DefaultTimeout,
-		frontend.DefaultLongPollTimeout,
-		dispatcher,
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	remoteAdminClients := map[string]admin.Client{}
 	remoteFrontendClients := map[string]frontend.Client{}
 	for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
@@ -131,7 +119,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			return nil, err
 		}
 
-		frontendclient, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
+		frontendClient, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
 			info.RPCName,
 			frontend.DefaultTimeout,
 			frontend.DefaultLongPollTimeout,
@@ -142,13 +130,13 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		}
 
 		remoteAdminClients[clusterName] = adminClient
-		remoteFrontendClients[clusterName] = frontendclient
+		remoteFrontendClients[clusterName] = frontendClient
 	}
 
 	return &clientBeanImpl{
 		factory:               factory,
 		historyClient:         historyClient,
-		frontendClient:        frontendClient,
+		frontendClient:        remoteFrontendClients[clusterMetadata.GetCurrentClusterName()],
 		remoteAdminClients:    remoteAdminClients,
 		remoteFrontendClients: remoteFrontendClients,
 	}, nil
