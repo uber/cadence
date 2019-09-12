@@ -24,7 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/worker/parentclosepolicy"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
@@ -41,6 +40,7 @@ import (
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
 	"github.com/uber/cadence/service/worker/indexer"
+	"github.com/uber/cadence/service/worker/parentclosepolicy"
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
 )
@@ -61,13 +61,13 @@ type (
 
 	// Config contains all the service config for worker
 	Config struct {
-		ReplicationCfg  *replicator.Config
-		ArchiverConfig  *archiver.Config
-		IndexerCfg      *indexer.Config
-		ScannerCfg      *scanner.Config
-		BatcherCfg      *batcher.Config
-		ThrottledLogRPS dynamicconfig.IntPropertyFn
-		EnableBatcher   dynamicconfig.BoolPropertyFn
+		ReplicationCfg                *replicator.Config
+		ArchiverConfig                *archiver.Config
+		IndexerCfg                    *indexer.Config
+		ScannerCfg                    *scanner.Config
+		BatcherCfg                    *batcher.Config
+		ThrottledLogRPS               dynamicconfig.IntPropertyFn
+		EnableBatcher                 dynamicconfig.BoolPropertyFn
 		EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
 	}
 )
@@ -114,9 +114,9 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
-		EnableBatcher:   dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
-		EnableParentClosePolicyWorker:          dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
-		ThrottledLogRPS: dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
+		EnableBatcher:                 dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
+		EnableParentClosePolicyWorker: dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		ThrottledLogRPS:               dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 	}
 	advancedVisWritingMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
