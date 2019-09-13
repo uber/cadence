@@ -64,7 +64,6 @@ type (
 		seed                int64
 		canDoBatch          func([]Vertex, []Vertex) bool
 		resetPoints         []ResetPoint
-		resetCount          int64
 		version             int64
 	}
 
@@ -106,7 +105,6 @@ func NewEventGenerator(
 		seed:                seed,
 		canDoBatch:          defaultBatchFunc,
 		resetPoints:         []ResetPoint{},
-		resetCount:          0,
 		version:             defaultVersion,
 	}
 }
@@ -193,7 +191,6 @@ func (g *EventGenerator) Reset() {
 	g.leafVertices = make([]Vertex, 0)
 	g.previousVertices = make([]Vertex, 0)
 	g.resetPoints = make([]ResetPoint, 0)
-	g.resetCount = 0
 }
 
 // ListResetPoint returns a list of available point to reset the event generator
@@ -231,7 +228,6 @@ func (g *EventGenerator) ResetToResetPoint(
 		seed:                g.seed,
 		canDoBatch:          g.canDoBatch,
 		resetPoints:         copyResetPoint(g.resetPoints[index:]),
-		resetCount:          g.resetCount + 1,
 	}
 }
 
@@ -315,7 +311,7 @@ func (g *EventGenerator) getRandomVertex() Vertex {
 	vertex := g.randomEntryVertices[nextIdx].DeepCopy()
 	parentEvent := g.previousVertices[len(g.previousVertices)-1]
 
-	vertex.GenerateData(parentEvent.GetData(), parentEvent.GetData(), g.version, g.resetCount)
+	vertex.GenerateData(parentEvent.GetData(), parentEvent.GetData(), g.version, int64(0))
 	return vertex
 }
 
@@ -372,7 +368,7 @@ func (g *EventGenerator) randomNextVertex(
 	latestVertex := g.previousVertices[len(g.previousVertices)-1]
 	for i := 0; i < count; i++ {
 		endVertex := g.pickRandomVertex(nextVertex)
-		endVertex.GenerateData(nextVertex.GetData(), latestVertex.GetData(), g.version, g.resetCount)
+		endVertex.GenerateData(nextVertex.GetData(), latestVertex.GetData(), g.version, int64(0))
 		latestVertex = endVertex
 		res = append(res, endVertex)
 		if _, ok := g.exitVertices[endVertex.GetName()]; ok {
