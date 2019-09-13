@@ -218,27 +218,17 @@ func (g *EventGenerator) ResetToResetPoint(
 		panic("The reset point does not exist.")
 	}
 	toReset := g.resetPoints[index]
-	previousVertices := make([]Vertex, len(toReset.previousVertices))
-	copy(previousVertices, toReset.previousVertices)
-	leafVertices := make([]Vertex, len(toReset.leafVertices))
-	copy(leafVertices, toReset.leafVertices)
-	entryVertices := make([]Vertex, len(g.entryVertices))
-	copy(entryVertices, g.entryVertices)
-	randomEntryVertices := make([]Vertex, len(g.randomEntryVertices))
-	copy(randomEntryVertices, g.randomEntryVertices)
-	resetPoints := make([]ResetPoint, len(g.resetPoints[index:]))
-	copy(resetPoints, g.resetPoints[index:])
 	return &EventGenerator{
 		connections:         copyConnections(g.connections),
-		previousVertices:    previousVertices,
-		leafVertices:        leafVertices,
-		entryVertices:       entryVertices,
+		previousVertices:    copyVertex(toReset.previousVertices),
+		leafVertices:        copyVertex(toReset.leafVertices),
+		entryVertices:       copyVertex(g.entryVertices),
 		exitVertices:        copyExitVertices(g.exitVertices),
-		randomEntryVertices: randomEntryVertices,
+		randomEntryVertices: copyVertex(g.randomEntryVertices),
 		dice:                rand.New(rand.NewSource(g.seed)),
 		seed:                g.seed,
 		canDoBatch:          g.canDoBatch,
-		resetPoints:         resetPoints,
+		resetPoints:         copyResetPoint(g.resetPoints[index:]),
 		resetCount:          g.resetCount + 1,
 	}
 }
@@ -272,10 +262,8 @@ func (g *EventGenerator) generateNextEventBatch() []Vertex {
 
 func (g *EventGenerator) addNewResetPoint() {
 
-	previousVerticesSnapshot := make([]Vertex, len(g.previousVertices))
-	copy(previousVerticesSnapshot, g.previousVertices)
-	leafVerticesSnapshot := make([]Vertex, len(g.leafVertices))
-	copy(leafVerticesSnapshot, g.leafVertices)
+	previousVerticesSnapshot := copyVertex(g.previousVertices)
+	leafVerticesSnapshot := copyVertex(g.leafVertices)
 	newResetPoint := ResetPoint{
 		previousVertices: previousVerticesSnapshot,
 		leafVertices:     leafVerticesSnapshot,
@@ -607,4 +595,24 @@ func (m *HistoryEventModel) AddEdge(
 func (m HistoryEventModel) ListEdges() []Edge {
 
 	return m.edges
+}
+
+func copyVertex(vertex []Vertex) []Vertex {
+	newVertex := make([]Vertex, len(vertex))
+	for _, v := range vertex {
+		newVertex = append(newVertex, v.DeepCopy())
+	}
+	return newVertex
+}
+
+func copyResetPoint(resetPoints []ResetPoint) []ResetPoint {
+	newResetPoint := make([]ResetPoint, len(resetPoints))
+	for _, resetPoint := range resetPoints {
+
+		newResetPoint = append(newResetPoint, ResetPoint{
+			previousVertices: copyVertex(resetPoint.previousVertices),
+			leafVertices:     copyVertex(resetPoint.leafVertices),
+		})
+	}
+	return newResetPoint
 }
