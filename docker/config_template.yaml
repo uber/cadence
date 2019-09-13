@@ -34,7 +34,7 @@ persistence:
                 password: {{ default .Env.MYSQL_PWD "" }}
                 {{- if .Env.MYSQL_TX_ISOLATION_COMPAT }}
                 connectAttributes:
-                    tx_isolation: 'READ_COMMITTED'
+                    tx_isolation: 'READ-COMMITTED'
                 {{- end }}
         visibility:
             sql:
@@ -46,7 +46,7 @@ persistence:
                 password: {{ default .Env.MYSQL_PWD "" }}
                 {{- if .Env.MYSQL_TX_ISOLATION_COMPAT }}
                 connectAttributes:
-                    tx_isolation: 'READ_COMMITTED'
+                    tx_isolation: 'READ-COMMITTED'
                 {{- end }}
         {{- end }}
         {{- if eq $es "true" }}
