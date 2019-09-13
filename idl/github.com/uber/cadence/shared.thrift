@@ -1563,7 +1563,7 @@ struct VersionHistories{
 
 // ReapplyEventsRequest is the request for reapply events API
 struct ReapplyEventsRequest{
-  10: optional string domainUUID
+  10: optional string domainName
   20: optional WorkflowExecution workflowExecution
   30: optional DataBlob events
 }
