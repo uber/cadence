@@ -190,6 +190,8 @@ func (g *EventGenerator) Reset() {
 
 	g.leafVertices = make([]Vertex, 0)
 	g.previousVertices = make([]Vertex, 0)
+	g.resetPoints = make([]ResetPoint, 0)
+	g.resetCount = 0
 }
 
 // ListResetPoint returns a list of available point to reset the event generator
@@ -407,7 +409,8 @@ func (g *EventGenerator) pickRandomVertex(
 
 func (g *EventGenerator) shouldBumpVersion() bool {
 	// 1//1000 to bump the version
-	return g.dice.Intn(1000) == 500
+	//return g.dice.Intn(1000) == 500
+	return false
 }
 
 // NewHistoryEventEdge initials a new edge between two HistoryEventVertexes
@@ -572,7 +575,7 @@ func (he HistoryEventVertex) GetData() interface{} {
 	return he.data
 }
 
-// DeepCopy returns a copied version of vertex data
+// DeepCopy returns the a deep copy of vertex
 func (he HistoryEventVertex) DeepCopy() Vertex {
 
 	return &HistoryEventVertex{

@@ -356,6 +356,8 @@ type (
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
+		StartVersion     int64
+		LastWriteVersion int64
 
 		UpsertActivityInfos       []*InternalActivityInfo
 		DeleteActivityInfos       []int64
@@ -384,6 +386,8 @@ type (
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
+		StartVersion     int64
+		LastWriteVersion int64
 
 		ActivityInfos       []*InternalActivityInfo
 		TimerInfos          []*TimerInfo
@@ -698,5 +702,41 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 		return common.EncodingTypeEmpty
 	default:
 		return common.EncodingTypeUnknown
+	}
+}
+
+// ToThrift convert data blob to thrift representation
+func (d *DataBlob) ToThrift() *workflow.DataBlob {
+	switch d.Encoding {
+	case common.EncodingTypeJSON:
+		return &workflow.DataBlob{
+			EncodingType: workflow.EncodingTypeJSON.Ptr(),
+			Data:         d.Data,
+		}
+	case common.EncodingTypeThriftRW:
+		return &workflow.DataBlob{
+			EncodingType: workflow.EncodingTypeThriftRW.Ptr(),
+			Data:         d.Data,
+		}
+	default:
+		panic(fmt.Sprintf("DataBlob seeing unsupported enconding type: %v", d.Encoding))
+	}
+}
+
+// NewDataBlobFromThrift convert data blob from thrift representation
+func NewDataBlobFromThrift(blob *workflow.DataBlob) *DataBlob {
+	switch blob.GetEncodingType() {
+	case workflow.EncodingTypeJSON:
+		return &DataBlob{
+			Encoding: common.EncodingTypeJSON,
+			Data:     blob.Data,
+		}
+	case workflow.EncodingTypeThriftRW:
+		return &DataBlob{
+			Encoding: common.EncodingTypeThriftRW,
+			Data:     blob.Data,
+		}
+	default:
+		panic(fmt.Sprintf("NewDataBlobFromThrift seeing unsupported enconding type: %v", blob.GetEncodingType()))
 	}
 }

@@ -201,14 +201,12 @@ func (r *nDCHistoryReplicatorImpl) applyEvents(
 		mutableState, err := context.loadWorkflowExecution()
 		switch err.(type) {
 		case nil:
-			branchIndex, err := r.applyNonStartEventsPrepareBranch(ctx, context, mutableState, task)
+			doContinue, branchIndex, err := r.applyNonStartEventsPrepareBranch(ctx, context, mutableState, task)
 			if err != nil {
 				return err
-			}
-
-			doContinue, err := r.applyNonStartEventsPrepareReorder(ctx, context, mutableState, branchIndex, task)
-			if err != nil || !doContinue {
-				return err
+			} else if !doContinue {
+				r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.DuplicateReplicationEventsCounter)
+				return nil
 			}
 
 			mutableState, isRebuilt, err := r.applyNonStartEventsPrepareMutableState(ctx, context, mutableState, branchIndex, task)
@@ -255,8 +253,9 @@ func (r *nDCHistoryReplicatorImpl) applyStartEvents(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		nDCMutableStateEventStoreVersion,
-		nDCMutableStateEventStoreVersion,
+		nDCProtocolVersion,
+		nDCProtocolVersion,
+		true,
 	)
 	if err != nil {
 		return err
@@ -285,57 +284,20 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsPrepareBranch(
 	context workflowExecutionContext,
 	mutableState mutableState,
 	task nDCReplicationTask,
-) (int, error) {
+) (bool, int, error) {
 
 	incomingVersionHistory := task.getVersionHistory()
 	branchMgr := r.newBranchMgr(context, mutableState, task.getLogger())
-	versionHistoryIndex, err := branchMgr.prepareVersionHistory(
+	doContinue, versionHistoryIndex, err := branchMgr.prepareVersionHistory(
 		ctx,
 		incomingVersionHistory,
+		task.getFirstEvent().GetEventId(),
 	)
 	if err != nil {
-		return 0, err
+		return false, 0, err
 	}
-	return versionHistoryIndex, nil
+	return doContinue, versionHistoryIndex, nil
 
-}
-
-func (r *nDCHistoryReplicatorImpl) applyNonStartEventsPrepareReorder(
-	ctx ctx.Context,
-	context workflowExecutionContext,
-	mutableState mutableState,
-	branchIndex int,
-	task nDCReplicationTask,
-) (bool, error) {
-
-	versionHistories := mutableState.GetVersionHistories()
-	versionHistory, err := versionHistories.GetVersionHistory(branchIndex)
-	if err != nil {
-		return false, err
-	}
-	lastVersionHistoryItem, err := versionHistory.GetLastItem()
-	if err != nil {
-		return false, err
-	}
-	nextEventID := lastVersionHistoryItem.GetEventID() + 1
-
-	if task.getFirstEvent().GetEventId() < nextEventID {
-		// duplicate replication task
-		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.DuplicateReplicationEventsCounter)
-		return false, nil
-	}
-	if task.getFirstEvent().GetEventId() > nextEventID {
-		// TODO we should use a new retry error for 3+DC
-		return false, newRetryTaskErrorWithHint(
-			ErrRetryBufferEventsMsg,
-			task.getDomainID(),
-			task.getWorkflowID(),
-			task.getRunID(),
-			lastVersionHistoryItem.GetEventID()+1,
-		)
-	}
-	// task.getFirstEvent().GetEventId() == nextEventID
-	return true, nil
 }
 
 func (r *nDCHistoryReplicatorImpl) applyNonStartEventsPrepareMutableState(
@@ -372,8 +334,9 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToCurrentBranch(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		nDCMutableStateEventStoreVersion,
-		nDCMutableStateEventStoreVersion,
+		nDCProtocolVersion,
+		nDCProtocolVersion,
+		true,
 	)
 	if err != nil {
 		return err
@@ -489,14 +452,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsMissingMutableState(
 
 	// for non reset workflow execution replication task, just do re-application
 	if !task.getRequest().GetResetWorkflow() {
-		// TODO we should use a new retry error for 3+DC
-		return nil, newRetryTaskErrorWithHint(
-			ErrWorkflowNotFoundMsg,
-			task.getDomainID(),
-			task.getWorkflowID(),
-			task.getRunID(),
-			common.FirstEventID,
-		)
+		return nil, newNDCRetryTaskErrorWithHint()
 	}
 
 	decisionTaskFailedEvent := task.getFirstEvent()
@@ -533,8 +489,9 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsResetWorkflow(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		nDCMutableStateEventStoreVersion,
-		nDCMutableStateEventStoreVersion,
+		nDCProtocolVersion,
+		nDCProtocolVersion,
+		true,
 	)
 	if err != nil {
 		return err
@@ -567,4 +524,8 @@ func (r *nDCHistoryReplicatorImpl) notify(
 
 	now = now.Add(-r.shard.GetConfig().StandbyClusterDelay())
 	r.shard.SetCurrentTime(clusterName, now)
+}
+
+func newNDCRetryTaskErrorWithHint() error {
+	return &shared.RetryTaskV2Error{}
 }
