@@ -29,10 +29,15 @@ import (
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql/mysql"
+	"github.com/uber/cadence/tools/sql/postgres"
 )
 
 type (
-	SQLConnTestSuite struct {
+	MySQLConnTestSuite struct {
+		test.DBTestBase
+	}
+
+	PostgresConnTestSuite struct {
 		test.DBTestBase
 	}
 )
@@ -44,15 +49,15 @@ const (
 	testPassword = "uber"
 )
 
-func TestSQLConnTestSuite(t *testing.T) {
-	suite.Run(t, new(SQLConnTestSuite))
+func TestMySQLConnTestSuite(t *testing.T) {
+	suite.Run(t, new(MySQLConnTestSuite))
 }
 
-func (s *SQLConnTestSuite) SetupTest() {
+func (s *MySQLConnTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
-func (s *SQLConnTestSuite) SetupSuite() {
+func (s *MySQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("")
 	if err != nil {
 		s.Log.Fatal("error creating sql conn, ", tag.Error(err))
@@ -60,18 +65,18 @@ func (s *SQLConnTestSuite) SetupSuite() {
 	s.SetupSuiteBase(conn)
 }
 
-func (s *SQLConnTestSuite) TearDownSuite() {
+func (s *MySQLConnTestSuite) TearDownSuite() {
 	s.TearDownSuiteBase()
 }
 
-func (s *SQLConnTestSuite) TestParseCQLFile() {
+func (s *MySQLConnTestSuite) TestParseCQLFile() {
 	s.RunParseFileTest(createTestSQLFileContent())
 }
 
-func (s *SQLConnTestSuite) TestSQLConn() {
+func (s *MySQLConnTestSuite) TestSQLConn() {
 	conn, err := newConn(&sqlConnectParams{
-		host:       environment.GetMySQLAddress(),
-		port:       environment.GetMySQLPort(),
+		host:       environment.GetSQLAddress(),
+		port:       environment.GetSQLPort(),
 		user:       testUser,
 		password:   testPassword,
 		driverName: mysql.DriverName,
@@ -84,10 +89,54 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 	conn.Close()
 }
 
+// --
+
+func TestPostgresConnTestSuite(t *testing.T) {
+	suite.Run(t, new(PostgresConnTestSuite))
+}
+
+func (s *PostgresConnTestSuite) SetupTest() {
+	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
+}
+
+func (s *PostgresConnTestSuite) SetupSuite() {
+	conn, err := newTestConn("")
+	if err != nil {
+		s.Log.Fatal("error creating sql conn, ", tag.Error(err))
+	}
+	s.SetupSuiteBase(conn)
+}
+
+func (s *PostgresConnTestSuite) TearDownSuite() {
+	s.TearDownSuiteBase()
+}
+
+func (s *PostgresConnTestSuite) TestParseCQLFile() {
+	s.RunParseFileTest(createTestSQLFileContent())
+}
+
+func (s *PostgresConnTestSuite) TestSQLConn() {
+	conn, err := newConn(&sqlConnectParams{
+		host:       environment.GetSQLAddress(),
+		port:       environment.GetSQLPort(),
+		user:       testUser,
+		password:   testPassword,
+		driverName: postgres.DriverName,
+		database:   s.DBName,
+	})
+	s.Nil(err)
+	s.RunCreateTest(conn)
+	s.RunUpdateTest(conn)
+	s.RunDropTest(conn)
+	conn.Close()
+}
+
+// -
+
 func newTestConn(database string) (*sqlConn, error) {
 	return newConn(&sqlConnectParams{
-		host:       environment.GetMySQLAddress(),
-		port:       environment.GetMySQLPort(),
+		host:       environment.GetSQLAddress(),
+		port:       environment.GetSQLPort(),
 		user:       testUser,
 		password:   testPassword,
 		driverName: mysql.DriverName,

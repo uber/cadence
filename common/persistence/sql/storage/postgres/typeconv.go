@@ -18,43 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sql
+package postgres
 
-import (
-	"testing"
+import "time"
 
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/tools/common/schema"
+var (
+	minMySQLDateTime = getMinMySQLDateTime()
 )
 
 type (
-	HandlerTestSuite struct {
-		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
-		suite.Suite
+	// DataConverter defines the API for conversions to/from
+	// go types to mysql datatypes
+	DataConverter interface {
+		ToMySQLDateTime(t time.Time) time.Time
+		FromMySQLDateTime(t time.Time) time.Time
 	}
+	converter struct{}
 )
 
-func TestHandlerTestSuite(t *testing.T) {
-	suite.Run(t, new(HandlerTestSuite))
+// ToMySQLDateTime converts to time to MySQL datetime
+func (c *converter) ToMySQLDateTime(t time.Time) time.Time {
+	if t.IsZero() {
+		return minMySQLDateTime
+	}
+	return t
 }
 
-func (s *HandlerTestSuite) SetupTest() {
-	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
+// FromMySQLDateTime converts mysql datetime and returns go time
+func (c *converter) FromMySQLDateTime(t time.Time) time.Time {
+	if t.Equal(minMySQLDateTime) {
+		return time.Time{}
+	}
+	return t
 }
 
-func (s *HandlerTestSuite) TestValidateConnectParams() {
-	p := new(sqlConnectParams)
-	s.NotNil(validateConnectParams(p, false))
-	s.NotNil(validateConnectParams(p, true))
-
-	p.host = environment.GetSQLAddress()
-	s.NotNil(validateConnectParams(p, false))
-	s.Nil(validateConnectParams(p, true))
-	s.Equal(schema.DryrunDBName, p.database)
-
-	p.database = "foobar"
-	s.Nil(validateConnectParams(p, false))
-	s.Nil(validateConnectParams(p, true))
+func getMinMySQLDateTime() time.Time {
+	t, err := time.Parse(time.RFC3339, "1000-01-01T00:00:00Z")
+	if err != nil {
+		return time.Unix(0, 0)
+	}
+	return t
 }

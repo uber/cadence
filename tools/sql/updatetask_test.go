@@ -39,7 +39,7 @@ func TestUpdateSchemaTestSuite(t *testing.T) {
 }
 
 func (s *UpdateSchemaTestSuite) SetupSuite() {
-	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
+	os.Setenv("SQL_HOST", environment.GetSQLAddress())
 	os.Setenv("SQL_USER", testUser)
 	os.Setenv("SQL_PASSWORD", testPassword)
 	conn, err := newTestConn("")

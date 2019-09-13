@@ -18,53 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sql
+package postgres
 
 import (
-	"os"
-	"testing"
+	"fmt"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/tools/common/schema/test"
+	"github.com/iancoleman/strcase"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
-type (
-	SetupSchemaTestSuite struct {
-		test.SetupSchemaTestBase
-		conn *sqlConn
-	}
+const (
+	// the DSN to be used for connecting to the database
+	dataSourceName = "user=%s password=%s host=%s port=%d dbname=%s sslmode=%b multiStatements=true clientFoundRows=true parseTime=true"
+	// DriverName refers to the name of the postgres driver
+	DriverName = "postgres"
 )
 
-func TestSetupSchemaTestSuite(t *testing.T) {
-	suite.Run(t, new(SetupSchemaTestSuite))
-}
-
-func (s *SetupSchemaTestSuite) SetupSuite() {
-	os.Setenv("SQL_HOST", environment.GetSQLAddress())
-	os.Setenv("SQL_USER", testUser)
-	os.Setenv("SQL_PASSWORD", testPassword)
-	conn, err := newTestConn("")
+// NewConnection returns a new connection to mysql database
+func NewConnection(host string, port int, user string, passwd string, database string, tlsEnabled bool) (*sqlx.DB, error) {
+	db, err := sqlx.Connect(DriverName, fmt.Sprintf(dataSourceName, user, passwd, host, port, database, tlsEnabled))
 	if err != nil {
-		log.Fatalf("error creating sql connection:%v", err)
+		return nil, err
 	}
-	s.conn = conn
-	s.SetupSuiteBase(conn)
-}
-
-func (s *SetupSchemaTestSuite) TearDownSuite() {
-	s.TearDownSuiteBase()
-}
-
-func (s *SetupSchemaTestSuite) TestCreateDatabase() {
-	RunTool([]string{"./tool", "-u", testUser, "--pw", testPassword, "create", "--db", "foobar123"})
-	err := s.conn.DropDatabase("foobar123")
-	s.Nil(err)
-}
-
-func (s *SetupSchemaTestSuite) TestSetupSchema() {
-	conn, err := newTestConn(s.DBName)
-	s.Nil(err)
-	s.RunSetupTest(buildCLIOptions(), conn, "--db", createTestSQLFileContent(), []string{"task_maps", "tasks"})
+	// Maps struct names in CamelCase to snake without need for db struct tags.
+	db.MapperFunc(strcase.ToSnake)
+	return db, nil
 }

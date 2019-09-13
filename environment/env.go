@@ -37,12 +37,15 @@ const (
 	// CassandraDefaultPort Cassandra default port
 	CassandraDefaultPort = "9042"
 
+	// which sql system to use
+	SQLDriver        = "SQL_DRIVER"
+	SqlDefaultDriver = "postgres"
 	// MySQLSeeds env
-	MySQLSeeds = "MYSQL_SEEDS"
+	SQLSeeds = "MYSQL_SEEDS"
 	// MySQLPort env
-	MySQLPort = "MYSQL_PORT"
+	SQLPort = "MYSQL_PORT"
 	// MySQLDefaultPort MySQL default port
-	MySQLDefaultPort = "3306"
+	SQLDefaultPort = "3306"
 
 	// KafkaSeeds env
 	KafkaSeeds = "KAFKA_SEEDS"
@@ -75,17 +78,24 @@ func SetupEnv() {
 		}
 	}
 
-	if os.Getenv(MySQLSeeds) == "" {
-		err := os.Setenv(MySQLSeeds, Localhost)
+	if os.Getenv(SQLDriver) == "" {
+		err := os.Setenv(SQLDriver, SqlDefaultDriver)
 		if err != nil {
-			panic(fmt.Sprintf("error setting env %v", MySQLSeeds))
+			panic(fmt.Sprintf("error setting env %v", SQLDriver))
 		}
 	}
 
-	if os.Getenv(MySQLPort) == "" {
-		err := os.Setenv(MySQLPort, MySQLDefaultPort)
+	if os.Getenv(SQLSeeds) == "" {
+		err := os.Setenv(SQLSeeds, Localhost)
 		if err != nil {
-			panic(fmt.Sprintf("error setting env %v", MySQLPort))
+			panic(fmt.Sprintf("error setting env %v", SQLSeeds))
+		}
+	}
+
+	if os.Getenv(SQLPort) == "" {
+		err := os.Setenv(SQLPort, SQLDefaultPort)
+		if err != nil {
+			panic(fmt.Sprintf("error setting env %v", SQLPort))
 		}
 	}
 
@@ -140,9 +150,17 @@ func GetCassandraPort() int {
 	return p
 }
 
+func GetSQlDriver() string {
+	driver := os.Getenv(SQLDriver)
+	if driver == "" {
+		driver = SqlDefaultDriver
+	}
+	return driver
+}
+
 // GetMySQLAddress return the cassandra address
-func GetMySQLAddress() string {
-	addr := os.Getenv(MySQLSeeds)
+func GetSQLAddress() string {
+	addr := os.Getenv(SQLSeeds)
 	if addr == "" {
 		addr = Localhost
 	}
@@ -150,14 +168,14 @@ func GetMySQLAddress() string {
 }
 
 // GetMySQLPort return the MySQL port
-func GetMySQLPort() int {
-	port := os.Getenv(MySQLPort)
+func GetSQLPort() int {
+	port := os.Getenv(SQLPort)
 	if port == "" {
-		port = MySQLDefaultPort
+		port = SQLDefaultPort
 	}
 	p, err := strconv.Atoi(port)
 	if err != nil {
-		panic(fmt.Sprintf("error getting env %v", MySQLPort))
+		panic(fmt.Sprintf("error getting env %v", SQLPort))
 	}
 	return p
 }
