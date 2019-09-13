@@ -1,0 +1,1 @@
+CREATE DATABASE cadence WITH ENCODING 'utf8';

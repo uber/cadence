@@ -22,6 +22,7 @@ package storage
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 	"github.com/uber/cadence/common/persistence/sql/storage/mysql"
+	"github.com/uber/cadence/common/persistence/sql/storage/postgres"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -66,7 +68,16 @@ func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
 	}
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
-	return mysql.NewDB(db, nil), nil
+
+	switch strings.ToLower(cfg.DriverName) {
+	case "mysql":
+		return mysql.NewDB(db, nil), nil
+
+	case "postgres":
+		return postgres.NewDB(db, nil), nil
+	}
+
+	return nil, errors.New(fmt.Sprintf("unknown driver '%s', must be either mysql/postgres", cfg.DriverName))
 }
 
 func buildDSN(cfg *config.SQL) string {

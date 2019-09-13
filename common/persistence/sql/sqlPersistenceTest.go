@@ -52,7 +52,7 @@ func NewTestCluster(dbName string, port int, schemaDir string) *TestCluster {
 	var result TestCluster
 	result.dbName = dbName
 	if port == 0 {
-		port = environment.GetMySQLPort()
+		port = environment.GetSQLPort()
 	}
 	if schemaDir == "" {
 		schemaDir = testSchemaDir
@@ -61,7 +61,7 @@ func NewTestCluster(dbName string, port int, schemaDir string) *TestCluster {
 	result.cfg = config.SQL{
 		User:            testUser,
 		Password:        testPassword,
-		ConnectAddr:     fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
+		ConnectAddr:     fmt.Sprintf("%v:%v", environment.GetSQLAddress(), port),
 		ConnectProtocol: "tcp",
 		DriverName:      defaultDriverName,
 		DatabaseName:    dbName,
