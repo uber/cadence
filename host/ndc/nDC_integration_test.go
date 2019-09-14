@@ -224,11 +224,10 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 			baseBranch = append(baseBranch, historyEvents)
 		}
 		baseVersionHistory := s.eventBatchesToVersionHistory(nil, baseBranch)
-		resetPoint := len(baseGenerator.ListResetPoint()) - 1
 
 		branch1 := []*shared.History{}
 		branchVersionHistory1 := baseVersionHistory.Duplicate()
-		branchGenerator1 := baseGenerator.ResetToResetPoint(resetPoint)
+		branchGenerator1 := baseGenerator.DeepCopy()
 		for i := 0; i < 10 && branchGenerator1.HasNextVertex(); i++ {
 			events := branchGenerator1.GetNextVertices()
 			historyEvents := &shared.History{}
@@ -241,8 +240,8 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 
 		branch2 := []*shared.History{}
 		branchVersionHistory2 := baseVersionHistory.Duplicate()
-		branchGenerator2 := baseGenerator.ResetToResetPoint(resetPoint)
-		branchGenerator2.SetVersion(branchGenerator2.GetVersion() + 1)
+		branchGenerator2 := baseGenerator.DeepCopy()
+		branchGenerator2.SetVersion(branchGenerator2.GetVersion() + 2)
 		for i := 0; i < 10 && branchGenerator2.HasNextVertex(); i++ {
 			events := branchGenerator2.GetNextVertices()
 			historyEvents := &shared.History{}

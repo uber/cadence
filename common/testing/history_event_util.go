@@ -43,6 +43,10 @@ const (
 	externalWorkflowID   = "external-workflowID"
 )
 
+var (
+	globalTaskID int64 = 1
+)
+
 // InitializeHistoryEventGenerator initializes the history event generator
 func InitializeHistoryEventGenerator(
 	domain string,
@@ -52,9 +56,10 @@ func InitializeHistoryEventGenerator(
 	generator := NewEventGenerator(time.Now().UnixNano())
 	generator.SetVersion(defaultVersion)
 	// Functions
-	notPendingDecisionTask := func() bool {
+	notPendingDecisionTask := func(input ...interface{}) bool {
 		count := 0
-		for _, e := range generator.ListGeneratedVertices() {
+		history := input[0].([]Vertex)
+		for _, e := range history {
 			switch e.GetName() {
 			case shared.EventTypeDecisionTaskScheduled.String():
 				count++
@@ -66,17 +71,19 @@ func InitializeHistoryEventGenerator(
 		}
 		return count <= 0
 	}
-	containActivityComplete := func() bool {
-		for _, e := range generator.ListGeneratedVertices() {
+	containActivityComplete := func(input ...interface{}) bool {
+		history := input[0].([]Vertex)
+		for _, e := range history {
 			if e.GetName() == shared.EventTypeActivityTaskCompleted.String() {
 				return true
 			}
 		}
 		return false
 	}
-	hasPendingActivity := func() bool {
+	hasPendingActivity := func(input ...interface{}) bool {
 		count := 0
-		for _, e := range generator.ListGeneratedVertices() {
+		history := input[0].([]Vertex)
+		for _, e := range history {
 			switch e.GetName() {
 			case shared.EventTypeActivityTaskScheduled.String():
 				count++
@@ -957,10 +964,11 @@ func getDefaultHistoryEvent(
 	version int64,
 ) *shared.HistoryEvent {
 
+	globalTaskID++
 	return &shared.HistoryEvent{
 		EventId:   common.Int64Ptr(eventID),
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-		TaskId:    common.Int64Ptr(eventID),
+		TaskId:    common.Int64Ptr(globalTaskID),
 		Version:   common.Int64Ptr(version),
 	}
 }
@@ -971,7 +979,7 @@ func copyConnections(
 
 	newMap := make(map[string][]Edge)
 	for key, value := range originalMap {
-		newMap[key] = value
+		newMap[key] = copyEdges(value)
 	}
 	return newMap
 }
@@ -985,4 +993,20 @@ func copyExitVertices(
 		newMap[key] = value
 	}
 	return newMap
+}
+
+func copyVertex(vertex []Vertex) []Vertex {
+	newVertex := make([]Vertex, len(vertex))
+	for idx, v := range vertex {
+		newVertex[idx] = v.DeepCopy()
+	}
+	return newVertex
+}
+
+func copyEdges(edges []Edge) []Edge {
+	newEdges := make([]Edge, len(edges))
+	for idx, e := range edges {
+		newEdges[idx] = e.DeepCopy()
+	}
+	return newEdges
 }
