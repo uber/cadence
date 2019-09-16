@@ -133,6 +133,21 @@ func (mr *MockWorkflowHandlerMockRecorder) DescribeWorkflowExecution(ctx, Descri
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeWorkflowExecution", reflect.TypeOf((*MockWorkflowHandler)(nil).DescribeWorkflowExecution), ctx, DescribeRequest)
 }
 
+// GetDomainReplicationMessages mocks base method
+func (m *MockWorkflowHandler) GetDomainReplicationMessages(ctx context.Context, Request *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainReplicationMessages", ctx, Request)
+	ret0, _ := ret[0].(*replicator.GetDomainReplicationMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainReplicationMessages indicates an expected call of GetDomainReplicationMessages
+func (mr *MockWorkflowHandlerMockRecorder) GetDomainReplicationMessages(ctx, Request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainReplicationMessages", reflect.TypeOf((*MockWorkflowHandler)(nil).GetDomainReplicationMessages), ctx, Request)
+}
+
 // GetReplicationMessages mocks base method
 func (m *MockWorkflowHandler) GetReplicationMessages(ctx context.Context, Request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
@@ -599,27 +614,4 @@ func (m *MockWorkflowHandler) UpdateDomain(ctx context.Context, UpdateRequest *s
 func (mr *MockWorkflowHandlerMockRecorder) UpdateDomain(ctx, UpdateRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomain", reflect.TypeOf((*MockWorkflowHandler)(nil).UpdateDomain), ctx, UpdateRequest)
-}
-
-// GetDomainReplicationMessages provides a mock function with given fields: ctx, Request
-func (_m *MockWorkflowHandler) GetDomainReplicationMessages(ctx context.Context, Request *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error) {
-	ret := _m.Called(ctx, Request)
-
-	var r0 *replicator.GetDomainReplicationMessagesResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *replicator.GetDomainReplicationMessagesRequest) *replicator.GetDomainReplicationMessagesResponse); ok {
-		r0 = rf(ctx, Request)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*replicator.GetDomainReplicationMessagesResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *replicator.GetDomainReplicationMessagesRequest) error); ok {
-		r1 = rf(ctx, Request)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }
