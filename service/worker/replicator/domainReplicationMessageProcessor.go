@@ -99,41 +99,44 @@ func (p *domainReplicationMessageProcessor) processorLoop() {
 	for {
 		select {
 		case <-timer.C:
-			ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
-			request := &replicator.GetDomainReplicationMessagesRequest{
-				LastRetrivedMessageId:  common.Int64Ptr(p.lastRetrievedMessageID),
-				LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
-			}
-			response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
-			cancel()
-
-			if err != nil {
-				p.logger.Error("Failed to get replication tasks", tag.Error(err))
-				timer.Reset(getWaitDuration())
-				continue
-			}
-
-			p.logger.Debug("Successfully fetched domain replication tasks.", tag.Counter(len(response.Messages.ReplicationTasks)))
-
-			for _, task := range response.Messages.ReplicationTasks {
-				err := backoff.Retry(func() error {
-					return p.handleDomainReplicationTask(task)
-				}, p.retryPolicy, isTransientRetryableError)
-
-				if err != nil {
-					p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
-					// TODO: put task into DLQ
-				}
-			}
-
-			p.lastProcessedMessageID = response.Messages.GetLastRetrivedMessageId()
-			p.lastRetrievedMessageID = response.Messages.GetLastRetrivedMessageId()
+			p.getAndHandleDomainReplicationTasks()
 			timer.Reset(getWaitDuration())
 		case <-p.done:
 			timer.Stop()
 			return
 		}
 	}
+}
+
+func (p *domainReplicationMessageProcessor) getAndHandleDomainReplicationTasks() {
+	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
+	request := &replicator.GetDomainReplicationMessagesRequest{
+		LastRetrivedMessageId:  common.Int64Ptr(p.lastRetrievedMessageID),
+		LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
+	}
+	response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
+	defer cancel()
+
+	if err != nil {
+		p.logger.Error("Failed to get replication tasks", tag.Error(err))
+		return
+	}
+
+	p.logger.Debug("Successfully fetched domain replication tasks.", tag.Counter(len(response.Messages.ReplicationTasks)))
+
+	for _, task := range response.Messages.ReplicationTasks {
+		err := backoff.Retry(func() error {
+			return p.handleDomainReplicationTask(task)
+		}, p.retryPolicy, isTransientRetryableError)
+
+		if err != nil {
+			p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
+			// TODO: put task into DLQ
+		}
+	}
+
+	p.lastProcessedMessageID = response.Messages.GetLastRetrivedMessageId()
+	p.lastRetrievedMessageID = response.Messages.GetLastRetrivedMessageId()
 }
 
 func (p *domainReplicationMessageProcessor) handleDomainReplicationTask(task *replicator.ReplicationTask) error {

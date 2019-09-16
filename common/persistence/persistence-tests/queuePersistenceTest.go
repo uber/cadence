@@ -95,8 +95,8 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 
 	wg.Wait()
 
-	result, lastRetrievedMessageID, err := s.GetMessages(-1, numMessages)
-	s.Nil(err, "Get messages failed.")
+	result, lastRetrievedMessageID, err := s.GetReplicationMessages(-1, numMessages)
+	s.Nil(err, "GetReplicationMessages failed.")
 	s.Len(result, numMessages)
 	s.Equal(numMessages-1, lastRetrievedMessageID)
 

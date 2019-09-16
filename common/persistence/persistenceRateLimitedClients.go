@@ -783,10 +783,10 @@ func (p *queueRateLimitedPersistenceClient) EnqueueMessage(message []byte) error
 	return p.persistence.EnqueueMessage(message)
 }
 
-func (p *queueRateLimitedPersistenceClient) GetMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error) {
+func (p *queueRateLimitedPersistenceClient) DequeueMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.GetMessages(lastMessageID, maxCount)
+	return p.persistence.DequeueMessages(lastMessageID, maxCount)
 }

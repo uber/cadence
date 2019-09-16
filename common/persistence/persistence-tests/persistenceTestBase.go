@@ -1351,8 +1351,8 @@ func (s *TestBase) Publish(message interface{}) error {
 	return s.DomainReplicationQueue.Publish(message)
 }
 
-// GetMessages is a utility method to get messages from the queue
-func (s *TestBase) GetMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error) {
+// GetReplicationMessages is a utility method to get messages from the queue
+func (s *TestBase) GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error) {
 	return s.DomainReplicationQueue.GetReplicationMessages(lastMessageID, maxCount)
 }
 

@@ -235,8 +235,8 @@ const (
 	PersistenceCountWorkflowExecutionsScope
 	// PersistenceEnqueueMessageScope tracks Encueue calls made by service to persistence layer
 	PersistenceEnqueueMessageScope
-	// PersistenceGetMessagesScope tracks GetMessages calls made by service to persistence layer
-	PersistenceGetMessagesScope
+	// PersistenceDequeueMessagesScope tracks DequeueMessages calls made by service to persistence layer
+	PersistenceDequeueMessagesScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
@@ -965,7 +965,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 		PersistenceGetAllHistoryTreeBranchesScope:                {operation: "GetAllHistoryTreeBranches"},
 		PersistenceEnqueueMessageScope:                           {operation: "EnqueueMessage"},
-		PersistenceGetMessagesScope:                              {operation: "GetMessages"},
+		PersistenceDequeueMessagesScope:                          {operation: "DequeueMessages"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 

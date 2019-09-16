@@ -62,7 +62,7 @@ func (q *domainReplicationQueueImpl) GetReplicationMessages(
 	lastMessageID int,
 	maxCount int,
 ) ([]*replicator.ReplicationTask, int, error) {
-	messages, err := q.queue.GetMessages(lastMessageID, maxCount)
+	messages, err := q.queue.DequeueMessages(lastMessageID, maxCount)
 	if err != nil {
 		return nil, lastMessageID, err
 	}

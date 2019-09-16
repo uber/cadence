@@ -143,7 +143,7 @@ func (q *cassandraQueue) getNextMessageID() (int, error) {
 	return result["message_id"].(int) + 1, nil
 }
 
-func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]*persistence.QueueMessage, error) {
+func (q *cassandraQueue) DequeueMessages(lastMessageID int, maxCount int) ([]*persistence.QueueMessage, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := q.session.Query(templateGetMessagesQuery,
 		q.queueType,
@@ -154,7 +154,7 @@ func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]*persis
 	iter := query.Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
-			Message: "GetMessages operation failed. Not able to create query iterator.",
+			Message: "DequeueMessages operation failed. Not able to create query iterator.",
 		}
 	}
 
@@ -169,7 +169,7 @@ func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]*persis
 
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetMessages operation failed. Error: %v", err),
+			Message: fmt.Sprintf("DequeueMessages operation failed. Error: %v", err),
 		}
 	}
 

@@ -99,7 +99,7 @@ func (q *sqlQueue) tryEnqueue(messagePayload []byte) error {
 	})
 }
 
-func (q *sqlQueue) GetMessages(lastMessageID, maxCount int) ([]*persistence.QueueMessage, error) {
+func (q *sqlQueue) DequeueMessages(lastMessageID, maxCount int) ([]*persistence.QueueMessage, error) {
 	rows, err := q.db.GetMessagesFromQueue(q.queueType, lastMessageID, maxCount)
 	if err != nil {
 		return nil, err

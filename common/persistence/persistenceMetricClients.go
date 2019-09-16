@@ -1223,15 +1223,15 @@ func (p *queuePersistenceClient) EnqueueMessage(message []byte) error {
 	return err
 }
 
-func (p *queuePersistenceClient) GetMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error) {
-	p.metricClient.IncCounter(metrics.PersistenceGetMessagesScope, metrics.PersistenceRequests)
+func (p *queuePersistenceClient) DequeueMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error) {
+	p.metricClient.IncCounter(metrics.PersistenceDequeueMessagesScope, metrics.PersistenceRequests)
 
-	sw := p.metricClient.StartTimer(metrics.PersistenceGetMessagesScope, metrics.PersistenceLatency)
-	result, err := p.persistence.GetMessages(lastMessageID, maxCount)
+	sw := p.metricClient.StartTimer(metrics.PersistenceDequeueMessagesScope, metrics.PersistenceLatency)
+	result, err := p.persistence.DequeueMessages(lastMessageID, maxCount)
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetMessagesScope, metrics.PersistenceFailures)
+		p.metricClient.IncCounter(metrics.PersistenceDequeueMessagesScope, metrics.PersistenceFailures)
 	}
 
 	return result, err

@@ -150,7 +150,7 @@ type (
 	// Queue is a store to enqueue and get messages
 	Queue interface {
 		EnqueueMessage(messagePayload []byte) error
-		GetMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
+		DequeueMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
 	}
 
 	// QueueMessage is the message that stores in the queue
