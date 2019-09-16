@@ -239,10 +239,10 @@ github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhe
 github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0HrGL1Y=
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 h1:zzrxE1FKn5ryBNl9eKOeqQ58Y/Qpo3Q9QNxKHX5uzzQ=
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2/go.mod h1:hzfGeIUDq/j97IG+FhNqkowIyEcD88LrW6fyU3K3WqY=
+github.com/yycptt/cadence-client v0.8.1-0.20190913225216-c029e235c27d h1:OUuvi0zZ4iFJW5WGT/P5ntoWR83FSY0cfJllYG5VKxI=
+github.com/yycptt/cadence-client v0.8.1-0.20190913225216-c029e235c27d/go.mod h1:Ex8cSPPQeKGgob9h5ix/LELEWwq3CPIW8QSBWYrZoVI=
 go.uber.org/atomic v1.4.0 h1:cxzIVoETapQEqDhQu3QfnvXAV4AlzcvUCxkVUFw3+EU=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
-go.uber.org/cadence v0.9.1-0.20190819173509-c3cd9f8f9745 h1:UfkGg9w9lbfmLNxHMFp5UlCqzqw/kAZglCSAE2v6aeY=
-go.uber.org/cadence v0.9.1-0.20190819173509-c3cd9f8f9745/go.mod h1:CQivfHCJ44B1kKL4LLtOhcepUwNoRodZceo/wU5Nthw=
 go.uber.org/dig v1.7.0 h1:E5/L92iQTNJTjfgJF2KgU+/JpMaiuvK2DHLBj0+kSZk=
 go.uber.org/dig v1.7.0/go.mod h1:z+dSd2TP9Usi48jL8M3v63iSBVkiwtVyMKxMZYYauPg=
 go.uber.org/fx v1.9.0 h1:7OAz8ucp35AU8eydejpYG7QrbE8rLKzGhHbZlJi5LYY=

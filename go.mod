@@ -104,3 +104,5 @@ require (
 )
 
 replace github.com/jmoiron/sqlx v1.2.0 => github.com/mfateev/sqlx v0.0.0-20180910213730-fa49b1cf03f7
+
+replace go.uber.org/cadence v0.9.1-0.20190819173509-c3cd9f8f9745 => github.com/yycptt/cadence-client v0.8.1-0.20190913225216-c029e235c27d

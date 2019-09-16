@@ -447,6 +447,44 @@ func getFlagsForScan() []cli.Flag {
 	}
 }
 
+func getFlagsForListArchived() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagListQueryWithAlias,
+			Usage: "SQL like query. A range on CloseTime is required. Timestamp can be specified in '2006-01-02T15:04:05Z07:00' format or as UnixNano value",
+		},
+		cli.IntFlag{
+			Name:  FlagPageSizeWithAlias,
+			Value: 100,
+			Usage: "Result page size",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintRawTimeWithAlias,
+			Usage: "Print raw time stamp",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintDateTimeWithAlias,
+			Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintMemoWithAlias,
+			Usage: "Print memo",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintSearchAttrWithAlias,
+			Usage: "Print search attributes",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintFullyDetailWithAlias,
+			Usage: "Print full message without table format",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintJSONWithAlias,
+			Usage: "Print in raw json format",
+		},
+	}
+}
+
 func getFlagsForCount() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{

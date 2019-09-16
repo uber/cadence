@@ -676,6 +676,54 @@ func CountWorkflow(c *cli.Context) {
 	fmt.Println(response.GetCount())
 }
 
+func ListArchivedWorkflow(c *cli.Context) {
+	wfClient := getWorkflowClient(c)
+
+	printJSON := c.Bool(FlagPrintJSON)
+	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+	pageSize := c.Int(FlagPageSize)
+	listQuery := c.String(FlagListQuery)
+	if pageSize <= 0 {
+		pageSize = defaultPageSizeForList
+	}
+
+	request := &s.ListArchivedWorkflowExecutionsRequest{
+		PageSize: common.Int32Ptr(int32(pageSize)),
+		Query:    common.StringPtr(listQuery),
+	}
+
+	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
+	if c.GlobalIsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+
+	result, err := wfClient.ListArchivedWorkflow(ctx, request)
+	if err != nil {
+		ErrorAndExit("Failed to list archived workflow.", err)
+	}
+
+	if printJSON || printDecodedRaw {
+		fmt.Println("[")
+		printListResults(result.Executions, printJSON)
+		fmt.Println("]")
+		return
+	}
+
+	table := createTableForListWorkflow(c, false, false)
+	appendWorkflowExecutionsToTable(
+		table,
+		result.Executions,
+		false,
+		c.Bool(FlagPrintRawTime),
+		c.Bool(FlagPrintDateTime),
+		c.Bool(FlagPrintMemo),
+		c.Bool(FlagPrintSearchAttr),
+	)
+	table.Render()
+}
+
 // DescribeWorkflow show information about the specified workflow execution
 func DescribeWorkflow(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -961,33 +1009,53 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
 		}
 
-		for _, e := range result {
-			var startTime, executionTime, closeTime string
-			if printRawTime {
-				startTime = fmt.Sprintf("%d", e.GetStartTime())
-				executionTime = fmt.Sprintf("%d", e.GetExecutionTime())
-				closeTime = fmt.Sprintf("%d", e.GetCloseTime())
-			} else {
-				startTime = convertTime(e.GetStartTime(), !printDateTime)
-				executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
-				closeTime = convertTime(e.GetCloseTime(), !printDateTime)
-			}
-			row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, executionTime}
-			if !queryOpen {
-				row = append(row, closeTime)
-			}
-			if printMemo {
-				row = append(row, getPrintableMemo(e.Memo))
-			}
-			if printSearchAttr {
-				row = append(row, getPrintableSearchAttr(e.SearchAttributes))
-			}
-			table.Append(row)
-		}
+		appendWorkflowExecutionsToTable(
+			table,
+			result,
+			queryOpen,
+			printRawTime,
+			printDateTime,
+			printMemo,
+			printSearchAttr,
+		)
 
 		return nextPageToken, len(result)
 	}
 	return prepareTable
+}
+
+func appendWorkflowExecutionsToTable(
+	table *tablewriter.Table,
+	executions []*s.WorkflowExecutionInfo,
+	queryOpen bool,
+	printRawTime bool,
+	printDateTime bool,
+	printMemo bool,
+	printSearchAttr bool,
+) {
+	for _, e := range executions {
+		var startTime, executionTime, closeTime string
+		if printRawTime {
+			startTime = fmt.Sprintf("%d", e.GetStartTime())
+			executionTime = fmt.Sprintf("%d", e.GetExecutionTime())
+			closeTime = fmt.Sprintf("%d", e.GetCloseTime())
+		} else {
+			startTime = convertTime(e.GetStartTime(), !printDateTime)
+			executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
+			closeTime = convertTime(e.GetCloseTime(), !printDateTime)
+		}
+		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, executionTime}
+		if !queryOpen {
+			row = append(row, closeTime)
+		}
+		if printMemo {
+			row = append(row, getPrintableMemo(e.Memo))
+		}
+		if printSearchAttr {
+			row = append(row, getPrintableSearchAttr(e.SearchAttributes))
+		}
+		table.Append(row)
+	}
 }
 
 func printRunStatus(event *s.HistoryEvent) {
