@@ -246,12 +246,7 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskTimedOutEvent
 func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTimeoutEvent(
 	scheduleEventID int64,
 ) (*workflow.HistoryEvent, error) {
-
 	opTag := tag.WorkflowActionDecisionTaskTimedOut
-	if err := m.msb.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
 	if m.msb.executionInfo.DecisionScheduleID != scheduleEventID || m.msb.executionInfo.DecisionStartedID > 0 {
 		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(m.msb.GetNextEventID()),
@@ -277,12 +272,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 	bypassTaskGeneration bool,
 	originalScheduledTimestamp int64,
 ) (*decisionInfo, error) {
-
 	opTag := tag.WorkflowActionDecisionTaskScheduled
-	if err := m.msb.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
 	if m.HasPendingDecision() {
 		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(m.msb.GetNextEventID()),
@@ -407,12 +397,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	requestID string,
 	request *workflow.PollForDecisionTaskRequest,
 ) (*workflow.HistoryEvent, *decisionInfo, error) {
-
 	opTag := tag.WorkflowActionDecisionTaskStarted
-	if err := m.msb.checkMutability(opTag); err != nil {
-		return nil, nil, err
-	}
-
 	decision, ok := m.GetDecisionInfo(scheduleEventID)
 	if !ok || decision.StartedID != common.EmptyEventID {
 		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
@@ -460,12 +445,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskCompletedEvent(
 	request *workflow.RespondDecisionTaskCompletedRequest,
 	maxResetPoints int,
 ) (*workflow.HistoryEvent, error) {
-
 	opTag := tag.WorkflowActionDecisionTaskCompleted
-	if err := m.msb.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
 	decision, ok := m.GetDecisionInfo(scheduleEventID)
 	if !ok || decision.StartedID != startedEventID {
 		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
@@ -504,12 +484,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 	newRunID string,
 	forkEventVersion int64,
 ) (*workflow.HistoryEvent, error) {
-
 	opTag := tag.WorkflowActionDecisionTaskFailed
-	if err := m.msb.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
 	attr := workflow.DecisionTaskFailedEventAttributes{
 		ScheduledEventId: common.Int64Ptr(scheduleEventID),
 		StartedEventId:   common.Int64Ptr(startedEventID),
@@ -553,12 +528,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 	scheduleEventID int64,
 	startedEventID int64,
 ) (*workflow.HistoryEvent, error) {
-
 	opTag := tag.WorkflowActionDecisionTaskTimedOut
-	if err := m.msb.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
 	dt, ok := m.GetDecisionInfo(scheduleEventID)
 	if !ok || dt.StartedID != startedEventID {
 		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,

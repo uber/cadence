@@ -1512,6 +1512,10 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 	bypassTaskGeneration bool,
 	originalScheduledTimestamp int64,
 ) (*decisionInfo, error) {
+	opTag := tag.WorkflowActionDecisionTaskScheduled
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration, originalScheduledTimestamp)
 }
 
@@ -1536,6 +1540,10 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 	requestID string,
 	request *workflow.PollForDecisionTaskRequest,
 ) (*workflow.HistoryEvent, *decisionInfo, error) {
+	opTag := tag.WorkflowActionDecisionTaskStarted
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskStartedEvent(scheduleEventID, requestID, request)
 }
 
@@ -1635,6 +1643,10 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
 	request *workflow.RespondDecisionTaskCompletedRequest,
 	maxResetPoints int,
 ) (*workflow.HistoryEvent, error) {
+	opTag := tag.WorkflowActionDecisionTaskCompleted
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request, maxResetPoints)
 }
 
@@ -1648,6 +1660,10 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(
 	scheduleEventID int64,
 	startedEventID int64,
 ) (*workflow.HistoryEvent, error) {
+	opTag := tag.WorkflowActionDecisionTaskTimedOut
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID)
 }
 
@@ -1660,6 +1676,10 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(
 func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(
 	scheduleEventID int64,
 ) (*workflow.HistoryEvent, error) {
+	opTag := tag.WorkflowActionDecisionTaskTimedOut
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID)
 }
 
@@ -1674,6 +1694,10 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 	newRunID string,
 	forkEventVersion int64,
 ) (*workflow.HistoryEvent, error) {
+	opTag := tag.WorkflowActionDecisionTaskFailed
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity, reason, baseRunID, newRunID, forkEventVersion)
 }
 
