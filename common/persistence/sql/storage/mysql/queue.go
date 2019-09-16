@@ -28,7 +28,7 @@ import (
 
 const (
 	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
-	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
+	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
 	templateGetMessagesQuery      = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
 )
 
@@ -38,7 +38,7 @@ func (mdb *DB) InsertIntoQueue(row *sqldb.QueueRow) (sql.Result, error) {
 }
 
 // GetLastEnqueuedMessageID returns the last enqueued message ID
-func (mdb *DB) GetLastEnqueuedMessageID(queueType int) (int, error) {
+func (mdb *DB) GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error) {
 	var lastMessageID int
 	err := mdb.conn.Get(&lastMessageID, templateGetLastMessageIDQuery, queueType)
 	return lastMessageID, err

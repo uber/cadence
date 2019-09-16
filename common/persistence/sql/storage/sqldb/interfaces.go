@@ -654,7 +654,7 @@ type (
 		DeleteFromVisibility(filter *VisibilityFilter) (sql.Result, error)
 
 		InsertIntoQueue(row *QueueRow) (sql.Result, error)
-		GetLastEnqueuedMessageID(queueType int) (int, error)
+		GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error)
 		GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]QueueRow, error)
 	}
 

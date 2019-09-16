@@ -23,11 +23,7 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"time"
-
-	"github.com/go-sql-driver/mysql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
@@ -35,9 +31,8 @@ import (
 
 type (
 	sqlQueue struct {
-		queueType   int
-		logger      log.Logger
-		retryPolicy backoff.RetryPolicy
+		queueType int
+		logger    log.Logger
 		sqlStore
 	}
 )
@@ -47,39 +42,19 @@ func newQueue(
 	logger log.Logger,
 	queueType int,
 ) (persistence.Queue, error) {
-	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
-	retryPolicy.SetBackoffCoefficient(1.5)
-	retryPolicy.SetMaximumAttempts(10)
-
 	return &sqlQueue{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
 		},
-		queueType:   queueType,
-		logger:      logger,
-		retryPolicy: retryPolicy,
+		queueType: queueType,
+		logger:    logger,
 	}, nil
-
 }
 
 func (q *sqlQueue) EnqueueMessage(messagePayload []byte) error {
-	err := backoff.Retry(func() error {
-		return q.tryEnqueue(messagePayload)
-	}, q.retryPolicy,
-		func(e error) bool {
-			_, ok := e.(*persistence.ConditionFailedError)
-			return ok
-		})
-	if err != nil {
-		return &workflow.InternalServiceError{Message: err.Error()}
-	}
-	return nil
-}
-
-func (q *sqlQueue) tryEnqueue(messagePayload []byte) error {
-	return q.txExecute("EnqueueMessage", func(tx sqldb.Tx) error {
-		lastMessageID, err := tx.GetLastEnqueuedMessageID(q.queueType)
+	err := q.txExecute("EnqueueMessage", func(tx sqldb.Tx) error {
+		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(q.queueType)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				lastMessageID = -1
@@ -89,14 +64,12 @@ func (q *sqlQueue) tryEnqueue(messagePayload []byte) error {
 		}
 
 		_, err = tx.InsertIntoQueue(&sqldb.QueueRow{QueueType: q.queueType, MessageID: lastMessageID + 1, MessagePayload: messagePayload})
-		if err != nil {
-			if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
-				return &persistence.ConditionFailedError{Msg: err.Error()}
-			}
-			return err
-		}
-		return nil
+		return err
 	})
+	if err != nil {
+		return &workflow.InternalServiceError{Message: err.Error()}
+	}
+	return nil
 }
 
 func (q *sqlQueue) DequeueMessages(lastMessageID, maxCount int) ([]*persistence.QueueMessage, error) {
