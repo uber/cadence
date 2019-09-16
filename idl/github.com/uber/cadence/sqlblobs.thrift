@@ -162,6 +162,7 @@ struct ActivityInfo {
   64: optional list<string> retryNonRetryableErrors
   66: optional string retryLastFailureReason
   68: optional string retryLastWorkerIdentity
+  70: optional binary retryLastFailureDetails
 }
 
 struct ChildExecutionInfo {
@@ -177,6 +178,7 @@ struct ChildExecutionInfo {
   28: optional string createRequestID
   30: optional string domainName
   32: optional string workflowTypeName
+  35: optional i32 parentClosePolicy
 }
 
 struct SignalInfo {

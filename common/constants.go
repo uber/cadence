@@ -123,3 +123,13 @@ const (
 const (
 	DomainReplicationQueueType = 1
 )
+
+// enum for dynamic config AdvancedVisibilityWritingMode
+const (
+	// AdvancedVisibilityWritingModeOff means do not write to advanced visibility store
+	AdvancedVisibilityWritingModeOff = "off"
+	// AdvancedVisibilityWritingModeOn means only write to advanced visibility store
+	AdvancedVisibilityWritingModeOn = "on"
+	// AdvancedVisibilityWritingModeDual means write to both normal visibility and advanced visibility store
+	AdvancedVisibilityWritingModeDual = "dual"
+)

@@ -49,7 +49,7 @@ type Config struct {
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
 	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
 	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
+	AdvancedVisibilityWritingMode   dynamicconfig.StringPropertyFn
 	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
 	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
 	ThrottledLogRPS                 dynamicconfig.IntPropertyFn
@@ -102,6 +102,7 @@ type Config struct {
 	TransferProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
 	TransferProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorCompleteTransferInterval           dynamicconfig.DurationPropertyFn
+	TransferProcessorVisibilityArchivalTimeLimit        dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskBatchSize                               dynamicconfig.IntPropertyFn
@@ -135,6 +136,15 @@ type Config struct {
 	EventEncodingType dynamicconfig.StringPropertyFnWithDomainFilter
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
+	// whether or not using Terminate as default ParentClosePolicy, otherwise use Abandon for backward compatibility
+	UseTerminateAsDefaultParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
+	// whether or not enable system workers for processing parent close policy task
+	EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
+	// parent close policy will be processed by sys workers(if enabled) if
+	// the number of children greater than or equal to this threshold
+	ParentClosePolicyThreshold dynamicconfig.IntPropertyFnWithDomainFilter
+	// total number of parentClosePolicy system workflows
+	NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
 
 	// Archival settings
 	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
@@ -170,7 +180,7 @@ const (
 )
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool, storeType string) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                                        numberOfShards,
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
@@ -182,7 +192,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
 		MaxAutoResetPoints:                                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints, defaultHistoryMaxAutoResetPoints),
 		MaxDecisionStartToCloseSeconds:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseSeconds, 240),
-		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
+		AdvancedVisibilityWritingMode:                         dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist)),
 		EmitShardDiffLog:                                      dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog, false),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
@@ -219,6 +229,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		TransferProcessorUpdateAckInterval:                    dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 30*time.Second),
 		TransferProcessorUpdateAckIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.TransferProcessorUpdateAckIntervalJitterCoefficient, 0.15),
 		TransferProcessorCompleteTransferInterval:             dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 60*time.Second),
+		TransferProcessorVisibilityArchivalTimeLimit:          dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 1*time.Second),
 		ReplicatorTaskBatchSize:                               dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
 		ReplicatorTaskWorkerCount:                             dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
 		ReplicatorTaskMaxRetryCount:                           dc.GetIntProperty(dynamicconfig.ReplicatorTaskMaxRetryCount, 100),
@@ -236,9 +247,13 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		ShardSyncMinInterval:                                  dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval, 5*time.Minute),
 
 		// history client: client/history/client.go set the client timeout 30s
-		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
-		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
+		LongPollExpirationInterval:             dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
+		EventEncodingType:                      dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EnableEventsV2:                         dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
+		UseTerminateAsDefaultParentClosePolicy: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.UseTerminateAsDefaultParentClosePolicy, false),
+		NumParentClosePolicySystemWorkflows:    dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
+		EnableParentClosePolicyWorker:          dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		ParentClosePolicyThreshold:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
 
 		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 		ArchiveRequestRPS:         dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
@@ -280,8 +295,8 @@ type Service struct {
 func NewService(params *service.BootstrapParams) common.Daemon {
 	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 		params.PersistenceConfig.NumHistoryShards,
-		params.ESConfig.Enable,
-		params.PersistenceConfig.DefaultStoreType())
+		params.PersistenceConfig.DefaultStoreType(),
+		params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 	return &Service{
@@ -331,7 +346,7 @@ func (s *Service) Start() {
 	}
 
 	var esVisibility persistence.VisibilityManager
-	if params.ESConfig.Enable {
+	if params.ESConfig != nil {
 		visibilityProducer, err := s.params.MessagingClient.NewProducer(common.VisibilityAppName)
 		if err != nil {
 			log.Fatal("Creating visibility producer failed", tag.Error(err))
@@ -339,7 +354,12 @@ func (s *Service) Start() {
 		esVisibility = espersistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
 			s.metricsClient, log)
 	}
-	visibility = persistence.NewVisibilityManagerWrapper(visibility, esVisibility, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false))
+	visibility = persistence.NewVisibilityManagerWrapper(
+		visibility,
+		esVisibility,
+		dynamicconfig.GetBoolPropertyFnFilteredByDomain(false), // history visibility never read
+		s.config.AdvancedVisibilityWritingMode,
+	)
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
@@ -361,7 +381,13 @@ func (s *Service) Start() {
 		ClusterMetadata:  base.GetClusterMetadata(),
 		DomainCache:      domainCache,
 	}
-	err = params.ArchiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, &archiver.VisibilityBootstrapContainer{})
+	visibilityArchvierBootstrapContainer := &archiver.VisibilityBootstrapContainer{
+		Logger:          base.GetLogger(),
+		MetricsClient:   base.GetMetricsClient(),
+		ClusterMetadata: base.GetClusterMetadata(),
+		DomainCache:     domainCache,
+	}
+	err = params.ArchiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, visibilityArchvierBootstrapContainer)
 	if err != nil {
 		log.Fatal("Failed to register archiver bootstrap container", tag.Error(err))
 	}

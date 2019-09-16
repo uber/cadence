@@ -79,6 +79,7 @@ func updateActivityInfos(
 				RetryNonRetryableErrors:       v.NonRetriableErrors,
 				RetryLastFailureReason:        &v.LastFailureReason,
 				RetryLastWorkerIdentity:       &v.LastWorkerIdentity,
+				RetryLastFailureDetails:       v.LastFailureDetails,
 			}
 			blob, err := activityInfoToBlob(info)
 			if err != nil {
@@ -193,6 +194,7 @@ func getActivityInfoMap(
 			NonRetriableErrors:       decoded.GetRetryNonRetryableErrors(),
 			LastFailureReason:        decoded.GetRetryLastFailureReason(),
 			LastWorkerIdentity:       decoded.GetRetryLastWorkerIdentity(),
+			LastFailureDetails:       decoded.GetRetryLastFailureDetails(),
 		}
 		if decoded.StartedEvent != nil {
 			info.StartedEvent = persistence.NewDataBlob(decoded.StartedEvent, common.EncodingType(decoded.GetStartedEventEncoding()))
@@ -379,6 +381,7 @@ func updateChildExecutionInfos(
 				CreateRequestID:        &v.CreateRequestID,
 				DomainName:             &v.DomainName,
 				WorkflowTypeName:       &v.WorkflowTypeName,
+				ParentClosePolicy:      common.Int32Ptr(int32(v.ParentClosePolicy)),
 			}
 			blob, err := childExecutionInfoToBlob(info)
 			if err != nil {
@@ -453,6 +456,7 @@ func getChildExecutionInfoMap(
 			CreateRequestID:       rowInfo.GetCreateRequestID(),
 			DomainName:            rowInfo.GetDomainName(),
 			WorkflowTypeName:      rowInfo.GetWorkflowTypeName(),
+			ParentClosePolicy:     workflow.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
 		}
 		if rowInfo.InitiatedEvent != nil {
 			info.InitiatedEvent = persistence.NewDataBlob(rowInfo.InitiatedEvent, common.EncodingType(rowInfo.GetInitiatedEventEncoding()))

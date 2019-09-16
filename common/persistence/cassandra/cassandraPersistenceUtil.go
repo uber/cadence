@@ -1161,6 +1161,7 @@ func updateActivityInfos(
 			a.NonRetriableErrors,
 			a.LastFailureReason,
 			a.LastWorkerIdentity,
+			a.LastFailureDetails,
 			scheduleEncoding,
 			shardID,
 			rowTypeExecution,
@@ -1326,6 +1327,7 @@ func updateChildExecutionInfos(
 			initiatedEncoding,
 			c.DomainName,
 			c.WorkflowTypeName,
+			int32(c.ParentClosePolicy),
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1978,6 +1980,8 @@ func createActivityInfo(
 			info.LastFailureReason = v.(string)
 		case "last_worker_identity":
 			info.LastWorkerIdentity = v.(string)
+		case "last_failure_details":
+			info.LastFailureDetails = v.([]byte)
 		case "event_data_encoding":
 			sharedEncoding = common.EncodingType(v.(string))
 		}
@@ -2045,6 +2049,8 @@ func createChildExecutionInfo(
 			info.DomainName = v.(string)
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
+		case "parent_close_policy":
+			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int))
 		}
 	}
 	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
@@ -2144,6 +2150,7 @@ func resetActivityInfoMap(
 		aInfo["non_retriable_errors"] = a.NonRetriableErrors
 		aInfo["last_failure_reason"] = a.LastFailureReason
 		aInfo["last_worker_identity"] = a.LastWorkerIdentity
+		aInfo["last_failure_details"] = a.LastFailureDetails
 
 		aMap[a.ScheduleID] = aInfo
 	}
@@ -2198,6 +2205,7 @@ func resetChildExecutionInfoMap(
 		cInfo["started_run_id"] = startedRunID
 		cInfo["domain_name"] = c.DomainName
 		cInfo["workflow_type_name"] = c.WorkflowTypeName
+		cInfo["parent_close_policy"] = int32(c.ParentClosePolicy)
 
 		cMap[c.InitiatedID] = cInfo
 	}

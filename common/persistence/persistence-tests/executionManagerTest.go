@@ -2153,6 +2153,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 		NonRetriableErrors:       []string{"accessDenied", "badRequest"},
 		LastFailureReason:        "some random error",
 		LastWorkerIdentity:       uuid.New(),
+		LastFailureDetails:       []byte(uuid.New()),
 	}}
 	err2 := s.UpdateWorkflowExecution(updatedInfo, updatedStats, []int64{int64(4)}, nil, int64(3), nil, activityInfos, nil, nil, nil)
 	s.NoError(err2)
@@ -2197,6 +2198,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.Equal(activityInfos[0].NonRetriableErrors, ai.NonRetriableErrors)
 	s.Equal(activityInfos[0].LastFailureReason, ai.LastFailureReason)
 	s.Equal(activityInfos[0].LastWorkerIdentity, ai.LastWorkerIdentity)
+	s.Equal(activityInfos[0].LastFailureDetails, ai.LastFailureDetails)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, updatedStats, nil, nil, int64(5), nil, nil, []int64{1}, nil, nil)
 	s.NoError(err2)
@@ -2292,12 +2294,13 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	createRequestID := uuid.New()
 	childExecutionInfos := []*p.ChildExecutionInfo{{
-		Version:         1234,
-		InitiatedID:     1,
-		InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(1)},
-		StartedID:       2,
-		StartedEvent:    &gen.HistoryEvent{EventId: int64Ptr(2)},
-		CreateRequestID: createRequestID,
+		Version:           1234,
+		InitiatedID:       1,
+		InitiatedEvent:    &gen.HistoryEvent{EventId: int64Ptr(1)},
+		StartedID:         2,
+		StartedEvent:      &gen.HistoryEvent{EventId: int64Ptr(2)},
+		CreateRequestID:   createRequestID,
+		ParentClosePolicy: gen.ParentClosePolicyTerminate,
 	}}
 	err2 := s.UpsertChildExecutionsState(updatedInfo, updatedStats, int64(3), childExecutionInfos)
 	s.NoError(err2)
@@ -2311,6 +2314,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	s.NotNil(ci)
 	s.Equal(int64(1234), ci.Version)
 	s.Equal(int64(1), ci.InitiatedID)
+	s.Equal(gen.ParentClosePolicyTerminate, ci.ParentClosePolicy)
 	s.Equal(int64(1), *ci.InitiatedEvent.EventId)
 	s.Equal(int64(2), ci.StartedID)
 	s.Equal(int64(2), *ci.StartedEvent.EventId)

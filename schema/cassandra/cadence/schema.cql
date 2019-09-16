@@ -178,6 +178,7 @@ CREATE TYPE activity_info (
   non_retriable_errors      list<text>,
   last_failure_reason       text,
   last_worker_identity      text, -- Worker that returns the last failure reason
+  last_failure_details      blob,
   event_data_encoding       text, -- Protocol used for history serialization
 );
 
@@ -204,6 +205,7 @@ CREATE TYPE child_execution_info (
   event_data_encoding       text, -- Protocol used for history serialization
   domain_name               text,
   workflow_type_name        text,
+  parent_close_policy       int,
 );
 
 -- External workflow cancellation in progress mutable state

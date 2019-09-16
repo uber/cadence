@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -142,6 +143,8 @@ const (
 	// that do not have a target workflow
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
 )
+
+const numItemsInGarbageInfo = 3
 
 type (
 	// InvalidPersistenceRequestError represents invalid request to persistence
@@ -612,6 +615,7 @@ type (
 		NonRetriableErrors []string
 		LastFailureReason  string
 		LastWorkerIdentity string
+		LastFailureDetails []byte
 		// Not written to database - This is used only for deduping heartbeat timer creation
 		LastHeartbeatTimeoutVisibility int64
 	}
@@ -638,6 +642,7 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
+		ParentClosePolicy     workflow.ParentClosePolicy
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
@@ -837,6 +842,14 @@ type (
 		RunID      string
 	}
 
+	// DeleteTaskRequest is used to detele a task that corrupted and need to be removed
+	// 	e.g. corrupted history event batch, eventID is not continouous
+	DeleteTaskRequest struct {
+		TaskID  int64
+		Type    int
+		ShardID int
+	}
+
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
 	DeleteCurrentWorkflowExecutionRequest struct {
 		DomainID   string
@@ -1006,7 +1019,7 @@ type (
 	}
 
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
-	//Deprecated: use v2 API-AppendHistoryNodes() instead
+	// Deprecated: use v2 API-AppendHistoryNodes() instead
 	AppendHistoryEventsRequest struct {
 		DomainID          string
 		Execution         workflow.WorkflowExecution
@@ -1020,7 +1033,7 @@ type (
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
-	//Deprecated: use v2 API-AppendHistoryNodes() instead
+	// Deprecated: use v2 API-AppendHistoryNodes() instead
 	GetWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
@@ -1061,7 +1074,7 @@ type (
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
-	//Deprecated: use v2 API-AppendHistoryNodes() instead
+	// Deprecated: use v2 API-AppendHistoryNodes() instead
 	DeleteWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
@@ -1222,7 +1235,7 @@ type (
 		DeleteRequestCancelInfoCount int
 	}
 
-	//UpdateWorkflowExecutionResponse is response for UpdateWorkflowExecutionRequest
+	// UpdateWorkflowExecutionResponse is response for UpdateWorkflowExecutionRequest
 	UpdateWorkflowExecutionResponse struct {
 		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
@@ -1296,6 +1309,18 @@ type (
 		LastFirstEventID int64
 	}
 
+	// ReadRawHistoryBranchResponse is the response to ReadHistoryBranchRequest
+	ReadRawHistoryBranchResponse struct {
+		// HistoryEventBlobs history event blobs
+		HistoryEventBlobs []*DataBlob
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
+		// Empty means we have reached the last page, not need to continue
+		NextPageToken []byte
+		// Size of history read from store
+		Size int
+	}
+
 	// ForkHistoryBranchRequest is used to fork a history branch
 	ForkHistoryBranchRequest struct {
 		// The base branch to fork from
@@ -1344,8 +1369,9 @@ type (
 		BranchToken []byte
 	}
 
-	// ForkingInProgressBranch is part of GetHistoryTreeResponse
-	ForkingInProgressBranch struct {
+	// HistoryBranchDetail contains detailed information of a branch
+	HistoryBranchDetail struct {
+		TreeID   string
 		BranchID string
 		ForkTime time.Time
 		Info     string
@@ -1355,7 +1381,23 @@ type (
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
 		Branches                  []*workflow.HistoryBranch
-		ForkingInProgressBranches []ForkingInProgressBranch
+		ForkingInProgressBranches []HistoryBranchDetail
+	}
+
+	// GetAllHistoryTreeBranchesRequest is a request of GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesRequest struct {
+		// pagination token
+		NextPageToken []byte
+		// maximum number of branches returned per page
+		PageSize int
+	}
+
+	// GetAllHistoryTreeBranchesResponse is a response to GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesResponse struct {
+		// pagination token
+		NextPageToken []byte
+		// all branches of all trees
+		Branches []HistoryBranchDetail
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
@@ -1406,6 +1448,9 @@ type (
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+
+		// Remove Task due to corrupted data
+		DeleteTask(request *DeleteTaskRequest) error
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
@@ -1443,14 +1488,14 @@ type (
 		Closeable
 		GetName() string
 
-		//Deprecated: use v2 API-AppendHistoryNodes() instead
+		// Deprecated: use v2 API-AppendHistoryNodes() instead
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
-		//Deprecated: use v2 API-ReadHistoryBranch() instead
+		// Deprecated: use v2 API-ReadHistoryBranch() instead
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
-		//Deprecated: use v2 API-ReadHistoryBranchByBatch() instead
+		// Deprecated: use v2 API-ReadHistoryBranchByBatch() instead
 		GetWorkflowExecutionHistoryByBatch(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryByBatchResponse, error)
-		//Deprecated: use v2 API-DeleteHistoryBranch instead
+		// Deprecated: use v2 API-DeleteHistoryBranch instead
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 
@@ -1469,6 +1514,9 @@ type (
 		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
 		// ReadHistoryBranchByBatch returns history node data for a branch ByBatch
 		ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error)
+		// ReadRawHistoryBranch returns history node raw data for a branch ByBatch
+		// NOTE: this API should only be used by 3+DC
+		ReadRawHistoryBranch(request *ReadHistoryBranchRequest) (*ReadRawHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
 		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
 		// CompleteForkBranch will complete the forking process after update mutableState, this is to help preventing data leakage
@@ -1478,6 +1526,8 @@ type (
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		// GetAllHistoryTreeBranches returns all branches of all trees
+		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
@@ -2368,6 +2418,20 @@ func NewHistoryBranchToken(treeID string) ([]byte, error) {
 	return token, nil
 }
 
+// NewHistoryBranchTokenByBranchID return a new branch token with treeID/branchID
+func NewHistoryBranchTokenByBranchID(treeID, branchID string) ([]byte, error) {
+	bi := &workflow.HistoryBranch{
+		TreeID:    &treeID,
+		BranchID:  &branchID,
+		Ancestors: []*workflow.HistoryBranchRange{},
+	}
+	token, err := internalThriftEncoder.Encode(bi)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
 // NewHistoryBranchTokenFromAnother make up a branchToken
 func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]byte, error) {
 	var branch workflow.HistoryBranch
@@ -2386,4 +2450,23 @@ func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]b
 		return nil, err
 	}
 	return token, nil
+}
+
+// BuildHistoryGarbageCleanupInfo combine the workflow identity information into a string
+func BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID string) string {
+	return fmt.Sprintf("%v:%v:%v", domainID, workflowID, runID)
+}
+
+// SplitHistoryGarbageCleanupInfo returns workflow identity information
+func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID string, err error) {
+	ss := strings.Split(info, ":")
+	// workflowID can contain ":" so len(ss) can be greater than 3
+	if len(ss) < numItemsInGarbageInfo {
+		return "", "", "", fmt.Errorf("not able to split info for  %s", info)
+	}
+	domainID = ss[0]
+	runID = ss[len(ss)-1]
+	workflowEnd := len(info) - len(runID) - 1
+	workflowID = info[len(domainID)+1 : workflowEnd]
+	return
 }

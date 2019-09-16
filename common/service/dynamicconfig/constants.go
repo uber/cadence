@@ -54,7 +54,7 @@ var keys = map[Key]string{
 	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
-	EnableVisibilityToKafka:             "system.enableVisibilityToKafka",
+	AdvancedVisibilityWritingMode:       "system.advancedVisibilityWritingMode",
 	EnableReadVisibilityFromES:          "system.enableReadVisibilityFromES",
 	HistoryArchivalStatus:               "system.historyArchivalStatus",
 	EnableReadFromHistoryArchival:       "system.enableReadFromHistoryArchival",
@@ -65,6 +65,7 @@ var keys = map[Key]string{
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	EnableBatcher:                       "worker.enableBatcher",
+	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -158,6 +159,7 @@ var keys = map[Key]string{
 	TransferProcessorUpdateAckInterval:                    "history.transferProcessorUpdateAckInterval",
 	TransferProcessorUpdateAckIntervalJitterCoefficient:   "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 	TransferProcessorCompleteTransferInterval:             "history.transferProcessorCompleteTransferInterval",
+	TransferProcessorVisibilityArchivalTimeLimit:          "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
 	ReplicatorTaskMaxRetryCount:                           "history.replicatorTaskMaxRetryCount",
@@ -177,12 +179,15 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
+	UseTerminateAsDefaultParentClosePolicy:                "history.useTerminateAsDefaultParentClosePolicy",
 	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
 	ArchiveRequestRPS:                                     "history.archiveRequestRPS",
 	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 	StickyTTL:                                             "history.stickyTTL",
 	DecisionHeartbeatTimeout:                              "history.decisionHeartbeatTimeout",
+	ParentClosePolicyThreshold:                            "history.parentClosePolicyThreshold",
+	NumParentClosePolicySystemWorkflows:                   "history.numParentClosePolicySystemWorkflows",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
@@ -234,8 +239,8 @@ const (
 	EnableVisibilitySampling
 	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
 	EnableReadFromClosedExecutionV2
-	// EnableVisibilityToKafka is key for enable kafka
-	EnableVisibilityToKafka
+	// AdvancedVisibilityWritingMode is key for how to write to advanced visibility
+	AdvancedVisibilityWritingMode
 	// EmitShardDiffLog whether emit the shard diff log
 	EmitShardDiffLog
 	// EnableReadVisibilityFromES is key for enable read from elastic search
@@ -437,6 +442,8 @@ const (
 	TransferProcessorUpdateAckIntervalJitterCoefficient
 	// TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor
 	TransferProcessorCompleteTransferInterval
+	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
+	TransferProcessorVisibilityArchivalTimeLimit
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
 	ReplicatorTaskBatchSize
 	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor
@@ -483,6 +490,14 @@ const (
 
 	// EnableEventsV2 is whether to use eventsV2
 	EnableEventsV2
+	// UseTerminateAsDefaultParentClosePolicy whether to use Terminate as default ParentClosePolicy, otherwise use Abandon for backward compatibility
+	UseTerminateAsDefaultParentClosePolicy
+	// ParentClosePolicyThreshold decides that parent close policy will be processed by sys workers(if enabled) if
+	// the number of children greater than or equal to this threshold
+	ParentClosePolicyThreshold
+	// NumParentClosePolicySystemWorkflows is key for number of parentClosePolicy system workflows running in total
+	NumParentClosePolicySystemWorkflows
+
 	// HistoryThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	HistoryThrottledLogRPS
 	// StickyTTL is to expire a sticky tasklist if no update more than this duration
@@ -540,6 +555,8 @@ const (
 	ScannerPersistenceMaxQPS
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
+	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
+	EnableParentClosePolicyWorker
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

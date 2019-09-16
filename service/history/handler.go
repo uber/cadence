@@ -672,6 +672,33 @@ func (h *Handler) DescribeHistoryHost(ctx context.Context,
 	return resp, nil
 }
 
+// RemoveTask returns information about the internal states of a history host
+func (h *Handler) RemoveTask(
+	ctx context.Context,
+	request *gen.RemoveTaskRequest,
+) (retError error) {
+	executionMgr, err := h.executionMgrFactory.NewExecutionManager(int(request.GetShardID()))
+	if err != nil {
+		return err
+	}
+	deleteTaskRequest := &persistence.DeleteTaskRequest{
+		TaskID:  request.GetTaskID(),
+		Type:    int(request.GetType()),
+		ShardID: int(request.GetShardID()),
+	}
+	err = executionMgr.DeleteTask(deleteTaskRequest)
+	return err
+}
+
+// CloseShard returns information about the internal states of a history host
+func (h *Handler) CloseShard(
+	ctx context.Context,
+	request *gen.CloseShardRequest,
+) (retError error) {
+	h.controller.removeEngineForShard(int(request.GetShardID()))
+	return nil
+}
+
 // DescribeMutableState - returns the internal analysis of workflow execution state
 func (h *Handler) DescribeMutableState(ctx context.Context,
 	request *hist.DescribeMutableStateRequest) (resp *hist.DescribeMutableStateResponse, retError error) {
@@ -986,6 +1013,42 @@ func (h *Handler) ResetWorkflowExecution(ctx context.Context,
 	}
 
 	resp, err2 := engine.ResetWorkflowExecution(ctx, wrappedRequest)
+	if err2 != nil {
+		return nil, h.error(err2, scope, domainID, workflowID)
+	}
+
+	return resp, nil
+}
+
+// QueryWorkflow queries a workflow.
+func (h *Handler) QueryWorkflow(
+	ctx context.Context,
+	request *hist.QueryWorkflowRequest,
+) (resp *hist.QueryWorkflowResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope := metrics.HistoryQueryWorkflowScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	domainID := request.GetDomainUUID()
+	if domainID == "" {
+		return nil, h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok := h.rateLimiter.Allow(); !ok {
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+
+	workflowID := request.GetExecution().GetWorkflowId()
+	engine, err1 := h.controller.GetEngine(workflowID)
+	if err1 != nil {
+		return nil, h.error(err1, scope, domainID, workflowID)
+	}
+
+	resp, err2 := engine.QueryWorkflow(ctx, request)
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}

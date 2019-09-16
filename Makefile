@@ -80,7 +80,6 @@ COVER_ROOT                 := $(BUILD)/coverage
 UNIT_COVER_FILE            := $(COVER_ROOT)/unit_cover.out
 INTEG_COVER_FILE           := $(COVER_ROOT)/integ_$(PERSISTENCE_TYPE)$(EV2_TEST)_cover.out
 INTEG_XDC_COVER_FILE       := $(COVER_ROOT)/integ_xdc_$(PERSISTENCE_TYPE)_cover.out
-
 INTEG_CASS_COVER_FILE      := $(COVER_ROOT)/integ_cassandra_cover.out
 INTEG_CASS_EV2_COVER_FILE  := $(COVER_ROOT)/integ_cassandra_ev2_cover.out
 INTEG_XDC_CASS_COVER_FILE  := $(COVER_ROOT)/integ_xdc_cassandra_cover.out
@@ -97,9 +96,9 @@ INTEG_XDC_SQL_COVER_FILE   := $(COVER_ROOT)/integ_xdc_sql_cover.out
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
 yarpc-install:
-	go mod vendor
-	go get './vendor/go.uber.org/thriftrw'
-	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
+	GO111MODULE=off go get -u github.com/myitcv/gobin
+	gobin -mod=readonly go.uber.org/thriftrw
+	gobin -mod=readonly go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc
 
 clean_thrift:
 	rm -rf .gen
@@ -190,13 +189,13 @@ cover_xdc_profile: clean bins_nothrift
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_CASS_COVER_FILE) $(INTEG_CASS_EV2_COVER_FILE) $(INTEG_XDC_CASS_COVER_FILE) $(INTEG_SQL_COVER_FILE) $(INTEG_SQL_EV2_COVER_FILE) $(INTEG_XDC_SQL_COVER_FILE)
 	@echo "mode: atomic" > $(COVER_ROOT)/cover.out
-	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_CASS_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_CASS_EV2_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_XDC_CASS_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_SQL_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_SQL_EV2_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_XDC_SQL_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_CASS_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_CASS_EV2_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_XDC_CASS_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_SQL_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_SQL_EV2_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_XDC_SQL_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
 
 cover: $(COVER_ROOT)/cover.out
 	go tool cover -html=$(COVER_ROOT)/cover.out;

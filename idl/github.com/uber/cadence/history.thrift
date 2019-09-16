@@ -84,7 +84,11 @@ struct GetMutableStateResponse {
   120: optional i32 eventStoreVersion
   130: optional binary branchToken
   140: optional map<string, shared.ReplicationInfo> replicationInfo
-  150: optional shared.WorkflowExecutionCloseStatus closeStatus
+  // TODO: when migrating to gRPC, make this a enum
+  // TODO: when migrating to gRPC, unify internal & external representation
+  // NOTE: workflowState & workflowCloseState are the same as persistence representation
+  150: optional i32 workflowState
+  160: optional i32 workflowCloseState
 }
 
 struct ResetStickyTaskListRequest {
@@ -283,6 +287,17 @@ struct SyncActivityRequest {
   110: optional i32 attempt
   120: optional string lastFailureReason
   130: optional string lastWorkerIdentity
+  140: optional binary lastFailureDetails
+}
+
+struct QueryWorkflowRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+  30: optional shared.WorkflowQuery query
+}
+
+struct QueryWorkflowResponse {
+  10: optional binary queryResult
 }
 
 /**
@@ -693,6 +708,25 @@ service HistoryService {
       3: shared.AccessDeniedError accessDeniedError,
     )
 
+ /**
+ * CloseShard close the shard
+ **/
+ void CloseShard(1: shared.CloseShardRequest request)
+    throws (
+    1: shared.BadRequestError badRequestError,
+    2: shared.InternalServiceError internalServiceError,
+    3: shared.AccessDeniedError accessDeniedError,
+    )
+
+  /**
+  * RemoveTask remove task based on type, taskid, shardid
+  **/
+  void RemoveTask(1: shared.RemoveTaskRequest request)
+     throws (
+     1: shared.BadRequestError badRequestError,
+     2: shared.InternalServiceError internalServiceError,
+     3: shared.AccessDeniedError accessDeniedError,
+     )
   replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)
     throws (
       1: shared.BadRequestError badRequestError,
@@ -701,4 +735,18 @@ service HistoryService {
       4: shared.ServiceBusyError serviceBusyError,
       5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
+
+  /**
+  * QueryWorkflow returns query result for a specified workflow execution
+  **/
+  QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)
+	throws (
+	  1: shared.BadRequestError badRequestError,
+	  2: shared.InternalServiceError internalServiceError,
+	  3: shared.EntityNotExistsError entityNotExistError,
+	  4: shared.QueryFailedError queryFailedError,
+	  5: shared.LimitExceededError limitExceededError,
+	  6: shared.ServiceBusyError serviceBusyError,
+	  7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+	)
 }

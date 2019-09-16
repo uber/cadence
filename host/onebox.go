@@ -424,7 +424,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.adminHandler.RegisterHandler()
 
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
-	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer)
+	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.esConfig != nil)
 	domainCache := cache.NewDomainCache(c.metadataMgr, c.clusterMetadata, c.frontEndService.GetMetricsClient(), c.logger)
 
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
@@ -435,7 +435,13 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 		ClusterMetadata:  c.clusterMetadata,
 		DomainCache:      domainCache,
 	}
-	err = c.archiverProvider.RegisterBootstrapContainer(common.FrontendServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+	visibilityArchiverBootstrapContainer := &carchiver.VisibilityBootstrapContainer{
+		Logger:          c.logger,
+		MetricsClient:   c.frontEndService.GetMetricsClient(),
+		ClusterMetadata: c.clusterMetadata,
+		DomainCache:     domainCache,
+	}
+	err = c.archiverProvider.RegisterBootstrapContainer(common.FrontendServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
 	if err != nil {
 		c.logger.Fatal("Failed to register archiver bootstrap container for frontend service", tag.Error(err))
 	}
@@ -497,12 +503,16 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 
 		service := service.New(params)
 		hConfig := c.historyConfig
-		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), hConfig.NumHistoryShards, c.workerConfig.EnableIndexer, config.StoreTypeCassandra)
+		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger),
+			hConfig.NumHistoryShards, config.StoreTypeCassandra, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
 		historyConfig.DecisionHeartbeatTimeout = dynamicconfig.GetDurationPropertyFnFilteredByDomain(time.Second * 5)
 		historyConfig.TimerProcessorHistoryArchivalSizeLimit = dynamicconfig.GetIntPropertyFn(5 * 1024)
+		if c.workerConfig.EnableIndexer {
+			historyConfig.AdvancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual)
+		}
 		if hConfig.HistoryCountLimitWarn != 0 {
 			historyConfig.HistoryCountLimitWarn = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitWarn)
 		}
@@ -519,7 +529,13 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 			ClusterMetadata:  c.clusterMetadata,
 			DomainCache:      domainCache,
 		}
-		err = c.archiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+		visibilityArchiverBootstrapContainer := &carchiver.VisibilityBootstrapContainer{
+			Logger:          c.logger,
+			MetricsClient:   service.GetMetricsClient(),
+			ClusterMetadata: c.clusterMetadata,
+			DomainCache:     domainCache,
+		}
+		err = c.archiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
 		if err != nil {
 			c.logger.Fatal("Failed to register archiver bootstrap container for history service", tag.Error(err))
 		}
@@ -683,6 +699,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 }
 
 func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, service service.Service) {
+	params.DynamicConfig.UpdateValue(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeDual)
 	workerConfig := worker.NewConfig(params)
 	c.indexer = indexer.NewIndexer(
 		workerConfig.IndexerCfg,
