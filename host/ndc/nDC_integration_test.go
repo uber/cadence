@@ -236,12 +236,12 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 			}
 			branch1 = append(branch1, historyEvents)
 		}
-		branchVersionHistory1 = s.eventBatchesToVersionHistory(branchVersionHistory1, baseBranch)
+		branchVersionHistory1 = s.eventBatchesToVersionHistory(branchVersionHistory1, branch1)
 
 		branch2 := []*shared.History{}
 		branchVersionHistory2 := baseVersionHistory.Duplicate()
 		branchGenerator2 := baseGenerator.DeepCopy()
-		branchGenerator2.SetVersion(branchGenerator2.GetVersion() + 2)
+		branchGenerator2.SetVersion(branchGenerator2.GetVersion() + 1)
 		for i := 0; i < 10 && branchGenerator2.HasNextVertex(); i++ {
 			events := branchGenerator2.GetNextVertices()
 			historyEvents := &shared.History{}
@@ -250,7 +250,7 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 			}
 			branch2 = append(branch2, historyEvents)
 		}
-		branchVersionHistory2 = s.eventBatchesToVersionHistory(branchVersionHistory2, baseBranch)
+		branchVersionHistory2 = s.eventBatchesToVersionHistory(branchVersionHistory2, branch2)
 
 		s.applyEvents(
 			workflowID,
