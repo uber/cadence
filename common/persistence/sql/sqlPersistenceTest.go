@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	testUser      = "root"
-	testPassword  = "root"
+	testUser      = "uber"
+	testPassword  = "uber"
 	testSchemaDir = "schema/mysql/v57"
 )
 
