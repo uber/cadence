@@ -115,17 +115,25 @@ func (s *integrationSuite) TestVisibilityArchival() {
 	endTime := time.Now().UnixNano()
 
 	var executions []*workflow.WorkflowExecutionInfo
-	request := &workflow.ListArchivedWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.archivalDomainName),
-		PageSize: common.Int32Ptr(2),
-		Query:    common.StringPtr(fmt.Sprintf("CloseTime >= %v and CloseTime <= %v and WorkflowType = '%s'", startTime, endTime, workflowType)),
-	}
-	for len(executions) == 0 || request.NextPageToken != nil {
-		response, err := s.engine.ListArchivedWorkflowExecutions(createContext(), request)
-		s.NoError(err)
-		s.NotNil(response)
-		executions = append(executions, response.GetExecutions()...)
-		request.NextPageToken = response.NextPageToken
+
+	for i := 0; i != retryLimit; i++ {
+		executions = []*workflow.WorkflowExecutionInfo{}
+		request := &workflow.ListArchivedWorkflowExecutionsRequest{
+			Domain:   common.StringPtr(s.archivalDomainName),
+			PageSize: common.Int32Ptr(2),
+			Query:    common.StringPtr(fmt.Sprintf("CloseTime >= %v and CloseTime <= %v and WorkflowType = '%s'", startTime, endTime, workflowType)),
+		}
+		for len(executions) == 0 || request.NextPageToken != nil {
+			response, err := s.engine.ListArchivedWorkflowExecutions(createContext(), request)
+			s.NoError(err)
+			s.NotNil(response)
+			executions = append(executions, response.GetExecutions()...)
+			request.NextPageToken = response.NextPageToken
+		}
+		if len(executions) == numRuns {
+			break
+		}
+		time.Sleep(retryBackoffTime)
 	}
 
 	s.Len(executions, numRuns)
