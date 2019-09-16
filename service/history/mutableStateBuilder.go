@@ -99,6 +99,7 @@ type (
 		insertTimerTasks       []persistence.Task
 
 		taskGenerator mutableStateTaskGenerator
+		dtm           mutableStateDecisionTaskManager
 
 		shard           ShardContext
 		clusterMetadata cluster.Metadata
@@ -169,12 +170,8 @@ func newMutableStateBuilder(
 		LastProcessedEvent: common.EmptyEventID,
 	}
 	s.hBuilder = newHistoryBuilder(s, logger)
-
-	s.taskGenerator = newMutableStateTaskGenerator(
-		shard.GetDomainCache(),
-		s.logger,
-		s,
-	)
+	s.taskGenerator = newMutableStateTaskGenerator(shard.GetDomainCache(), s.logger, s)
+	s.dtm = newMutableStateDecisionTaskManager(s)
 
 	return s
 }
@@ -1088,6 +1085,31 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 	e.deleteTimerInfos[timerID] = struct{}{}
 }
 
+func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
+
+	taskList := e.executionInfo.TaskList
+	if e.IsStickyTaskListEnabled() {
+		taskList = e.executionInfo.StickyTaskList
+	}
+	return &decisionInfo{
+		Version:                    e.executionInfo.DecisionVersion,
+		ScheduleID:                 e.executionInfo.DecisionScheduleID,
+		StartedID:                  e.executionInfo.DecisionStartedID,
+		RequestID:                  e.executionInfo.DecisionRequestID,
+		DecisionTimeout:            e.executionInfo.DecisionTimeout,
+		Attempt:                    e.executionInfo.DecisionAttempt,
+		StartedTimestamp:           e.executionInfo.DecisionStartedTimestamp,
+		ScheduledTimestamp:         e.executionInfo.DecisionScheduledTimestamp,
+		TaskList:                   taskList,
+		OriginalScheduledTimestamp: e.executionInfo.DecisionOriginalScheduledTimestamp,
+	}
+}
+
+// GetDecisionInfo returns details about the in-progress decision task
+func (e *mutableStateBuilder) GetDecisionInfo(scheduleEventID int64) (*decisionInfo, bool) {
+	return e.dtm.GetDecisionInfo(scheduleEventID)
+}
+
 func (e *mutableStateBuilder) GetPendingActivityInfos() map[int64]*persistence.ActivityInfo {
 	return e.pendingActivityInfoIDs
 }
@@ -1108,6 +1130,26 @@ func (e *mutableStateBuilder) GetPendingSignalExternalInfos() map[int64]*persist
 	return e.pendingSignalInfoIDs
 }
 
+func (e *mutableStateBuilder) HasProcessedOrPendingDecision() bool {
+	return e.dtm.HasProcessedOrPendingDecision()
+}
+
+func (e *mutableStateBuilder) HasPendingDecision() bool {
+	return e.dtm.HasPendingDecision()
+}
+
+func (e *mutableStateBuilder) GetPendingDecision() (*decisionInfo, bool) {
+	return e.dtm.GetPendingDecision()
+}
+
+func (e *mutableStateBuilder) HasInFlightDecision() bool {
+	return e.dtm.HasInFlightDecision()
+}
+
+func (e *mutableStateBuilder) GetInFlightDecision() (*decisionInfo, bool) {
+	return e.dtm.GetInFlightDecision()
+}
+
 func (e *mutableStateBuilder) HasBufferedEvents() bool {
 	if len(e.bufferedEvents) > 0 || len(e.updateBufferedEvents) > 0 {
 		return true
@@ -1120,6 +1162,20 @@ func (e *mutableStateBuilder) HasBufferedEvents() bool {
 	}
 
 	return false
+}
+
+// UpdateDecision updates a decision task.
+func (e *mutableStateBuilder) UpdateDecision(decision *decisionInfo) {
+	e.dtm.UpdateDecision(decision)
+}
+
+// DeleteDecision deletes a decision task.
+func (e *mutableStateBuilder) DeleteDecision() {
+	e.dtm.DeleteDecision()
+}
+
+func (e *mutableStateBuilder) FailDecision(incrementAttempt bool) {
+	e.dtm.FailDecision(incrementAttempt)
 }
 
 func (e *mutableStateBuilder) ClearStickyness() {
@@ -1433,6 +1489,58 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	return nil
 }
 
+func (e *mutableStateBuilder) AddFirstDecisionTaskScheduled(startEvent *workflow.HistoryEvent) error {
+	return e.dtm.AddFirstDecisionTaskScheduled(startEvent)
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(bypassTaskGeneration bool) (*decisionInfo, error) {
+	return e.dtm.AddDecisionTaskScheduledEvent(bypassTaskGeneration)
+}
+
+// originalScheduledTimestamp is to record the first scheduled decision during decision heartbeat.
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration bool, originalScheduledTimestamp int64) (*decisionInfo, error) {
+	return e.dtm.AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration, originalScheduledTimestamp)
+}
+
+func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() (*decisionInfo, error) {
+	return e.dtm.ReplicateTransientDecisionTaskScheduled()
+}
+
+func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
+	version int64,
+	scheduleID int64,
+	taskList string,
+	startToCloseTimeoutSeconds int32,
+	attempt int64,
+	scheduleTimestamp int64,
+	originalScheduledTimestamp int64,
+) (*decisionInfo, error) {
+	return e.dtm.ReplicateDecisionTaskScheduledEvent(version, scheduleID, taskList, startToCloseTimeoutSeconds, attempt, scheduleTimestamp, originalScheduledTimestamp)
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
+	scheduleEventID int64,
+	requestID string,
+	request *workflow.PollForDecisionTaskRequest,
+) (*workflow.HistoryEvent, *decisionInfo, error) {
+	return e.dtm.AddDecisionTaskStartedEvent(scheduleEventID, requestID, request)
+}
+
+func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(
+	decision *decisionInfo,
+	version int64,
+	scheduleID int64,
+	startedID int64,
+	requestID string,
+	timestamp int64,
+) (*decisionInfo, error) {
+	return e.dtm.ReplicateDecisionTaskStartedEvent(decision, version, scheduleID, startedID, requestID, timestamp)
+}
+
+func (e *mutableStateBuilder) CreateTransientDecisionEvents(decision *decisionInfo, identity string) (*workflow.HistoryEvent, *workflow.HistoryEvent) {
+	return e.dtm.CreateTransientDecisionEvents(decision, identity)
+}
+
 // add BinaryCheckSum for the first decisionTaskCompletedID for auto-reset
 func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	event *workflow.HistoryEvent,
@@ -1503,6 +1611,49 @@ func (e *mutableStateBuilder) CheckResettable() error {
 		}
 	}
 	return nil
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
+	scheduleEventID int64,
+	startedEventID int64,
+	request *workflow.RespondDecisionTaskCompletedRequest,
+	maxResetPoints int,
+) (*workflow.HistoryEvent, error) {
+	return e.dtm.AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request, maxResetPoints)
+}
+
+func (e *mutableStateBuilder) ReplicateDecisionTaskCompletedEvent(event *workflow.HistoryEvent) error {
+	return e.dtm.ReplicateDecisionTaskCompletedEvent(event)
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64) (*workflow.HistoryEvent, error) {
+	return e.dtm.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID)
+}
+
+func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(timeoutType workflow.TimeoutType) error {
+	return e.dtm.ReplicateDecisionTaskTimedOutEvent(timeoutType)
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) (*workflow.HistoryEvent, error) {
+	return e.dtm.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID)
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
+	scheduleEventID int64,
+	startedEventID int64,
+	cause workflow.DecisionTaskFailedCause,
+	details []byte,
+	identity string,
+	reason string,
+	baseRunID string,
+	newRunID string,
+	forkEventVersion int64,
+) (*workflow.HistoryEvent, error) {
+	return e.dtm.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity, reason, baseRunID, newRunID, forkEventVersion)
+}
+
+func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
+	return e.dtm.ReplicateDecisionTaskFailedEvent()
 }
 
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
