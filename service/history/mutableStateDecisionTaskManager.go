@@ -672,7 +672,6 @@ func (e *mutableStateBuilder) CreateTransientDecisionEvents(decision *decisionIn
 	return scheduledEvent, startedEvent
 }
 
-
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 	taskList := e.executionInfo.TaskList
 	if e.IsStickyTaskListEnabled() {
@@ -704,5 +703,3 @@ func (e *mutableStateBuilder) afterAddDecisionTaskCompletedEvent(
 	e.executionInfo.LastProcessedEvent = event.GetDecisionTaskCompletedEventAttributes().GetStartedEventId()
 	e.addBinaryCheckSumIfNotExists(event, maxResetPoints)
 }
-
-
