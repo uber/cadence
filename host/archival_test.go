@@ -136,7 +136,6 @@ func (s *integrationSuite) TestVisibilityArchival() {
 		time.Sleep(retryBackoffTime)
 	}
 
-	s.Len(executions, numRuns)
 	for _, execution := range executions {
 		s.Equal(workflowID, execution.GetExecution().GetWorkflowId())
 		s.Equal(workflowType, execution.GetType().GetName())
