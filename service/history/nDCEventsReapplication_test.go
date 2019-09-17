@@ -211,17 +211,15 @@ func (s *nDCEventReapplicationSuite) TestPrepareWorkflowMutation_GetDomainCache_
 	msBuilderCurrent.On("GetLastWriteVersion").Return(int64(1), nil)
 	msBuilderCurrent.On("UpdateReplicationStateVersion", int64(1), true).Return()
 	msBuilderCurrent.On("GetExecutionInfo").Return(execution)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", int64(1)).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestAlternativeClusterName)
-
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return(cluster.TestAlternativeClusterName)
 	replicationConfig := &persistence.DomainReplicationConfig{
-		ActiveClusterName: cluster.TestCurrentClusterName,
+		ActiveClusterName: cluster.TestAlternativeClusterName,
 	}
 	domainEntry := cache.NewDomainCacheEntryForTest(nil, nil, false, replicationConfig, int64(0), s.mockClusterMetadata)
-	s.mockDomainCache.On("GetDomainByID", execution.DomainID).Return(domainEntry)
+	s.mockDomainCache.On("GetDomainByID", execution.DomainID).Return(domainEntry, nil)
 	isCurrent, err := s.nDCReapplication.prepareWorkflowMutation(msBuilderCurrent)
 	s.False(isCurrent)
-	s.Error(err)
+	s.NoError(err)
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEventsToCurrentRunningWorkflow() {
