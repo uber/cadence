@@ -2110,7 +2110,10 @@ func (e *mutableStateBuilder) AddActivityTaskCanceledEvent(
 	return event, nil
 }
 
-func (e *mutableStateBuilder) ReplicateActivityTaskCanceledEvent(event *workflow.HistoryEvent) error {
+func (e *mutableStateBuilder) ReplicateActivityTaskCanceledEvent(
+	event *workflow.HistoryEvent,
+) error {
+
 	attributes := event.ActivityTaskCanceledEventAttributes
 	scheduleID := attributes.GetScheduledEventId()
 
@@ -3334,7 +3337,9 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 	return event, nil
 }
 
-func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTimedOutEvent(event *workflow.HistoryEvent) error {
+func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTimedOutEvent(
+	event *workflow.HistoryEvent,
+) error {
 	attributes := event.ChildWorkflowExecutionTimedOutEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
