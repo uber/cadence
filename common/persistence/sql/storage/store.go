@@ -22,8 +22,8 @@ package storage
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 
@@ -80,7 +80,8 @@ func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
 		return postgres.NewDB(db, nil), nil
 	}
 
-	return nil, errors.New(fmt.Sprintf("unknown driver '%s', must be either mysql/postgres", cfg.DriverName))
+	log.Panicf("unknown driver '%s', must be either %s/%s", cfg.DriverName, sqlStorePostgres, sqlStoreMySQL)
+	return nil, nil // unreachable
 }
 
 func buildDSN(cfg *config.SQL) string {
