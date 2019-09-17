@@ -40,6 +40,9 @@ const (
 	isolationLevelAttrName       = "transaction_isolation"
 	isolationLevelAttrNameLegacy = "tx_isolation"
 	defaultIsolationLevel        = "'READ-COMMITTED'"
+
+	sqlStoreMySQL    = "mysql"
+	sqlStorePostgres = "postgres"
 )
 
 var dsnAttrOverrides = map[string]string{
@@ -70,10 +73,10 @@ func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
 	db.MapperFunc(strcase.ToSnake)
 
 	switch strings.ToLower(cfg.DriverName) {
-	case "mysql":
+	case sqlStoreMySQL:
 		return mysql.NewDB(db, nil), nil
 
-	case "postgres":
+	case sqlStorePostgres:
 		return postgres.NewDB(db, nil), nil
 	}
 
