@@ -32,7 +32,7 @@ import (
 
 type (
 	nDCEventsReapplier interface {
-		reapplyEvents(ctx ctx.Context, msBuilder mutableState, historyEvents []*shared.HistoryEvent)
+		reapplyEvents(ctx ctx.Context, msBuilder mutableState, historyEvents []*shared.HistoryEvent) error
 	}
 
 	nDCEventsReapplierImpl struct {
@@ -41,7 +41,7 @@ type (
 	}
 )
 
-func newNDCEventsReapplication(
+func newNDCEventsReapplier(
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) nDCEventsReapplier {
@@ -51,6 +51,7 @@ func newNDCEventsReapplication(
 		logger:        logger,
 	}
 }
+
 func (r *nDCEventsReapplierImpl) reapplyEvents(
 	ctx ctx.Context,
 	msBuilder mutableState,
