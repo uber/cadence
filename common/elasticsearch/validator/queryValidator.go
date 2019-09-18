@@ -87,7 +87,10 @@ func (qv *VisibilityQueryValidator) validateListOrCountRequestForQuery(whereClau
 			return "", &workflow.BadRequestError{Message: "Invalid query."}
 		}
 
-		sel := stmt.(*sqlparser.Select)
+		sel, ok := stmt.(*sqlparser.Select)
+		if !ok {
+			return "", &workflow.BadRequestError{Message: "Invalid select query."}
+		}
 		buf := sqlparser.NewTrackedBuffer(nil)
 		// validate where expr
 		if sel.Where != nil {
