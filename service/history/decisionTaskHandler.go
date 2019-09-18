@@ -764,10 +764,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 	}
 
 	if attr.ParentClosePolicy == nil {
-		useTerminate := handler.config.UseTerminateAsDefaultParentClosePolicy(handler.domainEntry.GetInfo().Name)
-		if useTerminate {
-			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyTerminate)
-		} else {
+		attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
+	} else {
+		enabled := handler.config.EnableParentClosePolicy(handler.domainEntry.GetInfo().Name)
+		if !enabled {
 			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
 		}
 	}
