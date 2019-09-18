@@ -763,10 +763,16 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 		return err
 	}
 
+	enabled := handler.config.EnableParentClosePolicy(handler.domainEntry.GetInfo().Name)
 	if attr.ParentClosePolicy == nil {
-		attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
+		// for old clients, this field is empty. If they enable the feature, make default as terminate
+		if enabled {
+			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyTerminate)
+		} else {
+			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
+		}
 	} else {
-		enabled := handler.config.EnableParentClosePolicy(handler.domainEntry.GetInfo().Name)
+		// for domains that haven't enabled the feature yet, need to use Abandon for backward-compatibility
 		if !enabled {
 			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
 		}
