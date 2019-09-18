@@ -195,7 +195,7 @@ func (s *nDCBranchMgrSuite) TestFlushBufferedEvents() {
 	s.mockMutableState.On("GetVersionHistories").Return(versionHistories).Maybe()
 	s.mockMutableState.On("HasBufferedEvents").Return(true).Times(2)
 	s.mockMutableState.On("IsWorkflowExecutionRunning").Return(true).Times(1)
-	s.mockMutableState.On("UpdateCurrentVersion", lastWriteVersion, true).Times(1)
+	s.mockMutableState.On("UpdateCurrentVersion", lastWriteVersion, true).Return(nil).Times(1)
 	decisionInfo := &decisionInfo{
 		ScheduleID: 1234,
 		StartedID:  2345,
