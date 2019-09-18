@@ -38,7 +38,7 @@ import (
 type (
 	nDCEventReapplicationSuite struct {
 		suite.Suite
-		nDCReapplication *nDCEventsReapplication
+		nDCReapplication nDCEventsReapplier
 	}
 )
 
@@ -50,7 +50,7 @@ func TestNDCEventReapplicationSuite(t *testing.T) {
 func (s *nDCEventReapplicationSuite) SetupTest() {
 	logger := loggerimpl.NewDevelopmentForTest(s.Suite)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.nDCReapplication = newNDCEventsReapplication(
+	s.nDCReapplication = newNDCEventsReapplier(
 		metricsClient,
 		logger,
 	)
