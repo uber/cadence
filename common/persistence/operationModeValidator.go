@@ -136,8 +136,7 @@ func ValidateConflictResolveWorkflowModeState(
 	case ConflictResolveWorkflowModeUpdateCurrent:
 		// it is ok that currentWorkflowMutation is null, for 2 DC
 		if resetWorkflowState == WorkflowStateZombie ||
-			(newWorkflowState != nil && *newWorkflowState == WorkflowStateZombie) ||
-			(currentWorkflowState != nil && *currentWorkflowState == WorkflowStateZombie) {
+			(newWorkflowState != nil && *newWorkflowState == WorkflowStateZombie) {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf(
 					"Invalid workflow conflict resolve mode %v, state: %v",
