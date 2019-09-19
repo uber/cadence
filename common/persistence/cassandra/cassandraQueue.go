@@ -34,6 +34,10 @@ import (
 )
 
 const (
+	firstMessageID = 0
+)
+
+const (
 	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
 	templateGetMessagesQuery      = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
@@ -77,7 +81,9 @@ func newQueue(
 	}, nil
 }
 
-func (q *cassandraQueue) EnqueueMessage(messagePayload []byte) error {
+func (q *cassandraQueue) EnqueueMessage(
+	messagePayload []byte,
+) error {
 	err := backoff.Retry(
 		func() error {
 			nextMessageID, err := q.getNextMessageID()
@@ -99,7 +105,10 @@ func (q *cassandraQueue) EnqueueMessage(messagePayload []byte) error {
 	return nil
 }
 
-func (q *cassandraQueue) tryEnqueue(messageID int, messagePayload []byte) error {
+func (q *cassandraQueue) tryEnqueue(
+	messageID int,
+	messagePayload []byte,
+) error {
 	query := q.session.Query(templateEnqueueMessageQuery, q.queueType, messageID, messagePayload)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
@@ -128,7 +137,7 @@ func (q *cassandraQueue) getNextMessageID() (int, error) {
 	err := query.MapScan(result)
 	if err != nil {
 		if err == gocql.ErrNotFound {
-			return 0, nil
+			return firstMessageID, nil
 		} else if isThrottlingError(err) {
 			return 0, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", q.queueType, err),
@@ -143,7 +152,10 @@ func (q *cassandraQueue) getNextMessageID() (int, error) {
 	return result["message_id"].(int) + 1, nil
 }
 
-func (q *cassandraQueue) DequeueMessages(lastMessageID int, maxCount int) ([]*persistence.QueueMessage, error) {
+func (q *cassandraQueue) DequeueMessages(
+	lastMessageID int,
+	maxCount int,
+) ([]*persistence.QueueMessage, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := q.session.Query(templateGetMessagesQuery,
 		q.queueType,
@@ -161,8 +173,8 @@ func (q *cassandraQueue) DequeueMessages(lastMessageID int, maxCount int) ([]*pe
 	var result []*persistence.QueueMessage
 	message := make(map[string]interface{})
 	for iter.MapScan(message) {
-		payload := message["message_payload"].([]byte)
-		id := message["message_id"].(int)
+		payload := getMessagePayload(message)
+		id := getMessageID(message)
 		result = append(result, &persistence.QueueMessage{ID: id, Payload: payload})
 		message = make(map[string]interface{})
 	}
@@ -187,4 +199,12 @@ func (q *cassandraQueue) Close() error {
 func isMessageIDConflictError(err error) bool {
 	_, ok := err.(*persistence.ConditionFailedError)
 	return ok
+}
+
+func getMessagePayload(message map[string]interface{}) []byte {
+	return message["message_payload"].([]byte)
+}
+
+func getMessageID(message map[string]interface{}) int {
+	return message["message_id"].(int)
 }

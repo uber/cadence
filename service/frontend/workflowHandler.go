@@ -59,6 +59,7 @@ import (
 
 const (
 	getDomainReplicationMessageBatchSize = 100
+	defaultLastMessageID                 = -1
 )
 
 var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
@@ -3502,7 +3503,8 @@ func (wh *WorkflowHandler) GetDomainReplicationMessages(
 		return nil, wh.error(errors.New("domain replication queue not enabled for cluster"), scope)
 	}
 
-	lastMessageID := -1
+	// TODO: Set it to last ack level for the cluster.
+	lastMessageID := defaultLastMessageID
 	if request.IsSetLastRetrivedMessageId() {
 		lastMessageID = int(request.GetLastRetrivedMessageId())
 	}

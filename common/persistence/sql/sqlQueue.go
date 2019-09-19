@@ -63,7 +63,7 @@ func (q *sqlQueue) EnqueueMessage(messagePayload []byte) error {
 			}
 		}
 
-		_, err = tx.InsertIntoQueue(&sqldb.QueueRow{QueueType: q.queueType, MessageID: lastMessageID + 1, MessagePayload: messagePayload})
+		_, err = tx.InsertIntoQueue(newQueueRow(q.queueType, lastMessageID+1, messagePayload))
 		return err
 	})
 	if err != nil {
@@ -83,4 +83,8 @@ func (q *sqlQueue) DequeueMessages(lastMessageID, maxCount int) ([]*persistence.
 		messages = append(messages, &persistence.QueueMessage{ID: row.MessageID, Payload: row.MessagePayload})
 	}
 	return messages, nil
+}
+
+func newQueueRow(queueType int, messageID int, payload []byte) *sqldb.QueueRow {
+	return &sqldb.QueueRow{QueueType: queueType, MessageID: messageID, MessagePayload: payload}
 }
