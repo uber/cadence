@@ -54,7 +54,7 @@ type (
 	}
 
 	archiverProvider struct {
-		m *sync.RWMutex
+		sync.RWMutex
 
 		historyArchiverConfigs    *config.HistoryArchiverProvider
 		visibilityArchiverConfigs *config.VisibilityArchiverProvider
@@ -75,7 +75,6 @@ func NewArchiverProvider(
 	visibilityArchiverConfigs *config.VisibilityArchiverProvider,
 ) ArchiverProvider {
 	return &archiverProvider{
-		m:                         &sync.RWMutex{},
 		historyArchiverConfigs:    historyArchiverConfigs,
 		visibilityArchiverConfigs: visibilityArchiverConfigs,
 		historyContainers:         make(map[string]*archiver.HistoryBootstrapContainer),
@@ -113,12 +112,12 @@ func (p *archiverProvider) RegisterBootstrapContainer(
 
 func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archiver.HistoryArchiver, error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
-	p.m.RLock()
+	p.RLock()
 	if historyArchiver, ok := p.historyArchivers[archiverKey]; ok {
-		p.m.RUnlock()
+		p.RUnlock()
 		return historyArchiver, nil
 	}
-	p.m.RUnlock()
+	p.RUnlock()
 
 	container, ok := p.historyContainers[serviceName]
 	if !ok {
@@ -135,8 +134,8 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 			return nil, err
 		}
 
-		p.m.Lock()
-		defer p.m.Unlock()
+		p.Lock()
+		defer p.Unlock()
 		if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
 			return existingHistoryArchiver, nil
 		}
@@ -148,12 +147,12 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 
 func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (archiver.VisibilityArchiver, error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
-	p.m.RLock()
+	p.RLock()
 	if visibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
-		p.m.RUnlock()
+		p.RUnlock()
 		return visibilityArchiver, nil
 	}
-	p.m.RUnlock()
+	p.RUnlock()
 
 	container, ok := p.visibilityContainers[serviceName]
 	if !ok {
@@ -170,8 +169,8 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 			return nil, err
 		}
 
-		p.m.Lock()
-		defer p.m.Unlock()
+		p.Lock()
+		defer p.Unlock()
 		if existingVisibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
 			return existingVisibilityArchiver, nil
 		}
