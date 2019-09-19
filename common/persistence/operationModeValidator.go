@@ -142,7 +142,7 @@ func ValidateConflictResolveWorkflowModeState(
 				Message: fmt.Sprintf(
 					"Invalid workflow conflict resolve mode %v, state: %v",
 					mode,
-					*currentWorkflowState,
+					currentWorkflowState,
 				),
 			}
 		}
