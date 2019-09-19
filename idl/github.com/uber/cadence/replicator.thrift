@@ -132,7 +132,10 @@ struct GetDomainReplicationMessagesRequest {
   10: optional i64 (js.type = "Long") lastRetrivedMessageId
   // lastProcessedMessageId is the last messageId that is processed on the passive side.
   // This can be different than lastRetrivedMessageId if passive side supports prefetching messages.
-  20: optional i64 (js.type = "Long") lastProcessedMessageId}
+  20: optional i64 (js.type = "Long") lastProcessedMessageId
+  // clusterName is the name of the pulling cluster
+  30: optional string clusterName
+}
 
 struct GetDomainReplicationMessagesResponse {
   10: optional ReplicationMessages messages
