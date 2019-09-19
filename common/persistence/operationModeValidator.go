@@ -135,6 +135,7 @@ func ValidateConflictResolveWorkflowModeState(
 	switch mode {
 	case ConflictResolveWorkflowModeUpdateCurrent:
 		// it is ok that currentWorkflowMutation is null, for 2 DC
+		// Note: current workflow mutation can be in zombie state, for the update
 		if resetWorkflowState == WorkflowStateZombie ||
 			(newWorkflowState != nil && *newWorkflowState == WorkflowStateZombie) {
 			return &workflow.InternalServiceError{
