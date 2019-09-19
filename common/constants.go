@@ -83,6 +83,8 @@ const (
 	VisibilityAppName = "visibility"
 )
 
+// This was flagged by salus as potentially hardcoded credentials. This is a false positive by the scanner and should be
+// disregarded.
 // #nosec
 const (
 	// SystemGlobalDomainName is global domain name for cadence system workflows running globally
