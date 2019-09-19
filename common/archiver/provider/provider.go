@@ -150,10 +150,10 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 	archiverKey := p.getArchiverKey(scheme, serviceName)
 	p.m.RLock()
 	if visibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
-		p.m.Unlock()
+		p.m.RUnlock()
 		return visibilityArchiver, nil
 	}
-	p.m.Unlock()
+	p.m.RUnlock()
 
 	container, ok := p.visibilityContainers[serviceName]
 	if !ok {
