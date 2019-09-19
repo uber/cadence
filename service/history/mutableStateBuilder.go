@@ -4136,6 +4136,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 		return false, nil
 	}
 
+	currentVersion := e.GetCurrentVersion()
 	lastWriteVersion, err := e.GetLastWriteVersion()
 	if err != nil {
 		return false, err
@@ -4149,9 +4150,21 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 	}
 
 	lastWriteSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
+	currentVersionCluster := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
-	if currentCluster != lastWriteSourceCluster {
-		// workflow was passive here, sanity check no buffered events
+
+	// there are 4 cases for version changes (based on version from domain cache)
+	// NOTE: domain cache version change may occur after seeing events with higher version
+	//  meaning that the flush buffer logic in NDC branch manager should be kept.
+	//
+	// 1. active -> passive => fail decision & flush buffer using last write version
+	// 2. active -> active => fail decision & flush buffer using last write version
+	// 3. passive -> active => fail decision using current version, no buffered events
+	// 4. passive -> passive => no buffered events, since always passive, nothing to be done
+
+	// handle case 4
+	if lastWriteSourceCluster != currentCluster && currentVersionCluster != currentCluster {
+		// do a sanity check on buffered events
 		if e.HasBufferedEvents() {
 			return false, &workflow.InternalServiceError{
 				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
@@ -4160,10 +4173,24 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 		return false, nil
 	}
 
+	// handle case 1 & 2
+	var flushBufferVersion = lastWriteVersion
+
+	// handle case 3
+	if lastWriteSourceCluster != currentCluster && currentVersionCluster == currentCluster {
+		// do a sanity check on buffered events
+		if e.HasBufferedEvents() {
+			return false, &workflow.InternalServiceError{
+				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
+			}
+		}
+		flushBufferVersion = currentVersion
+	}
+
 	// this workflow was previous active (whether it has buffered events or not),
 	// the in flight decision must be failed to guarantee all events within same
 	// event batch shard the same version
-	if err := e.UpdateCurrentVersion(lastWriteVersion, true); err != nil {
+	if err := e.UpdateCurrentVersion(flushBufferVersion, true); err != nil {
 		return false, err
 	}
 
