@@ -22,7 +22,8 @@ THRIFTRW_SRCS = \
   idl/github.com/uber/cadence/sqlblobs.thrift \
 
 PROGS = cadence
-TEST_ARG ?= -race -v -timeout 40m
+TEST_TIMEOUT = 15m
+TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -46,8 +47,6 @@ endif
 ifdef TEST_TAG
 override TEST_TAG := -tags $(TEST_TAG)
 endif
-
-TEST_TIMEOUT = 15m
 
 define thriftrwrule
 THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
@@ -165,7 +164,7 @@ cover_profile: clean bins_nothrift
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
-		go test -timeout $(TEST_TIMEOUT) "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
+		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
 		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
 	done;
 
@@ -176,7 +175,7 @@ cover_integration_profile: clean bins_nothrift
 
 	@echo Running integration test with $(PERSISTENCE_TYPE) and eventsV2 $(EVENTSV2)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	@time go test -timeout $(TEST_TIMEOUT) $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -eventsV2=$(EVENTSV2) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -eventsV2=$(EVENTSV2) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
 cover_xdc_profile: clean bins_nothrift
