@@ -22,6 +22,7 @@ package provider
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
@@ -53,6 +54,8 @@ type (
 	}
 
 	archiverProvider struct {
+		m *sync.RWMutex
+
 		historyArchiverConfigs    *config.HistoryArchiverProvider
 		visibilityArchiverConfigs *config.VisibilityArchiverProvider
 
@@ -72,6 +75,7 @@ func NewArchiverProvider(
 	visibilityArchiverConfigs *config.VisibilityArchiverProvider,
 ) ArchiverProvider {
 	return &archiverProvider{
+		m:                         &sync.RWMutex{},
 		historyArchiverConfigs:    historyArchiverConfigs,
 		visibilityArchiverConfigs: visibilityArchiverConfigs,
 		historyContainers:         make(map[string]*archiver.HistoryBootstrapContainer),
@@ -109,9 +113,12 @@ func (p *archiverProvider) RegisterBootstrapContainer(
 
 func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archiver.HistoryArchiver, error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
+	p.m.RLock()
 	if historyArchiver, ok := p.historyArchivers[archiverKey]; ok {
+		p.m.RUnlock()
 		return historyArchiver, nil
 	}
+	p.m.RUnlock()
 
 	container, ok := p.historyContainers[serviceName]
 	if !ok {
@@ -127,6 +134,12 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 		if err != nil {
 			return nil, err
 		}
+
+		p.m.Lock()
+		defer p.m.Unlock()
+		if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
+			return existingHistoryArchiver, nil
+		}
 		p.historyArchivers[archiverKey] = historyArchiver
 		return historyArchiver, nil
 	}
@@ -135,9 +148,12 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 
 func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (archiver.VisibilityArchiver, error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
+	p.m.RLock()
 	if visibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
+		p.m.Unlock()
 		return visibilityArchiver, nil
 	}
+	p.m.Unlock()
 
 	container, ok := p.visibilityContainers[serviceName]
 	if !ok {
@@ -152,6 +168,12 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 		visibilityArchiver, err := filestore.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.Filestore)
 		if err != nil {
 			return nil, err
+		}
+
+		p.m.Lock()
+		defer p.m.Unlock()
+		if existingVisibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
+			return existingVisibilityArchiver, nil
 		}
 		p.visibilityArchivers[archiverKey] = visibilityArchiver
 		return visibilityArchiver, nil
