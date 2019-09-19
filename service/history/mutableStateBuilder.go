@@ -4124,6 +4124,10 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 		return false, nil
 	}
 
+	// NOTE:
+	// the main idea here is to guarantee that once there is a decision task started
+	// all events ending in the buffer should have the same version
+
 	// Handling mutable state turn from standby to active, while having a decision on the fly
 	decision, ok := e.GetInFlightDecision()
 	if !ok || decision.Version >= e.GetCurrentVersion() {
@@ -4143,6 +4147,22 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 			lastWriteVersion,
 		)}
 	}
+
+	lastWriteSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
+	currentCluster := e.clusterMetadata.GetCurrentClusterName()
+	if currentCluster != lastWriteSourceCluster {
+		// workflow was passive here, sanity check no buffered events
+		if e.HasBufferedEvents() {
+			return false, &workflow.InternalServiceError{
+				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
+			}
+		}
+		return false, nil
+	}
+
+	// this workflow was previous active (whether it has buffered events or not),
+	// the in flight decision must be failed to guarantee all events within same
+	// event batch shard the same version
 	if err := e.UpdateCurrentVersion(lastWriteVersion, true); err != nil {
 		return false, err
 	}
