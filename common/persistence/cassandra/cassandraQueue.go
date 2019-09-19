@@ -26,7 +26,6 @@ import (
 
 	"github.com/gocql/gocql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -45,9 +44,8 @@ const (
 
 type (
 	cassandraQueue struct {
-		queueType   int
-		logger      log.Logger
-		retryPolicy backoff.RetryPolicy
+		queueType int
+		logger    log.Logger
 		cassandraStore
 	}
 )
@@ -77,32 +75,18 @@ func newQueue(
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		logger:         logger,
 		queueType:      queueType,
-		retryPolicy:    retryPolicy,
 	}, nil
 }
 
 func (q *cassandraQueue) EnqueueMessage(
 	messagePayload []byte,
 ) error {
-	err := backoff.Retry(
-		func() error {
-			nextMessageID, err := q.getNextMessageID()
-			if err != nil {
-				return err
-			}
-
-			return q.tryEnqueue(nextMessageID, messagePayload)
-		},
-		q.retryPolicy,
-		func(e error) bool {
-			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
-		})
-
+	nextMessageID, err := q.getNextMessageID()
 	if err != nil {
-		return fmt.Errorf("failed to enqueue message: %v", err)
+		return err
 	}
 
-	return nil
+	return q.tryEnqueue(nextMessageID, messagePayload)
 }
 
 func (q *cassandraQueue) tryEnqueue(
@@ -194,11 +178,6 @@ func (q *cassandraQueue) Close() error {
 	}
 
 	return nil
-}
-
-func isMessageIDConflictError(err error) bool {
-	_, ok := err.(*persistence.ConditionFailedError)
-	return ok
 }
 
 func getMessagePayload(message map[string]interface{}) []byte {

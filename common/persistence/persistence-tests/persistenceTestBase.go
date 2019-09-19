@@ -21,7 +21,6 @@
 package persistencetests
 
 import (
-	"github.com/uber/cadence/.gen/go/replicator"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -29,8 +28,10 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -1348,7 +1349,23 @@ func (g *TestTransferTaskIDGenerator) GenerateTransferTaskID() (int64, error) {
 
 // Publish is a utility method to add messages to the queue
 func (s *TestBase) Publish(message interface{}) error {
-	return s.DomainReplicationQueue.Publish(message)
+	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
+	retryPolicy.SetBackoffCoefficient(1.5)
+	retryPolicy.SetMaximumAttempts(5)
+
+	return backoff.Retry(
+		func() error {
+			return s.DomainReplicationQueue.Publish(message)
+		},
+		retryPolicy,
+		func(e error) bool {
+			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
+		})
+}
+
+func isMessageIDConflictError(err error) bool {
+	_, ok := err.(*p.ConditionFailedError)
+	return ok
 }
 
 // GetReplicationMessages is a utility method to get messages from the queue

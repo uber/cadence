@@ -37,7 +37,7 @@ func (mdb *DB) InsertIntoQueue(row *sqldb.QueueRow) (sql.Result, error) {
 	return mdb.conn.NamedExec(templateEnqueueMessageQuery, row)
 }
 
-// GetLastEnqueuedMessageID returns the last enqueued message ID
+// GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
 func (mdb *DB) GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error) {
 	var lastMessageID int
 	err := mdb.conn.Get(&lastMessageID, templateGetLastMessageIDQuery, queueType)
