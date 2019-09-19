@@ -1372,6 +1372,7 @@ func ResetInBatch(c *cli.Context) {
 	// read exclude
 	excludes := map[string]string{}
 	if len(excFileName) > 0 {
+		// #nosec
 		excFile, err := os.Open(excFileName)
 		if err != nil {
 			ErrorAndExit("Open failed2", err)

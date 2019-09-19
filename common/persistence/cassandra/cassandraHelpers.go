@@ -101,6 +101,7 @@ func LoadCassandraSchema(
 	defer os.Remove(tmpFile.Name())
 
 	for _, file := range fileNames {
+		// #nosec
 		content, err := ioutil.ReadFile(dir + "/" + file)
 		if err != nil {
 			return fmt.Errorf("error reading contents of file %v:%v", file, err.Error())

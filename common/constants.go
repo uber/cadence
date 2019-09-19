@@ -83,6 +83,7 @@ const (
 	VisibilityAppName = "visibility"
 )
 
+// #nosec
 const (
 	// SystemGlobalDomainName is global domain name for cadence system workflows running globally
 	SystemGlobalDomainName = "cadence-system-global"

@@ -125,6 +125,7 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 		return nil
 	}
 
+	// #nosec
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -152,6 +153,7 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 		}
 	}
 
+	// #nosec
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err

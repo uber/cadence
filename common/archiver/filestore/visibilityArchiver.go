@@ -23,6 +23,7 @@ package filestore
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -197,7 +198,8 @@ func (v *visibilityArchiver) query(
 
 	response := &archiver.QueryVisibilityResponse{}
 	for idx, file := range files {
-		encodedRecord, err := readFile(path.Join(dirPath, file))
+		// #nosec
+		encodedRecord, err := ioutil.ReadFile(path.Join(dirPath, file))
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}

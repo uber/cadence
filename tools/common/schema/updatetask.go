@@ -21,7 +21,7 @@
 package schema
 
 import (
-	"crypto/md5"
+	"crypto/md5" // #nosec
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -278,6 +278,7 @@ func readManifest(dirPath string) (*manifest, error) {
 		return nil, fmt.Errorf("manifest missing SchemaUpdateCqlFiles")
 	}
 
+	// #nosec
 	md5Bytes := md5.Sum(jsonBlob)
 	manifest.md5 = hex.EncodeToString(md5Bytes[:])
 

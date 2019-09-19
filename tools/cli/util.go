@@ -667,6 +667,7 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 		input = c.String(flagNameOfRawInput)
 	} else if c.IsSet(flagNameOfInputFileName) {
 		inputFile := c.String(flagNameOfInputFileName)
+		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
 			ErrorAndExit("Error reading input file", err)

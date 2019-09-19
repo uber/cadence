@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -87,10 +86,6 @@ func writeFile(filepath string, data []byte, fileMode os.FileMode) error {
 		return err
 	}
 	return nil
-}
-
-func readFile(filepath string) ([]byte, error) {
-	return ioutil.ReadFile(filepath)
 }
 
 func listFiles(dirPath string) ([]string, error) {

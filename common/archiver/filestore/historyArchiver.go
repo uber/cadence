@@ -37,6 +37,7 @@ package filestore
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -236,7 +237,8 @@ func (h *historyArchiver) Get(
 		return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 	}
 
-	encodedHistoryBatches, err := readFile(filepath)
+	// #nosec
+	encodedHistoryBatches, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}

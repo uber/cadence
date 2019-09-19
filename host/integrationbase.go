@@ -123,6 +123,7 @@ func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 	if TestFlags.TestClusterConfigFile != "" {
 		configLocation = TestFlags.TestClusterConfigFile
 	}
+	// #nosec
 	confContent, err := ioutil.ReadFile(configLocation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test cluster config file %v: %v", configLocation, err)

@@ -188,7 +188,7 @@ func (s *visibilityArchiverSuite) TestArchive_Success() {
 	filepath := path.Join(dir, testDomainID, expectedFilename)
 	s.assertFileExists(filepath)
 
-	data, err := readFile(filepath)
+	data, err := ioutil.ReadFile(filepath)
 	s.NoError(err)
 
 	archivedRecord := &archiver.ArchiveVisibilityRequest{}
