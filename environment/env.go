@@ -41,9 +41,15 @@ const (
 	SQLDriver        = "SQL_DRIVER"
 	SqlDefaultDriver = "postgres"
 	// MySQLSeeds env
-	SQLSeeds = "MYSQL_SEEDS"
+	//TODO: remove in later release
+	MySQLSeeds = "MYSQL_SEEDS"
 	// MySQLPort env
-	SQLPort = "MYSQL_PORT"
+	//TODO: remove in later release
+	MySQLPort = "MYSQL_PORT"
+	// MySQLSeeds env
+	SQLSeeds = "SQL_SEEDS"
+	// MySQLPort env
+	SQLPort = "SQL_PORT"
 	// MySQLDefaultPort MySQL default port
 	SQLDefaultPort = "3306"
 
@@ -86,16 +92,28 @@ func SetupEnv() {
 	}
 
 	if os.Getenv(SQLSeeds) == "" {
-		err := os.Setenv(SQLSeeds, Localhost)
-		if err != nil {
-			panic(fmt.Sprintf("error setting env %v", SQLSeeds))
+		// backwards compatibility
+		// TODO remove in later release
+		if mysqlSeed := os.Getenv(MySQLSeeds); mysqlSeed != "" {
+			_ = os.Setenv(SQLSeeds, mysqlSeed)
+		} else {
+			err := os.Setenv(SQLSeeds, Localhost)
+			if err != nil {
+				panic(fmt.Sprintf("error setting env %v", SQLSeeds))
+			}
 		}
 	}
 
 	if os.Getenv(SQLPort) == "" {
-		err := os.Setenv(SQLPort, SQLDefaultPort)
-		if err != nil {
-			panic(fmt.Sprintf("error setting env %v", SQLPort))
+		// backwards compatibility
+		// TODO remove in later release
+		if mysqlPort := os.Getenv(MySQLPort); mysqlPort != "" {
+			_ = os.Setenv(SQLPort, mysqlPort)
+		} else {
+			err := os.Setenv(SQLPort, SQLDefaultPort)
+			if err != nil {
+				panic(fmt.Sprintf("error setting env %v", SQLPort))
+			}
 		}
 	}
 
@@ -158,7 +176,7 @@ func GetSQlDriver() string {
 	return driver
 }
 
-// GetMySQLAddress return the cassandra address
+// GetSQLAddress return the cassandra address
 func GetSQLAddress() string {
 	addr := os.Getenv(SQLSeeds)
 	if addr == "" {
