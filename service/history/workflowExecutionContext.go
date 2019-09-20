@@ -235,21 +235,7 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecution() (mutableState, er
 		return nil, err
 	}
 
-	if c.msBuilder != nil {
-		flushBeforeReady, err := c.msBuilder.StartTransaction(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-		if !flushBeforeReady {
-			return c.msBuilder, nil
-		}
-
-		if err = c.updateWorkflowExecutionAsActive(
-			c.shard.GetTimeSource().Now(),
-		); err != nil {
-			return nil, err
-		}
-	} else {
+	if c.msBuilder == nil {
 		response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
 			Execution: c.workflowExecution,
@@ -278,6 +264,20 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecution() (mutableState, er
 	}
 
 	flushBeforeReady, err := c.msBuilder.StartTransaction(domainEntry)
+	if err != nil {
+		return nil, err
+	}
+	if !flushBeforeReady {
+		return c.msBuilder, nil
+	}
+
+	if err = c.updateWorkflowExecutionAsActive(
+		c.shard.GetTimeSource().Now(),
+	); err != nil {
+		return nil, err
+	}
+
+	flushBeforeReady, err = c.msBuilder.StartTransaction(domainEntry)
 	if err != nil {
 		return nil, err
 	}
