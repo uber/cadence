@@ -39,7 +39,7 @@ const (
 
 	// which sql system to use
 	SQLDriver        = "SQL_DRIVER"
-	SqlDefaultDriver = "postgres"
+	SqlDefaultDriver = "mysql"
 	// MySQLSeeds env
 	//TODO: remove in later release
 	MySQLSeeds = "MYSQL_SEEDS"
