@@ -37,6 +37,7 @@ type (
 			ctx ctx.Context,
 			now time.Time,
 			targetWorkflow nDCWorkflow,
+			reapplyEvents *persistence.WorkflowEvents,
 		) error
 	}
 
@@ -60,6 +61,7 @@ func (r *nDCTransactionMgrForNewWorkflowImpl) dispatchForNewWorkflow(
 	ctx ctx.Context,
 	now time.Time,
 	targetWorkflow nDCWorkflow,
+	reapplyEvents *persistence.WorkflowEvents,
 ) error {
 	// NOTE: this function does NOT mutate current workflow or target workflow,
 	//  workflow mutation is done in methods within executeTransaction function
@@ -108,6 +110,11 @@ func (r *nDCTransactionMgrForNewWorkflowImpl) dispatchForNewWorkflow(
 	}
 
 	if !targetWorkflowIsNewer {
+		// Events land on non-current branch needs to do re-apply
+		if err := r.transactionMgr.reapplyEvents(ctx, reapplyEvents); err != nil {
+			return err
+		}
+
 		// target workflow is older than current workflow, need to suppress the target workflow
 		return r.executeTransaction(
 			ctx,

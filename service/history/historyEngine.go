@@ -32,6 +32,7 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -86,6 +87,7 @@ type (
 		resetor                   workflowResetor
 		replicationTaskProcessors []*ReplicationTaskProcessor
 		publicClient              workflowserviceclient.Interface
+		eventsReapplier           nDCEventsReapplier
 	}
 )
 
@@ -145,6 +147,7 @@ func NewEngineWithShardContext(
 	config *Config,
 	replicationTaskFetchers *ReplicationTaskFetchers,
 	domainReplicator replicator.DomainReplicator,
+	clientBean client.Bean,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -206,10 +209,12 @@ func NewEngineWithShardContext(
 		historyEngImpl.nDCReplicator = newNDCHistoryReplicator(
 			shard,
 			historyCache,
+			clientBean,
 			logger,
 		)
 	}
-	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
+	resetor := newWorkflowResetor(historyEngImpl)
+	historyEngImpl.resetor = resetor
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
 	var replicationTaskProcessors []*ReplicationTaskProcessor
@@ -220,7 +225,7 @@ func NewEngineWithShardContext(
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
 
 	shard.SetEngine(historyEngImpl)
-
+	historyEngImpl.eventsReapplier = newNDCEventsReapplier(shard.GetMetricsClient(), logger)
 	return historyEngImpl
 }
 
@@ -2424,4 +2429,41 @@ func (e *historyEngineImpl) GetReplicationMessages(ctx ctx.Context, taskID int64
 
 	e.logger.Debug("Successfully fetched replication messages.", tag.Counter(len(replicationMessages.ReplicationTasks)))
 	return replicationMessages, nil
+}
+
+func (e *historyEngineImpl) ReapplyEvents(
+	ctx ctx.Context,
+	reapplyRequest *h.ReapplyEventsRequest,
+) error {
+
+	domainEntry, err := e.getActiveDomainEntry(reapplyRequest.DomainID)
+	if err != nil {
+		return err
+	}
+	domainID := domainEntry.GetInfo().ID
+	execution := *reapplyRequest.GetWorkflowExecution()
+	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution, func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+		createDecisionTask := true
+		// Do not create decision task when the workflow is cron and the cron has not been started yet
+		if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecision() {
+			createDecisionTask = false
+		}
+		// TODO: reapply currently ignore this case, remove this line after we support the closed workflow
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			return nil, ErrWorkflowCompleted
+		}
+		postActions := &updateWorkflowAction{
+			createDecision: createDecisionTask,
+		}
+		if err := e.eventsReapplier.reapplyEvents(
+			ctx,
+			msBuilder,
+			reapplyRequest.GetEvents(),
+		); err != nil {
+			e.logger.Error("failed to re-apply stale events", tag.Error(err))
+			return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
+		}
+
+		return postActions, nil
+	})
 }

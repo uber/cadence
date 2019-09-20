@@ -26,7 +26,9 @@ import (
 	ctx "context"
 	"time"
 
+	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -102,6 +104,7 @@ type (
 			ctx ctx.Context,
 			now time.Time,
 			targetWorkflow nDCWorkflow,
+			reapplyEvents *persistence.WorkflowEvents,
 		) error
 		updateWorkflow(
 			ctx ctx.Context,
@@ -109,6 +112,7 @@ type (
 			isWorkflowRebuilt bool,
 			targetWorkflow nDCWorkflow,
 			newWorkflow nDCWorkflow,
+			reapplyEvents *persistence.WorkflowEvents,
 		) error
 		backfillWorkflow(
 			ctx ctx.Context,
@@ -128,9 +132,13 @@ type (
 			workflowID string,
 			runID string,
 		) (nDCWorkflow, error)
+		reapplyEvents(
+			ctx ctx.Context,
+			reapplyEvents *persistence.WorkflowEvents,
+		) error
 	}
 
-	nDCTransactionMgrImpl struct {
+	nDCTransactionMgrImpl struct { // client bean, domain cache
 		shard           ShardContext
 		domainCache     cache.DomainCache
 		historyCache    *historyCache
@@ -138,6 +146,8 @@ type (
 		historyV2Mgr    persistence.HistoryV2Manager
 		metricsClient   metrics.Client
 		logger          log.Logger
+		resetor         workflowResetor
+		clientBean      client.Bean
 
 		createMgr nDCTransactionMgrForNewWorkflow
 		updateMgr nDCTransactionMgrForExistingWorkflow
@@ -149,6 +159,7 @@ var _ nDCTransactionMgr = (*nDCTransactionMgrImpl)(nil)
 func newNDCTransactionMgr(
 	shard ShardContext,
 	historyCache *historyCache,
+	clientBean client.Bean,
 	logger log.Logger,
 ) *nDCTransactionMgrImpl {
 
@@ -158,6 +169,7 @@ func newNDCTransactionMgr(
 		historyCache:    historyCache,
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		historyV2Mgr:    shard.GetHistoryV2Manager(),
+		clientBean:      clientBean,
 		metricsClient:   shard.GetMetricsClient(),
 		logger:          logger.WithTags(tag.ComponentHistoryReplicator),
 
@@ -173,12 +185,14 @@ func (r *nDCTransactionMgrImpl) createWorkflow(
 	ctx ctx.Context,
 	now time.Time,
 	targetWorkflow nDCWorkflow,
+	reapplyEvents *persistence.WorkflowEvents,
 ) error {
 
 	return r.createMgr.dispatchForNewWorkflow(
 		ctx,
 		now,
 		targetWorkflow,
+		reapplyEvents,
 	)
 }
 
@@ -188,6 +202,7 @@ func (r *nDCTransactionMgrImpl) updateWorkflow(
 	isWorkflowRebuilt bool,
 	targetWorkflow nDCWorkflow,
 	newWorkflow nDCWorkflow,
+	reapplyEvents *persistence.WorkflowEvents,
 ) error {
 
 	return r.updateMgr.dispatchForExistingWorkflow(
@@ -196,6 +211,7 @@ func (r *nDCTransactionMgrImpl) updateWorkflow(
 		isWorkflowRebuilt,
 		targetWorkflow,
 		newWorkflow,
+		reapplyEvents,
 	)
 }
 
@@ -209,6 +225,13 @@ func (r *nDCTransactionMgrImpl) backfillWorkflow(
 	defer func() { targetWorkflow.getReleaseFn()(retError) }()
 
 	if _, err := targetWorkflow.getContext().persistNonFirstWorkflowEvents(
+		targetWorkflowEvents,
+	); err != nil {
+		return err
+	}
+
+	if err := r.reapplyEvents(
+		ctx,
 		targetWorkflowEvents,
 	); err != nil {
 		return err
@@ -294,4 +317,55 @@ func (r *nDCTransactionMgrImpl) loadNDCWorkflow(
 		return nil, err
 	}
 	return newNDCWorkflow(ctx, r.domainCache, r.clusterMetadata, context, msBuilder, release), nil
+}
+
+func (r *nDCTransactionMgrImpl) reapplyEvents(
+	ctx ctx.Context,
+	reapplyEvents *persistence.WorkflowEvents,
+) error {
+
+	hasReappliableEvent := false
+	for _, event := range reapplyEvents.Events {
+		switch event.GetEventType() {
+		case shared.EventTypeWorkflowExecutionSignaled:
+			hasReappliableEvent = true
+			break
+		default:
+		}
+	}
+	// there is no event to reapply
+	if !hasReappliableEvent {
+		return nil
+	}
+
+	domainID := reapplyEvents.DomainID
+	execution := &shared.WorkflowExecution{
+		WorkflowId: common.StringPtr(reapplyEvents.WorkflowID),
+		RunId:      common.StringPtr(reapplyEvents.RunID),
+	}
+	domainEntry, err := r.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return err
+	}
+
+	// The active cluster of the domain is the same as current cluster.
+	// Use the history from the same cluster to reapply events
+	activeCluster := domainEntry.GetReplicationConfig().ActiveClusterName
+	if activeCluster == r.shard.GetClusterMetadata().GetCurrentClusterName() {
+
+		return r.clientBean.GetHistoryClient().ReapplyEvents(ctx, &h.ReapplyEventsRequest{
+			DomainID:          common.StringPtr(domainID),
+			WorkflowExecution: execution,
+			Events:            reapplyEvents.Events,
+		})
+	}
+
+	// The active cluster of the domain is differ from the current cluster
+	// Use frontend client to route this request to the active cluster
+	// Reapplication only happens in active cluster
+	return r.clientBean.GetRemoteFrontendClient(activeCluster).ReapplyEvents(ctx, &shared.ReapplyEventsRequest{
+		DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
+		WorkflowExecution: execution,
+		Events:            reapplyEvents.Events,
+	})
 }

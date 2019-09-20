@@ -710,6 +710,8 @@ const (
 	HistoryGetReplicationMessagesScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
+	// HistoryReapplyEventsScope is the scope used by event reapplication
+	HistoryReapplyEventsScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
 	TransferQueueProcessorScope
 	// TransferActiveQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1205,6 +1207,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryDescribeMutableStateScope:                       {operation: "DescribeMutableState"},
 		HistoryGetReplicationMessagesScope:                     {operation: "GetReplicationMessages"},
 		HistoryShardControllerScope:                            {operation: "ShardController"},
+		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
 		TransferStandbyQueueProcessorScope:                     {operation: "TransferStandbyQueueProcessor"},

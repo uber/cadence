@@ -89,7 +89,7 @@ type Interface interface {
 
 	ReapplyEvents(
 		ctx context.Context,
-		ReapplyEventsRequest *shared.ReapplyEventsRequest,
+		ReapplyEventsRequest *history.ReapplyEventsRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -448,7 +448,7 @@ func (c client) QueryWorkflow(
 
 func (c client) ReapplyEvents(
 	ctx context.Context,
-	_ReapplyEventsRequest *shared.ReapplyEventsRequest,
+	_ReapplyEventsRequest *history.ReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 

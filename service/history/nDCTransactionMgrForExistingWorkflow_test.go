@@ -121,7 +121,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		newMutableState,
 	).Return(nil).Once()
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(newReleaseCalled)
@@ -154,7 +154,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 	})
 	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(targetRunID, nil).Times(1)
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.Error(err)
 }
 
@@ -230,7 +230,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		(*persistence.CurrentWorkflowCAS)(nil),
 	).Return(nil).Once()
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(newReleaseCalled)
@@ -288,6 +288,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 	})
 	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
 	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().reapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	targetWorkflow.EXPECT().happensAfter(currentWorkflow).Return(false, nil)
 	targetWorkflow.EXPECT().suppressWorkflowBy(currentWorkflow).Return(transactionPolicyPassive, nil).Times(1)
@@ -303,7 +304,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		transactionPolicyPassive.ptr(),
 	).Return(nil).Once()
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(newReleaseCalled)
@@ -363,7 +364,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		(*persistence.CurrentWorkflowCAS)(nil),
 	).Return(nil).Once()
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(newReleaseCalled)
@@ -440,7 +441,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		(*persistence.CurrentWorkflowCAS)(nil),
 	).Return(nil).Once()
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(newReleaseCalled)
@@ -497,6 +498,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 	})
 	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
 	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().reapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	targetWorkflow.EXPECT().happensAfter(currentWorkflow).Return(false, nil)
 	targetWorkflow.EXPECT().suppressWorkflowBy(currentWorkflow).Return(transactionPolicyPassive, nil).Times(1)
@@ -515,7 +517,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		(*persistence.CurrentWorkflowCAS)(nil),
 	).Return(nil).Once()
 
-	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, &persistence.WorkflowEvents{})
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(newReleaseCalled)

@@ -55,6 +55,7 @@ type (
 		GetFrontendClient() frontend.Client
 		GetRemoteAdminClient(cluster string) admin.Client
 		GetRemoteFrontendClient(cluster string) frontend.Client
+		SetRemoteFrontendClient(cluster string, client frontend.Client)
 	}
 
 	// DispatcherProvider provides a diapatcher to a given address
@@ -179,6 +180,15 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 		))
 	}
 	return client
+}
+
+// SetRemoteFrontendClient is only used for testing
+func (h *clientBeanImpl) SetRemoteFrontendClient(
+	cluster string,
+	client frontend.Client,
+) {
+
+	h.remoteFrontendClients[cluster] = client
 }
 
 func (h *clientBeanImpl) lazyInitMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {

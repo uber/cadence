@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,11 +29,10 @@ package history
 
 import (
 	context "context"
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
 	persistence "github.com/uber/cadence/common/persistence"
+	reflect "reflect"
+	time "time"
 )
 
 // MocknDCTransactionMgr is a mock of nDCTransactionMgr interface
@@ -60,31 +59,31 @@ func (m *MocknDCTransactionMgr) EXPECT() *MocknDCTransactionMgrMockRecorder {
 }
 
 // createWorkflow mocks base method
-func (m *MocknDCTransactionMgr) createWorkflow(ctx context.Context, now time.Time, targetWorkflow nDCWorkflow) error {
+func (m *MocknDCTransactionMgr) createWorkflow(ctx context.Context, now time.Time, targetWorkflow nDCWorkflow, reapplyEvents *persistence.WorkflowEvents) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "createWorkflow", ctx, now, targetWorkflow)
+	ret := m.ctrl.Call(m, "createWorkflow", ctx, now, targetWorkflow, reapplyEvents)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // createWorkflow indicates an expected call of createWorkflow
-func (mr *MocknDCTransactionMgrMockRecorder) createWorkflow(ctx, now, targetWorkflow interface{}) *gomock.Call {
+func (mr *MocknDCTransactionMgrMockRecorder) createWorkflow(ctx, now, targetWorkflow, reapplyEvents interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "createWorkflow", reflect.TypeOf((*MocknDCTransactionMgr)(nil).createWorkflow), ctx, now, targetWorkflow)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "createWorkflow", reflect.TypeOf((*MocknDCTransactionMgr)(nil).createWorkflow), ctx, now, targetWorkflow, reapplyEvents)
 }
 
 // updateWorkflow mocks base method
-func (m *MocknDCTransactionMgr) updateWorkflow(ctx context.Context, now time.Time, isWorkflowRebuilt bool, targetWorkflow, newWorkflow nDCWorkflow) error {
+func (m *MocknDCTransactionMgr) updateWorkflow(ctx context.Context, now time.Time, isWorkflowRebuilt bool, targetWorkflow, newWorkflow nDCWorkflow, reapplyEvents *persistence.WorkflowEvents) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "updateWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	ret := m.ctrl.Call(m, "updateWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapplyEvents)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // updateWorkflow indicates an expected call of updateWorkflow
-func (mr *MocknDCTransactionMgrMockRecorder) updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow interface{}) *gomock.Call {
+func (mr *MocknDCTransactionMgrMockRecorder) updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapplyEvents interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "updateWorkflow", reflect.TypeOf((*MocknDCTransactionMgr)(nil).updateWorkflow), ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "updateWorkflow", reflect.TypeOf((*MocknDCTransactionMgr)(nil).updateWorkflow), ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapplyEvents)
 }
 
 // backfillWorkflow mocks base method
@@ -129,4 +128,18 @@ func (m *MocknDCTransactionMgr) loadNDCWorkflow(ctx context.Context, domainID, w
 func (mr *MocknDCTransactionMgrMockRecorder) loadNDCWorkflow(ctx, domainID, workflowID, runID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "loadNDCWorkflow", reflect.TypeOf((*MocknDCTransactionMgr)(nil).loadNDCWorkflow), ctx, domainID, workflowID, runID)
+}
+
+// reapplyEvents mocks base method
+func (m *MocknDCTransactionMgr) reapplyEvents(ctx context.Context, reapplyEvents *persistence.WorkflowEvents) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "reapplyEvents", ctx, reapplyEvents)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// reapplyEvents indicates an expected call of reapplyEvents
+func (mr *MocknDCTransactionMgrMockRecorder) reapplyEvents(ctx, reapplyEvents interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "reapplyEvents", reflect.TypeOf((*MocknDCTransactionMgr)(nil).reapplyEvents), ctx, reapplyEvents)
 }

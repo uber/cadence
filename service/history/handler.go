@@ -216,7 +216,7 @@ func (h *Handler) Stop() {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
 	return NewEngineWithShardContext(context, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient,
-		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers, h.domainReplicator)
+		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers, h.domainReplicator, h.Service.GetClientBean())
 }
 
 // Health is for health check
@@ -1542,9 +1542,28 @@ func (h *Handler) GetReplicationMessages(
 // ReapplyEvents applies stale events to the current workflow and the current run
 func (h *Handler) ReapplyEvents(
 	ctx context.Context,
-	request *gen.ReapplyEventsRequest,
-) error {
-	return &gen.BadRequestError{Message: "This API is not implemented yet"}
+	request *hist.ReapplyEventsRequest,
+) (retError error) {
+
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope := metrics.HistoryReapplyEventsScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	domainID := request.GetDomainID()
+	workflowID := request.GetWorkflowExecution().GetWorkflowId()
+	engine, err := h.controller.GetEngine(workflowID)
+	if err != nil {
+		return h.error(err, scope, domainID, workflowID)
+	}
+
+	if err := engine.ReapplyEvents(ctx, request); err != nil {
+		return h.error(err, scope, domainID, workflowID)
+	}
+	return nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

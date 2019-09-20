@@ -599,3 +599,17 @@ func (_m *MockHistoryEngine) GetReplicationMessages(ctx context.Context, taskID 
 
 	return r0, r1
 }
+
+// ReapplyEvents is mock implementation for ReapplyEvents of HistoryEngine
+func (_m *MockHistoryEngine) ReapplyEvents(ctx context.Context, request *gohistory.ReapplyEventsRequest) error {
+	ret := _m.Called(request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gohistory.ReapplyEventsRequest) error); ok {
+		r0 = rf(request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

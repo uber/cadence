@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,10 +29,10 @@ package history
 
 import (
 	context "context"
+	gomock "github.com/golang/mock/gomock"
+	persistence "github.com/uber/cadence/common/persistence"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MocknDCTransactionMgrForNewWorkflow is a mock of nDCTransactionMgrForNewWorkflow interface
@@ -59,15 +59,15 @@ func (m *MocknDCTransactionMgrForNewWorkflow) EXPECT() *MocknDCTransactionMgrFor
 }
 
 // dispatchForNewWorkflow mocks base method
-func (m *MocknDCTransactionMgrForNewWorkflow) dispatchForNewWorkflow(ctx context.Context, now time.Time, targetWorkflow nDCWorkflow) error {
+func (m *MocknDCTransactionMgrForNewWorkflow) dispatchForNewWorkflow(ctx context.Context, now time.Time, targetWorkflow nDCWorkflow, reapplyEvents *persistence.WorkflowEvents) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchForNewWorkflow", ctx, now, targetWorkflow)
+	ret := m.ctrl.Call(m, "dispatchForNewWorkflow", ctx, now, targetWorkflow, reapplyEvents)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchForNewWorkflow indicates an expected call of dispatchForNewWorkflow
-func (mr *MocknDCTransactionMgrForNewWorkflowMockRecorder) dispatchForNewWorkflow(ctx, now, targetWorkflow interface{}) *gomock.Call {
+func (mr *MocknDCTransactionMgrForNewWorkflowMockRecorder) dispatchForNewWorkflow(ctx, now, targetWorkflow, reapplyEvents interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchForNewWorkflow", reflect.TypeOf((*MocknDCTransactionMgrForNewWorkflow)(nil).dispatchForNewWorkflow), ctx, now, targetWorkflow)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchForNewWorkflow", reflect.TypeOf((*MocknDCTransactionMgrForNewWorkflow)(nil).dispatchForNewWorkflow), ctx, now, targetWorkflow, reapplyEvents)
 }

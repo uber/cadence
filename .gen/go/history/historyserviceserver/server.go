@@ -79,7 +79,7 @@ type Interface interface {
 
 	ReapplyEvents(
 		ctx context.Context,
-		ReapplyEventsRequest *shared.ReapplyEventsRequest,
+		ReapplyEventsRequest *history.ReapplyEventsRequest,
 	) error
 
 	RecordActivityTaskHeartbeat(
@@ -309,7 +309,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.ReapplyEvents),
 				},
-				Signature:    "ReapplyEvents(ReapplyEventsRequest *shared.ReapplyEventsRequest)",
+				Signature:    "ReapplyEvents(ReapplyEventsRequest *history.ReapplyEventsRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 

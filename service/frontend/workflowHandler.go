@@ -3488,7 +3488,16 @@ func (wh *WorkflowHandler) ReapplyEvents(
 		return wh.error(errRequestNotSet, scope)
 	}
 
-	err = wh.history.ReapplyEvents(ctx, request)
+	domainEntry, err := wh.domainCache.GetDomain(request.GetDomainName())
+	if err != nil {
+		return wh.error(err, scope)
+	}
+
+	err = wh.history.ReapplyEvents(ctx, &h.ReapplyEventsRequest{
+		DomainID:          common.StringPtr(domainEntry.GetInfo().ID),
+		WorkflowExecution: request.WorkflowExecution,
+		Events:            request.Events,
+	})
 	if err != nil {
 		return wh.error(err, scope)
 	}

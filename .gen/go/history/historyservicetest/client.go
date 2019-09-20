@@ -336,7 +336,7 @@ func (mr *_MockClientRecorder) QueryWorkflow(
 // 	... := client.ReapplyEvents(...)
 func (m *MockClient) ReapplyEvents(
 	ctx context.Context,
-	_ReapplyEventsRequest *shared.ReapplyEventsRequest,
+	_ReapplyEventsRequest *history.ReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 

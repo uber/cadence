@@ -121,3 +121,10 @@ func (_m *MockClientBean) GetRemoteFrontendClient(_a0 string) frontend.Client {
 
 	return r0
 }
+
+// SetRemoteFrontendClient provides a mock function with given fields: _a0, _a1
+func (_m *MockClientBean) SetRemoteFrontendClient(
+	_a0 string,
+	_a1 frontend.Client,
+) {
+}
