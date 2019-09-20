@@ -62,7 +62,9 @@ func (mdb *DB) InsertIntoHistoryNode(row *sqldb.HistoryNodeRow) (sql.Result, err
 func (mdb *DB) SelectFromHistoryNode(filter *sqldb.HistoryNodeFilter) ([]sqldb.HistoryNodeRow, error) {
 	var rows []sqldb.HistoryNodeRow
 	err := mdb.conn.Select(&rows, getHistoryNodesQry,
-		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, -*filter.MinTxnID, *filter.PageSize)
+		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID,
+		*filter.MaxNodeID, -*filter.MinTxnID, *filter.PageSize,
+	)
 	// NOTE: since we let txn_id multiple by -1 when inserting, we have to revert it back here
 	for _, row := range rows {
 		*row.TxnID *= -1
