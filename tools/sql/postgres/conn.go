@@ -30,7 +30,7 @@ import (
 
 const (
 	// the DSN to be used for connecting to the database
-	dataSourceName = "user=%s password=%s host=%s port=%d dbname=%s sslmode=%b multiStatements=true clientFoundRows=true parseTime=true"
+	dataSourceName = "user=%s password=%s host=%s port=%d dbname=%s sslmode=%t multiStatements=true clientFoundRows=true parseTime=true"
 	// DriverName refers to the name of the postgres driver
 	DriverName = "postgres"
 )
