@@ -240,8 +240,8 @@ func ValidateConflictResolveWorkflowModeState(
 			return newInvalidConflictResolveWorkflowWithCurrentWithNewMode(
 				mode,
 				resetWorkflowState,
-				*currentWorkflowState,
 				*newWorkflowState,
+				*currentWorkflowState,
 			)
 		}
 		return nil
@@ -386,16 +386,16 @@ func newInvalidConflictResolveWorkflowWithCurrentMode(
 func newInvalidConflictResolveWorkflowWithCurrentWithNewMode(
 	mode ConflictResolveWorkflowMode,
 	resetWorkflowState int,
-	currentWorkflowState int,
 	newWorkflowState int,
+	currentWorkflowState int,
 ) error {
 	return &workflow.InternalServiceError{
 		Message: fmt.Sprintf(
-			"Invalid workflow conflict resolve mode %v, reset state: %v, current state: %v, new state: %v",
+			"Invalid workflow conflict resolve mode %v, reset state: %v, new state: %v, current state: %v",
 			mode,
 			resetWorkflowState,
-			currentWorkflowState,
 			newWorkflowState,
+			currentWorkflowState,
 		),
 	}
 }
