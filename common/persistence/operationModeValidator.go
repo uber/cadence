@@ -38,6 +38,9 @@ func ValidateCreateWorkflowModeState(
 ) error {
 
 	workflowState := newWorkflowSnapshot.ExecutionInfo.State
+	if err := checkWorkflowState(workflowState); err != nil {
+		return err
+	}
 
 	switch mode {
 	case CreateWorkflowModeBrandNew,
@@ -78,9 +81,15 @@ func ValidateUpdateWorkflowModeState(
 ) error {
 
 	currentWorkflowState := currentWorkflowMutation.ExecutionInfo.State
+	if err := checkWorkflowState(currentWorkflowState); err != nil {
+		return err
+	}
 	var newWorkflowState *int
 	if newWorkflowSnapshot != nil {
 		newWorkflowState = &newWorkflowSnapshot.ExecutionInfo.State
+		if err := checkWorkflowState(*newWorkflowState); err != nil {
+			return err
+		}
 	}
 
 	switch mode {
@@ -156,13 +165,22 @@ func ValidateConflictResolveWorkflowModeState(
 ) error {
 
 	resetWorkflowState := resetWorkflowSnapshot.ExecutionInfo.State
+	if err := checkWorkflowState(resetWorkflowState); err != nil {
+		return err
+	}
 	var newWorkflowState *int
 	if newWorkflowSnapshot != nil {
 		newWorkflowState = &newWorkflowSnapshot.ExecutionInfo.State
+		if err := checkWorkflowState(*newWorkflowState); err != nil {
+			return err
+		}
 	}
 	var currentWorkflowState *int
 	if currentWorkflowMutation != nil {
 		currentWorkflowState = &currentWorkflowMutation.ExecutionInfo.State
+		if err := checkWorkflowState(*currentWorkflowState); err != nil {
+			return err
+		}
 	}
 
 	switch mode {
@@ -295,6 +313,20 @@ func ValidateConflictResolveWorkflowModeState(
 	default:
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("unknown mode: %v", mode),
+		}
+	}
+}
+
+func checkWorkflowState(state int) error {
+	switch state {
+	case WorkflowStateCreated,
+		WorkflowStateRunning,
+		WorkflowStateZombie,
+		WorkflowStateCompleted:
+		return nil
+	default:
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("unknown workflow state: %v", state),
 		}
 	}
 }
