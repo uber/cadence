@@ -83,7 +83,9 @@ func (rpo *ringpopMonitor) Stop() {
 	}
 
 	for _, ring := range rpo.rings {
-		ring.Stop()
+		if err := ring.Stop(); err != nil {
+			rpo.logger.Warn("failed to stop ring", tag.Error(err))
+		}
 	}
 	rpo.stopped = true
 

@@ -22,9 +22,12 @@ package main
 
 import (
 	"github.com/uber/cadence/tools/cassandra"
+	"log"
 	"os"
 )
 
 func main() {
-	cassandra.RunTool(os.Args)
+	if err := cassandra.RunTool(os.Args); err != nil {
+		log.Fatalf("failed to run: %s", err.Error())
+	}
 }

@@ -228,7 +228,9 @@ func (h *serviceImpl) Stop() {
 	}
 
 	if h.dispatcher != nil {
-		h.dispatcher.Stop()
+		if err := h.dispatcher.Stop(); err != nil {
+			h.logger.Error("failed to stop dispatcher", tag.Error(err))
+		}
 	}
 
 	h.runtimeMetricsReporter.Stop()

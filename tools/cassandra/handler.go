@@ -108,7 +108,12 @@ func updateSchema(cli *cli.Context) error {
 		if err := doCreateKeyspace(cfg, cfg.Keyspace); err != nil {
 			return handleErr(fmt.Errorf("error creating dryrun Keyspace: %v", err))
 		}
-		defer doDropKeyspace(cfg, cfg.Keyspace)
+		defer func() {
+			if err := doDropKeyspace(cfg, cfg.Keyspace); err != nil {
+				// Obey the error handler but ignore the error returned as a result
+				_ = handleErr(err)
+			}
+		}()
 	}
 	client, err := newCQLClient(config)
 	if err != nil {
@@ -148,14 +153,16 @@ func doCreateKeyspace(cfg CQLClientConfig, name string) error {
 	return client.createKeyspace(name)
 }
 
-func doDropKeyspace(cfg CQLClientConfig, name string) {
+func doDropKeyspace(cfg CQLClientConfig, name string) error {
+	var err error
 	cfg.Keyspace = systemKeyspace
 	client, err := newCQLClient(&cfg)
 	if err != nil {
-		return
+		return err
 	}
-	client.dropKeyspace(name)
+	err = client.dropKeyspace(name)
 	client.Close()
+	return err
 }
 
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {

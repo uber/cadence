@@ -158,7 +158,9 @@ func (c *shardController) Start() {
 	c.shutdownWG.Add(1)
 	go c.shardManagementPump()
 
-	c.hServiceResolver.AddListener(shardControllerMembershipUpdateListenerName, c.membershipUpdateCh)
+	if err := c.hServiceResolver.AddListener(shardControllerMembershipUpdateListenerName, c.membershipUpdateCh); err != nil {
+		c.logger.Error("failed to add listener", tag.Error(err))
+	}
 
 	c.logger.Info("", tag.LifeCycleStarted, tag.Address(c.host.Identity()))
 }

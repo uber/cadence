@@ -152,6 +152,6 @@ func (c *sqlConn) DropDatabase(name string) error {
 // Close closes the sql client
 func (c *sqlConn) Close() {
 	if c.db != nil {
-		c.db.Close()
+		_ = c.db.Close()
 	}
 }

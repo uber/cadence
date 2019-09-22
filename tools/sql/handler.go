@@ -103,10 +103,12 @@ func doDropDatabase(p sqlConnectParams, name string) {
 	p.database = ""
 	conn, err := newConn(&p)
 	if err != nil {
-		handleErr(err)
+		_ = handleErr(err)
 		return
 	}
-	conn.DropDatabase(name)
+	if err := conn.DropDatabase(name); err != nil {
+		_ = handleErr(err)
+	}
 	conn.Close()
 }
 

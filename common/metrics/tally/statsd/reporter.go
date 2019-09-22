@@ -43,11 +43,11 @@ func (r *cadenceTallyStatsdReporter) metricNameWithTags(originalName string, tag
 	sort.Strings(keys)
 
 	var buffer bytes.Buffer
-	buffer.WriteString(originalName)
+	_, _ = buffer.WriteString(originalName)
 
 	for _, tk := range keys {
 		// adding "." as delimiter so that it will show as different parts in Graphite/Grafana
-		buffer.WriteString("." + tk + "." + tags[tk])
+		_, _ = buffer.WriteString("." + tk + "." + tags[tk])
 	}
 
 	return buffer.String()

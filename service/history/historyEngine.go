@@ -318,7 +318,10 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				e.timerProcessor.NotifyNewTimers(e.currentClusterName, fakeDecisionTimeoutTask)
 			}
 
-			e.shard.UpdateDomainNotificationVersion(nextDomains[len(nextDomains)-1].GetNotificationVersion() + 1)
+			err := e.shard.UpdateDomainNotificationVersion(nextDomains[len(nextDomains)-1].GetNotificationVersion() + 1)
+			if err != nil {
+				e.logger.Error("failed to update domain notification version", tag.Error(err))
+			}
 		},
 	)
 }

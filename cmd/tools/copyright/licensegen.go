@@ -139,7 +139,9 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
 
 	if strings.Contains(firstLine, licenseHeaderPrefixOld) || strings.Contains(firstLine, licenseHeaderPrefix) {
 		return nil // file already has the copyright header

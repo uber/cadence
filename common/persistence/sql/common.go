@@ -25,6 +25,8 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/go-sql-driver/mysql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -45,7 +47,9 @@ func (m *sqlStore) GetName() string {
 
 func (m *sqlStore) Close() {
 	if m.db != nil {
-		m.db.Close()
+		if err := m.db.Close(); err != nil {
+			m.logger.Warn("failed to close db", tag.Error(err))
+		}
 	}
 }
 
@@ -58,7 +62,9 @@ func (m *sqlStore) txExecute(operation string, f func(tx sqldb.Tx) error) error 
 	}
 	err = f(tx)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			err = errors.Wrap(err, "failed to rollback transaction")
+		}
 		switch err.(type) {
 		case *persistence.ConditionFailedError,
 			*persistence.CurrentWorkflowConditionFailedError,

@@ -489,8 +489,8 @@ func generateCSVReport(reportFileName string, headers []string, tableData [][]st
 	for _, data := range tableData {
 		csvContent += strings.Join(data, ",") + "\n"
 	}
-	f.WriteString(csvContent)
-	f.Close()
+	_, _ = f.WriteString(csvContent)
+	_ = f.Close()
 }
 
 func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, headers []string, tableData [][]string) {
@@ -541,8 +541,8 @@ func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, hea
 	htmlContent = wrapWithTag(htmlContent, "table", "")
 	htmlContent = wrapWithTag(htmlContent, "body", "")
 	htmlContent = wrapWithTag(htmlContent, "html", "")
-	f.WriteString("<!DOCTYPE html>\n")
-	f.WriteString(`<head>
+	_, _ = f.WriteString("<!DOCTYPE html>\n")
+	_, _ = f.WriteString(`<head>
 	<style>
 	table, th, td {
 	  border: 1px solid black;
@@ -553,8 +553,8 @@ func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, hea
 	}
 	</style>
 	</head>` + "\n")
-	f.WriteString(htmlContent)
-	f.Close()
+	_, _ = f.WriteString(htmlContent)
+	_ = f.Close()
 
 }
 

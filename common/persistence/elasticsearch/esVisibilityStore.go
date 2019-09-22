@@ -433,7 +433,9 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 	isLastPage := false
 	if err == io.EOF { // no more result
 		isLastPage = true
-		scrollService.Clear(context.Background())
+		if err := scrollService.Clear(context.Background()); err != nil {
+			v.logger.Error("failed to clear scroll service", tag.Error(err))
+		}
 	} else if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ScanWorkflowExecutions failed. Error: %v", err),

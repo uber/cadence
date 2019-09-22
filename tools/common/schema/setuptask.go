@@ -43,7 +43,9 @@ func (task *SetupTask) Run() error {
 	log.Printf("Starting schema setup, config=%+v\n", config)
 
 	if config.Overwrite {
-		task.db.DropAllTables()
+		if err := task.db.DropAllTables(); err != nil {
+			return err
+		}
 	}
 
 	if !config.DisableVersioning {

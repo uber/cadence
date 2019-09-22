@@ -136,15 +136,15 @@ func newTaskListID(domainID, taskListName string, taskType int) (*taskListID, er
 
 func (tid *taskListID) String() string {
 	var b bytes.Buffer
-	b.WriteString("[")
-	b.WriteString("name=")
-	b.WriteString(tid.name)
-	b.WriteString("type=")
+	_, _ = b.WriteString("[")
+	_, _ = b.WriteString("name=")
+	_, _ = b.WriteString(tid.name)
+	_, _ = b.WriteString("type=")
 	if tid.taskType == persistence.TaskListTypeActivity {
-		b.WriteString("activity")
+		_, _ = b.WriteString("activity")
 	} else {
-		b.WriteString("decision")
+		_, _ = b.WriteString("decision")
 	}
-	b.WriteString("]")
+	_, _ = b.WriteString("]")
 	return b.String()
 }

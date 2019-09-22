@@ -165,7 +165,7 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event
 
 	timer := notifier.metrics.StartTimer(metrics.HistoryEventNotificationScope, metrics.HistoryEventNotificationFanoutLatency)
 	defer timer.Stop()
-	notifier.eventsPubsubs.GetAndDo(identifier, func(key interface{}, value interface{}) error {
+	_, _, _ = notifier.eventsPubsubs.GetAndDo(identifier, func(key interface{}, value interface{}) error {
 		subscribers := value.(map[string]chan *historyEventNotification)
 
 		for _, channel := range subscribers {

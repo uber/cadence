@@ -171,7 +171,9 @@ func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup, workerID i
 			err := p.process(msg)
 			sw.Stop()
 			if err != nil {
-				msg.Nack()
+				if err := msg.Nack(); err != nil {
+					p.logger.Error("failed to nack message", tag.Error(err))
+				}
 			}
 		}
 	}

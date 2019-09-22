@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
 	"strings"
 	"time"
 
@@ -1086,7 +1087,9 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
-			iter.Close()
+			if err := iter.Close(); err != nil {
+				d.logger.Error("failed to close iterator", tag.Error(err))
+			}
 		}
 	}()
 
@@ -1370,7 +1373,9 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
-			iter.Close()
+			if err := iter.Close(); err != nil {
+				d.logger.Error("failed to close iterator", tag.Error(err))
+			}
 		}
 	}()
 
@@ -1498,7 +1503,9 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
-			iter.Close()
+			if err := iter.Close(); err != nil {
+				d.logger.Error("failed to close iterator", tag.Error(err))
+			}
 		}
 	}()
 
@@ -1577,7 +1584,9 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(request *p.Inter
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
-			iter.Close()
+			if err := iter.Close(); err != nil {
+				d.logger.Error("failed to close iterator", tag.Error(err))
+			}
 		}
 	}()
 

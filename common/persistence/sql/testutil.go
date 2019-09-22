@@ -53,7 +53,8 @@ func createDatabase(driver string, addr string, username, password, dbName strin
 	}
 
 	if overwrite {
-		dropDatabase(db, dbName)
+		// Ignore errors because this is just a test helper
+		_ = dropDatabase(db, dbName)
 	}
 	_, err = db.Exec(`CREATE DATABASE ` + dbName)
 	if err != nil {

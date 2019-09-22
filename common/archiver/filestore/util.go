@@ -105,7 +105,7 @@ func listFiles(dirPath string) ([]string, error) {
 		return nil, err
 	}
 	fileNames, err := f.Readdirnames(-1)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return nil, err
 	}

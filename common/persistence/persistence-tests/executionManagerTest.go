@@ -1300,14 +1300,16 @@ func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	}
 
 	// test wrong run id with conditional delete
-	s.DeleteCurrentWorkflowExecution(fakeInfo)
+	err := s.DeleteCurrentWorkflowExecution(fakeInfo)
+	s.NoError(err)
 
 	runID5, err5 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err5)
 	s.Equal(workflowExecution.GetRunId(), runID5)
 
 	// simulate a timer_task deleting execution after retention
-	s.DeleteCurrentWorkflowExecution(info0.ExecutionInfo)
+	err = s.DeleteCurrentWorkflowExecution(info0.ExecutionInfo)
+	s.NoError(err)
 
 	runID0, err1 = s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.Error(err1)

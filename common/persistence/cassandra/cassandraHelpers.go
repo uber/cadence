@@ -65,7 +65,9 @@ func NewCassandraCluster(clusterHosts string, port int, user, password, dc strin
 func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
 	// if overwrite flag is set, drop the keyspace and create a new one
 	if overwrite {
-		DropCassandraKeyspace(s, keyspace)
+		if err := DropCassandraKeyspace(s, keyspace); err != nil {
+			return err
+		}
 	}
 	err = s.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {
 		'class' : 'SimpleStrategy', 'replication_factor' : %d}`, keyspace, replicas)).Exec()
@@ -98,18 +100,20 @@ func LoadCassandraSchema(
 	if err != nil {
 		return fmt.Errorf("error creating tmp file:%v", err.Error())
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
 
 	for _, file := range fileNames {
 		content, err := ioutil.ReadFile(dir + "/" + file)
 		if err != nil {
 			return fmt.Errorf("error reading contents of file %v:%v", file, err.Error())
 		}
-		tmpFile.WriteString(string(content))
-		tmpFile.WriteString("\n")
+		_, _ = tmpFile.WriteString(string(content))
+		_, _ = tmpFile.WriteString("\n")
 	}
 
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	config := &cassandra.SetupSchemaConfig{
 		CQLClientConfig: cassandra.CQLClientConfig{

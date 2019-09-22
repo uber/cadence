@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
 	"os"
 	"strconv"
 	"strings"
@@ -69,7 +70,9 @@ ListLoop:
 		m.NoError(err)
 		token = resp.NextPageToken
 		for _, domain := range resp.Domains {
-			m.DeleteDomain(domain.Info.ID, "")
+			if err := m.DeleteDomain(domain.Info.ID, ""); err != nil {
+				m.logger.Warn("failed to delete domain", tag.Error(err))
+			}
 		}
 		if len(token) == 0 {
 			break ListLoop

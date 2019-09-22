@@ -330,7 +330,7 @@ func processMemo(c *cli.Context) map[string][]byte {
 func getPrintableMemo(memo *s.Memo) string {
 	buf := new(bytes.Buffer)
 	for k, v := range memo.Fields {
-		fmt.Fprintf(buf, "%s=%s\n", k, string(v))
+		_, _ = fmt.Fprintf(buf, "%s=%s\n", k, string(v))
 	}
 	return buf.String()
 }
@@ -339,8 +339,8 @@ func getPrintableSearchAttr(searchAttr *s.SearchAttributes) string {
 	buf := new(bytes.Buffer)
 	for k, v := range searchAttr.IndexedFields {
 		var decodedVal interface{}
-		json.Unmarshal(v, &decodedVal)
-		fmt.Fprintf(buf, "%s=%v\n", k, decodedVal)
+		_ = json.Unmarshal(v, &decodedVal)
+		_, _ = fmt.Fprintf(buf, "%s=%v\n", k, decodedVal)
 	}
 	return buf.String()
 }
@@ -574,7 +574,7 @@ func ListWorkflow(c *cli.Context) {
 			fmt.Printf("Press %s to show next page, press %s to quit: ",
 				color.GreenString("Enter"), color.RedString("any other key then Enter"))
 			var input string
-			fmt.Scanln(&input)
+			_, _ = fmt.Scanln(&input)
 			if strings.Trim(input, " ") == "" {
 				continue
 			} else {
@@ -867,23 +867,23 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *shared.SearchAttr
 		switch valueType {
 		case shared.IndexedValueTypeString, shared.IndexedValueTypeKeyword:
 			var val string
-			json.Unmarshal(v, &val)
+			_ = json.Unmarshal(v, &val)
 			result[k] = val
 		case shared.IndexedValueTypeInt:
 			var val int64
-			json.Unmarshal(v, &val)
+			_ = json.Unmarshal(v, &val)
 			result[k] = val
 		case shared.IndexedValueTypeDouble:
 			var val float64
-			json.Unmarshal(v, &val)
+			_ = json.Unmarshal(v, &val)
 			result[k] = val
 		case shared.IndexedValueTypeBool:
 			var val bool
-			json.Unmarshal(v, &val)
+			_ = json.Unmarshal(v, &val)
 			result[k] = val
 		case shared.IndexedValueTypeDatetime:
 			var val time.Time
-			json.Unmarshal(v, &val)
+			_ = json.Unmarshal(v, &val)
 			result[k] = val
 		default:
 			ErrorAndExit(fmt.Sprintf("Error unknown index value type [%v]", valueType), nil)

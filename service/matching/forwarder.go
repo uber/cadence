@@ -226,8 +226,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
 		if err != nil {
-			fwdr.handleErr(err)
-			return nil, err
+			return nil, fwdr.handleErr(err)
 		}
 		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
 	case persistence.TaskListTypeActivity:
@@ -244,8 +243,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
 		if err != nil {
-			fwdr.handleErr(err)
-			return nil, err
+			return nil, fwdr.handleErr(err)
 		}
 		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: resp}), nil
 	}

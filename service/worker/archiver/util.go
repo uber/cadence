@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"github.com/pkg/errors"
 	"time"
 
 	"github.com/dgryski/go-farm"
@@ -40,7 +41,7 @@ func MaxArchivalIterationTimeout() time.Duration {
 
 func hash(i interface{}) uint64 {
 	var b bytes.Buffer
-	gob.NewEncoder(&b).Encode(i)
+	_ = gob.NewEncoder(&b).Encode(i)
 	return farm.Fingerprint64(b.Bytes())
 }
 
@@ -98,6 +99,11 @@ func errorDetails(err error) string {
 	if _, ok := err.(*cadence.CustomError); !ok {
 		return details
 	}
-	err.(*cadence.CustomError).Details(&details)
+	// If no details can be extracted the Details function will return with an err no data message that we want to
+	// surface to the user.
+	if err := err.(*cadence.CustomError).Details(&details); err != nil {
+		noDataErr := errors.Wrap(err, "failed to get error details")
+		return noDataErr.Error()
+	}
 	return details
 }

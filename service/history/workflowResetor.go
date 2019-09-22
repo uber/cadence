@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -109,7 +110,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
-			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+			_ = w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
 				Success:     retError == nil || persistence.IsTimeoutError(retError),
 				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
@@ -441,7 +442,7 @@ func (w *workflowResetorImpl) replayReceivedSignals(
 			Identity:   se.GetWorkflowExecutionSignaledEventAttributes().Identity,
 			Input:      se.GetWorkflowExecutionSignaledEventAttributes().Input,
 		}
-		newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
+		_, _ = newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
 	}
 	for {
 		if len(continueRunID) == 0 {
@@ -491,7 +492,8 @@ func (w *workflowResetorImpl) replayReceivedSignals(
 							Identity:   e.GetWorkflowExecutionSignaledEventAttributes().Identity,
 							Input:      e.GetWorkflowExecutionSignaledEventAttributes().Input,
 						}
-						newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
+						// Explicitly ignore return values, doesn't matter when resetting
+						_, _ = newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
 					} else if e.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
 						attr := e.GetWorkflowExecutionContinuedAsNewEventAttributes()
 						continueRunID = attr.GetNewExecutionRunId()
@@ -706,7 +708,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 	ctx context.Context,
 	request *h.ReplicateEventsRequest,
 	domainID, workflowID, currentRunID string,
-) error {
+) (rerr error) {
 	var currContext workflowExecutionContext
 	var baseMutableState, currMutableState, newMsBuilder mutableState
 	var newHistorySize int64
@@ -776,11 +778,19 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 		return retError
 	}
 	defer func() {
-		w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+		err := w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 			BranchToken: newMsBuilder.GetExecutionInfo().GetCurrentBranch(),
 			Success:     retError == nil || persistence.IsTimeoutError(retError),
 			ShardID:     shardID,
 		})
+		if err != nil {
+			// Wrap the error that was returned before the defer if it exists
+			if rerr == nil {
+				rerr = errors.Wrap(err, "failed to CompleteForkBranchRequest")
+			} else {
+				rerr = errors.Wrapf(rerr, "failed to CompleteForkBranchRequest with error: %s", err.Error())
+			}
+		}
 	}()
 	newMsBuilder.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
 

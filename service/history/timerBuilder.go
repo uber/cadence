@@ -247,7 +247,9 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) per
 		if w.TimeoutType(at.TimeoutType) == w.TimeoutTypeHeartbeat {
 			ai.LastHeartbeatTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
 		}
-		msBuilder.UpdateActivity(ai)
+		if err := msBuilder.UpdateActivity(ai); err != nil {
+			tb.logger.Error("failed to update activity", tag.Error(err))
+		}
 
 		tb.logger.Debug(fmt.Sprintf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
 			tb.timeSource.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID))

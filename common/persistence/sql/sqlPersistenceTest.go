@@ -108,7 +108,8 @@ func (s *TestCluster) Config() config.Persistence {
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *TestCluster) TearDownTestDatabase() {
 	s.DropDatabase()
-	s.db.Close()
+	// Ignore errors because this is limited to tests
+	_ = s.db.Close()
 }
 
 // CreateSession from PersistenceTestCluster interface

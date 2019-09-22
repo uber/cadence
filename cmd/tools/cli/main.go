@@ -21,14 +21,16 @@
 package main
 
 import (
-	"os"
-
 	"github.com/uber/cadence/tools/cli"
+	"log"
+	"os"
 )
 
 // Start using this CLI tool with command
 // See cadence/tools/cli/README.md for usage
 func main() {
 	app := cli.NewCliApp()
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal("failed to run cli app: ", err.Error())
+	}
 }

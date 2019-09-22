@@ -591,15 +591,15 @@ func (s *TestBase) SetupDomains() {
 		},
 		IsGlobalDomain: testDomainIsGlobalDomain,
 	}
-	s.MetadataManager.CreateDomain(createDomainRequest)
+	_, _ = s.MetadataManager.CreateDomain(createDomainRequest)
 	createDomainRequest.Info.ID = testDomainStandbyID
 	createDomainRequest.Info.Name = testDomainStandbyName
 	createDomainRequest.ReplicationConfig.ActiveClusterName = testDomainStandbyClusterName
-	s.MetadataManager.CreateDomain(createDomainRequest)
+	_, _ = s.MetadataManager.CreateDomain(createDomainRequest)
 }
 
 // TeardownDomains delete the domains used for testing
 func (s *TestBase) TeardownDomains() {
-	s.MetadataManager.DeleteDomain(&persistence.DeleteDomainRequest{ID: testDomainActiveID})
-	s.MetadataManager.DeleteDomain(&persistence.DeleteDomainRequest{ID: testDomainStandbyID})
+	_ = s.MetadataManager.DeleteDomain(&persistence.DeleteDomainRequest{ID: testDomainActiveID})
+	_ = s.MetadataManager.DeleteDomain(&persistence.DeleteDomainRequest{ID: testDomainStandbyID})
 }

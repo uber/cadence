@@ -252,8 +252,8 @@ func (tc *TestCluster) TearDownCluster() {
 	tc.host.Stop()
 	tc.host = nil
 	tc.testBase.TearDownWorkflowStore()
-	os.RemoveAll(tc.archiverBase.historyStoreDirectory)
-	os.RemoveAll(tc.archiverBase.visibilityStoreDirectory)
+	_ = os.RemoveAll(tc.archiverBase.historyStoreDirectory)
+	_ = os.RemoveAll(tc.archiverBase.visibilityStoreDirectory)
 }
 
 // GetFrontendClient returns a frontend client from the test cluster

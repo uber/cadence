@@ -384,7 +384,9 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 		isHeartBeatTask := task.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
 		if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= task.VisibilityTimestamp.Unix() {
 			ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
-			msBuilder.UpdateActivity(ai)
+			if err := msBuilder.UpdateActivity(ai); err != nil {
+				t.logger.Error("failed to update activity", tag.Error(err))
+			}
 			updateState = true
 		}
 
@@ -544,7 +546,9 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 		metricScopeWithDomainTag.IncCounter(metrics.StartToCloseTimeoutCounter)
 		if decision.Attempt == task.ScheduleAttempt {
 			// Add a decision task timeout event.
-			msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, decision.StartedID)
+			if _, err := msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, decision.StartedID); err != nil {
+				t.logger.Error("failed to add task time out event", tag.Error(err))
+			}
 			scheduleNewDecision = true
 		}
 	case int(workflow.TimeoutTypeScheduleToStart):

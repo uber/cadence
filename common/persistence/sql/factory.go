@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"github.com/uber/cadence/common/log/tag"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
@@ -132,7 +133,9 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 
 // Close closes the factory
 func (f *Factory) Close() {
-	f.dbConn.forceClose()
+	if err := f.dbConn.forceClose(); err != nil {
+		f.logger.Error("failed to close factory", tag.Error(err))
+	}
 }
 
 // newRefCountedDBConn returns a  logical mysql connection that
@@ -161,13 +164,14 @@ func (c *dbConn) get() (sqldb.Interface, error) {
 }
 
 // forceClose ignores reference counts and shutsdown the underlying connection pool
-func (c *dbConn) forceClose() {
+func (c *dbConn) forceClose() (err error) {
 	c.Lock()
 	defer c.Unlock()
 	if c.Interface != nil {
-		c.Interface.Close()
+		err = c.Interface.Close()
 	}
 	c.refCnt = 0
+	return err
 }
 
 // Close closes the underlying connection if the reference count becomes zero

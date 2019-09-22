@@ -236,7 +236,9 @@ func (c *domainCache) Start() {
 	}
 
 	// initialize the cache by initial scan
-	c.refreshDomains()
+	if err := c.refreshDomains(); err != nil {
+		c.logger.Error("failed to refresh domains", tag.Error(err))
+	}
 	go c.refreshLoop()
 }
 
@@ -781,7 +783,10 @@ func (entry *DomainCacheEntry) IsSampledForLongerRetention(workflowID string) bo
 		}
 
 		h := fnv.New32a()
-		h.Write([]byte(workflowID))
+		if _, err := h.Write([]byte(workflowID)); err != nil {
+			// Without the workflowID hashed we cannot accurately compute r
+			return false
+		}
 		hash := h.Sum32()
 
 		r := float64(hash%1000) / float64(1000) // use 1000 so we support one decimal rate like 1.5%.

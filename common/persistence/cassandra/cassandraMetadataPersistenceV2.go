@@ -196,7 +196,9 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.Intern
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
-			iter.Close()
+			if err := iter.Close(); err != nil {
+				m.logger.Error("failed to close iterator", tag.Error(err))
+			}
 		}
 	}()
 
@@ -261,7 +263,9 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *p.InternalUpdateD
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
-			iter.Close()
+			if err := iter.Close(); err != nil {
+				m.logger.Error("failed to close iterator", tag.Error(err))
+			}
 		}
 	}()
 

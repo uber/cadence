@@ -22,7 +22,6 @@ package cli
 
 import (
 	"context"
-
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/common"
@@ -108,7 +107,9 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	})
 
 	if err := b.dispatcher.Start(); err != nil {
-		b.dispatcher.Stop()
+		if err := b.dispatcher.Stop(); err != nil {
+			b.logger.Error("failed to stop dispatcher", zap.Error(err))
+		}
 		b.logger.Fatal("Failed to create outbound transport channel: %v", zap.Error(err))
 	}
 }

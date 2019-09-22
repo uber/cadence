@@ -93,7 +93,7 @@ func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
 	case reflect.Struct:
 		var buf bytes.Buffer
 		t := reflect.TypeOf(d)
-		buf.WriteString("{")
+		_, _ = buf.WriteString("{")
 		for i := 0; i < v.NumField(); i++ {
 			f := v.Field(i)
 			if f.Kind() == reflect.Invalid {
@@ -104,7 +104,7 @@ func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
 				continue
 			}
 			if buf.Len() > 1 {
-				buf.WriteString(", ")
+				_, _ = buf.WriteString(", ")
 			}
 			fieldName := t.Field(i).Name
 			if !isAttributeName(fieldName) {
@@ -115,12 +115,12 @@ func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
 				}
 			}
 			if fieldName == "Reason" || fieldName == "Details" || fieldName == "Cause" {
-				buf.WriteString(fmt.Sprintf("%s:%s", color.RedString(fieldName), color.MagentaString(fieldValue)))
+				_, _ = buf.WriteString(fmt.Sprintf("%s:%s", color.RedString(fieldName), color.MagentaString(fieldValue)))
 			} else {
-				buf.WriteString(fmt.Sprintf("%s:%s", fieldName, fieldValue))
+				_, _ = buf.WriteString(fmt.Sprintf("%s:%s", fieldName, fieldValue))
 			}
 		}
-		buf.WriteString("}")
+		_, _ = buf.WriteString("}")
 		return buf.String()
 	default:
 		return fmt.Sprint(d)
@@ -495,7 +495,7 @@ func prettyPrintJSONObject(o interface{}) {
 		fmt.Printf("Error when try to print pretty: %v\n", err)
 		fmt.Println(o)
 	}
-	os.Stdout.Write(b)
+	_, _ = os.Stdout.Write(b)
 	fmt.Println()
 }
 
@@ -530,7 +530,7 @@ func getWorkflowClient(c *cli.Context) client.Client {
 
 func getWorkflowClientWithOptionalDomain(c *cli.Context) client.Client {
 	if !c.GlobalIsSet(FlagDomain) {
-		c.GlobalSet(FlagDomain, "system-domain")
+		_ = c.GlobalSet(FlagDomain, "system-domain")
 	}
 	return getWorkflowClient(c)
 }

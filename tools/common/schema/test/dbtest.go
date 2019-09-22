@@ -71,7 +71,8 @@ func (tb *DBTestBase) SetupSuiteBase(db DB) {
 
 // TearDownSuiteBase tears down the test suite
 func (tb *DBTestBase) TearDownSuiteBase() {
-	tb.db.DropDatabase(tb.DBName)
+	// Ignore because this is only run as a test utility
+	_ = tb.db.DropDatabase(tb.DBName)
 	tb.db.Close()
 }
 
@@ -79,13 +80,17 @@ func (tb *DBTestBase) TearDownSuiteBase() {
 func (tb *DBTestBase) RunParseFileTest(content string) {
 	rootDir, err := ioutil.TempDir("", "dbClientTestDir")
 	tb.Nil(err)
-	defer os.Remove(rootDir)
+	defer func() {
+		_ = os.Remove(rootDir)
+	}()
 
 	cqlFile, err := ioutil.TempFile(rootDir, "parseCQLTest")
 	tb.Nil(err)
-	defer os.Remove(cqlFile.Name())
+	defer func() {
+		_ = os.Remove(cqlFile.Name())
+	}()
 
-	cqlFile.WriteString(content)
+	_, _ = cqlFile.WriteString(content)
 	stmts, err := schema.ParseFile(cqlFile.Name())
 	tb.Nil(err)
 	tb.Equal(2, len(stmts), "wrong number of sql statements")

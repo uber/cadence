@@ -327,14 +327,19 @@ pollLoop:
 			})
 			if err != nil {
 				// will notify query client that the query task failed
-				e.deliverQueryResult(task.query.taskID, &queryResult{err: err})
+				if err := e.deliverQueryResult(task.query.taskID, &queryResult{err: err}); err != nil {
+					e.logger.Error("failed to delivery query result", tag.Error(err))
+				}
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
 			if mutableStateResp.GetPreviousStartedEventId() <= 0 {
 				// first decision task is not processed by worker yet.
-				e.deliverQueryResult(task.query.taskID,
+				err := e.deliverQueryResult(task.query.taskID,
 					&queryResult{err: errQueryBeforeFirstDecisionCompleted, waitNextEventID: mutableStateResp.GetNextEventId()})
+				if err != nil {
+					e.logger.Error("failed to delivery query result", tag.Error(err))
+				}
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
@@ -553,9 +558,15 @@ func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *quer
 
 func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
 	if *request.CompletedRequest.CompletedType == workflow.QueryTaskCompletedTypeFailed {
-		e.deliverQueryResult(request.GetTaskID(), &queryResult{err: errors.New(request.CompletedRequest.GetErrorMessage())})
+		err := e.deliverQueryResult(request.GetTaskID(), &queryResult{err: errors.New(request.CompletedRequest.GetErrorMessage())})
+		if err != nil {
+			e.logger.Error("failed to deliver query result", tag.Error(err))
+		}
 	} else {
-		e.deliverQueryResult(request.GetTaskID(), &queryResult{result: request.CompletedRequest.QueryResult})
+		err := e.deliverQueryResult(request.GetTaskID(), &queryResult{result: request.CompletedRequest.QueryResult})
+		if err != nil {
+			e.logger.Error("failed to deliver query result", tag.Error(err))
+		}
 	}
 
 	return nil

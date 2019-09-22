@@ -233,16 +233,13 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 		return t.thriftrwEncoder.Decode(data, event)
 	case *workflow.Memo:
 		memo := target.(*workflow.Memo)
-		t.thriftrwEncoder.Decode(data, memo)
-		return nil
+		return t.thriftrwEncoder.Decode(data, memo)
 	case *workflow.ResetPoints:
 		rp := target.(*workflow.ResetPoints)
-		t.thriftrwEncoder.Decode(data, rp)
-		return nil
+		return t.thriftrwEncoder.Decode(data, rp)
 	case *workflow.BadBinaries:
 		rp := target.(*workflow.BadBinaries)
-		t.thriftrwEncoder.Decode(data, rp)
-		return nil
+		return t.thriftrwEncoder.Decode(data, rp)
 	default:
 		return nil
 	}

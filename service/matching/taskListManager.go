@@ -366,9 +366,9 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *s.De
 func (c *taskListManagerImpl) String() string {
 	buf := new(bytes.Buffer)
 	if c.taskListID.taskType == persistence.TaskListTypeActivity {
-		buf.WriteString("Activity")
+		_, _ = buf.WriteString("Activity")
 	} else {
-		buf.WriteString("Decision")
+		_, _ = buf.WriteString("Decision")
 	}
 	rangeID := c.db.RangeID()
 	fmt.Fprintf(buf, " task list %v\n", c.taskListID.name)

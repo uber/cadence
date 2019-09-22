@@ -347,7 +347,9 @@ MoveAckLevelLoop:
 		// are processed and we are free to shutdown
 		t.logger.Debug(fmt.Sprintf("Timer ack manager shutdown."))
 		t.finishedChan <- struct{}{}
-		t.timerQueueShutdown()
+		if err := t.timerQueueShutdown(); err != nil {
+			t.logger.Error("failed to shutdown timer queue", tag.Error(err))
+		}
 		return
 	}
 

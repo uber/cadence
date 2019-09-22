@@ -209,7 +209,9 @@ func (t *timerQueueProcessorImpl) FailoverDomain(
 
 	// NOTE: READ REF BEFORE MODIFICATION
 	// ref: historyEngine.go registerDomainFailoverCallback function
-	updateShardAckLevel(TimerSequenceID{VisibilityTimestamp: minLevel})
+	if err := updateShardAckLevel(TimerSequenceID{VisibilityTimestamp: minLevel}); err != nil {
+		t.logger.Error("failed up update shard ack level", tag.Error(err))
+	}
 	failoverTimerProcessor.Start()
 }
 
@@ -243,7 +245,9 @@ func (t *timerQueueProcessorImpl) completeTimersLoop() {
 		select {
 		case <-t.shutdownChan:
 			// before shutdown, make sure the ack level is up to date
-			t.completeTimers()
+			if err := t.completeTimers(); err != nil {
+				t.logger.Error("failed to update ack level", tag.Error(err))
+			}
 			return
 		case <-timer.C:
 		CompleteLoop:
@@ -300,6 +304,8 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 
 	t.ackLevel = upperAckLevel
 
-	t.shard.UpdateTimerAckLevel(t.ackLevel.VisibilityTimestamp)
+	if err := t.shard.UpdateTimerAckLevel(t.ackLevel.VisibilityTimestamp); err != nil {
+		t.logger.Error("failed to update timer ack level", tag.Error(err))
+	}
 	return nil
 }

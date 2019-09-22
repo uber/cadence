@@ -21,8 +21,8 @@
 package cassandra
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
 	"time"
@@ -165,7 +165,9 @@ func (client *cqlClient) ReadSchemaVersion() (string, error) {
 	iter := query.Iter()
 	var version string
 	if !iter.Scan(&version) {
-		iter.Close()
+		if err := iter.Close(); err != nil {
+			return "", errors.Wrapf(err, "failed to close iterator while handing schema version err: %s", errGetSchemaVersion.Error())
+		}
 		return "", errGetSchemaVersion
 	}
 	if err := iter.Close(); err != nil {

@@ -693,7 +693,10 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 }
 
 func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, service service.Service) {
-	params.DynamicConfig.UpdateValue(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeDual)
+	err := params.DynamicConfig.UpdateValue(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeDual)
+	if err != nil {
+		c.logger.Error("failed to update dynamic config value", tag.Error(err))
+	}
 	workerConfig := worker.NewConfig(params)
 	c.indexer = indexer.NewIndexer(
 		workerConfig.IndexerCfg,

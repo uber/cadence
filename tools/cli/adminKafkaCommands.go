@@ -293,7 +293,7 @@ Loop:
 						*task.HistoryTaskAttributes.NextEventId,
 					)
 				}
-				outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				_, _ = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
 			}
 		}
 	}
@@ -339,7 +339,7 @@ Loop:
 						msg.GetVersion(),
 					)
 				}
-				outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				_, _ = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
 			}
 		}
 	}

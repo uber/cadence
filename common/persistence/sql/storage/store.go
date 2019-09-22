@@ -100,12 +100,12 @@ func buildDSNAttrs(cfg *config.SQL) string {
 	var buf bytes.Buffer
 	for k, v := range attrs {
 		if !first {
-			buf.WriteString("&")
+			_, _ = buf.WriteString("&")
 		}
 		first = false
-		buf.WriteString(k)
-		buf.WriteString("=")
-		buf.WriteString(v)
+		_, _ = buf.WriteString(k)
+		_, _ = buf.WriteString("=")
+		_, _ = buf.WriteString(v)
 	}
 	return url.PathEscape(buf.String())
 }

@@ -22,9 +22,12 @@ package main
 
 import (
 	"github.com/uber/cadence/tools/sql"
+	"log"
 	"os"
 )
 
 func main() {
-	sql.RunTool(os.Args)
+	if err := sql.RunTool(os.Args); err != nil {
+		log.Fatalf("failed to run cli tool %v", err)
+	}
 }

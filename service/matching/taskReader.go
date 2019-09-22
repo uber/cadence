@@ -228,7 +228,9 @@ func (tr *taskReader) isIdle(lastWriteTime time.Time) bool {
 }
 
 func (tr *taskReader) handleIdleTimeout() {
-	tr.persistAckLevel()
+	if err := tr.persistAckLevel(); err != nil {
+		tr.logger().Error("failed to persist ack level", tag.Error(err))
+	}
 	tr.tlMgr.taskGC.RunNow(tr.tlMgr.taskAckManager.getAckLevel())
 	tr.tlMgr.Stop()
 }

@@ -209,7 +209,9 @@ MoveAckLevelLoop:
 		// are processed and we are free to shundown
 		a.logger.Debug(fmt.Sprintf("Queue ack manager shutdown."))
 		a.finishedChan <- struct{}{}
-		a.processor.queueShutdown()
+		if err := a.processor.queueShutdown(); err != nil {
+			a.logger.Error("failed to queue shutdown", tag.Error(err))
+		}
 		return
 	}
 
