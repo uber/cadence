@@ -15,7 +15,6 @@ require (
 	github.com/cactus/go-statsd-client v3.1.1+incompatible
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
-	github.com/crossdock/crossdock-go v0.0.0-20160816171116-049aabb0122b // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
 	github.com/eapache/go-resiliency v1.2.0 // indirect
@@ -69,8 +68,8 @@ require (
 	github.com/uber-go/kafka-client v0.2.2
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/uber-go/tally v3.3.11+incompatible
-	github.com/uber/jaeger-client-go v2.15.0+incompatible // indirect
-	github.com/uber/jaeger-lib v1.5.0 // indirect
+	github.com/uber/jaeger-client-go v0.0.0-20190909155041-258182f41c19 // indirect
+	github.com/uber/jaeger-lib v2.1.1+incompatible // indirect
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.14.0
 	github.com/urfave/cli v1.20.0
