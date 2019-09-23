@@ -7,8 +7,8 @@ Instead of calling the worker directly, an intermediate queue is used. So the se
 queue and a worker receives the task using a long poll request. 
 Cadence calls this queue used to dispatch activity tasks an *activity task list*.
 
-Similarly, when a workflow needs to handle an external event, a decision task is created. *
-A Decision task list* is used to deliver it to the workflow worker (also called _decider_).
+Similarly, when a workflow needs to handle an external event, a decision task is created.
+*A Decision task list* is used to deliver it to the workflow worker (also called _decider_).
 
 While Cadence task lists are queues, they have some differences from commonly used queuing technologies. 
 The main one is that they do not require explicit registration and are created on demand. The number of task lists
