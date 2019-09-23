@@ -22,57 +22,37 @@ package postgres
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
-const (
-	addEventsQry = `INSERT INTO events (` +
-		`domain_id,workflow_id,run_id,first_event_id,batch_version,range_id,tx_id,data,data_encoding)` +
-		`VALUES (:domain_id,:workflow_id,:run_id,:first_event_id,:batch_version,:range_id,:tx_id,:data,:data_encoding);`
-
-	updateEventsQry = `UPDATE events ` +
-		`SET batch_version = :batch_version, range_id = :range_id, tx_id = :tx_id, data = :data, data_encoding = :data_encoding ` +
-		`WHERE domain_id = :domain_id AND workflow_id = :workflow_id AND run_id = :run_id AND first_event_id = :first_event_id`
-
-	getEventsQry = `SELECT first_event_id, batch_version, data, data_encoding ` +
-		`FROM events ` +
-		`WHERE domain_id = ? AND workflow_id = ? AND run_id = ? AND first_event_id >= ? AND first_event_id < ? ` +
-		`ORDER BY first_event_id LIMIT ?`
-
-	deleteEventsQry = `DELETE FROM events WHERE domain_id = ? AND workflow_id = ? AND run_id = ?`
-
-	lockEventQry = `SELECT range_id, tx_id FROM events ` +
-		`WHERE domain_id = ? AND workflow_id = ? AND run_id = ? AND first_event_id = ? ` +
-		`FOR UPDATE`
-)
-
 // InsertIntoEvents inserts a row into events table
 func (mdb *DB) InsertIntoEvents(row *sqldb.EventsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(addEventsQry, row)
+	log.Panic("do not call events v1 api")
+	return nil, nil
 }
 
 // UpdateEvents updates a row in events table
 func (mdb *DB) UpdateEvents(row *sqldb.EventsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(updateEventsQry, row)
+	log.Panic("do not call events v1 api")
+	return nil, nil
 }
 
 // SelectFromEvents reads one or more rows from events table
 func (mdb *DB) SelectFromEvents(filter *sqldb.EventsFilter) ([]sqldb.EventsRow, error) {
-	var rows []sqldb.EventsRow
-	err := mdb.conn.Select(&rows, getEventsQry,
-		filter.DomainID, filter.WorkflowID, filter.RunID, *filter.FirstEventID, *filter.NextEventID, *filter.PageSize)
-	return rows, err
+	log.Panic("do not call events v1 api")
+	return nil, nil
 }
 
 // DeleteFromEvents deletes one or more rows from events table
 func (mdb *DB) DeleteFromEvents(filter *sqldb.EventsFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteEventsQry, filter.DomainID, filter.WorkflowID, filter.RunID)
+	log.Panic("do not call events v1 api")
+	return nil, nil
 }
 
 // LockEvents acquires a write lock on a single row in events table
 func (mdb *DB) LockEvents(filter *sqldb.EventsFilter) (*sqldb.EventsRow, error) {
-	var row sqldb.EventsRow
-	err := mdb.conn.Get(&row, lockEventQry, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.FirstEventID)
-	return &row, err
+	log.Panic("do not call events v1 api")
+	return nil, nil
 }
