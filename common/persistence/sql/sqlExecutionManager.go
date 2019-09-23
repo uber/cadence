@@ -473,11 +473,6 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 			runID); err != nil {
 			return err
 		}
-		if newWorkflow != nil {
-			if err := applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
-				return err
-			}
-		}
 
 	case p.UpdateWorkflowModeUpdateCurrent:
 		if newWorkflow != nil {
@@ -508,11 +503,6 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 					Message: fmt.Sprintf("UpdateWorkflowExecution: failed to continue as new current execution. Error: %v", err),
 				}
 			}
-
-			if err := applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
-				return err
-			}
-
 		} else {
 			startVersion := updateWorkflow.StartVersion
 			lastWriteVersion := updateWorkflow.LastWriteVersion
@@ -540,7 +530,15 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 		}
 	}
 
-	return applyWorkflowMutationTx(tx, shardID, &updateWorkflow)
+	if err := applyWorkflowMutationTx(tx, shardID, &updateWorkflow); err != nil {
+		return err
+	}
+	if newWorkflow != nil {
+		if err := applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *sqlExecutionManager) ResetWorkflowExecution(
