@@ -60,7 +60,7 @@ func TestNDCTransactionMgrForNewWorkflowSuite(t *testing.T) {
 func (s *nDCTransactionMgrForNewWorkflowSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil)
+	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil, nil)
 
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
@@ -104,7 +104,7 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Dup() 
 
 	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(runID, nil).Times(1)
 
-	err := s.createMgr.dispatchForNewWorkflow(ctx, now, workflow, &persistence.WorkflowEvents{})
+	err := s.createMgr.dispatchForNewWorkflow(ctx, now, workflow)
 	s.NoError(err)
 }
 
@@ -155,7 +155,7 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_BrandN
 		int64(0),
 	).Return(nil).Once()
 
-	err := s.createMgr.dispatchForNewWorkflow(ctx, now, workflow, &persistence.WorkflowEvents{})
+	err := s.createMgr.dispatchForNewWorkflow(ctx, now, workflow)
 	s.NoError(err)
 	s.True(releaseCalled)
 }
@@ -229,7 +229,7 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Create
 		currentLastWriteVersion,
 	).Return(nil).Once()
 
-	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow, &persistence.WorkflowEvents{})
+	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow)
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(currentReleaseCalled)
@@ -279,7 +279,6 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Create
 
 	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
 	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
-	s.mockTransactionMgr.EXPECT().reapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	targetWorkflow.EXPECT().happensAfter(currentWorkflow).Return(false, nil)
 	targetWorkflow.EXPECT().suppressWorkflowBy(currentWorkflow).Return(transactionPolicyPassive, nil).Times(1)
@@ -297,7 +296,7 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Create
 		int64(0),
 	).Return(nil).Once()
 
-	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow, &persistence.WorkflowEvents{})
+	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow)
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(currentReleaseCalled)
@@ -359,7 +358,7 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Suppre
 		transactionPolicyPassive.ptr(),
 	).Return(nil).Once()
 
-	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow, &persistence.WorkflowEvents{})
+	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow)
 	s.NoError(err)
 	s.True(targetReleaseCalled)
 	s.True(currentReleaseCalled)

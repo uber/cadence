@@ -80,6 +80,8 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents() {
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events)
+	serializer := persistence.NewPayloadSerializer()
+	blob, _ := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, blob.ToThrift())
 	s.NoError(err)
 }

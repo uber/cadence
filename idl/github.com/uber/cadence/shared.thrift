@@ -1566,5 +1566,5 @@ struct VersionHistories{
 struct ReapplyEventsRequest{
   10: optional string domainName
   20: optional WorkflowExecution workflowExecution
-  30: optional list<HistoryEvent> events
+  30: optional DataBlob events
 }

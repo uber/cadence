@@ -29,10 +29,11 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -49,7 +50,6 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/replicator"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
 const (
@@ -147,7 +147,6 @@ func NewEngineWithShardContext(
 	config *Config,
 	replicationTaskFetchers *ReplicationTaskFetchers,
 	domainReplicator replicator.DomainReplicator,
-	clientBean client.Bean,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -209,7 +208,6 @@ func NewEngineWithShardContext(
 		historyEngImpl.nDCReplicator = newNDCHistoryReplicator(
 			shard,
 			historyCache,
-			clientBean,
 			logger,
 		)
 	}
@@ -2436,34 +2434,44 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyRequest *h.ReapplyEventsRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(reapplyRequest.DomainID)
+	domainEntry, err := e.getActiveDomainEntry(reapplyRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
-	execution := *reapplyRequest.GetWorkflowExecution()
-	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution, func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
-		createDecisionTask := true
-		// Do not create decision task when the workflow is cron and the cron has not been started yet
-		if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecision() {
-			createDecisionTask = false
-		}
-		// TODO: reapply currently ignore this case, remove this line after we support the closed workflow
-		if !msBuilder.IsWorkflowExecutionRunning() {
-			return nil, ErrWorkflowCompleted
-		}
-		postActions := &updateWorkflowAction{
-			createDecision: createDecisionTask,
-		}
-		if err := e.eventsReapplier.reapplyEvents(
-			ctx,
-			msBuilder,
-			reapplyRequest.GetEvents(),
-		); err != nil {
-			e.logger.Error("failed to re-apply stale events", tag.Error(err))
-			return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
-		}
+	// remove run id from the execution so that reapply events to the current run
+	execution := workflow.WorkflowExecution{
+		WorkflowId: reapplyRequest.GetRequest().GetWorkflowExecution().WorkflowId,
+	}
 
-		return postActions, nil
-	})
+	return e.updateWorkflowExecutionWithAction(
+		ctx,
+		domainID,
+		execution,
+		func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+			createDecisionTask := true
+			// Do not create decision task when the workflow is cron and the cron has not been started yet
+			if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecision() {
+				createDecisionTask = false
+			}
+			// TODO when https://github.com/uber/cadence/issues/2420 is finished
+			//  reset to workflow finish event
+			//  ignore this case for now
+			if !msBuilder.IsWorkflowExecutionRunning() {
+				return nil, nil
+			}
+			postActions := &updateWorkflowAction{
+				createDecision: createDecisionTask,
+			}
+			if err := e.eventsReapplier.reapplyEvents(
+				ctx,
+				msBuilder,
+				reapplyRequest.GetRequest().GetEvents(),
+			); err != nil {
+				e.logger.Error("failed to re-apply stale events", tag.Error(err))
+				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
+			}
+
+			return postActions, nil
+		})
 }

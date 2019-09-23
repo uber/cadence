@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -34,6 +35,10 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+)
+
+const (
+	defaultRemoteCallTimeout = 30 * time.Second
 )
 
 type (
@@ -120,6 +125,10 @@ type (
 		) (retError error)
 
 		getQueryRegistry() QueryRegistry
+
+		reapplyEvents(
+			ctx context.Context,
+			events *persistence.WorkflowEvents) error
 	}
 )
 
@@ -352,6 +361,14 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 	}
 	resetHistorySize := c.getHistorySize()
 	for _, workflowEvents := range workflowEventsSeq {
+		if conflictResolveMode == persistence.ConflictResolveWorkflowModeBypassCurrent {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
+			err := c.reapplyEvents(ctx, workflowEvents)
+			cancel()
+			if err != nil {
+				return err
+			}
+		}
 		eventsSize, err := c.persistNonFirstWorkflowEvents(workflowEvents)
 		if err != nil {
 			return err
@@ -378,6 +395,14 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 		)
 		if err != nil {
 			return err
+		}
+		if conflictResolveMode == persistence.ConflictResolveWorkflowModeBypassCurrent {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
+			err := c.reapplyEvents(ctx, workflowEventsSeq[0])
+			cancel()
+			if err != nil {
+				return err
+			}
 		}
 		newWorkflowSizeSize := newContext.getHistorySize()
 		eventsSize, err := c.persistFirstWorkflowEvents(workflowEventsSeq[0])
@@ -547,8 +572,17 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	if err != nil {
 		return err
 	}
+
 	currentWorkflowSize := c.getHistorySize()
 	for _, workflowEvents := range workflowEventsSeq {
+		if updateMode == persistence.UpdateWorkflowModeBypassCurrent {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
+			err := c.reapplyEvents(ctx, workflowEvents)
+			cancel()
+			if err != nil {
+				return err
+			}
+		}
 		eventsSize, err := c.persistNonFirstWorkflowEvents(workflowEvents)
 		if err != nil {
 			return err
@@ -575,6 +609,14 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		)
 		if err != nil {
 			return err
+		}
+		if updateMode == persistence.UpdateWorkflowModeBypassCurrent {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
+			err := c.reapplyEvents(ctx, workflowEventsSeq[0])
+			cancel()
+			if err != nil {
+				return err
+			}
 		}
 		newWorkflowSizeSize := newContext.getHistorySize()
 		eventsSize, err := c.persistFirstWorkflowEvents(workflowEventsSeq[0])
@@ -1126,4 +1168,61 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 
 func (c *workflowExecutionContextImpl) getQueryRegistry() QueryRegistry {
 	return c.queryRegistry
+}
+
+func (c *workflowExecutionContextImpl) reapplyEvents(
+	ctx context.Context,
+	reapplyEvents *persistence.WorkflowEvents,
+) error {
+
+	hasReappliableEvent := false
+	for _, event := range reapplyEvents.Events {
+		switch event.GetEventType() {
+		case workflow.EventTypeWorkflowExecutionSignaled:
+			hasReappliableEvent = true
+			break
+		default:
+		}
+	}
+	// there is no event to reapply
+	if !hasReappliableEvent {
+		return nil
+	}
+
+	domainID := reapplyEvents.DomainID
+	execution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(reapplyEvents.WorkflowID),
+	}
+	domainCache := c.shard.GetDomainCache()
+	clientBean := c.shard.GetService().GetClientBean()
+	serializer := c.shard.GetService().GetPayloadSerializer()
+	domainEntry, err := domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return err
+	}
+
+	// The active cluster of the domain is the same as current cluster.
+	// Use the history from the same cluster to reapply events
+	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(reapplyEvents.Events, common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	request := &workflow.ReapplyEventsRequest{
+		DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
+		WorkflowExecution: execution,
+		Events:            reapplyEventsDataBlob.ToThrift(),
+	}
+
+	activeCluster := domainEntry.GetReplicationConfig().ActiveClusterName
+	if activeCluster == c.shard.GetClusterMetadata().GetCurrentClusterName() {
+		return c.shard.GetEngine().ReapplyEvents(ctx, &history.ReapplyEventsRequest{
+			Request:    request,
+			DomainUUID: common.StringPtr(domainID),
+		})
+	}
+
+	// The active cluster of the domain is differ from the current cluster
+	// Use frontend client to route this request to the active cluster
+	// Reapplication only happens in active cluster
+	return clientBean.GetRemoteFrontendClient(activeCluster).ReapplyEvents(ctx, request)
 }

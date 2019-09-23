@@ -73,7 +73,8 @@ func (s *nDCTransactionMgrSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(nil, nil, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockShard = &shardContextImpl{
@@ -90,8 +91,7 @@ func (s *nDCTransactionMgrSuite) SetupTest() {
 		domainCache:               s.mockDomainCache,
 		clusterMetadata:           s.mockClusterMetadata,
 	}
-	s.mockClientBean = &client.MockClientBean{}
-	s.transactionMgr = newNDCTransactionMgr(s.mockShard, newHistoryCache(s.mockShard), s.mockClientBean, s.logger)
+	s.transactionMgr = newNDCTransactionMgr(s.mockShard, newHistoryCache(s.mockShard), s.logger)
 
 	s.controller = gomock.NewController(s.T())
 	s.mockCreateMgr = NewMocknDCTransactionMgrForNewWorkflow(s.controller)
@@ -110,13 +110,12 @@ func (s *nDCTransactionMgrSuite) TestCreateWorkflow() {
 	ctx := ctx.Background()
 	now := time.Now()
 	targetWorkflow := NewMocknDCWorkflow(s.controller)
-	reapply := &persistence.WorkflowEvents{}
 
 	s.mockCreateMgr.EXPECT().dispatchForNewWorkflow(
-		ctx, now, targetWorkflow, reapply,
+		ctx, now, targetWorkflow,
 	).Return(nil).Times(1)
 
-	err := s.transactionMgr.createWorkflow(ctx, now, targetWorkflow, reapply)
+	err := s.transactionMgr.createWorkflow(ctx, now, targetWorkflow)
 	s.NoError(err)
 }
 
@@ -126,13 +125,12 @@ func (s *nDCTransactionMgrSuite) TestUpdateWorkflow() {
 	isWorkflowRebuilt := true
 	targetWorkflow := NewMocknDCWorkflow(s.controller)
 	newWorkflow := NewMocknDCWorkflow(s.controller)
-	reapply := &persistence.WorkflowEvents{}
 
 	s.mockUpdateMgr.EXPECT().dispatchForExistingWorkflow(
-		ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapply,
+		ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow,
 	).Return(nil).Times(1)
 
-	err := s.transactionMgr.updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapply)
+	err := s.transactionMgr.updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
 	s.NoError(err)
 }
 

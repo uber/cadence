@@ -815,7 +815,7 @@ func (c *clientImpl) ReapplyEvents(
 	request *h.ReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(request.GetWorkflowExecution().GetWorkflowId())
+	client, err := c.getClientForWorkflowID(request.GetRequest().GetWorkflowExecution().GetWorkflowId())
 	if err != nil {
 		return err
 	}

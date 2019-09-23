@@ -26,18 +26,21 @@ import (
 	ctx "context"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	nDCEventsReapplier interface {
-		reapplyEvents(ctx ctx.Context, msBuilder mutableState, historyEvents []*shared.HistoryEvent) error
+		reapplyEvents(ctx ctx.Context, msBuilder mutableState, historyEventsBlob *shared.DataBlob) error
 	}
 
 	nDCEventsReapplierImpl struct {
-		metricsClient metrics.Client
-		logger        log.Logger
+		historySerializer persistence.PayloadSerializer
+		metricsClient     metrics.Client
+		logger            log.Logger
 	}
 )
 
@@ -47,25 +50,22 @@ func newNDCEventsReapplier(
 ) nDCEventsReapplier {
 
 	return &nDCEventsReapplierImpl{
-		metricsClient: metricsClient,
-		logger:        logger,
+		historySerializer: persistence.NewPayloadSerializer(),
+		metricsClient:     metricsClient,
+		logger:            logger,
 	}
 }
 
 func (r *nDCEventsReapplierImpl) reapplyEvents(
 	ctx ctx.Context,
 	msBuilder mutableState,
-	historyEvents []*shared.HistoryEvent,
+	historyEventsBlob *shared.DataBlob,
 ) error {
-	reapplyEvents := []*shared.HistoryEvent{}
-	// TODO: need to implement Reapply policy
-	for _, event := range historyEvents {
-		switch event.GetEventType() {
-		case shared.EventTypeWorkflowExecutionSignaled:
-			reapplyEvents = append(reapplyEvents, event)
-		}
-	}
 
+	reapplyEvents, err := r.validateHistoryEvents(historyEventsBlob)
+	if err != nil {
+		return err
+	}
 	if len(reapplyEvents) == 0 {
 		return nil
 	}
@@ -89,4 +89,29 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 		}
 	}
 	return nil
+}
+
+func (r *nDCEventsReapplierImpl) validateHistoryEvents(
+	historyEventsBlob *shared.DataBlob,
+) ([]*shared.HistoryEvent, error) {
+	if historyEventsBlob == nil {
+		return nil, nil
+	}
+
+	historyEvents, err := r.historySerializer.DeserializeBatchEvents(&persistence.DataBlob{
+		Encoding: common.EncodingTypeThriftRW,
+		Data:     historyEventsBlob.Data,
+	})
+	if err != nil {
+		return nil, err
+	}
+	reapplyEvents := []*shared.HistoryEvent{}
+	// TODO: need to implement Reapply policy
+	for _, event := range historyEvents {
+		switch event.GetEventType() {
+		case shared.EventTypeWorkflowExecutionSignaled:
+			reapplyEvents = append(reapplyEvents, event)
+		}
+	}
+	return reapplyEvents, nil
 }

@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +28,11 @@
 package history
 
 import (
-	context "context"
-	gomock "github.com/golang/mock/gomock"
-	persistence "github.com/uber/cadence/common/persistence"
-	reflect "reflect"
-	time "time"
+	"context"
+	"reflect"
+	"time"
+
+	"github.com/golang/mock/gomock"
 )
 
 // MocknDCTransactionMgrForExistingWorkflow is a mock of nDCTransactionMgrForExistingWorkflow interface
@@ -59,15 +59,15 @@ func (m *MocknDCTransactionMgrForExistingWorkflow) EXPECT() *MocknDCTransactionM
 }
 
 // dispatchForExistingWorkflow mocks base method
-func (m *MocknDCTransactionMgrForExistingWorkflow) dispatchForExistingWorkflow(ctx context.Context, now time.Time, isWorkflowRebuilt bool, targetWorkflow, newWorkflow nDCWorkflow, reapplyEvents *persistence.WorkflowEvents) error {
+func (m *MocknDCTransactionMgrForExistingWorkflow) dispatchForExistingWorkflow(ctx context.Context, now time.Time, isWorkflowRebuilt bool, targetWorkflow, newWorkflow nDCWorkflow) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchForExistingWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapplyEvents)
+	ret := m.ctrl.Call(m, "dispatchForExistingWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchForExistingWorkflow indicates an expected call of dispatchForExistingWorkflow
-func (mr *MocknDCTransactionMgrForExistingWorkflowMockRecorder) dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapplyEvents interface{}) *gomock.Call {
+func (mr *MocknDCTransactionMgrForExistingWorkflowMockRecorder) dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchForExistingWorkflow", reflect.TypeOf((*MocknDCTransactionMgrForExistingWorkflow)(nil).dispatchForExistingWorkflow), ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow, reapplyEvents)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchForExistingWorkflow", reflect.TypeOf((*MocknDCTransactionMgrForExistingWorkflow)(nil).dispatchForExistingWorkflow), ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
 }

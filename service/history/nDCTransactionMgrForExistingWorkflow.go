@@ -39,7 +39,6 @@ type (
 			isWorkflowRebuilt bool,
 			targetWorkflow nDCWorkflow,
 			newWorkflow nDCWorkflow,
-			reapplyEvents *persistence.WorkflowEvents,
 		) error
 	}
 
@@ -65,7 +64,6 @@ func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchForExistingWorkflow(
 	isWorkflowRebuilt bool,
 	targetWorkflow nDCWorkflow,
 	newWorkflow nDCWorkflow,
-	reapplyEvents *persistence.WorkflowEvents,
 ) error {
 
 	// NOTE: this function does NOT mutate current workflow, target workflow or new workflow,
@@ -150,7 +148,6 @@ func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchForExistingWorkflow(
 			currentWorkflow,
 			targetWorkflow,
 			newWorkflow,
-			reapplyEvents,
 		)
 	}
 
@@ -202,13 +199,12 @@ func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchWorkflowUpdateAsZombi
 	currentWorkflow nDCWorkflow,
 	targetWorkflow nDCWorkflow,
 	newWorkflow nDCWorkflow,
-	reapplyEvents *persistence.WorkflowEvents,
 ) error {
 
 	// Events land on non-current branch needs to do re-apply
-	if err := r.transactionMgr.reapplyEvents(ctx, reapplyEvents); err != nil {
-		return err
-	}
+	//if err := r.transactionMgr.reapplyEvents(ctx, reapplyEvents); err != nil {
+	//	return err
+	//}
 
 	if !isWorkflowRebuilt {
 		return r.executeTransaction(

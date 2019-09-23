@@ -216,7 +216,7 @@ func (h *Handler) Stop() {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
 	return NewEngineWithShardContext(context, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient,
-		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers, h.domainReplicator, h.Service.GetClientBean())
+		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers, h.domainReplicator)
 }
 
 // Health is for health check
@@ -1553,8 +1553,8 @@ func (h *Handler) ReapplyEvents(
 	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	domainID := request.GetDomainID()
-	workflowID := request.GetWorkflowExecution().GetWorkflowId()
+	domainID := request.GetDomainUUID()
+	workflowID := request.GetRequest().GetWorkflowExecution().GetWorkflowId()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
 		return h.error(err, scope, domainID, workflowID)

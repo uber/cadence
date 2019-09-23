@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber/cadence/client"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -92,11 +91,10 @@ var errPanic = errors.NewInternalFailureError("encounter panic")
 func newNDCHistoryReplicator(
 	shard ShardContext,
 	historyCache *historyCache,
-	clientBean client.Bean,
 	logger log.Logger,
 ) *nDCHistoryReplicatorImpl {
 
-	transactionMgr := newNDCTransactionMgr(shard, historyCache, clientBean, logger)
+	transactionMgr := newNDCTransactionMgr(shard, historyCache, logger)
 	replicator := &nDCHistoryReplicatorImpl{
 		shard:             shard,
 		clusterMetadata:   shard.GetService().GetClusterMetadata(),
@@ -283,12 +281,6 @@ func (r *nDCHistoryReplicatorImpl) applyStartEvents(
 			mutableState,
 			releaseFn,
 		),
-		&persistence.WorkflowEvents{
-			DomainID:   task.getDomainID(),
-			WorkflowID: task.getExecution().GetWorkflowId(),
-			RunID:      task.getExecution().GetRunId(),
-			Events:     task.getEvents(),
-		},
 	)
 	if err == nil {
 		r.notify(task.getSourceCluster(), task.getEventTime())
@@ -398,12 +390,6 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToCurrentBranch(
 		isRebuilt,
 		targetWorkflow,
 		newWorkflow,
-		&persistence.WorkflowEvents{
-			DomainID:   task.getDomainID(),
-			WorkflowID: task.getExecution().GetWorkflowId(),
-			RunID:      task.getExecution().GetRunId(),
-			Events:     task.getEvents(),
-		},
 	)
 	if err == nil {
 		r.notify(task.getSourceCluster(), task.getEventTime())
@@ -533,12 +519,6 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsResetWorkflow(
 		ctx,
 		task.getEventTime(),
 		targetWorkflow,
-		&persistence.WorkflowEvents{
-			DomainID:   task.getDomainID(),
-			WorkflowID: task.getExecution().GetWorkflowId(),
-			RunID:      task.getExecution().GetRunId(),
-			Events:     task.getEvents(),
-		},
 	)
 	if err == nil {
 		r.notify(task.getSourceCluster(), task.getEventTime())

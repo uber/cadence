@@ -344,9 +344,8 @@ struct QueryWorkflowResponse {
 }
 
 struct ReapplyEventsRequest {
-  10: optional string domainID
-  20: optional shared.WorkflowExecution workflowExecution
-  30: optional list<shared.HistoryEvent> events
+  10: optional string domainUUID
+  20: optional shared.ReapplyEventsRequest request
 }
 
 /**

@@ -3494,9 +3494,8 @@ func (wh *WorkflowHandler) ReapplyEvents(
 	}
 
 	err = wh.history.ReapplyEvents(ctx, &h.ReapplyEventsRequest{
-		DomainID:          common.StringPtr(domainEntry.GetInfo().ID),
-		WorkflowExecution: request.WorkflowExecution,
-		Events:            request.Events,
+		DomainUUID: common.StringPtr(domainEntry.GetInfo().ID),
+		Request:    request,
 	})
 	if err != nil {
 		return wh.error(err, scope)
