@@ -26,7 +26,7 @@ import (
 
 func failDecision(
 	mutableState mutableState,
-	di *decisionInfo,
+	di *decisionInfo,w
 	decisionFailureCause workflow.DecisionTaskFailedCause,
 ) error {
 

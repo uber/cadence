@@ -253,7 +253,7 @@ func (t *nDCReplicationTaskImpl) generateNewRunTask(
 		tag.SourceCluster(t.sourceCluster),
 		tag.IncomingVersion(t.version),
 		tag.WorkflowFirstEventID(newFirstEvent.GetEventId()),
-		tag.WorkflowNextEventID(newLastEvent.GetTaskId()+1),
+		tag.WorkflowNextEventID(newLastEvent.GetEventId()+1),
 	)
 
 	return &nDCReplicationTaskImpl{
