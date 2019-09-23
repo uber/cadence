@@ -1476,8 +1476,13 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 		T:               s.T(),
 	}
 
-	_, err = poller1.PollAndProcessDecisionTask(false, false)
-	s.Nil(err)
+	for i := 0; i < 2; i++ {
+		_, err = poller1.PollAndProcessDecisionTask(false, false)
+		s.Nil(err)
+		if timerCreated {
+			break
+		}
+	}
 	s.True(timerCreated)
 
 	// Update domain to fail over
