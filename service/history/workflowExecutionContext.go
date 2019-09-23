@@ -337,6 +337,12 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 	workflowCAS *persistence.CurrentWorkflowCAS,
 ) (retError error) {
 
+	defer func() {
+		if retError != nil {
+			c.clear()
+		}
+	}()
+
 	resetWorkflow, workflowEventsSeq, err := resetMutableState.CloseTransactionAsSnapshot(
 		now,
 		transactionPolicyPassive,
@@ -360,6 +366,12 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 	var newWorkflow *persistence.WorkflowSnapshot
 	if newContext != nil && newMutableState != nil {
 
+		defer func() {
+			if retError != nil {
+				newContext.clear()
+			}
+		}()
+
 		newWorkflow, workflowEventsSeq, err = newMutableState.CloseTransactionAsSnapshot(
 			now,
 			transactionPolicyPassive,
@@ -381,6 +393,12 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 
 	var currentWorkflow *persistence.WorkflowMutation
 	if currentContext != nil && currentMutableState != nil && currentTransactionPolicy != nil {
+
+		defer func() {
+			if retError != nil {
+				currentContext.clear()
+			}
+		}()
 
 		currentWorkflow, workflowEventsSeq, err = currentMutableState.CloseTransactionAsMutation(
 			now,
@@ -529,6 +547,12 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	currentWorkflowTransactionPolicy transactionPolicy,
 	newWorkflowTransactionPolicy *transactionPolicy,
 ) (retError error) {
+
+	defer func() {
+		if retError != nil {
+			c.clear()
+		}
+	}()
 
 	currentWorkflow, workflowEventsSeq, err := c.msBuilder.CloseTransactionAsMutation(
 		now,
