@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/uber/cadence/badge.svg)](https://coveralls.io/github/uber/cadence)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://app.slack.com/team/UFQ98VD0T)
 
-Visit [cadenceworkflow.io](https://cadenceworkflow.io/) to learn about Cadence.
+Visit [cadenceworkflow.io](https://cadenceworkflow.io) to learn about Cadence.
 
 This repo contains the source code of the Cadence server. To implement workflows, activities and worker use [Go client](https://github.com/uber-go/cadence-client) or [Java client](https://github.com/uber-java/cadence-client).
 
