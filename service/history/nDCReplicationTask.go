@@ -136,7 +136,7 @@ func newNDCReplicationTask(
 		tag.SourceCluster(sourceCluster),
 		tag.IncomingVersion(version),
 		tag.WorkflowFirstEventID(firstEvent.GetEventId()),
-		tag.WorkflowNextEventID(lastEvent.GetTaskId()+1),
+		tag.WorkflowNextEventID(lastEvent.GetEventId()+1),
 	)
 
 	return &nDCReplicationTaskImpl{
