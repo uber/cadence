@@ -38,6 +38,9 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
+
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -47,8 +50,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 )
 
 type (
@@ -65,7 +66,7 @@ type (
 )
 
 const (
-	cacheRefreshInterval = cache.DomainCacheRefreshInterval + time.Second
+	cacheRefreshInterval = cache.DomainCacheRefreshInterval + 5*time.Second
 )
 
 var (
@@ -1388,9 +1389,22 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	workflowCompleted := false
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
-		if !timerCreated {
-			timerCreated = true
 
+		resp, err := client1.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+				RunId:      common.StringPtr(we.GetRunId()),
+			},
+		})
+		s.Nil(err)
+		for _, event := range resp.History.Events {
+			if event.GetEventType() == workflow.EventTypeTimerStarted {
+				timerCreated = true
+			}
+		}
+
+		if !timerCreated {
 			// Send a signal in cluster
 			signalName := "my signal"
 			signalInput := []byte("my signal input.")
@@ -1405,7 +1419,6 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 				Identity:   common.StringPtr(""),
 			})
 			s.Nil(err)
-
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartTimer),
 				StartTimerDecisionAttributes: &workflow.StartTimerDecisionAttributes{
