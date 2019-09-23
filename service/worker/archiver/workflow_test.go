@@ -156,7 +156,7 @@ func (s *workflowSuite) TestReplayArchiveHistoryWorkflow() {
 		ArchivalsPerIteration:         dynamicconfig.GetIntPropertyFn(1000),
 		TimeLimitPerArchivalIteration: dynamicconfig.GetDurationPropertyFn(MaxArchivalIterationTimeout()),
 	}
-	err := worker.ReplayWorkflowHistoryFromJSONFile(logger, "testdata/archive_history_workflow_history.json")
+	err := worker.ReplayWorkflowHistoryFromJSONFile(logger, "testdata/archive_history_workflow_history_v1.json")
 	s.NoError(err)
 }
 
