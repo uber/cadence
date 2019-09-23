@@ -473,6 +473,11 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 			runID); err != nil {
 			return err
 		}
+		if newWorkflow != nil {
+			if err := applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+				return err
+			}
+		}
 
 	case p.UpdateWorkflowModeUpdateCurrent:
 		if newWorkflow != nil {

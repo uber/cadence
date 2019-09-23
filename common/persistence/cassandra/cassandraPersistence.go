@@ -1360,6 +1360,14 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			runID); err != nil {
 			return err
 		}
+		if newWorkflow != nil {
+			if err := applyWorkflowSnapshotBatchAsNew(batch,
+				d.shardID,
+				newWorkflow,
+			); err != nil {
+				return err
+			}
+		}
 
 	case p.UpdateWorkflowModeUpdateCurrent:
 		if newWorkflow != nil {
