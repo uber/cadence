@@ -49,7 +49,7 @@ func SimpleWorkflow(ctx workflow.Context, value string) error {
     if err := future.Get(ctx, &result); err != nil {
         return err
     }
-    workflow.GetLogger(ctx).Info(“Done”, zap.String(“result”, result))
+    workflow.GetLogger(ctx).Info("Done", zap.String("result", result))
     return nil
 }
 ```
