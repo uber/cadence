@@ -1390,21 +1390,9 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 
-		resp, err := client1.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(domainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      common.StringPtr(we.GetRunId()),
-			},
-		})
-		s.Nil(err)
-		for _, event := range resp.History.Events {
-			if event.GetEventType() == workflow.EventTypeTimerStarted {
-				timerCreated = true
-			}
-		}
-
 		if !timerCreated {
+			timerCreated = true
+
 			// Send a signal in cluster
 			signalName := "my signal"
 			signalInput := []byte("my signal input.")
@@ -1478,7 +1466,10 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 
 	for i := 0; i < 2; i++ {
 		_, err = poller1.PollAndProcessDecisionTask(false, false)
-		s.Nil(err)
+		if err != nil {
+			timerCreated = false
+			continue
+		}
 		if timerCreated {
 			break
 		}
