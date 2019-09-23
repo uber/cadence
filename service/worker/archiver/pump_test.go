@@ -174,7 +174,7 @@ func pumpWorkflow(ctx workflow.Context, requestLimit int, numRequests int) error
 	signalCh := workflow.NewBufferedChannel(ctx, requestLimit)
 	signalsSent, signalHashes := sendRequestsToChannel(ctx, signalCh, numRequests)
 	requestCh := workflow.NewBufferedChannel(ctx, requestLimit)
-	pump := NewPump(ctx, pumpTestLogger, pumpTestMetrics, nil, time.Nanosecond, requestLimit, requestCh, signalCh, NewHistoryRequestReceiver())
+	pump := NewPump(ctx, pumpTestLogger, pumpTestMetrics, nil, time.Nanosecond, requestLimit, requestCh, signalCh, GetHistoryRequestReceiver())
 	actual := pump.Run()
 	expected := PumpResult{
 		PumpedHashes:          signalHashes,
@@ -195,7 +195,7 @@ func signalChClosePumpWorkflow(ctx workflow.Context, requestLimit int, numReques
 	signalsSent, signalHashes := sendRequestsToChannelBlocking(ctx, signalCh, numRequests)
 	signalCh.Close()
 	requestCh := workflow.NewBufferedChannel(ctx, requestLimit)
-	pump := NewPump(ctx, pumpTestLogger, pumpTestMetrics, nil, time.Nanosecond, requestLimit, requestCh, signalCh, NewHistoryRequestReceiver())
+	pump := NewPump(ctx, pumpTestLogger, pumpTestMetrics, nil, time.Nanosecond, requestLimit, requestCh, signalCh, GetHistoryRequestReceiver())
 	actual := pump.Run()
 	expected := PumpResult{
 		PumpedHashes:          signalHashes,
@@ -216,7 +216,7 @@ func signalAndCarryoverPumpWorkflow(ctx workflow.Context, requestLimit int, carr
 	signalsSent, signalHashes := sendRequestsToChannel(ctx, signalCh, numSignals)
 	carryover, carryoverHashes := randomCarryover(carryoverSize)
 	requestCh := workflow.NewBufferedChannel(ctx, requestLimit)
-	pump := NewPump(ctx, pumpTestLogger, pumpTestMetrics, carryover, time.Nanosecond, requestLimit, requestCh, signalCh, NewHistoryRequestReceiver())
+	pump := NewPump(ctx, pumpTestLogger, pumpTestMetrics, carryover, time.Nanosecond, requestLimit, requestCh, signalCh, GetHistoryRequestReceiver())
 	actual := pump.Run()
 	expected := PumpResult{
 		PumpedHashes:          append(carryoverHashes, signalHashes...),

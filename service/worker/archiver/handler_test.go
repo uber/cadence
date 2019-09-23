@@ -186,7 +186,7 @@ func startAndFinishArchiverWorkflow(ctx workflow.Context, concurrency int, numRe
 		handlerTestMetrics,
 		concurrency,
 		requestCh,
-		NewHistoryRequestReceiver(),
+		GetHistoryRequestReceiver(),
 		NewHistoryRequestProcessor(handlerTestLogger, handlerTestMetrics),
 	)
 	handler.Start()

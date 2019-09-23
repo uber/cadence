@@ -34,9 +34,13 @@ type (
 	historyRequestReceiver struct{}
 )
 
-// NewHistoryRequestReceiver returns a new receiver for archive history requests
-func NewHistoryRequestReceiver() RequestReceiver {
-	return &historyRequestReceiver{}
+var (
+	hReceiver = &historyRequestReceiver{}
+)
+
+// GetHistoryRequestReceiver returns a new receiver for archive history requests
+func GetHistoryRequestReceiver() RequestReceiver {
+	return hReceiver
 }
 
 func (r *historyRequestReceiver) Receive(ctx workflow.Context, ch workflow.Channel) (interface{}, bool) {

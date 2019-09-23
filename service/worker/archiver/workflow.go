@@ -47,7 +47,7 @@ func archiveHistoryWorkflow(ctx workflow.Context, carryover []ArchiveHistoryRequ
 		nil,
 		nil,
 		convertHistoryRequestSlice(carryover),
-		NewHistoryRequestReceiver(),
+		GetHistoryRequestReceiver(),
 		NewHistoryRequestProcessor(
 			globalLogger,
 			NewReplayMetricsScope(globalMetricsClient.Scope(metrics.HistoryArchivalHandlerScope), ctx),

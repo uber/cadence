@@ -169,7 +169,7 @@ func archiveHistoryWorkflowTest(ctx workflow.Context) error {
 		workflowTestHandler,
 		workflowTestPump,
 		nil,
-		NewHistoryRequestReceiver(),
+		GetHistoryRequestReceiver(),
 		NewHistoryRequestProcessor(workflowTestLogger, workflowTestMetricsScope),
 	)
 }
