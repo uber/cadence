@@ -11,15 +11,13 @@ require (
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
-	github.com/bsm/sarama-cluster v2.1.15+incompatible
+	github.com/bsm/sarama-cluster v2.1.13+incompatible
 	github.com/cactus/go-statsd-client v3.1.1+incompatible
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
-	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
-	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/fatih/color v0.0.0-20181010231311-3f9d52f7176a
 	github.com/fatih/structtag v1.0.0 // indirect
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect

@@ -18,58 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package schema
+package archiver
 
 import (
-	"bufio"
-	"io"
-	"os"
-	"strings"
+	"go.uber.org/cadence/workflow"
 )
 
-const newLineDelim = '\n'
-
-// ParseFile takes a cql / sql file path as input
-// and returns an array of cql / sql statements on
-// success.
-func ParseFile(filePath string) ([]string, error) {
-	// #nosec
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
+type (
+	// RequestReceiver is for receiving archive requests from a workflow signal channel
+	RequestReceiver interface {
+		Receive(workflow.Context, workflow.Channel) (interface{}, bool)
+		ReceiveAsync(workflow.Channel) (interface{}, bool)
 	}
 
-	reader := bufio.NewReader(f)
+	historyRequestReceiver struct{}
+)
 
-	var line string
-	var currStmt string
-	var stmts = make([]string, 0, 4)
+var (
+	hReceiver = &historyRequestReceiver{}
+)
 
-	for err == nil {
+// GetHistoryRequestReceiver returns a new receiver for archive history requests
+func GetHistoryRequestReceiver() RequestReceiver {
+	return hReceiver
+}
 
-		line, err = reader.ReadString(newLineDelim)
-		line = strings.TrimSpace(line)
-		if len(line) < 1 {
-			continue
-		}
+func (r *historyRequestReceiver) Receive(ctx workflow.Context, ch workflow.Channel) (interface{}, bool) {
+	var signal ArchiveHistoryRequest
+	more := ch.Receive(ctx, &signal)
+	return signal, more
+}
 
-		// Filter out the comment lines, the
-		// only recognized comment line format
-		// is any line that starts with double dashes
-		tokens := strings.Split(line, "--")
-		if len(tokens) > 0 && len(tokens[0]) > 0 {
-			currStmt += tokens[0]
-			// semi-colon is the end of statement delim
-			if strings.HasSuffix(currStmt, ";") {
-				stmts = append(stmts, currStmt)
-				currStmt = ""
-			}
-		}
-	}
-
-	if err == io.EOF {
-		return stmts, nil
-	}
-
-	return nil, err
+func (r *historyRequestReceiver) ReceiveAsync(ch workflow.Channel) (interface{}, bool) {
+	var signal ArchiveHistoryRequest
+	ok := ch.ReceiveAsync(&signal)
+	return signal, ok
 }
