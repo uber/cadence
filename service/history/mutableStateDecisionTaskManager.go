@@ -89,6 +89,8 @@ type (
 		) (*workflow.HistoryEvent, error)
 		AddDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64) (*workflow.HistoryEvent, error)
 
+		ScheduleInMemoryDecisionTask() (*decisionInfo, error)
+
 		FailDecision(incrementAttempt bool)
 		DeleteDecision()
 		UpdateDecision(decision *decisionInfo)
@@ -549,6 +551,11 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 		return nil, err
 	}
 	return event, nil
+}
+
+func (m *mutableStateDecisionTaskManagerImpl) ScheduleInMemoryDecisionTask() (*decisionInfo, error) {
+	// TODO: implement me...
+	return nil, nil
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) FailDecision(

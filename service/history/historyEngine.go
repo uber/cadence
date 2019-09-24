@@ -586,43 +586,79 @@ func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
 ) (*h.QueryWorkflowResponse, error) {
-	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-	if err != nil {
-		return nil, err
-	}
-	ms, err := context.loadWorkflowExecution()
-	if err != nil {
-		return nil, err
-	}
-	queryRegistry := ms.GetQueryRegistry()
-	release(nil)
-	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
-	defer queryRegistry.removeQuery(queryID)
 	domainCache, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
 	if err != nil {
 		return nil, err
 	}
 	timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name))
 	defer timer.Stop()
+
+	// ensure decision task exists to dispatch query on
+retryLoop:
+	for i := 0; i < conditionalRetryCount; i++ {
+		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+		if err != nil {
+			return nil, err
+		}
+		msBuilder, err := context.loadWorkflowExecution()
+		if err != nil {
+			release(err)
+			return nil, err
+		}
+		// a scheduled decision task already exists - no need to schedule an in memory decision task
+		if msBuilder.HasPendingDecision() && !msBuilder.HasInFlightDecision() {
+			release(nil)
+			break retryLoop
+		}
+		// there exists an inflight decision task - try again to schedule decision task
+		if msBuilder.HasInFlightDecision() {
+			release(nil)
+			// wait for currently inflight decision task to complete
+			select {
+			case <-timer.C:
+				return nil, ErrQueryTimeout
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(100 * time.Millisecond):
+				continue retryLoop
+			}
+		}
+		// there is no scheduled or started decision task - schedule in memory decision task
+		_, err = msBuilder.ScheduleInMemoryDecisionTask()
+		if err != nil {
+			release(err)
+			return nil, err
+		}
+	}
+
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	if err != nil {
+		return nil, err
+	}
+	msBuilder, err := context.loadWorkflowExecution()
+	if err != nil {
+		release(err)
+		return nil, err
+	}
+	queryRegistry := msBuilder.GetQueryRegistry()
+	release(nil)
+	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
+	defer queryRegistry.removeQuery(queryID)
+
 	select {
 	case <-queryTermCh:
 		querySnapshot, err := queryRegistry.getQuerySnapshot(queryID)
 		if err != nil {
 			return nil, err
 		}
-		switch querySnapshot.state {
-		case queryStateCompleted:
-			result := querySnapshot.queryResult
-			switch result.GetResultType() {
-			case workflow.QueryResultTypeAnswered:
-				return &h.QueryWorkflowResponse{
-					QueryResult: result.GetAnswer(),
-				}, nil
-			case workflow.QueryResultTypeFailed:
-				return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
-			}
-		case queryStateExpired:
-			return nil, ErrQueryTimeout
+		result := querySnapshot.queryResult
+		switch result.GetResultType() {
+		case workflow.QueryResultTypeAnswered:
+			return &h.QueryWorkflowResponse{
+				QueryResult: result.GetAnswer(),
+			}, nil
+		case workflow.QueryResultTypeFailed:
+			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
 		}
 	case <-timer.C:
 		return nil, ErrQueryTimeout
@@ -630,6 +666,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, ctx.Err()
 	}
 	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
+
 }
 
 func (e *historyEngineImpl) getMutableState(

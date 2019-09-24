@@ -3569,6 +3569,10 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	return workflowSnapshot, workflowEventsSeq, nil
 }
 
+func (e *mutableStateBuilder) ScheduleInMemoryDecisionTask() (*decisionInfo, error) {
+	return e.decisionTaskManager.ScheduleInMemoryDecisionTask()
+}
+
 func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
 	now time.Time,
 	transactionPolicy transactionPolicy,
