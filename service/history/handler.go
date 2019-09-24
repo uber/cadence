@@ -1559,6 +1559,15 @@ func (h *Handler) ReapplyEvents(
 	if err != nil {
 		return h.error(err, scope, domainID, workflowID)
 	}
+	// deserialize history event object
+	historyEvents, err := h.GetPayloadSerializer().DeserializeBatchEvents(&persistence.DataBlob{
+		Encoding: common.EncodingTypeThriftRW,
+		Data:     request.GetRequest().GetEvents().GetData(),
+	})
+	if err != nil {
+		return h.error(err, scope, domainID, workflowID)
+	}
+	request.HistoryEvents = historyEvents
 
 	if err := engine.ReapplyEvents(ctx, request); err != nil {
 		return h.error(err, scope, domainID, workflowID)

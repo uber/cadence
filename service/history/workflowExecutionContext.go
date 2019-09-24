@@ -361,20 +361,14 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 		return err
 	}
 	resetHistorySize := c.getHistorySize()
+	reapplyEvent := []*workflow.HistoryEvent{}
 	for _, workflowEvents := range workflowEventsSeq {
-		if conflictResolveMode == persistence.ConflictResolveWorkflowModeBypassCurrent {
-			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
-			err := c.reapplyEvents(ctx, workflowEvents)
-			cancel()
-			if err != nil {
-				return err
-			}
-		}
 		eventsSize, err := c.persistNonFirstWorkflowEvents(workflowEvents)
 		if err != nil {
 			return err
 		}
 		resetHistorySize += eventsSize
+		reapplyEvent = append(reapplyEvent, workflowEvents.Events...)
 	}
 	c.setHistorySize(resetHistorySize)
 	resetWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -444,6 +438,17 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 		currentContext.setHistorySize(currentWorkflowSize)
 		currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
 			HistorySize: currentWorkflowSize,
+		}
+	}
+
+	if conflictResolveMode == persistence.ConflictResolveWorkflowModeBypassCurrent {
+		for _, workflowEvents := range workflowEventsSeq {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
+			err := c.reapplyEvents(ctx, workflowEvents)
+			cancel()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -576,14 +581,6 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 
 	currentWorkflowSize := c.getHistorySize()
 	for _, workflowEvents := range workflowEventsSeq {
-		if updateMode == persistence.UpdateWorkflowModeBypassCurrent {
-			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
-			err := c.reapplyEvents(ctx, workflowEvents)
-			cancel()
-			if err != nil {
-				return err
-			}
-		}
 		eventsSize, err := c.persistNonFirstWorkflowEvents(workflowEvents)
 		if err != nil {
 			return err
@@ -636,6 +633,17 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		newWorkflow,
 	); err != nil {
 		return err
+	}
+
+	if updateMode == persistence.UpdateWorkflowModeBypassCurrent {
+		for _, workflowEvents := range workflowEventsSeq {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
+			err := c.reapplyEvents(ctx, workflowEvents)
+			cancel()
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	resp, err := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
