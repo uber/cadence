@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	errAlreadyCompleted       = errors.New("query has already been completed, cannot post any new events")
+	errAlreadyCompleted      = errors.New("query has already been completed, cannot post any new events")
 	errInvalidEvent          = errors.New("event cannot be applied to query in state")
 	errResultAlreadyRecorded = errors.New("result already recorded cannot make state transition")
 )
