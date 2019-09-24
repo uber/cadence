@@ -44,6 +44,10 @@ var (
 	WorkflowActionDecisionTaskTimedOut  = workflowAction("add-decisiontask-timedout-event")
 	WorkflowActionDecisionTaskFailed    = workflowAction("add-decisiontask-failed-event")
 
+	// in memory decision
+	WorkflowActionInMemoryDecisionTaskScheduled = workflowAction("add-in-memory-decisiontask-scheduled")
+	WorkflowActionInMemoryDecisionTaskStarted   = workflowAction("add-in-memory-decisiontask-started")
+
 	// activity
 	WorkflowActionActivityTaskScheduled       = workflowAction("add-activitytask-scheduled-event")
 	WorkflowActionActivityTaskStarted         = workflowAction("add-activitytask-started-event")

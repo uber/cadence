@@ -1505,12 +1505,20 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 func (e *mutableStateBuilder) AddFirstDecisionTaskScheduled(
 	startEvent *workflow.HistoryEvent,
 ) error {
+	opTag := tag.WorkflowActionDecisionTaskScheduled
+	if err := e.checkMutability(opTag); err != nil {
+		return err
+	}
 	return e.decisionTaskManager.AddFirstDecisionTaskScheduled(startEvent)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(
 	bypassTaskGeneration bool,
 ) (*decisionInfo, error) {
+	opTag := tag.WorkflowActionDecisionTaskScheduled
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
 	return e.decisionTaskManager.AddDecisionTaskScheduledEvent(bypassTaskGeneration)
 }
 
@@ -3569,8 +3577,20 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	return workflowSnapshot, workflowEventsSeq, nil
 }
 
-func (e *mutableStateBuilder) ScheduleInMemoryDecisionTask() (*decisionInfo, error) {
-	return e.decisionTaskManager.ScheduleInMemoryDecisionTask()
+func (e *mutableStateBuilder) AddInMemoryDecisionTaskScheduled() error {
+	return e.decisionTaskManager.AddInMemoryDecisionTaskScheduled()
+}
+
+func (e *mutableStateBuilder) AddInMemoryDecisionTaskStarted() error {
+	return e.decisionTaskManager.AddInMemoryDecisionTaskStarted()
+}
+
+func (e *mutableStateBuilder) DeleteInMemoryDecisionTask() {
+	e.decisionTaskManager.DeleteInMemoryDecisionTask()
+}
+
+func (e *mutableStateBuilder) HasInMemoryDecisionTask() bool {
+	return e.decisionTaskManager.HasInMemoryDecisionTask()
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(

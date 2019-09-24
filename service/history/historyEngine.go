@@ -593,10 +593,29 @@ func (e *historyEngineImpl) QueryWorkflow(
 	timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name))
 	defer timer.Stop()
 
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	if err != nil {
+		return nil, err
+	}
+	msBuilder, err := context.loadWorkflowExecution()
+	if err != nil {
+		release(err)
+		return nil, err
+	}
+	queryRegistry := msBuilder.GetQueryRegistry()
+
+	// Below we may or may not create an in memory decision task.
+	// Regardless of if its created or not it is safe to call DeleteInMemoryDecisionTask.
+	// In the case where an in memory decision task is created it must be removed so as to not block other decision tasks.
+	defer msBuilder.DeleteInMemoryDecisionTask()
+	release(nil)
+	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
+	defer queryRegistry.removeQuery(queryID)
+
 	// ensure decision task exists to dispatch query on
 retryLoop:
 	for i := 0; i < conditionalRetryCount; i++ {
-		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+		context, release, err = e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
 		if err != nil {
 			return nil, err
 		}
@@ -624,27 +643,13 @@ retryLoop:
 			}
 		}
 		// there is no scheduled or started decision task - schedule in memory decision task
-		_, err = msBuilder.ScheduleInMemoryDecisionTask()
-		if err != nil {
+		if err := msBuilder.AddInMemoryDecisionTaskScheduled(); err != nil {
 			release(err)
 			return nil, err
 		}
 	}
 
-	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-	if err != nil {
-		return nil, err
-	}
-	msBuilder, err := context.loadWorkflowExecution()
-	if err != nil {
-		release(err)
-		return nil, err
-	}
-	queryRegistry := msBuilder.GetQueryRegistry()
-	release(nil)
-	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
-	defer queryRegistry.removeQuery(queryID)
-
+	// at this point query has been buffered and there is a pending decision task to dispatch the query on
 	select {
 	case <-queryTermCh:
 		querySnapshot, err := queryRegistry.getQuerySnapshot(queryID)
