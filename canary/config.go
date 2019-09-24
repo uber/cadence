@@ -1,11 +1,29 @@
+// Copyright (c) 2019 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package canary
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/uber-go/tally"
-	"github.com/uber-go/tally/m3"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/config"
 	"go.uber.org/zap"
@@ -62,15 +80,4 @@ func newRuntimeContext(env string, logger *zap.Logger, scope tally.Scope, servic
 		metrics: scope,
 		service: service,
 	}
-}
-
-// newTallyScope builds and returns a tally scope from m3 configuration
-func newTallyScope(cfg *m3.Configuration) (tally.Scope, error) {
-	reporter, err := cfg.NewReporter()
-	if err != nil {
-		return nil, err
-	}
-	scopeOpts := tally.ScopeOptions{CachedReporter: reporter}
-	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
-	return scope, nil
 }
