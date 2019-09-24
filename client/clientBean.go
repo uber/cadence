@@ -147,6 +147,13 @@ func (h *clientBeanImpl) GetHistoryClient() history.Client {
 	return h.historyClient
 }
 
+func (h *clientBeanImpl) SetHistoryClient(
+	client history.Client,
+) {
+
+	h.historyClient = client
+}
+
 func (h *clientBeanImpl) GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	if client := h.matchingClient.Load(); client != nil {
 		return client.(matching.Client), nil
@@ -154,8 +161,22 @@ func (h *clientBeanImpl) GetMatchingClient(domainIDToName DomainIDToNameFunc) (m
 	return h.lazyInitMatchingClient(domainIDToName)
 }
 
+func (h *clientBeanImpl) SetMatchingClient(
+	client matching.Client,
+) {
+
+	h.matchingClient.Store(client)
+}
+
 func (h *clientBeanImpl) GetFrontendClient() frontend.Client {
 	return h.frontendClient
+}
+
+func (h *clientBeanImpl) SetFrontendClient(
+	client frontend.Client,
+) {
+
+	h.frontendClient = client
 }
 
 func (h *clientBeanImpl) GetRemoteAdminClient(cluster string) admin.Client {
@@ -170,6 +191,14 @@ func (h *clientBeanImpl) GetRemoteAdminClient(cluster string) admin.Client {
 	return client
 }
 
+func (h *clientBeanImpl) SetRemoteAdminClient(
+	cluster string,
+	client admin.Client,
+) {
+
+	h.remoteAdminClients[cluster] = client
+}
+
 func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client {
 	client, ok := h.remoteFrontendClients[cluster]
 	if !ok {
@@ -182,7 +211,6 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 	return client
 }
 
-// SetRemoteFrontendClient is only used for testing
 func (h *clientBeanImpl) SetRemoteFrontendClient(
 	cluster string,
 	client frontend.Client,

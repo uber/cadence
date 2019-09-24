@@ -128,7 +128,8 @@ type (
 
 		reapplyEvents(
 			ctx context.Context,
-			events *persistence.WorkflowEvents) error
+			events *persistence.WorkflowEvents,
+		) error
 	}
 )
 
@@ -1187,8 +1188,9 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 	if len(reapplyEvents) == 0 {
 		return nil
 	}
-
 	domainID := events.DomainID
+	// Reapply events only reapply to the current run.
+	// Leave the run id empty will reapply events to the current run.
 	execution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(events.WorkflowID),
 	}
@@ -1200,28 +1202,32 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 		return err
 	}
 
+	activeCluster := domainEntry.GetReplicationConfig().ActiveClusterName
+	if activeCluster == c.shard.GetClusterMetadata().GetCurrentClusterName() {
+		return c.shard.GetEngine().ReapplyEvents(ctx, &history.ReapplyEventsRequest{
+			DomainUUID:    common.StringPtr(domainID),
+			HistoryEvents: reapplyEvents,
+			Request: &workflow.ReapplyEventsRequest{
+				DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
+				WorkflowExecution: execution,
+			},
+		})
+	}
+
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(reapplyEvents, common.EncodingTypeThriftRW)
 	if err != nil {
 		return err
 	}
-	request := &workflow.ReapplyEventsRequest{
-		DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
-		WorkflowExecution: execution,
-		Events:            reapplyEventsDataBlob.ToThrift(),
-	}
-
-	activeCluster := domainEntry.GetReplicationConfig().ActiveClusterName
-	if activeCluster == c.shard.GetClusterMetadata().GetCurrentClusterName() {
-		return c.shard.GetEngine().ReapplyEvents(ctx, &history.ReapplyEventsRequest{
-			Request:    request,
-			DomainUUID: common.StringPtr(domainID),
-		})
-	}
-
 	// The active cluster of the domain is differ from the current cluster
 	// Use frontend client to route this request to the active cluster
 	// Reapplication only happens in active cluster
-	return clientBean.GetRemoteFrontendClient(activeCluster).ReapplyEvents(ctx, request)
+	return clientBean.GetRemoteFrontendClient(activeCluster).ReapplyEvents(
+		ctx,
+		&workflow.ReapplyEventsRequest{
+			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
+			WorkflowExecution: execution,
+			Events:            reapplyEventsDataBlob.ToThrift(),
+		})
 }

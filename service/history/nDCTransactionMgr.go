@@ -130,7 +130,7 @@ type (
 		) (nDCWorkflow, error)
 	}
 
-	nDCTransactionMgrImpl struct { // client bean, domain cache
+	nDCTransactionMgrImpl struct {
 		shard           ShardContext
 		domainCache     cache.DomainCache
 		historyCache    *historyCache
@@ -159,7 +159,7 @@ func newNDCTransactionMgr(
 		historyCache:    historyCache,
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		historyV2Mgr:    shard.GetHistoryV2Manager(),
-		serializer:      persistence.NewPayloadSerializer(),
+		serializer:      shard.GetService().GetPayloadSerializer(),
 		metricsClient:   shard.GetMetricsClient(),
 		logger:          logger.WithTags(tag.ComponentHistoryReplicator),
 

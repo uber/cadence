@@ -201,11 +201,6 @@ func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchWorkflowUpdateAsZombi
 	newWorkflow nDCWorkflow,
 ) error {
 
-	// Events land on non-current branch needs to do re-apply
-	//if err := r.transactionMgr.reapplyEvents(ctx, reapplyEvents); err != nil {
-	//	return err
-	//}
-
 	if !isWorkflowRebuilt {
 		return r.executeTransaction(
 			ctx,

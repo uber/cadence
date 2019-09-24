@@ -51,6 +51,12 @@ func (_m *MockClientBean) GetHistoryClient() history.Client {
 	return r0
 }
 
+// SetHistoryClient provides a mock function with given fields: _a0
+func (_m *MockClientBean) SetHistoryClient(
+	_a0 history.Client,
+) {
+}
+
 // GetMatchingClient provides a mock function with given fields: domainIDToName
 func (_m *MockClientBean) GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	ret := _m.Called(domainIDToName)
@@ -74,6 +80,12 @@ func (_m *MockClientBean) GetMatchingClient(domainIDToName DomainIDToNameFunc) (
 	return r0, r1
 }
 
+// SetMatchingClient provides a mock function with given fields: _a0
+func (_m *MockClientBean) SetMatchingClient(
+	_a0 matching.Client,
+) {
+}
+
 // GetFrontendClient provides a mock function with given fields:
 func (_m *MockClientBean) GetFrontendClient() frontend.Client {
 	ret := _m.Called()
@@ -90,6 +102,12 @@ func (_m *MockClientBean) GetFrontendClient() frontend.Client {
 	return r0
 }
 
+// SetFrontendClient provides a mock function with given fields: _a0
+func (_m *MockClientBean) SetFrontendClient(
+	_a0 frontend.Client,
+) {
+}
+
 // GetRemoteAdminClient provides a mock function with given fields: _a0
 func (_m *MockClientBean) GetRemoteAdminClient(_a0 string) admin.Client {
 	ret := _m.Called(_a0)
@@ -104,6 +122,13 @@ func (_m *MockClientBean) GetRemoteAdminClient(_a0 string) admin.Client {
 	}
 
 	return r0
+}
+
+// SetRemoteAdminClient provides a mock function with given fields: _a0, _a1
+func (_m *MockClientBean) SetRemoteAdminClient(
+	_a0 string,
+	_a1 admin.Client,
+) {
 }
 
 // GetRemoteFrontendClient provides a mock function with given fields: _a0

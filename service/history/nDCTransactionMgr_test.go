@@ -183,11 +183,9 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CheckDB_NotCurrent() {
 	var releaseFn releaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{
-			{
-				EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionSignaled),
-			},
-		},
+		Events: []*shared.HistoryEvent{{
+			EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionSignaled),
+		}},
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}
