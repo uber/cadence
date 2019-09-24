@@ -590,7 +590,8 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
-	timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name))
+	ttl := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
+	timer := time.NewTimer(ttl)
 	defer timer.Stop()
 
 	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
@@ -606,7 +607,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	// Below we may or may not create an in memory decision task.
 	// Regardless of if its created or not it is safe to call DeleteInMemoryDecisionTask.
-	// In the case where an in memory decision task is created it must be removed so as to not block other decision tasks.
 	defer msBuilder.DeleteInMemoryDecisionTask()
 	release(nil)
 	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
@@ -643,7 +643,7 @@ retryLoop:
 			}
 		}
 		// there is no scheduled or started decision task - schedule in memory decision task
-		if err := msBuilder.AddInMemoryDecisionTaskScheduled(); err != nil {
+		if err := msBuilder.AddInMemoryDecisionTaskScheduled(ttl); err != nil {
 			release(err)
 			return nil, err
 		}

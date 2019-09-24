@@ -218,9 +218,10 @@ type (
 		CloseTransactionAsMutation(now time.Time, transactionPolicy transactionPolicy) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
 		CloseTransactionAsSnapshot(now time.Time, transactionPolicy transactionPolicy) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
 
-		AddInMemoryDecisionTaskScheduled() error
+		AddInMemoryDecisionTaskScheduled(time.Duration) error
 		AddInMemoryDecisionTaskStarted() error
 		DeleteInMemoryDecisionTask()
-		HasInMemoryDecisionTask() bool
+		HasScheduledInMemoryDecisionTask() bool
+		HasStartedInMemoryDecisionTask() bool
 	}
 )
