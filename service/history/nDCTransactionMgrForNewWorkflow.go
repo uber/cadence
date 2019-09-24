@@ -223,14 +223,19 @@ func (r *nDCTransactionMgrForNewWorkflowImpl) createAsZombie(
 		return err
 	}
 
-	if err := targetWorkflow.getContext().reapplyEvents(ctx, targetWorkflowEventsSeq[0]); err != nil {
-		return err
-	}
-
 	targetWorkflowHistorySize, err := targetWorkflow.getContext().persistFirstWorkflowEvents(
 		targetWorkflowEventsSeq[0],
 	)
 	if err != nil {
+		return err
+	}
+
+	if err := targetWorkflow.getContext().reapplyEvents(
+		ctx,
+		targetWorkflowSnapshot.ExecutionInfo.DomainID,
+		targetWorkflowSnapshot.ExecutionInfo.WorkflowID,
+		targetWorkflowEventsSeq[0].Events,
+	); err != nil {
 		return err
 	}
 

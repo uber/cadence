@@ -1521,6 +1521,7 @@ const (
 	GetReplicationMessagesForShardLatency
 	ArchiveVisibilityAttemptCount
 	ArchiveVisibilityFailedCount
+	EventReapplySkippedCount
 
 	NumHistoryMetrics
 )
@@ -1816,6 +1817,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		ArchiveVisibilityAttemptCount:                     {metricName: "archive_visibility_attempt_count", metricType: Counter},
 		ArchiveVisibilityFailedCount:                      {metricName: "archive_visibility_failed_count", metricType: Counter},
+		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

@@ -3487,7 +3487,18 @@ func (wh *WorkflowHandler) ReapplyEvents(
 	if request == nil {
 		return wh.error(errRequestNotSet, scope)
 	}
-
+	if request.DomainName == nil || request.GetDomainName() == "" {
+		return wh.error(errDomainNotSet, scope)
+	}
+	if request.WorkflowExecution == nil {
+		return wh.error(errExecutionNotSet, scope)
+	}
+	if request.GetWorkflowExecution().GetWorkflowId() == "" {
+		return wh.error(errWorkflowIDNotSet, scope)
+	}
+	if request.GetEvents() == nil {
+		return wh.error(errWorkflowIDNotSet, scope)
+	}
 	domainEntry, err := wh.domainCache.GetDomain(request.GetDomainName())
 	if err != nil {
 		return wh.error(err, scope)

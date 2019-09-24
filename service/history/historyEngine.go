@@ -2431,17 +2431,19 @@ func (e *historyEngineImpl) GetReplicationMessages(ctx ctx.Context, taskID int64
 
 func (e *historyEngineImpl) ReapplyEvents(
 	ctx ctx.Context,
-	reapplyRequest *h.ReapplyEventsRequest,
+	domainUUID string,
+	workflowID string,
+	reapplyEvents []*workflow.HistoryEvent,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(reapplyRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
 	if err != nil {
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
 	// remove run id from the execution so that reapply events to the current run
 	execution := workflow.WorkflowExecution{
-		WorkflowId: reapplyRequest.GetRequest().GetWorkflowExecution().WorkflowId,
+		WorkflowId: common.StringPtr(workflowID),
 	}
 
 	return e.updateWorkflowExecutionWithAction(
@@ -2458,6 +2460,8 @@ func (e *historyEngineImpl) ReapplyEvents(
 			//  reset to workflow finish event
 			//  ignore this case for now
 			if !msBuilder.IsWorkflowExecutionRunning() {
+				e.logger.Warn("failed to reapply event to a finished workflow", tag.WorkflowDomainID(domainID), tag.WorkflowID(workflowID))
+				e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
 				return nil, nil
 			}
 			postActions := &updateWorkflowAction{
@@ -2466,7 +2470,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 			if err := e.eventsReapplier.reapplyEvents(
 				ctx,
 				msBuilder,
-				reapplyRequest.GetRequest().GetEvents(),
+				reapplyEvents,
 			); err != nil {
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
 				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}

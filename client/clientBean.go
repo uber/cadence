@@ -51,9 +51,13 @@ type (
 	// Bean in an collection of clients
 	Bean interface {
 		GetHistoryClient() history.Client
+		SetHistoryClient(client history.Client)
 		GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
+		SetMatchingClient(client matching.Client)
 		GetFrontendClient() frontend.Client
+		SetFrontendClient(client frontend.Client)
 		GetRemoteAdminClient(cluster string) admin.Client
+		SetRemoteAdminClient(cluster string, client admin.Client)
 		GetRemoteFrontendClient(cluster string) frontend.Client
 		SetRemoteFrontendClient(cluster string, client frontend.Client)
 	}

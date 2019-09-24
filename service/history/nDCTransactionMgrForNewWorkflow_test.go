@@ -266,7 +266,12 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Create
 	var currentReleaseFn releaseWorkflowExecutionFunc = func(error) { currentReleaseCalled = true }
 	currentWorkflow.EXPECT().getReleaseFn().Return(currentReleaseFn).AnyTimes()
 
-	targetWorkflowSnapshot := &persistence.WorkflowSnapshot{}
+	targetWorkflowSnapshot := &persistence.WorkflowSnapshot{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+		},
+	}
 	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{&persistence.WorkflowEvents{}}
 	targetWorkflowHistorySize := int64(12345)
 	targetMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
@@ -296,7 +301,9 @@ func (s *nDCTransactionMgrForNewWorkflowSuite) TestDispatchForNewWorkflow_Create
 		"",
 		int64(0),
 	).Return(nil).Once()
-	targetContext.On("reapplyEvents", mock.Anything, targetWorkflowEventsSeq[0]).Return(nil)
+	targetContext.On("reapplyEvents", mock.Anything, domainID, workflowID, targetWorkflowEventsSeq[0].Events).
+		Return(nil).
+		Times(1)
 
 	err := s.createMgr.dispatchForNewWorkflow(ctx, now, targetWorkflow)
 	s.NoError(err)
