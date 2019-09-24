@@ -26,10 +26,9 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -215,27 +214,6 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CheckDB_NotCurrent() {
 	context.On(
 		"updateWorkflowExecutionWithNew", now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, transactionPolicyPassive, (*transactionPolicy)(nil),
 	).Return(nil).Once()
-
-	domainEntry := cache.NewDomainCacheEntryForTest(
-		nil,
-		nil,
-		true,
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: "active",
-		},
-		int64(1),
-		nil,
-	)
-	controller := gomock.NewController(s.T())
-	historyClient := historyservicetest.NewMockClient(controller)
-	historyClient.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(domainEntry, nil).Times(1)
-	defer s.mockDomainCache.AssertExpectations(s.T())
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return("active").Times(1)
-	defer s.mockClusterMetadata.AssertExpectations(s.T())
-	s.mockClientBean.On("GetHistoryClient").Return(historyClient).Times(1)
-	defer s.mockClientBean.AssertExpectations(s.T())
-
 	err := s.transactionMgr.backfillWorkflow(ctx, now, workflow, workflowEvents)
 	s.NoError(err)
 	s.True(releaseCalled)
