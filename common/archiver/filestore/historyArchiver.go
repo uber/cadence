@@ -37,7 +37,6 @@ package filestore
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"

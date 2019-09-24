@@ -23,7 +23,6 @@ package filestore
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
