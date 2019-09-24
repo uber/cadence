@@ -671,7 +671,6 @@ retryLoop:
 		return nil, ctx.Err()
 	}
 	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
-
 }
 
 func (e *historyEngineImpl) getMutableState(

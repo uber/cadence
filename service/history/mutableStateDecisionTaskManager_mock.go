@@ -332,6 +332,20 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) HasStartedInMemoryDec
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasStartedInMemoryDecisionTask", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).HasStartedInMemoryDecisionTask))
 }
 
+// HasInMemoryDecisionTask mocks base method
+func (m *MockmutableStateDecisionTaskManager) HasInMemoryDecisionTask() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasInMemoryDecisionTask")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasInMemoryDecisionTask indicates an expected call of HasInMemoryDecisionTask
+func (mr *MockmutableStateDecisionTaskManagerMockRecorder) HasInMemoryDecisionTask() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasInMemoryDecisionTask", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).HasInMemoryDecisionTask))
+}
+
 // FailDecision mocks base method
 func (m *MockmutableStateDecisionTaskManager) FailDecision(incrementAttempt bool) {
 	m.ctrl.T.Helper()

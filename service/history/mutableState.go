@@ -223,5 +223,6 @@ type (
 		DeleteInMemoryDecisionTask()
 		HasScheduledInMemoryDecisionTask() bool
 		HasStartedInMemoryDecisionTask() bool
+		HasInMemoryDecisionTask() bool
 	}
 )

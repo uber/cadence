@@ -2958,3 +2958,19 @@ func (_m *mockMutableState) HasStartedInMemoryDecisionTask() bool {
 
 	return r0
 }
+
+// HasInMemoryDecisionTask provides a mock function with given fields:
+func (_m *mockMutableState) HasInMemoryDecisionTask() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(bool)
+		}
+	}
+
+	return r0
+}

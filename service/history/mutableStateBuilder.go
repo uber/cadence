@@ -3597,6 +3597,10 @@ func (e *mutableStateBuilder) HasStartedInMemoryDecisionTask() bool {
 	return e.decisionTaskManager.HasStartedInMemoryDecisionTask()
 }
 
+func (e *mutableStateBuilder) HasInMemoryDecisionTask() bool {
+	return e.decisionTaskManager.HasInMemoryDecisionTask()
+}
+
 func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
 	now time.Time,
 	transactionPolicy transactionPolicy,
