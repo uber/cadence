@@ -237,8 +237,7 @@ func (h *historyArchiver) Get(
 		return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 	}
 
-	// #nosec
-	encodedHistoryBatches, err := ioutil.ReadFile(filepath)
+	encodedHistoryBatches, err := readFile(filepath)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}

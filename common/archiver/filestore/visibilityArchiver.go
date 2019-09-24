@@ -198,8 +198,7 @@ func (v *visibilityArchiver) query(
 
 	response := &archiver.QueryVisibilityResponse{}
 	for idx, file := range files {
-		// #nosec
-		encodedRecord, err := ioutil.ReadFile(path.Join(dirPath, file))
+		encodedRecord, err := readFile(path.Join(dirPath, file))
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}

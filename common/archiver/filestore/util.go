@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -86,6 +87,14 @@ func writeFile(filepath string, data []byte, fileMode os.FileMode) error {
 		return err
 	}
 	return nil
+}
+
+// readFile reads the contents of a file specified by filepath
+// WARNING: callers of this method should be extremely careful not to use it in a context where filepath is supplied by
+// the user.
+func readFile(filepath string) ([]byte, error) {
+	// #nosec
+	return ioutil.ReadFile(filepath)
 }
 
 func listFiles(dirPath string) ([]string, error) {

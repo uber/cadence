@@ -141,13 +141,13 @@ func (s *UtilSuite) TestReadFile() {
 
 	filename := "test-file-name"
 	fpath := filepath.Join(dir, filename)
-	data, err := ioutil.ReadFile(fpath)
+	data, err := readFile(fpath)
 	s.Error(err)
 	s.Empty(data)
 
 	err = writeFile(fpath, []byte("file contents"), testFileMode)
 	s.NoError(err)
-	data, err = ioutil.ReadFile(fpath)
+	data, err = readFile(fpath)
 	s.NoError(err)
 	s.Equal("file contents", string(data))
 }
