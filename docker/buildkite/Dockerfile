@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       gettext-base \
       libyaml-dev \
-      openjdk-8-jre \
       python \
       python-dev \
       python-pip \
