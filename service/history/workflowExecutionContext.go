@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/cadence/.gen/go/shared"
+
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -1172,26 +1174,25 @@ func (c *workflowExecutionContextImpl) getQueryRegistry() QueryRegistry {
 
 func (c *workflowExecutionContextImpl) reapplyEvents(
 	ctx context.Context,
-	reapplyEvents *persistence.WorkflowEvents,
+	events *persistence.WorkflowEvents,
 ) error {
 
-	hasReappliableEvent := false
-	for _, event := range reapplyEvents.Events {
+	reapplyEvents := []*workflow.HistoryEvent{}
+	// TODO: need to implement Reapply policy
+	for _, event := range events.Events {
 		switch event.GetEventType() {
 		case workflow.EventTypeWorkflowExecutionSignaled:
-			hasReappliableEvent = true
-			break
-		default:
+			reapplyEvents = append(reapplyEvents, event)
 		}
 	}
 	// there is no event to reapply
-	if !hasReappliableEvent {
+	if len(reapplyEvents) == 0 {
 		return nil
 	}
 
-	domainID := reapplyEvents.DomainID
+	domainID := events.DomainID
 	execution := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(reapplyEvents.WorkflowID),
+		WorkflowId: common.StringPtr(events.WorkflowID),
 	}
 	domainCache := c.shard.GetDomainCache()
 	clientBean := c.shard.GetService().GetClientBean()
@@ -1203,7 +1204,7 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
-	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(reapplyEvents.Events, common.EncodingTypeThriftRW)
+	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(reapplyEvents, common.EncodingTypeThriftRW)
 	if err != nil {
 		return err
 	}
