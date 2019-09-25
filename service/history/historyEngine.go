@@ -622,6 +622,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 			retErr = err
 		}
 		msBuilder.DeleteInMemoryDecisionTask()
+		release(nil)
 	}()
 
 	// ensure decision task exists to dispatch query on
