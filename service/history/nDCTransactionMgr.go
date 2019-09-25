@@ -279,7 +279,7 @@ func (r *nDCTransactionMgrImpl) backfillWorkflow(
 		} else if mode == persistence.UpdateWorkflowModeUpdateCurrent {
 			// case 2
 			transactionPolicy = transactionPolicyActive
-			r.logger.Warn("failed to reapply event to a finished workflow",
+			r.logger.Warn("cannot reapply event to a finished workflow",
 				tag.WorkflowDomainID(targetWorkflowEvents.DomainID),
 				tag.WorkflowID(targetWorkflowEvents.WorkflowID),
 			)

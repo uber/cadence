@@ -2464,7 +2464,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 			//  reset to workflow finish event
 			//  ignore this case for now
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				e.logger.Warn("failed to reapply event to a finished workflow",
+				e.logger.Warn("cannot reapply event to a finished workflow",
 					tag.WorkflowDomainID(domainID),
 					tag.WorkflowID(workflowID),
 				)
