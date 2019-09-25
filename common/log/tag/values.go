@@ -138,17 +138,18 @@ var (
 
 // Pre-defined values for SysErrorType
 var (
-	ErrorTypeInvalidHistoryAction        = errorType("InvalidHistoryAction")
-	ErrorTypeInvalidQueryTask            = errorType("InvalidQueryTask")
-	ErrorTypeQueryTaskFailed             = errorType("QueryTaskFailed")
-	ErrorTypePersistentStoreError        = errorType("PersistentStoreError")
-	ErrorTypeHistorySerializationError   = errorType("HistorySerializationError")
-	ErrorTypeHistoryDeserializationError = errorType("HistoryDeserializationError")
-	ErrorTypeDuplicateTask               = errorType("DuplicateTask")
-	ErrorTypeMultipleCompletionDecisions = errorType("MultipleCompletionDecisions")
-	ErrorTypeDuplicateTransferTask       = errorType("DuplicateTransferTask")
-	ErrorTypeDecisionFailed              = errorType("DecisionFailed")
-	ErrorTypeInvalidMutableStateAction   = errorType("InvalidMutableStateAction")
+	ErrorTypeInvalidHistoryAction         = errorType("InvalidHistoryAction")
+	ErrorTypeInvalidQueryTask             = errorType("InvalidQueryTask")
+	ErrorTypeQueryTaskFailed              = errorType("QueryTaskFailed")
+	ErrorTypePersistentStoreError         = errorType("PersistentStoreError")
+	ErrorTypeHistorySerializationError    = errorType("HistorySerializationError")
+	ErrorTypeHistoryDeserializationError  = errorType("HistoryDeserializationError")
+	ErrorTypeDuplicateTask                = errorType("DuplicateTask")
+	ErrorTypeMultipleCompletionDecisions  = errorType("MultipleCompletionDecisions")
+	ErrorTypeDuplicateTransferTask        = errorType("DuplicateTransferTask")
+	ErrorTypeDecisionFailed               = errorType("DecisionFailed")
+	ErrorTypeInvalidMutableStateAction    = errorType("InvalidMutableStateAction")
+	ErrorTypeInvalidMemDecisionTaskAction = errorType("InvalidMemDecisionTaskAction")
 )
 
 // Pre-defined values for SysShardUpdate

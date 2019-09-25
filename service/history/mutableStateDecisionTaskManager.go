@@ -586,10 +586,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddInMemoryDecisionTaskScheduled(t
 	defer m.ensureMemDecisionTaskValid()
 	opTag := tag.WorkflowActionInMemoryDecisionTaskScheduled
 	if m.HasPendingDecision() || m.HasInMemoryDecisionTask() {
-		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
-			tag.WorkflowEventID(m.msb.GetNextEventID()),
-			tag.ErrorTypeInvalidHistoryAction,
-			tag.WorkflowScheduleID(m.msb.executionInfo.DecisionScheduleID))
+		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag, tag.ErrorTypeInvalidMemDecisionTaskAction)
 		return m.msb.createInternalServerError(opTag)
 	}
 	m.memDecisionTask.state = memDecisionTaskStateScheduled
@@ -601,10 +598,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddInMemoryDecisionTaskStarted() e
 	defer m.ensureMemDecisionTaskValid()
 	opTag := tag.WorkflowActionInMemoryDecisionTaskStarted
 	if m.HasPendingDecision() || !m.HasScheduledInMemoryDecisionTask() {
-		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
-			tag.WorkflowEventID(m.msb.GetNextEventID()),
-			tag.ErrorTypeInvalidHistoryAction,
-			tag.WorkflowScheduleID(m.msb.executionInfo.DecisionScheduleID))
+		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag, tag.ErrorTypeInvalidMemDecisionTaskAction)
 		return m.msb.createInternalServerError(opTag)
 	}
 	m.memDecisionTask.state = memDecisionTaskStateStarted

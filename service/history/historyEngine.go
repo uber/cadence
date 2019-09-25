@@ -585,7 +585,7 @@ func (e *historyEngineImpl) GetMutableState(
 func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
-) (*h.QueryWorkflowResponse, error) {
+) (retResp *h.QueryWorkflowResponse, retErr error) {
 	domainCache, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
 	if err != nil {
 		return nil, err
@@ -604,13 +604,25 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 	queryRegistry := msBuilder.GetQueryRegistry()
-
-	// Below we may or may not create an in memory decision task.
-	// Regardless of if its created or not it is safe to call DeleteInMemoryDecisionTask.
-	defer msBuilder.DeleteInMemoryDecisionTask()
 	release(nil)
 	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
-	defer queryRegistry.removeQuery(queryID)
+
+	// after query is finished removed query from query registry and remove any potentially created in memory decision task
+	defer func() {
+		queryRegistry.removeQuery(queryID)
+		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+		if err != nil {
+			retResp = nil
+			retErr = err
+		}
+		msBuilder, err := context.loadWorkflowExecution()
+		if err != nil {
+			release(err)
+			retResp = nil
+			retErr = err
+		}
+		msBuilder.DeleteInMemoryDecisionTask()
+	}()
 
 	// ensure decision task exists to dispatch query on
 retryLoop:
@@ -625,7 +637,7 @@ retryLoop:
 			return nil, err
 		}
 		// a scheduled decision task already exists - no need to schedule an in memory decision task
-		if msBuilder.HasPendingDecision() && !msBuilder.HasInFlightDecision() {
+		if (msBuilder.HasPendingDecision() && !msBuilder.HasInFlightDecision()) || msBuilder.HasScheduledInMemoryDecisionTask() {
 			release(nil)
 			break retryLoop
 		}
