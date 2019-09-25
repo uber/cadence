@@ -53,7 +53,6 @@ const (
 
 // InsertIntoHistoryNode inserts a row into history_node table
 func (mdb *DB) InsertIntoHistoryNode(row *sqldb.HistoryNodeRow) (sql.Result, error) {
-	// NOTE: MySQL 5.6 doesn't support clustering order, to workaround, we let txn_id multiple by -1
 	*row.TxnID *= -1
 	return mdb.conn.NamedExec(addHistoryNodesQry, row)
 }
