@@ -2452,10 +2452,13 @@ func (e *historyEngineImpl) ReapplyEvents(
 		domainID,
 		execution,
 		func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
-			createDecisionTask := true
+
+			postActions := &updateWorkflowAction{
+				createDecision: true,
+			}
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
 			if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecision() {
-				createDecisionTask = false
+				postActions.createDecision = false
 			}
 			// TODO when https://github.com/uber/cadence/issues/2420 is finished
 			//  reset to workflow finish event
@@ -2466,10 +2469,9 @@ func (e *historyEngineImpl) ReapplyEvents(
 					tag.WorkflowID(workflowID),
 				)
 				e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
-				return nil, nil
-			}
-			postActions := &updateWorkflowAction{
-				createDecision: createDecisionTask,
+				return &updateWorkflowAction{
+					noop: true,
+				}, nil
 			}
 			if err := e.eventsReapplier.reapplyEvents(
 				ctx,
