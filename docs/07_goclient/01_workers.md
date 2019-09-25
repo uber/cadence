@@ -25,7 +25,7 @@ var HostPort = "127.0.0.1:7933"
 var Domain = "SimpleDomain"
 var TaskListName = "SimpleWorker"
 var ClientName = "SimpleWorker"
-var CadenceService = "CadenceServiceFrontend"
+var CadenceService = "cadence-frontend"
 
 func main() {
 	startWorker(buildLogger(), buildCadenceClient())
