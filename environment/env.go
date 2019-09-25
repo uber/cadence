@@ -37,20 +37,21 @@ const (
 	// CassandraDefaultPort Cassandra default port
 	CassandraDefaultPort = "9042"
 
-	// which sql system to use
-	SQLDriver        = "SQL_DRIVER"
-	SqlDefaultDriver = "mysql"
+	// SQLDriver which sql system to use
+	SQLDriver = "SQL_DRIVER"
+	// SQLDefaultDriver which sql system is used by default
+	SQLDefaultDriver = "mysql"
 	// MySQLSeeds env
 	//TODO: remove in later release
 	MySQLSeeds = "MYSQL_SEEDS"
 	// MySQLPort env
 	//TODO: remove in later release
 	MySQLPort = "MYSQL_PORT"
-	// MySQLSeeds env
+	// SQLSeeds env
 	SQLSeeds = "SQL_SEEDS"
-	// MySQLPort env
+	// SQLPort env
 	SQLPort = "SQL_PORT"
-	// MySQLDefaultPort MySQL default port
+	// SQLDefaultPort SQL default port
 	SQLDefaultPort = "3306"
 
 	// KafkaSeeds env
@@ -85,7 +86,7 @@ func SetupEnv() {
 	}
 
 	if os.Getenv(SQLDriver) == "" {
-		err := os.Setenv(SQLDriver, SqlDefaultDriver)
+		err := os.Setenv(SQLDriver, SQLDefaultDriver)
 		if err != nil {
 			panic(fmt.Sprintf("error setting env %v", SQLDriver))
 		}
@@ -168,10 +169,11 @@ func GetCassandraPort() int {
 	return p
 }
 
-func GetSQlDriver() string {
+// GetSQLDriver get the current used database driver
+func GetSQLDriver() string {
 	driver := os.Getenv(SQLDriver)
 	if driver == "" {
-		driver = SqlDefaultDriver
+		driver = SQLDefaultDriver
 	}
 	return driver
 }
@@ -185,7 +187,7 @@ func GetSQLAddress() string {
 	return addr
 }
 
-// GetMySQLPort return the MySQL port
+// GetSQLPort return the MySQL port
 func GetSQLPort() int {
 	port := os.Getenv(SQLPort)
 	if port == "" {

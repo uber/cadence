@@ -25,6 +25,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
+	// import the postgres pq driver to use in sqlx
 	_ "github.com/lib/pq"
 )
 
