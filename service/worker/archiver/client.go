@@ -52,7 +52,7 @@ type (
 		ArchivedInline bool
 	}
 
-	// ArchiveRequest is the request signal sent to the archiver workflow
+	// ArchiveRequest is the request signal sent to the archival workflow
 	ArchiveRequest struct {
 		ShardID              int
 		DomainID             string
