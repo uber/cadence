@@ -203,9 +203,9 @@ func (d *HandlerImpl) RegisterDomain(
 	config := &persistence.DomainConfig{
 		Retention:                registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
 		EmitMetric:               registerRequest.GetEmitMetric(),
-		HistoryArchivalStatus:    nextHistoryArchivalState.status,
+		HistoryArchivalStatus:    nextHistoryArchivalState.Status,
 		HistoryArchivalURI:       nextHistoryArchivalState.URI,
-		VisibilityArchivalStatus: nextVisibilityArchivalState.status,
+		VisibilityArchivalStatus: nextVisibilityArchivalState.Status,
 		VisibilityArchivalURI:    nextVisibilityArchivalState.URI,
 		BadBinaries:              shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 	}
@@ -365,7 +365,7 @@ func (d *HandlerImpl) UpdateDomain(
 	isGlobalDomain := getResponse.IsGlobalDomain
 
 	currentHistoryArchivalState := &ArchivalState{
-		status: config.HistoryArchivalStatus,
+		Status: config.HistoryArchivalStatus,
 		URI:    config.HistoryArchivalURI,
 	}
 	nextHistoryArchivalState := currentHistoryArchivalState
@@ -384,7 +384,7 @@ func (d *HandlerImpl) UpdateDomain(
 	}
 
 	currentVisibilityArchivalState := &ArchivalState{
-		status: config.VisibilityArchivalStatus,
+		Status: config.VisibilityArchivalStatus,
 		URI:    config.VisibilityArchivalURI,
 	}
 	nextVisibilityArchivalState := currentVisibilityArchivalState
@@ -435,12 +435,12 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 		if historyArchivalConfigChanged {
 			configurationChanged = true
-			config.HistoryArchivalStatus = nextHistoryArchivalState.status
+			config.HistoryArchivalStatus = nextHistoryArchivalState.Status
 			config.HistoryArchivalURI = nextHistoryArchivalState.URI
 		}
 		if visibilityArchivalConfigChanged {
 			configurationChanged = true
-			config.VisibilityArchivalStatus = nextVisibilityArchivalState.status
+			config.VisibilityArchivalStatus = nextVisibilityArchivalState.Status
 			config.VisibilityArchivalURI = nextVisibilityArchivalState.URI
 		}
 		if updatedConfig.BadBinaries != nil {

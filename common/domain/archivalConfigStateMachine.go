@@ -33,7 +33,7 @@ type (
 	// the only invalid state is {URI="", status=enabled}
 	// once URI is set it is immutable
 	ArchivalState struct {
-		status shared.ArchivalStatus
+		Status shared.ArchivalStatus
 		URI    string
 	}
 
@@ -52,17 +52,13 @@ var (
 	errInvalidState            = &shared.BadRequestError{Message: "Encountered illegal state: archival is enabled but URI is not set (should be impossible)"}
 	errInvalidEvent            = &shared.BadRequestError{Message: "Encountered illegal event: default URI is not set (should be impossible)"}
 	errCannotHandleStateChange = &shared.BadRequestError{Message: "Encountered current state and event that cannot be handled (should be impossible)"}
-)
-
-// the following errors represents bad user input
-var (
-	errURIUpdate = &shared.BadRequestError{Message: "Cannot update existing archival URI"}
+	errURIUpdate               = &shared.BadRequestError{Message: "Cannot update existing archival URI"}
 )
 
 func neverEnabledState() *ArchivalState {
 	return &ArchivalState{
 		URI:    "",
-		status: shared.ArchivalStatusDisabled,
+		Status: shared.ArchivalStatusDisabled,
 	}
 }
 
@@ -74,7 +70,7 @@ func (e *ArchivalEvent) validate() error {
 }
 
 func (s *ArchivalState) validate() error {
-	if s.status == shared.ArchivalStatusEnabled && len(s.URI) == 0 {
+	if s.Status == shared.ArchivalStatusEnabled && len(s.URI) == 0 {
 		return errInvalidState
 	}
 	return nil
@@ -149,7 +145,7 @@ func (s *ArchivalState) getNextState(
 	}
 
 	// state 1
-	if s.status == shared.ArchivalStatusEnabled && stateURISet {
+	if s.Status == shared.ArchivalStatusEnabled && stateURISet {
 		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventURISet {
 			return s, false, nil
 		}
@@ -158,13 +154,13 @@ func (s *ArchivalState) getNextState(
 		}
 		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusDisabled,
+				Status: shared.ArchivalStatusDisabled,
 				URI:    s.URI,
 			}, true, nil
 		}
 		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusDisabled,
+				Status: shared.ArchivalStatusDisabled,
 				URI:    s.URI,
 			}, true, nil
 		}
@@ -177,16 +173,16 @@ func (s *ArchivalState) getNextState(
 	}
 
 	// state 2
-	if s.status == shared.ArchivalStatusDisabled && stateURISet {
+	if s.Status == shared.ArchivalStatusDisabled && stateURISet {
 		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventURISet {
 			return &ArchivalState{
 				URI:    s.URI,
-				status: shared.ArchivalStatusEnabled,
+				Status: shared.ArchivalStatusEnabled,
 			}, true, nil
 		}
 		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusEnabled,
+				Status: shared.ArchivalStatusEnabled,
 				URI:    s.URI,
 			}, true, nil
 		}
@@ -205,22 +201,22 @@ func (s *ArchivalState) getNextState(
 	}
 
 	// state 3
-	if s.status == shared.ArchivalStatusDisabled && !stateURISet {
+	if s.Status == shared.ArchivalStatusDisabled && !stateURISet {
 		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusEnabled,
+				Status: shared.ArchivalStatusEnabled,
 				URI:    e.URI,
 			}, true, nil
 		}
 		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusEnabled,
+				Status: shared.ArchivalStatusEnabled,
 				URI:    e.defaultURI,
 			}, true, nil
 		}
 		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusDisabled,
+				Status: shared.ArchivalStatusDisabled,
 				URI:    e.URI,
 			}, true, nil
 		}
@@ -229,7 +225,7 @@ func (s *ArchivalState) getNextState(
 		}
 		if e.status == nil && eventURISet {
 			return &ArchivalState{
-				status: shared.ArchivalStatusDisabled,
+				Status: shared.ArchivalStatusDisabled,
 				URI:    e.URI,
 			}, true, nil
 		}

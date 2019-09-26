@@ -133,6 +133,8 @@ var (
 
 	// err for archival
 	errHistoryHasPassedRetentionPeriod = &gen.BadRequestError{Message: "Requested workflow history has passed retention period."}
+	// the following errors represents bad user input
+	errURIUpdate = &shared.BadRequestError{Message: "Cannot update existing archival URI"}
 
 	// err for string too long
 	errDomainTooLong       = &gen.BadRequestError{Message: "Domain length exceeds limit."}
