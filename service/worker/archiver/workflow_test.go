@@ -132,6 +132,19 @@ func (s *workflowSuite) TestArchivalWorkflow_Success() {
 	env.AssertExpectations(s.T())
 }
 
+// func (s *workflowSuite) TestReplayArchiveHistoryWorkflow() {
+// 	logger, _ := zap.NewDevelopment()
+// 	globalLogger = workflowTestLogger
+// 	globalMetricsClient = metrics.NewClient(tally.NewTestScope("replay", nil), metrics.Worker)
+// 	globalConfig = &Config{
+// 		ArchiverConcurrency:           dynamicconfig.GetIntPropertyFn(50),
+// 		ArchivalsPerIteration:         dynamicconfig.GetIntPropertyFn(1000),
+// 		TimeLimitPerArchivalIteration: dynamicconfig.GetDurationPropertyFn(MaxArchivalIterationTimeout()),
+// 	}
+// 	err := worker.ReplayWorkflowHistoryFromJSONFile(logger, "path/to/history/file.json")
+// 	s.NoError(err)
+// }
+
 func archivalWorkflowTest(ctx workflow.Context) error {
 	return archivalWorkflowHelper(ctx, workflowTestLogger, workflowTestMetrics, workflowTestConfig, workflowTestHandler, workflowTestPump, nil)
 }
