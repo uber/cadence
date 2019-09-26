@@ -66,7 +66,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	logger := tagLoggerWithHistoryRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), &request)
 	URI, err := carchiver.NewURI(request.URI)
 	if err != nil {
-		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get archival uri"), tag.ArchivalURI(request.URI), tag.Error(err))
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archival uri"), tag.ArchivalURI(request.URI), tag.Error(err))
 		return errUploadNonRetriable
 	}
 	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(URI.Scheme(), common.WorkerServiceName)
@@ -89,10 +89,10 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		return nil
 	}
 	if err.Error() == errUploadNonRetriable.Error() {
-		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("got non-retryable error from archiver"))
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("got non-retryable error from history archiver"))
 		return errUploadNonRetriable
 	}
-	logger.Error(carchiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason("got retryable error from archiver"), tag.Error(err))
+	logger.Error(carchiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason("got retryable error from history archiver"), tag.Error(err))
 	return err
 }
 
@@ -156,7 +156,7 @@ func archiveVisibilityActivity(ctx context.Context, request ArchiveRequest) (err
 	logger := tagLoggerWithVisibilityRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), &request)
 	URI, err := carchiver.NewURI(request.VisibilityURI)
 	if err != nil {
-		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get archival uri"), tag.ArchivalURI(request.VisibilityURI), tag.Error(err))
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get visibility archival uri"), tag.ArchivalURI(request.VisibilityURI), tag.Error(err))
 		return errArchiveVisibilityNonRetriable
 	}
 	visibilityArchiver, err := container.ArchiverProvider.GetVisibilityArchiver(URI.Scheme(), common.WorkerServiceName)
@@ -182,9 +182,9 @@ func archiveVisibilityActivity(ctx context.Context, request ArchiveRequest) (err
 		return nil
 	}
 	if err.Error() == errArchiveVisibilityNonRetriable.Error() {
-		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("got non-retryable error from archiver"))
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("got non-retryable error from visibility archiver"))
 		return errArchiveVisibilityNonRetriable
 	}
-	logger.Error(carchiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason("got retryable error from archiver"), tag.Error(err))
+	logger.Error(carchiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason("got retryable error from visibility archiver"), tag.Error(err))
 	return err
 }
