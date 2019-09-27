@@ -590,10 +590,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
-	ttl := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
-	timer := time.NewTimer(ttl)
-	defer timer.Stop()
-
 	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
 	if err != nil {
 		return nil, err
@@ -607,19 +603,25 @@ func (e *historyEngineImpl) QueryWorkflow(
 	release(nil)
 	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
 
+	ttl := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
+	timer := time.NewTimer(ttl)
+
 	// after query is finished removed query from query registry and remove any potentially created in memory decision task
 	defer func() {
+		timer.Stop()
 		queryRegistry.removeQuery(queryID)
 		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
 		if err != nil {
 			retResp = nil
 			retErr = err
+			return
 		}
 		msBuilder, err := context.loadWorkflowExecution()
 		if err != nil {
 			release(err)
 			retResp = nil
 			retErr = err
+			return
 		}
 		msBuilder.DeleteInMemoryDecisionTask()
 		release(nil)

@@ -52,6 +52,13 @@ type (
 	}
 
 	mutableState interface {
+		AddInMemoryDecisionTaskScheduled(time.Duration) error
+		AddInMemoryDecisionTaskStarted() error
+		DeleteInMemoryDecisionTask()
+		HasScheduledInMemoryDecisionTask() bool
+		HasStartedInMemoryDecisionTask() bool
+		HasInMemoryDecisionTask() bool
+
 		AddActivityTaskCancelRequestedEvent(int64, string, string) (*workflow.HistoryEvent, *persistence.ActivityInfo, error)
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) (*workflow.HistoryEvent, error)
 		AddActivityTaskCompletedEvent(int64, int64, *workflow.RespondActivityTaskCompletedRequest) (*workflow.HistoryEvent, error)
@@ -217,12 +224,5 @@ type (
 
 		CloseTransactionAsMutation(now time.Time, transactionPolicy transactionPolicy) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
 		CloseTransactionAsSnapshot(now time.Time, transactionPolicy transactionPolicy) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
-
-		AddInMemoryDecisionTaskScheduled(time.Duration) error
-		AddInMemoryDecisionTaskStarted() error
-		DeleteInMemoryDecisionTask()
-		HasScheduledInMemoryDecisionTask() bool
-		HasStartedInMemoryDecisionTask() bool
-		HasInMemoryDecisionTask() bool
 	}
 )

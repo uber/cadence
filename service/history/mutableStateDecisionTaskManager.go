@@ -36,6 +36,13 @@ import (
 
 type (
 	mutableStateDecisionTaskManager interface {
+		AddInMemoryDecisionTaskScheduled(time.Duration) error
+		AddInMemoryDecisionTaskStarted() error
+		DeleteInMemoryDecisionTask()
+		HasScheduledInMemoryDecisionTask() bool
+		HasStartedInMemoryDecisionTask() bool
+		HasInMemoryDecisionTask() bool
+
 		ReplicateDecisionTaskScheduledEvent(
 			version int64,
 			scheduleID int64,
@@ -88,13 +95,6 @@ type (
 			forkEventVersion int64,
 		) (*workflow.HistoryEvent, error)
 		AddDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64) (*workflow.HistoryEvent, error)
-
-		AddInMemoryDecisionTaskScheduled(time.Duration) error
-		AddInMemoryDecisionTaskStarted() error
-		DeleteInMemoryDecisionTask()
-		HasScheduledInMemoryDecisionTask() bool
-		HasStartedInMemoryDecisionTask() bool
-		HasInMemoryDecisionTask() bool
 
 		FailDecision(incrementAttempt bool)
 		DeleteDecision()

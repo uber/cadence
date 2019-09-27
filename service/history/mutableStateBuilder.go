@@ -199,6 +199,30 @@ func newMutableStateBuilderWithReplicationState(
 	return s
 }
 
+func (e *mutableStateBuilder) AddInMemoryDecisionTaskScheduled(ttl time.Duration) error {
+	return e.decisionTaskManager.AddInMemoryDecisionTaskScheduled(ttl)
+}
+
+func (e *mutableStateBuilder) AddInMemoryDecisionTaskStarted() error {
+	return e.decisionTaskManager.AddInMemoryDecisionTaskStarted()
+}
+
+func (e *mutableStateBuilder) DeleteInMemoryDecisionTask() {
+	e.decisionTaskManager.DeleteInMemoryDecisionTask()
+}
+
+func (e *mutableStateBuilder) HasScheduledInMemoryDecisionTask() bool {
+	return e.decisionTaskManager.HasScheduledInMemoryDecisionTask()
+}
+
+func (e *mutableStateBuilder) HasStartedInMemoryDecisionTask() bool {
+	return e.decisionTaskManager.HasStartedInMemoryDecisionTask()
+}
+
+func (e *mutableStateBuilder) HasInMemoryDecisionTask() bool {
+	return e.decisionTaskManager.HasInMemoryDecisionTask()
+}
+
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
@@ -3575,30 +3599,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		return nil, nil, err
 	}
 	return workflowSnapshot, workflowEventsSeq, nil
-}
-
-func (e *mutableStateBuilder) AddInMemoryDecisionTaskScheduled(ttl time.Duration) error {
-	return e.decisionTaskManager.AddInMemoryDecisionTaskScheduled(ttl)
-}
-
-func (e *mutableStateBuilder) AddInMemoryDecisionTaskStarted() error {
-	return e.decisionTaskManager.AddInMemoryDecisionTaskStarted()
-}
-
-func (e *mutableStateBuilder) DeleteInMemoryDecisionTask() {
-	e.decisionTaskManager.DeleteInMemoryDecisionTask()
-}
-
-func (e *mutableStateBuilder) HasScheduledInMemoryDecisionTask() bool {
-	return e.decisionTaskManager.HasScheduledInMemoryDecisionTask()
-}
-
-func (e *mutableStateBuilder) HasStartedInMemoryDecisionTask() bool {
-	return e.decisionTaskManager.HasStartedInMemoryDecisionTask()
-}
-
-func (e *mutableStateBuilder) HasInMemoryDecisionTask() bool {
-	return e.decisionTaskManager.HasInMemoryDecisionTask()
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
