@@ -237,7 +237,7 @@ func randomArchiveRequest() (ArchiveRequest, uint64) {
 		DomainID:   fmt.Sprintf("%v", rand.Intn(1000)),
 		WorkflowID: fmt.Sprintf("%v", rand.Intn(1000)),
 		RunID:      fmt.Sprintf("%v", rand.Intn(1000)),
-		Targets:    []string{ArchiveTargetHistory, ArchiveTargetVisibility},
+		Targets:    []archivalTarget{ArchiveTargetHistory, ArchiveTargetVisibility},
 	}
 	return ar, hash(ar)
 }

@@ -532,6 +532,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 	if err := t.deleteWorkflowExecution(task); err != nil {
 		return err
 	}
+	// delete workflow history if history archival is not needed or history as been archived inline
 	if !archiveHistory || resp.HistoryArchivedInline {
 		if archiveHistory {
 			t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteHistoryInlineCount)
@@ -540,6 +541,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 			return err
 		}
 	}
+	// delete visibility record here regardless if it's been archived inline or not
+	// since the entire record is included as part of the archive request.
 	if err := t.deleteWorkflowVisibility(task); err != nil {
 		return err
 	}

@@ -80,7 +80,7 @@ type (
 		VisibilityURI      string
 
 		// archival targets: history and/or visibility
-		Targets []string
+		Targets []archivalTarget
 	}
 
 	// Client is used to archive workflow histories
@@ -96,17 +96,21 @@ type (
 		rateLimiter      quotas.Limiter
 		archiverProvider provider.ArchiverProvider
 	}
+
+	archivalTarget int
 )
 
 const (
 	signalTimeout = 300 * time.Millisecond
 
 	tooManyRequestsErrMsg = "too many requests to archival workflow"
+)
 
+const (
 	// ArchiveTargetHistory is the archive target for workflow history
-	ArchiveTargetHistory = "history"
+	ArchiveTargetHistory archivalTarget = iota
 	// ArchiveTargetVisibility is the archive target for workflow visibility record
-	ArchiveTargetVisibility = "visibility"
+	ArchiveTargetVisibility
 )
 
 // NewClient creates a new Client
@@ -156,7 +160,7 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) (*ClientRe
 			}
 		}
 
-		targets := []string{}
+		targets := []archivalTarget{}
 		for i, target := range request.ArchiveRequest.Targets {
 			if <-results[i] != nil {
 				targets = append(targets, target)
