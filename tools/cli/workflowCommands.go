@@ -36,19 +36,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/valyala/fastjson"
-
-	"github.com/uber/cadence/common/clock"
-
-	"github.com/uber/cadence/service/history"
-
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/service/history"
 	"github.com/urfave/cli"
+	"github.com/valyala/fastjson"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 )
@@ -669,6 +665,7 @@ func CountWorkflow(c *cli.Context) {
 	fmt.Println(response.GetCount())
 }
 
+// ListArchivedWorkflow lists archived workflow executions based on filters
 func ListArchivedWorkflow(c *cli.Context) {
 	wfClient := getWorkflowClient(c)
 
