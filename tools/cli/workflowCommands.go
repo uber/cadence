@@ -737,6 +737,9 @@ func ListArchivedWorkflow(c *cli.Context) {
 			ErrorAndExit("Failed to list archived workflow", err)
 		}
 		cancel()
+		if len(result.Executions) == 0 {
+			break
+		}
 		table.ClearRows()
 		appendWorkflowExecutionsToTable(
 			table,

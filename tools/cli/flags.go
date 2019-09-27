@@ -451,7 +451,7 @@ func getFlagsForListArchived() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:  FlagListQueryWithAlias,
-			Usage: "SQL like query. A range on CloseTime is required. Timestamp can be specified in '2006-01-02T15:04:05Z07:00' format or as UnixNano value",
+			Usage: "SQL like query. Please check the documentation of the visibility archiver used by your domain for detailed instructions",
 		},
 		cli.IntFlag{
 			Name:  FlagPageSizeWithAlias,
