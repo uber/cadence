@@ -482,6 +482,10 @@ func getFlagsForListArchived() []cli.Flag {
 			Name:  FlagPrintJSONWithAlias,
 			Usage: "Print in raw json format",
 		},
+		cli.BoolFlag{
+			Name:  FlagMoreWithAlias,
+			Usage: "List more pages, default is to list one page of default page size 10",
+		},
 	}
 }
 

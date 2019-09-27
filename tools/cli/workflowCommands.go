@@ -44,7 +44,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 
-	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -571,13 +570,7 @@ func ListWorkflow(c *cli.Context) {
 				break
 			}
 
-			fmt.Printf("Press %s to show next page, press %s to quit: ",
-				color.GreenString("Enter"), color.RedString("any other key then Enter"))
-			var input string
-			fmt.Scanln(&input)
-			if strings.Trim(input, " ") == "" {
-				continue
-			} else {
+			if !showNextPage() {
 				break
 			}
 		}
@@ -682,9 +675,14 @@ func ListArchivedWorkflow(c *cli.Context) {
 	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
 	pageSize := c.Int(FlagPageSize)
-	listQuery := c.String(FlagListQuery)
+	listQuery := getRequiredOption(c, FlagListQuery)
+	more := c.Bool(FlagMore)
 	if pageSize <= 0 {
 		pageSize = defaultPageSizeForList
+	}
+
+	if (printJSON || printDecodedRaw) && more {
+		ErrorAndExit("Not support printJSON in more mode", nil)
 	}
 
 	request := &s.ListArchivedWorkflowExecutionsRequest{
@@ -711,17 +709,46 @@ func ListArchivedWorkflow(c *cli.Context) {
 		return
 	}
 
+	printRawTime := c.Bool(FlagPrintRawTime)
+	printDateTime := c.Bool(FlagPrintDateTime)
+	printMemo := c.Bool(FlagPrintMemo)
+	printSearchAttr := c.Bool(FlagPrintSearchAttr)
 	table := createTableForListWorkflow(c, false, false)
 	appendWorkflowExecutionsToTable(
 		table,
 		result.Executions,
 		false,
-		c.Bool(FlagPrintRawTime),
-		c.Bool(FlagPrintDateTime),
-		c.Bool(FlagPrintMemo),
-		c.Bool(FlagPrintSearchAttr),
+		printRawTime,
+		printDateTime,
+		printMemo,
+		printSearchAttr,
 	)
 	table.Render()
+
+	for more && len(result.NextPageToken) != 0 {
+		if !showNextPage() {
+			break
+		}
+		request.NextPageToken = result.NextPageToken
+		// create a new context for each new request as each request may take a long time
+		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+		result, err = wfClient.ListArchivedWorkflow(ctx, request)
+		if err != nil {
+			ErrorAndExit("Failed to list archived workflow", err)
+		}
+		cancel()
+		table.ClearRows()
+		appendWorkflowExecutionsToTable(
+			table,
+			result.Executions,
+			false,
+			printRawTime,
+			printDateTime,
+			printMemo,
+			printSearchAttr,
+		)
+		table.Render()
+	}
 }
 
 // DescribeWorkflow show information about the specified workflow execution
