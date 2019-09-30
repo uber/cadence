@@ -210,11 +210,11 @@ func getFlagsForShowID() []cli.Flag {
 	return []cli.Flag{
 		cli.BoolFlag{
 			Name:  FlagPrintDateTimeWithAlias,
-			Usage: "Print time stamp",
+			Usage: "Print timestamp",
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw time stamp",
+			Usage: "Print raw timestamp",
 		},
 		cli.StringFlag{
 			Name:  FlagOutputFilenameWithAlias,
@@ -375,7 +375,7 @@ func getFlagsForListAll() []cli.Flag {
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw time stamp",
+			Usage: "Print raw timestamp",
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintDateTimeWithAlias,
@@ -418,7 +418,7 @@ func getFlagsForScan() []cli.Flag {
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw time stamp",
+			Usage: "Print raw timestamp",
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintDateTimeWithAlias,
@@ -456,11 +456,11 @@ func getFlagsForListArchived() []cli.Flag {
 		cli.IntFlag{
 			Name:  FlagPageSizeWithAlias,
 			Value: 100,
-			Usage: "Result page size",
+			Usage: "Count of visibility records included in a single page",
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw time stamp",
+			Usage: "Print raw timestamp",
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintDateTimeWithAlias,
