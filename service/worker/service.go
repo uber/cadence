@@ -23,6 +23,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -344,6 +345,7 @@ func (s *Service) ensureSystemDomainExists(pFactory persistencefactory.Factory, 
 
 func (s *Service) ensureDomainAvailable() {
 	client := cclient.NewClient(s.params.PublicClient, common.SystemLocalDomainName, &cclient.Options{})
+	// Use TerminateWorkflow to check whether domain is refreshed in cache or not
 	err := client.TerminateWorkflow(context.Background(), "wid-not-exist", "", "test reason", nil)
 	retryCount := 0
 	for err != nil && retryCount <= 10 {
@@ -360,7 +362,7 @@ func (s *Service) ensureDomainAvailable() {
 }
 
 func isErrSystemDomainNotExist(err *cshared.EntityNotExistsError) bool {
-	return err.Message == fmt.Sprintf("Domain: %s", common.SystemLocalDomainName)
+	return strings.Contains(err.Message, common.SystemLocalDomainName)
 }
 
 func (s *Service) registerSystemDomain(pFactory persistencefactory.Factory, clusterName string) {
