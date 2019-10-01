@@ -51,6 +51,7 @@ var keys = map[Key]string{
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
+	EnableNDC:                           "system.enableNDC",
 	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
@@ -146,7 +147,7 @@ var keys = map[Key]string{
 	TimerProcessorMaxPollIntervalJitterCoefficient:        "history.timerProcessorMaxPollIntervalJitterCoefficient",
 	TimerProcessorMaxTimeShift:                            "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                "history.timerProcessorHistoryArchivalSizeLimit",
-	TimerProcessorHistoryArchivalTimeLimit:                "history.timerProcessorHistoryArchivalTimeLimit",
+	TimerProcessorArchivalTimeLimit:                       "history.TimerProcessorArchivalTimeLimit",
 	TransferTaskBatchSize:                                 "history.transferTaskBatchSize",
 	TransferProcessorFailoverMaxPollRPS:                   "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                           "history.transferProcessorMaxPollRPS",
@@ -233,6 +234,8 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
+	// EnableNDC is key for enable N data center events replication
+	EnableNDC
 	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
@@ -416,8 +419,8 @@ const (
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
 	TimerProcessorHistoryArchivalSizeLimit
-	// TimerProcessorHistoryArchivalTimeLimit is the upper time limit for inline history archival
-	TimerProcessorHistoryArchivalTimeLimit
+	// TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival
+	TimerProcessorArchivalTimeLimit
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
 	TransferTaskBatchSize
 	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor
