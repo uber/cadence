@@ -80,7 +80,7 @@ func (tb *UpdateSchemaTestBase) RunDryrunTest(app *cli.App, db DB, dbNameFlag st
 	tb.Log.Info(ver)
 	tb.Equal(ver, endVersion)
 	err = db.DropAllTables()
-	tb.Nil(err)
+	tb.NotNil(err)
 }
 
 // RunUpdateSchemaTest tests schema update

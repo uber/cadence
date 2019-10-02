@@ -21,7 +21,6 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/log/tag"
 	"log"
 	"os"
 	"strings"
@@ -38,7 +37,7 @@ var validServices = []string{historyService, matchingService, frontendService, w
 func main() {
 	app := buildCLI()
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal("failed to run entry point for cadence server", tag.Error(err))
+		log.Fatal("failed to run entry point for cadence server, err:", err)
 	}
 }
 

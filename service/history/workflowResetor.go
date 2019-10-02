@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/log"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -783,14 +784,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 			Success:     retError == nil || persistence.IsTimeoutError(retError),
 			ShardID:     shardID,
 		})
-		if err != nil {
-			// Wrap the error that was returned before the defer if it exists
-			if rerr == nil {
-				rerr = errors.Wrap(err, "failed to CompleteForkBranchRequest")
-			} else {
-				rerr = errors.Wrapf(rerr, "failed to CompleteForkBranchRequest with error: %s", err.Error())
-			}
-		}
+		log.Info(err)
 	}()
 	newMsBuilder.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
 

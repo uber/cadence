@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"github.com/pkg/errors"
 	"time"
 
 	"github.com/dgryski/go-farm"
@@ -96,14 +95,12 @@ func contextExpired(ctx context.Context) bool {
 
 func errorDetails(err error) string {
 	var details string
-	if _, ok := err.(*cadence.CustomError); !ok {
-		return details
+	customErr, ok := err.(*cadence.CustomError)
+	if !ok {
+		return ""
 	}
-	// If no details can be extracted the Details function will return with an err no data message that we want to
-	// surface to the user.
-	if err := err.(*cadence.CustomError).Details(&details); err != nil {
-		noDataErr := errors.Wrap(err, "failed to get error details")
-		return noDataErr.Error()
+	if err := customErr.Details(&details); err != nil {
+		return ""
 	}
 	return details
 }

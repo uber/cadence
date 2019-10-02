@@ -22,7 +22,7 @@ package persistencetests
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log/tag"
+
 	"os"
 	"strconv"
 	"strings"
@@ -36,6 +36,7 @@ import (
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 )
 

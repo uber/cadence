@@ -226,7 +226,9 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
 		if err != nil {
-			return nil, fwdr.handleErr(err)
+			// Ignore error result
+			_ := fwdr.handleErr(err)
+			return nil, err
 		}
 		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
 	case persistence.TaskListTypeActivity:

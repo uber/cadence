@@ -25,7 +25,6 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/go-sql-driver/mysql"
@@ -62,8 +61,8 @@ func (m *sqlStore) txExecute(operation string, f func(tx sqldb.Tx) error) error 
 	}
 	err = f(tx)
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			err = errors.Wrap(err, "failed to rollback transaction")
+		if err2 := tx.Rollback(); err2 != nil {
+			err = err2
 		}
 		switch err.(type) {
 		case *persistence.ConditionFailedError,
