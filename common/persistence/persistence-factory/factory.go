@@ -304,7 +304,7 @@ func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, err
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 
-	return p.NewDomainReplicationQueue(result), nil
+	return p.NewDomainReplicationQueue(result, f.logger), nil
 }
 
 // Close closes this factory

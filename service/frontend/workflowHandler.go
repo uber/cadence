@@ -3550,6 +3550,22 @@ func (wh *WorkflowHandler) GetDomainReplicationMessages(
 		return nil, wh.error(err, scope)
 	}
 
+	lastProcessedMessageId := defaultLastMessageID
+	if request.IsSetLastProcessedMessageId() {
+		lastProcessedMessageId = int(request.GetLastProcessedMessageId())
+	}
+
+	if lastProcessedMessageId != defaultLastMessageID {
+		go func() {
+			err := wh.domainReplicationQueue.UpdateAckLevel(lastProcessedMessageId, request.GetClusterName())
+			if err != nil {
+				wh.GetLogger().Warn("Failed to update domain replication queue ack level.",
+					tag.TaskID(int64(lastProcessedMessageId)),
+					tag.ClusterName(request.GetClusterName()))
+			}
+		}()
+	}
+
 	return &replicator.GetDomainReplicationMessagesResponse{
 		Messages: &replicator.ReplicationMessages{
 			ReplicationTasks:      replicationTasks,

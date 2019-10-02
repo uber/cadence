@@ -40,6 +40,7 @@ const (
 	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
 	templateGetMessagesQuery      = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
+	templateDeleteMessagesQuery   = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
 )
 
 type (
@@ -136,7 +137,7 @@ func (q *cassandraQueue) getNextMessageID() (int, error) {
 	return result["message_id"].(int) + 1, nil
 }
 
-func (q *cassandraQueue) DequeueMessages(
+func (q *cassandraQueue) ReadMessages(
 	lastMessageID int,
 	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
@@ -150,7 +151,7 @@ func (q *cassandraQueue) DequeueMessages(
 	iter := query.Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
-			Message: "DequeueMessages operation failed. Not able to create query iterator.",
+			Message: "ReadMessages operation failed. Not able to create query iterator.",
 		}
 	}
 
@@ -165,7 +166,7 @@ func (q *cassandraQueue) DequeueMessages(
 
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DequeueMessages operation failed. Error: %v", err),
+			Message: fmt.Sprintf("ReadMessages operation failed. Error: %v", err),
 		}
 	}
 
@@ -186,4 +187,23 @@ func getMessagePayload(message map[string]interface{}) []byte {
 
 func getMessageID(message map[string]interface{}) int {
 	return message["message_id"].(int)
+}
+
+func (q *cassandraQueue) UpdateAckLevel(messageID int, clusterName string) error {
+	panic("implement me")
+}
+
+func (q *cassandraQueue) GetAckLevels() (map[string]int, error) {
+	panic("implement me")
+}
+
+func (q *cassandraQueue) DeleteMessagesBefore(messageID int) error {
+	query := q.session.Query(templateDeleteMessagesQuery, q.queueType, messageID)
+	if err := query.Exec(); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteMessagesBefore operation failed. Error %v", err),
+		}
+	}
+
+	return nil
 }

@@ -656,6 +656,7 @@ type (
 		InsertIntoQueue(row *QueueRow) (sql.Result, error)
 		GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error)
 		GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]QueueRow, error)
+		DeleteMessages(queueType, messageID int) (sql.Result, error)
 	}
 
 	// Tx defines the API for a SQL transaction

@@ -1621,6 +1621,7 @@ type (
 	DomainReplicationQueue interface {
 		Publish(message interface{}) error
 		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
+		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
 	}
 )
 
