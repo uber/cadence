@@ -75,6 +75,18 @@ service AdminService {
     )
 
   /**
+  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow
+  * execution in unknown to the service.
+  **/
+  GetWorkflowExecutionRawHistoryResponseV2 GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryRequestV2 getRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
   * AddSearchAttribute whitelist search attribute in request.
   **/
   void AddSearchAttribute(1: AddSearchAttributeRequest request)
@@ -111,6 +123,22 @@ struct GetWorkflowExecutionRawHistoryResponse {
   20: optional list<shared.DataBlob> historyBatches
   30: optional map<string, shared.ReplicationInfo> replicationInfo
   40: optional i32 eventStoreVersion
+}
+
+struct GetWorkflowExecutionRawHistoryRequestV2 {
+  10: optional string domain
+  20: optional shared.WorkflowExecution execution
+  30: optional i64 (js.type = "Long") firstEventId
+  40: optional i64 (js.type = "Long") nextEventId
+  50: optional i64 (js.type = "Long") nextEventVersion
+  60: optional i32 maximumPageSize
+  70: optional binary nextPageToken
+}
+
+struct GetWorkflowExecutionRawHistoryResponseV2 {
+  10: optional binary nextPageToken
+  20: optional list<shared.DataBlob> historyBatches
+  30: optional shared.VersionHistory versionHistory
 }
 
 struct AddSearchAttributeRequest {

@@ -90,7 +90,7 @@ func (item *VersionHistoryItem) Equals(input *VersionHistoryItem) bool {
 // NewVersionHistory create a new version history
 func NewVersionHistory(
 	inputToken []byte,
-	inputitems []*VersionHistoryItem,
+	inputItems []*VersionHistoryItem,
 ) *VersionHistory {
 
 	token := make([]byte, len(inputToken))
@@ -100,7 +100,7 @@ func NewVersionHistory(
 		items:       nil,
 	}
 
-	for _, item := range inputitems {
+	for _, item := range inputItems {
 		if err := versionHistory.AddOrUpdateItem(item.Duplicate()); err != nil {
 			panic(fmt.Sprintf("unable to initialize version history: %v", err))
 		}

@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 // 
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -67,6 +67,12 @@ type Interface interface {
 		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryResponse, error)
+
+	GetWorkflowExecutionRawHistoryV2(
+		ctx context.Context,
+		GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
+		opts ...yarpc.CallOption,
+	) (*admin.GetWorkflowExecutionRawHistoryResponseV2, error)
 
 	RemoveTask(
 		ctx context.Context,
@@ -211,6 +217,29 @@ func (c client) GetWorkflowExecutionRawHistory(
 	}
 
 	success, err = admin.AdminService_GetWorkflowExecutionRawHistory_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetWorkflowExecutionRawHistoryV2(
+	ctx context.Context,
+	_GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	opts ...yarpc.CallOption,
+) (success *admin.GetWorkflowExecutionRawHistoryResponseV2, err error) {
+
+	args := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.Args(_GetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetWorkflowExecutionRawHistoryV2_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse(&result)
 	return
 }
 

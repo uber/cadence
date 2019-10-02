@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 // 
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -60,6 +60,11 @@ type Interface interface {
 		ctx context.Context,
 		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
 	) (*admin.GetWorkflowExecutionRawHistoryResponse, error)
+
+	GetWorkflowExecutionRawHistoryV2(
+		ctx context.Context,
+		GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	) (*admin.GetWorkflowExecutionRawHistoryResponseV2, error)
 
 	RemoveTask(
 		ctx context.Context,
@@ -134,6 +139,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "GetWorkflowExecutionRawHistoryV2",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionRawHistoryV2),
+				},
+				Signature:    "GetWorkflowExecutionRawHistoryV2(GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2) (*admin.GetWorkflowExecutionRawHistoryResponseV2)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RemoveTask",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -146,7 +162,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 6)
+	procedures := make([]transport.Procedure, 0, 7)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -239,6 +255,25 @@ func (h handler) GetWorkflowExecutionRawHistory(ctx context.Context, body wire.V
 
 	hadError := err != nil
 	result, err := admin.AdminService_GetWorkflowExecutionRawHistory_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_GetWorkflowExecutionRawHistoryV2_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetWorkflowExecutionRawHistoryV2(ctx, args.GetRequest)
+
+	hadError := err != nil
+	result, err := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
