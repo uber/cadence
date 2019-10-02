@@ -148,7 +148,7 @@ func (s *adminHandlerSuite) Test_ConvertIndexedValueTypeToESDataType() {
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvalidWorkflowID() {
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryRequestV2{
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(""),
@@ -166,7 +166,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvalidRunID() {
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryRequestV2{
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &shared.WorkflowExecution{
 				WorkflowId: common.StringPtr("workflowID"),
@@ -184,7 +184,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvalidSize() {
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryRequestV2{
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &shared.WorkflowExecution{
 				WorkflowId: common.StringPtr("workflowID"),
@@ -203,7 +203,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 	ctx := context.Background()
 	s.domainCache.On("GetDomainID", s.domainName).Return("", fmt.Errorf("test"))
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryRequestV2{
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &shared.WorkflowExecution{
 				WorkflowId: common.StringPtr("workflowID"),
@@ -241,7 +241,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 		Size:              0,
 	}, nil)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryRequestV2{
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &shared.WorkflowExecution{
 				WorkflowId: common.StringPtr("workflowID"),

@@ -70,9 +70,9 @@ type Interface interface {
 
 	GetWorkflowExecutionRawHistoryV2(
 		ctx context.Context,
-		GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
+		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 		opts ...yarpc.CallOption,
-	) (*admin.GetWorkflowExecutionRawHistoryResponseV2, error)
+	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
 
 	RemoveTask(
 		ctx context.Context,
@@ -222,9 +222,9 @@ func (c client) GetWorkflowExecutionRawHistory(
 
 func (c client) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	_GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	_GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (success *admin.GetWorkflowExecutionRawHistoryResponseV2, err error) {
+) (success *admin.GetWorkflowExecutionRawHistoryV2Response, err error) {
 
 	args := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.Args(_GetRequest)
 

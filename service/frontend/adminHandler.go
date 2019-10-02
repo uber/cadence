@@ -426,8 +426,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 // GetWorkflowExecutionRawHistoryV2 - retrieves the history of workflow execution
 func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryRequestV2,
-) (resp *admin.GetWorkflowExecutionRawHistoryResponseV2, retError error) {
+	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+) (resp *admin.GetWorkflowExecutionRawHistoryV2Response, retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminGetWorkflowExecutionRawHistoryV2Scope
@@ -487,7 +487,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		if _, ok := err.(*gen.EntityNotExistsError); ok {
 			// when no events can be returned from DB, DB layer will return
 			// EntityNotExistsError, this API shall return empty response
-			return &admin.GetWorkflowExecutionRawHistoryResponseV2{
+			return &admin.GetWorkflowExecutionRawHistoryV2Response{
 				HistoryBatches: []*gen.DataBlob{},
 				NextPageToken:  nil, // no further pagination
 				VersionHistory: versionHistory,
@@ -510,7 +510,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		blobs = append(blobs, blob.ToThrift())
 	}
 
-	result := &admin.GetWorkflowExecutionRawHistoryResponseV2{
+	result := &admin.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: blobs,
 		VersionHistory: versionHistory,
 	}
@@ -527,7 +527,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 }
 
 func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(
-	request *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 ) error {
 
 	execution := request.Execution
@@ -550,7 +550,7 @@ func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(
 
 func (adh *AdminHandler) preparePaginationToken(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	branchToken []byte,
 	nextEventID int64,
 ) (*getHistoryContinuationToken, error) {

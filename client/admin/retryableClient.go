@@ -138,11 +138,11 @@ func (c *retryableClient) GetWorkflowExecutionRawHistory(
 
 func (c *retryableClient) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (*admin.GetWorkflowExecutionRawHistoryResponseV2, error) {
+) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
 
-	var resp *admin.GetWorkflowExecutionRawHistoryResponseV2
+	var resp *admin.GetWorkflowExecutionRawHistoryV2Response
 	op := func() error {
 		var err error
 		resp, err = c.client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)

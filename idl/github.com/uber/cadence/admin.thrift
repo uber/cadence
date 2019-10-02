@@ -80,7 +80,7 @@ service AdminService {
   * StartEventId defines the beginning of the event to fetch. The first event is inclusive.
   * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
   **/
-  GetWorkflowExecutionRawHistoryResponseV2 GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryRequestV2 getRequest)
+  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -131,7 +131,7 @@ struct GetWorkflowExecutionRawHistoryResponse {
   * StartEventId defines the beginning of the event to fetch. The first event is inclusive.
   * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
   **/
-struct GetWorkflowExecutionRawHistoryRequestV2 {
+struct GetWorkflowExecutionRawHistoryV2Request {
   10: optional string domain
   20: optional shared.WorkflowExecution execution
   30: optional i64 (js.type = "Long") startEventId
@@ -141,7 +141,7 @@ struct GetWorkflowExecutionRawHistoryRequestV2 {
   70: optional binary nextPageToken
 }
 
-struct GetWorkflowExecutionRawHistoryResponseV2 {
+struct GetWorkflowExecutionRawHistoryV2Response {
   10: optional binary nextPageToken
   20: optional list<shared.DataBlob> historyBatches
   30: optional shared.VersionHistory versionHistory

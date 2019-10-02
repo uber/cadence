@@ -63,8 +63,8 @@ type Interface interface {
 
 	GetWorkflowExecutionRawHistoryV2(
 		ctx context.Context,
-		GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
-	) (*admin.GetWorkflowExecutionRawHistoryResponseV2, error)
+		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
+	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
 
 	RemoveTask(
 		ctx context.Context,
@@ -145,7 +145,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionRawHistoryV2),
 				},
-				Signature:    "GetWorkflowExecutionRawHistoryV2(GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2) (*admin.GetWorkflowExecutionRawHistoryResponseV2)",
+				Signature:    "GetWorkflowExecutionRawHistoryV2(GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request) (*admin.GetWorkflowExecutionRawHistoryV2Response)",
 				ThriftModule: admin.ThriftModule,
 			},
 

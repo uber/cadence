@@ -1111,406 +1111,6 @@ func (v *GetWorkflowExecutionRawHistoryRequest) IsSetNextPageToken() bool {
 	return v != nil && v.NextPageToken != nil
 }
 
-// StartEventId defines the beginning of the event to fetch. The first event is inclusive.
-// EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
-type GetWorkflowExecutionRawHistoryRequestV2 struct {
-	Domain          *string                   `json:"domain,omitempty"`
-	Execution       *shared.WorkflowExecution `json:"execution,omitempty"`
-	StartEventId    *int64                    `json:"startEventId,omitempty"`
-	EndEventId      *int64                    `json:"endEventId,omitempty"`
-	EndEventVersion *int64                    `json:"endEventVersion,omitempty"`
-	MaximumPageSize *int32                    `json:"maximumPageSize,omitempty"`
-	NextPageToken   []byte                    `json:"nextPageToken,omitempty"`
-}
-
-// ToWire translates a GetWorkflowExecutionRawHistoryRequestV2 struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *GetWorkflowExecutionRawHistoryRequestV2) ToWire() (wire.Value, error) {
-	var (
-		fields [7]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.Domain != nil {
-		w, err = wire.NewValueString(*(v.Domain)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.Execution != nil {
-		w, err = v.Execution.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.StartEventId != nil {
-		w, err = wire.NewValueI64(*(v.StartEventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.EndEventId != nil {
-		w, err = wire.NewValueI64(*(v.EndEventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-	if v.EndEventVersion != nil {
-		w, err = wire.NewValueI64(*(v.EndEventVersion)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-	if v.MaximumPageSize != nil {
-		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 60, Value: w}
-		i++
-	}
-	if v.NextPageToken != nil {
-		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 70, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-// FromWire deserializes a GetWorkflowExecutionRawHistoryRequestV2 struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryRequestV2 struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v GetWorkflowExecutionRawHistoryRequestV2
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *GetWorkflowExecutionRawHistoryRequestV2) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.Domain = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TStruct {
-				v.Execution, err = _WorkflowExecution_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.StartEventId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 40:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.EndEventId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 50:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.EndEventVersion = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 60:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.MaximumPageSize = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 70:
-			if field.Value.Type() == wire.TBinary {
-				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a GetWorkflowExecutionRawHistoryRequestV2
-// struct.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [7]string
-	i := 0
-	if v.Domain != nil {
-		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
-		i++
-	}
-	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
-		i++
-	}
-	if v.StartEventId != nil {
-		fields[i] = fmt.Sprintf("StartEventId: %v", *(v.StartEventId))
-		i++
-	}
-	if v.EndEventId != nil {
-		fields[i] = fmt.Sprintf("EndEventId: %v", *(v.EndEventId))
-		i++
-	}
-	if v.EndEventVersion != nil {
-		fields[i] = fmt.Sprintf("EndEventVersion: %v", *(v.EndEventVersion))
-		i++
-	}
-	if v.MaximumPageSize != nil {
-		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
-		i++
-	}
-	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
-		i++
-	}
-
-	return fmt.Sprintf("GetWorkflowExecutionRawHistoryRequestV2{%v}", strings.Join(fields[:i], ", "))
-}
-
-// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryRequestV2 match the
-// provided GetWorkflowExecutionRawHistoryRequestV2.
-//
-// This function performs a deep comparison.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) Equals(rhs *GetWorkflowExecutionRawHistoryRequestV2) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
-		return false
-	}
-	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.StartEventId, rhs.StartEventId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.EndEventId, rhs.EndEventId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.EndEventVersion, rhs.EndEventVersion) {
-		return false
-	}
-	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
-		return false
-	}
-	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
-		return false
-	}
-
-	return true
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of GetWorkflowExecutionRawHistoryRequestV2.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.Domain != nil {
-		enc.AddString("domain", *v.Domain)
-	}
-	if v.Execution != nil {
-		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
-	}
-	if v.StartEventId != nil {
-		enc.AddInt64("startEventId", *v.StartEventId)
-	}
-	if v.EndEventId != nil {
-		enc.AddInt64("endEventId", *v.EndEventId)
-	}
-	if v.EndEventVersion != nil {
-		enc.AddInt64("endEventVersion", *v.EndEventVersion)
-	}
-	if v.MaximumPageSize != nil {
-		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
-	}
-	if v.NextPageToken != nil {
-		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
-	}
-	return err
-}
-
-// GetDomain returns the value of Domain if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
-	}
-
-	return
-}
-
-// IsSetDomain returns true if Domain is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetDomain() bool {
-	return v != nil && v.Domain != nil
-}
-
-// GetExecution returns the value of Execution if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetExecution() (o *shared.WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-
-	return
-}
-
-// IsSetExecution returns true if Execution is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetExecution() bool {
-	return v != nil && v.Execution != nil
-}
-
-// GetStartEventId returns the value of StartEventId if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetStartEventId() (o int64) {
-	if v != nil && v.StartEventId != nil {
-		return *v.StartEventId
-	}
-
-	return
-}
-
-// IsSetStartEventId returns true if StartEventId is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetStartEventId() bool {
-	return v != nil && v.StartEventId != nil
-}
-
-// GetEndEventId returns the value of EndEventId if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetEndEventId() (o int64) {
-	if v != nil && v.EndEventId != nil {
-		return *v.EndEventId
-	}
-
-	return
-}
-
-// IsSetEndEventId returns true if EndEventId is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetEndEventId() bool {
-	return v != nil && v.EndEventId != nil
-}
-
-// GetEndEventVersion returns the value of EndEventVersion if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetEndEventVersion() (o int64) {
-	if v != nil && v.EndEventVersion != nil {
-		return *v.EndEventVersion
-	}
-
-	return
-}
-
-// IsSetEndEventVersion returns true if EndEventVersion is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetEndEventVersion() bool {
-	return v != nil && v.EndEventVersion != nil
-}
-
-// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
-	}
-
-	return
-}
-
-// IsSetMaximumPageSize returns true if MaximumPageSize is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetMaximumPageSize() bool {
-	return v != nil && v.MaximumPageSize != nil
-}
-
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetNextPageToken() (o []byte) {
-	if v != nil && v.NextPageToken != nil {
-		return v.NextPageToken
-	}
-
-	return
-}
-
-// IsSetNextPageToken returns true if NextPageToken is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetNextPageToken() bool {
-	return v != nil && v.NextPageToken != nil
-}
-
 type GetWorkflowExecutionRawHistoryResponse struct {
 	NextPageToken     []byte                             `json:"nextPageToken,omitempty"`
 	HistoryBatches    []*shared.DataBlob                 `json:"historyBatches,omitempty"`
@@ -1954,13 +1554,19 @@ func (v *GetWorkflowExecutionRawHistoryResponse) IsSetEventStoreVersion() bool {
 	return v != nil && v.EventStoreVersion != nil
 }
 
-type GetWorkflowExecutionRawHistoryResponseV2 struct {
-	NextPageToken  []byte                 `json:"nextPageToken,omitempty"`
-	HistoryBatches []*shared.DataBlob     `json:"historyBatches,omitempty"`
-	VersionHistory *shared.VersionHistory `json:"versionHistory,omitempty"`
+// StartEventId defines the beginning of the event to fetch. The first event is inclusive.
+// EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
+type GetWorkflowExecutionRawHistoryV2Request struct {
+	Domain          *string                   `json:"domain,omitempty"`
+	Execution       *shared.WorkflowExecution `json:"execution,omitempty"`
+	StartEventId    *int64                    `json:"startEventId,omitempty"`
+	EndEventId      *int64                    `json:"endEventId,omitempty"`
+	EndEventVersion *int64                    `json:"endEventVersion,omitempty"`
+	MaximumPageSize *int32                    `json:"maximumPageSize,omitempty"`
+	NextPageToken   []byte                    `json:"nextPageToken,omitempty"`
 }
 
-// ToWire translates a GetWorkflowExecutionRawHistoryResponseV2 struct into a Thrift-level intermediate
+// ToWire translates a GetWorkflowExecutionRawHistoryV2Request struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -1975,7 +1581,401 @@ type GetWorkflowExecutionRawHistoryResponseV2 struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *GetWorkflowExecutionRawHistoryResponseV2) ToWire() (wire.Value, error) {
+func (v *GetWorkflowExecutionRawHistoryV2Request) ToWire() (wire.Value, error) {
+	var (
+		fields [7]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.StartEventId != nil {
+		w, err = wire.NewValueI64(*(v.StartEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.EndEventId != nil {
+		w, err = wire.NewValueI64(*(v.EndEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.EndEventVersion != nil {
+		w, err = wire.NewValueI64(*(v.EndEventVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a GetWorkflowExecutionRawHistoryV2Request struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryV2Request struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetWorkflowExecutionRawHistoryV2Request
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetWorkflowExecutionRawHistoryV2Request) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.StartEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.EndEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.EndEventVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 60:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.MaximumPageSize = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 70:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetWorkflowExecutionRawHistoryV2Request
+// struct.
+func (v *GetWorkflowExecutionRawHistoryV2Request) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [7]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		i++
+	}
+	if v.StartEventId != nil {
+		fields[i] = fmt.Sprintf("StartEventId: %v", *(v.StartEventId))
+		i++
+	}
+	if v.EndEventId != nil {
+		fields[i] = fmt.Sprintf("EndEventId: %v", *(v.EndEventId))
+		i++
+	}
+	if v.EndEventVersion != nil {
+		fields[i] = fmt.Sprintf("EndEventVersion: %v", *(v.EndEventVersion))
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
+		i++
+	}
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+
+	return fmt.Sprintf("GetWorkflowExecutionRawHistoryV2Request{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryV2Request match the
+// provided GetWorkflowExecutionRawHistoryV2Request.
+//
+// This function performs a deep comparison.
+func (v *GetWorkflowExecutionRawHistoryV2Request) Equals(rhs *GetWorkflowExecutionRawHistoryV2Request) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.StartEventId, rhs.StartEventId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.EndEventId, rhs.EndEventId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.EndEventVersion, rhs.EndEventVersion) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetWorkflowExecutionRawHistoryV2Request.
+func (v *GetWorkflowExecutionRawHistoryV2Request) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.Execution != nil {
+		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
+	}
+	if v.StartEventId != nil {
+		enc.AddInt64("startEventId", *v.StartEventId)
+	}
+	if v.EndEventId != nil {
+		enc.AddInt64("endEventId", *v.EndEventId)
+	}
+	if v.EndEventVersion != nil {
+		enc.AddInt64("endEventVersion", *v.EndEventVersion)
+	}
+	if v.MaximumPageSize != nil {
+		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+// GetExecution returns the value of Execution if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetExecution() (o *shared.WorkflowExecution) {
+	if v != nil && v.Execution != nil {
+		return v.Execution
+	}
+
+	return
+}
+
+// IsSetExecution returns true if Execution is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetExecution() bool {
+	return v != nil && v.Execution != nil
+}
+
+// GetStartEventId returns the value of StartEventId if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetStartEventId() (o int64) {
+	if v != nil && v.StartEventId != nil {
+		return *v.StartEventId
+	}
+
+	return
+}
+
+// IsSetStartEventId returns true if StartEventId is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetStartEventId() bool {
+	return v != nil && v.StartEventId != nil
+}
+
+// GetEndEventId returns the value of EndEventId if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetEndEventId() (o int64) {
+	if v != nil && v.EndEventId != nil {
+		return *v.EndEventId
+	}
+
+	return
+}
+
+// IsSetEndEventId returns true if EndEventId is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetEndEventId() bool {
+	return v != nil && v.EndEventId != nil
+}
+
+// GetEndEventVersion returns the value of EndEventVersion if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetEndEventVersion() (o int64) {
+	if v != nil && v.EndEventVersion != nil {
+		return *v.EndEventVersion
+	}
+
+	return
+}
+
+// IsSetEndEventVersion returns true if EndEventVersion is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetEndEventVersion() bool {
+	return v != nil && v.EndEventVersion != nil
+}
+
+// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetMaximumPageSize() (o int32) {
+	if v != nil && v.MaximumPageSize != nil {
+		return *v.MaximumPageSize
+	}
+
+	return
+}
+
+// IsSetMaximumPageSize returns true if MaximumPageSize is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetMaximumPageSize() bool {
+	return v != nil && v.MaximumPageSize != nil
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryV2Request) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+// IsSetNextPageToken returns true if NextPageToken is not nil.
+func (v *GetWorkflowExecutionRawHistoryV2Request) IsSetNextPageToken() bool {
+	return v != nil && v.NextPageToken != nil
+}
+
+type GetWorkflowExecutionRawHistoryV2Response struct {
+	NextPageToken  []byte                 `json:"nextPageToken,omitempty"`
+	HistoryBatches []*shared.DataBlob     `json:"historyBatches,omitempty"`
+	VersionHistory *shared.VersionHistory `json:"versionHistory,omitempty"`
+}
+
+// ToWire translates a GetWorkflowExecutionRawHistoryV2Response struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetWorkflowExecutionRawHistoryV2Response) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
 		i      int = 0
@@ -2017,11 +2017,11 @@ func _VersionHistory_Read(w wire.Value) (*shared.VersionHistory, error) {
 	return &v, err
 }
 
-// FromWire deserializes a GetWorkflowExecutionRawHistoryResponseV2 struct from its Thrift-level
+// FromWire deserializes a GetWorkflowExecutionRawHistoryV2Response struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryResponseV2 struct
+// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryV2Response struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -2029,12 +2029,12 @@ func _VersionHistory_Read(w wire.Value) (*shared.VersionHistory, error) {
 //     return nil, err
 //   }
 //
-//   var v GetWorkflowExecutionRawHistoryResponseV2
+//   var v GetWorkflowExecutionRawHistoryV2Response
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *GetWorkflowExecutionRawHistoryResponseV2) FromWire(w wire.Value) error {
+func (v *GetWorkflowExecutionRawHistoryV2Response) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -2069,9 +2069,9 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) FromWire(w wire.Value) error 
 	return nil
 }
 
-// String returns a readable string representation of a GetWorkflowExecutionRawHistoryResponseV2
+// String returns a readable string representation of a GetWorkflowExecutionRawHistoryV2Response
 // struct.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) String() string {
+func (v *GetWorkflowExecutionRawHistoryV2Response) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -2091,14 +2091,14 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("GetWorkflowExecutionRawHistoryResponseV2{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("GetWorkflowExecutionRawHistoryV2Response{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryResponseV2 match the
-// provided GetWorkflowExecutionRawHistoryResponseV2.
+// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryV2Response match the
+// provided GetWorkflowExecutionRawHistoryV2Response.
 //
 // This function performs a deep comparison.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) Equals(rhs *GetWorkflowExecutionRawHistoryResponseV2) bool {
+func (v *GetWorkflowExecutionRawHistoryV2Response) Equals(rhs *GetWorkflowExecutionRawHistoryV2Response) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -2118,8 +2118,8 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) Equals(rhs *GetWorkflowExecut
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of GetWorkflowExecutionRawHistoryResponseV2.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of GetWorkflowExecutionRawHistoryV2Response.
+func (v *GetWorkflowExecutionRawHistoryV2Response) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -2137,7 +2137,7 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) MarshalLogObject(enc zapcore.
 
 // GetNextPageToken returns the value of NextPageToken if it is set or its
 // zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) GetNextPageToken() (o []byte) {
+func (v *GetWorkflowExecutionRawHistoryV2Response) GetNextPageToken() (o []byte) {
 	if v != nil && v.NextPageToken != nil {
 		return v.NextPageToken
 	}
@@ -2146,13 +2146,13 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) GetNextPageToken() (o []byte)
 }
 
 // IsSetNextPageToken returns true if NextPageToken is not nil.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) IsSetNextPageToken() bool {
+func (v *GetWorkflowExecutionRawHistoryV2Response) IsSetNextPageToken() bool {
 	return v != nil && v.NextPageToken != nil
 }
 
 // GetHistoryBatches returns the value of HistoryBatches if it is set or its
 // zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) GetHistoryBatches() (o []*shared.DataBlob) {
+func (v *GetWorkflowExecutionRawHistoryV2Response) GetHistoryBatches() (o []*shared.DataBlob) {
 	if v != nil && v.HistoryBatches != nil {
 		return v.HistoryBatches
 	}
@@ -2161,13 +2161,13 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) GetHistoryBatches() (o []*sha
 }
 
 // IsSetHistoryBatches returns true if HistoryBatches is not nil.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) IsSetHistoryBatches() bool {
+func (v *GetWorkflowExecutionRawHistoryV2Response) IsSetHistoryBatches() bool {
 	return v != nil && v.HistoryBatches != nil
 }
 
 // GetVersionHistory returns the value of VersionHistory if it is set or its
 // zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) GetVersionHistory() (o *shared.VersionHistory) {
+func (v *GetWorkflowExecutionRawHistoryV2Response) GetVersionHistory() (o *shared.VersionHistory) {
 	if v != nil && v.VersionHistory != nil {
 		return v.VersionHistory
 	}
@@ -2176,7 +2176,7 @@ func (v *GetWorkflowExecutionRawHistoryResponseV2) GetVersionHistory() (o *share
 }
 
 // IsSetVersionHistory returns true if VersionHistory is not nil.
-func (v *GetWorkflowExecutionRawHistoryResponseV2) IsSetVersionHistory() bool {
+func (v *GetWorkflowExecutionRawHistoryV2Response) IsSetVersionHistory() bool {
 	return v != nil && v.VersionHistory != nil
 }
 
@@ -2185,14 +2185,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "bde4ccfe2a59604384ebeb0fac8ab85449b784bf",
+	SHA1:     "e9c1356324cb3d991cbdd9e5f4eaea63f05ac920",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryResponseV2 GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryRequestV2 getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryRequestV2 {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") endEventId\n  50: optional i64 (js.type = \"Long\") endEventVersion\n  60: optional i32 maximumPageSize\n  70: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponseV2 {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") endEventId\n  50: optional i64 (js.type = \"Long\") endEventVersion\n  60: optional i32 maximumPageSize\n  70: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -5155,7 +5155,7 @@ func (v *AdminService_GetWorkflowExecutionRawHistory_Result) EnvelopeType() wire
 //
 // The arguments for GetWorkflowExecutionRawHistoryV2 are sent and received over the wire as this struct.
 type AdminService_GetWorkflowExecutionRawHistoryV2_Args struct {
-	GetRequest *GetWorkflowExecutionRawHistoryRequestV2 `json:"getRequest,omitempty"`
+	GetRequest *GetWorkflowExecutionRawHistoryV2Request `json:"getRequest,omitempty"`
 }
 
 // ToWire translates a AdminService_GetWorkflowExecutionRawHistoryV2_Args struct into a Thrift-level intermediate
@@ -5193,8 +5193,8 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) ToWire() (wire.Valu
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetWorkflowExecutionRawHistoryRequestV2_Read(w wire.Value) (*GetWorkflowExecutionRawHistoryRequestV2, error) {
-	var v GetWorkflowExecutionRawHistoryRequestV2
+func _GetWorkflowExecutionRawHistoryV2Request_Read(w wire.Value) (*GetWorkflowExecutionRawHistoryV2Request, error) {
+	var v GetWorkflowExecutionRawHistoryV2Request
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -5223,7 +5223,7 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) FromWire(w wire.Val
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.GetRequest, err = _GetWorkflowExecutionRawHistoryRequestV2_Read(field.Value)
+				v.GetRequest, err = _GetWorkflowExecutionRawHistoryV2Request_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -5283,7 +5283,7 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) MarshalLogObject(en
 
 // GetGetRequest returns the value of GetRequest if it is set or its
 // zero value if it is unset.
-func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) GetGetRequest() (o *GetWorkflowExecutionRawHistoryRequestV2) {
+func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) GetGetRequest() (o *GetWorkflowExecutionRawHistoryV2Request) {
 	if v != nil && v.GetRequest != nil {
 		return v.GetRequest
 	}
@@ -5318,7 +5318,7 @@ var AdminService_GetWorkflowExecutionRawHistoryV2_Helper = struct {
 	// Args accepts the parameters of GetWorkflowExecutionRawHistoryV2 in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		getRequest *GetWorkflowExecutionRawHistoryRequestV2,
+		getRequest *GetWorkflowExecutionRawHistoryV2Request,
 	) *AdminService_GetWorkflowExecutionRawHistoryV2_Args
 
 	// IsException returns true if the given error can be thrown
@@ -5343,7 +5343,7 @@ var AdminService_GetWorkflowExecutionRawHistoryV2_Helper = struct {
 	//     return fmt.Errorf("unexpected error from GetWorkflowExecutionRawHistoryV2: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*GetWorkflowExecutionRawHistoryResponseV2, error) (*AdminService_GetWorkflowExecutionRawHistoryV2_Result, error)
+	WrapResponse func(*GetWorkflowExecutionRawHistoryV2Response, error) (*AdminService_GetWorkflowExecutionRawHistoryV2_Result, error)
 
 	// UnwrapResponse takes the result struct for GetWorkflowExecutionRawHistoryV2
 	// and returns the value or error returned by it.
@@ -5353,12 +5353,12 @@ var AdminService_GetWorkflowExecutionRawHistoryV2_Helper = struct {
 	//
 	//   result := deserialize(bytes)
 	//   value, err := AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*AdminService_GetWorkflowExecutionRawHistoryV2_Result) (*GetWorkflowExecutionRawHistoryResponseV2, error)
+	UnwrapResponse func(*AdminService_GetWorkflowExecutionRawHistoryV2_Result) (*GetWorkflowExecutionRawHistoryV2Response, error)
 }{}
 
 func init() {
 	AdminService_GetWorkflowExecutionRawHistoryV2_Helper.Args = func(
-		getRequest *GetWorkflowExecutionRawHistoryRequestV2,
+		getRequest *GetWorkflowExecutionRawHistoryV2Request,
 	) *AdminService_GetWorkflowExecutionRawHistoryV2_Args {
 		return &AdminService_GetWorkflowExecutionRawHistoryV2_Args{
 			GetRequest: getRequest,
@@ -5380,7 +5380,7 @@ func init() {
 		}
 	}
 
-	AdminService_GetWorkflowExecutionRawHistoryV2_Helper.WrapResponse = func(success *GetWorkflowExecutionRawHistoryResponseV2, err error) (*AdminService_GetWorkflowExecutionRawHistoryV2_Result, error) {
+	AdminService_GetWorkflowExecutionRawHistoryV2_Helper.WrapResponse = func(success *GetWorkflowExecutionRawHistoryV2Response, err error) (*AdminService_GetWorkflowExecutionRawHistoryV2_Result, error) {
 		if err == nil {
 			return &AdminService_GetWorkflowExecutionRawHistoryV2_Result{Success: success}, nil
 		}
@@ -5410,7 +5410,7 @@ func init() {
 
 		return nil, err
 	}
-	AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse = func(result *AdminService_GetWorkflowExecutionRawHistoryV2_Result) (success *GetWorkflowExecutionRawHistoryResponseV2, err error) {
+	AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse = func(result *AdminService_GetWorkflowExecutionRawHistoryV2_Result) (success *GetWorkflowExecutionRawHistoryV2Response, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -5446,7 +5446,7 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type AdminService_GetWorkflowExecutionRawHistoryV2_Result struct {
 	// Value returned by GetWorkflowExecutionRawHistoryV2 after a successful execution.
-	Success              *GetWorkflowExecutionRawHistoryResponseV2 `json:"success,omitempty"`
+	Success              *GetWorkflowExecutionRawHistoryV2Response `json:"success,omitempty"`
 	BadRequestError      *shared.BadRequestError                   `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError              `json:"internalServiceError,omitempty"`
 	EntityNotExistError  *shared.EntityNotExistsError              `json:"entityNotExistError,omitempty"`
@@ -5524,8 +5524,8 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) ToWire() (wire.Va
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetWorkflowExecutionRawHistoryResponseV2_Read(w wire.Value) (*GetWorkflowExecutionRawHistoryResponseV2, error) {
-	var v GetWorkflowExecutionRawHistoryResponseV2
+func _GetWorkflowExecutionRawHistoryV2Response_Read(w wire.Value) (*GetWorkflowExecutionRawHistoryV2Response, error) {
+	var v GetWorkflowExecutionRawHistoryV2Response
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -5554,7 +5554,7 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) FromWire(w wire.V
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _GetWorkflowExecutionRawHistoryResponseV2_Read(field.Value)
+				v.Success, err = _GetWorkflowExecutionRawHistoryV2Response_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -5706,7 +5706,7 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) MarshalLogObject(
 
 // GetSuccess returns the value of Success if it is set or its
 // zero value if it is unset.
-func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) GetSuccess() (o *GetWorkflowExecutionRawHistoryResponseV2) {
+func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) GetSuccess() (o *GetWorkflowExecutionRawHistoryV2Response) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}

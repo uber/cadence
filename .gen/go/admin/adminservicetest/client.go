@@ -234,9 +234,9 @@ func (mr *_MockClientRecorder) GetWorkflowExecutionRawHistory(
 // 	... := client.GetWorkflowExecutionRawHistoryV2(...)
 func (m *MockClient) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	_GetRequest *admin.GetWorkflowExecutionRawHistoryRequestV2,
+	_GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (success *admin.GetWorkflowExecutionRawHistoryResponseV2, err error) {
+) (success *admin.GetWorkflowExecutionRawHistoryV2Response, err error) {
 
 	args := []interface{}{ctx, _GetRequest}
 	for _, o := range opts {
@@ -244,7 +244,7 @@ func (m *MockClient) GetWorkflowExecutionRawHistoryV2(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "GetWorkflowExecutionRawHistoryV2", args...)
-	success, _ = ret[i].(*admin.GetWorkflowExecutionRawHistoryResponseV2)
+	success, _ = ret[i].(*admin.GetWorkflowExecutionRawHistoryV2Response)
 	i++
 	err, _ = ret[i].(error)
 	return
