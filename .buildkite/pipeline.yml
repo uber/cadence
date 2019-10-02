@@ -60,7 +60,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make ndc"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - "build/coverage/*.out"
     retry:
