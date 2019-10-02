@@ -22,6 +22,8 @@ package provider
 
 import (
 	"errors"
+	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"github.com/uber/cadence/common/archiver"
@@ -121,6 +123,9 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 
 	container, ok := p.historyContainers[serviceName]
 	if !ok {
+		fmt.Println("### 0")
+		fmt.Println(string(debug.Stack()))
+		fmt.Println("### 0")
 		return nil, ErrBootstrapContainerNotFound
 	}
 
@@ -156,6 +161,9 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 
 	container, ok := p.visibilityContainers[serviceName]
 	if !ok {
+		fmt.Println("### 1")
+		fmt.Println(string(debug.Stack()))
+		fmt.Println("### 1")
 		return nil, ErrBootstrapContainerNotFound
 	}
 

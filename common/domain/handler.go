@@ -99,7 +99,7 @@ func NewHandler(
 		metadataMgr:         metadataMgr,
 		clusterMetadata:     clusterMetadata,
 		domainReplicator:    domainReplicator,
-		domainAttrValidator: newAttrValidator(clusterMetadata, int32(minRetentionDays)),
+		domainAttrValidator: NewAttrValidator(clusterMetadata, int32(minRetentionDays)),
 		archivalMetadata:    archivalMetadata,
 		archiverProvider:    archiverProvider,
 	}
