@@ -85,14 +85,16 @@ type (
 
 	// ExecutionsRow represents a row in executions table
 	ExecutionsRow struct {
-		ShardID          int
-		DomainID         UUID
-		WorkflowID       string
-		RunID            UUID
-		NextEventID      int64
-		LastWriteVersion int64
-		Data             []byte
-		DataEncoding     string
+		ShardID                  int
+		DomainID                 UUID
+		WorkflowID               string
+		RunID                    UUID
+		NextEventID              int64
+		LastWriteVersion         int64
+		Data                     []byte
+		DataEncoding             string
+		VersionHistories         []byte
+		VersionHistoriesEncoding string
 	}
 
 	// ExecutionsFilter contains the column names within domain table that
@@ -278,9 +280,7 @@ type (
 		MinNodeID *int64
 		// Exclusive
 		MaxNodeID *int64
-		// Exclusive
-		MinTxnID *int64
-		PageSize *int
+		PageSize  *int
 	}
 
 	// HistoryTreeRow represents a row in history_tree table

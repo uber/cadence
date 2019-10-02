@@ -193,6 +193,7 @@ func newTimerQueueFailoverProcessor(
 			shard.GetConfig().TimerProcessorFailoverMaxPollRPS,
 			logger,
 		),
+		config: shard.GetConfig(),
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
 	return updateShardAckLevel, processor
@@ -375,8 +376,8 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 
 	updateHistory := false
 	updateState := false
-	ai, running := msBuilder.GetActivityInfo(task.EventID)
-	if running {
+	ai, ok := msBuilder.GetActivityInfo(task.EventID)
+	if ok {
 		// If current one is HB task then we may need to create the next heartbeat timer.  Clear the create flag for this
 		// heartbeat timer so we can create it again if needed.
 		// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
@@ -385,7 +386,11 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 		if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= task.VisibilityTimestamp.Unix() {
 			ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
 			if err := msBuilder.UpdateActivity(ai); err != nil {
+<<<<<<< HEAD
 				t.logger.Error("failed to update activity", tag.Error(err))
+=======
+				return err
+>>>>>>> e2cfef989cc0a6c3606bcd30edd44eda9861f920
 			}
 			updateState = true
 		}
@@ -397,8 +402,8 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 
 ExpireActivityTimers:
 	for _, td := range tBuilder.GetActivityTimers(msBuilder) {
-		ai, isRunning := msBuilder.GetActivityInfo(td.ActivityID)
-		if !isRunning {
+		ai, ok := msBuilder.GetActivityInfo(td.ActivityID)
+		if !ok {
 			//  We might have time out this activity already.
 			continue ExpireActivityTimers
 		}
@@ -629,9 +634,9 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 
 	// generate activity task
 	scheduledID := task.EventID
-	ai, running := msBuilder.GetActivityInfo(scheduledID)
-	if !running || task.ScheduleAttempt < int64(ai.Attempt) {
-		if running && ai != nil {
+	ai, ok := msBuilder.GetActivityInfo(scheduledID)
+	if !ok || task.ScheduleAttempt < int64(ai.Attempt) {
+		if ok {
 			t.logger.Info("Duplicate activity retry timer task",
 				tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
 				tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
@@ -644,7 +649,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 		}
 		return nil
 	}
-	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, ai.Version, task.Version, task)
+	ok, err = verifyTaskVersion(t.shard, t.logger, task.DomainID, ai.Version, task.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -653,9 +658,9 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 
 	domainID := task.DomainID
 	targetDomainID := domainID
-	scheduledEvent, ok := msBuilder.GetActivityScheduledEvent(scheduledID)
-	if !ok {
-		return &workflow.InternalServiceError{Message: "unable to get activity schedule event."}
+	scheduledEvent, err := msBuilder.GetActivityScheduledEvent(scheduledID)
+	if err != nil {
+		return err
 	}
 	if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
 		domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
@@ -735,9 +740,9 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 	}
 
 	// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
-	startEvent, found := msBuilder.GetStartEvent()
-	if !found {
-		return &workflow.InternalServiceError{Message: "Failed to load start event."}
+	startEvent, err := msBuilder.GetStartEvent()
+	if err != nil {
+		return err
 	}
 
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
@@ -765,7 +770,6 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 	_, newMutableState, err := msBuilder.AddContinueAsNewEvent(
 		msBuilder.GetNextEventID(),
 		common.EmptyEventID,
-		domainEntry,
 		startAttributes.GetParentWorkflowDomain(),
 		continueAsnewAttributes,
 		eventStoreVersion,

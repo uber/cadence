@@ -385,9 +385,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 	}
 
 	// this is a cron workflow
-	startEvent, found := handler.mutableState.GetStartEvent()
-	if !found {
-		return &workflow.InternalServiceError{Message: "Failed to load start event."}
+	startEvent, err := handler.mutableState.GetStartEvent()
+	if err != nil {
+		return err
 	}
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 	return handler.retryCronContinueAsNew(
@@ -462,15 +462,15 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 	if backoffInterval == backoff.NoBackoff {
 		// no retry or cron
 		if _, err := handler.mutableState.AddFailWorkflowEvent(handler.decisionTaskCompletedID, attr); err != nil {
-			return &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+			return err
 		}
 		return nil
 	}
 
 	// this is a cron / backoff workflow
-	startEvent, found := handler.mutableState.GetStartEvent()
-	if !found {
-		return &workflow.InternalServiceError{Message: "Failed to load start event."}
+	startEvent, err := handler.mutableState.GetStartEvent()
+	if err != nil {
+		return err
 	}
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 	return handler.retryCronContinueAsNew(
@@ -705,7 +705,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
 		handler.decisionTaskCompletedID,
 		handler.decisionTaskCompletedID,
-		handler.domainEntry,
 		parentDomainName,
 		attr,
 		handler.eventStoreVersion,
@@ -763,11 +762,17 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 		return err
 	}
 
+	enabled := handler.config.EnableParentClosePolicy(handler.domainEntry.GetInfo().Name)
 	if attr.ParentClosePolicy == nil {
-		useTerminate := handler.config.UseTerminateAsDefaultParentClosePolicy(handler.domainEntry.GetInfo().Name)
-		if useTerminate {
+		// for old clients, this field is empty. If they enable the feature, make default as terminate
+		if enabled {
 			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyTerminate)
 		} else {
+			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
+		}
+	} else {
+		// for domains that haven't enabled the feature yet, need to use Abandon for backward-compatibility
+		if !enabled {
 			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
 		}
 	}
@@ -919,7 +924,6 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
 		handler.decisionTaskCompletedID,
 		handler.decisionTaskCompletedID,
-		handler.domainEntry,
 		attr.GetParentWorkflowDomain(),
 		continueAsNewAttributes,
 		handler.eventStoreVersion,

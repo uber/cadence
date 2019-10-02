@@ -174,6 +174,8 @@ func getInputFile(inputFile string) *os.File {
 		}
 		return os.Stdin
 	}
+	// This code is executed from the CLI. All user input is from a CLI user.
+	// #nosec
 	f, err := os.Open(inputFile)
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
@@ -508,11 +510,11 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 			Version:             currVersion,
 			LastReplicationInfo: repInfo,
 			EventStoreVersion:   exeInfo.EventStoreVersion,
-			BranchToken:         exeInfo.GetCurrentBranch(),
+			BranchToken:         exeInfo.BranchToken,
 		}
 
-		_, historyBatches, err := history.GetAllHistory(historyMgr, historyV2Mgr, nil, loggerimpl.NewNopLogger(), true,
-			domainID, wid, rid, minID, maxID, exeInfo.EventStoreVersion, exeInfo.GetCurrentBranch(), common.IntPtr(shardID))
+		_, historyBatches, err := history.GetAllHistory(historyMgr, historyV2Mgr, nil, true,
+			domainID, wid, rid, minID, maxID, exeInfo.EventStoreVersion, exeInfo.BranchToken, common.IntPtr(shardID))
 
 		if err != nil {
 			ErrorAndExit("GetAllHistory error", err)
@@ -539,12 +541,12 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 					ErrorAndExit("GetWorkflowExecution error", err)
 				}
 				taskTemplate.NewRunEventStoreVersion = resp.State.ExecutionInfo.EventStoreVersion
-				taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.GetCurrentBranch()
+				taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.BranchToken
 			}
 			taskTemplate.Version = firstEvent.GetVersion()
 			taskTemplate.FirstEventID = firstEvent.GetEventId()
 			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
-			task, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, nil, loggerimpl.NewNopLogger(), batch, common.IntPtr(shardID))
+			task, _, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, nil, batch, common.IntPtr(shardID))
 			if err != nil {
 				ErrorAndExit("GenerateReplicationTask error", err)
 			}
@@ -582,7 +584,9 @@ func AdminRereplicate(c *cli.Context) {
 
 	if c.IsSet(FlagInputFile) {
 		inFile := c.String(FlagInputFile)
+		// This code is executed from the CLI. All user input is from a CLI user.
 		// parse domainID,workflowID,runID,minEventID,maxEventID
+		// #nosec
 		file, err := os.Open(inFile)
 		if err != nil {
 			ErrorAndExit("Open failed", err)
@@ -821,6 +825,8 @@ func createConsumerAndWaitForReady(brokers []string, tlsConfig *tls.Config, grou
 }
 
 func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err error) {
+	// This code is executed from the CLI. All user input is from a CLI user.
+	// #nosec
 	file, err := os.Open(in)
 	if err != nil {
 		return nil, err
@@ -853,6 +859,8 @@ func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err e
 }
 
 func loadBrokerConfig(hostFile string, cluster string) ([]string, *tls.Config, error) {
+	// This code is executed from the CLI and is only used to load config files
+	// #nosec
 	contents, err := ioutil.ReadFile(hostFile)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load kafka cluster info from %v., error: %v", hostFile, err)

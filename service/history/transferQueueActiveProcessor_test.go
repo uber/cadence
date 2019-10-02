@@ -50,7 +50,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	dc "github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
 
@@ -119,11 +118,9 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.version = int64(4096)
 	// ack manager will use the domain information
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
-		Info: &persistence.DomainInfo{ID: validDomainID},
+		Info: &persistence.DomainInfo{ID: testDomainID},
 		Config: &persistence.DomainConfig{
-			Retention:                1,
-			VisibilityArchivalStatus: workflow.ArchivalStatusEnabled,
-			VisibilityArchivalURI:    "test:///visibility/archival",
+			Retention: 1,
 		},
 		IsGlobalDomain: true,
 		ReplicationConfig: &persistence.DomainReplicationConfig{
@@ -146,6 +143,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 		s.mockClientBean,
 		s.mockArchivalMetadata,
 		s.mockArchiverProvider,
+		nil,
 	)
 
 	shardContext := &shardContextImpl{
@@ -213,7 +211,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockParentClosePolicyClient = &parentclosepolicy.ClientMock{}
 	s.transferQueueActiveProcessor.parentClosePolicyClient = s.mockParentClosePolicyClient
 
-	s.domainID = validDomainID
+	s.domainID = testDomainID
 	s.domainEntry = cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: s.domainID}, &persistence.DomainConfig{}, "", nil)
 }
 
@@ -244,7 +242,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Success() {
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -302,7 +299,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Duplication(
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -362,7 +358,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_FirstDecisio
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -411,7 +406,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_NonFirstDeci
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -468,7 +462,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Sticky_NonFi
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -529,7 +522,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_DecisionNotS
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -588,7 +580,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Duplication(
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -647,7 +638,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -698,7 +688,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		CompletionEvent:    event,
 	}).Return(nil).Times(1)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 
 	_, err = s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -715,7 +704,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -753,10 +741,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("Archive", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
 
 	_, err = s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -773,7 +757,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -891,10 +874,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("Archive", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
 	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(nil, gomock.Any()).Return(nil).Times(1)
 	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(nil, gomock.Any()).Return(nil).Times(1)
 
@@ -913,7 +892,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -989,10 +967,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("Archive", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
 	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything).Return(nil).Times(1)
 
 	_, err = s.transferQueueActiveProcessor.process(transferTask, true)
@@ -1016,7 +990,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Success()
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1080,7 +1053,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Failure()
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1146,7 +1118,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Duplicati
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1213,7 +1184,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Success()
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1292,7 +1262,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Failure()
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1362,7 +1331,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Duplicati
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1429,7 +1397,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1531,7 +1498,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1626,7 +1592,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1723,7 +1688,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1810,7 +1774,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessRecordWorkflowStartedTask
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 
 	event, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -1862,7 +1825,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessUpsertWorkflowSearchAttri
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
 
 	event, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -2033,8 +1995,8 @@ func (s *transferQueueActiveProcessorSuite) createSignalWorkflowExecutionRequest
 func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
 	msBuilder mutableState, ci *persistence.ChildExecutionInfo, domainName string, targetDomainName string) *history.StartWorkflowExecutionRequest {
 
-	event, ok := msBuilder.GetChildExecutionInitiatedEvent(task.ScheduleID)
-	if !ok {
+	event, err := msBuilder.GetChildExecutionInitiatedEvent(task.ScheduleID)
+	if err != nil {
 		s.Fail("Cannot find corresponding child workflow info with scheduled ID %v.", task.ScheduleID)
 	}
 	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes

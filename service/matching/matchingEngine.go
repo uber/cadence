@@ -360,7 +360,7 @@ pollLoop:
 				StickyExecutionEnabled:    common.BoolPtr(isStickyEnabled),
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				EventStoreVersion:         mutableStateResp.EventStoreVersion,
-				BranchToken:               mutableStateResp.BranchToken,
+				BranchToken:               mutableStateResp.CurrentBranchToken,
 			}
 			return e.createPollForDecisionTaskResponse(task, resp), nil
 		}
@@ -499,7 +499,7 @@ query_loop:
 				expectedNextEventID := result.waitNextEventID
 			wait_loop:
 				for j := 0; j < maxQueryWaitCount; j++ {
-					ms, err := e.historyService.GetMutableState(ctx, &h.GetMutableStateRequest{
+					ms, err := e.historyService.PollMutableState(ctx, &h.PollMutableStateRequest{
 						DomainUUID:          queryRequest.DomainUUID,
 						Execution:           queryRequest.QueryRequest.Execution,
 						ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
@@ -510,7 +510,7 @@ query_loop:
 							continue query_loop
 						}
 
-						if !ms.GetIsWorkflowRunning() {
+						if ms.GetWorkflowCloseState() != persistence.WorkflowCloseStatusNone {
 							return nil, &workflow.QueryFailedError{Message: "workflow closed without making any progress"}
 						}
 
