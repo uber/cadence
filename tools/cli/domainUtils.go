@@ -69,7 +69,10 @@ var (
 			Name:  FlagActiveClusterNameWithAlias,
 			Usage: "Active cluster name",
 		},
-		cli.StringFlag{ // use StringFlag instead of buggy StringSliceFlag
+		cli.StringFlag{
+			// use StringFlag instead of buggy StringSliceFlag
+			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
+			//  consider update urfave/cli
 			Name:  FlagClustersWithAlias,
 			Usage: "Clusters",
 		},
@@ -124,7 +127,10 @@ var (
 			Name:  FlagActiveClusterNameWithAlias,
 			Usage: "Active cluster name",
 		},
-		cli.StringFlag{ // use StringFlag instead of buggy StringSliceFlag
+		cli.StringFlag{
+			// use StringFlag instead of buggy StringSliceFlag
+			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
+			//  consider update urfave/cli
 			Name:  FlagClustersWithAlias,
 			Usage: "Clusters",
 		},
