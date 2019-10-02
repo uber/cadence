@@ -37,10 +37,13 @@ const (
 )
 
 const (
-	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
-	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
-	templateGetMessagesQuery      = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
-	templateDeleteMessagesQuery   = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
+	templateEnqueueMessageQuery      = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
+	templateGetLastMessageIDQuery    = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
+	templateGetMessagesQuery         = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
+	templateDeleteMessagesQuery      = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
+	templateGetQueueMetadataQuery    = `SELECT cluster_ack_level, version FROM queue_metadata WHERE queue_type=?`
+	templateInsertQueueMetadataQuery = `INSERT INTO queue_metadata (queue_type, cluster_ack_level, version) VALUES(?, ?, ?) IF NOT EXISTS`
+	templateUpdateQueueMetadataQuery = `UPDATE queue_metadata SET cluster_ack_level = ?, version = ? WHERE queue_type=? IF version = ?`
 )
 
 type (
@@ -190,11 +193,57 @@ func getMessageID(message map[string]interface{}) int {
 }
 
 func (q *cassandraQueue) UpdateAckLevel(messageID int, clusterName string) error {
-	panic("implement me")
+	version := 0
+	clusterAckLevels := map[string]int{clusterName: messageID}
+	query := q.session.Query(templateInsertQueueMetadataQuery, q.queueType, clusterAckLevels, version)
+	var queueType int
+	applied, err := query.ScanCAS(&queueType, &clusterAckLevels, &version)
+	if err != nil {
+		return fmt.Errorf("failed to update ack level: %v", err)
+	}
+
+	if applied {
+		return nil
+	}
+
+	// Not applied, need to update
+	clusterAckLevels[clusterName] = messageID
+
+	query = q.session.Query(templateUpdateQueueMetadataQuery, clusterAckLevels, version+1, q.queueType, version)
+	applied, err = query.ScanCAS()
+	if !applied {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateDomain operation encounter concurrent write."),
+		}
+	}
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateDomain operation failed. Error %v", err),
+		}
+	}
+
+	return nil
 }
 
 func (q *cassandraQueue) GetAckLevels() (map[string]int, error) {
-	panic("implement me")
+	ackLevels, _, err := q.getQueueMetadata()
+	return ackLevels, err
+}
+
+func (q *cassandraQueue) getQueueMetadata() (map[string]int, int, error) {
+	query := q.session.Query(templateGetQueueMetadataQuery, q.queueType)
+	var ackLevels map[string]int
+	var version int
+	err := query.Scan(&ackLevels, &version)
+	if err != nil {
+		if err == gocql.ErrNotFound {
+			return nil, 0, nil
+		}
+
+		return nil, 0, fmt.Errorf("failed to get queue metadata: %v", err)
+	}
+
+	return ackLevels, version, nil
 }
 
 func (q *cassandraQueue) DeleteMessagesBefore(messageID int) error {

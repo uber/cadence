@@ -463,6 +463,12 @@ type (
 		MessagePayload []byte
 	}
 
+	// QueueMetadataRow represents a row in queue_metadata table
+	QueueMetadataRow struct {
+		QueueType int
+		Data      []byte
+	}
+
 	// tableCRUD defines the API for interacting with the database tables
 	tableCRUD interface {
 		InsertIntoDomain(rows *DomainRow) (sql.Result, error)
@@ -657,6 +663,8 @@ type (
 		GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error)
 		GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]QueueRow, error)
 		DeleteMessages(queueType, messageID int) (sql.Result, error)
+		UpdateAckLevel(queueType int, messageID int, clusterName string) error
+		GetAckLevels(queueType int) (map[string]int, error)
 	}
 
 	// Tx defines the API for a SQL transaction

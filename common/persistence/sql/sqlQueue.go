@@ -90,11 +90,18 @@ func newQueueRow(queueType int, messageID int, payload []byte) *sqldb.QueueRow {
 }
 
 func (q *sqlQueue) UpdateAckLevel(messageID int, clusterName string) error {
-	panic("implement me")
+	err := q.txExecute("UpdateAckLevel", func(tx sqldb.Tx) error {
+		return tx.UpdateAckLevel(q.queueType, messageID, clusterName)
+	})
+
+	if err != nil {
+		return &workflow.InternalServiceError{Message: err.Error()}
+	}
+	return nil
 }
 
 func (q *sqlQueue) GetAckLevels() (map[string]int, error) {
-	panic("implement me")
+	return q.db.GetAckLevels(q.queueType)
 }
 
 func (q *sqlQueue) DeleteMessagesBefore(messageID int) error {

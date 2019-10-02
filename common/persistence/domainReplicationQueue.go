@@ -108,10 +108,14 @@ func (q *domainReplicationQueueImpl) UpdateAckLevel(lastProcessedMessageID int, 
 	return nil
 }
 
+func (q *domainReplicationQueueImpl) GetAckLevels() (map[string]int, error) {
+	return q.queue.GetAckLevels()
+}
+
 func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 	ackLevelByCluster, err := q.queue.GetAckLevels()
 	if err != nil {
-		return fmt.Errorf("failed to load ack levels: %v", err)
+		return fmt.Errorf("failed to purge messages: %v", err)
 	}
 
 	if len(ackLevelByCluster) == 0 {
@@ -127,7 +131,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 
 	err = q.queue.DeleteMessagesBefore(minAckLevel)
 	if err != nil {
-		return fmt.Errorf("failed to delete messages: %v", err)
+		return fmt.Errorf("failed to purge messages: %v", err)
 	}
 
 	q.ackLevelUpdated = false

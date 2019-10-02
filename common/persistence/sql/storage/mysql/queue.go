@@ -22,15 +22,20 @@ package mysql
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
 const (
-	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
-	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
-	templateGetMessagesQuery      = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
-	templateDeleteMessagesQuery   = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
+	templateEnqueueMessageQuery      = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
+	templateGetLastMessageIDQuery    = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
+	templateGetMessagesQuery         = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
+	templateDeleteMessagesQuery      = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
+	templateGetQueueMetadataQuery    = `SELECT data from queue_metadata WHERE queue_type = ?`
+	templateLockQueueMetadataQuery   = templateGetQueueMetadataQuery + ` FOR UPDATE`
+	templateInsertQueueMetadataQuery = `INSERT INTO queue_metadata (queue_type, data) VALUES(:queue_type, :data)`
+	templateUpdateQueueMetadataQuery = `UPDATE queue_metadata SET data = ? WHERE queue_type = ?`
 )
 
 // InsertIntoQueue inserts a new row into queue table
@@ -55,4 +60,60 @@ func (mdb *DB) GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]sq
 // DeleteMessages deletes messages before messageID from the queue
 func (mdb *DB) DeleteMessages(queueType, messageID int) (sql.Result, error) {
 	return mdb.conn.Exec(templateDeleteMessagesQuery, queueType, messageID)
+}
+
+// UpdateAckLevel updates ack level
+func (mdb *DB) UpdateAckLevel(queueType int, messageID int, clusterName string) error {
+	var data []byte
+	err := mdb.conn.Get(&data, templateLockQueueMetadataQuery, queueType)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return err
+		}
+
+		// insert
+		clusterAckLevels := map[string]int{clusterName: messageID}
+		data, err = json.Marshal(clusterAckLevels)
+		if err != nil {
+			return err
+		}
+
+		_, err := mdb.conn.NamedExec(templateInsertQueueMetadataQuery, sqldb.QueueMetadataRow{QueueType: queueType, Data: data})
+		return err
+	}
+
+	// update
+	var clusterAckLevels map[string]int
+	if err := json.Unmarshal(data, &clusterAckLevels); err != nil {
+		return err
+	}
+
+	clusterAckLevels[clusterName] = messageID
+	data, err = json.Marshal(clusterAckLevels)
+	if err != nil {
+		return err
+	}
+
+	_, err = mdb.conn.Exec(templateUpdateQueueMetadataQuery, data, queueType)
+	return err
+}
+
+// GetAckLevels returns ack levels for pulling clusters
+func (mdb *DB) GetAckLevels(queueType int) (map[string]int, error) {
+	var data []byte
+	err := mdb.conn.Get(&data, templateGetQueueMetadataQuery, queueType)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	var clusterAckLevels map[string]int
+	if err := json.Unmarshal(data, &clusterAckLevels); err != nil {
+		return nil, err
+	}
+
+	return clusterAckLevels, nil
 }
