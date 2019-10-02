@@ -452,46 +452,37 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
-	nextEventID := request.GetNextEventId()
-	if nextEventID > response.GetNextEventId() {
-		nextEventID = response.GetNextEventId()
+	endEventID := request.GetEndEventId()
+	if endEventID > response.GetNextEventId() {
+		endEventID = response.GetNextEventId()
 	}
+
 	versionHistory, err := adh.getVersionHistory(
 		response.GetVersionHistories(),
-		nextEventID,
-		request.GetNextEventVersion())
+		endEventID,
+		request.GetEndEventVersion())
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 	token, err := adh.preparePaginationToken(
 		ctx,
 		request,
-		response.GetCurrentBranchToken(),
-		response.GetReplicationInfo(),
-		nextEventID)
+		versionHistory.GetBranchToken(),
+		endEventID)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 
-	var historyBatches []*gen.History
-	var size int
 	pageSize := int(request.GetMaximumPageSize())
 	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
-	_, historyBatches, token.PersistenceToken, size, err = historyService.PaginateHistory(
-		adh.historyMgr,
-		adh.historyV2Mgr,
-		true, // this means that we are getting history by batch
-		domainID,
-		execution.GetWorkflowId(),
-		token.RunID,
-		token.EventStoreVersion,
-		token.BranchToken,
-		token.FirstEventID,
-		token.NextEventID,
-		token.PersistenceToken,
-		pageSize,
-		common.IntPtr(shardID),
-	)
+	rawHistoryResponse, err := adh.historyV2Mgr.ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
+		BranchToken:   versionHistory.GetBranchToken(),
+		MinEventID:    request.GetStartEventId(),
+		MaxEventID:    request.GetEndEventId(),
+		PageSize:      pageSize,
+		NextPageToken: token.PersistenceToken,
+		ShardID:       common.IntPtr(shardID),
+	})
 	if err != nil {
 		if _, ok := err.(*gen.EntityNotExistsError); ok {
 			// when no events can be returned from DB, DB layer will return
@@ -505,22 +496,18 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		return nil, err
 	}
 
+	token.PersistenceToken = rawHistoryResponse.NextPageToken
+	size := rawHistoryResponse.Size
 	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
 	// domains along with the individual domains stats
 	adh.metricsClient.RecordTimer(scope, metrics.HistorySize, time.Duration(size))
 	domainScope := adh.metricsClient.Scope(scope, metrics.DomainTag(request.GetDomain()))
 	domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
+	rawBlobs := rawHistoryResponse.HistoryEventBlobs
 	blobs := []*gen.DataBlob{}
-	for _, historyBatch := range historyBatches {
-		blob, err := adh.GetPayloadSerializer().SerializeBatchEvents(historyBatch.Events, common.EncodingTypeThriftRW)
-		if err != nil {
-			return nil, err
-		}
-		blobs = append(blobs, &gen.DataBlob{
-			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
-			Data:         blob.Data,
-		})
+	for _, blob := range rawBlobs {
+		blobs = append(blobs, blob.ToThrift())
 	}
 
 	result := &admin.GetWorkflowExecutionRawHistoryResponseV2{
@@ -565,7 +552,6 @@ func (adh *AdminHandler) preparePaginationToken(
 	ctx context.Context,
 	request *admin.GetWorkflowExecutionRawHistoryRequestV2,
 	branchToken []byte,
-	replicationInfo map[string]*gen.ReplicationInfo,
 	nextEventID int64,
 ) (*getHistoryContinuationToken, error) {
 
@@ -579,22 +565,15 @@ func (adh *AdminHandler) preparePaginationToken(
 
 		if execution.GetRunId() != token.RunID ||
 			// we guarantee to use the first event ID provided in the request
-			request.GetFirstEventId() != token.FirstEventID ||
+			request.GetStartEventId() != token.FirstEventID ||
 			// the next event ID in the request must be <= next event ID from mutable state, when initialized
 			// so as long as customer do not change next event ID during pagination,
 			// next event ID in the token <= next event ID in the request.
-			request.GetNextEventId() < token.NextEventID {
+			request.GetEndEventId() < token.NextEventID {
 			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
 		}
-		// for the rest variables in the token, since we do not do hmac,
-		// the only thing can be done is to trust the token:
-		// IsWorkflowRunning: not used
-		// TransientDecision: not used
-		// PersistenceToken: trust
-		// EventStoreVersion: trust
-		// ReplicationInfo: trust
 	} else {
-		firstEventID := request.GetFirstEventId()
+		firstEventID := request.GetStartEventId()
 		if firstEventID < 0 || firstEventID > nextEventID {
 			return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 		}
@@ -604,7 +583,7 @@ func (adh *AdminHandler) preparePaginationToken(
 			FirstEventID:      firstEventID,
 			NextEventID:       nextEventID,
 			PersistenceToken:  nil, // this is the initialized value
-			ReplicationInfo:   replicationInfo,
+			ReplicationInfo:   nil, // this field will not be used in 3+DC
 			EventStoreVersion: persistence.EventStoreVersionV2,
 		}
 	}

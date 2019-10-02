@@ -154,11 +154,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 				WorkflowId: common.StringPtr(""),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			FirstEventId:     common.Int64Ptr(1),
-			NextEventId:      common.Int64Ptr(10),
-			NextEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:  common.Int32Ptr(10),
-			NextPageToken:    nil,
+			StartEventId:    common.Int64Ptr(1),
+			EndEventId:      common.Int64Ptr(10),
+			EndEventVersion: common.Int64Ptr(100),
+			MaximumPageSize: common.Int32Ptr(10),
+			NextPageToken:   nil,
 		})
 	s.Error(err)
 }
@@ -172,11 +172,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr("runID"),
 			},
-			FirstEventId:     common.Int64Ptr(1),
-			NextEventId:      common.Int64Ptr(10),
-			NextEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:  common.Int32Ptr(10),
-			NextPageToken:    nil,
+			StartEventId:    common.Int64Ptr(1),
+			EndEventId:      common.Int64Ptr(10),
+			EndEventVersion: common.Int64Ptr(100),
+			MaximumPageSize: common.Int32Ptr(10),
+			NextPageToken:   nil,
 		})
 	s.Error(err)
 }
@@ -190,11 +190,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			FirstEventId:     common.Int64Ptr(1),
-			NextEventId:      common.Int64Ptr(10),
-			NextEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:  common.Int32Ptr(-1),
-			NextPageToken:    nil,
+			StartEventId:    common.Int64Ptr(1),
+			EndEventId:      common.Int64Ptr(10),
+			EndEventVersion: common.Int64Ptr(100),
+			MaximumPageSize: common.Int32Ptr(-1),
+			NextPageToken:   nil,
 		})
 	s.Error(err)
 }
@@ -209,11 +209,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			FirstEventId:     common.Int64Ptr(1),
-			NextEventId:      common.Int64Ptr(10),
-			NextEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:  common.Int32Ptr(1),
-			NextPageToken:    nil,
+			StartEventId:    common.Int64Ptr(1),
+			EndEventId:      common.Int64Ptr(10),
+			EndEventVersion: common.Int64Ptr(100),
+			MaximumPageSize: common.Int32Ptr(1),
+			NextPageToken:   nil,
 		})
 	s.Error(err)
 }
@@ -235,11 +235,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	}
 	s.historyClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything).Return(&persistence.ReadHistoryBranchByBatchResponse{
-		History:          []*shared.History{},
-		NextPageToken:    []byte{},
-		Size:             0,
-		LastFirstEventID: int64(1),
+	s.mockHistoryV2Mgr.On("ReadRawHistoryBranch", mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
+		HistoryEventBlobs: []*persistence.DataBlob{},
+		NextPageToken:     []byte{},
+		Size:              0,
 	}, nil)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&admin.GetWorkflowExecutionRawHistoryRequestV2{
@@ -248,11 +247,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			FirstEventId:     common.Int64Ptr(1),
-			NextEventId:      common.Int64Ptr(10),
-			NextEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:  common.Int32Ptr(10),
-			NextPageToken:    nil,
+			StartEventId:    common.Int64Ptr(1),
+			EndEventId:      common.Int64Ptr(10),
+			EndEventVersion: common.Int64Ptr(100),
+			MaximumPageSize: common.Int32Ptr(10),
+			NextPageToken:   nil,
 		})
 	s.NoError(err)
 }

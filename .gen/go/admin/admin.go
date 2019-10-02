@@ -1111,14 +1111,16 @@ func (v *GetWorkflowExecutionRawHistoryRequest) IsSetNextPageToken() bool {
 	return v != nil && v.NextPageToken != nil
 }
 
+// StartEventId defines the beginning of the event to fetch. The first event is inclusive.
+// EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
 type GetWorkflowExecutionRawHistoryRequestV2 struct {
-	Domain           *string                   `json:"domain,omitempty"`
-	Execution        *shared.WorkflowExecution `json:"execution,omitempty"`
-	FirstEventId     *int64                    `json:"firstEventId,omitempty"`
-	NextEventId      *int64                    `json:"nextEventId,omitempty"`
-	NextEventVersion *int64                    `json:"nextEventVersion,omitempty"`
-	MaximumPageSize  *int32                    `json:"maximumPageSize,omitempty"`
-	NextPageToken    []byte                    `json:"nextPageToken,omitempty"`
+	Domain          *string                   `json:"domain,omitempty"`
+	Execution       *shared.WorkflowExecution `json:"execution,omitempty"`
+	StartEventId    *int64                    `json:"startEventId,omitempty"`
+	EndEventId      *int64                    `json:"endEventId,omitempty"`
+	EndEventVersion *int64                    `json:"endEventVersion,omitempty"`
+	MaximumPageSize *int32                    `json:"maximumPageSize,omitempty"`
+	NextPageToken   []byte                    `json:"nextPageToken,omitempty"`
 }
 
 // ToWire translates a GetWorkflowExecutionRawHistoryRequestV2 struct into a Thrift-level intermediate
@@ -1160,24 +1162,24 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
-	if v.FirstEventId != nil {
-		w, err = wire.NewValueI64(*(v.FirstEventId)), error(nil)
+	if v.StartEventId != nil {
+		w, err = wire.NewValueI64(*(v.StartEventId)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
-	if v.NextEventId != nil {
-		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
+	if v.EndEventId != nil {
+		w, err = wire.NewValueI64(*(v.EndEventId)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
-	if v.NextEventVersion != nil {
-		w, err = wire.NewValueI64(*(v.NextEventVersion)), error(nil)
+	if v.EndEventVersion != nil {
+		w, err = wire.NewValueI64(*(v.EndEventVersion)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1248,7 +1250,7 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.FirstEventId = &x
+				v.StartEventId = &x
 				if err != nil {
 					return err
 				}
@@ -1258,7 +1260,7 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.NextEventId = &x
+				v.EndEventId = &x
 				if err != nil {
 					return err
 				}
@@ -1268,7 +1270,7 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.NextEventVersion = &x
+				v.EndEventVersion = &x
 				if err != nil {
 					return err
 				}
@@ -1315,16 +1317,16 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) String() string {
 		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
 		i++
 	}
-	if v.FirstEventId != nil {
-		fields[i] = fmt.Sprintf("FirstEventId: %v", *(v.FirstEventId))
+	if v.StartEventId != nil {
+		fields[i] = fmt.Sprintf("StartEventId: %v", *(v.StartEventId))
 		i++
 	}
-	if v.NextEventId != nil {
-		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
+	if v.EndEventId != nil {
+		fields[i] = fmt.Sprintf("EndEventId: %v", *(v.EndEventId))
 		i++
 	}
-	if v.NextEventVersion != nil {
-		fields[i] = fmt.Sprintf("NextEventVersion: %v", *(v.NextEventVersion))
+	if v.EndEventVersion != nil {
+		fields[i] = fmt.Sprintf("EndEventVersion: %v", *(v.EndEventVersion))
 		i++
 	}
 	if v.MaximumPageSize != nil {
@@ -1355,13 +1357,13 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) Equals(rhs *GetWorkflowExecuti
 	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.FirstEventId, rhs.FirstEventId) {
+	if !_I64_EqualsPtr(v.StartEventId, rhs.StartEventId) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
+	if !_I64_EqualsPtr(v.EndEventId, rhs.EndEventId) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.NextEventVersion, rhs.NextEventVersion) {
+	if !_I64_EqualsPtr(v.EndEventVersion, rhs.EndEventVersion) {
 		return false
 	}
 	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
@@ -1386,14 +1388,14 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) MarshalLogObject(enc zapcore.O
 	if v.Execution != nil {
 		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
 	}
-	if v.FirstEventId != nil {
-		enc.AddInt64("firstEventId", *v.FirstEventId)
+	if v.StartEventId != nil {
+		enc.AddInt64("startEventId", *v.StartEventId)
 	}
-	if v.NextEventId != nil {
-		enc.AddInt64("nextEventId", *v.NextEventId)
+	if v.EndEventId != nil {
+		enc.AddInt64("endEventId", *v.EndEventId)
 	}
-	if v.NextEventVersion != nil {
-		enc.AddInt64("nextEventVersion", *v.NextEventVersion)
+	if v.EndEventVersion != nil {
+		enc.AddInt64("endEventVersion", *v.EndEventVersion)
 	}
 	if v.MaximumPageSize != nil {
 		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
@@ -1434,49 +1436,49 @@ func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetExecution() bool {
 	return v != nil && v.Execution != nil
 }
 
-// GetFirstEventId returns the value of FirstEventId if it is set or its
+// GetStartEventId returns the value of StartEventId if it is set or its
 // zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetFirstEventId() (o int64) {
-	if v != nil && v.FirstEventId != nil {
-		return *v.FirstEventId
+func (v *GetWorkflowExecutionRawHistoryRequestV2) GetStartEventId() (o int64) {
+	if v != nil && v.StartEventId != nil {
+		return *v.StartEventId
 	}
 
 	return
 }
 
-// IsSetFirstEventId returns true if FirstEventId is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetFirstEventId() bool {
-	return v != nil && v.FirstEventId != nil
+// IsSetStartEventId returns true if StartEventId is not nil.
+func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetStartEventId() bool {
+	return v != nil && v.StartEventId != nil
 }
 
-// GetNextEventId returns the value of NextEventId if it is set or its
+// GetEndEventId returns the value of EndEventId if it is set or its
 // zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetNextEventId() (o int64) {
-	if v != nil && v.NextEventId != nil {
-		return *v.NextEventId
+func (v *GetWorkflowExecutionRawHistoryRequestV2) GetEndEventId() (o int64) {
+	if v != nil && v.EndEventId != nil {
+		return *v.EndEventId
 	}
 
 	return
 }
 
-// IsSetNextEventId returns true if NextEventId is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetNextEventId() bool {
-	return v != nil && v.NextEventId != nil
+// IsSetEndEventId returns true if EndEventId is not nil.
+func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetEndEventId() bool {
+	return v != nil && v.EndEventId != nil
 }
 
-// GetNextEventVersion returns the value of NextEventVersion if it is set or its
+// GetEndEventVersion returns the value of EndEventVersion if it is set or its
 // zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) GetNextEventVersion() (o int64) {
-	if v != nil && v.NextEventVersion != nil {
-		return *v.NextEventVersion
+func (v *GetWorkflowExecutionRawHistoryRequestV2) GetEndEventVersion() (o int64) {
+	if v != nil && v.EndEventVersion != nil {
+		return *v.EndEventVersion
 	}
 
 	return
 }
 
-// IsSetNextEventVersion returns true if NextEventVersion is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetNextEventVersion() bool {
-	return v != nil && v.NextEventVersion != nil
+// IsSetEndEventVersion returns true if EndEventVersion is not nil.
+func (v *GetWorkflowExecutionRawHistoryRequestV2) IsSetEndEventVersion() bool {
+	return v != nil && v.EndEventVersion != nil
 }
 
 // GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
@@ -2183,14 +2185,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "88c5aa2ebf48c2fd9eca4357b155e1613d6b5c55",
+	SHA1:     "bde4ccfe2a59604384ebeb0fac8ab85449b784bf",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponseV2 GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryRequestV2 getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\nstruct GetWorkflowExecutionRawHistoryRequestV2 {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i64 (js.type = \"Long\") nextEventVersion\n  60: optional i32 maximumPageSize\n  70: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponseV2 {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryResponseV2 GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryRequestV2 getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryRequestV2 {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") endEventId\n  50: optional i64 (js.type = \"Long\") endEventVersion\n  60: optional i32 maximumPageSize\n  70: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponseV2 {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //

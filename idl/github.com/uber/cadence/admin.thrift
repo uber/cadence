@@ -77,6 +77,8 @@ service AdminService {
   /**
   * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow
   * execution in unknown to the service.
+  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.
+  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
   **/
   GetWorkflowExecutionRawHistoryResponseV2 GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryRequestV2 getRequest)
     throws (
@@ -125,12 +127,16 @@ struct GetWorkflowExecutionRawHistoryResponse {
   40: optional i32 eventStoreVersion
 }
 
+/**
+  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.
+  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
+  **/
 struct GetWorkflowExecutionRawHistoryRequestV2 {
   10: optional string domain
   20: optional shared.WorkflowExecution execution
-  30: optional i64 (js.type = "Long") firstEventId
-  40: optional i64 (js.type = "Long") nextEventId
-  50: optional i64 (js.type = "Long") nextEventVersion
+  30: optional i64 (js.type = "Long") startEventId
+  40: optional i64 (js.type = "Long") endEventId
+  50: optional i64 (js.type = "Long") endEventVersion
   60: optional i32 maximumPageSize
   70: optional binary nextPageToken
 }
