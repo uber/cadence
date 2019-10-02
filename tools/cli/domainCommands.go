@@ -178,7 +178,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			ReplicationConfiguration: replicationConfig,
 		}
 	} else {
-		resp, err := d.frontendClient.DescribeDomain(ctx, &shared.DescribeDomainRequest{
+		resp, err := d.describeDomain(ctx, &shared.DescribeDomainRequest{
 			Name: common.StringPtr(domainName),
 		})
 		if err != nil {
