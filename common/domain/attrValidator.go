@@ -36,8 +36,8 @@ type (
 	}
 )
 
-// NewAttrValidator create a new domain attr validator
-func NewAttrValidator(
+// newAttrValidator create a new domain attr validator
+func newAttrValidator(
 	clusterMetadata cluster.Metadata,
 	minRetentionDays int32,
 ) *AttrValidatorImpl {

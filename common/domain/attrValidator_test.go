@@ -57,7 +57,7 @@ func (s *attrValidatorSuite) TearDownSuite() {
 func (s *attrValidatorSuite) SetupTest() {
 	s.minRetentionDays = 1
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.validator = NewAttrValidator(s.mockClusterMetadata, int32(s.minRetentionDays))
+	s.validator = newAttrValidator(s.mockClusterMetadata, int32(s.minRetentionDays))
 }
 
 func (s *attrValidatorSuite) TearDownTest() {
