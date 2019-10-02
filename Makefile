@@ -54,6 +54,10 @@ ifndef PERSISTENCE_TYPE
 override PERSISTENCE_TYPE = cassandra
 endif
 
+ifndef TEST_RUN_COUNT
+override TEST_RUN_COUNT = 1
+endif
+
 ifdef TEST_TAG
 override TEST_TAG := -tags $(TEST_TAG)
 endif
@@ -212,7 +216,7 @@ cover_ndc_profile: clean bins_nothrift
 
 	@echo Running integration test for 3+ dc with $(PERSISTENCE_TYPE)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_NDC_DIR)
-	@time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out || exit 1;
+	@time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_NDC_COVER_FILE)
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_CASS_COVER_FILE) $(INTEG_CASS_EV2_COVER_FILE) $(INTEG_XDC_CASS_COVER_FILE) $(INTEG_SQL_COVER_FILE) $(INTEG_SQL_EV2_COVER_FILE) $(INTEG_XDC_SQL_COVER_FILE)

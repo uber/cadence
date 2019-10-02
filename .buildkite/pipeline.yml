@@ -56,7 +56,7 @@ steps:
           run: integration-test-xdc-cassandra
           config: docker/buildkite/docker-compose.yml
 
-  - label: ":golang: integration 3+dc test with cassandra"
+  - label: ":golang: integration ndc test with cassandra"
     agents:
       queue: "workers"
       docker: "*"
@@ -116,7 +116,7 @@ steps:
           run: integration-test-xdc-mysql
           config: docker/buildkite/docker-compose.yml
 
-  - label: ":golang: integration 3+dc test with mysql"
+  - label: ":golang: integration ndc test with mysql"
     agents:
       queue: "workers"
       docker: "*"
