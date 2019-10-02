@@ -796,21 +796,13 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	deleteHistory := func() {
 		// this function should be only called when we drop start workflow execution
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-<<<<<<< HEAD
-			err := r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
-				BranchToken: msBuilder.GetCurrentBranch(),
-				ShardID:     common.IntPtr(r.shard.GetShardID()),
-			})
-			if err != nil {
-				r.logger.Error("failed to delete history branch", tag.Error(err))
-=======
 			currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 			if err == nil {
-				r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+				err = r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 					BranchToken: currentBranchToken,
 					ShardID:     common.IntPtr(r.shard.GetShardID()),
 				})
->>>>>>> e2cfef989cc0a6c3606bcd30edd44eda9861f920
+				r.logger.Error("failed to delete history branch", tag.Error(err))
 			}
 		} else {
 			err := r.shard.GetHistoryManager().DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{

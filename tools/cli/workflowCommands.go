@@ -565,18 +565,7 @@ func ListWorkflow(c *cli.Context) {
 			if len(nextPageToken) == 0 {
 				break
 			}
-
-<<<<<<< HEAD
-			fmt.Printf("Press %s to show next page, press %s to quit: ",
-				color.GreenString("Enter"), color.RedString("any other key then Enter"))
-			var input string
-			_, _ = fmt.Scanln(&input)
-			if strings.Trim(input, " ") == "" {
-				continue
-			} else {
-=======
 			if !showNextPage() {
->>>>>>> e2cfef989cc0a6c3606bcd30edd44eda9861f920
 				break
 			}
 		}

@@ -113,14 +113,6 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(
 	)
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
-<<<<<<< HEAD
-		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
-			_ = w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
-				Success:     retError == nil || persistence.IsTimeoutError(retError),
-				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
-			})
-=======
 		if newMutableState != nil {
 			newBranchToken, err := newMutableState.GetCurrentBranchToken()
 			if err == nil && len(newBranchToken) > 0 {
@@ -130,7 +122,6 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(
 					ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 				})
 			}
->>>>>>> e2cfef989cc0a6c3606bcd30edd44eda9861f920
 		}
 	}()
 	if retError != nil {
@@ -866,23 +857,15 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 		return retError
 	}
 	defer func() {
-<<<<<<< HEAD
-		err := w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-			BranchToken: newMsBuilder.GetExecutionInfo().GetCurrentBranch(),
-			Success:     retError == nil || persistence.IsTimeoutError(retError),
-			ShardID:     shardID,
-		})
-		log.Info(err)
-=======
 		newBranchToken, err := newMsBuilder.GetCurrentBranchToken()
 		if err == nil {
-			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+			err = w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newBranchToken,
 				Success:     true,
 				ShardID:     shardID,
 			})
+			log.Info(err)
 		}
->>>>>>> e2cfef989cc0a6c3606bcd30edd44eda9861f920
 	}()
 	retError = newMsBuilder.SetCurrentBranchToken(forkResp.NewBranchToken)
 	if retError != nil {

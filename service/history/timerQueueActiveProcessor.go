@@ -386,11 +386,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 		if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= task.VisibilityTimestamp.Unix() {
 			ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
 			if err := msBuilder.UpdateActivity(ai); err != nil {
-<<<<<<< HEAD
-				t.logger.Error("failed to update activity", tag.Error(err))
-=======
 				return err
->>>>>>> e2cfef989cc0a6c3606bcd30edd44eda9861f920
 			}
 			updateState = true
 		}
