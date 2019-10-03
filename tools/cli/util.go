@@ -785,6 +785,6 @@ func showNextPage() bool {
 	fmt.Printf("Press %s to show next page, press %s to quit: ",
 		color.GreenString("Enter"), color.RedString("any other key then Enter"))
 	var input string
-	_, _  = fmt.Scanln(&input)
+	_, _ = fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""
 }

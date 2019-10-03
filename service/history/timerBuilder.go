@@ -22,6 +22,7 @@ package history
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -237,7 +238,7 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) per
 			ai.LastHeartbeatTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
 		}
 		if err := msBuilder.UpdateActivity(ai); err != nil {
-			tb.logger.Error("failed to update activity", tag.Error(err))
+			log.F("failed to update activity", tag.Error(err))
 		}
 
 	}
