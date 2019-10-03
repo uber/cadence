@@ -128,7 +128,6 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 			// Clusters attr is not used.
 		},
 		FailoverVersion: s.version,
-		TableVersion:    persistence.DomainTableVersionV1,
 	}, nil)
 	s.mockProducer = &mocks.KafkaProducer{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
@@ -1423,7 +1422,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
@@ -1431,7 +1429,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
@@ -1524,7 +1521,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
@@ -1532,7 +1528,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
@@ -1618,7 +1613,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
@@ -1626,7 +1620,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
@@ -1714,7 +1707,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
@@ -1722,7 +1714,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 		Info:              &persistence.DomainInfo{Name: childDomainName, ID: childDomainID},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
 	}
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()

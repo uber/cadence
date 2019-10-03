@@ -340,7 +340,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupLocalDomain() {
 			},
 		},
 		IsGlobalDomain: false,
-		TableVersion:   persistence.DomainTableVersionV1,
 	}
 
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(domainRecord, nil)
@@ -358,7 +357,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithOneR
 			},
 		},
 		IsGlobalDomain: true,
-		TableVersion:   persistence.DomainTableVersionV1,
 	}
 
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(domainRecord, nil)
@@ -381,7 +379,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithTwoR
 			},
 		},
 		IsGlobalDomain: true,
-		TableVersion:   persistence.DomainTableVersionV1,
 	}
 
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(domainRecord, nil)

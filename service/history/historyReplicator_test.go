@@ -216,7 +216,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -263,7 +262,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -318,7 +316,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 			},
 			FailoverVersion: lastWriteVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -373,7 +370,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 			},
 			FailoverVersion: lastWriteVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -427,7 +423,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 			},
 			FailoverVersion: lastWriteVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	msBuilder.On("GetActivityInfo", scheduleID).Return(nil, false)
@@ -482,7 +477,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityV
 			},
 			FailoverVersion: lastWriteVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	msBuilder.On("GetActivityInfo", scheduleID).Return(&persistence.ActivityInfo{
@@ -550,7 +544,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	activityInfo := &persistence.ActivityInfo{
@@ -625,7 +618,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	activityInfo := &persistence.ActivityInfo{
@@ -700,7 +692,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerV
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	activityInfo := &persistence.ActivityInfo{
@@ -1031,7 +1022,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 			},
 			FailoverVersion: currentVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
@@ -1103,7 +1093,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 			},
 			FailoverVersion: currentVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
@@ -1249,7 +1238,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 			},
 			FailoverVersion: currentVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
@@ -1319,7 +1307,6 @@ func (s *historyReplicatorSuite) TestWorkflowReset() {
 			},
 			FailoverVersion: currentVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
@@ -1391,7 +1378,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 			},
 			FailoverVersion: currentVersion,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
@@ -2558,7 +2544,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -2665,7 +2650,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -2778,7 +2762,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -2924,7 +2907,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3053,7 +3035,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3182,7 +3163,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3302,7 +3282,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", delReq).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3456,7 +3435,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3630,7 +3608,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3831,7 +3808,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -3982,7 +3958,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
 		Config:            &p.DomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}, nil)
@@ -4143,7 +4118,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			},
 			FailoverVersion: domainVersion, // this does not matter
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 

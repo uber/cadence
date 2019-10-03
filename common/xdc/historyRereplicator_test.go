@@ -100,7 +100,6 @@ func (s *historyRereplicatorSuite) SetupTest() {
 					{ClusterName: cluster.TestCurrentClusterName},
 				},
 			},
-			TableVersion: persistence.DomainTableVersionV1,
 		}, nil,
 	)
 	s.serializer = persistence.NewPayloadSerializer()

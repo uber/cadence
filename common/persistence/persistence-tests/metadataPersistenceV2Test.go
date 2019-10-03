@@ -949,7 +949,6 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			IsGlobalDomain:  true,
 			ConfigVersion:   133,
 			FailoverVersion: 266,
-			TableVersion:    p.DomainTableVersionV2,
 		},
 		{
 			Info: &p.DomainInfo{
@@ -976,7 +975,6 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			IsGlobalDomain:  false,
 			ConfigVersion:   400,
 			FailoverVersion: 667,
-			TableVersion:    p.DomainTableVersionV2,
 		},
 	}
 	for _, domain := range inputDomains {

@@ -160,7 +160,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {
 			},
 			FailoverVersion: 1234,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -211,7 +210,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowCompleted() {
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -262,7 +260,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 
@@ -337,7 +334,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockProducer.On("Publish", &replicator.ReplicationTask{
@@ -431,7 +427,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 			},
 			FailoverVersion: version,
 			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockProducer.On("Publish", &replicator.ReplicationTask{

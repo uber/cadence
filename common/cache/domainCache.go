@@ -21,7 +21,6 @@
 package cache
 
 import (
-	"fmt"
 	"hash/fnv"
 	"sort"
 	"strconv"
@@ -236,7 +235,10 @@ func (c *domainCache) Start() {
 	}
 
 	// initialize the cache by initial scan
-	c.refreshDomains()
+	err := c.refreshDomains()
+	if err != nil {
+		c.logger.Fatal("Unable to initialize domain cache", tag.Error(err))
+	}
 	go c.refreshLoop()
 }
 
@@ -441,26 +443,7 @@ UpdateLoop:
 }
 
 func (c *domainCache) loadDomain(name string, id string) (*persistence.GetDomainResponse, error) {
-	resp, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: name, ID: id})
-	if err == nil {
-		if resp.TableVersion == persistence.DomainTableVersionV1 {
-			// if loaded from V1 table
-			// this means the FailoverNotificationVersion will be 0
-			// and NotificationVersion has complete different meaning
-			resp.FailoverNotificationVersion = 0
-			resp.NotificationVersion = 0
-		} else {
-			// the result is from V2 table
-			// this should not happen since background thread is refreshing.
-			// if this actually happen, just discard the result
-			// since we need to guarantee that domainNotificationVersion > all notification versions
-			// inside the cache
-			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Domain: %v", name),
-			}
-		}
-	}
-	return resp, err
+	return c.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: name, ID: id})
 }
 
 func (c *domainCache) updateNameToIDCache(cacheNameToID Cache, name string, id string) {

@@ -244,7 +244,6 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
 				},
 			},
-			TableVersion: p.DomainTableVersionV1,
 		},
 		nil,
 	)
@@ -314,7 +313,6 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
 				},
 			},
-			TableVersion: p.DomainTableVersionV1,
 		},
 		nil,
 	)
@@ -386,7 +384,6 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
 				},
 			},
-			TableVersion: p.DomainTableVersionV1,
 		},
 		nil,
 	)
@@ -446,7 +443,6 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
 				},
 			},
-			TableVersion: p.DomainTableVersionV1,
 		},
 		nil,
 	)

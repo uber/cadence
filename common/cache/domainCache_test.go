@@ -208,7 +208,6 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		TableVersion: persistence.DomainTableVersionV1,
 	}
 	entry := s.buildEntryFromRecord(domainRecord)
 
@@ -239,7 +238,6 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		TableVersion: persistence.DomainTableVersionV1,
 	}
 	entry := s.buildEntryFromRecord(domainRecord)
 
@@ -490,7 +488,6 @@ func (s *domainCacheSuite) TestUpdateCache_GetNotTrigger() {
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		TableVersion: persistence.DomainTableVersionV1,
 	}
 	entryOld := s.buildEntryFromRecord(domainRecordOld)
 
@@ -508,7 +505,6 @@ func (s *domainCacheSuite) TestUpdateCache_GetNotTrigger() {
 			},
 		},
 		ConfigVersion: domainRecordOld.ConfigVersion + 1,
-		TableVersion:  persistence.DomainTableVersionV1,
 	}
 	entryNew := s.buildEntryFromRecord(domainRecordNew)
 
@@ -558,7 +554,6 @@ func (s *domainCacheSuite) TestGetUpdateCache_ConcurrentAccess() {
 		},
 		ConfigVersion:   0,
 		FailoverVersion: 0,
-		TableVersion:    persistence.DomainTableVersionV1,
 	}
 	entryOld := s.buildEntryFromRecord(domainRecordOld)
 

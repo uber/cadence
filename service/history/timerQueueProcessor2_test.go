@@ -118,7 +118,6 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 				},
 			},
 			FailoverVersion: common.EmptyVersion,
-			TableVersion:    persistence.DomainTableVersionV1,
 		},
 		nil,
 	)

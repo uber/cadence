@@ -88,7 +88,6 @@ type (
 		dispatcherProvider     client.DispatcherProvider
 		messagingClient        messaging.Client
 		metadataMgr            persistence.MetadataManager
-		metadataMgrV2          persistence.MetadataManager
 		shardMgr               persistence.ShardManager
 		historyMgr             persistence.HistoryManager
 		historyV2Mgr           persistence.HistoryV2Manager
@@ -129,7 +128,6 @@ type (
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
-		MetadataMgrV2                 persistence.MetadataManager
 		ShardMgr                      persistence.ShardManager
 		HistoryMgr                    persistence.HistoryManager
 		HistoryV2Mgr                  persistence.HistoryV2Manager
@@ -165,7 +163,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		dispatcherProvider:     params.DispatcherProvider,
 		messagingClient:        params.MessagingClient,
 		metadataMgr:            params.MetadataMgr,
-		metadataMgrV2:          params.MetadataMgrV2,
 		visibilityMgr:          params.VisibilityMgr,
 		shardMgr:               params.ShardMgr,
 		historyMgr:             params.HistoryMgr,
@@ -657,7 +654,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
 		c.startWorkerReplicator(params, service, replicatorDomainCache)
@@ -687,7 +684,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 }
 
 func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ReplicationCfg.ReplicatorMessageConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	c.replicator = replicator.NewReplicator(
@@ -755,10 +752,8 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 }
 
 func (c *cadenceImpl) createSystemDomain() error {
-	if c.metadataMgrV2 == nil {
-		return nil
-	}
-	_, err := c.metadataMgrV2.CreateDomain(&persistence.CreateDomainRequest{
+
+	_, err := c.metadataMgr.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        "cadence-system",

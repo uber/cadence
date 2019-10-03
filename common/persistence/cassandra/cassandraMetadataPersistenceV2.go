@@ -415,7 +415,6 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 		FailoverVersion:             failoverVersion,
 		FailoverNotificationVersion: failoverNotificationVersion,
 		NotificationVersion:         notificationVersion,
-		TableVersion:                p.DomainTableVersionV2,
 	}, nil
 }
 
@@ -435,7 +434,6 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 		Info:              &p.DomainInfo{},
 		Config:            &p.InternalDomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
-		TableVersion:      p.DomainTableVersionV2,
 	}
 	var replicationClusters []map[string]interface{}
 	var badBinariesData []byte
@@ -484,7 +482,6 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 			Info:              &p.DomainInfo{},
 			Config:            &p.InternalDomainConfig{},
 			ReplicationConfig: &p.DomainReplicationConfig{},
-			TableVersion:      p.DomainTableVersionV2,
 		}
 	}
 
