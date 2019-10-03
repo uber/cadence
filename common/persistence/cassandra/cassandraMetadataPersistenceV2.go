@@ -37,6 +37,44 @@ const constDomainPartition = 0
 const domainMetadataRecordName = "cadence-domain-metadata"
 
 const (
+	templateDomainInfoType = `{` +
+		`id: ?, ` +
+		`name: ?, ` +
+		`status: ?, ` +
+		`description: ?, ` +
+		`owner_email: ?, ` +
+		`data: ? ` +
+		`}`
+
+	templateDomainConfigType = `{` +
+		`retention: ?, ` +
+		`emit_metric: ?, ` +
+		`archival_bucket: ?, ` +
+		`archival_status: ?,` +
+		`history_archival_status: ?, ` +
+		`history_archival_uri: ?, ` +
+		`visibility_archival_status: ?, ` +
+		`visibility_archival_uri: ?, ` +
+		`bad_binaries: ?,` +
+		`bad_binaries_encoding: ?` +
+		`}`
+
+	templateDomainReplicationConfigType = `{` +
+		`active_cluster_name: ?, ` +
+		`clusters: ? ` +
+		`}`
+
+	templateCreateDomainQuery = `INSERT INTO domains (` +
+		`id, domain) ` +
+		`VALUES(?, {name: ?}) IF NOT EXISTS`
+
+	templateGetDomainQuery = `SELECT domain.name ` +
+		`FROM domains ` +
+		`WHERE id = ?`
+
+	templateDeleteDomainQuery = `DELETE FROM domains ` +
+		`WHERE id = ?`
+
 	templateCreateDomainByNameQueryWithinBatchV2 = `INSERT INTO domains_by_name_v2 (` +
 		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, notification_version) ` +
 		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?) IF NOT EXISTS`

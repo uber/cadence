@@ -492,7 +492,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -552,7 +552,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -631,7 +631,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,

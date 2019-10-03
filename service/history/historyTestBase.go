@@ -574,7 +574,7 @@ func (s *TestBase) SetupWorkflowStore() {
 	log := loggerimpl.NewDevelopmentForTest(s.Suite)
 	config := NewDynamicConfigForTest()
 	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
+	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManager,
 		clusterMetadata, nil, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext
 }
