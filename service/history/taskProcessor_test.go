@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -34,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 )
@@ -45,7 +45,7 @@ type (
 		logger          log.Logger
 		mockService     service.Service
 		mockShard       ShardContext
-		mockMetadataMgr *mocks.MetadataManager
+		mockDomainCache *cache.DomainCacheMock
 		mockProcessor   *MockTimerProcessor
 		mockQueueAckMgr *MockTimerQueueAckMgr
 
@@ -77,8 +77,8 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockProcessor = &MockTimerProcessor{}
 	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
-	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil)
+	s.mockDomainCache = &cache.DomainCacheMock{}
+	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil, nil)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
@@ -87,7 +87,7 @@ func (s *taskProcessorSuite) SetupTest() {
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
-		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, nil, metricsClient, s.logger),
+		domainCache:               s.mockDomainCache,
 		metricsClient:             metricsClient,
 		standbyClusterCurrentTime: make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),
@@ -108,7 +108,7 @@ func (s *taskProcessorSuite) SetupTest() {
 }
 
 func (s *taskProcessorSuite) TearDownTest() {
-	s.mockMetadataMgr.AssertExpectations(s.T())
+	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockProcessor.AssertExpectations(s.T())
 	s.mockQueueAckMgr.AssertExpectations(s.T())
 }

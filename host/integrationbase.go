@@ -242,9 +242,9 @@ func (s *IntegrationBase) registerArchivalDomain() error {
 			},
 		},
 		IsGlobalDomain:  false,
-		FailoverVersion: 0,
+		FailoverVersion: common.EmptyVersion,
 	}
-	response, err := s.testCluster.testBase.MetadataProxy.CreateDomain(domainRequest)
+	response, err := s.testCluster.testBase.MetadataManager.CreateDomain(domainRequest)
 
 	s.Logger.Info("Register domain succeeded",
 		tag.WorkflowDomainName(s.archivalDomainName),

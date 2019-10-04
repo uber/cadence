@@ -29,10 +29,13 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
+	frontendclient "github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -70,6 +73,7 @@ type Cadence interface {
 	GetFrontendClient() workflowserviceclient.Interface
 	FrontendAddress() string
 	GetFrontendService() service.Service
+	GetHistoryClient() historyserviceclient.Interface
 }
 
 type (
@@ -84,7 +88,6 @@ type (
 		dispatcherProvider     client.DispatcherProvider
 		messagingClient        messaging.Client
 		metadataMgr            persistence.MetadataManager
-		metadataMgrV2          persistence.MetadataManager
 		shardMgr               persistence.ShardManager
 		historyMgr             persistence.HistoryManager
 		historyV2Mgr           persistence.HistoryV2Manager
@@ -95,17 +98,20 @@ type (
 		shutdownCh             chan struct{}
 		shutdownWG             sync.WaitGroup
 		frontEndService        service.Service
+		historyService         service.Service
 		clusterNo              int // cluster number
 		replicator             *replicator.Replicator
 		clientWorker           archiver.ClientWorker
 		indexer                *indexer.Indexer
 		enableEventsV2         bool
+		enbaleNDC              bool
 		archiverMetadata       carchiver.ArchivalMetadata
 		archiverProvider       provider.ArchiverProvider
 		historyConfig          *HistoryConfig
 		esConfig               *elasticsearch.Config
 		esClient               elasticsearch.Client
 		workerConfig           *WorkerConfig
+		mockFrontendClient     map[string]frontendclient.Client
 	}
 
 	// HistoryConfig contains configs for history service
@@ -123,7 +129,6 @@ type (
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
-		MetadataMgrV2                 persistence.MetadataManager
 		ShardMgr                      persistence.ShardManager
 		HistoryMgr                    persistence.HistoryManager
 		HistoryV2Mgr                  persistence.HistoryV2Manager
@@ -133,6 +138,7 @@ type (
 		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
+		EnableNDC                     bool
 		ArchiverMetadata              carchiver.ArchivalMetadata
 		ArchiverProvider              provider.ArchiverProvider
 		EnableReadHistoryFromArchival bool
@@ -140,6 +146,7 @@ type (
 		ESConfig                      *elasticsearch.Config
 		ESClient                      elasticsearch.Client
 		WorkerConfig                  *WorkerConfig
+		MockFrontendClient            map[string]frontendclient.Client
 		DomainReplicationQueue        persistence.DomainReplicationQueue
 	}
 
@@ -158,7 +165,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		dispatcherProvider:     params.DispatcherProvider,
 		messagingClient:        params.MessagingClient,
 		metadataMgr:            params.MetadataMgr,
-		metadataMgrV2:          params.MetadataMgrV2,
 		visibilityMgr:          params.VisibilityMgr,
 		shardMgr:               params.ShardMgr,
 		historyMgr:             params.HistoryMgr,
@@ -169,12 +175,14 @@ func NewCadence(params *CadenceParams) Cadence {
 		shutdownCh:             make(chan struct{}),
 		clusterNo:              params.ClusterNo,
 		enableEventsV2:         params.EnableEventsV2,
+		enbaleNDC:              params.EnableNDC,
 		esConfig:               params.ESConfig,
 		esClient:               params.ESClient,
 		archiverMetadata:       params.ArchiverMetadata,
 		archiverProvider:       params.ArchiverProvider,
 		historyConfig:          params.HistoryConfig,
 		workerConfig:           params.WorkerConfig,
+		mockFrontendClient:     params.MockFrontendClient,
 	}
 }
 
@@ -199,7 +207,7 @@ func (c *cadenceImpl) Start() error {
 
 	var startWG sync.WaitGroup
 	startWG.Add(2)
-	go c.startHistory(hosts, &startWG, c.enableEventsV2)
+	go c.startHistory(hosts, &startWG, c.enableEventsV2, c.enbaleNDC)
 	go c.startMatching(hosts, &startWG)
 	startWG.Wait()
 
@@ -389,6 +397,10 @@ func (c *cadenceImpl) GetFrontendService() service.Service {
 	return c.frontEndService
 }
 
+func (c *cadenceImpl) GetHistoryClient() historyserviceclient.Interface {
+	return NewHistoryClient(c.historyService.GetDispatcher())
+}
+
 func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.WaitGroup) {
 	params := new(service.BootstrapParams)
 	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
@@ -461,6 +473,15 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 
 	// must start base service first
 	c.frontEndService.Start()
+	if c.mockFrontendClient != nil {
+		clientBean := c.frontEndService.GetClientBean()
+		if clientBean != nil {
+			for serviceName, client := range c.mockFrontendClient {
+				clientBean.SetRemoteFrontendClient(serviceName, client)
+			}
+		}
+	}
+
 	err = c.adminHandler.Start()
 	if err != nil {
 		c.logger.Fatal("Failed to start admin", tag.Error(err))
@@ -475,7 +496,12 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.WaitGroup, enableEventsV2 bool) {
+func (c *cadenceImpl) startHistory(
+	hosts map[string][]string,
+	startWG *sync.WaitGroup,
+	enableEventsV2 bool,
+	enableNDC bool,
+) {
 
 	pprofPorts := c.HistoryPProfPort()
 	for i, hostport := range c.HistoryServiceAddress() {
@@ -502,6 +528,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.ArchiverProvider = c.archiverProvider
 
 		service := service.New(params)
+		c.historyService = service
 		hConfig := c.historyConfig
 		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger),
 			hConfig.NumHistoryShards, config.StoreTypeCassandra, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
@@ -510,6 +537,8 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
 		historyConfig.DecisionHeartbeatTimeout = dynamicconfig.GetDurationPropertyFnFilteredByDomain(time.Second * 5)
 		historyConfig.TimerProcessorHistoryArchivalSizeLimit = dynamicconfig.GetIntPropertyFn(5 * 1024)
+		historyConfig.EnableNDC = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableNDC)
+
 		if c.workerConfig.EnableIndexer {
 			historyConfig.AdvancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual)
 		}
@@ -545,6 +574,15 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		handler.RegisterHandler()
 
 		service.Start()
+		if c.mockFrontendClient != nil {
+			clientBean := service.GetClientBean()
+			if clientBean != nil {
+				for serviceName, client := range c.mockFrontendClient {
+					clientBean.SetRemoteFrontendClient(serviceName, client)
+				}
+			}
+		}
+
 		err = handler.Start()
 		if err != nil {
 			c.logger.Fatal("Failed to start history", tag.Error(err))
@@ -580,6 +618,15 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	c.matchingHandler.RegisterHandler()
 
 	service.Start()
+	if c.mockFrontendClient != nil {
+		clientBean := service.GetClientBean()
+		if clientBean != nil {
+			for serviceName, client := range c.mockFrontendClient {
+				clientBean.SetRemoteFrontendClient(serviceName, client)
+			}
+		}
+	}
+
 	err := c.matchingHandler.Start()
 	if err != nil {
 		c.logger.Fatal("Failed to start history", tag.Error(err))
@@ -617,7 +664,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
 		c.startWorkerReplicator(params, service, replicatorDomainCache)
@@ -647,7 +694,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 }
 
 func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ReplicationCfg.ReplicatorMessageConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	c.replicator = replicator.NewReplicator(
@@ -715,10 +762,8 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 }
 
 func (c *cadenceImpl) createSystemDomain() error {
-	if c.metadataMgrV2 == nil {
-		return nil
-	}
-	_, err := c.metadataMgrV2.CreateDomain(&persistence.CreateDomainRequest{
+
+	_, err := c.metadataMgr.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        "cadence-system",
@@ -731,6 +776,7 @@ func (c *cadenceImpl) createSystemDomain() error {
 			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		FailoverVersion:   common.EmptyVersion,
 	})
 	if err != nil {
 		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {

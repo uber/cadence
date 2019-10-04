@@ -56,7 +56,6 @@ type (
 		mockShardManager         *mocks.ShardManager
 		mockClusterMetadata      *mocks.ClusterMetadata
 		mockProducer             *mocks.KafkaProducer
-		mockMetadataMgr          *mocks.MetadataManager
 		mockMessagingClient      messaging.Client
 		mockService              service.Service
 		mockShard                *shardContextImpl
@@ -94,10 +93,16 @@ func (s *conflictResolverSuite) SetupTest() {
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(
+		s.mockClusterMetadata,
+		s.mockMessagingClient,
+		metricsClient,
+		s.mockClientBean,
+		nil,
+		nil,
+		nil)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockEventsCache = &MockEventsCache{}
 
@@ -136,9 +141,9 @@ func (s *conflictResolverSuite) SetupTest() {
 	}
 	s.mockShard.SetEngine(h)
 
-	s.mockContext = newWorkflowExecutionContext(validDomainID, shared.WorkflowExecution{
+	s.mockContext = newWorkflowExecutionContext(testDomainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(validRunID),
+		RunId:      common.StringPtr(testRunID),
 	}, s.mockShard, s.mockExecutionMgr, s.logger)
 	s.conflictResolver = newConflictResolver(s.mockShard, s.mockContext, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
 
@@ -151,7 +156,6 @@ func (s *conflictResolverSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
-	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockEventsCache.AssertExpectations(s.T())
@@ -317,10 +321,12 @@ func (s *conflictResolverSuite) TestReset() {
 		input.ResetWorkflowSnapshot.TransferTasks = nil
 
 		s.Equal(&persistence.ConflictResolveWorkflowExecutionRequest{
-			RangeID:              s.mockShard.shardInfo.RangeID,
-			PrevRunID:            prevRunID,
-			PrevLastWriteVersion: prevLastWriteVersion,
-			PrevState:            prevState,
+			RangeID: s.mockShard.shardInfo.RangeID,
+			CurrentWorkflowCAS: &persistence.CurrentWorkflowCAS{
+				PrevRunID:            prevRunID,
+				PrevLastWriteVersion: prevLastWriteVersion,
+				PrevState:            prevState,
+			},
 			ResetWorkflowSnapshot: persistence.WorkflowSnapshot{
 				ExecutionInfo: executionInfo,
 				ExecutionStats: &persistence.ExecutionStats{

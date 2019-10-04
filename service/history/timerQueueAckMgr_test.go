@@ -28,8 +28,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
@@ -48,7 +48,6 @@ type (
 
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockShardMgr        *mocks.ShardManager
-		mockMetadataMgr     *mocks.MetadataManager
 		mockHistoryMgr      *mocks.HistoryManager
 		mockShard           *shardContextImpl
 		mockService         service.Service
@@ -67,7 +66,6 @@ type (
 
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockShardMgr             *mocks.ShardManager
-		mockMetadataMgr          *mocks.MetadataManager
 		mockHistoryMgr           *mocks.HistoryManager
 		mockShard                *shardContextImpl
 		mockService              service.Service
@@ -105,7 +103,6 @@ func (s *timerQueueAckMgrSuite) TearDownSuite() {
 func (s *timerQueueAckMgrSuite) SetupTest() {
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockShardMgr = &mocks.ShardManager{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
@@ -113,7 +110,7 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockShard = &shardContextImpl{
 		service:         s.mockService,
 		clusterMetadata: s.mockClusterMetadata,
@@ -133,7 +130,6 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
-		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, s.metricsClient, s.logger),
 		metricsClient:             s.metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),
@@ -161,7 +157,6 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 func (s *timerQueueAckMgrSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardMgr.AssertExpectations(s.T())
-	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
@@ -554,7 +549,6 @@ func (s *timerQueueFailoverAckMgrSuite) TearDownSuite() {
 func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockShardMgr = &mocks.ShardManager{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
@@ -562,7 +556,7 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockShard = &shardContextImpl{
 		service:         s.mockService,
 		clusterMetadata: s.mockClusterMetadata,
@@ -582,7 +576,6 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
-		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, s.metricsClient, s.logger),
 		metricsClient:             s.metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),
@@ -621,7 +614,6 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 func (s *timerQueueFailoverAckMgrSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardMgr.AssertExpectations(s.T())
-	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())

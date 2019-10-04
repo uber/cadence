@@ -51,7 +51,6 @@ type (
 		logger                log.Logger
 		mockService           service.Service
 		mockShard             ShardContext
-		mockMetadataMgr       *mocks.MetadataManager
 		mockClusterMetadata   *mocks.ClusterMetadata
 		mockMessagingClient   messaging.Client
 		mockProcessor         *MockTimerProcessor
@@ -90,10 +89,9 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockProcessor = &MockTimerProcessor{}
 	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockExecutionManager = &mocks.ExecutionManager{}
 	s.mockVisibilityManager = &mocks.VisibilityManager{}
 	s.mockHistoryV2Manager = &mocks.HistoryV2Manager{}
@@ -107,7 +105,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
-		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
 		metricsClient:             metricsClient,
 		standbyClusterCurrentTime: make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),
@@ -138,7 +135,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TearDownTest() {
-	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockProcessor.AssertExpectations(s.T())
 	s.mockQueueAckMgr.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
@@ -164,8 +160,8 @@ func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 	s.mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockVisibilityManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
 	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
-	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
-	mockMutableState.On("GetLastWriteVersion").Return(int64(1234))
+	mockMutableState.On("GetCurrentBranchToken").Return([]byte{1, 2, 3}, nil).Once()
+	mockMutableState.On("GetLastWriteVersion").Return(int64(1234), nil)
 
 	err := s.timerQueueProcessor.deleteWorkflow(task, ctx, mockMutableState)
 	s.NoError(err)
@@ -180,8 +176,8 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveHistory_NoErr_InlineArchivalFa
 
 	mockMutableState := &mockMutableState{}
 	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
-	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
-	mockMutableState.On("GetLastWriteVersion").Return(int64(1234)).Once()
+	mockMutableState.On("GetCurrentBranchToken").Return([]byte{1, 2, 3}, nil).Once()
+	mockMutableState.On("GetLastWriteVersion").Return(int64(1234), nil).Once()
 	mockMutableState.On("GetNextEventID").Return(int64(101)).Once()
 
 	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(nil).Once()
@@ -207,8 +203,8 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveHistory_SendSignalErr() {
 
 	mockMutableState := &mockMutableState{}
 	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
-	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
-	mockMutableState.On("GetLastWriteVersion").Return(int64(1234)).Once()
+	mockMutableState.On("GetCurrentBranchToken").Return([]byte{1, 2, 3}, nil).Once()
+	mockMutableState.On("GetLastWriteVersion").Return(int64(1234), nil).Once()
 	mockMutableState.On("GetNextEventID").Return(int64(101)).Once()
 
 	s.mockArchivalClient.On("Archive", mock.Anything, mock.MatchedBy(func(req *archiver.ClientRequest) bool {
@@ -226,12 +222,14 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveVisibility_SendSignalNoErr() {
 
 	mockMutableState := &mockMutableState{}
 	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
-	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
+	mockMutableState.On("GetCurrentBranchToken").Return([]byte{1, 2, 3}, nil).Once()
 	mockMutableState.On("GetNextEventID").Return(int64(101)).Once()
-	mockMutableState.On("GetStartEvent").Return(nil, true).Once()
+	mockMutableState.On("GetStartEvent").Return(&workflow.HistoryEvent{
+		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+	}, nil).Once()
 	mockMutableState.On("GetCompletionEvent").Return(&workflow.HistoryEvent{
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-	}, true).Once()
+	}, nil).Once()
 	mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		WorkflowTypeName: "some random workflow type name",
 		StartTimestamp:   time.Now().Add(-time.Hour),
@@ -262,13 +260,15 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveBoth_SendSignalErr() {
 
 	mockMutableState := &mockMutableState{}
 	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
-	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
-	mockMutableState.On("GetLastWriteVersion").Return(int64(1234)).Once()
+	mockMutableState.On("GetCurrentBranchToken").Return([]byte{1, 2, 3}, nil).Once()
+	mockMutableState.On("GetLastWriteVersion").Return(int64(1234), nil).Once()
 	mockMutableState.On("GetNextEventID").Return(int64(101)).Twice()
-	mockMutableState.On("GetStartEvent").Return(nil, true).Once()
+	mockMutableState.On("GetStartEvent").Return(&workflow.HistoryEvent{
+		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+	}, nil).Once()
 	mockMutableState.On("GetCompletionEvent").Return(&workflow.HistoryEvent{
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-	}, true).Once()
+	}, nil).Once()
 	mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		WorkflowTypeName: "some random workflow type name",
 		StartTimestamp:   time.Now().Add(-time.Hour),

@@ -64,7 +64,6 @@ type (
 		controller               *gomock.Controller
 		mockMatchingClient       *matchingservicetest.MockClient
 		mockHistoryClient        *historyservicetest.MockClient
-		mockMetadataMgr          *mocks.MetadataManager
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockHistoryMgr           *mocks.HistoryManager
@@ -113,7 +112,6 @@ func (s *resetorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
@@ -125,7 +123,7 @@ func (s *resetorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockEventsCache = &MockEventsCache{}
@@ -201,7 +199,7 @@ func (s *resetorSuite) TearDownTest() {
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -211,7 +209,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := validDomainID
+	domainID := testDomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -256,14 +254,17 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	signalName2 := "sig2"
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:          domainID,
-		WorkflowID:        wid,
-		WorkflowTypeName:  wfType,
-		TaskList:          taskListName,
-		RunID:             forkRunID,
-		EventStoreVersion: p.EventStoreVersionV2,
-		BranchToken:       forkBranchToken,
-		NextEventID:       34,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              forkRunID,
+		EventStoreVersion:  p.EventStoreVersionV2,
+		BranchToken:        forkBranchToken,
+		NextEventID:        34,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:  forkExeInfo,
@@ -278,12 +279,15 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		},
 	}
 	currExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:         domainID,
-		WorkflowID:       wid,
-		WorkflowTypeName: wfType,
-		TaskList:         taskListName,
-		RunID:            currRunID,
-		NextEventID:      common.FirstEventID,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              currRunID,
+		NextEventID:        common.FirstEventID,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
@@ -897,7 +901,7 @@ func (s *resetorSuite) assertActivityIDs(ids []string, timers []*p.ActivityInfo)
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCancel() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -907,7 +911,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := validDomainID
+	domainID := testDomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -955,14 +959,17 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	}
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:          domainID,
-		WorkflowID:        wid,
-		WorkflowTypeName:  wfType,
-		TaskList:          taskListName,
-		RunID:             forkRunID,
-		EventStoreVersion: p.EventStoreVersionV2,
-		BranchToken:       forkBranchToken,
-		NextEventID:       35,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              forkRunID,
+		EventStoreVersion:  p.EventStoreVersionV2,
+		BranchToken:        forkBranchToken,
+		NextEventID:        35,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:  forkExeInfo,
@@ -977,12 +984,15 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		},
 	}
 	currExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:         domainID,
-		WorkflowID:       wid,
-		WorkflowTypeName: wfType,
-		TaskList:         taskListName,
-		RunID:            currRunID,
-		NextEventID:      common.FirstEventID,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              currRunID,
+		NextEventID:        common.FirstEventID,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:  currExeInfo,
@@ -1473,7 +1483,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: validDomainID},
+		&p.DomainInfo{ID: testDomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: "active",
@@ -1497,7 +1507,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := validDomainID
+	domainID := testDomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -1544,14 +1554,17 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:          domainID,
-		WorkflowID:        wid,
-		WorkflowTypeName:  wfType,
-		TaskList:          taskListName,
-		RunID:             forkRunID,
-		EventStoreVersion: p.EventStoreVersionV2,
-		BranchToken:       forkBranchToken,
-		NextEventID:       35,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              forkRunID,
+		EventStoreVersion:  p.EventStoreVersionV2,
+		BranchToken:        forkBranchToken,
+		NextEventID:        35,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 
 	forkRepState := &p.ReplicationState{
@@ -1575,12 +1588,15 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		},
 	}
 	currExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:         domainID,
-		WorkflowID:       wid,
-		WorkflowTypeName: wfType,
-		TaskList:         taskListName,
-		RunID:            currRunID,
-		NextEventID:      common.FirstEventID,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              currRunID,
+		NextEventID:        common.FirstEventID,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
@@ -2197,7 +2213,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("standby")
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: validDomainID},
+		&p.DomainInfo{ID: testDomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: "active",
@@ -2221,7 +2237,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := validDomainID
+	domainID := testDomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2268,14 +2284,17 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:          domainID,
-		WorkflowID:        wid,
-		WorkflowTypeName:  wfType,
-		TaskList:          taskListName,
-		RunID:             forkRunID,
-		EventStoreVersion: p.EventStoreVersionV2,
-		BranchToken:       forkBranchToken,
-		NextEventID:       35,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              forkRunID,
+		EventStoreVersion:  p.EventStoreVersionV2,
+		BranchToken:        forkBranchToken,
+		NextEventID:        35,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 
 	forkRepState := &p.ReplicationState{
@@ -2299,12 +2318,15 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 		},
 	}
 	currExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:         domainID,
-		WorkflowID:       wid,
-		WorkflowTypeName: wfType,
-		TaskList:         taskListName,
-		RunID:            currRunID,
-		NextEventID:      common.FirstEventID,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              currRunID,
+		NextEventID:        common.FirstEventID,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
@@ -2805,7 +2827,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: validDomainID},
+		&p.DomainInfo{ID: testDomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: "active",
@@ -2829,7 +2851,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := validDomainID
+	domainID := testDomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2876,14 +2898,17 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:          domainID,
-		WorkflowID:        wid,
-		WorkflowTypeName:  wfType,
-		TaskList:          taskListName,
-		RunID:             forkRunID,
-		EventStoreVersion: p.EventStoreVersionV2,
-		BranchToken:       forkBranchToken,
-		NextEventID:       35,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              forkRunID,
+		EventStoreVersion:  p.EventStoreVersionV2,
+		BranchToken:        forkBranchToken,
+		NextEventID:        35,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 
 	forkRepState := &p.ReplicationState{
@@ -2907,13 +2932,16 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 		},
 	}
 	currExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:         domainID,
-		WorkflowID:       wid,
-		WorkflowTypeName: wfType,
-		TaskList:         taskListName,
-		RunID:            currRunID,
-		NextEventID:      common.FirstEventID,
-		State:            p.WorkflowStateCompleted,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              currRunID,
+		NextEventID:        common.FirstEventID,
+		State:              p.WorkflowStateCompleted,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
@@ -3504,14 +3532,14 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 }
 
 func (s *resetorSuite) TestApplyReset() {
-	domainID := validDomainID
+	domainID := testDomainID
 	beforeResetVersion := int64(100)
 	afterResetVersion := int64(101)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return(cluster.TestAlternativeClusterName)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return(cluster.TestCurrentClusterName)
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: validDomainID},
+		&p.DomainInfo{ID: testDomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -3562,14 +3590,17 @@ func (s *resetorSuite) TestApplyReset() {
 
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:          domainID,
-		WorkflowID:        wid,
-		WorkflowTypeName:  wfType,
-		TaskList:          taskListName,
-		RunID:             forkRunID,
-		EventStoreVersion: p.EventStoreVersionV2,
-		BranchToken:       forkBranchToken,
-		NextEventID:       35,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              forkRunID,
+		EventStoreVersion:  p.EventStoreVersionV2,
+		BranchToken:        forkBranchToken,
+		NextEventID:        35,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 
 	forkRepState := &p.ReplicationState{
@@ -3593,13 +3624,16 @@ func (s *resetorSuite) TestApplyReset() {
 		},
 	}
 	currExeInfo := &p.WorkflowExecutionInfo{
-		DomainID:         domainID,
-		WorkflowID:       wid,
-		WorkflowTypeName: wfType,
-		TaskList:         taskListName,
-		RunID:            currRunID,
-		NextEventID:      common.FirstEventID,
-		State:            p.WorkflowStateCompleted,
+		DomainID:           domainID,
+		WorkflowID:         wid,
+		WorkflowTypeName:   wfType,
+		TaskList:           taskListName,
+		RunID:              currRunID,
+		NextEventID:        common.FirstEventID,
+		State:              p.WorkflowStateCompleted,
+		DecisionVersion:    common.EmptyVersion,
+		DecisionScheduleID: common.EmptyEventID,
+		DecisionStartedID:  common.EmptyEventID,
 	}
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{

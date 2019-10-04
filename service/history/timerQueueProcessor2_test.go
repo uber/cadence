@@ -60,7 +60,7 @@ type (
 		controller               *gomock.Controller
 		mockHistoryEngine        *historyEngineImpl
 		mockMatchingClient       *matchingservicetest.MockClient
-		mockMetadataMgr          *mocks.MetadataManager
+		mockDomainCache          *cache.DomainCacheMock
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockHistoryMgr           *mocks.HistoryManager
@@ -104,21 +104,11 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
+	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	// ack manager will use the domain information
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
-		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: "domainID"},
-			Config: &persistence.DomainConfig{Retention: 1},
-			ReplicationConfig: &persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-				},
-			},
-			TableVersion: persistence.DomainTableVersionV1,
-		},
+	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(
+		testLocalDomainEntry,
 		nil,
 	)
 	s.mockProducer = &mocks.KafkaProducer{}
@@ -126,10 +116,9 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockEventsCache = &MockEventsCache{}
 
-	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
 	s.mockShard = &shardContextImpl{
 		service: s.mockService,
 		shardInfo: &persistence.ShardInfo{
@@ -150,7 +139,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
 		logger:                    s.logger,
-		domainCache:               domainCache,
+		domainCache:               s.mockDomainCache,
 		eventsCache:               s.mockEventsCache,
 		metricsClient:             metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
@@ -225,7 +214,7 @@ func (s *timerQueueProcessor2Suite) stopProcessor() {
 
 func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	we := workflow.WorkflowExecution{WorkflowId: common.StringPtr("timer-update-timesout-test"),
-		RunId: common.StringPtr(validRunID)}
+		RunId: common.StringPtr(testRunID)}
 
 	taskList := "user-timer-update-times-out"
 
@@ -239,7 +228,6 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
 	_, _ = builder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		we,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID:   common.StringPtr(s.domainID),
@@ -258,7 +246,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	timerTask := &persistence.TimerTaskInfo{
 		DomainID:   s.domainID,
 		WorkflowID: "wid",
-		RunID:      validRunID,
+		RunID:      testRunID,
 		TaskID:     taskID,
 		TaskType:   persistence.TaskTypeDecisionTimeout, TimeoutType: int(workflow.TimeoutTypeStartToClose),
 		VisibilityTimestamp: mockTS.Now(),
@@ -301,7 +289,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	we := workflow.WorkflowExecution{WorkflowId: common.StringPtr("workflow-timesout-test"),
-		RunId: common.StringPtr(validRunID)}
+		RunId: common.StringPtr(testRunID)}
 	taskList := "task-workflow-times-out"
 
 	builder := newMutableStateBuilderWithEventV2(s.mockShard, s.mockEventsCache, s.logger, we.GetRunId())
@@ -314,7 +302,6 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
 	_, _ = builder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		we,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID:   common.StringPtr(s.domainID),
@@ -333,7 +320,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	timerTask := &persistence.TimerTaskInfo{
 		DomainID:            s.domainID,
 		WorkflowID:          "wid",
-		RunID:               validRunID,
+		RunID:               testRunID,
 		TaskID:              taskID,
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		VisibilityTimestamp: mockTS.Now(),
@@ -377,7 +364,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
 	we := workflow.WorkflowExecution{WorkflowId: common.StringPtr("workflow-timesout-test"),
-		RunId: common.StringPtr(validRunID)}
+		RunId: common.StringPtr(testRunID)}
 	taskList := "task-workflow-times-out"
 	schedule := "@every 30s"
 
@@ -392,7 +379,6 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
 		CronSchedule:                        &schedule,
 	}
 	_, _ = builder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		we,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID:   common.StringPtr(s.domainID),
@@ -411,7 +397,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
 	timerTask := &persistence.TimerTaskInfo{
 		DomainID:            s.domainID,
 		WorkflowID:          "wid",
-		RunID:               validRunID,
+		RunID:               testRunID,
 		TaskID:              taskID,
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		VisibilityTimestamp: mockTS.Now(),

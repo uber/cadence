@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
@@ -53,7 +54,7 @@ type (
 		mockCtrl                 *gomock.Controller
 		mockShardManager         *mocks.ShardManager
 		mockHistoryEngine        *historyEngineImpl
-		mockMetadataMgr          *mocks.MetadataManager
+		mockDomainCache          *cache.DomainCacheMock
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockHistoryMgr           *mocks.HistoryManager
@@ -92,29 +93,14 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
+	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockHistoryRereplicator = &xdc.MockHistoryRereplicator{}
 	// ack manager will use the domain information
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
-		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: "domainID"},
-			Config: &persistence.DomainConfig{Retention: 1},
-			ReplicationConfig: &persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestAlternativeClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			IsGlobalDomain: true,
-			TableVersion:   persistence.DomainTableVersionV1,
-		},
-		nil,
-	)
+	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testGlobalDomainEntry, nil)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil, nil)
 
 	config := NewDynamicConfigForTest()
 	shardContext := &shardContextImpl{
@@ -129,7 +115,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		closeCh:                   make(chan int, 100),
 		config:                    config,
 		logger:                    s.logger,
-		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
+		domainCache:               s.mockDomainCache,
 		metricsClient:             metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		standbyClusterCurrentTime: make(map[string]time.Time),
@@ -175,7 +161,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		s.logger,
 	)
 
-	s.domainID = validDomainID
+	s.domainID = testDomainID
 	s.domainEntry = cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: s.domainID}, &persistence.DomainConfig{}, "", nil)
 }
 
@@ -209,7 +195,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 		execution.GetRunId(),
 	)
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -233,7 +218,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	event, timerInfo := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 	nextEventID := event.GetEventId() + 1
 
-	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -275,7 +260,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -298,7 +282,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	timerTimeout := 2 * time.Second
 	event, timerInfo := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 
-	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -333,7 +317,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -360,7 +343,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	timerTimeout2 := 50 * time.Second
 	_, timerInfo2 := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID2, int64(timerTimeout2.Seconds()))
 
-	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo1, msBuilder)
 	tBuilder.AddUserTimer(timerInfo2, msBuilder)
 
@@ -397,7 +380,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -424,7 +406,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	nextEventID := scheduledEvent.GetEventId() + 1
 
-	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -466,7 +448,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -494,7 +475,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	startedEvent := addActivityTaskStartedEvent(msBuilder, scheduleEvent.GetEventId(), identity)
 
-	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	_, err = tBuilder.AddStartToCloseActivityTimeout(timerInfo)
 	s.Nil(err)
 
@@ -533,7 +514,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -571,7 +551,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	activityInfo2.TimerTaskStatus |= TimerTaskStatusCreatedHeartbeat
 	activityInfo2.LastHeartBeatUpdatedTime = time.Now()
 
-	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	_, err = tBuilder.AddStartToCloseActivityTimeout(timerInfo1)
 	s.Nil(err)
 	_, err = tBuilder.AddScheduleToCloseActivityTimeout(timerInfo2)
@@ -616,7 +596,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 				Condition:                 msBuilder.GetNextEventID(),
 				UpsertActivityInfos:       input.UpdateWorkflowMutation.UpsertActivityInfos,
 				DeleteActivityInfos:       []int64{},
-				UpserTimerInfos:           []*persistence.TimerInfo{},
+				UpsertTimerInfos:          []*persistence.TimerInfo{},
 				DeleteTimerInfos:          []string{},
 				UpsertChildExecutionInfos: []*persistence.ChildExecutionInfo{},
 				DeleteChildExecutionInfo:  nil,
@@ -651,7 +631,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -735,7 +714,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -785,7 +763,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Pendin
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	event, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -838,7 +815,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Succes
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -883,7 +859,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -942,7 +917,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
@@ -992,7 +966,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessRetryTimeout() {
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	_, err := msBuilder.AddWorkflowExecutionStartedEvent(
-		s.domainEntry,
 		execution,
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
