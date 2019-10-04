@@ -708,6 +708,8 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 		baseBranch = append(baseBranch, historyEvents)
 	}
 	if isWorkflowFinished {
+		// cannot proceed since the test below requires workflow not finished
+		// this is ok since build kite will run this test several times
 		s.logger.Info("Encounter finish workflow history event during randomization test, skip")
 		return
 	}
