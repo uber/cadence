@@ -65,7 +65,6 @@ type (
 		ExecutionMgrFactory    pfactory.Factory
 		ExecutionManager       p.ExecutionManager
 		TaskMgr                p.TaskManager
-		HistoryMgr             p.HistoryManager
 		HistoryV2Mgr           p.HistoryV2Manager
 		MetadataManager        p.MetadataManager
 		VisibilityMgr          p.VisibilityManager
@@ -182,9 +181,6 @@ func (s *TestBase) Setup() {
 
 	s.MetadataManager, err = factory.NewMetadataManager()
 	s.fatalOnError("NewMetadataManager", err)
-
-	s.HistoryMgr, err = factory.NewHistoryManager()
-	s.fatalOnError("NewHistoryManager", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryV2Manager()
 	s.fatalOnError("NewHistoryV2Manager", err)

@@ -1549,23 +1549,6 @@ type (
 		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
 	}
 
-	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
-	// Deprecated: use HistoryV2Manager instead
-	HistoryManager interface {
-		Closeable
-		GetName() string
-
-		// Deprecated: use v2 API-AppendHistoryNodes() instead
-		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
-		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
-		// Deprecated: use v2 API-ReadHistoryBranch() instead
-		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
-		// Deprecated: use v2 API-ReadHistoryBranchByBatch() instead
-		GetWorkflowExecutionHistoryByBatch(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryByBatchResponse, error)
-		// Deprecated: use v2 API-DeleteHistoryBranch instead
-		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
-	}
-
 	// HistoryV2Manager is used to manager workflow history events
 	HistoryV2Manager interface {
 		Closeable
