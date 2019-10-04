@@ -28,6 +28,8 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
+
+	_ "github.com/lib/pq"
 )
 
 type (
