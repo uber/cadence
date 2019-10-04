@@ -3,7 +3,7 @@
 A workflow implementation implements a workflow interface. Each time a new workflow execution is started,
 a new instance of the workflow implementation object is created. Then, one of the methods
 (depending on which workflow type has been started) annotated with `@WorkflowMethod` is invoked. As soon as this method
-returns the workflow, execution is closed. While workflow execution is open, it can receive calls to signal and query methods.
+returns, the workflow execution is closed. While workflow execution is open, it can receive calls to signal and query methods.
 No additional calls to workflow methods are allowed. The workflow object is stateful, so query and signal methods
 can communicate with the other parts of the workflow through workflow object fields.
 

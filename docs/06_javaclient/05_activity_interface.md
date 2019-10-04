@@ -8,7 +8,7 @@ The only requirement is that activity method arguments and return values are ser
 [DataConverter](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/converter/DataConverter.html)
 interface. The default implementation uses a JSON serializer, but an alternative implementation can be easily configured.
 
-Followingn is an example of an interface that defines four activities:
+Following is an example of an interface that defines four activities:
 
 ```java
 public interface FileProcessingActivities {
@@ -24,7 +24,7 @@ public interface FileProcessingActivities {
 }
 
 ```
-We recommended you use a single value type argument for activity methods. This way, adding new arguments as fields
+We recommend to use a single value type argument for activity methods. In this way, adding new arguments as fields
 to the value type is a backwards-compatible change.
 
 An optional @ActivityMethod annotation can be used to specify activity options like timeouts or a task list. Required options

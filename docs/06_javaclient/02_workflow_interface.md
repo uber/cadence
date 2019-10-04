@@ -10,7 +10,7 @@ A workflow must define an interface class. All of its methods must have one of t
 - **@SignalMethod** indicates a method that reacts to external signals. It must have a `void` return type.
 - **@QueryMethod** indicates a method that reacts to synchronous query requests.
 
-You can have more than one method with the same annotation. For example:
+You can have more than one method with the same annotation (except @WorkflowMethod). For example:
 ```java
 public interface FileProcessingWorkflow {
 
@@ -25,7 +25,10 @@ public interface FileProcessingWorkflow {
 
     @SignalMethod
     void retryNow();
+    
+    @SignalMethod
+    void abandon();
 }
 ```
 
-We recommended that you use a single value type argument for workflow methods. This way, adding new arguments as fields to the value type is a backwards-compatible change.
+We recommended that you use a single value type argument for workflow methods. In this way, adding new arguments as fields to the value type is a backwards-compatible change.

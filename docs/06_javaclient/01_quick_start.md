@@ -357,6 +357,11 @@ So far our workflow is not very interesting. Let's change it to listen on an ext
       }
       logger.info(++count + ": " + greeting + " " + name + "!");
     }
+    
+    @Override
+    public void updateGreeting(String greeting) {
+      this.greeting = greeting;
+    }
   }
 ```
 The workflow interface now has a new method annotated with @SignalMethod. It is a callback method that is invoked
@@ -501,7 +506,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Query result as JSON:
 3
 ```
-One limitation of the query is that it requires a worker process running beecause it is executing callback code.
+One limitation of the query is that it requires a worker process running because it is executing callback code.
 An interesting feature of the query is that it works for completed workflows as well. Let's complete the workflow by sending "Bye" and query it.
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloQuery" --name "HelloWorld::updateGreeting" --input \"Bye\"
@@ -528,7 +533,7 @@ First let's define an activities interface and implement it:
     void say(String message);
   }
 ```
-The `@ActivityMethod` annotation is not required, but `scheduleToCloseTimeout` is required and annotation is a convenient way to specify it.
+The `@ActivityMethod` annotation is not required, but `scheduleToCloseTimeoutSeconds` is required and annotation is a convenient way to specify it.
 It is allowed to have multiple activities on a single interface.
 
 Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object).
@@ -653,7 +658,6 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
                                 StartToCloseTimeoutSeconds:100,
                                 HeartbeatTimeoutSeconds:100,
                                 DecisionTaskCompletedEventId:4}
-cadence:
 ```
 The last event in the workflow history is `ActivityTaskScheduled`. It is recorded when workflow invoked the activity, but it wasn't picked up by an activity worker yet.
 
@@ -696,7 +700,6 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
     }
   ]
 }
-cadence:
 ```
 Let's start the activity worker. It starts and immediately prints:
 ```text
@@ -776,3 +779,4 @@ Let's look at various failure scenarios. Modify activity task timeout:
     }
   }
 ```
+(To be continued ...)
