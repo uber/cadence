@@ -303,9 +303,6 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 
 	retryV1Err, okV1 := t.convertRetryTaskError(err)
 	_, okV2 := t.convertRetryTaskV2Error(err)
-	if !okV1 || retryV1Err.GetRunId() == "" {
-		return err
-	}
 
 	if !okV1 && !okV2 {
 		return err
