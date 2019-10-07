@@ -505,6 +505,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 	s.visibilityRecords = []*visibilityRecord{
 		{
 			DomainID:         testDomainID,
+			DomainName:       testDomainName,
 			WorkflowID:       testWorkflowID,
 			RunID:            testRunID,
 			WorkflowTypeName: testWorkflowTypeName,
@@ -515,6 +516,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 		},
 		{
 			DomainID:           testDomainID,
+			DomainName:         testDomainName,
 			WorkflowID:         "some random workflow ID",
 			RunID:              "some random run ID",
 			WorkflowTypeName:   testWorkflowTypeName,
@@ -526,6 +528,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 		},
 		{
 			DomainID:           testDomainID,
+			DomainName:         testDomainName,
 			WorkflowID:         "another workflow ID",
 			RunID:              "another run ID",
 			WorkflowTypeName:   testWorkflowTypeName,
@@ -537,6 +540,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 		},
 		{
 			DomainID:           testDomainID,
+			DomainName:         testDomainName,
 			WorkflowID:         "and another workflow ID",
 			RunID:              "and another run ID",
 			WorkflowTypeName:   testWorkflowTypeName,
@@ -548,6 +552,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 		},
 		{
 			DomainID:           "some random domain ID",
+			DomainName:         "some random domain name",
 			WorkflowID:         "another workflow ID",
 			RunID:              "another run ID",
 			WorkflowTypeName:   testWorkflowTypeName,
