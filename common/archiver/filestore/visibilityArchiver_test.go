@@ -121,6 +121,7 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_InvalidURI() {
 	URI, err := archiver.NewURI("wrongscheme://")
 	s.NoError(err)
 	request := &archiver.ArchiveVisibilityRequest{
+		DomainName:         testDomainName,
 		DomainID:           testDomainID,
 		WorkflowID:         testWorkflowID,
 		RunID:              testRunID,
@@ -162,6 +163,7 @@ func (s *visibilityArchiverSuite) TestArchive_Success() {
 	closeTimestamp := time.Now()
 	request := &archiver.ArchiveVisibilityRequest{
 		DomainID:           testDomainID,
+		DomainName:         testDomainName,
 		WorkflowID:         testWorkflowID,
 		RunID:              testRunID,
 		WorkflowTypeName:   testWorkflowTypeName,
