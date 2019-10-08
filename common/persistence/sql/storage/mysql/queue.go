@@ -23,6 +23,7 @@ package mysql
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
@@ -44,26 +45,26 @@ func (mdb *DB) InsertIntoQueue(row *sqldb.QueueRow) (sql.Result, error) {
 }
 
 // GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
-func (mdb *DB) GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error) {
+func (mdb *DB) GetLastEnqueuedMessageIDForUpdate(queueType common.QueueType) (int, error) {
 	var lastMessageID int
 	err := mdb.conn.Get(&lastMessageID, templateGetLastMessageIDQuery, queueType)
 	return lastMessageID, err
 }
 
 // GetMessagesFromQueue retrieves messages from the queue
-func (mdb *DB) GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]sqldb.QueueRow, error) {
+func (mdb *DB) GetMessagesFromQueue(queueType common.QueueType, lastMessageID, maxRows int) ([]sqldb.QueueRow, error) {
 	var rows []sqldb.QueueRow
 	err := mdb.conn.Select(&rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
 	return rows, err
 }
 
 // DeleteMessagesBefore deletes messages before messageID from the queue
-func (mdb *DB) DeleteMessagesBefore(queueType, messageID int) (sql.Result, error) {
+func (mdb *DB) DeleteMessagesBefore(queueType common.QueueType, messageID int) (sql.Result, error) {
 	return mdb.conn.Exec(templateDeleteMessagesQuery, queueType, messageID)
 }
 
 // InsertAckLevel inserts ack level
-func (mdb *DB) InsertAckLevel(queueType int, messageID int, clusterName string) error {
+func (mdb *DB) InsertAckLevel(queueType common.QueueType, messageID int, clusterName string) error {
 	clusterAckLevels := map[string]int{clusterName: messageID}
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
@@ -76,7 +77,7 @@ func (mdb *DB) InsertAckLevel(queueType int, messageID int, clusterName string) 
 }
 
 // UpdateAckLevels updates cluster ack levels
-func (mdb *DB) UpdateAckLevels(queueType int, clusterAckLevels map[string]int) error {
+func (mdb *DB) UpdateAckLevels(queueType common.QueueType, clusterAckLevels map[string]int) error {
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
 		return err
@@ -87,7 +88,7 @@ func (mdb *DB) UpdateAckLevels(queueType int, clusterAckLevels map[string]int) e
 }
 
 // GetAckLevels returns ack levels for pulling clusters
-func (mdb *DB) GetAckLevels(queueType int, forUpdate bool) (map[string]int, error) {
+func (mdb *DB) GetAckLevels(queueType common.QueueType, forUpdate bool) (map[string]int, error) {
 	queryStr := templateGetQueueMetadataQuery
 	if forUpdate {
 		queryStr = templateGetQueueMetadataForUpdateQuery

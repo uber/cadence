@@ -22,6 +22,7 @@ package sqldb
 
 import (
 	"database/sql"
+	"github.com/uber/cadence/common"
 	"time"
 )
 
@@ -458,14 +459,14 @@ type (
 
 	// QueueRow represents a row in queue table
 	QueueRow struct {
-		QueueType      int
+		QueueType      common.QueueType
 		MessageID      int
 		MessagePayload []byte
 	}
 
 	// QueueMetadataRow represents a row in queue_metadata table
 	QueueMetadataRow struct {
-		QueueType int
+		QueueType common.QueueType
 		Data      []byte
 	}
 
@@ -660,12 +661,12 @@ type (
 		DeleteFromVisibility(filter *VisibilityFilter) (sql.Result, error)
 
 		InsertIntoQueue(row *QueueRow) (sql.Result, error)
-		GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error)
-		GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]QueueRow, error)
-		DeleteMessagesBefore(queueType, messageID int) (sql.Result, error)
-		InsertAckLevel(queueType int, messageID int, clusterName string) error
-		UpdateAckLevels(queueType int, clusterAckLevels map[string]int) error
-		GetAckLevels(queueType int, forUpdate bool) (map[string]int, error)
+		GetLastEnqueuedMessageIDForUpdate(queueType common.QueueType) (int, error)
+		GetMessagesFromQueue(queueType common.QueueType, lastMessageID, maxRows int) ([]QueueRow, error)
+		DeleteMessagesBefore(queueType common.QueueType, messageID int) (sql.Result, error)
+		InsertAckLevel(queueType common.QueueType, messageID int, clusterName string) error
+		UpdateAckLevels(queueType common.QueueType, clusterAckLevels map[string]int) error
+		GetAckLevels(queueType common.QueueType, forUpdate bool) (map[string]int, error)
 	}
 
 	// Tx defines the API for a SQL transaction

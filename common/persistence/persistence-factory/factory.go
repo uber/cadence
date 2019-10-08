@@ -76,7 +76,7 @@ type (
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store
 		NewVisibilityStore() (p.VisibilityStore, error)
-		NewQueue(queueType int) (p.Queue, error)
+		NewQueue(queueType common.QueueType) (p.Queue, error)
 	}
 	// Datastore represents a datastore
 	Datastore struct {

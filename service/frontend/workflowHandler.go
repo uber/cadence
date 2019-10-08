@@ -229,6 +229,7 @@ func (wh *WorkflowHandler) Start() error {
 
 // Stop stops the handler
 func (wh *WorkflowHandler) Stop() {
+	wh.domainReplicationQueue.Close()
 	wh.domainCache.Stop()
 	wh.metadataMgr.Close()
 	wh.visibilityMgr.Close()
@@ -3564,14 +3565,12 @@ func (wh *WorkflowHandler) GetDomainReplicationMessages(
 	}
 
 	if lastProcessedMessageID != defaultLastMessageID {
-		go func() {
-			err := wh.domainReplicationQueue.UpdateAckLevel(lastProcessedMessageID, request.GetClusterName())
-			if err != nil {
-				wh.GetLogger().Warn("Failed to update domain replication queue ack level.",
-					tag.TaskID(int64(lastProcessedMessageID)),
-					tag.ClusterName(request.GetClusterName()))
-			}
-		}()
+		err := wh.domainReplicationQueue.UpdateAckLevel(lastProcessedMessageID, request.GetClusterName())
+		if err != nil {
+			wh.GetLogger().Warn("Failed to update domain replication queue ack level.",
+				tag.TaskID(int64(lastProcessedMessageID)),
+				tag.ClusterName(request.GetClusterName()))
+		}
 	}
 
 	return &replicator.GetDomainReplicationMessagesResponse{

@@ -26,6 +26,7 @@ import (
 
 	"github.com/gocql/gocql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -48,7 +49,7 @@ const (
 
 type (
 	cassandraQueue struct {
-		queueType int
+		queueType common.QueueType
 		logger    log.Logger
 		cassandraStore
 	}
@@ -67,7 +68,7 @@ type (
 func newQueue(
 	cfg config.Cassandra,
 	logger log.Logger,
-	queueType int,
+	queueType common.QueueType,
 ) (persistence.Queue, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
@@ -241,6 +242,11 @@ func (q *cassandraQueue) UpdateAckLevel(messageID int, clusterName string) error
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
 		}
+	}
+
+	// Ignore possibly delayed message
+	if queueMetadata.clusterAckLevels[clusterName] > messageID {
+		return nil
 	}
 
 	queueMetadata.clusterAckLevels[clusterName] = messageID

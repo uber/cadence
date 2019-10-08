@@ -21,9 +21,11 @@
 package sql
 
 import (
-	"database/sql"
 	"fmt"
+
+	"database/sql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
@@ -31,7 +33,7 @@ import (
 
 type (
 	sqlQueue struct {
-		queueType int
+		queueType common.QueueType
 		logger    log.Logger
 		sqlStore
 	}
@@ -40,7 +42,7 @@ type (
 func newQueue(
 	db sqldb.Interface,
 	logger log.Logger,
-	queueType int,
+	queueType common.QueueType,
 ) (persistence.Queue, error) {
 	return &sqlQueue{
 		sqlStore: sqlStore{
@@ -85,7 +87,7 @@ func (q *sqlQueue) ReadMessages(lastMessageID, maxCount int) ([]*persistence.Que
 	return messages, nil
 }
 
-func newQueueRow(queueType int, messageID int, payload []byte) *sqldb.QueueRow {
+func newQueueRow(queueType common.QueueType, messageID int, payload []byte) *sqldb.QueueRow {
 	return &sqldb.QueueRow{QueueType: queueType, MessageID: messageID, MessagePayload: payload}
 }
 
@@ -115,6 +117,11 @@ func (q *sqlQueue) UpdateAckLevel(messageID int, clusterName string) error {
 					Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
 				}
 			}
+			return nil
+		}
+
+		// Ignore possibly delayed message
+		if clusterAckLevels[clusterName] > messageID {
 			return nil
 		}
 

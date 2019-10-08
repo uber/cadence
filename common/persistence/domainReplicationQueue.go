@@ -44,7 +44,7 @@ func NewDomainReplicationQueue(queue Queue, logger log.Logger) DomainReplication
 		queue:               queue,
 		logger:              logger,
 		encoder:             codec.NewThriftRWEncoder(),
-		ackNotificationChan: make(chan bool, 100),
+		ackNotificationChan: make(chan bool),
 		done:                make(chan bool),
 	}
 }
@@ -103,7 +103,10 @@ func (q *domainReplicationQueueImpl) UpdateAckLevel(lastProcessedMessageID int, 
 		return fmt.Errorf("failed to update ack level: %v", err)
 	}
 
-	q.ackNotificationChan <- true
+	select {
+	case q.ackNotificationChan <- true:
+	default:
+	}
 
 	return nil
 }
@@ -141,6 +144,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 
 func (q *domainReplicationQueueImpl) purgeProcessor() {
 	ticker := time.NewTicker(purgeInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -154,10 +158,11 @@ func (q *domainReplicationQueueImpl) purgeProcessor() {
 				}
 			}
 		case <-q.ackNotificationChan:
-			{
-				q.ackLevelUpdated = true
-			}
+			q.ackLevelUpdated = true
 		}
 	}
+}
 
+func (q *domainReplicationQueueImpl) Close() {
+	close(q.done)
 }
