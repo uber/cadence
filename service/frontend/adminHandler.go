@@ -654,24 +654,6 @@ func (adh *AdminHandler) preparePaginationToken(
 	return token, nil
 }
 
-func (adh *AdminHandler) getVersionHistory(
-	rawVersionHistories *gen.VersionHistories,
-	nextEventID int64,
-	nextEventVerison int64,
-) (*gen.VersionHistory, error) {
-	versionHistories := persistence.NewVersionHistoriesFromThrift(rawVersionHistories)
-	targetVersionHistoryItem := persistence.NewVersionHistoryItem(nextEventID, nextEventVerison)
-	idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(targetVersionHistoryItem)
-	if err != nil {
-		return nil, err
-	}
-	result, err := versionHistories.GetVersionHistory(idx)
-	if err != nil {
-		return nil, err
-	}
-	return result.ToThrift(), nil
-}
-
 // startRequestProfile initiates recording of request metrics
 func (adh *AdminHandler) startRequestProfile(scope int) tally.Stopwatch {
 	adh.startWG.Wait()
