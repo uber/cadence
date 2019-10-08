@@ -70,7 +70,9 @@ type (
 	getRawHistoryContinuationToken struct {
 		RunID             string
 		StartEventID      int64
+		StartEventVersion int64
 		EndEventID        int64
+		EndEventVersion   int64
 		IsWorkflowRunning bool
 		PersistenceToken  []byte
 		BranchToken       []byte
@@ -657,16 +659,20 @@ func (adh *AdminHandler) preparePaginationToken(
 
 		if execution.GetRunId() != token.RunID ||
 			request.GetStartEventId() != token.StartEventID ||
-			request.GetEndEventId() != token.EndEventID {
+			request.GetStartEventVersion() != token.StartEventVersion ||
+			request.GetEndEventId() != token.EndEventID ||
+			request.GetEndEventVersion() != token.EndEventVersion {
 			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
 		}
 	} else {
 		token = &getRawHistoryContinuationToken{
-			RunID:            execution.GetRunId(),
-			BranchToken:      branchToken,
-			StartEventID:     request.GetStartEventId(),
-			EndEventID:       request.GetEndEventId(),
-			PersistenceToken: nil, // this is the initialized value
+			RunID:             execution.GetRunId(),
+			BranchToken:       branchToken,
+			StartEventID:      request.GetStartEventId(),
+			StartEventVersion: request.GetStartEventVersion(),
+			EndEventID:        request.GetEndEventId(),
+			EndEventVersion:   request.GetEndEventVersion(),
+			PersistenceToken:  nil, // this is the initialized value
 		}
 	}
 	return token, nil
