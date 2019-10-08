@@ -126,8 +126,6 @@ type (
 			baseRunID string,
 			baseRunNextEventID int64,
 		) (retError error)
-
-		getQueryRegistry() QueryRegistry
 	}
 )
 
@@ -146,7 +144,6 @@ type (
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
-		queryRegistry   QueryRegistry
 	}
 )
 
@@ -182,7 +179,6 @@ func newWorkflowExecutionContext(
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
-		queryRegistry: NewQueryRegistry(),
 	}
 }
 
@@ -703,7 +699,8 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, err := c.msBuilder.GetCompletionEvent(); err == nil {
-			emitWorkflowCompletionStats(c.metricsClient, domainName, event)
+			taskList := currentWorkflow.ExecutionInfo.TaskList
+			emitWorkflowCompletionStats(c.metricsClient, domainName, taskList, event)
 		}
 	}
 
@@ -1123,6 +1120,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 				HistorySize: c.stats.HistorySize,
 			},
 			ReplicationState: currMutableState.GetReplicationState(),
+			VersionHistories: currMutableState.GetVersionHistories(),
 
 			UpsertActivityInfos:       []*persistence.ActivityInfo{},
 			DeleteActivityInfos:       []int64{},
@@ -1168,10 +1166,6 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		)
 	}
 	return nil
-}
-
-func (c *workflowExecutionContextImpl) getQueryRegistry() QueryRegistry {
-	return c.queryRegistry
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionEventReapply(

@@ -667,6 +667,8 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 		input = c.String(flagNameOfRawInput)
 	} else if c.IsSet(flagNameOfInputFileName) {
 		inputFile := c.String(flagNameOfInputFileName)
+		// This method is purely used to parse input from the CLI. The input comes from a trusted user
+		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
 			ErrorAndExit("Error reading input file", err)
@@ -777,4 +779,12 @@ func removePrevious2LinesFromTerminal() {
 	fmt.Printf("\033[2K")
 	fmt.Printf("\033[1A")
 	fmt.Printf("\033[2K")
+}
+
+func showNextPage() bool {
+	fmt.Printf("Press %s to show next page, press %s to quit: ",
+		color.GreenString("Enter"), color.RedString("any other key then Enter"))
+	var input string
+	fmt.Scanln(&input)
+	return strings.Trim(input, " ") == ""
 }

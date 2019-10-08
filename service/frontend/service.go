@@ -25,6 +25,7 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -98,7 +99,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		DomainRPS:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDomainRPS, 1200),
 		MaxIDLengthLimit:                    dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		HistoryMgrNumConns:                  dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
-		MaxBadBinaries:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, 10),
+		MaxBadBinaries:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
 		EnableAdminProtection:               dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                 dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 		DisableListVisibilityByFilter:       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisableListVisibilityByFilter, false),
@@ -111,7 +112,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		SearchAttributesNumberOfKeysLimit:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 100),
 		SearchAttributesSizeOfValueLimit:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesSizeOfValueLimit, 2*1024),
 		SearchAttributesTotalSizeLimit:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesTotalSizeLimit, 40*1024),
-		MinRetentionDays:                    dc.GetIntProperty(dynamicconfig.MinRetentionDays, 1),
+		MinRetentionDays:                    dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
 	}
 }
 
@@ -155,7 +156,7 @@ func (s *Service) Start() {
 	}
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), base.GetMetricsClient(), log)
 
-	metadata, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
+	metadata, err := pFactory.NewMetadataManager()
 	if err != nil {
 		log.Fatal("failed to create metadata manager", tag.Error(err))
 	}
@@ -193,17 +194,6 @@ func (s *Service) Start() {
 		log.Fatal("Creating historyV2 manager persistence failed", tag.Error(err))
 	}
 
-	// TODO when global domain is enabled, uncomment the line below and remove the line after
-	var kafkaProducer messaging.Producer
-	if base.GetClusterMetadata().IsGlobalDomainEnabled() {
-		kafkaProducer, err = base.GetMessagingClient().NewProducerWithClusterName(base.GetClusterMetadata().GetCurrentClusterName())
-		if err != nil {
-			log.Fatal("Creating kafka producer failed", tag.Error(err))
-		}
-	} else {
-		kafkaProducer = &mocks.KafkaProducer{}
-	}
-
 	domainCache := cache.NewDomainCache(metadata, base.GetClusterMetadata(), base.GetMetricsClient(), base.GetLogger())
 
 	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
@@ -225,7 +215,38 @@ func (s *Service) Start() {
 		log.Fatal("Failed to register archiver bootstrap container", tag.Error(err))
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, domainCache)
+	var replicationMessageSink messaging.Producer
+	var domainReplicationQueue persistence.DomainReplicationQueue
+	clusterMetadata := base.GetClusterMetadata()
+	if clusterMetadata.IsGlobalDomainEnabled() {
+		consumerConfig := clusterMetadata.GetReplicationConsumerConfig()
+		if consumerConfig != nil && consumerConfig.Type == config.ReplicationConsumerTypeRPC {
+			domainReplicationQueue, err = pFactory.NewDomainReplicationQueue()
+			if err != nil {
+				log.Fatal("Failed to create domain replication queue", tag.Error(err))
+			}
+			replicationMessageSink = domainReplicationQueue
+		} else {
+			replicationMessageSink, err = base.GetMessagingClient().NewProducerWithClusterName(
+				base.GetClusterMetadata().GetCurrentClusterName())
+			if err != nil {
+				log.Fatal("Creating replicationMessageSink producer failed", tag.Error(err))
+			}
+		}
+	} else {
+		replicationMessageSink = &mocks.KafkaProducer{}
+	}
+
+	wfHandler := NewWorkflowHandler(
+		base,
+		s.config,
+		metadata,
+		history,
+		historyV2,
+		visibility,
+		replicationMessageSink,
+		domainReplicationQueue,
+		domainCache)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 

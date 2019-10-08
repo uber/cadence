@@ -59,6 +59,7 @@ func TagLoggerWithArchiveHistoryRequestAndURI(logger log.Logger, request *Archiv
 func TagLoggerWithArchiveVisibilityRequestAndURI(logger log.Logger, request *ArchiveVisibilityRequest, URI string) log.Logger {
 	return logger.WithTags(
 		tag.ArchivalRequestDomainID(request.DomainID),
+		tag.ArchivalRequestDomainName(request.DomainName),
 		tag.ArchivalRequestWorkflowID(request.WorkflowID),
 		tag.ArchivalRequestRunID(request.RunID),
 		tag.ArchvialRequestWorkflowType(request.WorkflowTypeName),
@@ -107,6 +108,9 @@ func ValidateVisibilityArchivalRequest(request *ArchiveVisibilityRequest) error 
 	if request.DomainID == "" {
 		return errEmptyDomainID
 	}
+	if request.DomainName == "" {
+		return errEmptyDomainName
+	}
 	if request.WorkflowID == "" {
 		return errEmptyWorkflowID
 	}
@@ -137,4 +141,13 @@ func ValidateQueryRequest(request *QueryVisibilityRequest) error {
 		return errEmptyQuery
 	}
 	return nil
+}
+
+// ConvertSearchAttrToBytes converts search attribute value from string back to byte array
+func ConvertSearchAttrToBytes(searchAttrStr map[string]string) map[string][]byte {
+	searchAttr := make(map[string][]byte)
+	for k, v := range searchAttrStr {
+		searchAttr[k] = []byte(v)
+	}
+	return searchAttr
 }

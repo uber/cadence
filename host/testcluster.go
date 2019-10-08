@@ -68,6 +68,7 @@ type (
 	TestClusterConfig struct {
 		FrontendAddress       string
 		EnableEventsV2        bool
+		EnableNDC             bool
 		EnableArchival        bool
 		IsMasterCluster       bool
 		ClusterNo             int
@@ -152,28 +153,29 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
 	cadenceParams := &CadenceParams{
-		ClusterMetadata:     clusterMetadata,
-		PersistenceConfig:   pConfig,
-		DispatcherProvider:  client.NewDNSYarpcDispatcherProvider(logger, 0),
-		MessagingClient:     messagingClient,
-		MetadataMgr:         testBase.MetadataProxy,
-		MetadataMgrV2:       testBase.MetadataManagerV2,
-		ShardMgr:            testBase.ShardMgr,
-		HistoryMgr:          testBase.HistoryMgr,
-		HistoryV2Mgr:        testBase.HistoryV2Mgr,
-		ExecutionMgrFactory: testBase.ExecutionMgrFactory,
-		TaskMgr:             testBase.TaskMgr,
-		VisibilityMgr:       visibilityMgr,
-		Logger:              logger,
-		ClusterNo:           options.ClusterNo,
-		EnableEventsV2:      options.EnableEventsV2,
-		ESConfig:            options.ESConfig,
-		ESClient:            esClient,
-		ArchiverMetadata:    archiverBase.metadata,
-		ArchiverProvider:    archiverBase.provider,
-		HistoryConfig:       options.HistoryConfig,
-		WorkerConfig:        options.WorkerConfig,
-		MockFrontendClient:  options.MockFrontendClient,
+		ClusterMetadata:        clusterMetadata,
+		PersistenceConfig:      pConfig,
+		DispatcherProvider:     client.NewDNSYarpcDispatcherProvider(logger, 0),
+		MessagingClient:        messagingClient,
+		MetadataMgr:            testBase.MetadataManager,
+		ShardMgr:               testBase.ShardMgr,
+		HistoryMgr:             testBase.HistoryMgr,
+		HistoryV2Mgr:           testBase.HistoryV2Mgr,
+		ExecutionMgrFactory:    testBase.ExecutionMgrFactory,
+		TaskMgr:                testBase.TaskMgr,
+		VisibilityMgr:          visibilityMgr,
+		Logger:                 logger,
+		ClusterNo:              options.ClusterNo,
+		EnableEventsV2:         options.EnableEventsV2,
+		EnableNDC:              options.EnableNDC,
+		ESConfig:               options.ESConfig,
+		ESClient:               esClient,
+		ArchiverMetadata:       archiverBase.metadata,
+		ArchiverProvider:       archiverBase.provider,
+		HistoryConfig:          options.HistoryConfig,
+		WorkerConfig:           options.WorkerConfig,
+		MockFrontendClient:     options.MockFrontendClient,
+		DomainReplicationQueue: testBase.DomainReplicationQueue,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {

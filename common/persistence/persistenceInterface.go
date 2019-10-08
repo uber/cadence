@@ -147,6 +147,18 @@ type (
 		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
+	// Queue is a store to enqueue and get messages
+	Queue interface {
+		EnqueueMessage(messagePayload []byte) error
+		DequeueMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
+	}
+
+	// QueueMessage is the message that stores in the queue
+	QueueMessage struct {
+		ID      int
+		Payload []byte
+	}
+
 	// DataBlob represents a blob for any binary data.
 	// It contains raw data, and metadata(right now only encoding) in other field
 	// Note that it should be only used for Persistence layer, below dataInterface and application(historyEngine/etc)
@@ -644,7 +656,6 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
-		TableVersion                int
 	}
 
 	// InternalUpdateDomainRequest is used to update domain
@@ -656,7 +667,6 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
-		TableVersion                int
 	}
 
 	// InternalListDomainsResponse is the response for GetDomain

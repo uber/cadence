@@ -89,6 +89,7 @@ type (
 	// ArchiveVisibilityRequest is request to Archive single workflow visibility record
 	ArchiveVisibilityRequest struct {
 		DomainID           string
+		DomainName         string // doesn't need to be archived
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
@@ -98,7 +99,8 @@ type (
 		CloseStatus        shared.WorkflowExecutionCloseStatus
 		HistoryLength      int64
 		Memo               *shared.Memo
-		SearchAttributes   map[string][]byte
+		SearchAttributes   map[string]string
+		HistoryArchivalURI string
 	}
 
 	// QueryVisibilityRequest is the request to query archived visibility records

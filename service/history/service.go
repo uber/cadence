@@ -89,7 +89,7 @@ type Config struct {
 	TimerProcessorMaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
 	TimerProcessorMaxTimeShift                       dynamicconfig.DurationPropertyFn
 	TimerProcessorHistoryArchivalSizeLimit           dynamicconfig.IntPropertyFn
-	TimerProcessorHistoryArchivalTimeLimit           dynamicconfig.DurationPropertyFn
+	TimerProcessorArchivalTimeLimit                  dynamicconfig.DurationPropertyFn
 
 	// TransferQueueProcessor settings
 	TransferTaskBatchSize                               dynamicconfig.IntPropertyFn
@@ -137,8 +137,8 @@ type Config struct {
 	EventEncodingType dynamicconfig.StringPropertyFnWithDomainFilter
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
-	// whether or not using Terminate as default ParentClosePolicy, otherwise use Abandon for backward compatibility
-	UseTerminateAsDefaultParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
+	// whether or not using ParentClosePolicy
+	EnableParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
 	// whether or not enable system workers for processing parent close policy task
 	EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
 	// parent close policy will be processed by sys workers(if enabled) if
@@ -184,7 +184,7 @@ const (
 func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                               numberOfShards,
-		EnableNDC:                                    dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableNDC, true),
+		EnableNDC:                                    dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableNDC, false),
 		RPS:                                          dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthLimit:                             dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                            dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
@@ -219,7 +219,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		TimerProcessorMaxPollIntervalJitterCoefficient:        dc.GetFloat64Property(dynamicconfig.TimerProcessorMaxPollIntervalJitterCoefficient, 0.15),
 		TimerProcessorMaxTimeShift:                            dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxTimeShift, 1*time.Second),
 		TimerProcessorHistoryArchivalSizeLimit:                dc.GetIntProperty(dynamicconfig.TimerProcessorHistoryArchivalSizeLimit, 500*1024),
-		TimerProcessorHistoryArchivalTimeLimit:                dc.GetDurationProperty(dynamicconfig.TimerProcessorHistoryArchivalTimeLimit, 1*time.Second),
+		TimerProcessorArchivalTimeLimit:                       dc.GetDurationProperty(dynamicconfig.TimerProcessorArchivalTimeLimit, 1*time.Second),
 		TransferTaskBatchSize:                                 dc.GetIntProperty(dynamicconfig.TransferTaskBatchSize, 100),
 		TransferProcessorFailoverMaxPollRPS:                   dc.GetIntProperty(dynamicconfig.TransferProcessorFailoverMaxPollRPS, 1),
 		TransferProcessorMaxPollRPS:                           dc.GetIntProperty(dynamicconfig.TransferProcessorMaxPollRPS, 20),
@@ -249,13 +249,13 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		ShardSyncMinInterval:                                  dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval, 5*time.Minute),
 
 		// history client: client/history/client.go set the client timeout 30s
-		LongPollExpirationInterval:             dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:                      dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
-		EnableEventsV2:                         dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
-		UseTerminateAsDefaultParentClosePolicy: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.UseTerminateAsDefaultParentClosePolicy, false),
-		NumParentClosePolicySystemWorkflows:    dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
-		EnableParentClosePolicyWorker:          dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
-		ParentClosePolicyThreshold:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
+		LongPollExpirationInterval:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
+		EventEncodingType:                   dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EnableEventsV2:                      dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
+		EnableParentClosePolicy:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableParentClosePolicy, true),
+		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
+		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
 
 		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 		ArchiveRequestRPS:         dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
@@ -337,7 +337,7 @@ func (s *Service) Start() {
 		log.Fatal("failed to create shard manager", tag.Error(err))
 	}
 
-	metadata, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
+	metadata, err := pFactory.NewMetadataManager()
 	if err != nil {
 		log.Fatal("failed to create metadata manager", tag.Error(err))
 	}

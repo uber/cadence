@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package frontend
+package domain
 
 import (
 	"context"
@@ -43,62 +43,107 @@ import (
 )
 
 type (
-	domainHandlerGlobalDomainEnabledNotMasterClusterSuite struct {
+	domainHandlerGlobalDomainEnabledMasterClusterSuite struct {
 		suite.Suite
 		persistencetests.TestBase
 
-		config               *Config
+		minRetentionDays     int
+		maxBadBinaryCount    int
 		logger               log.Logger
 		metadataMgr          persistence.MetadataManager
 		mockProducer         *mocks.KafkaProducer
-		mockDomainReplicator DomainReplicator
+		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
 		mockArchiverProvider *provider.MockArchiverProvider
 
-		handler *domainHandlerImpl
+		handler *HandlerImpl
 	}
 )
 
-func TestDomainHandlerGlobalDomainEnabledNotMasterClusterSuite(t *testing.T) {
-	s := new(domainHandlerGlobalDomainEnabledNotMasterClusterSuite)
+func TestDomainHandlerGlobalDomainEnabledMasterClusterSuite(t *testing.T) {
+	s := new(domainHandlerGlobalDomainEnabledMasterClusterSuite)
 	suite.Run(t, s)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupSuite() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
-		ClusterMetadata: cluster.GetTestClusterMetadata(true, false),
+		ClusterMetadata: cluster.GetTestClusterMetadata(true, true),
 	})
 	s.TestBase.Setup()
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TearDownSuite() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TearDownSuite() {
 	s.TestBase.TearDownWorkflowStore()
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupTest() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupTest() {
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
-	s.config = NewConfig(dcCollection, numHistoryShards, false)
-	s.metadataMgr = s.TestBase.MetadataProxy
+	s.minRetentionDays = 1
+	s.maxBadBinaryCount = 10
+	s.metadataMgr = s.TestBase.MetadataManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
-	s.archivalMetadata = archiver.NewArchivalMetadata(dcCollection, "", false, "", false, &config.ArchivalDomainDefaults{})
+	s.archivalMetadata = archiver.NewArchivalMetadata(
+		dcCollection,
+		"",
+		false,
+		"",
+		false,
+		&config.ArchivalDomainDefaults{},
+	)
 	s.mockArchiverProvider = &provider.MockArchiverProvider{}
-
-	s.handler = newDomainHandler(s.config, logger, s.metadataMgr, s.ClusterMetadata,
-		s.mockDomainReplicator, s.archivalMetadata, s.mockArchiverProvider)
+	s.handler = NewHandler(
+		s.minRetentionDays,
+		dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
+		logger,
+		s.metadataMgr,
+		s.ClusterMetadata,
+		s.mockDomainReplicator,
+		s.archivalMetadata,
+		s.mockArchiverProvider,
+	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TearDownTest() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockArchiverProvider.AssertExpectations(s.T())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_InvalidCluster() {
+	domainName := s.getRandomDomainName()
+	description := "some random description"
+	email := "some random email"
+	retention := int32(7)
+	emitMetric := true
+	activeClusterName := cluster.TestAlternativeClusterName
+	clusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(activeClusterName),
+		},
+	}
+	data := map[string]string{"some random key": "some random value"}
+	isGlobalDomain := false
+
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		Description:                            common.StringPtr(description),
+		OwnerEmail:                             common.StringPtr(email),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      common.StringPtr(activeClusterName),
+		Data:                                   data,
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
+	})
+	s.IsType(&shared.BadRequestError{}, err)
+}
+
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	var clusters []*shared.ClusterReplicationConfiguration
@@ -109,14 +154,14 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	}
 
 	retention := int32(1)
-	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
 	})
 	s.Nil(err)
 
-	resp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	resp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
 	s.Nil(err)
@@ -148,7 +193,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_LocalDomain_NoDefault() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_NoDefault() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -170,7 +215,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 		})
 	}
 
-	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		Description:                            common.StringPtr(description),
 		OwnerEmail:                             common.StringPtr(email),
@@ -183,7 +228,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	})
 	s.Nil(err)
 
-	resp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	resp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
 	s.Nil(err)
@@ -215,7 +260,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_LocalDomain_NoAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_LocalDomain_NoAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -230,7 +275,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	}
 	isGlobalDomain := false
 
-	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		Description:                            common.StringPtr(description),
 		OwnerEmail:                             common.StringPtr(email),
@@ -272,23 +317,35 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
-	updateResp, err := s.handler.updateDomain(context.Background(), &shared.UpdateDomainRequest{
+	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
 	s.Nil(err)
-	fnTest(updateResp.DomainInfo, updateResp.Configuration, updateResp.ReplicationConfiguration, updateResp.GetIsGlobalDomain(), updateResp.GetFailoverVersion())
+	fnTest(
+		updateResp.DomainInfo,
+		updateResp.Configuration,
+		updateResp.ReplicationConfiguration,
+		updateResp.GetIsGlobalDomain(),
+		updateResp.GetFailoverVersion(),
+	)
 
-	getResp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	getResp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
 	s.Nil(err)
-	fnTest(getResp.DomainInfo, getResp.Configuration, getResp.ReplicationConfiguration, getResp.GetIsGlobalDomain(), getResp.GetFailoverVersion())
+	fnTest(
+		getResp.DomainInfo,
+		getResp.Configuration,
+		getResp.ReplicationConfiguration,
+		getResp.GetIsGlobalDomain(),
+		getResp.GetFailoverVersion(),
+	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_LocalDomain_AllAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_LocalDomain_AllAttrSet() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
-	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
@@ -336,7 +393,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
-	updateResp, err := s.handler.updateDomain(context.Background(), &shared.UpdateDomainRequest{
+	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
 		UpdatedInfo: &shared.UpdateDomainInfo{
 			Description: common.StringPtr(description),
@@ -358,16 +415,28 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		},
 	})
 	s.Nil(err)
-	fnTest(updateResp.DomainInfo, updateResp.Configuration, updateResp.ReplicationConfiguration, updateResp.GetIsGlobalDomain(), updateResp.GetFailoverVersion())
+	fnTest(
+		updateResp.DomainInfo,
+		updateResp.Configuration,
+		updateResp.ReplicationConfiguration,
+		updateResp.GetIsGlobalDomain(),
+		updateResp.GetFailoverVersion(),
+	)
 
-	getResp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	getResp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
 	s.Nil(err)
-	fnTest(getResp.DomainInfo, getResp.Configuration, getResp.ReplicationConfiguration, getResp.GetIsGlobalDomain(), getResp.GetFailoverVersion())
+	fnTest(
+		getResp.DomainInfo,
+		getResp.Configuration,
+		getResp.ReplicationConfiguration,
+		getResp.GetIsGlobalDomain(),
+		getResp.GetFailoverVersion(),
+	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
 	var clusters []*shared.ClusterReplicationConfiguration
@@ -377,20 +446,49 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 		})
 	}
 
-	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
-		Name:           common.StringPtr(domainName),
-		IsGlobalDomain: common.BoolPtr(isGlobalDomain),
-	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
-	resp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	retention := int32(1)
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+	})
+	s.Nil(err)
+
+	resp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
-	s.IsType(&shared.EntityNotExistsError{}, err)
-	s.Nil(resp)
+	s.Nil(err)
+
+	s.NotEmpty(resp.DomainInfo.GetUUID())
+	resp.DomainInfo.UUID = common.StringPtr("")
+	s.Equal(&shared.DomainInfo{
+		Name:        common.StringPtr(domainName),
+		Status:      shared.DomainStatusRegistered.Ptr(),
+		Description: common.StringPtr(""),
+		OwnerEmail:  common.StringPtr(""),
+		Data:        map[string]string{},
+		UUID:        common.StringPtr(""),
+	}, resp.DomainInfo)
+	s.Equal(&shared.DomainConfiguration{
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(false),
+		HistoryArchivalStatus:                  shared.ArchivalStatusDisabled.Ptr(),
+		HistoryArchivalURI:                     common.StringPtr(""),
+		VisibilityArchivalStatus:               shared.ArchivalStatusDisabled.Ptr(),
+		VisibilityArchivalURI:                  common.StringPtr(""),
+		BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+	}, resp.Configuration)
+	s.Equal(&shared.DomainReplicationConfiguration{
+		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+		Clusters:          clusters,
+	}, resp.ReplicationConfiguration)
+	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(s.ClusterMetadata.GetCurrentClusterName(), 0), resp.GetFailoverVersion())
+	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_NoDefault() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_NoDefault() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -411,7 +509,9 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		Description:                            common.StringPtr(description),
 		OwnerEmail:                             common.StringPtr(email),
@@ -422,79 +522,49 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 		Data:                                   data,
 		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
 	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.Nil(err)
 
-	resp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	resp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
-	})
-	s.IsType(&shared.EntityNotExistsError{}, err)
-	s.Nil(resp)
-}
-
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_NoAttrSet() {
-	domainName := s.getRandomDomainName()
-	description := "some random description"
-	email := "some random email"
-	retention := int32(7)
-	emitMetric := true
-	activeClusterName := ""
-	clusters := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
-		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
-			activeClusterName = clusterName
-		}
-		clusters = append(clusters, &persistence.ClusterReplicationConfig{
-			ClusterName: clusterName,
-		})
-	}
-	s.True(len(activeClusterName) > 0)
-	s.True(len(clusters) > 1)
-	data := map[string]string{"some random key": "some random value"}
-	isGlobalDomain := true
-
-	_, err := s.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: description,
-			OwnerEmail:  email,
-			Data:        data,
-		},
-		Config: &persistence.DomainConfig{
-			Retention:                retention,
-			EmitMetric:               emitMetric,
-			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
-			HistoryArchivalURI:       "",
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
-			VisibilityArchivalURI:    "",
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: activeClusterName,
-			Clusters:          clusters,
-		},
-		IsGlobalDomain:  isGlobalDomain,
-		ConfigVersion:   0,
-		FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0),
 	})
 	s.Nil(err)
 
-	resp, err := s.handler.updateDomain(context.Background(), &shared.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.IsType(&shared.BadRequestError{}, err)
-	s.Nil(resp)
+	s.NotEmpty(resp.DomainInfo.GetUUID())
+	resp.DomainInfo.UUID = common.StringPtr("")
+	s.Equal(&shared.DomainInfo{
+		Name:        common.StringPtr(domainName),
+		Status:      shared.DomainStatusRegistered.Ptr(),
+		Description: common.StringPtr(description),
+		OwnerEmail:  common.StringPtr(email),
+		Data:        data,
+		UUID:        common.StringPtr(""),
+	}, resp.DomainInfo)
+	s.Equal(&shared.DomainConfiguration{
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		HistoryArchivalStatus:                  shared.ArchivalStatusDisabled.Ptr(),
+		HistoryArchivalURI:                     common.StringPtr(""),
+		VisibilityArchivalStatus:               shared.ArchivalStatusDisabled.Ptr(),
+		VisibilityArchivalURI:                  common.StringPtr(""),
+		BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+	}, resp.Configuration)
+	s.Equal(&shared.DomainReplicationConfiguration{
+		ActiveClusterName: common.StringPtr(activeClusterName),
+		Clusters:          clusters,
+	}, resp.ReplicationConfiguration)
+	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0), resp.GetFailoverVersion())
+	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_AllAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_NoAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)
 	emitMetric := true
+	data := map[string]string{"some random key": "some random value"}
 	activeClusterName := ""
 	clusters := []*shared.ClusterReplicationConfiguration{}
-	clustersDB := []*persistence.ClusterReplicationConfig{}
 	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
@@ -502,44 +572,143 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 			ClusterName: common.StringPtr(clusterName),
 		})
-		clustersDB = append(clustersDB, &persistence.ClusterReplicationConfig{
-			ClusterName: clusterName,
+	}
+	s.True(len(activeClusterName) > 0)
+	s.True(len(clusters) > 1)
+	isGlobalDomain := true
+
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		Description:                            common.StringPtr(description),
+		OwnerEmail:                             common.StringPtr(email),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      common.StringPtr(activeClusterName),
+		Data:                                   data,
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
+	})
+	s.Nil(err)
+
+	fnTest := func(info *shared.DomainInfo, config *shared.DomainConfiguration,
+		replicationConfig *shared.DomainReplicationConfiguration, isGlobalDomain bool, failoverVersion int64) {
+		s.NotEmpty(info.GetUUID())
+		info.UUID = common.StringPtr("")
+		s.Equal(&shared.DomainInfo{
+			Name:        common.StringPtr(domainName),
+			Status:      shared.DomainStatusRegistered.Ptr(),
+			Description: common.StringPtr(description),
+			OwnerEmail:  common.StringPtr(email),
+			Data:        data,
+			UUID:        common.StringPtr(""),
+		}, info)
+		s.Equal(&shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+			EmitMetric:                             common.BoolPtr(emitMetric),
+			HistoryArchivalStatus:                  shared.ArchivalStatusDisabled.Ptr(),
+			HistoryArchivalURI:                     common.StringPtr(""),
+			VisibilityArchivalStatus:               shared.ArchivalStatusDisabled.Ptr(),
+			VisibilityArchivalURI:                  common.StringPtr(""),
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+		}, config)
+		s.Equal(&shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(activeClusterName),
+			Clusters:          clusters,
+		}, replicationConfig)
+		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0), failoverVersion)
+		s.Equal(isGlobalDomain, isGlobalDomain)
+	}
+
+	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	fnTest(
+		updateResp.DomainInfo,
+		updateResp.Configuration,
+		updateResp.ReplicationConfiguration,
+		updateResp.GetIsGlobalDomain(),
+		updateResp.GetFailoverVersion(),
+	)
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	fnTest(
+		getResp.DomainInfo,
+		getResp.Configuration,
+		getResp.ReplicationConfiguration,
+		getResp.GetIsGlobalDomain(),
+		getResp.GetFailoverVersion(),
+	)
+}
+
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_AllAttrSet() {
+	domainName := s.getRandomDomainName()
+	activeClusterName := ""
+	clusters := []*shared.ClusterReplicationConfiguration{}
+	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
+			activeClusterName = clusterName
+		}
+		clusters = append(clusters, &shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterName),
 		})
 	}
 	s.True(len(activeClusterName) > 0)
 	s.True(len(clusters) > 1)
-	s.True(len(clustersDB) > 1)
-	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "",
-			OwnerEmail:  "",
-			Data:        map[string]string{},
-		},
-		Config: &persistence.DomainConfig{
-			Retention:                0,
-			EmitMetric:               false,
-			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
-			HistoryArchivalURI:       "",
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
-			VisibilityArchivalURI:    "",
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: activeClusterName,
-			Clusters:          clustersDB,
-		},
-		IsGlobalDomain:  isGlobalDomain,
-		ConfigVersion:   0,
-		FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0),
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
+		Clusters:                               clusters,
+		ActiveClusterName:                      common.StringPtr(activeClusterName),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
 	})
 	s.Nil(err)
 
-	updateResp, err := s.handler.updateDomain(context.Background(), &shared.UpdateDomainRequest{
+	description := "some random description"
+	email := "some random email"
+	retention := int32(7)
+	emitMetric := true
+	data := map[string]string{"some random key": "some random value"}
+
+	fnTest := func(info *shared.DomainInfo, config *shared.DomainConfiguration,
+		replicationConfig *shared.DomainReplicationConfiguration, isGlobalDomain bool, failoverVersion int64) {
+		s.NotEmpty(info.GetUUID())
+		info.UUID = common.StringPtr("")
+		s.Equal(&shared.DomainInfo{
+			Name:        common.StringPtr(domainName),
+			Status:      shared.DomainStatusRegistered.Ptr(),
+			Description: common.StringPtr(description),
+			OwnerEmail:  common.StringPtr(email),
+			Data:        data,
+			UUID:        common.StringPtr(""),
+		}, info)
+		s.Equal(&shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+			EmitMetric:                             common.BoolPtr(emitMetric),
+			HistoryArchivalStatus:                  shared.ArchivalStatusDisabled.Ptr(),
+			HistoryArchivalURI:                     common.StringPtr(""),
+			VisibilityArchivalStatus:               shared.ArchivalStatusDisabled.Ptr(),
+			VisibilityArchivalURI:                  common.StringPtr(""),
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+		}, config)
+		s.Equal(&shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(activeClusterName),
+			Clusters:          clusters,
+		}, replicationConfig)
+		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0), failoverVersion)
+		s.Equal(isGlobalDomain, isGlobalDomain)
+	}
+
+	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
 		UpdatedInfo: &shared.UpdateDomainInfo{
 			Description: common.StringPtr(description),
@@ -560,61 +729,62 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 			Clusters:          clusters,
 		},
 	})
-	s.IsType(&shared.BadRequestError{}, err)
-	s.Nil(updateResp)
+	s.Nil(err)
+	fnTest(
+		updateResp.DomainInfo,
+		updateResp.Configuration,
+		updateResp.ReplicationConfiguration,
+		updateResp.GetIsGlobalDomain(),
+		updateResp.GetFailoverVersion(),
+	)
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	fnTest(
+		getResp.DomainInfo,
+		getResp.Configuration,
+		getResp.ReplicationConfiguration,
+		getResp.GetIsGlobalDomain(),
+		getResp.GetFailoverVersion(),
+	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_Failover() {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_Failover() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)
 	emitMetric := true
+	data := map[string]string{"some random key": "some random value"}
 	prevActiveClusterName := ""
 	nextActiveClusterName := s.ClusterMetadata.GetCurrentClusterName()
 	clusters := []*shared.ClusterReplicationConfiguration{}
-	clustersDB := []*persistence.ClusterReplicationConfig{}
 	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
-		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
+		if clusterName != nextActiveClusterName {
 			prevActiveClusterName = clusterName
 		}
 		clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 			ClusterName: common.StringPtr(clusterName),
 		})
-		clustersDB = append(clustersDB, &persistence.ClusterReplicationConfig{
-			ClusterName: clusterName,
-		})
 	}
 	s.True(len(prevActiveClusterName) > 0)
 	s.True(len(clusters) > 1)
-	s.True(len(clustersDB) > 1)
-	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: description,
-			OwnerEmail:  email,
-			Data:        data,
-		},
-		Config: &persistence.DomainConfig{
-			Retention:                retention,
-			EmitMetric:               emitMetric,
-			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
-			HistoryArchivalURI:       "",
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
-			VisibilityArchivalURI:    "",
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: prevActiveClusterName,
-			Clusters:          clustersDB,
-		},
-		IsGlobalDomain:  isGlobalDomain,
-		ConfigVersion:   0,
-		FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(prevActiveClusterName, 0),
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+
+	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		Description:                            common.StringPtr(description),
+		OwnerEmail:                             common.StringPtr(email),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      common.StringPtr(prevActiveClusterName),
+		Data:                                   data,
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
 	})
 	s.Nil(err)
 
@@ -650,24 +820,34 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
-
-	updateResp, err := s.handler.updateDomain(context.Background(), &shared.UpdateDomainRequest{
+	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
 		ReplicationConfiguration: &shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		},
 	})
 	s.Nil(err)
-	fnTest(updateResp.DomainInfo, updateResp.Configuration, updateResp.ReplicationConfiguration, updateResp.GetIsGlobalDomain(), updateResp.GetFailoverVersion())
+	fnTest(
+		updateResp.DomainInfo,
+		updateResp.Configuration,
+		updateResp.ReplicationConfiguration,
+		updateResp.GetIsGlobalDomain(),
+		updateResp.GetFailoverVersion(),
+	)
 
-	getResp, err := s.handler.describeDomain(context.Background(), &shared.DescribeDomainRequest{
+	getResp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
 	s.Nil(err)
-	fnTest(getResp.DomainInfo, getResp.Configuration, getResp.ReplicationConfiguration, getResp.GetIsGlobalDomain(), getResp.GetFailoverVersion())
+	fnTest(
+		getResp.DomainInfo,
+		getResp.Configuration,
+		getResp.ReplicationConfiguration,
+		getResp.GetIsGlobalDomain(),
+		getResp.GetFailoverVersion(),
+	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) getRandomDomainName() string {
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
 }

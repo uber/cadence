@@ -23,13 +23,13 @@ package persistence
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/quotas"
-
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -48,13 +48,14 @@ type (
 		NewHistoryManager() (p.HistoryManager, error)
 		// NewHistoryManager returns a new historyV2 manager
 		NewHistoryV2Manager() (p.HistoryV2Manager, error)
-		// NewMetadataManager returns a new metadata manager that can speak
-		// the given version or versions
-		NewMetadataManager(version MetadataVersion) (p.MetadataManager, error)
+		// NewMetadataManager returns a new metadata manager
+		NewMetadataManager() (p.MetadataManager, error)
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
 		NewVisibilityManager() (p.VisibilityManager, error)
+		// NewDomainReplicationQueue returns a new queue for domain replication
+		NewDomainReplicationQueue() (p.DomainReplicationQueue, error)
 	}
 	// DataStoreFactory is a low level interface to be implemented by a datastore
 	// Examples of datastores are cassandra, mysql etc
@@ -71,14 +72,11 @@ type (
 		NewHistoryV2Store() (p.HistoryV2Store, error)
 		// NewMetadataStore returns a new metadata store
 		NewMetadataStore() (p.MetadataStore, error)
-		// NewMetadataStoreV1 returns a metadata store that can talk v1
-		NewMetadataStoreV1() (p.MetadataStore, error)
-		// NewMetadataStoreV2 returns a metadata store that can talk v2
-		NewMetadataStoreV2() (p.MetadataStore, error)
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store
 		NewVisibilityStore() (p.VisibilityStore, error)
+		NewQueue(queueType int) (p.Queue, error)
 	}
 	// Datastore represents a datastore
 	Datastore struct {
@@ -94,9 +92,6 @@ type (
 	}
 
 	storeType int
-
-	// MetadataVersion refers to the metadata schema version
-	MetadataVersion int
 )
 
 const (
@@ -106,19 +101,18 @@ const (
 	storeTypeMetadata
 	storeTypeExecution
 	storeTypeVisibility
-)
-
-const (
-	// MetadataV1 refers to metadata schema version 1
-	MetadataV1 MetadataVersion = iota + 1
-	// MetadataV2 refers to metadata schema version 2
-	MetadataV2
-	// MetadataV1V2 refers to metadata schema versions 1 and 2
-	MetadataV1V2
+	storeTypeQueue
 )
 
 var storeTypes = []storeType{
-	storeTypeHistory, storeTypeTask, storeTypeShard, storeTypeMetadata, storeTypeExecution, storeTypeVisibility}
+	storeTypeHistory,
+	storeTypeTask,
+	storeTypeShard,
+	storeTypeMetadata,
+	storeTypeExecution,
+	storeTypeVisibility,
+	storeTypeQueue,
+}
 
 // New returns an implementation of factory that vends persistence objects based on
 // specified configuration. This factory takes as input a config.Persistence object
@@ -131,7 +125,8 @@ func New(
 	cfg *config.Persistence,
 	clusterName string,
 	metricsClient metrics.Client,
-	logger log.Logger) Factory {
+	logger log.Logger,
+) Factory {
 	factory := &factoryImpl{
 		config:        cfg,
 		metricsClient: metricsClient,
@@ -172,7 +167,6 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
-
 }
 
 // NewHistoryManager returns a new history manager
@@ -210,19 +204,11 @@ func (f *factoryImpl) NewHistoryV2Manager() (p.HistoryV2Manager, error) {
 }
 
 // NewMetadataManager returns a new metadata manager
-func (f *factoryImpl) NewMetadataManager(version MetadataVersion) (p.MetadataManager, error) {
+func (f *factoryImpl) NewMetadataManager() (p.MetadataManager, error) {
 	var err error
 	var store p.MetadataStore
 	ds := f.datastores[storeTypeMetadata]
-	switch version {
-	case MetadataV1:
-		store, err = ds.factory.NewMetadataStoreV1()
-	case MetadataV2:
-		store, err = ds.factory.NewMetadataStoreV2()
-	default:
-		store, err = ds.factory.NewMetadataStore()
-	}
-
+	store, err = ds.factory.NewMetadataStore()
 	if err != nil {
 		return nil, err
 	}
@@ -278,6 +264,22 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	}
 
 	return result, nil
+}
+
+func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, error) {
+	ds := f.datastores[storeTypeQueue]
+	result, err := ds.factory.NewQueue(common.DomainReplicationQueueType)
+	if err != nil {
+		return nil, err
+	}
+	if ds.ratelimit != nil {
+		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+	}
+	if f.metricsClient != nil {
+		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
+	}
+
+	return p.NewDomainReplicationQueue(result), nil
 }
 
 // Close closes this factory

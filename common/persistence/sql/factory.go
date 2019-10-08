@@ -106,16 +106,6 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 	return newMetadataPersistenceV2(conn, f.clusterName, f.logger)
 }
 
-// NewMetadataStoreV1 returns the default metadatastore
-func (f *Factory) NewMetadataStoreV1() (p.MetadataStore, error) {
-	return f.NewMetadataStore()
-}
-
-// NewMetadataStoreV2 returns the default metadatastore
-func (f *Factory) NewMetadataStoreV2() (p.MetadataStore, error) {
-	return f.NewMetadataStore()
-}
-
 // NewExecutionStore returns an ExecutionStore for a given shardID
 func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	conn, err := f.dbConn.get()
@@ -128,6 +118,16 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 // NewVisibilityStore returns a visibility store
 func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 	return NewSQLVisibilityStore(f.cfg, f.logger)
+}
+
+// NewQueue returns a new queue backed by sql
+func (f *Factory) NewQueue(queueType int) (p.Queue, error) {
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+
+	return newQueue(conn, f.logger, queueType)
 }
 
 // Close closes the factory

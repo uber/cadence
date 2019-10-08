@@ -64,7 +64,6 @@ type (
 		controller               *gomock.Controller
 		mockMatchingClient       *matchingservicetest.MockClient
 		mockHistoryClient        *historyservicetest.MockClient
-		mockMetadataMgr          *mocks.MetadataManager
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockHistoryMgr           *mocks.HistoryManager
@@ -113,7 +112,6 @@ func (s *resetorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
@@ -763,7 +761,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
-		Success:     false,
+		Success:     true,
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
@@ -2081,7 +2079,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
-		Success:     false,
+		Success:     true,
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
@@ -2805,7 +2803,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
-		Success:     false,
+		Success:     true,
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
@@ -3426,7 +3424,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
-		Success:     false,
+		Success:     true,
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
@@ -4062,7 +4060,7 @@ func (s *resetorSuite) TestApplyReset() {
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
-		Success:     false,
+		Success:     true,
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
