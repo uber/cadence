@@ -113,7 +113,7 @@ func (q *domainReplicationQueueImpl) GetAckLevels() (map[string]int, error) {
 }
 
 func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
-	ackLevelByCluster, err := q.queue.GetAckLevels()
+	ackLevelByCluster, err := q.GetAckLevels()
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}

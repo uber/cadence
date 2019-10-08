@@ -814,3 +814,7 @@ func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(messageID int) 
 
 	return p.persistence.DeleteMessagesBefore(messageID)
 }
+
+func (p *queueRateLimitedPersistenceClient) Close() {
+	p.persistence.Close()
+}

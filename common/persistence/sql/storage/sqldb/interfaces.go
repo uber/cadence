@@ -662,9 +662,10 @@ type (
 		InsertIntoQueue(row *QueueRow) (sql.Result, error)
 		GetLastEnqueuedMessageIDForUpdate(queueType int) (int, error)
 		GetMessagesFromQueue(queueType, lastMessageID, maxRows int) ([]QueueRow, error)
-		DeleteMessages(queueType, messageID int) (sql.Result, error)
-		UpdateAckLevel(queueType int, messageID int, clusterName string) error
-		GetAckLevels(queueType int) (map[string]int, error)
+		DeleteMessagesBefore(queueType, messageID int) (sql.Result, error)
+		InsertAckLevel(queueType int, messageID int, clusterName string) error
+		UpdateAckLevels(queueType int, clusterAckLevels map[string]int) error
+		GetAckLevels(queueType int, forUpdate bool) (map[string]int, error)
 	}
 
 	// Tx defines the API for a SQL transaction

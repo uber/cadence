@@ -1278,3 +1278,7 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(messageID int) error {
 
 	return err
 }
+
+func (p *queuePersistenceClient) Close() {
+	p.persistence.Close()
+}

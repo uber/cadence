@@ -149,11 +149,12 @@ type (
 
 	// Queue is a store to enqueue and get messages
 	Queue interface {
+		Closeable
 		EnqueueMessage(messagePayload []byte) error
 		ReadMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
+		DeleteMessagesBefore(messageID int) error
 		UpdateAckLevel(messageID int, clusterName string) error
 		GetAckLevels() (map[string]int, error)
-		DeleteMessagesBefore(messageID int) error
 	}
 
 	// QueueMessage is the message that stores in the queue

@@ -346,14 +346,14 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *p.InternalUpdateDom
 	)
 
 	applied, err := query.ScanCAS()
-	if !applied {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDomain operation encounter concurrent write."),
-		}
-	}
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateDomain operation failed. Error %v", err),
+		}
+	}
+	if !applied {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateDomain operation encounter concurrent write."),
 		}
 	}
 
