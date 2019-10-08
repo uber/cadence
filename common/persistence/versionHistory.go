@@ -243,7 +243,7 @@ func (v *VersionHistory) ContainsItem(
 	prevEventID := common.FirstEventID - 1
 	for _, currentItem := range v.items {
 		if item.GetVersion() == currentItem.GetVersion() {
-			if prevEventID < item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {
+			if prevEventID <= item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {
 				return true
 			}
 		} else if item.GetVersion() < currentItem.GetVersion() {
