@@ -22,6 +22,8 @@ package replicator
 
 import (
 	"context"
+	"fmt"
+	"github.com/uber/cadence/common/membership"
 	"sync/atomic"
 	"time"
 
@@ -49,12 +51,16 @@ func newDomainReplicationMessageProcessor(
 	remotePeer workflowserviceclient.Interface,
 	metricsClient metrics.Client,
 	domainReplicator DomainReplicator,
+	hostInfo *membership.HostInfo,
+	serviceResolver membership.ServiceResolver,
 ) *domainReplicationMessageProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
 	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
 	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
 
 	return &domainReplicationMessageProcessor{
+		hostInfo:               hostInfo,
+		serviceResolver:        serviceResolver,
 		status:                 common.DaemonStatusInitialized,
 		sourceCluster:          sourceCluster,
 		logger:                 logger,
@@ -70,6 +76,8 @@ func newDomainReplicationMessageProcessor(
 
 type (
 	domainReplicationMessageProcessor struct {
+		hostInfo               *membership.HostInfo
+		serviceResolver        membership.ServiceResolver
 		status                 int32
 		sourceCluster          string
 		logger                 log.Logger
@@ -108,6 +116,17 @@ func (p *domainReplicationMessageProcessor) processorLoop() {
 }
 
 func (p *domainReplicationMessageProcessor) getAndHandleDomainReplicationTasks() {
+	info, err := p.serviceResolver.Lookup(p.sourceCluster)
+	if err != nil {
+		p.logger.Info("Failed to lookup host info. Skip current run.")
+		return
+	}
+
+	if info.Identity() != p.hostInfo.Identity() {
+		p.logger.Info(fmt.Sprintf("Worker not responsible for source cluster %v.", p.sourceCluster))
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
 	request := &replicator.GetDomainReplicationMessagesRequest{
 		LastRetrivedMessageId:  common.Int64Ptr(p.lastRetrievedMessageID),
