@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
 	"strconv"
@@ -64,6 +65,15 @@ type (
 		historyV2Mgr  persistence.HistoryV2Manager
 		startWG       sync.WaitGroup
 		params        *service.BootstrapParams
+	}
+
+	getRawHistoryContinuationToken struct {
+		RunID             string
+		StartEventID      int64
+		EndEventID        int64
+		IsWorkflowRunning bool
+		PersistenceToken  []byte
+		BranchToken       []byte
 	}
 )
 
@@ -456,7 +466,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	versionHistories := persistence.NewVersionHistoriesFromThrift(
 		response.GetVersionHistories(),
 	)
-	startEventID, endEventID, versionHistory, err := adh.getEventRange(
+	versionHistory, err := adh.updateEventRange(
 		request,
 		versionHistories,
 	)
@@ -468,8 +478,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		ctx,
 		request,
 		versionHistory.GetBranchToken(),
-		startEventID,
-		endEventID)
+	)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -480,9 +489,11 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		adh.numberOfHistoryShards,
 	)
 	rawHistoryResponse, err := adh.historyV2Mgr.ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
-		BranchToken:   token.BranchToken,
-		MinEventID:    startEventID,
-		MaxEventID:    endEventID,
+		BranchToken: token.BranchToken,
+		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
+		// ReadRawHistoryBranch is inclusive exclusive.
+		MinEventID:    token.StartEventID + 1,
+		MaxEventID:    token.EndEventID,
 		PageSize:      pageSize,
 		NextPageToken: token.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
@@ -521,7 +532,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	if len(token.PersistenceToken) == 0 {
 		result.NextPageToken = nil
 	} else {
-		result.NextPageToken, err = serializeHistoryToken(token)
+		result.NextPageToken, err = serializeRawHistoryToken(token)
 		if err != nil {
 			return nil, err
 		}
@@ -549,106 +560,113 @@ func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(
 	if pageSize < 0 {
 		return &gen.BadRequestError{Message: "Invalid PageSize."}
 	}
+
+	if request.StartEventId == nil &&
+		request.StartEventVersion == nil &&
+		request.EndEventId == nil &&
+		request.EndEventVersion == nil {
+		return &gen.BadRequestError{Message: "Invalid event query range."}
+	}
+
+	if (request.StartEventId != nil && request.StartEventVersion == nil) ||
+		(request.StartEventId == nil && request.StartEventVersion != nil) {
+		return &gen.BadRequestError{Message: "Invalid start event id and start event version combination."}
+	}
+
+	if (request.EndEventId != nil && request.EndEventVersion == nil) ||
+		(request.EndEventId == nil && request.EndEventVersion != nil) {
+		return &gen.BadRequestError{Message: "Invalid end event id and end event version combination."}
+	}
 	return nil
 }
 
-func (adh *AdminHandler) getEventRange(
+func (adh *AdminHandler) updateEventRange(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	versionHistories *persistence.VersionHistories,
-) (int64, int64, *persistence.VersionHistory, error) {
+) (*persistence.VersionHistory, error) {
 
-	currentBranch, err := versionHistories.GetCurrentVersionHistory()
-	// The start event should be exclusive
-	targetStartEventID := request.GetStartEventId() + 1
-	targetStartEventVersion := request.GetStartEventVersion()
+	targetBranch, err := versionHistories.GetCurrentVersionHistory()
 	if request.StartEventId == nil || request.StartEventVersion == nil {
-		firstItem, err := currentBranch.GetFirstItem()
+		firstItem, err := targetBranch.GetFirstItem()
 		if err != nil {
-			return 0, 0, nil, err
+			return nil, err
 		}
-		targetStartEventID = common.FirstEventID
-		targetStartEventVersion = firstItem.GetVersion()
+		request.StartEventId = common.Int64Ptr(common.FirstEventID)
+		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
 	}
-	targetEndEventID := request.GetEndEventId()
-	targetEndEventVersion := request.GetEndEventVersion()
 	if request.EndEventId == nil || request.EndEventVersion == nil {
-		lastItem, err := currentBranch.GetLastItem()
+		lastItem, err := targetBranch.GetLastItem()
 		if err != nil {
-			return 0, 0, nil, err
+			return nil, err
 		}
-		targetEndEventID = lastItem.GetEventID()
-		targetEndEventVersion = lastItem.GetVersion()
+		request.EndEventId = common.Int64Ptr(lastItem.GetEventID())
+		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
+	}
+
+	if request.GetStartEventId() < 0 || request.GetStartEventId() > request.GetEndEventId() {
+		return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 	}
 
 	// update current branch based on updated end event item
-	targetItem := persistence.NewVersionHistoryItem(targetEndEventID, targetEndEventVersion)
-	idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(targetItem)
+	endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
+	idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
-	currentBranch, err = versionHistories.GetVersionHistory(idx)
+	targetBranch, err = versionHistories.GetVersionHistory(idx)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
 
-	startItem := persistence.NewVersionHistoryItem(targetStartEventID, targetStartEventVersion)
+	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
 	// Start event is not on the same branch as target branch
-	if !currentBranch.ContainsItem(startItem) {
+	if !targetBranch.ContainsItem(startItem) {
 		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
 		if err != nil {
-			return 0, 0, nil, err
+			return nil, err
 		}
 		startBranch, err := versionHistories.GetVersionHistory(idx)
 		if err != nil {
-			return 0, 0, nil, err
+			return nil, err
 		}
-		startItem, err = currentBranch.FindLCAItem(startBranch)
+		startItem, err = targetBranch.FindLCAItem(startBranch)
 		if err != nil {
-			return 0, 0, nil, err
+			return nil, err
 		}
-		targetStartEventID = startItem.GetEventID()
+		request.StartEventId = common.Int64Ptr(startItem.GetEventID())
+		request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
 	}
 
-	return targetStartEventID, targetEndEventID, currentBranch, nil
+	return targetBranch, nil
 }
 
 func (adh *AdminHandler) preparePaginationToken(
 	ctx context.Context,
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	branchToken []byte,
-	startEventID int64,
-	endEventID int64,
-) (*getHistoryContinuationToken, error) {
+) (*getRawHistoryContinuationToken, error) {
 
 	execution := request.Execution
-	var token *getHistoryContinuationToken
+	var token *getRawHistoryContinuationToken
+	var err error
 	if request.NextPageToken != nil {
-		token, err := deserializeHistoryToken(request.NextPageToken)
+		token, err = deserializeRawHistoryToken(request.NextPageToken)
 		if err != nil {
 			return nil, err
 		}
 
 		if execution.GetRunId() != token.RunID ||
-			// we guarantee to use the first event ID provided in the request
-			request.GetStartEventId() != token.FirstEventID ||
-			// the next event ID in the request must be <= next event ID from mutable state, when initialized
-			// so as long as customer do not change next event ID during pagination,
-			// next event ID in the token <= next event ID in the request.
-			request.GetEndEventId() < token.NextEventID {
+			request.GetStartEventId() != token.StartEventID ||
+			request.GetEndEventId() != token.EndEventID {
 			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
 		}
 	} else {
-		if startEventID < 0 || startEventID > endEventID {
-			return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
-		}
-		token = &getHistoryContinuationToken{
-			RunID:             execution.GetRunId(),
-			BranchToken:       branchToken,
-			FirstEventID:      startEventID,
-			NextEventID:       endEventID,
-			PersistenceToken:  nil, // this is the initialized value
-			ReplicationInfo:   nil, // this field will not be used in 3+DC
-			EventStoreVersion: persistence.EventStoreVersionV2,
+		token = &getRawHistoryContinuationToken{
+			RunID:            execution.GetRunId(),
+			BranchToken:      branchToken,
+			StartEventID:     request.GetStartEventId(),
+			EndEventID:       request.GetEndEventId(),
+			PersistenceToken: nil, // this is the initialized value
 		}
 	}
 	return token, nil
@@ -696,4 +714,19 @@ func convertIndexedValueTypeToESDataType(valueType gen.IndexedValueType) string 
 	default:
 		return ""
 	}
+}
+
+func serializeRawHistoryToken(token *getRawHistoryContinuationToken) ([]byte, error) {
+	if token == nil {
+		return nil, nil
+	}
+
+	bytes, err := json.Marshal(token)
+	return bytes, err
+}
+
+func deserializeRawHistoryToken(bytes []byte) (*getRawHistoryContinuationToken, error) {
+	token := &getRawHistoryContinuationToken{}
+	err := json.Unmarshal(bytes, token)
+	return token, err
 }
