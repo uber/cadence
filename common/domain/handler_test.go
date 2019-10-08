@@ -91,7 +91,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataProxy
+	s.metadataMgr = s.TestBase.MetadataManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -330,6 +330,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 			domains[resp.Domains[0].DomainInfo.GetName()] = resp.Domains[0]
 		}
 	}
+	delete(domains, common.SystemLocalDomainName)
 	s.Equal(map[string]*shared.DescribeDomainResponse{
 		domainName1: &shared.DescribeDomainResponse{
 			DomainInfo: &shared.DomainInfo{

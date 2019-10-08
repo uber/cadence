@@ -660,7 +660,6 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
-		TableVersion                int
 	}
 
 	// InternalUpdateDomainRequest is used to update domain
@@ -672,7 +671,6 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
-		TableVersion                int
 	}
 
 	// InternalListDomainsResponse is the response for GetDomain
