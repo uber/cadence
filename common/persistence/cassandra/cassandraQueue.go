@@ -60,7 +60,7 @@ type (
 	queueMetadata struct {
 		clusterAckLevels map[string]int
 		// version is used for CAS operation.
-		version          int
+		version int
 	}
 )
 
@@ -278,7 +278,7 @@ func (q *cassandraQueue) getQueueMetadata() (*queueMetadata, error) {
 		return nil, fmt.Errorf("failed to get queue metadata: %v", err)
 	}
 
-	return &queueMetadata{clusterAckLevels: ackLevels, version:version}, nil
+	return &queueMetadata{clusterAckLevels: ackLevels, version: version}, nil
 }
 
 func (q *cassandraQueue) updateQueueMetadata(metadata *queueMetadata) error {

@@ -75,7 +75,7 @@ func (mdb *DB) InsertAckLevel(queueType int, messageID int, clusterName string) 
 
 }
 
-// UpdateAckLevel updates ack level
+// UpdateAckLevels updates cluster ack levels
 func (mdb *DB) UpdateAckLevels(queueType int, clusterAckLevels map[string]int) error {
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
