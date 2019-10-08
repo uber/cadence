@@ -105,7 +105,7 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 func (s *QueuePersistenceSuite) TestQueueMetadataOperations() {
 	clusterAckLevels, err := s.GetAckLevels()
 	s.Require().NoError(err)
-	s.Assert().Nil(clusterAckLevels)
+	s.Assert().Len(clusterAckLevels, 0)
 
 	err = s.UpdateAckLevel(10, "test1")
 	s.Require().NoError(err)

@@ -278,6 +278,11 @@ func (q *cassandraQueue) getQueueMetadata() (*queueMetadata, error) {
 		return nil, fmt.Errorf("failed to get queue metadata: %v", err)
 	}
 
+	// if record exist but ackLevels is empty, we initialize the map
+	if ackLevels == nil {
+		ackLevels = make(map[string]int)
+	}
+
 	return &queueMetadata{clusterAckLevels: ackLevels, version: version}, nil
 }
 
