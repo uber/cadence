@@ -154,11 +154,12 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 				WorkflowId: common.StringPtr(""),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:    common.Int64Ptr(1),
-			EndEventId:      common.Int64Ptr(10),
-			EndEventVersion: common.Int64Ptr(100),
-			MaximumPageSize: common.Int32Ptr(10),
-			NextPageToken:   nil,
+			StartEventId:      common.Int64Ptr(1),
+			StartEventVersion: common.Int64Ptr(100),
+			EndEventId:        common.Int64Ptr(10),
+			EndEventVersion:   common.Int64Ptr(100),
+			MaximumPageSize:   common.Int32Ptr(1),
+			NextPageToken:     nil,
 		})
 	s.Error(err)
 }
@@ -172,11 +173,12 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr("runID"),
 			},
-			StartEventId:    common.Int64Ptr(1),
-			EndEventId:      common.Int64Ptr(10),
-			EndEventVersion: common.Int64Ptr(100),
-			MaximumPageSize: common.Int32Ptr(10),
-			NextPageToken:   nil,
+			StartEventId:      common.Int64Ptr(1),
+			StartEventVersion: common.Int64Ptr(100),
+			EndEventId:        common.Int64Ptr(10),
+			EndEventVersion:   common.Int64Ptr(100),
+			MaximumPageSize:   common.Int32Ptr(1),
+			NextPageToken:     nil,
 		})
 	s.Error(err)
 }
@@ -190,11 +192,12 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:    common.Int64Ptr(1),
-			EndEventId:      common.Int64Ptr(10),
-			EndEventVersion: common.Int64Ptr(100),
-			MaximumPageSize: common.Int32Ptr(-1),
-			NextPageToken:   nil,
+			StartEventId:      common.Int64Ptr(1),
+			StartEventVersion: common.Int64Ptr(100),
+			EndEventId:        common.Int64Ptr(10),
+			EndEventVersion:   common.Int64Ptr(100),
+			MaximumPageSize:   common.Int32Ptr(-1),
+			NextPageToken:     nil,
 		})
 	s.Error(err)
 }
@@ -209,11 +212,12 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:    common.Int64Ptr(1),
-			EndEventId:      common.Int64Ptr(10),
-			EndEventVersion: common.Int64Ptr(100),
-			MaximumPageSize: common.Int32Ptr(1),
-			NextPageToken:   nil,
+			StartEventId:      common.Int64Ptr(1),
+			StartEventVersion: common.Int64Ptr(100),
+			EndEventId:        common.Int64Ptr(10),
+			EndEventVersion:   common.Int64Ptr(100),
+			MaximumPageSize:   common.Int32Ptr(1),
+			NextPageToken:     nil,
 		})
 	s.Error(err)
 }
@@ -247,11 +251,142 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 				WorkflowId: common.StringPtr("workflowID"),
 				RunId:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:    common.Int64Ptr(1),
-			EndEventId:      common.Int64Ptr(10),
-			EndEventVersion: common.Int64Ptr(100),
-			MaximumPageSize: common.Int32Ptr(10),
-			NextPageToken:   nil,
+			StartEventId:      common.Int64Ptr(1),
+			StartEventVersion: common.Int64Ptr(100),
+			EndEventId:        common.Int64Ptr(10),
+			EndEventVersion:   common.Int64Ptr(100),
+			MaximumPageSize:   common.Int32Ptr(10),
+			NextPageToken:     nil,
 		})
+	s.NoError(err)
+}
+
+func (s *adminHandlerSuite) Test_GetEventRange_DefinedStartAndEnd() {
+	inputStartEventID := int64(1)
+	inputEndEventID := int64(100)
+	inputStartVersion := int64(10)
+	inputEndVersion := int64(11)
+	firstItem := persistence.NewVersionHistoryItem(inputStartEventID+1, inputStartVersion)
+	targetItem := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
+	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
+	versionHistories := persistence.NewVersionHistories(versionHistory)
+	startEventID, endEventID, targetVersionHistory, err := s.handler.getEventRange(
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr("workflowID"),
+				RunId:      common.StringPtr(uuid.New()),
+			},
+			StartEventId:      common.Int64Ptr(inputStartEventID),
+			StartEventVersion: common.Int64Ptr(inputStartVersion),
+			EndEventId:        common.Int64Ptr(inputEndEventID),
+			EndEventVersion:   common.Int64Ptr(inputEndVersion),
+			MaximumPageSize:   common.Int32Ptr(10),
+			NextPageToken:     nil,
+		},
+		versionHistories,
+	)
+	s.Equal(startEventID, inputStartEventID+1)
+	s.Equal(endEventID, inputEndEventID)
+	s.Equal(targetVersionHistory, versionHistory)
+	s.NoError(err)
+}
+
+func (s *adminHandlerSuite) Test_GetEventRange_DefinedEndEvent() {
+	inputStartEventID := int64(1)
+	inputEndEventID := int64(100)
+	inputStartVersion := int64(10)
+	inputEndVersion := int64(11)
+	firstItem := persistence.NewVersionHistoryItem(inputStartEventID+1, inputStartVersion)
+	targetItem := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
+	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
+	versionHistories := persistence.NewVersionHistories(versionHistory)
+	startEventID, endEventID, targetVersionHistory, err := s.handler.getEventRange(
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr("workflowID"),
+				RunId:      common.StringPtr(uuid.New()),
+			},
+			StartEventId:      nil,
+			StartEventVersion: nil,
+			EndEventId:        common.Int64Ptr(inputEndEventID),
+			EndEventVersion:   common.Int64Ptr(inputEndVersion),
+			MaximumPageSize:   common.Int32Ptr(10),
+			NextPageToken:     nil,
+		},
+		versionHistories,
+	)
+	s.Equal(startEventID, inputStartEventID)
+	s.Equal(endEventID, inputEndEventID)
+	s.Equal(targetVersionHistory, versionHistory)
+	s.NoError(err)
+}
+
+func (s *adminHandlerSuite) Test_GetEventRange_DefinedStartEvent() {
+	inputStartEventID := int64(1)
+	inputEndEventID := int64(100)
+	inputStartVersion := int64(10)
+	inputEndVersion := int64(11)
+	firstItem := persistence.NewVersionHistoryItem(inputStartEventID+1, inputStartVersion)
+	targetItem := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
+	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
+	versionHistories := persistence.NewVersionHistories(versionHistory)
+	startEventID, endEventID, targetVersionHistory, err := s.handler.getEventRange(
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr("workflowID"),
+				RunId:      common.StringPtr(uuid.New()),
+			},
+			StartEventId:      common.Int64Ptr(inputStartEventID),
+			StartEventVersion: common.Int64Ptr(inputStartVersion),
+			EndEventId:        nil,
+			EndEventVersion:   nil,
+			MaximumPageSize:   common.Int32Ptr(10),
+			NextPageToken:     nil,
+		},
+		versionHistories,
+	)
+	s.Equal(startEventID, inputStartEventID+1)
+	s.Equal(endEventID, inputEndEventID)
+	s.Equal(targetVersionHistory, versionHistory)
+	s.NoError(err)
+}
+
+func (s *adminHandlerSuite) Test_GetEventRange_NonCurrentBranch() {
+	inputStartEventID := int64(1)
+	inputEndEventID := int64(100)
+	inputStartVersion := int64(10)
+	inputEndVersion := int64(101)
+	item1 := persistence.NewVersionHistoryItem(inputStartEventID+1, inputStartVersion)
+	item2 := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
+	versionHistory1 := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{item1, item2})
+	item3 := persistence.NewVersionHistoryItem(int64(10), int64(20))
+	item4 := persistence.NewVersionHistoryItem(int64(20), int64(51))
+	versionHistory2 := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{item1, item3, item4})
+	versionHistories := persistence.NewVersionHistories(versionHistory1)
+	_, _, err := versionHistories.AddVersionHistory(versionHistory2)
+	s.NoError(err)
+
+	startEventID, endEventID, targetVersionHistory, err := s.handler.getEventRange(
+		&admin.GetWorkflowExecutionRawHistoryV2Request{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr("workflowID"),
+				RunId:      common.StringPtr(uuid.New()),
+			},
+			StartEventId:      common.Int64Ptr(9),
+			StartEventVersion: common.Int64Ptr(20),
+			EndEventId:        common.Int64Ptr(inputEndEventID),
+			EndEventVersion:   common.Int64Ptr(inputEndVersion),
+			MaximumPageSize:   common.Int32Ptr(10),
+			NextPageToken:     nil,
+		},
+		versionHistories,
+	)
+	s.Equal(startEventID, inputStartEventID+1)
+	s.Equal(endEventID, inputEndEventID)
+	s.Equal(targetVersionHistory, versionHistory1)
 	s.NoError(err)
 }

@@ -128,17 +128,18 @@ struct GetWorkflowExecutionRawHistoryResponse {
 }
 
 /**
-  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.
+  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.
   * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
   **/
 struct GetWorkflowExecutionRawHistoryV2Request {
   10: optional string domain
   20: optional shared.WorkflowExecution execution
   30: optional i64 (js.type = "Long") startEventId
-  40: optional i64 (js.type = "Long") endEventId
-  50: optional i64 (js.type = "Long") endEventVersion
-  60: optional i32 maximumPageSize
-  70: optional binary nextPageToken
+  40: optional i64 (js.type = "Long") startEventVersion
+  50: optional i64 (js.type = "Long") endEventId
+  60: optional i64 (js.type = "Long") endEventVersion
+  70: optional i32 maximumPageSize
+  80: optional binary nextPageToken
 }
 
 struct GetWorkflowExecutionRawHistoryV2Response {

@@ -441,7 +441,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	}
 	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
 	if err != nil {
-		return nil, err
+		return nil, adh.error(err, scope)
 	}
 
 	execution := request.Execution
@@ -452,33 +452,37 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
-	endEventID := request.GetEndEventId()
-	if endEventID > response.GetNextEventId() {
-		endEventID = response.GetNextEventId()
-	}
 
-	versionHistory, err := adh.getVersionHistory(
+	versionHistories := persistence.NewVersionHistoriesFromThrift(
 		response.GetVersionHistories(),
-		endEventID,
-		request.GetEndEventVersion())
+	)
+	startEventID, endEventID, versionHistory, err := adh.getEventRange(
+		request,
+		versionHistories,
+	)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
+
 	token, err := adh.preparePaginationToken(
 		ctx,
 		request,
 		versionHistory.GetBranchToken(),
+		startEventID,
 		endEventID)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 
 	pageSize := int(request.GetMaximumPageSize())
-	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(
+		execution.GetWorkflowId(),
+		adh.numberOfHistoryShards,
+	)
 	rawHistoryResponse, err := adh.historyV2Mgr.ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
-		BranchToken:   versionHistory.GetBranchToken(),
-		MinEventID:    request.GetStartEventId(),
-		MaxEventID:    request.GetEndEventId(),
+		BranchToken:   token.BranchToken,
+		MinEventID:    startEventID,
+		MaxEventID:    endEventID,
 		PageSize:      pageSize,
 		NextPageToken: token.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
@@ -490,7 +494,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 			return &admin.GetWorkflowExecutionRawHistoryV2Response{
 				HistoryBatches: []*gen.DataBlob{},
 				NextPageToken:  nil, // no further pagination
-				VersionHistory: versionHistory,
+				VersionHistory: versionHistory.ToThrift(),
 			}, nil
 		}
 		return nil, err
@@ -512,7 +516,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 
 	result := &admin.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: blobs,
-		VersionHistory: versionHistory,
+		VersionHistory: versionHistory.ToThrift(),
 	}
 	if len(token.PersistenceToken) == 0 {
 		result.NextPageToken = nil
@@ -548,11 +552,72 @@ func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(
 	return nil
 }
 
+func (adh *AdminHandler) getEventRange(
+	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	versionHistories *persistence.VersionHistories,
+) (int64, int64, *persistence.VersionHistory, error) {
+
+	currentBranch, err := versionHistories.GetCurrentVersionHistory()
+	// The start event should be exclusive
+	targetStartEventID := request.GetStartEventId() + 1
+	targetStartEventVersion := request.GetStartEventVersion()
+	if request.StartEventId == nil || request.StartEventVersion == nil {
+		firstItem, err := currentBranch.GetFirstItem()
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		targetStartEventID = common.FirstEventID
+		targetStartEventVersion = firstItem.GetVersion()
+	}
+	targetEndEventID := request.GetEndEventId()
+	targetEndEventVersion := request.GetEndEventVersion()
+	if request.EndEventId == nil || request.EndEventVersion == nil {
+		lastItem, err := currentBranch.GetLastItem()
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		targetEndEventID = lastItem.GetEventID()
+		targetEndEventVersion = lastItem.GetVersion()
+	}
+
+	// update current branch based on updated end event item
+	targetItem := persistence.NewVersionHistoryItem(targetEndEventID, targetEndEventVersion)
+	idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(targetItem)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	currentBranch, err = versionHistories.GetVersionHistory(idx)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+
+	startItem := persistence.NewVersionHistoryItem(targetStartEventID, targetStartEventVersion)
+	// Start event is not on the same branch as target branch
+	if !currentBranch.ContainsItem(startItem) {
+		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		startBranch, err := versionHistories.GetVersionHistory(idx)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		startItem, err = currentBranch.FindLCAItem(startBranch)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		targetStartEventID = startItem.GetEventID()
+	}
+
+	return targetStartEventID, targetEndEventID, currentBranch, nil
+}
+
 func (adh *AdminHandler) preparePaginationToken(
 	ctx context.Context,
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	branchToken []byte,
-	nextEventID int64,
+	startEventID int64,
+	endEventID int64,
 ) (*getHistoryContinuationToken, error) {
 
 	execution := request.Execution
@@ -573,15 +638,14 @@ func (adh *AdminHandler) preparePaginationToken(
 			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
 		}
 	} else {
-		firstEventID := request.GetStartEventId()
-		if firstEventID < 0 || firstEventID > nextEventID {
+		if startEventID < 0 || startEventID > endEventID {
 			return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 		}
 		token = &getHistoryContinuationToken{
 			RunID:             execution.GetRunId(),
 			BranchToken:       branchToken,
-			FirstEventID:      firstEventID,
-			NextEventID:       nextEventID,
+			FirstEventID:      startEventID,
+			NextEventID:       endEventID,
 			PersistenceToken:  nil, // this is the initialized value
 			ReplicationInfo:   nil, // this field will not be used in 3+DC
 			EventStoreVersion: persistence.EventStoreVersionV2,
