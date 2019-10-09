@@ -372,13 +372,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	var historyBatches []*gen.History
 	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
 	_, historyBatches, token.PersistenceToken, size, err = historyService.PaginateHistory(
-		adh.historyMgr,
 		adh.historyV2Mgr,
 		true, // this means that we are getting history by batch
-		domainID,
-		execution.GetWorkflowId(),
-		token.RunID,
-		token.EventStoreVersion,
 		token.BranchToken,
 		token.FirstEventID,
 		token.NextEventID,
