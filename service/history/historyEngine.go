@@ -66,7 +66,6 @@ type (
 		timeSource                clock.TimeSource
 		decisionHandler           decisionHandler
 		clusterMetadata           cluster.Metadata
-		historyMgr                persistence.HistoryManager
 		historyV2Mgr              persistence.HistoryV2Manager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             persistence.VisibilityManager
@@ -152,7 +151,6 @@ func NewEngineWithShardContext(
 
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
-	historyManager := shard.GetHistoryManager()
 	historyV2Manager := shard.GetHistoryV2Manager()
 	historyCache := newHistoryCache(shard)
 	historyEngImpl := &historyEngineImpl{
@@ -160,7 +158,6 @@ func NewEngineWithShardContext(
 		shard:                shard,
 		clusterMetadata:      shard.GetClusterMetadata(),
 		timeSource:           shard.GetTimeSource(),
-		historyMgr:           historyManager,
 		historyV2Mgr:         historyV2Manager,
 		executionManager:     executionManager,
 		visibilityMgr:        visibilityMgr,

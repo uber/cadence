@@ -89,7 +89,6 @@ type (
 		messagingClient        messaging.Client
 		metadataMgr            persistence.MetadataManager
 		shardMgr               persistence.ShardManager
-		historyMgr             persistence.HistoryManager
 		historyV2Mgr           persistence.HistoryV2Manager
 		taskMgr                persistence.TaskManager
 		visibilityMgr          persistence.VisibilityManager
@@ -130,7 +129,6 @@ type (
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
 		ShardMgr                      persistence.ShardManager
-		HistoryMgr                    persistence.HistoryManager
 		HistoryV2Mgr                  persistence.HistoryV2Manager
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager

@@ -45,7 +45,6 @@ type (
 		GetShardID() int
 		GetService() service.Service
 		GetExecutionManager() persistence.ExecutionManager
-		GetHistoryManager() persistence.HistoryManager
 		GetHistoryV2Manager() persistence.HistoryV2Manager
 		GetDomainCache() cache.DomainCache
 		GetClusterMetadata() cluster.Metadata

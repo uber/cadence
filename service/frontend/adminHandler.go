@@ -61,7 +61,6 @@ type (
 		history       history.Client
 		domainCache   cache.DomainCache
 		metricsClient metrics.Client
-		historyMgr    persistence.HistoryManager
 		historyV2Mgr  persistence.HistoryV2Manager
 		startWG       sync.WaitGroup
 		params        *service.BootstrapParams
@@ -85,7 +84,7 @@ func NewAdminHandler(
 	sVice service.Service,
 	numberOfHistoryShards int,
 	domainCache cache.DomainCache,
-	historyMgr persistence.HistoryManager,
+	metadataMgr persistence.MetadataManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	params *service.BootstrapParams,
 ) *AdminHandler {
@@ -94,7 +93,6 @@ func NewAdminHandler(
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
 		domainCache:           domainCache,
-		historyMgr:            historyMgr,
 		historyV2Mgr:          historyV2Mgr,
 		params:                params,
 	}

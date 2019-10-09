@@ -71,7 +71,6 @@ type (
 	WorkflowHandler struct {
 		domainCache               cache.DomainCache
 		metadataMgr               persistence.MetadataManager
-		historyMgr                persistence.HistoryManager
 		historyV2Mgr              persistence.HistoryV2Manager
 		visibilityMgr             persistence.VisibilityManager
 		history                   history.Client
@@ -153,7 +152,6 @@ func NewWorkflowHandler(
 	sVice service.Service,
 	config *Config,
 	metadataMgr persistence.MetadataManager,
-	historyMgr persistence.HistoryManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	visibilityMgr persistence.VisibilityManager,
 	replicationMessageSink messaging.Producer,
@@ -164,7 +162,6 @@ func NewWorkflowHandler(
 		Service:         sVice,
 		config:          config,
 		metadataMgr:     metadataMgr,
-		historyMgr:      historyMgr,
 		historyV2Mgr:    historyV2Mgr,
 		visibilityMgr:   visibilityMgr,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
@@ -233,7 +230,6 @@ func (wh *WorkflowHandler) Stop() {
 	wh.domainCache.Stop()
 	wh.metadataMgr.Close()
 	wh.visibilityMgr.Close()
-	wh.historyMgr.Close()
 	wh.Service.Stop()
 }
 
@@ -3110,37 +3106,21 @@ func (wh *WorkflowHandler) getHistory(
 
 	historyEvents := []*gen.HistoryEvent{}
 	var size int
-	if len(branchToken) != 0 {
-		shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
-		var err error
-		historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.historyV2Mgr, &persistence.ReadHistoryBranchRequest{
-			BranchToken:   branchToken,
-			MinEventID:    firstEventID,
-			MaxEventID:    nextEventID,
-			PageSize:      int(pageSize),
-			NextPageToken: nextPageToken,
-			ShardID:       common.IntPtr(shardID),
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID:      domainID,
-			Execution:     execution,
-			FirstEventID:  firstEventID,
-			NextEventID:   nextEventID,
-			PageSize:      int(pageSize),
-			NextPageToken: nextPageToken,
-		})
 
-		if err != nil {
-			return nil, nil, err
-		}
-		historyEvents = append(historyEvents, response.History.Events...)
-		nextPageToken = response.NextPageToken
-		size = response.Size
+	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
+	var err error
+	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.historyV2Mgr, &persistence.ReadHistoryBranchRequest{
+		BranchToken:   branchToken,
+		MinEventID:    firstEventID,
+		MaxEventID:    nextEventID,
+		PageSize:      int(pageSize),
+		NextPageToken: nextPageToken,
+		ShardID:       common.IntPtr(shardID),
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 	if len(nextPageToken) == 0 && transientDecision != nil {

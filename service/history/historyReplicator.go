@@ -61,7 +61,6 @@ type (
 		historyCache      *historyCache
 		domainCache       cache.DomainCache
 		historySerializer persistence.PayloadSerializer
-		historyMgr        persistence.HistoryManager
 		clusterMetadata   cluster.Metadata
 		metricsClient     metrics.Client
 		logger            log.Logger

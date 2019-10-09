@@ -55,7 +55,6 @@ type (
 		shardManager            persistence.ShardManager
 		metadataMgr             persistence.MetadataManager
 		visibilityMgr           persistence.VisibilityManager
-		historyMgr              persistence.HistoryManager
 		historyV2Mgr            persistence.HistoryV2Manager
 		executionMgrFactory     persistence.ExecutionManagerFactory
 		domainCache             cache.DomainCache
@@ -99,7 +98,6 @@ func NewHandler(
 	shardManager persistence.ShardManager,
 	metadataMgr persistence.MetadataManager,
 	visibilityMgr persistence.VisibilityManager,
-	historyMgr persistence.HistoryManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	executionMgrFactory persistence.ExecutionManagerFactory,
 	domainCache cache.DomainCache,
@@ -112,7 +110,6 @@ func NewHandler(
 		config:              config,
 		shardManager:        shardManager,
 		metadataMgr:         metadataMgr,
-		historyMgr:          historyMgr,
 		historyV2Mgr:        historyV2Mgr,
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
