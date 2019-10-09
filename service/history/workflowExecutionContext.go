@@ -312,6 +312,8 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 		NewWorkflowSnapshot: *newWorkflow,
 	}
 
+	historySize += c.getHistorySize()
+	c.setHistorySize(historySize)
 	createRequest.NewWorkflowSnapshot.ExecutionStats = &persistence.ExecutionStats{
 		HistorySize: historySize,
 	}
