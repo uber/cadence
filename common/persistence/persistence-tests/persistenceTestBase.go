@@ -1417,3 +1417,7 @@ func pickRandomEncoding() common.EncodingType {
 	}
 	return encoding
 }
+
+func int64Ptr(i int64)*int64{
+	return &i
+}

@@ -64,8 +64,6 @@ type (
 		NewTaskStore() (p.TaskStore, error)
 		// NewShardStore returns a new shard store
 		NewShardStore() (p.ShardStore, error)
-		// NewHistoryStore returns a new history store
-		NewHistoryStore() (p.HistoryStore, error)
 		// NewHistoryV2Store returns a new historyV2 store
 		NewHistoryV2Store() (p.HistoryV2Store, error)
 		// NewMetadataStore returns a new metadata store
