@@ -76,7 +76,7 @@ type (
 		EndEventID        int64
 		EndEventVersion   int64
 		PersistenceToken  []byte
-		VersionHistories  *persistence.VersionHistories
+		VersionHistories  *gen.VersionHistories
 	}
 )
 
@@ -492,7 +492,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		}
 		versionHistory, err = adh.updateEventRange(
 			request,
-			versionHistories,
+			persistence.NewVersionHistoriesFromThrift(versionHistories),
 		)
 		if err != nil {
 			return nil, adh.error(err, scope)
@@ -609,6 +609,9 @@ func (adh *AdminHandler) updateEventRange(
 ) (*persistence.VersionHistory, error) {
 
 	targetBranch, err := versionHistories.GetCurrentVersionHistory()
+	if err != nil {
+		return nil, err
+	}
 	if request.StartEventId == nil || request.StartEventVersion == nil {
 		firstItem, err := targetBranch.GetFirstItem()
 		if err != nil {
@@ -617,28 +620,32 @@ func (adh *AdminHandler) updateEventRange(
 		request.StartEventId = common.Int64Ptr(common.FirstEventID - 1)
 		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
 	}
+	isEndBoundarySet := true
 	if request.EndEventId == nil || request.EndEventVersion == nil {
 		lastItem, err := targetBranch.GetLastItem()
 		if err != nil {
 			return nil, err
 		}
-		request.EndEventId = common.Int64Ptr(lastItem.GetEventID())
+		request.EndEventId = common.Int64Ptr(lastItem.GetEventID() + 1)
 		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
+		isEndBoundarySet = false
 	}
 
-	if request.GetStartEventId() < 0 || request.GetStartEventId() > request.GetEndEventId() {
+	if request.GetStartEventId() < 0 {
 		return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 	}
 
 	// get branch based on the end event
-	endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
-	idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
-	if err != nil {
-		return nil, err
-	}
-	targetBranch, err = versionHistories.GetVersionHistory(idx)
-	if err != nil {
-		return nil, err
+	if isEndBoundarySet {
+		endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
+		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
+		if err != nil {
+			return nil, err
+		}
+		targetBranch, err = versionHistories.GetVersionHistory(idx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
@@ -677,7 +684,7 @@ func (adh *AdminHandler) generatePaginationToken(
 		StartEventVersion: request.GetStartEventVersion(),
 		EndEventID:        request.GetEndEventId(),
 		EndEventVersion:   request.GetEndEventVersion(),
-		VersionHistories:  versionHistories,
+		VersionHistories:  versionHistories.ToThrift(),
 		PersistenceToken:  nil, // this is the initialized value
 	}
 }
