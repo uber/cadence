@@ -23,7 +23,6 @@ package replicator
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/membership"
 	"sync/atomic"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -99,7 +99,6 @@ func (p *domainReplicationMessageProcessor) Start() {
 	go p.processorLoop()
 }
 
-// TODO: need to make sure only one worker is processing per source DC
 func (p *domainReplicationMessageProcessor) processorLoop() {
 	timer := time.NewTimer(getWaitDuration())
 
@@ -116,6 +115,11 @@ func (p *domainReplicationMessageProcessor) processorLoop() {
 }
 
 func (p *domainReplicationMessageProcessor) getAndHandleDomainReplicationTasks() {
+	// The following is a best effort to make sure only one worker is processing tasks for a
+	// particular source cluster. When the ring is under reconfiguration, it is possible that
+	// for a small period of time two or more workers think they are the owner and try to execute
+	// the processing logic. This will not result in correctness issue as domain replication task
+	// processing will be protected by version check.
 	info, err := p.serviceResolver.Lookup(p.sourceCluster)
 	if err != nil {
 		p.logger.Info("Failed to lookup host info. Skip current run.")

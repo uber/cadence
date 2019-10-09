@@ -40,9 +40,15 @@ const (
 var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
 
 // NewDomainReplicationQueue creates a new DomainReplicationQueue instance
-func NewDomainReplicationQueue(queue Queue, metricsClient metrics.Client, logger log.Logger) DomainReplicationQueue {
+func NewDomainReplicationQueue(
+	queue Queue,
+	clusterName string,
+	metricsClient metrics.Client,
+	logger log.Logger,
+) DomainReplicationQueue {
 	return &domainReplicationQueueImpl{
 		queue:               queue,
+		clusterName:         clusterName,
 		metricsClient:       metricsClient,
 		logger:              logger,
 		encoder:             codec.NewThriftRWEncoder(),
@@ -54,6 +60,7 @@ func NewDomainReplicationQueue(queue Queue, metricsClient metrics.Client, logger
 type (
 	domainReplicationQueueImpl struct {
 		queue               Queue
+		clusterName         string
 		metricsClient       metrics.Client
 		logger              log.Logger
 		encoder             codec.BinaryEncoder
@@ -140,7 +147,9 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
 
-	q.metricsClient.Scope(metrics.FrontendDomainReplicationQueueScope).UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
+	q.metricsClient.
+		Scope(metrics.FrontendDomainReplicationQueueScope, metrics.SourceClusterTag(q.clusterName)).
+		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
 
 	q.ackLevelUpdated = false
 
