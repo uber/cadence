@@ -68,7 +68,6 @@ type (
 		service                service.Service
 		shardInfo              *persistence.ShardInfo
 		transferSequenceNumber int64
-		historyMgr             persistence.HistoryManager
 		historyV2Mgr           persistence.HistoryV2Manager
 		executionMgr           persistence.ExecutionManager
 		domainCache            cache.DomainCache
@@ -93,7 +92,7 @@ type (
 var _ ShardContext = (*TestShardContext)(nil)
 
 func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumber int64,
-	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, executionMgr persistence.ExecutionManager,
+	historyV2Mgr persistence.HistoryV2Manager, executionMgr persistence.ExecutionManager,
 	metadataMgr persistence.MetadataManager, clusterMetadata cluster.Metadata,
 	clientBean client.Bean, config *Config, logger log.Logger) *TestShardContext {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
@@ -161,11 +160,6 @@ func (s *TestShardContext) GetService() service.Service {
 // GetExecutionManager test implementation
 func (s *TestShardContext) GetExecutionManager() persistence.ExecutionManager {
 	return s.executionMgr
-}
-
-// GetHistoryManager test implementation
-func (s *TestShardContext) GetHistoryManager() persistence.HistoryManager {
-	return s.historyMgr
 }
 
 // GetHistoryV2Manager return historyV2

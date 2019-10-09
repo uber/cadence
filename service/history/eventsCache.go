@@ -169,7 +169,6 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 
 	historyEvents = response.HistoryEvents
 
-
 	// find history event from batch and return back single event to caller
 	for _, e := range historyEvents {
 		if e.GetEventId() == eventID {
