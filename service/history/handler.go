@@ -181,7 +181,7 @@ func (h *Handler) Start() error {
 
 	h.replicationTaskFetchers.Start()
 
-	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
+	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
 	h.historyEventNotifier = newHistoryEventNotifier(h.Service.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
@@ -199,7 +199,6 @@ func (h *Handler) Stop() {
 	h.domainCache.Stop()
 	h.controller.Stop()
 	h.shardManager.Close()
-	h.historyMgr.Close()
 	if h.historyV2Mgr != nil {
 		h.historyV2Mgr.Close()
 	}

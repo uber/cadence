@@ -189,7 +189,6 @@ func NewEngineWithShardContext(
 			shard,
 			historyEngImpl.historyCache,
 			publisher, executionManager,
-			historyManager,
 			historyV2Manager,
 			logger,
 		)
@@ -199,7 +198,6 @@ func NewEngineWithShardContext(
 			historyEngImpl,
 			historyCache,
 			shard.GetDomainCache(),
-			historyManager,
 			historyV2Manager,
 			logger,
 		)

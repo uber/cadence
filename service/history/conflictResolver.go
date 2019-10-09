@@ -189,33 +189,18 @@ func (r *conflictResolverImpl) reset(
 func (r *conflictResolverImpl) getHistory(domainID string, execution shared.WorkflowExecution, firstEventID,
 	nextEventID int64, nextPageToken []byte, eventStoreVersion int32, branchToken []byte) ([]*shared.HistoryEvent, int, int64, []byte, error) {
 
-	if eventStoreVersion == persistence.EventStoreVersionV2 {
-		response, err := r.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
-			BranchToken:   branchToken,
-			MinEventID:    firstEventID,
-			MaxEventID:    nextEventID,
-			PageSize:      defaultHistoryPageSize,
-			NextPageToken: nextPageToken,
-			ShardID:       common.IntPtr(r.shard.GetShardID()),
-		})
-		if err != nil {
-			return nil, 0, 0, nil, err
-		}
-		return response.HistoryEvents, response.Size, response.LastFirstEventID, response.NextPageToken, nil
-	}
-	response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-		DomainID:      domainID,
-		Execution:     execution,
-		FirstEventID:  firstEventID,
-		NextEventID:   nextEventID,
+	response, err := r.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+		BranchToken:   branchToken,
+		MinEventID:    firstEventID,
+		MaxEventID:    nextEventID,
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
+		ShardID:       common.IntPtr(r.shard.GetShardID()),
 	})
-
 	if err != nil {
 		return nil, 0, 0, nil, err
 	}
-	return response.History.Events, response.Size, response.LastFirstEventID, response.NextPageToken, nil
+	return response.HistoryEvents, response.Size, response.LastFirstEventID, response.NextPageToken, nil
 }
 
 func (r *conflictResolverImpl) logError(msg string, err error) {

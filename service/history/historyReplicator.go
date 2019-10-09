@@ -122,7 +122,6 @@ func newHistoryReplicator(
 	historyEngine *historyEngineImpl,
 	historyCache *historyCache,
 	domainCache cache.DomainCache,
-	historyMgr persistence.HistoryManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	logger log.Logger,
 ) *historyReplicator {
@@ -134,13 +133,12 @@ func newHistoryReplicator(
 		historyCache:      historyCache,
 		domainCache:       domainCache,
 		historySerializer: persistence.NewPayloadSerializer(),
-		historyMgr:        historyMgr,
 		clusterMetadata:   shard.GetService().GetClusterMetadata(),
 		metricsClient:     shard.GetMetricsClient(),
 		logger:            logger.WithTags(tag.ComponentHistoryReplicator),
 
 		getNewConflictResolver: func(context workflowExecutionContext, logger log.Logger) conflictResolver {
-			return newConflictResolver(shard, context, historyMgr, historyV2Mgr, logger)
+			return newConflictResolver(shard, context, historyV2Mgr, logger)
 		},
 		getNewStateBuilder: func(msBuilder mutableState, logger log.Logger) stateBuilder {
 			return newStateBuilder(shard, msBuilder, logger)
@@ -804,21 +802,13 @@ func (r *historyReplicator) replicateWorkflowStarted(
 
 	deleteHistory := func() {
 		// this function should be only called when we drop start workflow execution
-		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-			currentBranchToken, err := msBuilder.GetCurrentBranchToken()
-			if err == nil {
-				r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
-					BranchToken: currentBranchToken,
-					ShardID:     common.IntPtr(r.shard.GetShardID()),
-				})
-			}
-		} else {
-			r.shard.GetHistoryManager().DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
-				DomainID:  domainID,
-				Execution: execution,
+		currentBranchToken, err := msBuilder.GetCurrentBranchToken()
+		if err == nil {
+			r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+				BranchToken: currentBranchToken,
+				ShardID:     common.IntPtr(r.shard.GetShardID()),
 			})
 		}
-
 	}
 
 	// try to create the workflow execution

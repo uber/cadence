@@ -210,13 +210,8 @@ func (r *nDCStateRebuilderImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, size, err := PaginateHistory(
-			nil,
 			r.historyV2Mgr,
 			true,
-			workflowIdentifier.DomainID,
-			workflowIdentifier.WorkflowID,
-			workflowIdentifier.RunID,
-			persistence.EventStoreVersionV2,
 			branchToken,
 			firstEventID,
 			nextEventID,

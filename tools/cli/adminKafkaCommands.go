@@ -472,9 +472,6 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 		maxID = maxRereplicateEventID
 	}
 
-	histV1 := cassandra.NewHistoryPersistenceFromSession(session, loggerimpl.NewNopLogger())
-	historyMgr := persistence.NewHistoryManagerImpl(histV1, loggerimpl.NewNopLogger(), dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit))
-
 	histV2 := cassandra.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, loggerimpl.NewNopLogger(), dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit))
 
@@ -513,8 +510,8 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 			BranchToken:         exeInfo.BranchToken,
 		}
 
-		_, historyBatches, err := history.GetAllHistory(historyMgr, historyV2Mgr, nil, true,
-			domainID, wid, rid, minID, maxID, exeInfo.EventStoreVersion, exeInfo.BranchToken, common.IntPtr(shardID))
+		_, historyBatches, err := history.GetAllHistory(historyV2Mgr, nil, true,
+			minID, maxID, exeInfo.BranchToken, common.IntPtr(shardID))
 
 		if err != nil {
 			ErrorAndExit("GetAllHistory error", err)
@@ -546,7 +543,7 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 			taskTemplate.Version = firstEvent.GetVersion()
 			taskTemplate.FirstEventID = firstEvent.GetEventId()
 			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
-			task, _, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, nil, batch, common.IntPtr(shardID))
+			task, _, err := history.GenerateReplicationTask(targets, taskTemplate, historyV2Mgr, nil, batch, common.IntPtr(shardID))
 			if err != nil {
 				ErrorAndExit("GenerateReplicationTask error", err)
 			}

@@ -220,7 +220,7 @@ func GenerateReplicationTask(
 	var err error
 	if history == nil {
 		history, _, err = GetAllHistory(historyV2Mgr, metricsClient, false,
-			task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken, shardID)
+			task.FirstEventID, task.NextEventID, task.BranchToken, shardID)
 		if err != nil {
 			return nil, "", err
 		}
@@ -243,12 +243,8 @@ func GenerateReplicationTask(
 				historyV2Mgr,
 				metricsClient,
 				false,
-				task.DomainID,
-				task.WorkflowID,
-				newRunID,
 				common.FirstEventID,
 				common.FirstEventID+1, // [common.FirstEventID to common.FirstEventID+1) will get the first batch
-				task.NewRunEventStoreVersion,
 				task.NewRunBranchToken,
 				shardID)
 			if err != nil {
@@ -310,12 +306,8 @@ func GetAllHistory(
 	historyV2Mgr persistence.HistoryV2Manager,
 	metricsClient metrics.Client,
 	byBatch bool,
-	domainID string,
-	workflowID string,
-	runID string,
 	firstEventID int64,
 	nextEventID int64,
-	eventStoreVersion int32,
 	branchToken []byte,
 	shardID *int,
 ) (*shared.History, []*shared.History, error) {

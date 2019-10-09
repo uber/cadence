@@ -363,11 +363,6 @@ func (s *Service) Start() {
 		s.config.AdvancedVisibilityWritingMode,
 	)
 
-	history, err := pFactory.NewHistoryManager()
-	if err != nil {
-		log.Fatal("Creating history manager persistence failed", tag.Error(err))
-	}
-
 	historyV2, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
 		log.Fatal("Creating historyV2 manager persistence failed", tag.Error(err))
@@ -376,7 +371,6 @@ func (s *Service) Start() {
 	domainCache := cache.NewDomainCache(metadata, base.GetClusterMetadata(), base.GetMetricsClient(), base.GetLogger())
 
 	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
-		HistoryManager:   history,
 		HistoryV2Manager: historyV2,
 		Logger:           base.GetLogger(),
 		MetricsClient:    base.GetMetricsClient(),
@@ -394,7 +388,7 @@ func (s *Service) Start() {
 		log.Fatal("Failed to register archiver bootstrap container", tag.Error(err))
 	}
 
-	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, history, historyV2, pFactory, domainCache, params.PublicClient)
+	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, historyV2, pFactory, domainCache, params.PublicClient)
 	handler.RegisterHandler()
 
 	// must start base service first

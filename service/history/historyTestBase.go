@@ -131,7 +131,6 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 			serializer),
 		shardInfo:                 shardInfo,
 		transferSequenceNumber:    transferSequenceNumber,
-		historyMgr:                historyMgr,
 		historyV2Mgr:              historyV2Mgr,
 		executionMgr:              executionMgr,
 		domainCache:               domainCache,
@@ -470,12 +469,6 @@ func (s *TestShardContext) ResetWorkflowExecution(request *persistence.ResetWork
 	return s.executionMgr.ResetWorkflowExecution(request)
 }
 
-// AppendHistoryEvents test implementation
-func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {
-	resp, err := s.historyMgr.AppendHistoryEvents(request)
-	return resp.Size, err
-}
-
 // AppendHistoryV2Events append history V2 events
 func (s *TestShardContext) AppendHistoryV2Events(
 	request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error) {
@@ -568,7 +561,7 @@ func (s *TestBase) SetupWorkflowStore() {
 	log := loggerimpl.NewDevelopmentForTest(s.Suite)
 	config := NewDynamicConfigForTest()
 	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr,
+	s.ShardContext = newTestShardContext(s.ShardInfo, 0,
 		s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, clusterMetadata, nil, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext
 }
