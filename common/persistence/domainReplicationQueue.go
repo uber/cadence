@@ -148,7 +148,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 	}
 
 	q.metricsClient.
-		Scope(metrics.FrontendDomainReplicationQueueScope, metrics.SourceClusterTag(q.clusterName)).
+		Scope(metrics.FrontendDomainReplicationQueueScope).
 		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
 
 	q.ackLevelUpdated = false
