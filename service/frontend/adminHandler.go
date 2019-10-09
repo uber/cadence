@@ -458,8 +458,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	}
 
 	execution := request.Execution
-	var versionHistories *persistence.VersionHistories
 	var pageToken *getWorkflowRawHistoryV2Token
+	var versionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
 		response, err := adh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID: common.StringPtr(domainID),
@@ -469,30 +469,40 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 			return nil, adh.error(err, scope)
 		}
 
-		versionHistories = persistence.NewVersionHistoriesFromThrift(
+		versionHistories := persistence.NewVersionHistoriesFromThrift(
 			response.GetVersionHistories(),
 		)
+		versionHistory, err = adh.updateEventRange(
+			request,
+			versionHistories,
+		)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+
+		pageToken = adh.generatePaginationToken(request, versionHistories)
 	} else {
 		pageToken, err = deserializeRawHistoryToken(request.NextPageToken)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
-		versionHistories = pageToken.VersionHistories
+		versionHistories := pageToken.VersionHistories
 		if versionHistories == nil {
 			return nil, adh.error(&gen.BadRequestError{Message: "Invalid version histories."}, scope)
 		}
+		versionHistory, err = adh.updateEventRange(
+			request,
+			versionHistories,
+		)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
 	}
 
-	versionHistory, err := adh.updateEventRange(
+	if err := adh.validatePaginationToken(
 		request,
-		versionHistories,
-	)
-	if err != nil {
-		return nil, adh.error(err, scope)
-	}
-
-	token, err := adh.preparePaginationToken(request, pageToken, versionHistories)
-	if err != nil {
+		pageToken,
+	); err != nil {
 		return nil, adh.error(err, scope)
 	}
 
@@ -505,10 +515,10 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		BranchToken: versionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
 		// ReadRawHistoryBranch is inclusive exclusive.
-		MinEventID:    token.StartEventID + 1,
-		MaxEventID:    token.EndEventID,
+		MinEventID:    pageToken.StartEventID + 1,
+		MaxEventID:    pageToken.EndEventID,
 		PageSize:      pageSize,
-		NextPageToken: token.PersistenceToken,
+		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
 	})
 	if err != nil {
@@ -524,7 +534,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		return nil, err
 	}
 
-	token.PersistenceToken = rawHistoryResponse.NextPageToken
+	pageToken.PersistenceToken = rawHistoryResponse.NextPageToken
 	size := rawHistoryResponse.Size
 	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
 	// domains along with the individual domains stats
@@ -542,10 +552,10 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		HistoryBatches: blobs,
 		VersionHistory: versionHistory.ToThrift(),
 	}
-	if len(token.PersistenceToken) == 0 {
+	if len(pageToken.PersistenceToken) == 0 {
 		result.NextPageToken = nil
 	} else {
-		result.NextPageToken, err = serializeRawHistoryToken(token)
+		result.NextPageToken, err = serializeRawHistoryToken(pageToken)
 		if err != nil {
 			return nil, err
 		}
@@ -653,48 +663,41 @@ func (adh *AdminHandler) updateEventRange(
 	return targetBranch, nil
 }
 
-func (adh *AdminHandler) preparePaginationToken(
+func (adh *AdminHandler) generatePaginationToken(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
-	token *getWorkflowRawHistoryV2Token,
 	versionHistories *persistence.VersionHistories,
-) (*getWorkflowRawHistoryV2Token, error) {
+) *getWorkflowRawHistoryV2Token {
 
 	execution := request.Execution
-	var err error
-	if request.NextPageToken == nil {
-		return &getWorkflowRawHistoryV2Token{
-			DomainName:        request.GetDomain(),
-			WorkflowID:        execution.GetWorkflowId(),
-			RunID:             execution.GetRunId(),
-			StartEventID:      request.GetStartEventId(),
-			StartEventVersion: request.GetStartEventVersion(),
-			EndEventID:        request.GetEndEventId(),
-			EndEventVersion:   request.GetEndEventVersion(),
-			VersionHistories:  versionHistories,
-			PersistenceToken:  nil, // this is the initialized value
-		}, nil
-	} else {
-		if token == nil {
-			token, err = deserializeRawHistoryToken(request.NextPageToken)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if request.GetDomain() != token.DomainName ||
-			execution.GetWorkflowId() != token.WorkflowID ||
-			execution.GetRunId() != token.RunID ||
-			request.GetStartEventId() != token.StartEventID ||
-			request.GetStartEventVersion() != token.StartEventVersion ||
-			request.GetEndEventId() != token.EndEventID ||
-			request.GetEndEventVersion() != token.EndEventVersion {
-			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
-		}
-
-		if token.VersionHistories == nil {
-			return nil, &gen.BadRequestError{Message: "Invalid version histories."}
-		}
-		return token, nil
+	return &getWorkflowRawHistoryV2Token{
+		DomainName:        request.GetDomain(),
+		WorkflowID:        execution.GetWorkflowId(),
+		RunID:             execution.GetRunId(),
+		StartEventID:      request.GetStartEventId(),
+		StartEventVersion: request.GetStartEventVersion(),
+		EndEventID:        request.GetEndEventId(),
+		EndEventVersion:   request.GetEndEventVersion(),
+		VersionHistories:  versionHistories,
+		PersistenceToken:  nil, // this is the initialized value
 	}
+}
+
+func (adh *AdminHandler) validatePaginationToken(
+	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	token *getWorkflowRawHistoryV2Token,
+) error {
+
+	execution := request.Execution
+	if request.GetDomain() != token.DomainName ||
+		execution.GetWorkflowId() != token.WorkflowID ||
+		execution.GetRunId() != token.RunID ||
+		request.GetStartEventId() != token.StartEventID ||
+		request.GetStartEventVersion() != token.StartEventVersion ||
+		request.GetEndEventId() != token.EndEventID ||
+		request.GetEndEventVersion() != token.EndEventVersion {
+		return &gen.BadRequestError{Message: "Invalid pagination token."}
+	}
+	return nil
 }
 
 // startRequestProfile initiates recording of request metrics
