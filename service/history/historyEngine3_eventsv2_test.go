@@ -89,7 +89,7 @@ func TestEngine3Suite(t *testing.T) {
 
 func (s *engine3Suite) SetupSuite() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.config = NewDynamicConfigForEventsV2Test()
+	s.config = NewDynamicConfigForTest()
 }
 
 func (s *engine3Suite) TearDownSuite() {

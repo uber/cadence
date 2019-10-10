@@ -546,14 +546,6 @@ func NewDynamicConfigForTest() *Config {
 	return config
 }
 
-// NewDynamicConfigForEventsV2Test with enableEventsV2 = true
-func NewDynamicConfigForEventsV2Test() *Config {
-	dc := dynamicconfig.NewNopCollection()
-	config := NewConfig(dc, 1, cconfig.StoreTypeCassandra, false)
-	config.EnableEventsV2 = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true)
-	return config
-}
-
 // SetupWorkflowStore to setup workflow test base
 func (s *TestBase) SetupWorkflowStore() {
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})

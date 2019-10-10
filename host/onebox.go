@@ -169,7 +169,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		domainReplicationQueue: params.DomainReplicationQueue,
 		shutdownCh:             make(chan struct{}),
 		clusterNo:              params.ClusterNo,
-		enableEventsV2:         params.EnableEventsV2,
 		enbaleNDC:              params.EnableNDC,
 		esConfig:               params.ESConfig,
 		esClient:               params.ESClient,
@@ -202,7 +201,7 @@ func (c *cadenceImpl) Start() error {
 
 	var startWG sync.WaitGroup
 	startWG.Add(2)
-	go c.startHistory(hosts, &startWG, c.enableEventsV2, c.enbaleNDC)
+	go c.startHistory(hosts, &startWG, c.enbaleNDC)
 	go c.startMatching(hosts, &startWG)
 	startWG.Wait()
 
@@ -428,14 +427,13 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 
 	domainCache := cache.NewDomainCache(c.metadataMgr, c.clusterMetadata, c.frontEndService.GetMetricsClient(), c.logger)
 	c.adminHandler = frontend.NewAdminHandler(
-		c.frontEndService, c.historyConfig.NumHistoryShards, domainCache, c.historyMgr, c.historyV2Mgr, params)
+		c.frontEndService, c.historyConfig.NumHistoryShards, domainCache, c.metadataMgr, c.historyV2Mgr, params)
 	c.adminHandler.RegisterHandler()
 
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
 	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.esConfig != nil)
 
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
-		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
 		Logger:           c.logger,
 		MetricsClient:    c.frontEndService.GetMetricsClient(),
@@ -457,7 +455,6 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 		c.frontEndService,
 		frontendConfig,
 		c.metadataMgr,
-		c.historyMgr,
 		c.historyV2Mgr,
 		c.visibilityMgr,
 		replicationMessageSink,
@@ -494,7 +491,6 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 func (c *cadenceImpl) startHistory(
 	hosts map[string][]string,
 	startWG *sync.WaitGroup,
-	enableEventsV2 bool,
 	enableNDC bool,
 ) {
 
@@ -529,7 +525,6 @@ func (c *cadenceImpl) startHistory(
 			hConfig.NumHistoryShards, config.StoreTypeCassandra, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
-		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
 		historyConfig.DecisionHeartbeatTimeout = dynamicconfig.GetDurationPropertyFnFilteredByDomain(time.Second * 5)
 		historyConfig.TimerProcessorHistoryArchivalSizeLimit = dynamicconfig.GetIntPropertyFn(5 * 1024)
 		historyConfig.EnableNDC = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableNDC)
@@ -546,7 +541,6 @@ func (c *cadenceImpl) startHistory(
 		domainCache := cache.NewDomainCache(c.metadataMgr, c.clusterMetadata, service.GetMetricsClient(), c.logger)
 
 		historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
-			HistoryManager:   c.historyMgr,
 			HistoryV2Manager: c.historyV2Mgr,
 			Logger:           c.logger,
 			MetricsClient:    service.GetMetricsClient(),
@@ -565,7 +559,7 @@ func (c *cadenceImpl) startHistory(
 		}
 
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, domainCache, params.PublicClient)
+			c.visibilityMgr, c.historyV2Mgr, c.executionMgrFactory, domainCache, params.PublicClient)
 		handler.RegisterHandler()
 
 		service.Start()
@@ -718,7 +712,6 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
-		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
 		Logger:           c.logger,
 		MetricsClient:    service.GetMetricsClient(),
@@ -734,7 +727,6 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
 		Logger:           c.logger,
-		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,
 		Config:           workerConfig.ArchiverConfig,

@@ -350,11 +350,10 @@ func (e *historyEngineImpl) createMutableState(
 ) (mutableState, error) {
 
 	domainName := domainEntry.GetInfo().Name
-	enableEventsV2 := e.config.EnableEventsV2(domainName)
 	enableNDC := e.config.EnableNDC(domainName)
 
 	var newMutableState mutableState
-	if enableEventsV2 && enableNDC {
+	if enableNDC {
 		// version history applies to both local and global domain
 		newMutableState = newMutableStateBuilderWithVersionHistories(
 			e.shard,
@@ -381,11 +380,10 @@ func (e *historyEngineImpl) createMutableState(
 		)
 	}
 
-	if enableEventsV2 {
-		if err := newMutableState.SetHistoryTree(runID); err != nil {
-			return nil, err
-		}
+	if err := newMutableState.SetHistoryTree(runID); err != nil {
+		return nil, err
 	}
+
 	return newMutableState, nil
 }
 

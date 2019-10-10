@@ -97,7 +97,7 @@ func TestWorkflowResetorSuite(t *testing.T) {
 func (s *resetorSuite) SetupSuite() {
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.config = NewDynamicConfigForEventsV2Test()
+	s.config = NewDynamicConfigForTest()
 }
 
 func (s *resetorSuite) TearDownSuite() {
@@ -114,7 +114,6 @@ func (s *resetorSuite) SetupTest() {
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
-	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
