@@ -225,7 +225,7 @@ func (s *nDCStateRebuilderSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.nDCStateRebuilder.getPaginationFn(workflowIdentifier, common.FirstEventID, nextEventID, branchToken)
+	paginationFn := s.nDCStateRebuilder.getPaginationFn(workflowIdentifier, firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*shared.History{}
