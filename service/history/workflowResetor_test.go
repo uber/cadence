@@ -770,7 +770,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReq).Return(nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Times(2)
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 	s.mockClusterMetadata.On("TestResetWorkflowExecution_NoReplication")
@@ -785,8 +785,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	// 4. signal 2 :32
 	// 5. decisionTaskScheduled :33
 	calls := s.mockHistoryV2Mgr.Calls
-	s.Equal(4, len(calls))
-	appendCall := calls[2]
+	s.Equal(5, len(calls))
+	appendCall := calls[3]
 	s.Equal("AppendHistoryNodes", appendCall.Method)
 	appendReq, ok := appendCall.Arguments[0].(*p.AppendHistoryNodesRequest)
 	s.Equal(true, ok)
@@ -826,7 +826,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(1, len(resetReq.CurrentWorkflowMutation.TimerTasks))
 	s.Equal(p.TransferTaskTypeCloseExecution, resetReq.CurrentWorkflowMutation.TransferTasks[0].GetType())
 	s.Equal(p.TaskTypeDeleteHistoryEvent, resetReq.CurrentWorkflowMutation.TimerTasks[0].GetType())
-	s.Equal(int64(100), resetReq.CurrentWorkflowMutation.ExecutionStats.HistorySize)
+	s.Equal(int64(200), resetReq.CurrentWorkflowMutation.ExecutionStats.HistorySize)
 
 	s.Equal("wfType", resetReq.NewWorkflowSnapshot.ExecutionInfo.WorkflowTypeName)
 	s.True(len(resetReq.NewWorkflowSnapshot.ExecutionInfo.RunID) > 0)
