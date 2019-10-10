@@ -88,7 +88,7 @@ func (s *HistoryIteratorSuite) SetupTest() {
 func (s *HistoryIteratorSuite) TestReadHistory_Failed_EventsV2() {
 	mockHistoryV2Manager := &mocks.HistoryV2Manager{}
 	mockHistoryV2Manager.On("ReadHistoryBranchByBatch", mock.Anything).Return(nil, errors.New("got error reading history branch"))
-	itr := s.constructTestHistoryIterator( mockHistoryV2Manager, testDefaultTargetHistoryBlobSize, nil)
+	itr := s.constructTestHistoryIterator(mockHistoryV2Manager, testDefaultTargetHistoryBlobSize, nil)
 	history, err := itr.readHistory(common.FirstEventID)
 	s.Error(err)
 	s.Nil(history)
@@ -110,7 +110,7 @@ func (s *HistoryIteratorSuite) TestReadHistory_Success_EventsV2() {
 }
 
 func (s *HistoryIteratorSuite) TestNewIteratorWithState() {
-	itr := s.constructTestHistoryIterator( nil, testDefaultTargetHistoryBlobSize, nil)
+	itr := s.constructTestHistoryIterator(nil, testDefaultTargetHistoryBlobSize, nil)
 	testIteratorState := historyIteratorState{
 		FinishedIteration: true,
 		NextEventID:       4,
@@ -119,7 +119,7 @@ func (s *HistoryIteratorSuite) TestNewIteratorWithState() {
 	stateToken, err := itr.GetState()
 	s.NoError(err)
 
-	newItr := s.constructTestHistoryIterator( nil, testDefaultTargetHistoryBlobSize, stateToken)
+	newItr := s.constructTestHistoryIterator(nil, testDefaultTargetHistoryBlobSize, stateToken)
 	s.assertStateMatches(testIteratorState, newItr)
 }
 

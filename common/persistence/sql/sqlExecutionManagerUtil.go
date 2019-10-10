@@ -889,18 +889,18 @@ func createReplicationTasks(
 		}
 
 		blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
-			DomainID:                domainID,
-			WorkflowID:              &workflowID,
-			RunID:                   runID,
-			TaskType:                common.Int16Ptr(int16(task.GetType())),
-			FirstEventID:            &firstEventID,
-			NextEventID:             &nextEventID,
-			Version:                 &version,
-			LastReplicationInfo:     lastReplicationInfo,
-			ScheduledID:             &activityScheduleID,
-			BranchToken:             branchToken,
-			NewRunBranchToken:       newRunBranchToken,
-			ResetWorkflow:           &resetWorkflow,
+			DomainID:            domainID,
+			WorkflowID:          &workflowID,
+			RunID:               runID,
+			TaskType:            common.Int16Ptr(int16(task.GetType())),
+			FirstEventID:        &firstEventID,
+			NextEventID:         &nextEventID,
+			Version:             &version,
+			LastReplicationInfo: lastReplicationInfo,
+			ScheduledID:         &activityScheduleID,
+			BranchToken:         branchToken,
+			NewRunBranchToken:   newRunBranchToken,
+			ResetWorkflow:       &resetWorkflow,
 		})
 		if err != nil {
 			return err

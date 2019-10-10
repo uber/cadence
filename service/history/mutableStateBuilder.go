@@ -4029,11 +4029,11 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 	}
 
 	replicationTask := &persistence.HistoryReplicationTask{
-		FirstEventID:            firstEvent.GetEventId(),
-		NextEventID:             lastEvent.GetEventId() + 1,
-		Version:                 firstEvent.GetVersion(),
-		BranchToken:             currentBranchToken,
-		NewRunBranchToken:       nil,
+		FirstEventID:      firstEvent.GetEventId(),
+		NextEventID:       lastEvent.GetEventId() + 1,
+		Version:           firstEvent.GetVersion(),
+		BranchToken:       currentBranchToken,
+		NewRunBranchToken: nil,
 	}
 
 	// TODO after NDC release and migration is done, remove this check

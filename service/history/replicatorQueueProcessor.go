@@ -256,17 +256,17 @@ func GenerateReplicationTask(
 	ret := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
 		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			TargetClusters:          targetClusters,
-			DomainId:                common.StringPtr(task.DomainID),
-			WorkflowId:              common.StringPtr(task.WorkflowID),
-			RunId:                   common.StringPtr(task.RunID),
-			FirstEventId:            common.Int64Ptr(task.FirstEventID),
-			NextEventId:             common.Int64Ptr(task.NextEventID),
-			Version:                 common.Int64Ptr(task.Version),
-			ReplicationInfo:         convertLastReplicationInfo(task.LastReplicationInfo),
-			History:                 history,
-			NewRunHistory:           newRunHistory,
-			ResetWorkflow:           common.BoolPtr(task.ResetWorkflow),
+			TargetClusters:  targetClusters,
+			DomainId:        common.StringPtr(task.DomainID),
+			WorkflowId:      common.StringPtr(task.WorkflowID),
+			RunId:           common.StringPtr(task.RunID),
+			FirstEventId:    common.Int64Ptr(task.FirstEventID),
+			NextEventId:     common.Int64Ptr(task.NextEventID),
+			Version:         common.Int64Ptr(task.Version),
+			ReplicationInfo: convertLastReplicationInfo(task.LastReplicationInfo),
+			History:         history,
+			NewRunHistory:   newRunHistory,
+			ResetWorkflow:   common.BoolPtr(task.ResetWorkflow),
 		},
 	}
 	return ret, newRunID, nil

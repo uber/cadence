@@ -378,8 +378,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 				LastEventID: int64(2),
 			},
 		},
-		BranchToken:             []byte("branchToken1"),
-		NewRunBranchToken:       []byte("branchToken2"),
+		BranchToken:       []byte("branchToken1"),
+		NewRunBranchToken: []byte("branchToken2"),
 	}}
 
 	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
@@ -499,8 +499,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 				LastEventID: int64(2),
 			},
 		},
-		BranchToken:             []byte("branchToken3"),
-		NewRunBranchToken:       []byte("branchToken4"),
+		BranchToken:       []byte("branchToken3"),
+		NewRunBranchToken: []byte("branchToken4"),
 	}}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, updatedStats, updatedReplicationState, nil, int64(3), replicationTasks1)
 	s.NoError(err2)
@@ -651,8 +651,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 				LastEventID: int64(2),
 			},
 		},
-		BranchToken:             []byte("branchToken1"),
-		NewRunBranchToken:       []byte("branchToken2"),
+		BranchToken:       []byte("branchToken1"),
+		NewRunBranchToken: []byte("branchToken2"),
 	},
 		&p.WorkflowTimeoutTask{
 			TaskID:              s.GetNextSequenceNumber(),
@@ -844,8 +844,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 				LastEventID: int64(20),
 			},
 		},
-		BranchToken:       []byte("branchToken5"),
-		ResetWorkflow:     true,
+		BranchToken:   []byte("branchToken5"),
+		ResetWorkflow: true,
 	}}
 
 	insertTimerInfos := []*p.TimerInfo{{
@@ -1083,8 +1083,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 				LastEventID: int64(2),
 			},
 		},
-		BranchToken:             []byte("branchToken1"),
-		NewRunBranchToken:       []byte("branchToken2"),
+		BranchToken:       []byte("branchToken1"),
+		NewRunBranchToken: []byte("branchToken2"),
 	},
 		&p.WorkflowTimeoutTask{
 			TaskID:              s.GetNextSequenceNumber(),
@@ -1260,7 +1260,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 				LastEventID: int64(20),
 			},
 		},
-		BranchToken:       []byte("branchToken5"),
+		BranchToken: []byte("branchToken5"),
 	}}
 
 	insertTimerInfos := []*p.TimerInfo{{

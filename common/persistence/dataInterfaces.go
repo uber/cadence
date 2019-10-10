@@ -309,7 +309,7 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		BranchToken       []byte
+		BranchToken        []byte
 		// Cron
 		CronSchedule      string
 		ExpirationSeconds int32
@@ -364,7 +364,7 @@ type (
 		ResetWorkflow     bool
 
 		// TODO deprecate when NDC is fully released && migrated
-		LastReplicationInfo     map[string]*ReplicationInfo
+		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -563,15 +563,15 @@ type (
 
 	// HistoryReplicationTask is the replication task created for shipping history replication events to other clusters
 	HistoryReplicationTask struct {
-		VisibilityTimestamp     time.Time
-		TaskID                  int64
-		FirstEventID            int64
-		NextEventID             int64
-		Version                 int64
-		LastReplicationInfo     map[string]*ReplicationInfo
-		BranchToken             []byte
-		ResetWorkflow           bool
-		NewRunBranchToken       []byte
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		LastReplicationInfo map[string]*ReplicationInfo
+		BranchToken         []byte
+		ResetWorkflow       bool
+		NewRunBranchToken   []byte
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters

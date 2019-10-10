@@ -355,9 +355,9 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 
 	if token.FirstEventID >= token.NextEventID {
 		return &admin.GetWorkflowExecutionRawHistoryResponse{
-			HistoryBatches:    []*gen.DataBlob{},
-			ReplicationInfo:   token.ReplicationInfo,
-			NextPageToken:     nil, // no further pagination
+			HistoryBatches:  []*gen.DataBlob{},
+			ReplicationInfo: token.ReplicationInfo,
+			NextPageToken:   nil, // no further pagination
 		}, nil
 	}
 
@@ -379,9 +379,9 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			// when no events can be returned from DB, DB layer will return
 			// EntityNotExistsError, this API shall return empty response
 			return &admin.GetWorkflowExecutionRawHistoryResponse{
-				HistoryBatches:    []*gen.DataBlob{},
-				ReplicationInfo:   token.ReplicationInfo,
-				NextPageToken:     nil, // no further pagination
+				HistoryBatches:  []*gen.DataBlob{},
+				ReplicationInfo: token.ReplicationInfo,
+				NextPageToken:   nil, // no further pagination
 			}, nil
 		}
 		return nil, err
@@ -405,8 +405,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	}
 
 	result := &admin.GetWorkflowExecutionRawHistoryResponse{
-		HistoryBatches:    blobs,
-		ReplicationInfo:   token.ReplicationInfo,
+		HistoryBatches:  blobs,
+		ReplicationInfo: token.ReplicationInfo,
 	}
 	if len(token.PersistenceToken) == 0 {
 		result.NextPageToken = nil

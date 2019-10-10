@@ -314,15 +314,15 @@ func (r *historyReplicator) ApplyRawEvents(
 	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(version)
 
 	requestOut := &h.ReplicateEventsRequest{
-		SourceCluster:           common.StringPtr(sourceCluster),
-		DomainUUID:              requestIn.DomainUUID,
-		WorkflowExecution:       requestIn.WorkflowExecution,
-		FirstEventId:            common.Int64Ptr(firstEventID),
-		NextEventId:             common.Int64Ptr(nextEventID),
-		Version:                 common.Int64Ptr(version),
-		ReplicationInfo:         requestIn.ReplicationInfo,
-		History:                 &shared.History{Events: events},
-		NewRunHistory:           nil,
+		SourceCluster:     common.StringPtr(sourceCluster),
+		DomainUUID:        requestIn.DomainUUID,
+		WorkflowExecution: requestIn.WorkflowExecution,
+		FirstEventId:      common.Int64Ptr(firstEventID),
+		NextEventId:       common.Int64Ptr(nextEventID),
+		Version:           common.Int64Ptr(version),
+		ReplicationInfo:   requestIn.ReplicationInfo,
+		History:           &shared.History{Events: events},
+		NewRunHistory:     nil,
 	}
 
 	if requestIn.NewRunHistory != nil {
@@ -725,7 +725,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 
 	// directly use stateBuilder to apply events for other events(including continueAsNew)
 	lastEvent, _, newMutableState, err := sBuilder.applyEvents(
-		domainID, requestID, execution, request.History.Events, newRunHistory,request.GetNewRunNDC(),
+		domainID, requestID, execution, request.History.Events, newRunHistory, request.GetNewRunNDC(),
 	)
 	if err != nil {
 		return err

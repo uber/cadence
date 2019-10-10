@@ -450,7 +450,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
-	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events,  false)
+	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events, false)
 	s.Nil(err)
 	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(
 		s.mockShard,
@@ -603,7 +603,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(
 		testDomainID, requestID, execution,
-		s.toHistory(continueAsNewEvent), newRunHistory.Events,  false,
+		s.toHistory(continueAsNewEvent), newRunHistory.Events, false,
 	)
 	s.Nil(err)
 	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(
@@ -693,7 +693,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
-	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(event), nil,  false)
+	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(event), nil, false)
 	s.Nil(err)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
@@ -730,7 +730,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
-	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(event), nil,  false)
+	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(event), nil, false)
 	s.Nil(err)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
@@ -1922,7 +1922,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	s.mockUpdateVersion(startedEvent)
 
 	s.mockMutableState.On("ClearStickyness").Once()
-	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(startedEvent), nil,  false)
+	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(startedEvent), nil, false)
 	s.Nil(err)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.ActivityTimeoutTask)

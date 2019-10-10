@@ -285,8 +285,8 @@ func (c *historyRereplicationContext) createReplicationRawRequest(
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
-		ReplicationInfo:   replicationInfo,
-		History:           historyBlob,
+		ReplicationInfo: replicationInfo,
+		History:         historyBlob,
 		// NewRunHistory this will be handled separately
 	}
 

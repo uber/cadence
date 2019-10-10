@@ -954,19 +954,19 @@ func (m *sqlExecutionManager) GetReplicationTasks(
 		}
 
 		tasks[i] = &p.ReplicationTaskInfo{
-			TaskID:                  row.TaskID,
-			DomainID:                sqldb.UUID(info.DomainID).String(),
-			WorkflowID:              info.GetWorkflowID(),
-			RunID:                   sqldb.UUID(info.RunID).String(),
-			TaskType:                int(info.GetTaskType()),
-			FirstEventID:            info.GetFirstEventID(),
-			NextEventID:             info.GetNextEventID(),
-			Version:                 info.GetVersion(),
-			LastReplicationInfo:     lastReplicationInfo,
-			ScheduledID:             info.GetScheduledID(),
-			BranchToken:             info.GetBranchToken(),
-			NewRunBranchToken:       info.GetNewRunBranchToken(),
-			ResetWorkflow:           info.GetResetWorkflow(),
+			TaskID:              row.TaskID,
+			DomainID:            sqldb.UUID(info.DomainID).String(),
+			WorkflowID:          info.GetWorkflowID(),
+			RunID:               sqldb.UUID(info.RunID).String(),
+			TaskType:            int(info.GetTaskType()),
+			FirstEventID:        info.GetFirstEventID(),
+			NextEventID:         info.GetNextEventID(),
+			Version:             info.GetVersion(),
+			LastReplicationInfo: lastReplicationInfo,
+			ScheduledID:         info.GetScheduledID(),
+			BranchToken:         info.GetBranchToken(),
+			NewRunBranchToken:   info.GetNewRunBranchToken(),
+			ResetWorkflow:       info.GetResetWorkflow(),
 		}
 	}
 	var nextPageToken []byte

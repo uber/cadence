@@ -220,11 +220,11 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		BranchToken       []byte
-		CronSchedule      string
-		ExpirationSeconds int32
-		Memo              map[string][]byte
-		SearchAttributes  map[string][]byte
+		BranchToken        []byte
+		CronSchedule       string
+		ExpirationSeconds  int32
+		Memo               map[string][]byte
+		SearchAttributes   map[string][]byte
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
