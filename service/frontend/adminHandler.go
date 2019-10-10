@@ -617,6 +617,8 @@ func (adh *AdminHandler) updateEventRange(
 		if err != nil {
 			return nil, err
 		}
+		// If start event is not set, get the events from the first event
+		// As the API is exclusive-exclusive, use first event id - 1 here
 		request.StartEventId = common.Int64Ptr(common.FirstEventID - 1)
 		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
 	}
@@ -626,6 +628,8 @@ func (adh *AdminHandler) updateEventRange(
 		if err != nil {
 			return nil, err
 		}
+		// If end event is not set, get the events until the end event
+		// As the API is exclusive-exclusive, use end event id + 1 1 here
 		request.EndEventId = common.Int64Ptr(lastItem.GetEventID() + 1)
 		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
 		isEndBoundarySet = false

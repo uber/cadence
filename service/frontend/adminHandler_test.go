@@ -355,7 +355,7 @@ func (s *adminHandlerSuite) Test_GetEventRange_DefinedStartEvent() {
 		versionHistories,
 	)
 	s.Equal(request.GetStartEventId(), inputStartEventID)
-	s.Equal(request.GetEndEventId(), inputEndEventID)
+	s.Equal(request.GetEndEventId(), inputEndEventID+1)
 	s.Equal(targetVersionHistory, versionHistory)
 	s.NoError(err)
 }
