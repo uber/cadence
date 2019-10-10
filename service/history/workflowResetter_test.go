@@ -108,9 +108,50 @@ func (s *workflowResetterSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *workflowResetterSuite) TestPagination() {
+func (s *workflowResetterSuite) TestReapplyEvents() {
 
-	firstEventID := int64(8)
+	event1 := &shared.HistoryEvent{
+		EventId: common.Int64Ptr(101),
+		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{
+			SignalName: common.StringPtr("some random signal name"),
+			Input:      []byte("some random signal input"),
+			Identity:   common.StringPtr("some random signal identity"),
+		},
+	}
+	event2 := &shared.HistoryEvent{
+		EventId:                              common.Int64Ptr(102),
+		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	}
+	event3 := &shared.HistoryEvent{
+		EventId: common.Int64Ptr(103),
+		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{
+			SignalName: common.StringPtr("another random signal name"),
+			Input:      []byte("another random signal input"),
+			Identity:   common.StringPtr("another random signal identity"),
+		},
+	}
+	events := []*shared.HistoryEvent{event1, event2, event3}
+
+	mutableState := &mockMutableState{}
+	defer mutableState.AssertExpectations(s.T())
+
+	for _, event := range events {
+		if event.GetEventType() == shared.EventTypeWorkflowExecutionSignaled {
+			attr := event.GetWorkflowExecutionSignaledEventAttributes()
+			mutableState.On("AddWorkflowExecutionSignaled",
+				attr.GetSignalName(),
+				attr.GetInput(),
+				attr.GetIdentity(),
+			).Return(&shared.HistoryEvent{}, nil).Once()
+		}
+	}
+
+	err := s.workflowResetter.reapplyEvents(mutableState, events)
+	s.NoError(err)
+}
+
+func (s *workflowResetterSuite) TestPagination() {
+	firstEventID := common.FirstEventID
 	nextEventID := int64(101)
 	branchToken := []byte("some random branch token")
 	workflowIdentifier := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.baseRunID)
