@@ -159,7 +159,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 	}
 	s.mockShard.SetEngine(engine)
 
-	s.historyReplicator = newHistoryReplicator(s.mockShard, clock.NewEventTimeSource(), engine, historyCache, s.mockShard.domainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
+	s.historyReplicator = newHistoryReplicator(s.mockShard, clock.NewEventTimeSource(), engine, historyCache, s.mockShard.domainCache, s.mockHistoryV2Mgr, s.logger)
 	s.mockWorkflowResetor = &mockWorkflowResetor{}
 	s.historyReplicator.resetor = s.mockWorkflowResetor
 }
@@ -167,7 +167,6 @@ func (s *historyReplicatorSuite) SetupTest() {
 func (s *historyReplicatorSuite) TearDownTest() {
 	s.historyReplicator = nil
 	s.mockCtrl.Finish()
-	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())

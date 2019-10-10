@@ -109,7 +109,6 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		currentClusterName:   s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.ShardContext,
 		clusterMetadata:      s.ShardContext.GetClusterMetadata(),
-		historyMgr:           s.HistoryMgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
@@ -124,7 +123,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.engineImpl.txProcessor = newTransferQueueProcessor(
 		s.ShardContext, s.engineImpl, s.mockVisibilityMgr, nil, nil, s.logger,
 	)
-	s.engineImpl.replicatorProcessor = newReplicatorQueueProcessor(s.ShardContext, historyCache, nil, s.ExecutionManager, s.HistoryMgr, s.HistoryV2Mgr, s.logger)
+	s.engineImpl.replicatorProcessor = newReplicatorQueueProcessor(s.ShardContext, historyCache, nil, s.ExecutionManager,s.HistoryV2Mgr, s.logger)
 	s.engineImpl.timerProcessor = newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.mockMatchingClient, s.logger)
 	s.ShardContext.SetEngine(s.engineImpl)
 }
