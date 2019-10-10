@@ -364,8 +364,6 @@ type (
 		ResetWorkflow     bool
 
 		// TODO deprecate when NDC is fully released && migrated
-		EventStoreVersion       int32
-		NewRunEventStoreVersion int32
 		LastReplicationInfo     map[string]*ReplicationInfo
 	}
 
@@ -571,10 +569,8 @@ type (
 		NextEventID             int64
 		Version                 int64
 		LastReplicationInfo     map[string]*ReplicationInfo
-		EventStoreVersion       int32
 		BranchToken             []byte
 		ResetWorkflow           bool
-		NewRunEventStoreVersion int32
 		NewRunBranchToken       []byte
 	}
 

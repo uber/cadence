@@ -608,7 +608,6 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		response.DecisionInfo.ScheduledEvent = scheduledEvent
 		response.DecisionInfo.StartedEvent = startedEvent
 	}
-	response.EventStoreVersion = common.Int32Ptr(msBuilder.GetEventStoreVersion())
 	currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 	if err != nil {
 		return nil, err

@@ -564,8 +564,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, nil
 	}
 
-	eventStoreVersion := matchingResp.GetEventStoreVersion()
-	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, eventStoreVersion, matchingResp.GetBranchToken())
+	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, matchingResp.GetBranchToken())
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1437,8 +1436,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		}
 		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
 
-		eventStoreVersion := matchingResp.GetEventStoreVersion()
-		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, eventStoreVersion, matchingResp.GetBranchToken())
+		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, matchingResp.GetBranchToken())
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -3261,7 +3259,6 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 	scope metrics.Scope,
 	domainID string,
 	matchingResp *m.PollForDecisionTaskResponse,
-	eventStoreVersion int32,
 	branchToken []byte,
 ) (*gen.PollForDecisionTaskResponse, error) {
 

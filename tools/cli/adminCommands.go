@@ -118,7 +118,7 @@ func AdminDescribeWorkflow(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("json.Unmarshal err", err)
 		}
-		if ms.ExecutionInfo != nil && ms.ExecutionInfo.EventStoreVersion == persistence.EventStoreVersionV2 {
+		if ms.ExecutionInfo != nil {
 			branchInfo := shared.HistoryBranch{}
 			thriftrwEncoder := codec.NewThriftRWEncoder()
 			err := thriftrwEncoder.Decode(ms.ExecutionInfo.BranchToken, &branchInfo)

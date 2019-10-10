@@ -321,7 +321,6 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		// IsWorkflowRunning: not used
 		// TransientDecision: not used
 		// PersistenceToken: trust
-		// EventStoreVersion: trust
 		// ReplicationInfo: trust
 
 	} else {
@@ -358,7 +357,6 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		return &admin.GetWorkflowExecutionRawHistoryResponse{
 			HistoryBatches:    []*gen.DataBlob{},
 			ReplicationInfo:   token.ReplicationInfo,
-			EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
 			NextPageToken:     nil, // no further pagination
 		}, nil
 	}
@@ -383,7 +381,6 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			return &admin.GetWorkflowExecutionRawHistoryResponse{
 				HistoryBatches:    []*gen.DataBlob{},
 				ReplicationInfo:   token.ReplicationInfo,
-				EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
 				NextPageToken:     nil, // no further pagination
 			}, nil
 		}
@@ -410,7 +407,6 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	result := &admin.GetWorkflowExecutionRawHistoryResponse{
 		HistoryBatches:    blobs,
 		ReplicationInfo:   token.ReplicationInfo,
-		EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
 	}
 	if len(token.PersistenceToken) == 0 {
 		result.NextPageToken = nil

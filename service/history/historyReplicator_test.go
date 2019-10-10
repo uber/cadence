@@ -61,7 +61,6 @@ type (
 		logger                   log.Logger
 		mockCtrl                 *gomock.Controller
 		mockExecutionMgr         *mocks.ExecutionManager
-		mockHistoryMgr           *mocks.HistoryManager
 		mockHistoryV2Mgr         *mocks.HistoryV2Manager
 		mockShardManager         *mocks.ShardManager
 		mockClusterMetadata      *mocks.ClusterMetadata
@@ -96,7 +95,6 @@ func (s *historyReplicatorSuite) TearDownSuite() {
 func (s *historyReplicatorSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockCtrl = gomock.NewController(s.T())
-	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -123,7 +121,6 @@ func (s *historyReplicatorSuite) SetupTest() {
 		executionManager:          s.mockExecutionMgr,
 		shardManager:              s.mockShardManager,
 		clusterMetadata:           s.mockClusterMetadata,
-		historyMgr:                s.mockHistoryMgr,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
@@ -149,7 +146,6 @@ func (s *historyReplicatorSuite) SetupTest() {
 		currentClusterName:   s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
-		historyMgr:           s.mockHistoryMgr,
 		executionManager:     s.mockExecutionMgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
@@ -2514,7 +2510,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -2634,7 +2629,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -2750,7 +2744,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -2881,7 +2874,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 		CronSchedule:         cronSchedule,
 		HasRetryPolicy:       true,
 		InitialInterval:      retryPolicy.GetInitialIntervalInSeconds(),
@@ -3027,7 +3019,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -3165,7 +3156,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -3303,9 +3293,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
-	msBuilder.On("GetEventStoreVersion").Return(executionInfo.EventStoreVersion)
 	msBuilder.On("GetCurrentBranchToken").Return(executionInfo.BranchToken, nil)
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -3470,9 +3458,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
-	msBuilder.On("GetEventStoreVersion").Return(executionInfo.EventStoreVersion)
 	msBuilder.On("GetCurrentBranchToken").Return(executionInfo.BranchToken, nil)
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -3651,9 +3637,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
-	msBuilder.On("GetEventStoreVersion").Return(executionInfo.EventStoreVersion)
 	msBuilder.On("GetCurrentBranchToken").Return(executionInfo.BranchToken, nil)
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -3830,7 +3814,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -3989,7 +3972,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
@@ -4157,7 +4139,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout:      di.DecisionTimeout,
 		State:                persistence.WorkflowStateRunning,
 		CloseStatus:          persistence.WorkflowCloseStatusNone,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 		CronSchedule:         cronSchedule,
 		HasRetryPolicy:       true,
 		InitialInterval:      retryPolicy.GetInitialIntervalInSeconds(),

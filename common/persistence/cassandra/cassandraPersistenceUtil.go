@@ -1040,15 +1040,12 @@ func createReplicationTasks(
 		version := common.EmptyVersion
 		var lastReplicationInfo map[string]map[string]interface{}
 		activityScheduleID := common.EmptyEventID
-		var eventStoreVersion, newRunEventStoreVersion int32
 		var branchToken, newRunBranchToken []byte
 		resetWorkflow := false
 
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
 			histTask := task.(*p.HistoryReplicationTask)
-			eventStoreVersion = histTask.EventStoreVersion
-			newRunEventStoreVersion = histTask.NewRunEventStoreVersion
 			branchToken = histTask.BranchToken
 			newRunBranchToken = histTask.NewRunBranchToken
 			firstEventID = histTask.FirstEventID
@@ -1088,10 +1085,10 @@ func createReplicationTasks(
 			version,
 			lastReplicationInfo,
 			activityScheduleID,
-			eventStoreVersion,
+			defaultEventStoreVersionValue,
 			branchToken,
 			resetWorkflow,
-			newRunEventStoreVersion,
+			defaultEventStoreVersionValue,
 			newRunBranchToken,
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
@@ -2041,14 +2038,10 @@ func createReplicationTaskInfo(
 			}
 		case "scheduled_id":
 			info.ScheduledID = v.(int64)
-		case "event_store_version":
-			info.EventStoreVersion = int32(v.(int))
 		case "branch_token":
 			info.BranchToken = v.([]byte)
 		case "reset_workflow":
 			info.ResetWorkflow = v.(bool)
-		case "new_run_event_store_version":
-			info.NewRunEventStoreVersion = int32(v.(int))
 		case "new_run_branch_token":
 			info.NewRunBranchToken = v.([]byte)
 		}

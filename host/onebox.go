@@ -102,7 +102,6 @@ type (
 		replicator             *replicator.Replicator
 		clientWorker           archiver.ClientWorker
 		indexer                *indexer.Indexer
-		enableEventsV2         bool
 		enbaleNDC              bool
 		archiverMetadata       carchiver.ArchivalMetadata
 		archiverProvider       provider.ArchiverProvider
@@ -135,7 +134,6 @@ type (
 		VisibilityMgr                 persistence.VisibilityManager
 		Logger                        log.Logger
 		ClusterNo                     int
-		EnableEventsV2                bool
 		EnableNDC                     bool
 		ArchiverMetadata              carchiver.ArchivalMetadata
 		ArchiverProvider              provider.ArchiverProvider
@@ -165,7 +163,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		metadataMgr:            params.MetadataMgr,
 		visibilityMgr:          params.VisibilityMgr,
 		shardMgr:               params.ShardMgr,
-		historyMgr:             params.HistoryMgr,
 		historyV2Mgr:           params.HistoryV2Mgr,
 		taskMgr:                params.TaskMgr,
 		executionMgrFactory:    params.ExecutionMgrFactory,

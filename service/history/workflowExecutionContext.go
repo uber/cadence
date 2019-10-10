@@ -745,13 +745,11 @@ func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
 	newWorkflowSnapshot.ReplicationTasks = nil
 
 	newRunBranchToken := newRunTask.BranchToken
-	newRunEventStoreVersion := newRunTask.EventStoreVersion
 	taskUpdated := false
 	for _, replicationTask := range currentWorkflowMutation.ReplicationTasks {
 		if task, ok := replicationTask.(*persistence.HistoryReplicationTask); ok {
 			taskUpdated = true
 			task.NewRunBranchToken = newRunBranchToken
-			task.NewRunEventStoreVersion = newRunEventStoreVersion
 		}
 	}
 	if !taskUpdated {

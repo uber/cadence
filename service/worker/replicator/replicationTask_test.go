@@ -396,8 +396,6 @@ func (s *historyReplicationTaskSuite) TestNewHistoryReplicationTask() {
 				History:                 replicationAttr.History,
 				NewRunHistory:           replicationAttr.NewRunHistory,
 				ForceBufferEvents:       common.BoolPtr(false),
-				EventStoreVersion:       replicationAttr.EventStoreVersion,
-				NewRunEventStoreVersion: replicationAttr.NewRunEventStoreVersion,
 				ResetWorkflow:           replicationAttr.ResetWorkflow,
 				NewRunNDC:               replicationAttr.NewRunNDC,
 			},
@@ -701,8 +699,6 @@ func (s *historyReplicationTaskSuite) getHistoryReplicationTask() *replicator.Re
 		NewRunHistory: &shared.History{
 			Events: []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(2)}},
 		},
-		EventStoreVersion:       common.Int32Ptr(144),
-		NewRunEventStoreVersion: common.Int32Ptr(16384),
 		ResetWorkflow:           common.BoolPtr(true),
 	}
 	replicationTask := &replicator.ReplicationTask{

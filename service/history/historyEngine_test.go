@@ -4725,7 +4725,6 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ExpirationTime:                     sourceInfo.ExpirationTime,
 		MaximumAttempts:                    sourceInfo.MaximumAttempts,
 		NonRetriableErrors:                 sourceInfo.NonRetriableErrors,
-		EventStoreVersion:                  sourceInfo.EventStoreVersion,
 		BranchToken:                        sourceInfo.BranchToken,
 		ExpirationSeconds:                  sourceInfo.ExpirationSeconds,
 	}

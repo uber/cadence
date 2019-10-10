@@ -266,8 +266,6 @@ func GenerateReplicationTask(
 			ReplicationInfo:         convertLastReplicationInfo(task.LastReplicationInfo),
 			History:                 history,
 			NewRunHistory:           newRunHistory,
-			EventStoreVersion:       common.Int32Ptr(task.EventStoreVersion),
-			NewRunEventStoreVersion: common.Int32Ptr(task.NewRunEventStoreVersion),
 			ResetWorkflow:           common.BoolPtr(task.ResetWorkflow),
 		},
 	}

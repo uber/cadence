@@ -322,9 +322,7 @@ func (r *historyReplicator) ApplyRawEvents(
 		Version:                 common.Int64Ptr(version),
 		ReplicationInfo:         requestIn.ReplicationInfo,
 		History:                 &shared.History{Events: events},
-		EventStoreVersion:       requestIn.EventStoreVersion,
 		NewRunHistory:           nil,
-		NewRunEventStoreVersion: nil,
 	}
 
 	if requestIn.NewRunHistory != nil {
@@ -333,7 +331,6 @@ func (r *historyReplicator) ApplyRawEvents(
 			return err
 		}
 		requestOut.NewRunHistory = &shared.History{Events: newRunEvents}
-		requestOut.NewRunEventStoreVersion = requestIn.NewRunEventStoreVersion
 	}
 
 	return r.ApplyEvents(ctx, requestOut)
@@ -728,8 +725,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 
 	// directly use stateBuilder to apply events for other events(including continueAsNew)
 	lastEvent, _, newMutableState, err := sBuilder.applyEvents(
-		domainID, requestID, execution, request.History.Events, newRunHistory,
-		request.GetEventStoreVersion(), request.GetNewRunEventStoreVersion(), request.GetNewRunNDC(),
+		domainID, requestID, execution, request.History.Events, newRunHistory,request.GetNewRunNDC(),
 	)
 	if err != nil {
 		return err

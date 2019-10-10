@@ -506,7 +506,6 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 			RunID:               rid,
 			Version:             currVersion,
 			LastReplicationInfo: repInfo,
-			EventStoreVersion:   exeInfo.EventStoreVersion,
 			BranchToken:         exeInfo.BranchToken,
 		}
 
@@ -537,7 +536,6 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 				if err != nil {
 					ErrorAndExit("GetWorkflowExecution error", err)
 				}
-				taskTemplate.NewRunEventStoreVersion = resp.State.ExecutionInfo.EventStoreVersion
 				taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.BranchToken
 			}
 			taskTemplate.Version = firstEvent.GetVersion()

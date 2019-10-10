@@ -79,7 +79,6 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		DomainName:           request.DomainName,
 		WorkflowID:           request.WorkflowID,
 		RunID:                request.RunID,
-		EventStoreVersion:    request.EventStoreVersion,
 		BranchToken:          request.BranchToken,
 		NextEventID:          request.NextEventID,
 		CloseFailoverVersion: request.CloseFailoverVersion,

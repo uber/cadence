@@ -194,8 +194,6 @@ func newHistoryReplicationTask(
 			History:                 attr.History,
 			NewRunHistory:           attr.NewRunHistory,
 			ForceBufferEvents:       common.BoolPtr(false),
-			EventStoreVersion:       attr.EventStoreVersion,
-			NewRunEventStoreVersion: attr.NewRunEventStoreVersion,
 			ResetWorkflow:           attr.ResetWorkflow,
 			NewRunNDC:               attr.NewRunNDC,
 		},

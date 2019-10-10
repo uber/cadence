@@ -921,7 +921,6 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 		handler.decisionTaskCompletedID,
 		attr.GetParentWorkflowDomain(),
 		continueAsNewAttributes,
-		handler.eventStoreVersion,
 	)
 	if err != nil {
 		return err

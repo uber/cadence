@@ -493,7 +493,6 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 		req.AttemptArchiveInline = executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
 		req.ArchiveRequest.ShardID = t.shard.GetShardID()
 		req.ArchiveRequest.DomainName = domainCacheEntry.GetInfo().Name
-		req.ArchiveRequest.EventStoreVersion = msBuilder.GetEventStoreVersion()
 		req.ArchiveRequest.BranchToken, err = msBuilder.GetCurrentBranchToken()
 		if err != nil {
 			return err
