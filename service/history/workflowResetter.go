@@ -37,6 +37,40 @@ import (
 )
 
 type (
+	workflowResetter interface {
+		// ResetWorkflowExecution is the external API used by history engine
+		ResetWorkflowExecution(
+			ctx ctx.Context,
+			domainName string,
+			workflowID string,
+			baseRunID string,
+			baseResetUntilEventID int64,
+			terminateReason string,
+			resetReason string,
+			additionalReapplyEvents []*shared.HistoryEvent,
+		) (resetRunID string, retError error)
+
+		// resetWorkflow is the internal API, used by NDC history events reapplication
+		// when current workflow has already finished
+		resetWorkflow(
+			ctx ctx.Context,
+			domainID string,
+			workflowID string,
+			baseRunID string,
+			baseBranchToken []byte,
+			baseResetUntilEventID int64,
+			baseNextEventID int64,
+			resetRunID string,
+			resetRequestID string,
+			resetWorkflowVersion int64,
+			currentWorkflowTerminated bool,
+			currentWorkflow nDCWorkflow,
+			terminateReason string,
+			resetReason string,
+			additionalReapplyEvents []*shared.HistoryEvent,
+		) error
+	}
+
 	workflowResetterImpl struct {
 		shard           ShardContext
 		domainCache     cache.DomainCache
@@ -65,8 +99,6 @@ func newWorkflowResetter(
 	}
 }
 
-// ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted/decisionTaskFailed/decisionTaskTimeout.
-// It will then fail the decision with cause of "reset_workflow"
 func (r *workflowResetterImpl) ResetWorkflowExecution(
 	ctx ctx.Context,
 	domainName string,
@@ -148,7 +180,7 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 		}
 	}
 
-	resetWorkflow, err := r.prepareResetWorkflow(
+	if err := r.resetWorkflow(
 		ctx,
 		domainID,
 		workflowID,
@@ -159,23 +191,61 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 		resetRunID,
 		resetRequestID,
 		*resetWorkflowVersion,
+		currentWorkflowTerminated,
+		currentWorkflow,
 		terminateReason,
 		resetReason,
 		additionalReapplyEvents,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	if err := r.persistToDB(
-		currentWorkflowTerminated,
-		currentWorkflow,
-		resetWorkflow,
 	); err != nil {
 		return "", err
 	}
 
 	return resetRunID, err
+}
+
+func (r *workflowResetterImpl) resetWorkflow(
+	ctx ctx.Context,
+	domainID string,
+	workflowID string,
+	baseRunID string,
+	baseBranchToken []byte,
+	baseResetUntilEventID int64,
+	baseNextEventID int64,
+	resetRunID string,
+	resetRequestID string,
+	resetWorkflowVersion int64,
+	currentWorkflowTerminated bool,
+	currentWorkflow nDCWorkflow,
+	terminateReason string,
+	resetReason string,
+	additionalReapplyEvents []*shared.HistoryEvent,
+) (retError error) {
+
+	resetWorkflow, err := r.prepareResetWorkflow(
+		ctx,
+		domainID,
+		workflowID,
+		baseRunID,
+		baseBranchToken,
+		baseResetUntilEventID,
+		baseNextEventID,
+		resetRunID,
+		resetRequestID,
+		resetWorkflowVersion,
+		terminateReason,
+		resetReason,
+		additionalReapplyEvents,
+	)
+	if err != nil {
+		return err
+	}
+	defer resetWorkflow.getReleaseFn()(retError)
+
+	return r.persistToDB(
+		currentWorkflowTerminated,
+		currentWorkflow,
+		resetWorkflow,
+	)
 }
 
 func (r *workflowResetterImpl) prepareResetWorkflow(
