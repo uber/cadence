@@ -163,6 +163,7 @@ func (s *Service) Start() {
 		s.logger.Fatal("failed to start replicator, could not create MetadataManager", tag.Error(err))
 	}
 	s.metadataMgr = metadataMgr
+
 	s.domainCache = cache.NewDomainCache(metadataMgr, base.GetClusterMetadata(), s.metricsClient, s.logger)
 	s.domainCache.Start()
 
