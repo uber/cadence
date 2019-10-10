@@ -106,7 +106,7 @@ func NewTaskPersistenceMetricsClient(persistence TaskManager, metricClient metri
 	}
 }
 
-// NewHistoryV2PersistenceMetricsClient creates a HistoryManager client to manage workflow execution history
+// NewHistoryV2PersistenceMetricsClient creates a HistoryV2Manager client to manage workflow execution history
 func NewHistoryV2PersistenceMetricsClient(persistence HistoryV2Manager, metricClient metrics.Client, logger log.Logger) HistoryV2Manager {
 	return &historyV2PersistenceClient{
 		persistence:  persistence,

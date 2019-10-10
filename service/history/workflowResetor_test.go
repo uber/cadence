@@ -66,7 +66,6 @@ type (
 		mockHistoryClient        *historyservicetest.MockClient
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockExecutionMgr         *mocks.ExecutionManager
-		mockHistoryMgr           *mocks.HistoryManager
 		mockHistoryV2Mgr         *mocks.HistoryV2Manager
 		mockShardManager         *mocks.ShardManager
 		mockClusterMetadata      *mocks.ClusterMetadata
@@ -133,7 +132,6 @@ func (s *resetorSuite) SetupTest() {
 		shardID:                   shardID,
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
-		historyMgr:                s.mockHistoryMgr,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		domainCache:               s.mockDomainCache,
 		eventsCache:               s.mockEventsCache,
@@ -163,7 +161,6 @@ func (s *resetorSuite) SetupTest() {
 		shard:                mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
-		historyMgr:           s.mockHistoryMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
@@ -184,7 +181,6 @@ func (s *resetorSuite) SetupTest() {
 
 func (s *resetorSuite) TearDownTest() {
 	s.controller.Finish()
-	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
@@ -763,9 +759,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
-	appendV1Resp := &p.AppendHistoryEventsResponse{
-		Size: 100,
-	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,
 	}
@@ -777,7 +770,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReq).Return(nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
@@ -2079,9 +2071,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		ShardID:     common.IntPtr(s.shardID),
 	}
 
-	appendV1Resp := &p.AppendHistoryEventsResponse{
-		Size: 100,
-	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,
 	}
@@ -2093,7 +2082,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReq).Return(nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()

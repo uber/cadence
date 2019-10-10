@@ -112,7 +112,7 @@ func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter qu
 	}
 }
 
-// NewHistoryV2PersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
+// NewHistoryV2PersistenceRateLimitedClient creates a HistoryV2Manager client to manage workflow execution history
 func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter quotas.Limiter, logger log.Logger) HistoryV2Manager {
 	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,
