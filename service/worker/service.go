@@ -156,8 +156,8 @@ func (s *Service) Start() {
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
 	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
 	s.ensureSystemDomainExists(pFactory, base.GetClusterMetadata().GetCurrentClusterName())
-
 	s.metricsClient = base.GetMetricsClient()
+
 	metadataMgr, err := pFactory.NewMetadataManager()
 	if err != nil {
 		s.logger.Fatal("failed to start replicator, could not create MetadataManager", tag.Error(err))
