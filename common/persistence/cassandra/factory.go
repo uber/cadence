@@ -21,6 +21,7 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/common"
 	"sync"
 
 	"github.com/gocql/gocql"
@@ -74,18 +75,8 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryV2Store, error) {
 	return newHistoryV2Persistence(f.cfg, f.logger)
 }
 
-// NewMetadataStore returns a new metadata store
+// NewMetadataStore returns a metadata store that understands only v2
 func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
-	return newMetadataManagerProxy(f.cfg, f.clusterName, f.logger)
-}
-
-// NewMetadataStoreV1 returns a metadatastore that understands only v1
-func (f *Factory) NewMetadataStoreV1() (p.MetadataStore, error) {
-	return newMetadataPersistence(f.cfg, f.clusterName, f.logger)
-}
-
-// NewMetadataStoreV2 returns a metadatastore that understands only v2
-func (f *Factory) NewMetadataStoreV2() (p.MetadataStore, error) {
 	return newMetadataPersistenceV2(f.cfg, f.clusterName, f.logger)
 }
 
@@ -104,7 +95,7 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 }
 
 // NewQueue returns a new queue backed by cassandra
-func (f *Factory) NewQueue(queueType int) (p.Queue, error) {
+func (f *Factory) NewQueue(queueType common.QueueType) (p.Queue, error) {
 	return newQueue(f.cfg, f.logger, queueType)
 }
 

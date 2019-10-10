@@ -235,8 +235,14 @@ const (
 	PersistenceCountWorkflowExecutionsScope
 	// PersistenceEnqueueMessageScope tracks Encueue calls made by service to persistence layer
 	PersistenceEnqueueMessageScope
-	// PersistenceDequeueMessagesScope tracks DequeueMessages calls made by service to persistence layer
-	PersistenceDequeueMessagesScope
+	// PersistenceReadQueueMessagesScope tracks ReadMessages calls made by service to persistence layer
+	PersistenceReadQueueMessagesScope
+	// PersistenceDeleteQueueMessagesScope tracks DeleteMessages calls made by service to persistence layer
+	PersistenceDeleteQueueMessagesScope
+	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
+	PersistenceUpdateAckLevelScope
+	// PersistenceGetAckLevelScope tracks GetAckLevel calls made by service to persistence layer
+	PersistenceGetAckLevelScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
@@ -399,6 +405,8 @@ const (
 	AdminClientDescribeWorkflowExecutionScope
 	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryScope
+	// AdminClientGetWorkflowExecutionRawHistoryV2Scope tracks RPC calls to admin service
+	AdminClientGetWorkflowExecutionRawHistoryV2Scope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -544,6 +552,8 @@ const (
 
 	// HistoryArchiverScope is used by history archivers
 	HistoryArchiverScope
+	// VisibilityArchiverScope is used by visibility archivers
+	VisibilityArchiverScope
 
 	// The following metrics are only used by internal archiver implemention.
 	// TODO: move them to internal repo once cadence plugin model is in place.
@@ -572,6 +582,8 @@ const (
 	AdminDescribeWorkflowExecutionScope
 	// AdminGetWorkflowExecutionRawHistoryScope is the metric scope for admin.GetWorkflowExecutionRawHistoryScope
 	AdminGetWorkflowExecutionRawHistoryScope
+	// AdminGetWorkflowExecutionRawHistoryV2Scope is the metric scope for admin.GetWorkflowExecutionRawHistoryScope
+	AdminGetWorkflowExecutionRawHistoryV2Scope
 	// AdminRemoveTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminRemoveTaskScope
 	//AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
@@ -658,6 +670,8 @@ const (
 	FrontendGetDomainReplicationMessagesScope
 	// FrontendReapplyEventsScope is the metric scope for frontend.ReapplyEvents
 	FrontendReapplyEventsScope
+	// FrontendDomainReplicationQueueScope is the metrics scope for domain replication queue
+	FrontendDomainReplicationQueueScope
 
 	NumFrontendScopes
 )
@@ -884,8 +898,8 @@ const (
 	HistoryReplicationTaskScope
 	// HistoryMetadataReplicationTaskScope is the scope used by history metadata task replication processing
 	HistoryMetadataReplicationTaskScope
-	// HistoryReplicationTaskV2Scope is the scope used by history task replication processing
-	HistoryReplicationTaskV2Scope
+	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
+	HistoryReplicationV2TaskScope
 	// SyncShardTaskScope is the scope used by sync shrad information processing
 	SyncShardTaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
@@ -983,7 +997,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 		PersistenceGetAllHistoryTreeBranchesScope:                {operation: "GetAllHistoryTreeBranches"},
 		PersistenceEnqueueMessageScope:                           {operation: "EnqueueMessage"},
-		PersistenceDequeueMessagesScope:                          {operation: "DequeueMessages"},
+		PersistenceReadQueueMessagesScope:                        {operation: "ReadQueueMessages"},
+		PersistenceDeleteQueueMessagesScope:                      {operation: "DeleteQueueMessages"},
+		PersistenceUpdateAckLevelScope:                           {operation: "UpdateAckLevel"},
+		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1067,6 +1084,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientDescribeHistoryHostScope:                 {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:           {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientGetWorkflowExecutionRawHistoryV2Scope:    {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientCloseShardScope:                          {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                   {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                    {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1132,7 +1150,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchDeleteWorkflowExecutionsScope:                 {operation: "DeleteWorkflowExecution"},
 		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
 
-		HistoryArchiverScope: {operation: "HistoryArchiver"},
+		HistoryArchiverScope:    {operation: "HistoryArchiver"},
+		VisibilityArchiverScope: {operation: "VisibilityArchiver"},
 
 		BlobstoreClientUploadScope:          {operation: "BlobstoreClientUpload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDownloadScope:        {operation: "BlobstoreClientDownload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
@@ -1144,11 +1163,12 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// Frontend Scope Names
 	Frontend: {
 		// Admin API scope co-locates with with frontend
-		AdminRemoveTaskScope:                     {operation: "AdminRemoveTask"},
-		AdminCloseShardTaskScope:                 {operation: "AdminCloseShardTask"},
-		AdminDescribeHistoryHostScope:            {operation: "DescribeHistoryHost"},
-		AdminDescribeWorkflowExecutionScope:      {operation: "DescribeWorkflowExecution"},
-		AdminGetWorkflowExecutionRawHistoryScope: {operation: "GetWorkflowExecutionRawHistory"},
+		AdminRemoveTaskScope:                       {operation: "AdminRemoveTask"},
+		AdminCloseShardTaskScope:                   {operation: "AdminCloseShardTask"},
+		AdminDescribeHistoryHostScope:              {operation: "DescribeHistoryHost"},
+		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
+		AdminGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
+		AdminGetWorkflowExecutionRawHistoryV2Scope: {operation: "GetWorkflowExecutionRawHistoryV2"},
 
 		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},
@@ -1188,6 +1208,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendGetReplicationMessagesScope:           {operation: "GetReplicationMessages"},
 		FrontendGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
 		FrontendReapplyEventsScope:                    {operation: "ReapplyEvents"},
+		FrontendDomainReplicationQueueScope:           {operation: "DomainReplicationQueue"},
 	},
 	// History Scope Names
 	History: {
@@ -1301,7 +1322,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DomainReplicationTaskScope:             {operation: "DomainReplicationTask"},
 		HistoryReplicationTaskScope:            {operation: "HistoryReplicationTask"},
 		HistoryMetadataReplicationTaskScope:    {operation: "HistoryMetadataReplicationTask"},
-		HistoryReplicationTaskV2Scope:          {operation: "HistoryReplicationTaskV2"},
+		HistoryReplicationV2TaskScope:          {operation: "HistoryReplicationV2Task"},
 		SyncShardTaskScope:                     {operation: "SyncShardTask"},
 		SyncActivityTaskScope:                  {operation: "SyncActivityTask"},
 		ESProcessorScope:                       {operation: "ESProcessor"},
@@ -1391,7 +1412,7 @@ const (
 	HistoryArchiverTotalUploadSize
 	HistoryArchiverHistorySize
 
-	// The following metrics are only used by internal archiver implemention.
+	// The following metrics are only used by internal history archiver implemention.
 	// TODO: move them to internal repo once cadence plugin model is in place.
 	HistoryArchiverBlobExistsCount
 	HistoryArchiverBlobSize
@@ -1401,15 +1422,26 @@ const (
 	HistoryArchiverBlobIntegrityCheckFailedCount
 	HistoryArchiverDuplicateArchivalsCount
 
+	VisibilityArchiverArchiveNonRetryableErrorCount
+	VisibilityArchiverArchiveTransientErrorCount
+	VisibilityArchiveSuccessCount
+
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
+// Frontend Metrics enum
+const (
+	DomainReplicationTaskAckLevel = iota + NumCommonMetrics
+
+	NumFrontendMetrics
+)
+
 // History Metrics enum
 const (
-	TaskRequests = iota + NumCommonMetrics
+	TaskRequests = iota + NumFrontendMetrics
 	TaskLatency
 	TaskFailures
 	TaskDiscarded
@@ -1537,8 +1569,6 @@ const (
 	ReplicationTasksFetched
 	ReplicationTasksReturned
 	GetReplicationMessagesForShardLatency
-	ArchiveVisibilityAttemptCount
-	ArchiveVisibilityFailedCount
 	EventReapplySkippedCount
 
 	NumHistoryMetrics
@@ -1707,10 +1737,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverRunningBlobIntegrityCheckCount:             {metricName: "history_archiver_running_blob_integrity_check", metricType: Counter},
 		HistoryArchiverBlobIntegrityCheckFailedCount:              {metricName: "history_archiver_blob_integrity_check_failed", metricType: Counter},
 		HistoryArchiverDuplicateArchivalsCount:                    {metricName: "history_archiver_duplicate_archivals", metricType: Counter},
+		VisibilityArchiverArchiveNonRetryableErrorCount:           {metricName: "visibility_archiver_archive_non_retryable_error", metricType: Counter},
+		VisibilityArchiverArchiveTransientErrorCount:              {metricName: "visibility_archiver_archive_transient_error", metricType: Counter},
+		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
 	},
-	Frontend: {},
+	Frontend: {
+		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
+	},
 	History: {
 		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
 		TaskLatency:                                       {metricName: "task_latency", metricType: Timer},
@@ -1839,8 +1874,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
-		ArchiveVisibilityAttemptCount:                     {metricName: "archive_visibility_attempt_count", metricType: Counter},
-		ArchiveVisibilityFailedCount:                      {metricName: "archive_visibility_failed_count", metricType: Counter},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
 	},
 	Matching: {

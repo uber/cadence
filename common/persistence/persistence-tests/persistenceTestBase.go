@@ -68,8 +68,6 @@ type (
 		HistoryMgr             p.HistoryManager
 		HistoryV2Mgr           p.HistoryV2Manager
 		MetadataManager        p.MetadataManager
-		MetadataManagerV2      p.MetadataManager
-		MetadataProxy          p.MetadataManager
 		VisibilityMgr          p.VisibilityManager
 		DomainReplicationQueue p.DomainReplicationQueue
 		ShardInfo              *p.ShardInfo
@@ -182,13 +180,7 @@ func (s *TestBase) Setup() {
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
 
-	s.MetadataManager, err = factory.NewMetadataManager(pfactory.MetadataV1)
-	s.fatalOnError("NewMetadataManager", err)
-
-	s.MetadataManagerV2, err = factory.NewMetadataManager(pfactory.MetadataV2)
-	s.fatalOnError("NewMetadataManager", err)
-
-	s.MetadataProxy, err = factory.NewMetadataManager(pfactory.MetadataV1V2)
+	s.MetadataManager, err = factory.NewMetadataManager()
 	s.fatalOnError("NewMetadataManager", err)
 
 	s.HistoryMgr, err = factory.NewHistoryManager()
@@ -1383,6 +1375,16 @@ func isMessageIDConflictError(err error) bool {
 // GetReplicationMessages is a utility method to get messages from the queue
 func (s *TestBase) GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error) {
 	return s.DomainReplicationQueue.GetReplicationMessages(lastMessageID, maxCount)
+}
+
+// UpdateAckLevel updates replication queue ack level
+func (s *TestBase) UpdateAckLevel(lastProcessedMessageID int, clusterName string) error {
+	return s.DomainReplicationQueue.UpdateAckLevel(lastProcessedMessageID, clusterName)
+}
+
+// GetAckLevels returns replication queue ack levels
+func (s *TestBase) GetAckLevels() (map[string]int, error) {
+	return s.DomainReplicationQueue.GetAckLevels()
 }
 
 // GenerateTransferTaskIDs helper

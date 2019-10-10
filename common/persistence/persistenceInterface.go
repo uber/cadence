@@ -149,8 +149,12 @@ type (
 
 	// Queue is a store to enqueue and get messages
 	Queue interface {
+		Closeable
 		EnqueueMessage(messagePayload []byte) error
-		DequeueMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
+		ReadMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
+		DeleteMessagesBefore(messageID int) error
+		UpdateAckLevel(messageID int, clusterName string) error
+		GetAckLevels() (map[string]int, error)
 	}
 
 	// QueueMessage is the message that stores in the queue
@@ -656,7 +660,6 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
-		TableVersion                int
 	}
 
 	// InternalUpdateDomainRequest is used to update domain
@@ -668,7 +671,6 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
-		TableVersion                int
 	}
 
 	// InternalListDomainsResponse is the response for GetDomain

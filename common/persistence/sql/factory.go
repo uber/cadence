@@ -24,6 +24,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"sync"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
@@ -107,16 +108,6 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 	return newMetadataPersistenceV2(conn, f.clusterName, f.logger)
 }
 
-// NewMetadataStoreV1 returns the default metadatastore
-func (f *Factory) NewMetadataStoreV1() (p.MetadataStore, error) {
-	return f.NewMetadataStore()
-}
-
-// NewMetadataStoreV2 returns the default metadatastore
-func (f *Factory) NewMetadataStoreV2() (p.MetadataStore, error) {
-	return f.NewMetadataStore()
-}
-
 // NewExecutionStore returns an ExecutionStore for a given shardID
 func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	conn, err := f.dbConn.get()
@@ -132,7 +123,7 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 }
 
 // NewQueue returns a new queue backed by sql
-func (f *Factory) NewQueue(queueType int) (p.Queue, error) {
+func (f *Factory) NewQueue(queueType common.QueueType) (p.Queue, error) {
 	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err
