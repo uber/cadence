@@ -135,8 +135,6 @@ type Config struct {
 
 	// encoding the history events
 	EventEncodingType dynamicconfig.StringPropertyFnWithDomainFilter
-	// whether or not using eventsV2
-	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 	// whether or not using ParentClosePolicy
 	EnableParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
 	// whether or not enable system workers for processing parent close policy task
@@ -251,7 +249,6 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
 		EventEncodingType:                   dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
-		EnableEventsV2:                      dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
 		EnableParentClosePolicy:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableParentClosePolicy, true),
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),

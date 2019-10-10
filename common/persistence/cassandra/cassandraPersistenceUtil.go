@@ -30,6 +30,8 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
+const defaultEventStoreVersionValue = -1
+
 func applyWorkflowMutationBatch(
 	batch *gocql.Batch,
 	shardID int,
@@ -451,7 +453,7 @@ func createExecution(
 			executionInfo.ExpirationTime,
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
-			executionInfo.EventStoreVersion,
+			defaultEventStoreVersionValue,
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
@@ -521,7 +523,7 @@ func createExecution(
 			executionInfo.ExpirationTime,
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
-			executionInfo.EventStoreVersion,
+			defaultEventStoreVersionValue,
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
@@ -596,7 +598,7 @@ func createExecution(
 			executionInfo.ExpirationTime,
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
-			executionInfo.EventStoreVersion,
+			defaultEventStoreVersionValue,
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
@@ -709,7 +711,7 @@ func updateExecution(
 			executionInfo.ExpirationTime,
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
-			executionInfo.EventStoreVersion,
+			defaultEventStoreVersionValue,
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
@@ -780,7 +782,7 @@ func updateExecution(
 			executionInfo.ExpirationTime,
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
-			executionInfo.EventStoreVersion,
+			defaultEventStoreVersionValue,
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
@@ -856,7 +858,7 @@ func updateExecution(
 			executionInfo.ExpirationTime,
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
-			executionInfo.EventStoreVersion,
+			defaultEventStoreVersionValue,
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
@@ -1916,8 +1918,6 @@ func createWorkflowExecutionInfo(
 			info.ExpirationTime = v.(time.Time)
 		case "non_retriable_errors":
 			info.NonRetriableErrors = v.([]string)
-		case "event_store_version":
-			info.EventStoreVersion = int32(v.(int))
 		case "branch_token":
 			info.BranchToken = v.([]byte)
 		case "cron_schedule":

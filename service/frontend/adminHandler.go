@@ -352,11 +352,6 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			PersistenceToken: nil, // this is the initialized value
 			ReplicationInfo:  response.ReplicationInfo,
 		}
-		// calculate event store version based on if branch token exist
-		token.EventStoreVersion = persistence.EventStoreVersionV2
-		if token.BranchToken == nil {
-			token.EventStoreVersion = 0
-		}
 	}
 
 	if token.FirstEventID >= token.NextEventID {

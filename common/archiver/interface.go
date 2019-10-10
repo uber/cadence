@@ -39,7 +39,6 @@ type (
 		DomainName           string
 		WorkflowID           string
 		RunID                string
-		EventStoreVersion    int32
 		BranchToken          []byte
 		NextEventID          int64
 		CloseFailoverVersion int64

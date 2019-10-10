@@ -32,12 +32,6 @@ import (
 	"github.com/uber/cadence/common/codec"
 )
 
-// TODO remove this event store version
-const (
-	// 0/1 or empty are all considered as V1
-	EventStoreVersionV2 = 2
-)
-
 // Domain status
 const (
 	DomainStatusRegistered = iota
@@ -315,8 +309,6 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		// events V2 related
-		EventStoreVersion int32
 		BranchToken       []byte
 		// Cron
 		CronSchedule      string

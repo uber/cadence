@@ -34,7 +34,7 @@ import (
 
 type (
 	eventsCache interface {
-		getEvent(domainID, workflowID, runID string, firstEventID, eventID int64, eventStoreVersion int32,
+		getEvent(domainID, workflowID, runID string, firstEventID, eventID int64,
 			branchToken []byte) (*shared.HistoryEvent, error)
 		putEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent)
 		deleteEvent(domainID, workflowID, runID string, eventID int64)
@@ -95,7 +95,7 @@ func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
 	}
 }
 
-func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, firstEventID, eventID int64, eventStoreVersion int32,
+func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, firstEventID, eventID int64,
 	branchToken []byte) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetEventScope, metrics.CacheLatency)
@@ -111,7 +111,7 @@ func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, firstEven
 	}
 
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
-	event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, firstEventID, eventID, eventStoreVersion, branchToken)
+	event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, firstEventID, eventID, branchToken)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
 		e.logger.Error("EventsCache unable to retrieve event from store",
@@ -146,7 +146,7 @@ func (e *eventsCacheImpl) deleteEvent(domainID, workflowID, runID string, eventI
 }
 
 func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID string, firstEventID, eventID int64,
-	eventStoreVersion int32, branchToken []byte) (*shared.HistoryEvent, error) {
+	branchToken []byte) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetFromStoreScope, metrics.CacheLatency)
 	defer sw.Stop()

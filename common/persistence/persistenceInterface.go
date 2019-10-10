@@ -220,8 +220,6 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		// events V2 related
-		EventStoreVersion int32
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
