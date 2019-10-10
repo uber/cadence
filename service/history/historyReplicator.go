@@ -228,7 +228,11 @@ func (r *historyReplicator) SyncActivity(
 				msBuilder.GetNextEventID(),
 			)
 		}
-		return newNDCRetryTaskErrorWithHint()
+		// TODO: add version history into the sync activity
+		// compare LCA of the incoming version history with local version history
+		// if the LCA is the last item of local version history
+		// do re-send else discard this task
+		return nil
 	}
 
 	ai, ok := msBuilder.GetActivityInfo(scheduleID)

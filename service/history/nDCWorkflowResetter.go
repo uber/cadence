@@ -42,6 +42,8 @@ type (
 			now time.Time,
 			baseEventID int64,
 			baseVersion int64,
+			incomingFirstEventID int64,
+			incomingVersion int64,
 		) (mutableState, error)
 	}
 
@@ -94,9 +96,17 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	now time.Time,
 	baseEventID int64,
 	baseVersion int64,
+	incomingFirstEventID int64,
+	incomingVersion int64,
 ) (mutableState, error) {
 
-	baseBranchToken, err := r.getBaseBranchToken(ctx, baseEventID, baseVersion)
+	baseBranchToken, err := r.getBaseBranchToken(
+		ctx,
+		baseEventID,
+		baseVersion,
+		incomingFirstEventID,
+		incomingVersion,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +166,8 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 	ctx ctx.Context,
 	baseEventID int64,
 	baseVersion int64,
+	incomingFirstEventID int64,
+	incomingVersion int64,
 ) (baseBranchToken []byte, retError error) {
 
 	baseWorkflow, err := r.transactionMgr.loadNDCWorkflow(
@@ -176,7 +188,18 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 		persistence.NewVersionHistoryItem(baseEventID, baseVersion),
 	)
 	if err != nil {
-		return nil, newNDCRetryTaskErrorWithHint()
+		// the base event and incoming event are from different branch
+		// only re-replicate the gap on the incoming branch
+		// the base branch event will eventually arrived
+		return nil, newNDCRetryTaskErrorWithHint(
+			r.domainID,
+			r.workflowID,
+			r.newRunID,
+			nil,
+			nil,
+			common.Int64Ptr(incomingFirstEventID),
+			common.Int64Ptr(incomingVersion),
+		)
 	}
 
 	baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)

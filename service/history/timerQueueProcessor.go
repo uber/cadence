@@ -88,7 +88,18 @@ func newTimerQueueProcessor(
 				func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
 					return historyService.ReplicateRawEvents(ctx, request)
 				},
-				persistence.NewPayloadSerializer(),
+				shard.GetService().GetPayloadSerializer(),
+				historyRereplicationTimeout,
+				logger,
+			)
+			nDCHistoryReplicator := xdc.NewNDCHistoryRereplicator(
+				currentClusterName,
+				shard.GetDomainCache(),
+				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
+				func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+					return historyService.ReplicateEventsV2(ctx, request)
+				},
+				shard.GetService().GetPayloadSerializer(),
 				historyRereplicationTimeout,
 				logger,
 			)
@@ -98,6 +109,7 @@ func newTimerQueueProcessor(
 				clusterName,
 				taskAllocator,
 				historyRereplicator,
+				nDCHistoryReplicator,
 				logger,
 			)
 		}

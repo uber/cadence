@@ -51,23 +51,24 @@ type (
 	timerQueueStandbyProcessorSuite struct {
 		suite.Suite
 
-		mockCtrl                 *gomock.Controller
-		mockShardManager         *mocks.ShardManager
-		mockHistoryEngine        *historyEngineImpl
-		mockDomainCache          *cache.DomainCacheMock
-		mockVisibilityMgr        *mocks.VisibilityManager
-		mockExecutionMgr         *mocks.ExecutionManager
-		mockHistoryMgr           *mocks.HistoryManager
-		mockShard                ShardContext
-		mockClusterMetadata      *mocks.ClusterMetadata
-		mockMessagingClient      messaging.Client
-		mockService              service.Service
-		mockClientBean           *client.MockClientBean
-		mockHistoryRereplicator  *xdc.MockHistoryRereplicator
-		logger                   log.Logger
-		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *MockReplicatorQueueProcessor
-		mockTimerProcessor       *MockTimerQueueProcessor
+		mockCtrl                   *gomock.Controller
+		mockShardManager           *mocks.ShardManager
+		mockHistoryEngine          *historyEngineImpl
+		mockDomainCache            *cache.DomainCacheMock
+		mockVisibilityMgr          *mocks.VisibilityManager
+		mockExecutionMgr           *mocks.ExecutionManager
+		mockHistoryMgr             *mocks.HistoryManager
+		mockShard                  ShardContext
+		mockClusterMetadata        *mocks.ClusterMetadata
+		mockMessagingClient        messaging.Client
+		mockService                service.Service
+		mockClientBean             *client.MockClientBean
+		mockHistoryRereplicator    *xdc.MockHistoryRereplicator
+		mockNDCHistoryRereplicator *xdc.MockNDCHistoryRereplicator
+		logger                     log.Logger
+		mockTxProcessor            *MockTransferQueueProcessor
+		mockReplicationProcessor   *MockReplicatorQueueProcessor
+		mockTimerProcessor         *MockTimerQueueProcessor
 
 		domainID                   string
 		domainEntry                *cache.DomainCacheEntry
@@ -96,6 +97,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockHistoryRereplicator = &xdc.MockHistoryRereplicator{}
+	s.mockNDCHistoryRereplicator = &xdc.MockNDCHistoryRereplicator{}
 	// ack manager will use the domain information
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testGlobalDomainEntry, nil)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
@@ -158,6 +160,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		s.clusterName,
 		newTaskAllocator(s.mockShard),
 		s.mockHistoryRereplicator,
+		s.mockNDCHistoryRereplicator,
 		s.logger,
 	)
 

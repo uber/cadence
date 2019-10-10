@@ -57,8 +57,9 @@ type (
 
 	activityReplicationTask struct {
 		workflowReplicationTask
-		req                 *h.SyncActivityRequest
-		historyRereplicator xdc.HistoryRereplicator
+		req                    *h.SyncActivityRequest
+		historyRereplicator    xdc.HistoryRereplicator
+		nDCHistoryRereplicator xdc.NDCHistoryRereplicator
 	}
 
 	historyReplicationTask struct {
@@ -77,8 +78,8 @@ type (
 
 	historyReplicationV2Task struct {
 		workflowReplicationTask
-		req *h.ReplicateEventsV2Request
-		// TODO add history resend v2 here
+		req                    *h.ReplicateEventsV2Request
+		nDCHistoryRereplicator xdc.NDCHistoryRereplicator
 	}
 )
 
@@ -100,6 +101,7 @@ func newActivityReplicationTask(
 	historyClient history.Client,
 	metricsClient metrics.Client,
 	historyRereplicator xdc.HistoryRereplicator,
+	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
 ) *activityReplicationTask {
 
 	attr := task.SyncActicvityTaskAttributes
@@ -141,7 +143,8 @@ func newActivityReplicationTask(
 			LastWorkerIdentity: attr.LastWorkerIdentity,
 			LastFailureDetails: attr.LastFailureDetails,
 		},
-		historyRereplicator: historyRereplicator,
+		historyRereplicator:    historyRereplicator,
+		nDCHistoryRereplicator: nDCHistoryRereplicator,
 	}
 }
 
@@ -252,7 +255,7 @@ func newHistoryReplicationV2Task(
 	timeSource clock.TimeSource,
 	historyClient history.Client,
 	metricsClient metrics.Client,
-	// TODO add history resend v2 here
+	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
 ) *historyReplicationV2Task {
 
 	attr := task.HistoryTaskV2Attributes
@@ -287,6 +290,7 @@ func newHistoryReplicationV2Task(
 			NewRunEvents:        attr.NewRunEvents,
 			ResetWorkflow:       attr.ResetWorkflow,
 		},
+		nDCHistoryRereplicator: nDCHistoryRereplicator,
 	}
 }
 
@@ -302,7 +306,7 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 	}
 
 	retryV1Err, okV1 := t.convertRetryTaskError(err)
-	_, okV2 := t.convertRetryTaskV2Error(err)
+	retryV2Err, okV2 := t.convertRetryTaskV2Error(err)
 
 	if !okV1 && !okV2 {
 		return err
@@ -332,6 +336,19 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 		}
 	} else if okV2 {
 		// TODO execute v2 resend logic here before calling execute again
+		if err := t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
+			retryV2Err.GetDomainId(),
+			retryV2Err.GetWorkflowId(),
+			retryV2Err.GetRunId(),
+			retryV2Err.StartEventId,
+			retryV2Err.StartEventVersion,
+			retryV2Err.EndEventId,
+			retryV2Err.EndEventVersion,
+		); err != nil {
+			t.logger.Error("error resend history", tag.Error(err))
+			// should return the replication error, not the resending error
+			return err
+		}
 	} else {
 		return &shared.InternalServiceError{Message: "activityReplicationTask encounter error which cannot be handled"}
 	}
@@ -429,7 +446,7 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 		return err
 	}
 
-	_, ok := t.convertRetryTaskV2Error(err)
+	retryErr, ok := t.convertRetryTaskV2Error(err)
 	if !ok {
 		return err
 	}
@@ -438,8 +455,19 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	// TODO execute v2 resend logic here before calling execute again
-
+	if err := t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
+		retryErr.GetDomainId(),
+		retryErr.GetWorkflowId(),
+		retryErr.GetRunId(),
+		retryErr.StartEventId,
+		retryErr.StartEventVersion,
+		retryErr.EndEventId,
+		retryErr.EndEventVersion,
+	); err != nil {
+		t.logger.Error("error resend history", tag.Error(err))
+		// should return the replication error, not the resending error
+		return err
+	}
 	// should try again
 	return t.Execute()
 }
