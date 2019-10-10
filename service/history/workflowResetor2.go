@@ -148,105 +148,22 @@ func (r *workflowResetorImpl2) ResetWorkflowExecution(
 		}
 	}
 
-	resetBranchToken, err := r.generateBranchToken(
-		domainID,
-		workflowID,
-		baseBranchToken,
-		baseResetUntilEventID,
-		resetRunID,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	stateRebuilder := newNDCStateRebuilder(r.shard, r.logger)
-	resetContext := newWorkflowExecutionContext(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(resetRunID),
-		},
-		r.shard,
-		r.shard.GetExecutionManager(),
-		r.logger,
-	)
-	resetMutableState, resetHistorySize, err := stateRebuilder.rebuild(
+	resetContext, resetMutableState, err := r.prepareResetWorkflow(
 		ctx,
-		r.shard.GetTimeSource().Now(),
-		definition.NewWorkflowIdentifier(
-			domainID,
-			workflowID,
-			baseRunID,
-		),
-		baseBranchToken,
-		baseResetUntilEventID,
-		definition.NewWorkflowIdentifier(
-			domainID,
-			workflowID,
-			resetRunID,
-		),
-		resetBranchToken,
-		resetRequestID,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	resetContext.setHistorySize(resetHistorySize)
-
-	baseLastEventVersion := resetMutableState.GetCurrentVersion()
-	if baseLastEventVersion > *resetWorkflowVersion {
-		return "", &shared.InternalServiceError{
-			Message: "workflowResetorImpl2 encounter version mismatch.",
-		}
-	}
-	if err := resetMutableState.UpdateCurrentVersion(*resetWorkflowVersion, false); err != nil {
-		return "", err
-	}
-
-	decision, ok := resetMutableState.GetInFlightDecision()
-	if !ok {
-		return "", &shared.InternalServiceError{
-			Message: "workflowResetorImpl2 encounter missing inflight decision.",
-		}
-	}
-
-	_, err = resetMutableState.AddDecisionTaskFailedEvent(
-		decision.ScheduleID,
-		decision.StartedID, shared.DecisionTaskFailedCauseResetWorkflow,
-		nil,
-		identityHistoryService,
-		resetReason,
-		baseRunID,
-		resetRunID,
-		baseLastEventVersion,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	if err := r.failInflightActivity(resetMutableState, terminateReason); err != nil {
-		return "", err
-	}
-
-	if err := r.reapplyContinueAsNewWorkflowEvents(
-		ctx,
-		resetMutableState,
 		domainID,
 		workflowID,
 		baseRunID,
 		baseBranchToken,
 		baseResetUntilEventID,
 		baseNextEventID,
-	); err != nil {
-		return "", err
-	}
-
-	if err := r.reapplyEvents(resetMutableState, additionalReapplyEvents); err != nil {
-		return "", err
-	}
-
-	if err := scheduleDecision(resetMutableState); err != nil {
+		resetRunID,
+		resetRequestID,
+		*resetWorkflowVersion,
+		terminateReason,
+		resetReason,
+		additionalReapplyEvents,
+	)
+	if err != nil {
 		return "", err
 	}
 
@@ -290,7 +207,128 @@ func (r *workflowResetorImpl2) ResetWorkflowExecution(
 			return "", err
 		}
 	}
+
 	return resetRunID, err
+}
+
+func (r *workflowResetorImpl2) prepareResetWorkflow(
+	ctx ctx.Context,
+	domainID string,
+	workflowID string,
+	baseRunID string,
+	baseBranchToken []byte,
+	baseResetUntilEventID int64,
+	baseNextEventID int64,
+	resetRunID string,
+	resetRequestID string,
+	resetWorkflowVersion int64,
+	terminateReason string,
+	resetReason string,
+	additionalReapplyEvents []*shared.HistoryEvent,
+) (workflowExecutionContext, mutableState, error) {
+
+	resetBranchToken, err := r.generateBranchToken(
+		domainID,
+		workflowID,
+		baseBranchToken,
+		baseResetUntilEventID,
+		resetRunID,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	stateRebuilder := newNDCStateRebuilder(r.shard, r.logger)
+	resetContext := newWorkflowExecutionContext(
+		domainID,
+		shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(resetRunID),
+		},
+		r.shard,
+		r.shard.GetExecutionManager(),
+		r.logger,
+	)
+	resetMutableState, resetHistorySize, err := stateRebuilder.rebuild(
+		ctx,
+		r.shard.GetTimeSource().Now(),
+		definition.NewWorkflowIdentifier(
+			domainID,
+			workflowID,
+			baseRunID,
+		),
+		baseBranchToken,
+		baseResetUntilEventID,
+		definition.NewWorkflowIdentifier(
+			domainID,
+			workflowID,
+			resetRunID,
+		),
+		resetBranchToken,
+		resetRequestID,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resetContext.setHistorySize(resetHistorySize)
+
+	baseLastEventVersion := resetMutableState.GetCurrentVersion()
+	if baseLastEventVersion > resetWorkflowVersion {
+		return nil, nil, &shared.InternalServiceError{
+			Message: "workflowResetorImpl2 encounter version mismatch.",
+		}
+	}
+	if err := resetMutableState.UpdateCurrentVersion(resetWorkflowVersion, false); err != nil {
+		return nil, nil, err
+	}
+
+	decision, ok := resetMutableState.GetInFlightDecision()
+	if !ok {
+		return nil, nil, &shared.InternalServiceError{
+			Message: "workflowResetorImpl2 encounter missing inflight decision.",
+		}
+	}
+
+	_, err = resetMutableState.AddDecisionTaskFailedEvent(
+		decision.ScheduleID,
+		decision.StartedID, shared.DecisionTaskFailedCauseResetWorkflow,
+		nil,
+		identityHistoryService,
+		resetReason,
+		baseRunID,
+		resetRunID,
+		baseLastEventVersion,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := r.failInflightActivity(resetMutableState, terminateReason); err != nil {
+		return nil, nil, err
+	}
+
+	if err := r.reapplyContinueAsNewWorkflowEvents(
+		ctx,
+		resetMutableState,
+		domainID,
+		workflowID,
+		baseRunID,
+		baseBranchToken,
+		baseResetUntilEventID,
+		baseNextEventID,
+	); err != nil {
+		return nil, nil, err
+	}
+
+	if err := r.reapplyEvents(resetMutableState, additionalReapplyEvents); err != nil {
+		return nil, nil, err
+	}
+
+	if err := scheduleDecision(resetMutableState); err != nil {
+		return nil, nil, err
+	}
+	return resetContext, resetMutableState, nil
 }
 
 func (r *workflowResetorImpl2) failInflightActivity(
