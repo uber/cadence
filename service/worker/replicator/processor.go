@@ -441,6 +441,7 @@ func (p *replicationTaskProcessor) filterTask(
 	}
 
 	shouldProcessTask := false
+
 FilterLoop:
 	for _, targetCluster := range domainEntry.GetReplicationConfig().Clusters {
 		if p.currentCluster == targetCluster.ClusterName {
