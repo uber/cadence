@@ -146,6 +146,7 @@ func (s *adminHandlerSuite) Test_ConvertIndexedValueTypeToESDataType() {
 }
 
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvalidWorkflowID() {
+
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&admin.GetWorkflowExecutionRawHistoryV2Request{
