@@ -37,7 +37,7 @@ import (
 )
 
 type (
-	workflowResetorImpl2 struct {
+	workflowResetterImpl struct {
 		shard           ShardContext
 		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
@@ -48,13 +48,13 @@ type (
 	}
 )
 
-func newWorkflowResetor2(
+func newWorkflowResetter(
 	shard ShardContext,
 	historyCache *historyCache,
 	transactionMgr nDCTransactionMgr,
 	logger log.Logger,
-) *workflowResetorImpl2 {
-	return &workflowResetorImpl2{
+) *workflowResetterImpl {
+	return &workflowResetterImpl{
 		shard:           shard,
 		domainCache:     shard.GetDomainCache(),
 		clusterMetadata: shard.GetClusterMetadata(),
@@ -67,7 +67,7 @@ func newWorkflowResetor2(
 
 // ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted/decisionTaskFailed/decisionTaskTimeout.
 // It will then fail the decision with cause of "reset_workflow"
-func (r *workflowResetorImpl2) ResetWorkflowExecution(
+func (r *workflowResetterImpl) ResetWorkflowExecution(
 	ctx ctx.Context,
 	domainName string,
 	workflowID string,
@@ -110,7 +110,7 @@ func (r *workflowResetorImpl2) ResetWorkflowExecution(
 	if err != nil {
 		return "", err
 	} else if currentRunID == "" {
-		return "", &shared.InternalServiceError{Message: "workflowResetorImpl2 encounter missing current workflow."}
+		return "", &shared.InternalServiceError{Message: "workflowResetterImpl encounter missing current workflow."}
 	}
 
 	if baseRunID == currentRunID {
@@ -178,7 +178,7 @@ func (r *workflowResetorImpl2) ResetWorkflowExecution(
 	return resetRunID, err
 }
 
-func (r *workflowResetorImpl2) prepareResetWorkflow(
+func (r *workflowResetterImpl) prepareResetWorkflow(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,
@@ -243,7 +243,7 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 	baseLastEventVersion := resetMutableState.GetCurrentVersion()
 	if baseLastEventVersion > resetWorkflowVersion {
 		return nil, &shared.InternalServiceError{
-			Message: "workflowResetorImpl2 encounter version mismatch.",
+			Message: "workflowResetterImpl encounter version mismatch.",
 		}
 	}
 	if err := resetMutableState.UpdateCurrentVersion(resetWorkflowVersion, false); err != nil {
@@ -253,7 +253,7 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 	decision, ok := resetMutableState.GetInFlightDecision()
 	if !ok {
 		return nil, &shared.InternalServiceError{
-			Message: "workflowResetorImpl2 encounter missing inflight decision.",
+			Message: "workflowResetterImpl encounter missing inflight decision.",
 		}
 	}
 
@@ -306,7 +306,7 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 	), nil
 }
 
-func (r *workflowResetorImpl2) persistToDB(
+func (r *workflowResetterImpl) persistToDB(
 	currentWorkflowTerminated bool,
 	currentWorkflow nDCWorkflow,
 	resetWorkflow nDCWorkflow,
@@ -350,7 +350,7 @@ func (r *workflowResetorImpl2) persistToDB(
 	)
 }
 
-func (r *workflowResetorImpl2) failInflightActivity(
+func (r *workflowResetterImpl) failInflightActivity(
 	mutableState mutableState,
 	terminateReason string,
 ) error {
@@ -373,7 +373,7 @@ func (r *workflowResetorImpl2) failInflightActivity(
 	return nil
 }
 
-func (r *workflowResetorImpl2) generateBranchToken(
+func (r *workflowResetterImpl) generateBranchToken(
 	domainID string,
 	workflowID string,
 	forkBranchToken []byte,
@@ -401,13 +401,13 @@ func (r *workflowResetorImpl2) generateBranchToken(
 	}); errComplete != nil {
 		r.logger.WithTags(
 			tag.Error(errComplete),
-		).Error("workflowResetorImpl2 unable to complete creation of new branch.")
+		).Error("workflowResetterImpl unable to complete creation of new branch.")
 	}
 
 	return resetBranchToken, nil
 }
 
-func (r *workflowResetorImpl2) terminateWorkflow(
+func (r *workflowResetterImpl) terminateWorkflow(
 	mutableState mutableState,
 	terminateReason string,
 ) error {
@@ -430,7 +430,7 @@ func (r *workflowResetorImpl2) terminateWorkflow(
 	return err
 }
 
-func (r *workflowResetorImpl2) reapplyContinueAsNewWorkflowEvents(
+func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 	ctx ctx.Context,
 	resetMutableState mutableState,
 	domainID string,
@@ -484,7 +484,7 @@ func (r *workflowResetorImpl2) reapplyContinueAsNewWorkflowEvents(
 	return nil
 }
 
-func (r *workflowResetorImpl2) reapplyWorkflowEvents(
+func (r *workflowResetterImpl) reapplyWorkflowEvents(
 	mutableState mutableState,
 	workflowIdentifier definition.WorkflowIdentifier,
 	firstEventID int64,
@@ -526,7 +526,7 @@ func (r *workflowResetorImpl2) reapplyWorkflowEvents(
 	return nextRunID, nil
 }
 
-func (r *workflowResetorImpl2) reapplyEvents(
+func (r *workflowResetterImpl) reapplyEvents(
 	mutableState mutableState,
 	events []*shared.HistoryEvent,
 ) error {
@@ -549,7 +549,7 @@ func (r *workflowResetorImpl2) reapplyEvents(
 	return nil
 }
 
-func (r *workflowResetorImpl2) getPaginationFn(
+func (r *workflowResetterImpl) getPaginationFn(
 	workflowIdentifier definition.WorkflowIdentifier,
 	firstEventID int64,
 	nextEventID int64,
