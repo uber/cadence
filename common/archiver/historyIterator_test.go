@@ -110,6 +110,13 @@ func (s *HistoryIteratorSuite) TestReadHistory_Success_EventsV2() {
 	mockHistoryV2Manager.AssertExpectations(s.T())
 }
 
+// In the following test:
+//   batchInfo represents # of events for each history batch.
+//   page represents the metadata of the set of history batches that should be requested by the iterator
+//   and returned by the history manager. Each page specifies the index of the first history batch it should
+//   return, # of batches to return and first/last event failover version for the set of batches returned.
+//   Note that is possible that a history batch is contained in multiple pages.
+
 func (s *HistoryIteratorSuite) TestReadHistoryBatches_Fail_FirstCallToReadHistoryGivesError() {
 	batchInfo := []int{1}
 	pages := []page{
