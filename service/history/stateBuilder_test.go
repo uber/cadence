@@ -189,6 +189,7 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 	s.mockMutableState.On("GetExecutionInfo").Return(executionInfo)
 
 	s.mockMutableState.On("ClearStickyness").Once()
+	s.mockMutableState.On("SetHistoryTree", testRunID).Return(nil)
 	_, _, _, err := s.stateBuilder.applyEvents(testDomainID, requestID, execution, s.toHistory(event), nil, false)
 	s.Nil(err)
 
