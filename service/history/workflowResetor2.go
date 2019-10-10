@@ -148,7 +148,7 @@ func (r *workflowResetorImpl2) ResetWorkflowExecution(
 		}
 	}
 
-	resetContext, resetMutableState, err := r.prepareResetWorkflow(
+	resetWorkflow, err := r.prepareResetWorkflow(
 		ctx,
 		domainID,
 		workflowID,
@@ -167,45 +167,12 @@ func (r *workflowResetorImpl2) ResetWorkflowExecution(
 		return "", err
 	}
 
-	if !currentWorkflowTerminated {
-		currentMutableState := currentWorkflow.getMutableState()
-		currentRunID := currentMutableState.GetExecutionInfo().RunID
-		currentLastWriteVersion, err := currentMutableState.GetLastWriteVersion()
-		if err != nil {
-			return "", err
-		}
-
-		now := r.shard.GetTimeSource().Now()
-		resetWorkflowSnapshot, resetWorkflowEventsSeq, err := resetMutableState.CloseTransactionAsSnapshot(
-			now,
-			transactionPolicyActive,
-		)
-		if err != nil {
-			return "", err
-		}
-		resetHistorySize, err := resetContext.persistFirstWorkflowEvents(resetWorkflowEventsSeq[0])
-		if err != nil {
-			return "", err
-		}
-
-		if err := resetContext.createWorkflowExecution(
-			resetWorkflowSnapshot,
-			resetHistorySize,
-			now,
-			persistence.CreateWorkflowModeContinueAsNew,
-			currentRunID,
-			currentLastWriteVersion,
-		); err != nil {
-			return "", err
-		}
-	} else {
-		if err := currentWorkflow.getContext().updateWorkflowExecutionWithNewAsActive(
-			r.shard.GetTimeSource().Now(),
-			resetContext,
-			resetMutableState,
-		); err != nil {
-			return "", err
-		}
+	if err := r.persistToDB(
+		currentWorkflowTerminated,
+		currentWorkflow,
+		resetWorkflow,
+	); err != nil {
+		return "", err
 	}
 
 	return resetRunID, err
@@ -225,7 +192,7 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 	terminateReason string,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
-) (workflowExecutionContext, mutableState, error) {
+) (nDCWorkflow, error) {
 
 	resetBranchToken, err := r.generateBranchToken(
 		domainID,
@@ -235,7 +202,7 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 		resetRunID,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	stateRebuilder := newNDCStateRebuilder(r.shard, r.logger)
@@ -268,24 +235,24 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 		resetRequestID,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	resetContext.setHistorySize(resetHistorySize)
 
 	baseLastEventVersion := resetMutableState.GetCurrentVersion()
 	if baseLastEventVersion > resetWorkflowVersion {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, &shared.InternalServiceError{
 			Message: "workflowResetorImpl2 encounter version mismatch.",
 		}
 	}
 	if err := resetMutableState.UpdateCurrentVersion(resetWorkflowVersion, false); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	decision, ok := resetMutableState.GetInFlightDecision()
 	if !ok {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, &shared.InternalServiceError{
 			Message: "workflowResetorImpl2 encounter missing inflight decision.",
 		}
 	}
@@ -301,11 +268,11 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 		baseLastEventVersion,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := r.failInflightActivity(resetMutableState, terminateReason); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := r.reapplyContinueAsNewWorkflowEvents(
@@ -318,17 +285,69 @@ func (r *workflowResetorImpl2) prepareResetWorkflow(
 		baseResetUntilEventID,
 		baseNextEventID,
 	); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := r.reapplyEvents(resetMutableState, additionalReapplyEvents); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := scheduleDecision(resetMutableState); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return resetContext, resetMutableState, nil
+
+	return newNDCWorkflow(
+		ctx,
+		r.domainCache,
+		r.clusterMetadata,
+		resetContext,
+		resetMutableState,
+		noopReleaseFn,
+	), nil
+}
+
+func (r *workflowResetorImpl2) persistToDB(
+	currentWorkflowTerminated bool,
+	currentWorkflow nDCWorkflow,
+	resetWorkflow nDCWorkflow,
+) error {
+
+	if currentWorkflowTerminated {
+		return currentWorkflow.getContext().updateWorkflowExecutionWithNewAsActive(
+			r.shard.GetTimeSource().Now(),
+			resetWorkflow.getContext(),
+			resetWorkflow.getMutableState(),
+		)
+	}
+
+	currentMutableState := currentWorkflow.getMutableState()
+	currentRunID := currentMutableState.GetExecutionInfo().RunID
+	currentLastWriteVersion, err := currentMutableState.GetLastWriteVersion()
+	if err != nil {
+		return err
+	}
+
+	now := r.shard.GetTimeSource().Now()
+	resetWorkflowSnapshot, resetWorkflowEventsSeq, err := resetWorkflow.getMutableState().CloseTransactionAsSnapshot(
+		now,
+		transactionPolicyActive,
+	)
+	if err != nil {
+		return err
+	}
+	resetHistorySize, err := resetWorkflow.getContext().persistFirstWorkflowEvents(resetWorkflowEventsSeq[0])
+	if err != nil {
+		return err
+	}
+
+	return resetWorkflow.getContext().createWorkflowExecution(
+		resetWorkflowSnapshot,
+		resetHistorySize,
+		now,
+		persistence.CreateWorkflowModeContinueAsNew,
+		currentRunID,
+		currentLastWriteVersion,
+	)
 }
 
 func (r *workflowResetorImpl2) failInflightActivity(
