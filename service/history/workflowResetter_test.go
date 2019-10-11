@@ -110,6 +110,66 @@ func (s *workflowResetterSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
+func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
+	firstEventID := common.FirstEventID
+	nextEventID := int64(6)
+	branchToken := []byte("some random branch token")
+
+	newRunID := uuid.New()
+	event1 := &shared.HistoryEvent{
+		EventId:                                 common.Int64Ptr(1),
+		EventType:                               shared.EventTypeWorkflowExecutionStarted.Ptr(),
+		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
+	}
+	event2 := &shared.HistoryEvent{
+		EventId:                              common.Int64Ptr(2),
+		EventType:                            shared.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	}
+	event3 := &shared.HistoryEvent{
+		EventId:                            common.Int64Ptr(3),
+		EventType:                          shared.EventTypeDecisionTaskStarted.Ptr(),
+		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
+	}
+	event4 := &shared.HistoryEvent{
+		EventId:                              common.Int64Ptr(4),
+		EventType:                            shared.EventTypeDecisionTaskCompleted.Ptr(),
+		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
+	}
+	event5 := &shared.HistoryEvent{
+		EventId:   common.Int64Ptr(5),
+		EventType: shared.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
+		WorkflowExecutionContinuedAsNewEventAttributes: &shared.WorkflowExecutionContinuedAsNewEventAttributes{
+			NewExecutionRunId: common.StringPtr(newRunID),
+		},
+	}
+	events := []*shared.HistoryEvent{event1, event2, event3, event4, event5}
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", &persistence.ReadHistoryBranchRequest{
+		BranchToken:   branchToken,
+		MinEventID:    firstEventID,
+		MaxEventID:    nextEventID,
+		PageSize:      nDCDefaultPageSize,
+		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
+		History:       []*shared.History{{Events: events}},
+		NextPageToken: nil,
+	}, nil).Once()
+
+	mutableState := &mockMutableState{}
+	defer mutableState.AssertExpectations(s.T())
+
+	nextRunID, err := s.workflowResetter.reapplyWorkflowEvents(
+		mutableState,
+		definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.currentRunID),
+		firstEventID,
+		nextEventID,
+		branchToken,
+	)
+	s.NoError(err)
+	s.Equal(newRunID, nextRunID)
+}
+
 func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	firstEventID := common.FirstEventID
 	nextEventID := int64(6)

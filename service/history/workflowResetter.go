@@ -99,6 +99,8 @@ func newWorkflowResetter(
 	}
 }
 
+// TODO missing input validation on reset event ID - 1 being decision task started event
+
 func (r *workflowResetterImpl) ResetWorkflowExecution(
 	ctx ctx.Context,
 	domainName string,
