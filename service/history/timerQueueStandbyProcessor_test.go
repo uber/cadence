@@ -92,7 +92,6 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
-	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -111,7 +110,6 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
 		shardManager:              s.mockShardManager,
-		historyMgr:                s.mockHistoryMgr,
 		clusterMetadata:           s.mockClusterMetadata,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
@@ -140,7 +138,6 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		currentClusterName:   s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
-		historyMgr:           s.mockHistoryMgr,
 		executionManager:     s.mockExecutionMgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
@@ -172,7 +169,6 @@ func (s *timerQueueStandbyProcessorSuite) TearDownTest() {
 	s.mockCtrl.Finish()
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockHistoryRereplicator.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
