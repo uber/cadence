@@ -241,23 +241,8 @@ func (v *VersionHistory) ContainsItem(
 ) bool {
 
 	prevEventID := common.FirstEventID - 1
-	lastItem, err := v.GetLastItem()
-	if err != nil {
-		return false
-	}
-
 	for _, currentItem := range v.items {
 		if item.GetVersion() == currentItem.GetVersion() {
-			// this is a special handling for event id = 0
-			if (item.GetEventID() == common.FirstEventID-1) && item.GetEventID() <= currentItem.GetEventID() {
-				return true
-			}
-			// this is a special handling for event id = last event id + 1
-			// because if the versions are the equal and the different between event ids is one
-			// the event is virtually appendable to this version history
-			if (*lastItem == *currentItem) && (item.GetEventID() == currentItem.GetEventID()+1) {
-				return true
-			}
 			if prevEventID < item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {
 				return true
 			}
@@ -332,6 +317,16 @@ func (v *VersionHistory) GetLastItem() (*VersionHistoryItem, error) {
 	}
 
 	return v.items[len(v.items)-1].Duplicate(), nil
+}
+
+// ListItems lists all the items
+func (v *VersionHistory) ListItems() []*VersionHistoryItem {
+
+	result := []*VersionHistoryItem{}
+	for _, item := range v.items {
+		result = append(result, item.Duplicate())
+	}
+	return result
 }
 
 // IsEmpty indicate whether version history is empty
@@ -589,4 +584,14 @@ func (h *VersionHistories) GetCurrentVersionHistoryIndex() int {
 func (h *VersionHistories) GetCurrentVersionHistory() (*VersionHistory, error) {
 
 	return h.GetVersionHistory(h.GetCurrentVersionHistoryIndex())
+}
+
+// ListVersionHistories list all version histories
+func (h *VersionHistories) ListVersionHistories() []*VersionHistory {
+
+	versionHistories := []*VersionHistory{}
+	for _, history := range h.histories {
+		versionHistories = append(versionHistories, history.Duplicate())
+	}
+	return versionHistories
 }

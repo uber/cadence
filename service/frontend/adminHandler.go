@@ -648,9 +648,9 @@ func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 
 	// get branch based on the end event
 	endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
-	idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
-	if err != nil {
-		return nil, err
+	idx := findFirstVersionHistoryIndexByItem(versionHistories, endItem)
+	if idx < 0 {
+		return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
 	}
 	targetBranch, err = versionHistories.GetVersionHistory(idx)
 	if err != nil {
@@ -659,10 +659,10 @@ func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 
 	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
 	// Start event is not on the same branch as target branch
-	if !targetBranch.ContainsItem(startItem) {
-		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
-		if err != nil {
-			return nil, err
+	if !versionHistoryContainsItem(targetBranch, startItem) {
+		idx := findFirstVersionHistoryIndexByItem(versionHistories, startItem)
+		if idx < 0 {
+			return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
 		}
 		startBranch, err := versionHistories.GetVersionHistory(idx)
 		if err != nil {
@@ -773,4 +773,50 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 	token := &getWorkflowRawHistoryV2Token{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
+}
+
+func versionHistoryContainsItem(
+	versionHistory *persistence.VersionHistory,
+	item *persistence.VersionHistoryItem,
+) bool {
+
+	prevEventID := common.FirstEventID - 1
+	lastItem, err := versionHistory.GetLastItem()
+	if err != nil {
+		return false
+	}
+
+	for _, currentItem := range versionHistory.ListItems() {
+		if item.GetVersion() == currentItem.GetVersion() {
+			// this is a special handling for event id = 0
+			if (item.GetEventID() == common.FirstEventID-1) && item.GetEventID() <= currentItem.GetEventID() {
+				return true
+			}
+			// this is a special handling for event id = last event id + 1
+			// because if the versions are the equal and the different between event ids is one
+			// the event is virtually appendable to this version history
+			if (*lastItem == *currentItem) && (item.GetEventID() == currentItem.GetEventID()+1) {
+				return true
+			}
+			if prevEventID < item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {
+				return true
+			}
+		} else if item.GetVersion() < currentItem.GetVersion() {
+			return false
+		}
+		prevEventID = currentItem.GetEventID()
+	}
+	return false
+}
+
+func findFirstVersionHistoryIndexByItem(
+	versionHistories *persistence.VersionHistories,
+	item *persistence.VersionHistoryItem,
+) int {
+	for index, versionHistory := range versionHistories.ListVersionHistories() {
+		if versionHistoryContainsItem(versionHistory, item) {
+			return index
+		}
+	}
+	return -1
 }
