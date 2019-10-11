@@ -73,12 +73,12 @@ It also exposes the `thenApply` and `handle` methods. See the `Promise` JavaDoc 
 
 To convert a synchronous call:
 ```java
-String localName = activities.download(surceBucket, sourceFile);
+String localName = activities.download(sourceBucket, sourceFile);
 ```
 To asynchronous style, the method reference is passed to `Async.function` or `Async.procedure`
 followed by activity arguments:
 ```java
-Promise<String> localNamePromise = Async.function(activities::download, surceBucket, sourceFile);
+Promise<String> localNamePromise = Async.function(activities::download, sourceBucket, sourceFile);
 ```
 Then to wait synchronously for the result:
 ```java

@@ -69,7 +69,7 @@ To support such use cases, Cadence allows activity implementations that do not c
 
 ## Local Activities
 
-Some of the activities are very short lived and do not need the queing semantic, flow control, rate limiting and routing capabilities. For these Cadence supports so called _local activity_ feature. Local activities are executed in the same worker process as the workflow that invoked them. Consider using local activities for funcitons that are:
+Some of the activities are very short lived and do not need the queing semantic, flow control, rate limiting and routing capabilities. For these Cadence supports so called _local activity_ feature. Local activities are executed in the same worker process as the workflow that invoked them. Consider using local activities for functions that are:
 
 * no longer than a few seconds
 * do not require global rate limiting

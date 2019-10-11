@@ -58,7 +58,7 @@ different domains. Various configuration options like retention period or archiv
 
 ### Event
 An indivisible operation performed by your application. For example,
-acitvity_task_started, task_failed, or timer_canceled. Events are recorded in the event history.
+activity_task_started, task_failed, or timer_canceled. Events are recorded in the event history.
 
 ### Event History
 An append log of events for your application. History is durably persisted
