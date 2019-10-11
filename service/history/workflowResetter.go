@@ -322,6 +322,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
+	// TODO add checking of reset until event ID == decision task started ID + 1
 	decision, ok := resetMutableState.GetInFlightDecision()
 	if !ok {
 		return nil, &shared.InternalServiceError{
@@ -530,15 +531,24 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 		return err
 	}
 
+	getNextEventIDBranchToken := func(runID string) (nextEventID int64, branchToken []byte, retError error) {
+		workflow, err := r.transactionMgr.loadNDCWorkflow(ctx, domainID, workflowID, runID)
+		if err != nil {
+			return 0, nil, err
+		}
+		defer func() { workflow.getReleaseFn()(retError) }()
+
+		nextEventID = workflow.getMutableState().GetNextEventID()
+		branchToken, err = workflow.getMutableState().GetCurrentBranchToken()
+		if err != nil {
+			return 0, nil, err
+		}
+		return nextEventID, branchToken, nil
+	}
+
 	// second for remaining continue as new workflow, reapply eligible events
 	for len(nextRunID) != 0 {
-
-		nextWorkflow, err := r.transactionMgr.loadNDCWorkflow(ctx, domainID, workflowID, nextRunID)
-		if err != nil {
-			return err
-		}
-		nextWorkflowNextEventID := nextWorkflow.getMutableState().GetNextEventID()
-		nextWorkflowBranchToken, err := nextWorkflow.getMutableState().GetCurrentBranchToken()
+		nextWorkflowNextEventID, nextWorkflowBranchToken, err := getNextEventIDBranchToken(nextRunID)
 		if err != nil {
 			return err
 		}
