@@ -427,7 +427,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 
 	domainCache := cache.NewDomainCache(c.metadataMgr, c.clusterMetadata, c.frontEndService.GetMetricsClient(), c.logger)
 	c.adminHandler = frontend.NewAdminHandler(
-		c.frontEndService, c.historyConfig.NumHistoryShards, domainCache, c.metadataMgr, c.historyV2Mgr, params)
+		c.frontEndService, c.historyConfig.NumHistoryShards, domainCache, c.historyV2Mgr, params)
 	c.adminHandler.RegisterHandler()
 
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
