@@ -47,7 +47,6 @@ type (
 			baseResetUntilEventID int64,
 			terminateReason string,
 			resetReason string,
-			additionalReapplyEvents []*shared.HistoryEvent,
 		) (resetRunID string, retError error)
 
 		// resetWorkflow is the internal API, used by NDC history events reapplication
@@ -109,7 +108,6 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 	baseResetUntilEventID int64,
 	terminateReason string,
 	resetReason string,
-	additionalReapplyEvents []*shared.HistoryEvent,
 ) (resetRunID string, retError error) {
 
 	domainID, err := r.domainCache.GetDomainID(domainName)
@@ -197,7 +195,7 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 		currentWorkflow,
 		terminateReason,
 		resetReason,
-		additionalReapplyEvents,
+		nil,
 	); err != nil {
 		return "", err
 	}
