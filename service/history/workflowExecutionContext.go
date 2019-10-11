@@ -193,7 +193,9 @@ func (c *workflowExecutionContextImpl) unlock() {
 func (c *workflowExecutionContextImpl) clear() {
 	c.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.WorkflowContextCleared)
 	c.msBuilder = nil
-	c.stats = &persistence.ExecutionStats{}
+	c.stats = &persistence.ExecutionStats{
+		HistorySize: 0,
+	}
 }
 
 func (c *workflowExecutionContextImpl) getDomainID() string {
@@ -320,6 +322,7 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 
 	_, err := c.createWorkflowExecutionWithRetry(createRequest)
 	if err != nil {
+		c.clear() // clear history size
 		return err
 	}
 
