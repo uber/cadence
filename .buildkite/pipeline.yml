@@ -30,7 +30,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile EVENTSV2=true"
+    command: "make cover_integration_profile "
     artifact_paths:
       - "build/coverage/*.out"
     retry:
@@ -90,7 +90,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile EVENTSV2=true"
+    command: "make cover_integration_profile"
     artifact_paths:
       - "build/coverage/*.out"
     retry:

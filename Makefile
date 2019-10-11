@@ -45,11 +45,6 @@ EV2_TEST=_ev2
 GO_BUILD_LDFLAGS_CMD      := $(abspath ./scripts/go-build-ldflags.sh)
 GO_BUILD_LDFLAGS          := $(shell $(GO_BUILD_LDFLAGS_CMD) LDFLAG)
 
-ifndef EVENTSV2
-override EVENTSV2 = false
-EV2_TEST=
-endif
-
 ifndef PERSISTENCE_TYPE
 override PERSISTENCE_TYPE = cassandra
 endif
@@ -153,22 +148,6 @@ test: bins
 		go test -timeout $(TEST_TIMEOUT) -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
-test_eventsV2: bins
-	@rm -f test_eventsV2
-	@rm -f test_eventsV2.log
-	@echo Running integration test
-	@for dir in $(INTEG_TEST_ROOT); do \
-    		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" -v $(TEST_TAG) -eventsV2=true | tee -a test_eventsV2.log; \
-    done;
-
-test_eventsV2_xdc: bins
-	@rm -f test_eventsV2_xdc
-	@rm -f test_eventsV2_xdc.log
-	@echo Running integration test for cross dc:
-	@for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" -v $(TEST_TAG) -eventsV2xdc=true | tee -a test_eventsV2_xdc.log; \
-	done;
-
 # need to run xdc tests with race detector off because of ringpop bug causing data race issue
 test_xdc: bins
 	@rm -f test
@@ -194,9 +173,9 @@ cover_integration_profile: clean bins_nothrift
 	@mkdir -p $(COVER_ROOT)
 	@echo "mode: atomic" > $(INTEG_COVER_FILE)
 
-	@echo Running integration test with $(PERSISTENCE_TYPE) and eventsV2 $(EVENTSV2)
+	@echo Running integration test with $(PERSISTENCE_TYPE)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -eventsV2=$(EVENTSV2) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
 cover_xdc_profile: clean bins_nothrift
