@@ -30,6 +30,8 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
+// eventStoreVersion is already deprecated, this is just a constant for place holder.
+// TODO we can remove it after fixing all the query templates
 const defaultEventStoreVersionValue = -1
 
 func applyWorkflowMutationBatch(
