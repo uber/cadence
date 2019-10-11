@@ -690,12 +690,11 @@ func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 		DomainName:           testDomainName,
 		WorkflowID:           testWorkflowID,
 		RunID:                testRunID,
-		EventStoreVersion:    persistence.EventStoreVersionV2,
 		BranchToken:          testBranchToken,
 		NextEventID:          testNextEventID,
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
-	itr := newHistoryIterator(request, nil, mockHistoryV2Manager, targetHistoryBlobSize)
+	itr := newHistoryIterator(request, mockHistoryV2Manager, targetHistoryBlobSize)
 	if initialState != nil {
 		err := itr.reset(initialState)
 		s.NoError(err)
