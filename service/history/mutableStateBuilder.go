@@ -1311,7 +1311,6 @@ func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 	if e.IsStickyTaskListEnabled() {
 		taskList = e.executionInfo.StickyTaskList
 	}
-
 	return &decisionInfo{
 		Version:                    e.executionInfo.DecisionVersion,
 		ScheduleID:                 e.executionInfo.DecisionScheduleID,
