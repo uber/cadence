@@ -303,7 +303,13 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 	createMode persistence.CreateWorkflowMode,
 	prevRunID string,
 	prevLastWriteVersion int64,
-) error {
+) (retError error) {
+
+	defer func() {
+		if retError != nil {
+			c.clear()
+		}
+	}()
 
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		// workflow create mode & prev run ID & version
@@ -322,7 +328,6 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 
 	_, err := c.createWorkflowExecutionWithRetry(createRequest)
 	if err != nil {
-		c.clear() // clear history size
 		return err
 	}
 
