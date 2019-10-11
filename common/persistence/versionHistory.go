@@ -241,10 +241,21 @@ func (v *VersionHistory) ContainsItem(
 ) bool {
 
 	prevEventID := common.FirstEventID - 1
+	lastItem, err := v.GetLastItem()
+	if err != nil {
+		return false
+	}
+
 	for _, currentItem := range v.items {
 		if item.GetVersion() == currentItem.GetVersion() {
 			// this is a special handling for event id = 0
 			if (item.GetEventID() == common.FirstEventID-1) && item.GetEventID() <= currentItem.GetEventID() {
+				return true
+			}
+			// this is a special handling for event id = last event id + 1
+			// because if the versions are the equal and the different between event ids is one
+			// the event is virtually appendable to this version history
+			if (*lastItem == *currentItem) && (item.GetEventID() == currentItem.GetEventID()+1) {
 				return true
 			}
 			if prevEventID < item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {

@@ -371,10 +371,10 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(
 
 	//TODO: deprecate this field when deprecating 2DC code
 	var nextEventID *int64
-	var nextEventIDV2 *int64
-	var nextEventVersionV2 *int64
+	var lastEventIDV2 *int64
+	var lastEventVersionV2 *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, nextEventIDV2, nextEventVersionV2, t.processCancelExecution)
+		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, lastEventIDV2, lastEventVersionV2, t.processCancelExecution)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
@@ -397,9 +397,6 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(
 		}
 
 		if t.discardTask(transferTask) {
-			// returning nil and set next event ID
-			// the post action function below shall take over
-			nextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 			if msBuilder.GetVersionHistories() != nil {
 				currentBranch, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
 				if err != nil {
@@ -409,8 +406,13 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(
 				if err != nil {
 					return err
 				}
-				nextEventIDV2 = common.Int64Ptr(lastItem.GetEventID())
-				nextEventVersionV2 = common.Int64Ptr(lastItem.GetVersion())
+				// set last event ID and version to do re send in post action func
+				lastEventIDV2 = common.Int64Ptr(lastItem.GetEventID())
+				lastEventVersionV2 = common.Int64Ptr(lastItem.GetVersion())
+			} else {
+				// returning nil and set next event ID
+				// the post action function below shall take over
+				nextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 			}
 			return nil
 		}
@@ -425,10 +427,10 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(
 
 	//TODO: deprecate this field when deprecating 2DC code
 	var nextEventID *int64
-	var nextEventIDV2 *int64
-	var nextEventVersionV2 *int64
+	var lastEventID *int64
+	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, nextEventIDV2, nextEventVersionV2, t.processSignalExecution)
+		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, lastEventID, lastEventVersion, t.processSignalExecution)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
@@ -451,9 +453,6 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(
 		}
 
 		if t.discardTask(transferTask) {
-			// returning nil and set next event ID
-			// the post action function below shall take over
-			nextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 			if msBuilder.GetVersionHistories() != nil {
 				currentBranch, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
 				if err != nil {
@@ -463,8 +462,13 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(
 				if err != nil {
 					return err
 				}
-				nextEventIDV2 = common.Int64Ptr(lastItem.GetEventID())
-				nextEventVersionV2 = common.Int64Ptr(lastItem.GetVersion())
+				// set last event ID and version to do re send in post action func
+				lastEventID = common.Int64Ptr(lastItem.GetEventID())
+				lastEventVersion = common.Int64Ptr(lastItem.GetVersion())
+			} else {
+				// returning nil and set next event ID
+				// the post action function below shall take over
+				nextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 			}
 			return nil
 		}
@@ -479,10 +483,10 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(
 
 	//TODO: deprecate this field when deprecating 2DC code
 	var nextEventID *int64
-	var nextEventIDV2 *int64
-	var nextEventVersionV2 *int64
+	var lastEventID *int64
+	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, nextEventIDV2, nextEventVersionV2, t.processStartChildExecution)
+		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, lastEventID, lastEventVersion, t.processStartChildExecution)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
@@ -509,9 +513,6 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(
 		}
 
 		if t.discardTask(transferTask) {
-			// returning nil and set next event ID
-			// the post action function below shall take over
-			nextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 			if msBuilder.GetVersionHistories() != nil {
 				currentBranch, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
 				if err != nil {
@@ -521,8 +522,13 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(
 				if err != nil {
 					return err
 				}
-				nextEventIDV2 = common.Int64Ptr(lastItem.GetEventID())
-				nextEventVersionV2 = common.Int64Ptr(lastItem.GetVersion())
+				// set last event ID and version to do re send in post action func
+				lastEventID = common.Int64Ptr(lastItem.GetEventID())
+				lastEventVersion = common.Int64Ptr(lastItem.GetVersion())
+			} else {
+				// returning nil and set next event ID
+				// the post action function below shall take over
+				nextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 			}
 			return nil
 		}
@@ -654,15 +660,15 @@ func (t *transferQueueStandbyProcessorImpl) getDomainIDAndWorkflowExecution(
 func (t *transferQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(
 	transferTask *persistence.TransferTaskInfo,
 	nextEventID *int64,
-	nextEventIDV2 *int64,
-	nextEventVersionV2 *int64,
+	lastEventID *int64,
+	lastEventVersion *int64,
 	verifyFn func(*persistence.TransferTaskInfo, bool) error,
 ) error {
 
 	if nextEventID == nil {
 		return nil
 	}
-	err := t.fetchHistoryFromRemote(transferTask, nextEventID, nextEventIDV2, nextEventVersionV2)
+	err := t.fetchHistoryFromRemote(transferTask, nextEventID, lastEventID, lastEventVersion)
 	if err != nil {
 		// fail to fetch events from remote, just discard the task
 		return ErrTaskDiscarded
@@ -679,8 +685,8 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(
 func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 	transferTask *persistence.TransferTaskInfo,
 	nextEventID *int64,
-	nextEventIDV2 *int64,
-	nextEventVersionV2 *int64,
+	lastEventID *int64,
+	lastEventVersion *int64,
 ) error {
 
 	t.metricsClient.IncCounter(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientRequests)
@@ -688,13 +694,13 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 	defer stopwatch.Stop()
 
 	var err error
-	if nextEventIDV2 != nil {
+	if lastEventID != nil && lastEventVersion != nil {
 		err = t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
 			transferTask.DomainID,
 			transferTask.WorkflowID,
 			transferTask.RunID,
-			nextEventIDV2,
-			nextEventVersionV2,
+			lastEventID,
+			lastEventVersion,
 			nil,
 			nil,
 		)
