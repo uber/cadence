@@ -501,7 +501,7 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 		)
 	}
 
-	c.clear()
+	c.clear() // TODO when 2DC is deprecated remove this line
 	return nil
 }
 
