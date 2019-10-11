@@ -28,7 +28,7 @@ are supported. An adapter to any other database that provides multi-row single s
 can be added. There are different service deployment models. At Uber, our team operates multitenant clusters
 that are shared by hundreds of applications.
 
-Watch Maxim's talk from the Uber Open Summit for an introductionto the Cadence programming model and value proposition.
+Watch Maxim's talk from the Uber Open Summit for an introduction to the Cadence programming model and value proposition.
 
 {% include youtubePlayer.html id="llmsBGKOuWI" %}
 
