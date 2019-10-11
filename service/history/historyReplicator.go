@@ -111,7 +111,7 @@ func newHistoryReplicator(
 	historyEngine *historyEngineImpl,
 	historyCache *historyCache,
 	domainCache cache.DomainCache,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	logger log.Logger,
 ) *historyReplicator {
 

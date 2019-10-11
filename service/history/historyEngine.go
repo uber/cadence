@@ -66,7 +66,7 @@ type (
 		timeSource                clock.TimeSource
 		decisionHandler           decisionHandler
 		clusterMetadata           cluster.Metadata
-		historyV2Mgr              persistence.HistoryV2Manager
+		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             persistence.VisibilityManager
 		txProcessor               transferQueueProcessor

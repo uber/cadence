@@ -49,7 +49,7 @@ type (
 		shard           ShardContext
 		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
-		historyV2Mgr    persistence.HistoryV2Manager
+		historyV2Mgr    persistence.HistoryManager
 
 		context      workflowExecutionContext
 		mutableState mutableState

@@ -48,7 +48,7 @@ type (
 	nDCWorkflowResetterImpl struct {
 		shard          ShardContext
 		transactionMgr nDCTransactionMgr
-		historyV2Mgr   persistence.HistoryV2Manager
+		historyV2Mgr   persistence.HistoryManager
 		stateRebuilder nDCStateRebuilder
 
 		domainID   string

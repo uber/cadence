@@ -135,7 +135,7 @@ type (
 		domainCache     cache.DomainCache
 		historyCache    *historyCache
 		clusterMetadata cluster.Metadata
-		historyV2Mgr    persistence.HistoryV2Manager
+		historyV2Mgr    persistence.HistoryManager
 		serializer      persistence.PayloadSerializer
 		metricsClient   metrics.Client
 		eventsReapplier nDCEventsReapplier

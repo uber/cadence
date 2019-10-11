@@ -58,7 +58,7 @@ type (
 		domainCache     cache.DomainCache
 		eventsCache     eventsCache
 		clusterMetadata cluster.Metadata
-		historyV2Mgr    persistence.HistoryV2Manager
+		historyV2Mgr    persistence.HistoryManager
 		taskRefresher   mutableStateTaskRefresher
 
 		rebuiltHistorySize int64
