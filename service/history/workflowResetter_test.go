@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -59,6 +60,7 @@ type (
 		workflowID   string
 		baseRunID    string
 		currentRunID string
+		resetRunID   string
 	}
 )
 
@@ -105,10 +107,213 @@ func (s *workflowResetterSuite) SetupTest() {
 	s.workflowID = "some random workflow ID"
 	s.baseRunID = uuid.New()
 	s.currentRunID = uuid.New()
+	s.resetRunID = uuid.New()
 }
 
 func (s *workflowResetterSuite) TearDownTest() {
+	s.mockDomainCache.AssertExpectations(s.T())
+	s.mockClusterMetadata.AssertExpectations(s.T())
+	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.controller.Finish()
+}
+
+func (s *workflowResetterSuite) TestPersistToDB_CurrentTerminated() {
+	currentWorkflowTerminated := true
+
+	currentWorkflow := NewMocknDCWorkflow(s.controller)
+	currentReleaseCalled := false
+	currentContext := &mockWorkflowExecutionContext{}
+	defer currentContext.AssertExpectations(s.T())
+	currentMutableState := &mockMutableState{}
+	defer currentMutableState.AssertExpectations(s.T())
+	var currentReleaseFn releaseWorkflowExecutionFunc = func(error) { currentReleaseCalled = true }
+	currentWorkflow.EXPECT().getContext().Return(currentContext).AnyTimes()
+	currentWorkflow.EXPECT().getMutableState().Return(currentMutableState).AnyTimes()
+	currentWorkflow.EXPECT().getReleaseFn().Return(currentReleaseFn).AnyTimes()
+
+	resetWorkflow := NewMocknDCWorkflow(s.controller)
+	resetReleaseCalled := false
+	resetContext := &mockWorkflowExecutionContext{}
+	defer resetContext.AssertExpectations(s.T())
+	resetMutableState := &mockMutableState{}
+	defer resetMutableState.AssertExpectations(s.T())
+	var targetReleaseFn releaseWorkflowExecutionFunc = func(error) { resetReleaseCalled = true }
+	resetWorkflow.EXPECT().getContext().Return(resetContext).AnyTimes()
+	resetWorkflow.EXPECT().getMutableState().Return(resetMutableState).AnyTimes()
+	resetWorkflow.EXPECT().getReleaseFn().Return(targetReleaseFn).AnyTimes()
+
+	currentContext.On("updateWorkflowExecutionWithNewAsActive",
+		mock.Anything,
+		resetContext,
+		resetMutableState,
+	).Return(nil).Once()
+
+	err := s.workflowResetter.persistToDB(currentWorkflowTerminated, currentWorkflow, resetWorkflow)
+	s.NoError(err)
+	// persistToDB function is not charged of releasing locks
+	s.False(currentReleaseCalled)
+	s.False(resetReleaseCalled)
+}
+
+func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
+	currentWorkflowTerminated := false
+	currentLastWriteVersion := int64(1234)
+
+	currentWorkflow := NewMocknDCWorkflow(s.controller)
+	currentReleaseCalled := false
+	currentContext := &mockWorkflowExecutionContext{}
+	defer currentContext.AssertExpectations(s.T())
+	currentMutableState := &mockMutableState{}
+	defer currentMutableState.AssertExpectations(s.T())
+	var currentReleaseFn releaseWorkflowExecutionFunc = func(error) { currentReleaseCalled = true }
+	currentWorkflow.EXPECT().getContext().Return(currentContext).AnyTimes()
+	currentWorkflow.EXPECT().getMutableState().Return(currentMutableState).AnyTimes()
+	currentWorkflow.EXPECT().getReleaseFn().Return(currentReleaseFn).AnyTimes()
+
+	currentMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		RunID: s.currentRunID,
+	})
+	currentMutableState.On("GetLastWriteVersion").Return(currentLastWriteVersion, nil)
+
+	resetWorkflow := NewMocknDCWorkflow(s.controller)
+	resetReleaseCalled := false
+	resetContext := &mockWorkflowExecutionContext{}
+	defer resetContext.AssertExpectations(s.T())
+	resetMutableState := &mockMutableState{}
+	defer resetMutableState.AssertExpectations(s.T())
+	var targetReleaseFn releaseWorkflowExecutionFunc = func(error) { resetReleaseCalled = true }
+	resetWorkflow.EXPECT().getContext().Return(resetContext).AnyTimes()
+	resetWorkflow.EXPECT().getMutableState().Return(resetMutableState).AnyTimes()
+	resetWorkflow.EXPECT().getReleaseFn().Return(targetReleaseFn).AnyTimes()
+
+	resetSnapshot := &persistence.WorkflowSnapshot{}
+	resetEventsSeq := []*persistence.WorkflowEvents{{
+		DomainID:    s.domainID,
+		WorkflowID:  s.workflowID,
+		RunID:       s.resetRunID,
+		BranchToken: []byte("some random reset branch token"),
+		Events: []*shared.HistoryEvent{{
+			EventId: common.Int64Ptr(123),
+		}},
+	}}
+	resetEventsSize := int64(4321)
+	resetMutableState.On("CloseTransactionAsSnapshot",
+		mock.Anything,
+		transactionPolicyActive,
+	).Return(resetSnapshot, resetEventsSeq, nil).Once()
+	resetContext.On("persistFirstWorkflowEvents", resetEventsSeq[0]).Return(resetEventsSize, nil)
+	resetContext.On("createWorkflowExecution",
+		resetSnapshot,
+		resetEventsSize,
+		mock.Anything,
+		persistence.CreateWorkflowModeContinueAsNew,
+		s.currentRunID,
+		currentLastWriteVersion,
+	).Return(nil).Once()
+
+	err := s.workflowResetter.persistToDB(currentWorkflowTerminated, currentWorkflow, resetWorkflow)
+	s.NoError(err)
+	// persistToDB function is not charged of releasing locks
+	s.False(currentReleaseCalled)
+	s.False(resetReleaseCalled)
+}
+
+func (s *workflowResetterSuite) TestFailInflightActivity() {
+	terminateReason := "some random termination reason"
+
+	mutableState := &mockMutableState{}
+	defer mutableState.AssertExpectations(s.T())
+
+	activity1 := &persistence.ActivityInfo{
+		Version:         12,
+		ScheduleID:      123,
+		StartedID:       124,
+		Details:         []byte("some random activity 1 details"),
+		StartedIdentity: "some random activity 1 started identity",
+	}
+	activity2 := &persistence.ActivityInfo{
+		Version:    12,
+		ScheduleID: 456,
+		StartedID:  common.EmptyEventID,
+	}
+	mutableState.On("GetPendingActivityInfos").Return(map[int64]*persistence.ActivityInfo{
+		activity1.ScheduleID: activity1,
+		activity2.ScheduleID: activity2,
+	}).Times(1)
+
+	mutableState.On("AddActivityTaskFailedEvent",
+		activity1.ScheduleID,
+		activity1.StartedID,
+		&shared.RespondActivityTaskFailedRequest{
+			Reason:   common.StringPtr(terminateReason),
+			Details:  activity1.Details,
+			Identity: common.StringPtr(activity1.StartedIdentity),
+		},
+	).Return(&shared.HistoryEvent{}, nil).Times(1)
+
+	err := s.workflowResetter.failInflightActivity(mutableState, terminateReason)
+	s.NoError(err)
+}
+
+func (s *workflowResetterSuite) TestGenerateBranchToken() {
+	baseBranchToken := []byte("some random base branch token")
+	baseNodeID := int64(1234)
+
+	resetRunID := uuid.New()
+	resetBranchToken := []byte("some random reset branch token")
+
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", &persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: baseBranchToken,
+		ForkNodeID:      baseNodeID,
+		Info:            persistence.BuildHistoryGarbageCleanupInfo(s.domainID, s.workflowID, resetRunID),
+		ShardID:         common.IntPtr(s.mockShard.GetShardID()),
+	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
+
+	s.mockHistoryV2Mgr.On("CompleteForkBranch", &persistence.CompleteForkBranchRequest{
+		BranchToken: resetBranchToken,
+		Success:     true,
+		ShardID:     common.IntPtr(s.mockShard.GetShardID()),
+	}).Return(nil).Times(1)
+
+	newBranchToken, err := s.workflowResetter.generateBranchToken(
+		s.domainID, s.workflowID, baseBranchToken, baseNodeID, resetRunID,
+	)
+	s.NoError(err)
+	s.Equal(resetBranchToken, newBranchToken)
+}
+
+func (s *workflowResetterSuite) TestTerminateWorkflow() {
+	decision := &decisionInfo{
+		Version:    123,
+		ScheduleID: 1234,
+		StartedID:  5678,
+	}
+	terminateReason := "some random terminate reason"
+
+	mutableState := &mockMutableState{}
+	defer mutableState.AssertExpectations(s.T())
+
+	mutableState.On("GetInFlightDecision").Return(decision, true).Times(1)
+	mutableState.On("AddDecisionTaskFailedEvent",
+		decision.ScheduleID,
+		decision.StartedID,
+		shared.DecisionTaskFailedCauseForceCloseDecision,
+		([]byte)(nil),
+		identityHistoryService,
+		"",
+		"",
+		"",
+		int64(0),
+	).Return(&shared.HistoryEvent{}, nil).Times(1)
+	mutableState.On("FlushBufferedEvents").Return(nil).Once()
+	mutableState.On("AddWorkflowExecutionTerminatedEvent",
+		terminateReason,
+		([]byte)(nil),
+		identityHistoryService,
+	).Return(&shared.HistoryEvent{}, nil)
+
+	err := s.workflowResetter.terminateWorkflow(mutableState, terminateReason)
+	s.NoError(err)
 }
 
 func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
@@ -197,18 +402,18 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		NextPageToken: nil,
 	}, nil).Once()
 
-	newWorkflow := NewMocknDCWorkflow(s.controller)
-	newReleaseCalled := false
-	newMutableState := &mockMutableState{}
-	defer newMutableState.AssertExpectations(s.T())
-	var targetReleaseFn releaseWorkflowExecutionFunc = func(error) { newReleaseCalled = true }
-	newWorkflow.EXPECT().getMutableState().Return(newMutableState).AnyTimes()
-	newWorkflow.EXPECT().getReleaseFn().Return(targetReleaseFn).AnyTimes()
+	resetWorkflow := NewMocknDCWorkflow(s.controller)
+	resetReleaseCalled := false
+	resetMutableState := &mockMutableState{}
+	defer resetMutableState.AssertExpectations(s.T())
+	var newReleaseFn releaseWorkflowExecutionFunc = func(error) { resetReleaseCalled = true }
+	resetWorkflow.EXPECT().getMutableState().Return(resetMutableState).AnyTimes()
+	resetWorkflow.EXPECT().getReleaseFn().Return(newReleaseFn).AnyTimes()
 
-	newMutableState.On("GetNextEventID").Return(newNextEventID)
-	newMutableState.On("GetCurrentBranchToken").Return(newBranchToken, nil)
+	resetMutableState.On("GetNextEventID").Return(newNextEventID)
+	resetMutableState.On("GetCurrentBranchToken").Return(newBranchToken, nil)
 
-	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, s.domainID, s.workflowID, newRunID).Return(newWorkflow, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, s.domainID, s.workflowID, newRunID).Return(resetWorkflow, nil).Times(1)
 
 	mutableState := &mockMutableState{}
 	defer mutableState.AssertExpectations(s.T())
@@ -224,7 +429,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		baseNextEventID,
 	)
 	s.NoError(err)
-	s.True(newReleaseCalled)
+	s.True(resetReleaseCalled)
 }
 
 func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {

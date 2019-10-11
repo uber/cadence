@@ -144,7 +144,7 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 	if err != nil {
 		return "", err
 	} else if currentRunID == "" {
-		return "", &shared.InternalServiceError{Message: "workflowResetterImpl encounter missing current workflow."}
+		return "", &shared.InternalServiceError{Message: "workflowResetter encounter missing current workflow."}
 	}
 
 	if baseRunID == currentRunID {
@@ -315,7 +315,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	baseLastEventVersion := resetMutableState.GetCurrentVersion()
 	if baseLastEventVersion > resetWorkflowVersion {
 		return nil, &shared.InternalServiceError{
-			Message: "workflowResetterImpl encounter version mismatch.",
+			Message: "workflowResetter encounter version mismatch.",
 		}
 	}
 	if err := resetMutableState.UpdateCurrentVersion(resetWorkflowVersion, false); err != nil {
@@ -326,7 +326,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	decision, ok := resetMutableState.GetInFlightDecision()
 	if !ok {
 		return nil, &shared.InternalServiceError{
-			Message: "workflowResetterImpl encounter missing inflight decision.",
+			Message: "workflowResetter encounter missing inflight decision.",
 		}
 	}
 
@@ -429,7 +429,16 @@ func (r *workflowResetterImpl) failInflightActivity(
 ) error {
 
 	for _, ai := range mutableState.GetPendingActivityInfos() {
-		if ai.StartedID != common.EmptyEventID {
+		switch ai.StartedID {
+		case common.EmptyEventID:
+			// activity not started, noop
+		case common.TransientEventID:
+			// activity is started (with retry policy)
+			// should not encounter this case when rebuilding mutable state
+			return &shared.InternalServiceError{
+				Message: "workflowResetter encounter transient activity",
+			}
+		default:
 			if _, err := mutableState.AddActivityTaskFailedEvent(
 				ai.ScheduleID,
 				ai.StartedID,
@@ -455,7 +464,7 @@ func (r *workflowResetterImpl) generateBranchToken(
 ) ([]byte, error) {
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
-	resp, err := r.shard.GetHistoryV2Manager().ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      forkNodeID,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, resetRunID),
@@ -474,7 +483,7 @@ func (r *workflowResetterImpl) generateBranchToken(
 	}); errComplete != nil {
 		r.logger.WithTags(
 			tag.Error(errComplete),
-		).Error("workflowResetterImpl unable to complete creation of new branch.")
+		).Error("workflowResetter unable to complete creation of new branch.")
 	}
 
 	return resetBranchToken, nil
