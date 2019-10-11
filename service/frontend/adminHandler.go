@@ -84,7 +84,6 @@ func NewAdminHandler(
 	sVice service.Service,
 	numberOfHistoryShards int,
 	domainCache cache.DomainCache,
-	metadataMgr persistence.MetadataManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	params *service.BootstrapParams,
 ) *AdminHandler {
