@@ -297,7 +297,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 	targetWorkflow.EXPECT().happensAfter(currentWorkflow).Return(true, nil)
 	currentWorkflowPolicy := transactionPolicyPassive
 	currentMutableState.On("IsWorkflowExecutionRunning").Return(false)
-	currentWorkflow.EXPECT().suppressWorkflowBy(targetWorkflow).Return(currentWorkflowPolicy, nil).Times(0)
+	currentWorkflow.EXPECT().suppressBy(targetWorkflow).Return(currentWorkflowPolicy, nil).Times(0)
 	targetWorkflow.EXPECT().revive().Return(nil).Times(1)
 
 	targetContext.On(
