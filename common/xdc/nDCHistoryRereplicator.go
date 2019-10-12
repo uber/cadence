@@ -76,7 +76,8 @@ func NewNDCHistoryRereplicator(
 	historyReplicationFn nDCHistoryReplicationFn,
 	serializer persistence.PayloadSerializer,
 	replicationTimeout time.Duration,
-	logger log.Logger) *NDCHistoryRereplicatorImpl {
+	logger log.Logger,
+) *NDCHistoryRereplicatorImpl {
 
 	return &NDCHistoryRereplicatorImpl{
 		targetClusterName:    targetClusterName,
@@ -117,6 +118,9 @@ func (n *NDCHistoryRereplicatorImpl) SendSingleWorkflowHistory(
 		}
 		token = response.NextPageToken
 
+		// we don't need to handle continue as new here
+		// because we only care about the current run
+		// TODO: revisit to evaluate if we need to handle continue as new
 		for _, batch := range response.HistoryBatches {
 			replicationRequest := n.createReplicationRawRequest(
 				domainID,
@@ -154,12 +158,13 @@ func (n *NDCHistoryRereplicatorImpl) createReplicationRawRequest(
 	return request
 }
 
-func (n *NDCHistoryRereplicatorImpl) sendReplicationRawRequest(request *history.ReplicateEventsV2Request) error {
+func (n *NDCHistoryRereplicatorImpl) sendReplicationRawRequest(
+	request *history.ReplicateEventsV2Request,
+) error {
 
 	if request == nil {
 		return nil
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), n.replicationTimeout)
 	defer func() {
 		cancel()
@@ -203,7 +208,6 @@ func (n *NDCHistoryRereplicatorImpl) getHistory(
 		MaximumPageSize:   common.Int32Ptr(pageSize),
 		NextPageToken:     token,
 	})
-
 	if err != nil {
 		logger.Error("error getting history", tag.Error(err))
 		return nil, err

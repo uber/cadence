@@ -237,11 +237,21 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(timerTask, nextEventID, lastEventID, lastEventVersion, t.processExpiredUserTimer)
+		return t.fetchHistoryAndVerifyOnce(
+			timerTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processExpiredUserTimer,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
+			return standbyTimerTaskPostActionTaskDiscarded(
+				nextEventID,
+				timerTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -318,11 +328,21 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(timerTask, nextEventID, lastEventID, lastEventVersion, t.processActivityTimeout)
+		return t.fetchHistoryAndVerifyOnce(
+			timerTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processActivityTimeout,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
+			return standbyTimerTaskPostActionTaskDiscarded(
+				nextEventID,
+				timerTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -429,11 +449,21 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(timerTask, nextEventID, lastEventID, lastEventVersion, t.processDecisionTimeout)
+		return t.fetchHistoryAndVerifyOnce(
+			timerTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processDecisionTimeout,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
+			return standbyTimerTaskPostActionTaskDiscarded(
+				nextEventID,
+				timerTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -491,11 +521,21 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowBackoffTimer(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(timerTask, nextEventID, lastEventID, lastEventVersion, t.processWorkflowBackoffTimer)
+		return t.fetchHistoryAndVerifyOnce(
+			timerTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processWorkflowBackoffTimer,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
+			return standbyTimerTaskPostActionTaskDiscarded(
+				nextEventID,
+				timerTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -554,11 +594,21 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowTimeout(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(timerTask, nextEventID, lastEventID, lastEventVersion, t.processWorkflowTimeout)
+		return t.fetchHistoryAndVerifyOnce(
+			timerTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processWorkflowTimeout,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
+			return standbyTimerTaskPostActionTaskDiscarded(
+				nextEventID,
+				timerTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -667,7 +717,7 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(
 	if nextEventID == nil {
 		return nil
 	}
-	err := t.fetchHistoryFromRemote(timerTask, nextEventID, lastEventID, lastEventVersion)
+	err := t.fetchHistoryFromRemote(timerTask, *nextEventID, lastEventID, lastEventVersion)
 	if err != nil {
 		// fail to fetch events from remote, just discard the task
 		return ErrTaskDiscarded
@@ -683,7 +733,7 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(
 
 func (t *timerQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 	timerTask *persistence.TimerTaskInfo,
-	nextEventID *int64,
+	nextEventID int64,
 	lastEventID *int64,
 	lastEventVersion *int64,
 ) error {
@@ -706,7 +756,7 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 	} else {
 		err = t.historyRereplicator.SendMultiWorkflowHistory(
 			timerTask.DomainID, timerTask.WorkflowID,
-			timerTask.RunID, *nextEventID,
+			timerTask.RunID, nextEventID,
 			timerTask.RunID, common.EndEventID, // use common.EndEventID since we do not know where is the end
 		)
 	}
@@ -717,7 +767,7 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 			tag.WorkflowRunID(timerTask.RunID),
 			tag.WorkflowDomainID(timerTask.DomainID),
 			tag.ShardID(t.shard.GetShardID()),
-			tag.WorkflowNextEventID(*nextEventID),
+			tag.WorkflowNextEventID(nextEventID),
 			tag.ClusterName(t.clusterName))
 	}
 	return err

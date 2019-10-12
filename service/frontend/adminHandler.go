@@ -488,10 +488,11 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	); err != nil {
 		return nil, adh.error(err, scope)
 	}
-	// API is exclusive-exclusive. Return empty response here.
+
 	startEventID := pageToken.StartEventID + 1
 	endEventID := pageToken.EndEventID
 	if startEventID == endEventID {
+		// API is exclusive-exclusive. Return empty response here.
 		return &admin.GetWorkflowExecutionRawHistoryV2Response{
 			HistoryBatches: []*gen.DataBlob{},
 			NextPageToken:  nil, // no further pagination

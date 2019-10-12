@@ -374,11 +374,21 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(
 	var lastEventIDV2 *int64
 	var lastEventVersionV2 *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, lastEventIDV2, lastEventVersionV2, t.processCancelExecution)
+		return t.fetchHistoryAndVerifyOnce(
+			transferTask,
+			nextEventID,
+			lastEventIDV2,
+			lastEventVersionV2,
+			t.processCancelExecution,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTrensferTaskPostActionTaskDiscarded(nextEventID, transferTask, t.logger)
+			return standbyTrensferTaskPostActionTaskDiscarded(
+				nextEventID,
+				transferTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -430,11 +440,21 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, lastEventID, lastEventVersion, t.processSignalExecution)
+		return t.fetchHistoryAndVerifyOnce(
+			transferTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processSignalExecution,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTrensferTaskPostActionTaskDiscarded(nextEventID, transferTask, t.logger)
+			return standbyTrensferTaskPostActionTaskDiscarded(
+				nextEventID,
+				transferTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -486,11 +506,21 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(
 	var lastEventID *int64
 	var lastEventVersion *int64
 	postProcessingFn := func() error {
-		return t.fetchHistoryAndVerifyOnce(transferTask, nextEventID, lastEventID, lastEventVersion, t.processStartChildExecution)
+		return t.fetchHistoryAndVerifyOnce(
+			transferTask,
+			nextEventID,
+			lastEventID,
+			lastEventVersion,
+			t.processStartChildExecution,
+		)
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTrensferTaskPostActionTaskDiscarded(nextEventID, transferTask, t.logger)
+			return standbyTrensferTaskPostActionTaskDiscarded(
+				nextEventID,
+				transferTask,
+				t.logger,
+			)
 		}
 	}
 
@@ -542,9 +572,14 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStarted(
 
 	processTaskIfClosed := false
 
-	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder mutableState) error {
-		return t.processRecordWorkflowStartedOrUpsertHelper(transferTask, msBuilder, true)
-	}, standbyTaskPostActionNoOp)
+	return t.processTransfer(
+		processTaskIfClosed,
+		transferTask,
+		func(msBuilder mutableState) error {
+			return t.processRecordWorkflowStartedOrUpsertHelper(transferTask, msBuilder, true)
+		},
+		standbyTaskPostActionNoOp,
+	)
 }
 
 func (t *transferQueueStandbyProcessorImpl) processUpsertWorkflowSearchAttributes(
@@ -553,9 +588,14 @@ func (t *transferQueueStandbyProcessorImpl) processUpsertWorkflowSearchAttribute
 
 	processTaskIfClosed := false
 
-	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder mutableState) error {
-		return t.processRecordWorkflowStartedOrUpsertHelper(transferTask, msBuilder, false)
-	}, standbyTaskPostActionNoOp)
+	return t.processTransfer(
+		processTaskIfClosed,
+		transferTask,
+		func(msBuilder mutableState) error {
+			return t.processRecordWorkflowStartedOrUpsertHelper(transferTask, msBuilder, false)
+		},
+		standbyTaskPostActionNoOp,
+	)
 }
 
 func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsertHelper(
@@ -668,7 +708,7 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(
 	if nextEventID == nil {
 		return nil
 	}
-	err := t.fetchHistoryFromRemote(transferTask, nextEventID, lastEventID, lastEventVersion)
+	err := t.fetchHistoryFromRemote(transferTask, *nextEventID, lastEventID, lastEventVersion)
 	if err != nil {
 		// fail to fetch events from remote, just discard the task
 		return ErrTaskDiscarded
@@ -684,7 +724,7 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(
 
 func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 	transferTask *persistence.TransferTaskInfo,
-	nextEventID *int64,
+	nextEventID int64,
 	lastEventID *int64,
 	lastEventVersion *int64,
 ) error {
@@ -709,7 +749,7 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 			transferTask.DomainID,
 			transferTask.WorkflowID,
 			transferTask.RunID,
-			*nextEventID,
+			nextEventID,
 			transferTask.RunID,
 			common.EndEventID, // use common.EndEventID since we do not know where is the end
 		)
@@ -720,7 +760,7 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 			tag.WorkflowID(transferTask.WorkflowID),
 			tag.WorkflowRunID(transferTask.RunID),
 			tag.WorkflowDomainID(transferTask.DomainID),
-			tag.WorkflowNextEventID(*nextEventID),
+			tag.WorkflowNextEventID(nextEventID),
 			tag.SourceCluster(t.clusterName))
 	}
 	return err
