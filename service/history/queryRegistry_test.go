@@ -61,8 +61,7 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.Nil(notFound)
 
 	for i := 0; i < 5; i++ {
-		changed, err := qr.recordEvent(ids[i], queryEventStart, nil)
-		s.True(changed)
+		err := qr.recordEvent(ids[i], queryEventStart, nil)
 		s.NoError(err)
 	}
 	s.assertHasQueries(qr, true, true, false)
@@ -72,15 +71,10 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 		querySnapshot, err := qr.getQuerySnapshot(id)
 		s.NoError(err)
 		if querySnapshot.state == queryStateBuffered {
-			changed, err := qr.recordEvent(id, queryEventStart, nil)
-			s.True(changed)
+			err := qr.recordEvent(id, queryEventStart, nil)
 			s.NoError(err)
 		}
-		changed, err := qr.recordEvent(id, queryEventPersistenceConditionSatisfied, nil)
-		s.False(changed)
-		s.NoError(err)
-		changed, err = qr.recordEvent(id, queryEventRecordResult, &shared.WorkflowQueryResult{})
-		s.True(changed)
+		err = qr.recordEvent(id, queryEventComplete, &shared.WorkflowQueryResult{})
 		s.NoError(err)
 	}
 

@@ -560,21 +560,16 @@ func (s *engineSuite) TestQueryWorkflow() {
 		queryRegistry := builder.GetQueryRegistry()
 		buffered := queryRegistry.getBufferedSnapshot()
 		for _, id := range buffered {
-			changed, err := queryRegistry.recordEvent(id, queryEventStart, nil)
-			s.True(changed)
+			err := queryRegistry.recordEvent(id, queryEventStart, nil)
 			s.NoError(err)
 		}
 		started := queryRegistry.getStartedSnapshot()
 		for _, id := range started {
-			changed, err := queryRegistry.recordEvent(id, queryEventPersistenceConditionSatisfied, nil)
-			s.False(changed)
-			s.NoError(err)
 			resultType := workflow.QueryResultTypeAnswered
-			changed, err = queryRegistry.recordEvent(id, queryEventRecordResult, &workflow.WorkflowQueryResult{
+			err := queryRegistry.recordEvent(id, queryEventComplete, &workflow.WorkflowQueryResult{
 				ResultType: &resultType,
 				Answer:     answer,
 			})
-			s.True(changed)
 			s.NoError(err)
 			querySnapshot, err := queryRegistry.getQuerySnapshot(id)
 			s.NoError(err)
@@ -585,8 +580,8 @@ func (s *engineSuite) TestQueryWorkflow() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:             &execution,
-			Query:                 &workflow.WorkflowQuery{},
+			Execution: &execution,
+			Query:     &workflow.WorkflowQuery{},
 		},
 	}
 

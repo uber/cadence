@@ -759,7 +759,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 		if notOpenReject || notCompletedCleanlyReject {
 			return &h.QueryWorkflowResponse{
 				Response: &workflow.QueryWorkflowResponse{
-					QueryResult: nil,
 					QueryRejected: &workflow.QueryRejected{
 						CloseStatus: persistence.ToThriftWorkflowExecutionCloseStatus(closeStatus).Ptr(),
 					},
@@ -771,8 +770,9 @@ func (e *historyEngineImpl) QueryWorkflow(
 	execInfo := ms.GetExecutionInfo()
 	clientFeature := client.NewFeatureImpl(execInfo.ClientLibraryVersion, execInfo.ClientFeatureVersion, execInfo.ClientImpl)
 	if !ms.IsWorkflowExecutionRunning() || !clientFeature.SupportConsistentQuery() || req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual {
-		release(nil)
-		return e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
+		mresp, err := e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
+		release(err)
+		return mresp, err
 	}
 
 	// queries with read_after_write consistency are not defined on non-active cluster
@@ -781,150 +781,44 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
-	/**
-
-	At this point the following are true
-	- READ_AFTER_WRITE query consistency is desired
-	- The workflow is open
-	- The client supports consistency query
-	- The cluster is active
-
-	There are three cases at this point
-	1. {Scheduled=false, Started=false}: safe to dispatch directly through matching
-	2. {Scheduled=true, Started=false}: add to query registry do nothing
-	3. {Scheduled=true, Started=true}: wait for current decision to complete then dispatch directly through matching
-
-	 */
-
-	// case 1: {Scheduled=false, Started=false}
 	if !ms.HasPendingDecision() && !ms.HasInFlightDecision() {
-		release(nil)
-		return e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
+		mresp, err := e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
+		release(err)
+		return mresp, err
 	}
 
-	// case 2: {Scheduled=true, Started=false}
-	if ms.HasPendingDecision() && !ms.HasInFlightDecision() {
-		qr := ms.GetQueryRegistry()
-		queryID, _, termCh := qr.bufferQuery(req.GetQuery())
-		ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
-		timer := time.NewTimer(ttl)
-		defer func() {
-			timer.Stop()
-			qr.removeQuery(queryID)
-		}()
-		release(nil)
-		select {
-		case <-termCh:
-			querySnapshot, err := qr.getQuerySnapshot(queryID)
-			if err != nil {
-				return nil, err
-			}
-			result := querySnapshot.queryResult
-			switch result.GetResultType() {
-			case workflow.QueryResultTypeAnswered:
-				return &h.QueryWorkflowResponse{
-					Response: &workflow.QueryWorkflowResponse{
-						QueryResult:   result.GetAnswer(),
-					},
-				}, nil
-			case workflow.QueryResultTypeFailed:
-				return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
-			}
-		case <-timer.C:
-			return nil, ErrQueryTimeout
-		case <-ctx.Done():
-			return nil, ctx.Err()
+	qr := ms.GetQueryRegistry()
+	queryID, _, termCh := qr.bufferQuery(req.GetQuery())
+	ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
+	timer := time.NewTimer(ttl)
+	defer func() {
+		timer.Stop()
+		qr.removeQuery(queryID)
+	}()
+	release(nil)
+	select {
+	case <-termCh:
+		querySnapshot, err := qr.getQuerySnapshot(queryID)
+		if err != nil {
+			return nil, err
 		}
-		return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
+		result := querySnapshot.queryResult
+		switch result.GetResultType() {
+		case workflow.QueryResultTypeAnswered:
+			return &h.QueryWorkflowResponse{
+				Response: &workflow.QueryWorkflowResponse{
+					QueryResult: result.GetAnswer(),
+				},
+			}, nil
+		case workflow.QueryResultTypeFailed:
+			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
+		}
+	case <-timer.C:
+		return nil, ErrQueryTimeout
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
-
-	// case 3: {Scheduled=true, Started=true}
-
-
-
-	// wait for current decision task to complete or record failure
-	// if complete you can dispatch directly through matching
-	// on failure you need to buffer (in order to buffer you need to hold the lock first to make sure the state of mutable state is not updated
-
-
-
-
-
-
-
-	// you can dispatch through matching directly safely if there are no scheduled decision tasks
-	// or if there is a started
-
-	// the only case in which it is safe to dispatch directly though matching at this point is if there is no scheduled or started decision task
-
-	// determine if query can be safely dispatched through matching directly, if so just dispatch
-	// otherwise buffer query in query registry and wait for query timeout or for query to complete
-
-	//	domainCache, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	msBuilder, err := context.loadWorkflowExecution()
-	//	if err != nil {
-	//		release(err)
-	//		return nil, err
-	//	}
-	//	queryRegistry := msBuilder.GetQueryRegistry()
-	//	release(nil)
-	//	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
-	//
-	//	ttl := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
-	//	timer := time.NewTimer(ttl)
-	//
-	//	// after query is finished removed query from query registry and remove any potentially created in memory decision task
-	//	defer func() {
-	//		timer.Stop()
-	//		queryRegistry.removeQuery(queryID)
-	//		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-	//		if err != nil {
-	//			retResp = nil
-	//			retErr = err
-	//			return
-	//		}
-	//		msBuilder, err := context.loadWorkflowExecution()
-	//		if err != nil {
-	//			release(err)
-	//			retResp = nil
-	//			retErr = err
-	//			return
-	//		}
-	//		msBuilder.DeleteInMemoryDecisionTask()
-	//		release(nil)
-	//	}()
-	//
-	//
-	//	// at this point query has been buffered and there is a pending decision task to dispatch the query on
-	//	select {
-	//	case <-queryTermCh:
-	//		querySnapshot, err := queryRegistry.getQuerySnapshot(queryID)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		result := querySnapshot.queryResult
-	//		switch result.GetResultType() {
-	//		case workflow.QueryResultTypeAnswered:
-	//			return &h.QueryWorkflowResponse{
-	//				QueryResult: result.GetAnswer(),
-	//			}, nil
-	//		case workflow.QueryResultTypeFailed:
-	//			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
-	//		}
-	//	case <-timer.C:
-	//		return nil, ErrQueryTimeout
-	//	case <-ctx.Done():
-	//		return nil, ctx.Err()
-	//	}
-	//	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
-	return nil, nil
+	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
 }
 
 func (e *historyEngineImpl) queryDirectlyThroughMatching(

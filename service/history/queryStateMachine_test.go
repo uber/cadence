@@ -48,27 +48,24 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 		event  queryEvent
 		result *shared.WorkflowQueryResult
 
-		expectChanged        bool
 		expectErr            error
 		expectState          queryState
 		expectTermChClosed   bool
 		expectResultRecorded bool
 	}{
 		{
-			event:  queryEventRebuffer,
+			event:  queryEventBuffer,
 			result: nil,
 
-			expectChanged:        false,
 			expectErr:            errInvalidEvent,
 			expectState:          queryStateBuffered,
 			expectTermChClosed:   false,
 			expectResultRecorded: false,
 		},
 		{
-			event:  queryEventRecordResult,
+			event:  queryEventComplete,
 			result: nil,
 
-			expectChanged:        false,
 			expectErr:            errInvalidEvent,
 			expectState:          queryStateBuffered,
 			expectTermChClosed:   false,
@@ -78,17 +75,15 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 			event:  queryEventStart,
 			result: nil,
 
-			expectChanged:        true,
 			expectErr:            nil,
 			expectState:          queryStateStarted,
 			expectTermChClosed:   false,
 			expectResultRecorded: false,
 		},
 		{
-			event:  queryEventRebuffer,
+			event:  queryEventBuffer,
 			result: nil,
 
-			expectChanged:        true,
 			expectErr:            nil,
 			expectState:          queryStateBuffered,
 			expectTermChClosed:   false,
@@ -98,77 +93,42 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 			event:  queryEventStart,
 			result: nil,
 
-			expectChanged:        true,
 			expectErr:            nil,
 			expectState:          queryStateStarted,
 			expectTermChClosed:   false,
 			expectResultRecorded: false,
 		},
 		{
-			event:  queryEventRebuffer,
+			event:  queryEventBuffer,
 			result: &shared.WorkflowQueryResult{},
 
-			expectChanged:        false,
 			expectErr:            errInvalidEvent,
 			expectState:          queryStateStarted,
 			expectTermChClosed:   false,
 			expectResultRecorded: false,
 		},
 		{
-			event:  queryEventRecordResult,
+			event:  queryEventComplete,
 			result: nil,
 
-			expectChanged:        false,
 			expectErr:            errInvalidEvent,
 			expectState:          queryStateStarted,
 			expectTermChClosed:   false,
 			expectResultRecorded: false,
 		},
 		{
-			event:  queryEventRecordResult,
+			event:  queryEventComplete,
 			result: &shared.WorkflowQueryResult{},
 
-			expectChanged:        false,
-			expectErr:            nil,
-			expectState:          queryStateStarted,
-			expectTermChClosed:   false,
-			expectResultRecorded: true,
-		},
-		{
-			event:  queryEventRebuffer,
-			result: nil,
-
-			expectChanged:        false,
-			expectErr:            errResultAlreadyRecorded,
-			expectState:          queryStateStarted,
-			expectTermChClosed:   false,
-			expectResultRecorded: true,
-		},
-		{
-			event:  queryEventRecordResult,
-			result: &shared.WorkflowQueryResult{},
-
-			expectChanged:        false,
-			expectErr:            errResultAlreadyRecorded,
-			expectState:          queryStateStarted,
-			expectTermChClosed:   false,
-			expectResultRecorded: true,
-		},
-		{
-			event:  queryEventPersistenceConditionSatisfied,
-			result: nil,
-
-			expectChanged:        true,
 			expectErr:            nil,
 			expectState:          queryStateCompleted,
 			expectTermChClosed:   true,
 			expectResultRecorded: true,
 		},
 		{
-			event:  queryEventPersistenceConditionSatisfied,
+			event:  queryEventBuffer,
 			result: nil,
 
-			expectChanged:        false,
 			expectErr:            errAlreadyCompleted,
 			expectState:          queryStateCompleted,
 			expectTermChClosed:   true,
@@ -178,8 +138,7 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 
 	qsm := newQueryStateMachine(&shared.WorkflowQuery{})
 	for _, tc := range testCases {
-		changed, err := qsm.recordEvent(tc.event, tc.result)
-		s.Equal(tc.expectChanged, changed)
+		err := qsm.recordEvent(tc.event, tc.result)
 		s.Equal(tc.expectErr, err)
 		s.Equal(tc.expectState, qsm.getQuerySnapshot().state)
 		s.Equal(tc.expectTermChClosed, s.chanClosed(qsm.getQueryTermCh()))

@@ -617,5 +617,12 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	}
 	response.BranchToken = currentBranchToken
 
+	qr := msBuilder.GetQueryRegistry()
+	buffered := qr.getBufferedSnapshot()
+	for _, b := range buffered {
+		query, _ := qr.getQuerySnapshot(b)
+		response.Queries = append(response.Queries, query.queryInput)
+	}
+
 	return response, nil
 }

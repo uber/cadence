@@ -44,7 +44,7 @@ type (
 		getQueryTermCh(string) (<-chan struct{}, error)
 
 		bufferQuery(*shared.WorkflowQuery) (string, *querySnapshot, <-chan struct{})
-		recordEvent(string, queryEvent, *shared.WorkflowQueryResult) (bool, error)
+		recordEvent(string, queryEvent, *shared.WorkflowQueryResult) error
 		removeQuery(string)
 	}
 
@@ -139,20 +139,16 @@ func (r *queryRegistryImpl) bufferQuery(queryInput *shared.WorkflowQuery) (strin
 	return id, qsm.getQuerySnapshot(), qsm.getQueryTermCh()
 }
 
-func (r *queryRegistryImpl) recordEvent(id string, event queryEvent, queryResult *shared.WorkflowQueryResult) (bool, error) {
+func (r *queryRegistryImpl) recordEvent(id string, event queryEvent, queryResult *shared.WorkflowQueryResult) error {
 	r.Lock()
 	defer r.Unlock()
 
 	qsm, err := r.getQueryStateMachine(id)
 	if err != nil {
-		return false, err
+		return err
 	}
-	changed, err := qsm.recordEvent(event, queryResult)
-	if err != nil {
-		return false, err
-	}
-	if !changed {
-		return false, nil
+	if err := qsm.recordEvent(event, queryResult); err != nil {
+		return err
 	}
 	delete(r.buffered, id)
 	delete(r.started, id)
@@ -167,7 +163,7 @@ func (r *queryRegistryImpl) recordEvent(id string, event queryEvent, queryResult
 	default:
 		panic("unknown query state")
 	}
-	return true, nil
+	return nil
 }
 
 func (r *queryRegistryImpl) removeQuery(id string) {

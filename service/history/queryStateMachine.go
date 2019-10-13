@@ -33,7 +33,6 @@ import (
 var (
 	errAlreadyCompleted      = errors.New("query has already been completed, cannot post any new events")
 	errInvalidEvent          = errors.New("event cannot be applied to query in state")
-	errResultAlreadyRecorded = errors.New("result already recorded cannot make state transition")
 )
 
 const (
@@ -43,10 +42,9 @@ const (
 )
 
 const (
-	queryEventRebuffer queryEvent = iota
+	queryEventBuffer queryEvent = iota
 	queryEventStart
-	queryEventRecordResult
-	queryEventPersistenceConditionSatisfied
+	queryEventComplete
 )
 
 type (
@@ -56,7 +54,7 @@ type (
 	queryStateMachine interface {
 		getQuerySnapshot() *querySnapshot
 		getQueryTermCh() <-chan struct{}
-		recordEvent(queryEvent, *shared.WorkflowQueryResult) (bool, error)
+		recordEvent(queryEvent, *shared.WorkflowQueryResult) error
 	}
 
 	queryStateMachineImpl struct {
@@ -65,7 +63,6 @@ type (
 		id                            string
 		queryInput                    *shared.WorkflowQuery
 		queryResult                   *shared.WorkflowQueryResult
-		persistenceConditionSatisfied bool
 		termCh                        chan struct{}
 		state                         queryState
 	}
@@ -83,7 +80,6 @@ func newQueryStateMachine(queryInput *shared.WorkflowQuery) queryStateMachine {
 		id:                            uuid.New(),
 		queryInput:                    queryInput,
 		queryResult:                   nil,
-		persistenceConditionSatisfied: false,
 		termCh:                        make(chan struct{}),
 		state:                         queryStateBuffered,
 	}
@@ -108,59 +104,36 @@ func (q *queryStateMachineImpl) getQueryTermCh() <-chan struct{} {
 	return q.termCh
 }
 
-func (q *queryStateMachineImpl) recordEvent(event queryEvent, queryResult *shared.WorkflowQueryResult) (bool, error) {
+func (q *queryStateMachineImpl) recordEvent(event queryEvent, queryResult *shared.WorkflowQueryResult) error {
 	q.Lock()
 	defer q.Unlock()
 
 	if q.state == queryStateCompleted {
-		return false, errAlreadyCompleted
-	}
-
-	if event != queryEventRecordResult && queryResult != nil {
-		return false, errInvalidEvent
+		return errAlreadyCompleted
 	}
 
 	switch event {
-	case queryEventRebuffer:
-		if q.state != queryStateStarted {
-			return false, errInvalidEvent
-		}
-		if q.queryResult != nil {
-			return false, errResultAlreadyRecorded
+	case queryEventBuffer:
+		if queryResult != nil || q.state != queryStateStarted {
+			return errInvalidEvent
 		}
 		q.state = queryStateBuffered
-		return true, nil
+		return nil
 	case queryEventStart:
-		if q.state != queryStateBuffered {
-			return false, errInvalidEvent
+		if queryResult != nil || q.state != queryStateBuffered {
+			return errInvalidEvent
 		}
 		q.state = queryStateStarted
-		return true, nil
-	case queryEventRecordResult:
-		if q.state != queryStateStarted {
-			return false, errInvalidEvent
-		}
-		if queryResult == nil {
-			return false, errInvalidEvent
-		}
-		if q.queryResult != nil {
-			return false, errResultAlreadyRecorded
+		return nil
+	case queryEventComplete:
+		if queryResult == nil || q.state != queryStateStarted {
+			return errInvalidEvent
 		}
 		q.queryResult = queryResult
-		return q.handleComplete(), nil
-	case queryEventPersistenceConditionSatisfied:
-		q.persistenceConditionSatisfied = true
-		return q.handleComplete(), nil
+		q.state = queryStateCompleted
+		close(q.termCh)
+		return nil
 	default:
 		panic("invalid event")
 	}
-}
-
-func (q *queryStateMachineImpl) handleComplete() bool {
-	if q.queryResult == nil || !q.persistenceConditionSatisfied {
-		return false
-	}
-	q.state = queryStateCompleted
-	close(q.termCh)
-	return true
 }
