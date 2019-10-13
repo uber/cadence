@@ -755,13 +755,11 @@ func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
 	newWorkflowSnapshot.ReplicationTasks = nil
 
 	newRunBranchToken := newRunTask.BranchToken
-	newRunEventStoreVersion := newRunTask.EventStoreVersion
 	taskUpdated := false
 	for _, replicationTask := range currentWorkflowMutation.ReplicationTasks {
 		if task, ok := replicationTask.(*persistence.HistoryReplicationTask); ok {
 			taskUpdated = true
 			task.NewRunBranchToken = newRunBranchToken
-			task.NewRunEventStoreVersion = newRunEventStoreVersion
 		}
 	}
 	if !taskUpdated {
@@ -791,19 +789,6 @@ func (c *workflowExecutionContextImpl) persistFirstWorkflowEvents(
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
-	firstEvent := events[0]
-
-	if len(branchToken) == 0 {
-		size, err := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
-			DomainID:          domainID,
-			Execution:         execution,
-			FirstEventID:      firstEvent.GetEventId(),
-			EventBatchVersion: firstEvent.GetVersion(),
-			Events:            events,
-			// TransactionID is set by shard context
-		})
-		return int64(size), err
-	}
 
 	size, err := c.appendHistoryV2EventsWithRetry(
 		domainID,
@@ -834,19 +819,6 @@ func (c *workflowExecutionContextImpl) persistNonFirstWorkflowEvents(
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
-	firstEvent := events[0]
-
-	if len(branchToken) == 0 {
-		size, err := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
-			DomainID:          domainID,
-			Execution:         execution,
-			FirstEventID:      firstEvent.GetEventId(),
-			EventBatchVersion: firstEvent.GetVersion(),
-			Events:            events,
-			// TransactionID is set by shard context
-		})
-		return int64(size), err
-	}
 
 	size, err := c.appendHistoryV2EventsWithRetry(
 		domainID,
@@ -859,25 +831,6 @@ func (c *workflowExecutionContextImpl) persistNonFirstWorkflowEvents(
 		},
 	)
 	return int64(size), err
-}
-
-func (c *workflowExecutionContextImpl) appendHistoryEventsWithRetry(
-	request *persistence.AppendHistoryEventsRequest,
-) (int64, error) {
-
-	resp := 0
-	op := func() error {
-		var err error
-		resp, err = c.shard.AppendHistoryEvents(request)
-		return err
-	}
-
-	err := backoff.Retry(
-		op,
-		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
-	)
-	return int64(resp), err
 }
 
 func (c *workflowExecutionContextImpl) appendHistoryV2EventsWithRetry(
