@@ -213,11 +213,10 @@ func (t *nDCReplicationTaskImpl) isWorkflowReset() bool {
 		decisionTaskFailedEvent := t.getFirstEvent()
 		attr := decisionTaskFailedEvent.DecisionTaskFailedEventAttributes
 		baseRunID := attr.GetBaseRunId()
-		baseEventID := decisionTaskFailedEvent.GetEventId()
 		baseEventVersion := attr.GetForkEventVersion()
 		newRunID := attr.GetNewRunId()
 
-		return baseRunID != "" && baseEventID != 0 && baseEventVersion != 0 && newRunID != ""
+		return len(baseRunID) > 0 && baseEventVersion != 0 && len(newRunID) > 0
 
 	default:
 		return false
