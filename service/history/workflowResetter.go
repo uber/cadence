@@ -24,8 +24,6 @@ import (
 	ctx "context"
 	"fmt"
 
-	"github.com/pborman/uuid"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -39,19 +37,7 @@ import (
 
 type (
 	workflowResetter interface {
-		// ResetWorkflowExecution is the external API used by history engine
-		ResetWorkflowExecution(
-			ctx ctx.Context,
-			domainName string,
-			workflowID string,
-			baseRunID string,
-			baseRebuildLastEventID int64,
-			terminateReason string,
-			resetReason string,
-		) (resetRunID string, retError error)
-
-		// resetWorkflow is the internal API, used by NDC history events reapplication
-		// when current workflow has already finished
+		// resetWorkflow is the new NDC compatible workflow reset logic
 		resetWorkflow(
 			ctx ctx.Context,
 			domainID string,
@@ -63,10 +49,7 @@ type (
 			baseNextEventID int64,
 			resetRunID string,
 			resetRequestID string,
-			resetWorkflowVersion int64,
-			currentWorkflowTerminated bool,
 			currentWorkflow nDCWorkflow,
-			terminateReason string,
 			resetReason string,
 			additionalReapplyEvents []*shared.HistoryEvent,
 		) error
@@ -85,6 +68,8 @@ type (
 		logger            log.Logger
 	}
 )
+
+var _ workflowResetter = (*workflowResetterImpl)(nil)
 
 func newWorkflowResetter(
 	shard ShardContext,
@@ -106,110 +91,6 @@ func newWorkflowResetter(
 	}
 }
 
-func (r *workflowResetterImpl) ResetWorkflowExecution(
-	ctx ctx.Context,
-	domainName string,
-	workflowID string,
-	baseRunID string,
-	baseRebuildLastEventID int64,
-	terminateReason string,
-	resetReason string,
-) (resetRunID string, retError error) {
-
-	domainEntry, err := r.domainCache.GetDomain(domainName)
-	if err != nil {
-		return "", err
-	}
-	domainID := domainEntry.GetInfo().ID
-
-	resetWorkflowVersion := domainEntry.GetFailoverVersion()
-	resetRunID = uuid.New()
-	resetRequestID := uuid.New()
-
-	baseWorkflow, err := r.transactionMgr.loadNDCWorkflow(
-		ctx,
-		domainID,
-		workflowID,
-		baseRunID,
-	)
-	if err != nil {
-		return "", err
-	}
-	defer func() { baseWorkflow.getReleaseFn()(retError) }()
-
-	baseVersionHistories := baseWorkflow.getMutableState().GetVersionHistories()
-	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
-	if err != nil {
-		return "", err
-	}
-	baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
-	if err != nil {
-		return "", err
-	}
-	baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
-	baseNextEventID := baseWorkflow.getMutableState().GetNextEventID()
-
-	var currentWorkflow nDCWorkflow
-	currentWorkflowTerminated := false
-
-	currentRunID, err := r.transactionMgr.getCurrentWorkflowRunID(ctx, domainID, workflowID)
-	if err != nil {
-		return "", err
-	} else if currentRunID == "" {
-		return "", &shared.InternalServiceError{Message: "workflowResetter encounter missing current workflow."}
-	}
-
-	if baseRunID == currentRunID {
-		currentWorkflow = baseWorkflow
-		resetWorkflowVersion = domainEntry.GetFailoverVersion()
-	} else {
-		currentWorkflow, err = r.transactionMgr.loadNDCWorkflow(
-			ctx,
-			domainID,
-			workflowID,
-			currentRunID,
-		)
-		if err != nil {
-			return "", err
-		}
-		defer func() { currentWorkflow.getReleaseFn()(retError) }()
-
-		currentMutableState := currentWorkflow.getMutableState()
-		if currentMutableState.IsWorkflowExecutionRunning() {
-			currentWorkflowTerminated = true
-			if err := r.terminateWorkflow(currentMutableState, terminateReason); err != nil {
-				return "", err
-			}
-			resetWorkflowVersion = currentMutableState.GetCurrentVersion()
-		} else {
-			resetWorkflowVersion = domainEntry.GetFailoverVersion()
-		}
-	}
-
-	if err := r.resetWorkflow(
-		ctx,
-		domainID,
-		workflowID,
-		baseRunID,
-		baseCurrentBranchToken,
-		baseRebuildLastEventID,
-		baseRebuildLastEventVersion,
-		baseNextEventID,
-		resetRunID,
-		resetRequestID,
-		resetWorkflowVersion,
-		currentWorkflowTerminated,
-		currentWorkflow,
-		terminateReason,
-		resetReason,
-		nil,
-	); err != nil {
-		return "", err
-	}
-
-	return resetRunID, err
-}
-
 func (r *workflowResetterImpl) resetWorkflow(
 	ctx ctx.Context,
 	domainID string,
@@ -221,13 +102,29 @@ func (r *workflowResetterImpl) resetWorkflow(
 	baseNextEventID int64,
 	resetRunID string,
 	resetRequestID string,
-	resetWorkflowVersion int64,
-	currentWorkflowTerminated bool,
 	currentWorkflow nDCWorkflow,
-	terminateReason string,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
 ) (retError error) {
+
+	domainEntry, err := r.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return err
+	}
+	resetWorkflowVersion := domainEntry.GetFailoverVersion()
+
+	currentMutableState := currentWorkflow.getMutableState()
+	currentWorkflowTerminated := false
+	if currentMutableState.IsWorkflowExecutionRunning() {
+		if err := r.terminateWorkflow(
+			currentMutableState,
+			resetReason,
+		); err != nil {
+			return err
+		}
+		resetWorkflowVersion = currentMutableState.GetCurrentVersion()
+		currentWorkflowTerminated = true
+	}
 
 	resetWorkflow, err := r.prepareResetWorkflow(
 		ctx,
@@ -241,7 +138,6 @@ func (r *workflowResetterImpl) resetWorkflow(
 		resetRunID,
 		resetRequestID,
 		resetWorkflowVersion,
-		terminateReason,
 		resetReason,
 		additionalReapplyEvents,
 	)
@@ -269,7 +165,6 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	resetRunID string,
 	resetRequestID string,
 	resetWorkflowVersion int64,
-	terminateReason string,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
 ) (nDCWorkflow, error) {
@@ -326,7 +221,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
-	if err := r.failInflightActivity(resetMutableState, terminateReason); err != nil {
+	if err := r.failInflightActivity(resetMutableState, resetReason); err != nil {
 		return nil, err
 	}
 
