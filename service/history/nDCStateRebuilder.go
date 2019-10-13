@@ -137,7 +137,7 @@ func (r *nDCStateRebuilderImpl) rebuild(
 	}
 
 	if rebuiltMutableState.GetNextEventID() != baseNextEventID {
-		return nil, 0, &shared.InternalServiceError{
+		return nil, 0, &shared.BadRequestError{
 			Message: fmt.Sprintf("nDCStateRebuilder unable to rebuild mutable state to event ID: %v", baseNextEventID),
 		}
 	}

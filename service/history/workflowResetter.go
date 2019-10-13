@@ -22,6 +22,7 @@ package history
 
 import (
 	ctx "context"
+	"fmt"
 
 	"github.com/pborman/uuid"
 
@@ -98,8 +99,6 @@ func newWorkflowResetter(
 	}
 }
 
-// TODO missing input validation on reset event ID - 1 being decision task started event
-
 func (r *workflowResetterImpl) ResetWorkflowExecution(
 	ctx ctx.Context,
 	domainName string,
@@ -133,6 +132,15 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 		return "", err
 	}
 	baseNextEventID := baseWorkflow.getMutableState().GetNextEventID()
+	if baseResetUntilEventID >= baseNextEventID {
+		return "", &shared.BadRequestError{
+			Message: fmt.Sprintf("Cannot not reset to event ID %v, event ID range [%v, %v)",
+				baseResetUntilEventID,
+				common.FirstEventID,
+				baseNextEventID,
+			),
+		}
+	}
 
 	var currentWorkflow nDCWorkflow
 	currentWorkflowTerminated := false
@@ -322,9 +330,9 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 
 	// TODO add checking of reset until event ID == decision task started ID + 1
 	decision, ok := resetMutableState.GetInFlightDecision()
-	if !ok {
-		return nil, &shared.InternalServiceError{
-			Message: "workflowResetter encounter missing inflight decision.",
+	if !ok || decision.StartedID+1 != resetMutableState.GetNextEventID() {
+		return nil, &shared.BadRequestError{
+			Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseResetUntilEventID),
 		}
 	}
 
