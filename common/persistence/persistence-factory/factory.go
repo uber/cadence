@@ -44,9 +44,7 @@ type (
 		NewTaskManager() (p.TaskManager, error)
 		// NewShardManager returns a new shard manager
 		NewShardManager() (p.ShardManager, error)
-		// NewHistoryManager returns a new history manager
-		NewHistoryManager() (p.HistoryManager, error)
-		// NewHistoryManager returns a new historyV2 manager
+		// NewHistoryV2Manager returns a new historyV2 manager
 		NewHistoryV2Manager() (p.HistoryV2Manager, error)
 		// NewMetadataManager returns a new metadata manager
 		NewMetadataManager() (p.MetadataManager, error)
@@ -66,8 +64,6 @@ type (
 		NewTaskStore() (p.TaskStore, error)
 		// NewShardStore returns a new shard store
 		NewShardStore() (p.ShardStore, error)
-		// NewHistoryStore returns a new history store
-		NewHistoryStore() (p.HistoryStore, error)
 		// NewHistoryV2Store returns a new historyV2 store
 		NewHistoryV2Store() (p.HistoryV2Store, error)
 		// NewMetadataStore returns a new metadata store
@@ -89,6 +85,7 @@ type (
 		metricsClient metrics.Client
 		logger        log.Logger
 		datastores    map[storeType]Datastore
+		clusterName   string
 	}
 
 	storeType int
@@ -131,6 +128,7 @@ func New(
 		config:        cfg,
 		metricsClient: metricsClient,
 		logger:        logger,
+		clusterName:   clusterName,
 	}
 	limiters := buildRatelimiters(cfg)
 	factory.init(clusterName, limiters)
@@ -165,23 +163,6 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	}
 	if f.metricsClient != nil {
 		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger)
-	}
-	return result, nil
-}
-
-// NewHistoryManager returns a new history manager
-func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
-	ds := f.datastores[storeTypeHistory]
-	store, err := ds.factory.NewHistoryStore()
-	if err != nil {
-		return nil, err
-	}
-	result := p.NewHistoryManagerImpl(store, f.logger, f.config.TransactionSizeLimit)
-	if ds.ratelimit != nil {
-		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
-	}
-	if f.metricsClient != nil {
-		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
@@ -279,7 +260,7 @@ func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, err
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 
-	return p.NewDomainReplicationQueue(result, f.logger), nil
+	return p.NewDomainReplicationQueue(result, f.clusterName, f.metricsClient, f.logger), nil
 }
 
 // Close closes this factory

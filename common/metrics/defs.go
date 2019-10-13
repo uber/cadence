@@ -241,7 +241,7 @@ const (
 	PersistenceDeleteQueueMessagesScope
 	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
 	PersistenceUpdateAckLevelScope
-	// PersistenceGetAckLevelScope tracks GetAckLeve calls made by service to persistence layer
+	// PersistenceGetAckLevelScope tracks GetAckLevel calls made by service to persistence layer
 	PersistenceGetAckLevelScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
@@ -405,6 +405,8 @@ const (
 	AdminClientDescribeWorkflowExecutionScope
 	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryScope
+	// AdminClientGetWorkflowExecutionRawHistoryV2Scope tracks RPC calls to admin service
+	AdminClientGetWorkflowExecutionRawHistoryV2Scope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -580,6 +582,8 @@ const (
 	AdminDescribeWorkflowExecutionScope
 	// AdminGetWorkflowExecutionRawHistoryScope is the metric scope for admin.GetWorkflowExecutionRawHistoryScope
 	AdminGetWorkflowExecutionRawHistoryScope
+	// AdminGetWorkflowExecutionRawHistoryV2Scope is the metric scope for admin.GetWorkflowExecutionRawHistoryScope
+	AdminGetWorkflowExecutionRawHistoryV2Scope
 	// AdminRemoveTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminRemoveTaskScope
 	//AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
@@ -666,6 +670,8 @@ const (
 	FrontendGetDomainReplicationMessagesScope
 	// FrontendReapplyEventsScope is the metric scope for frontend.ReapplyEvents
 	FrontendReapplyEventsScope
+	// FrontendDomainReplicationQueueScope is the metrics scope for domain replication queue
+	FrontendDomainReplicationQueueScope
 
 	NumFrontendScopes
 )
@@ -1078,6 +1084,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientDescribeHistoryHostScope:                 {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:           {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientGetWorkflowExecutionRawHistoryV2Scope:    {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientCloseShardScope:                          {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                   {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                    {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1156,11 +1163,12 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// Frontend Scope Names
 	Frontend: {
 		// Admin API scope co-locates with with frontend
-		AdminRemoveTaskScope:                     {operation: "AdminRemoveTask"},
-		AdminCloseShardTaskScope:                 {operation: "AdminCloseShardTask"},
-		AdminDescribeHistoryHostScope:            {operation: "DescribeHistoryHost"},
-		AdminDescribeWorkflowExecutionScope:      {operation: "DescribeWorkflowExecution"},
-		AdminGetWorkflowExecutionRawHistoryScope: {operation: "GetWorkflowExecutionRawHistory"},
+		AdminRemoveTaskScope:                       {operation: "AdminRemoveTask"},
+		AdminCloseShardTaskScope:                   {operation: "AdminCloseShardTask"},
+		AdminDescribeHistoryHostScope:              {operation: "DescribeHistoryHost"},
+		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
+		AdminGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
+		AdminGetWorkflowExecutionRawHistoryV2Scope: {operation: "GetWorkflowExecutionRawHistoryV2"},
 
 		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},
@@ -1200,6 +1208,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendGetReplicationMessagesScope:           {operation: "GetReplicationMessages"},
 		FrontendGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
 		FrontendReapplyEventsScope:                    {operation: "ReapplyEvents"},
+		FrontendDomainReplicationQueueScope:           {operation: "DomainReplicationQueue"},
 	},
 	// History Scope Names
 	History: {
@@ -1423,9 +1432,16 @@ const (
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
+// Frontend Metrics enum
+const (
+	DomainReplicationTaskAckLevel = iota + NumCommonMetrics
+
+	NumFrontendMetrics
+)
+
 // History Metrics enum
 const (
-	TaskRequests = iota + NumCommonMetrics
+	TaskRequests = iota + NumFrontendMetrics
 	TaskLatency
 	TaskFailures
 	TaskDiscarded
@@ -1727,7 +1743,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
 	},
-	Frontend: {},
+	Frontend: {
+		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
+	},
 	History: {
 		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
 		TaskLatency:                                       {metricName: "task_latency", metricType: Timer},

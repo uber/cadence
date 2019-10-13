@@ -42,7 +42,6 @@ type (
 	decisionTaskHandlerImpl struct {
 		identity                string
 		decisionTaskCompletedID int64
-		eventStoreVersion       int32
 		domainEntry             *cache.DomainCacheEntry
 
 		// internal state
@@ -71,7 +70,6 @@ type (
 func newDecisionTaskHandler(
 	identity string,
 	decisionTaskCompletedID int64,
-	eventStoreVersion int32,
 	domainEntry *cache.DomainCacheEntry,
 	mutableState mutableState,
 	attrValidator *decisionAttrValidator,
@@ -86,7 +84,6 @@ func newDecisionTaskHandler(
 	return &decisionTaskHandlerImpl{
 		identity:                identity,
 		decisionTaskCompletedID: decisionTaskCompletedID,
-		eventStoreVersion:       eventStoreVersion,
 		domainEntry:             domainEntry,
 
 		// internal state
@@ -311,10 +308,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartTimer(
 		return err
 	}
 
-	_, ti, err := handler.mutableState.AddTimerStartedEvent(handler.decisionTaskCompletedID, attr)
+	_, _, err := handler.mutableState.AddTimerStartedEvent(handler.decisionTaskCompletedID, attr)
 	switch err.(type) {
 	case nil:
-		handler.timerBuilder.AddUserTimer(ti, handler.mutableState)
 		return nil
 	case *workflow.BadRequestError:
 		return handler.handlerFailDecision(
@@ -707,7 +703,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 		handler.decisionTaskCompletedID,
 		parentDomainName,
 		attr,
-		handler.eventStoreVersion,
 	)
 	if err != nil {
 		return err
@@ -926,7 +921,6 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 		handler.decisionTaskCompletedID,
 		attr.GetParentWorkflowDomain(),
 		continueAsNewAttributes,
-		handler.eventStoreVersion,
 	)
 	if err != nil {
 		return err

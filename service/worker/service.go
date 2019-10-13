@@ -58,10 +58,12 @@ type (
 	// 3. Archiver: Handles archival of workflow histories.
 	Service struct {
 		stopC         chan struct{}
-		isStopped     int32
+		status        int32
 		params        *service.BootstrapParams
 		config        *Config
 		logger        log.Logger
+		metadataMgr   persistence.MetadataManager
+		domainCache   cache.DomainCache
 		metricsClient metrics.Client
 	}
 
@@ -143,10 +145,28 @@ func NewConfig(params *service.BootstrapParams) *Config {
 
 // Start is called to start the service
 func (s *Service) Start() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 	base := service.New(s.params)
 	base.Start()
 	s.logger = base.GetLogger()
+
+	pConfig := s.params.PersistenceConfig
+	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
+	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
+	s.ensureSystemDomainExists(pFactory, base.GetClusterMetadata().GetCurrentClusterName())
 	s.metricsClient = base.GetMetricsClient()
+
+	metadataMgr, err := pFactory.NewMetadataManager()
+	if err != nil {
+		s.logger.Fatal("failed to start replicator, could not create MetadataManager", tag.Error(err))
+	}
+	s.metadataMgr = metadataMgr
+
+	s.domainCache = cache.NewDomainCache(metadataMgr, base.GetClusterMetadata(), s.metricsClient, s.logger)
+	s.domainCache.Start()
+
 	s.logger.Info("service starting", tag.ComponentWorker)
 
 	if s.config.IndexerCfg != nil {
@@ -158,14 +178,9 @@ func (s *Service) Start() {
 	batcherEnabled := s.config.EnableBatcher()
 	parentClosePolicyEnabled := s.config.EnableParentClosePolicyWorker()
 
-	pConfig := s.params.PersistenceConfig
-	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
-	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
-	s.ensureSystemDomainExists(pFactory, base.GetClusterMetadata().GetCurrentClusterName())
-
 	s.startScanner(base)
 	if replicatorEnabled {
-		s.startReplicator(base, pFactory)
+		s.startReplicator(base)
 	}
 	if archiverEnabled {
 		s.startArchiver(base, pFactory)
@@ -184,10 +199,11 @@ func (s *Service) Start() {
 
 // Stop is called to stop the service
 func (s *Service) Stop() {
-	if !atomic.CompareAndSwapInt32(&s.isStopped, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
 	close(s.stopC)
+	s.domainCache.Stop()
 	s.params.Logger.Info("service stopped", tag.ComponentWorker)
 }
 
@@ -235,23 +251,24 @@ func (s *Service) startScanner(base service.Service) {
 	}
 }
 
-func (s *Service) startReplicator(base service.Service, pFactory persistencefactory.Factory) {
-	metadataV2Mgr, err := pFactory.NewMetadataManager()
+func (s *Service) startReplicator(base service.Service) {
+	serviceResolver, err := base.GetMembershipMonitor().GetResolver(common.WorkerServiceName)
 	if err != nil {
-		s.logger.Fatal("failed to start replicator, could not create MetadataManager", tag.Error(err))
+		s.logger.Fatal("failed to get service resolver", tag.Error(err))
 	}
-	domainCache := cache.NewDomainCache(metadataV2Mgr, base.GetClusterMetadata(), s.metricsClient, s.logger)
-	domainCache.Start()
 
 	replicator := replicator.NewReplicator(
 		base.GetClusterMetadata(),
-		metadataV2Mgr,
-		domainCache,
+		s.metadataMgr,
+		s.domainCache,
 		base.GetClientBean(),
 		s.config.ReplicationCfg,
 		base.GetMessagingClient(),
 		s.logger,
-		s.metricsClient)
+		s.metricsClient,
+		base.GetHostInfo(),
+		serviceResolver,
+	)
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
 		s.logger.Fatal("fail to start replicator", tag.Error(err))
@@ -275,33 +292,23 @@ func (s *Service) startIndexer(base service.Service) {
 func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory) {
 	publicClient := s.params.PublicClient
 
-	historyManager, err := pFactory.NewHistoryManager()
-	if err != nil {
-		s.logger.Fatal("failed to start archiver, could not create HistoryManager", tag.Error(err))
-	}
 	historyV2Manager, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
 		s.logger.Fatal("failed to start archiver, could not create HistoryV2Manager", tag.Error(err))
 	}
-	metadataMgr, err := pFactory.NewMetadataManager()
-	if err != nil {
-		s.logger.Fatal("failed to start archiver, could not create MetadataManager", tag.Error(err))
-	}
-	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
-	domainCache.Start()
+
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
-		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,
 		Logger:           s.logger,
 		MetricsClient:    s.metricsClient,
 		ClusterMetadata:  base.GetClusterMetadata(),
-		DomainCache:      domainCache,
+		DomainCache:      s.domainCache,
 	}
 	visibilityArchiverBootstrapContainer := &carchiver.VisibilityBootstrapContainer{
 		Logger:          s.logger,
 		MetricsClient:   s.metricsClient,
 		ClusterMetadata: base.GetClusterMetadata(),
-		DomainCache:     domainCache,
+		DomainCache:     s.domainCache,
 	}
 	archiverProvider := base.GetArchiverProvider()
 	err = archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
@@ -313,9 +320,8 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
 		Logger:           s.logger,
-		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,
-		DomainCache:      domainCache,
+		DomainCache:      s.domainCache,
 		Config:           s.config.ArchiverConfig,
 		ArchiverProvider: archiverProvider,
 	}
