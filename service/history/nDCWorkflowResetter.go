@@ -92,16 +92,16 @@ func newNDCWorkflowResetter(
 func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	ctx ctx.Context,
 	now time.Time,
-	baseEventID int64,
-	baseVersion int64,
+	baseLastEventID int64,
+	baseLastEventVersion int64,
 ) (mutableState, error) {
 
-	baseBranchToken, err := r.getBaseBranchToken(ctx, baseEventID, baseVersion)
+	baseBranchToken, err := r.getBaseBranchToken(ctx, baseLastEventID, baseLastEventVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	resetBranchToken, err := r.getResetBranchToken(ctx, baseBranchToken, baseEventID)
+	resetBranchToken, err := r.getResetBranchToken(ctx, baseBranchToken, baseLastEventID)
 
 	requestID := uuid.New()
 	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.rebuild(
@@ -113,7 +113,8 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 			r.baseRunID,
 		),
 		baseBranchToken,
-		baseEventID+1,
+		baseLastEventID,
+		baseLastEventVersion,
 		definition.NewWorkflowIdentifier(
 			r.domainID,
 			r.workflowID,
@@ -168,14 +169,14 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 func (r *nDCWorkflowResetterImpl) getResetBranchToken(
 	ctx ctx.Context,
 	baseBranchToken []byte,
-	baseEventID int64,
+	baseLastEventID int64,
 ) ([]byte, error) {
 
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
 	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseBranchToken,
-		ForkNodeID:      baseEventID + 1,
+		ForkNodeID:      baseLastEventID + 1,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
 		ShardID:         common.IntPtr(shardID),
 	})

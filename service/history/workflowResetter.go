@@ -45,7 +45,7 @@ type (
 			domainName string,
 			workflowID string,
 			baseRunID string,
-			baseResetUntilEventID int64,
+			baseRebuildLastEventID int64,
 			terminateReason string,
 			resetReason string,
 		) (resetRunID string, retError error)
@@ -58,7 +58,8 @@ type (
 			workflowID string,
 			baseRunID string,
 			baseBranchToken []byte,
-			baseResetUntilEventID int64,
+			baseRebuildLastEventID int64,
+			baseRebuildLastEventVersion int64,
 			baseNextEventID int64,
 			resetRunID string,
 			resetRequestID string,
@@ -104,15 +105,18 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 	domainName string,
 	workflowID string,
 	baseRunID string,
-	baseResetUntilEventID int64,
+	baseRebuildLastEventID int64,
 	terminateReason string,
 	resetReason string,
 ) (resetRunID string, retError error) {
 
-	domainID, err := r.domainCache.GetDomainID(domainName)
+	domainEntry, err := r.domainCache.GetDomain(domainName)
 	if err != nil {
 		return "", err
 	}
+	domainID := domainEntry.GetInfo().ID
+
+	resetWorkflowVersion := domainEntry.GetFailoverVersion()
 	resetRunID = uuid.New()
 	resetRequestID := uuid.New()
 
@@ -127,24 +131,20 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 	}
 	defer func() { baseWorkflow.getReleaseFn()(retError) }()
 
-	baseBranchToken, err := baseWorkflow.getMutableState().GetCurrentBranchToken()
+	baseVersionHistories := baseWorkflow.getMutableState().GetVersionHistories()
+	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return "", err
 	}
-	baseNextEventID := baseWorkflow.getMutableState().GetNextEventID()
-	if baseResetUntilEventID >= baseNextEventID {
-		return "", &shared.BadRequestError{
-			Message: fmt.Sprintf("Cannot not reset to event ID %v, event ID range [%v, %v)",
-				baseResetUntilEventID,
-				common.FirstEventID,
-				baseNextEventID,
-			),
-		}
+	baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
+	if err != nil {
+		return "", err
 	}
+	baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
+	baseNextEventID := baseWorkflow.getMutableState().GetNextEventID()
 
 	var currentWorkflow nDCWorkflow
 	currentWorkflowTerminated := false
-	var resetWorkflowVersion *int64
 
 	currentRunID, err := r.transactionMgr.getCurrentWorkflowRunID(ctx, domainID, workflowID)
 	if err != nil {
@@ -155,11 +155,7 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 
 	if baseRunID == currentRunID {
 		currentWorkflow = baseWorkflow
-		domainEntry, err := r.domainCache.GetDomain(domainName)
-		if err != nil {
-			return "", err
-		}
-		resetWorkflowVersion = common.Int64Ptr(domainEntry.GetFailoverVersion())
+		resetWorkflowVersion = domainEntry.GetFailoverVersion()
 	} else {
 		currentWorkflow, err = r.transactionMgr.loadNDCWorkflow(
 			ctx,
@@ -178,13 +174,9 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 			if err := r.terminateWorkflow(currentMutableState, terminateReason); err != nil {
 				return "", err
 			}
-			resetWorkflowVersion = common.Int64Ptr(currentMutableState.GetCurrentVersion())
+			resetWorkflowVersion = currentMutableState.GetCurrentVersion()
 		} else {
-			domainEntry, err := r.domainCache.GetDomain(domainName)
-			if err != nil {
-				return "", err
-			}
-			resetWorkflowVersion = common.Int64Ptr(domainEntry.GetFailoverVersion())
+			resetWorkflowVersion = domainEntry.GetFailoverVersion()
 		}
 	}
 
@@ -193,12 +185,13 @@ func (r *workflowResetterImpl) ResetWorkflowExecution(
 		domainID,
 		workflowID,
 		baseRunID,
-		baseBranchToken,
-		baseResetUntilEventID,
+		baseCurrentBranchToken,
+		baseRebuildLastEventID,
+		baseRebuildLastEventVersion,
 		baseNextEventID,
 		resetRunID,
 		resetRequestID,
-		*resetWorkflowVersion,
+		resetWorkflowVersion,
 		currentWorkflowTerminated,
 		currentWorkflow,
 		terminateReason,
@@ -217,7 +210,8 @@ func (r *workflowResetterImpl) resetWorkflow(
 	workflowID string,
 	baseRunID string,
 	baseBranchToken []byte,
-	baseResetUntilEventID int64,
+	baseRebuildLastEventID int64,
+	baseRebuildLastEventVersion int64,
 	baseNextEventID int64,
 	resetRunID string,
 	resetRequestID string,
@@ -235,7 +229,8 @@ func (r *workflowResetterImpl) resetWorkflow(
 		workflowID,
 		baseRunID,
 		baseBranchToken,
-		baseResetUntilEventID,
+		baseRebuildLastEventID,
+		baseRebuildLastEventVersion,
 		baseNextEventID,
 		resetRunID,
 		resetRequestID,
@@ -262,7 +257,8 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	workflowID string,
 	baseRunID string,
 	baseBranchToken []byte,
-	baseResetUntilEventID int64,
+	baseRebuildLastEventID int64,
+	baseRebuildLastEventVersion int64,
 	baseNextEventID int64,
 	resetRunID string,
 	resetRequestID string,
@@ -276,7 +272,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		domainID,
 		workflowID,
 		baseBranchToken,
-		baseResetUntilEventID,
+		baseRebuildLastEventID+1,
 		resetRunID,
 	)
 	if err != nil {
@@ -303,7 +299,8 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 			baseRunID,
 		),
 		baseBranchToken,
-		baseResetUntilEventID,
+		baseRebuildLastEventID,
+		baseRebuildLastEventVersion,
 		definition.NewWorkflowIdentifier(
 			domainID,
 			workflowID,
@@ -332,7 +329,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	decision, ok := resetMutableState.GetInFlightDecision()
 	if !ok || decision.StartedID+1 != resetMutableState.GetNextEventID() {
 		return nil, &shared.BadRequestError{
-			Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseResetUntilEventID),
+			Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted: %v", baseRebuildLastEventID),
 		}
 	}
 
@@ -361,7 +358,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		workflowID,
 		baseRunID,
 		baseBranchToken,
-		baseResetUntilEventID,
+		baseRebuildLastEventID+1,
 		baseNextEventID,
 	); err != nil {
 		return nil, err
@@ -525,7 +522,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 	workflowID string,
 	baseRunID string,
 	baseBranchToken []byte,
-	baseResetUntilEventID int64,
+	baseRebuildNextEventID int64,
 	baseNextEventID int64,
 ) error {
 
@@ -539,7 +536,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 	if nextRunID, err = r.reapplyWorkflowEvents(
 		resetMutableState,
 		definition.NewWorkflowIdentifier(domainID, workflowID, baseRunID),
-		baseResetUntilEventID,
+		baseRebuildNextEventID,
 		baseNextEventID,
 		baseBranchToken,
 	); err != nil {
