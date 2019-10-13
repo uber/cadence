@@ -770,14 +770,87 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	execInfo := ms.GetExecutionInfo()
 	clientFeature := client.NewFeatureImpl(execInfo.ClientLibraryVersion, execInfo.ClientFeatureVersion, execInfo.ClientImpl)
-	if !clientFeature.SupportConsistentQuery() || req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual {
+	if !ms.IsWorkflowExecutionRunning() || !clientFeature.SupportConsistentQuery() || req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual {
+		release(nil)
 		return e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
 	}
 
 	// queries with read_after_write consistency are not defined on non-active cluster
-	if _, err := e.getActiveDomainEntry(request.DomainUUID); err != nil {
+	de, err := e.getActiveDomainEntry(request.DomainUUID)
+	if err != nil {
 		return nil, err
 	}
+
+	/**
+
+	At this point the following are true
+	- READ_AFTER_WRITE query consistency is desired
+	- The workflow is open
+	- The client supports consistency query
+	- The cluster is active
+
+	There are three cases at this point
+	1. {Scheduled=false, Started=false}: safe to dispatch directly through matching
+	2. {Scheduled=true, Started=false}: add to query registry do nothing
+	3. {Scheduled=true, Started=true}: wait for current decision to complete then dispatch directly through matching
+
+	 */
+
+	// case 1: {Scheduled=false, Started=false}
+	if !ms.HasPendingDecision() && !ms.HasInFlightDecision() {
+		release(nil)
+		return e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
+	}
+
+	// case 2: {Scheduled=true, Started=false}
+	if ms.HasPendingDecision() && !ms.HasInFlightDecision() {
+		qr := ms.GetQueryRegistry()
+		queryID, _, termCh := qr.bufferQuery(req.GetQuery())
+		ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
+		timer := time.NewTimer(ttl)
+		defer func() {
+			timer.Stop()
+			qr.removeQuery(queryID)
+		}()
+		release(nil)
+		select {
+		case <-termCh:
+			querySnapshot, err := qr.getQuerySnapshot(queryID)
+			if err != nil {
+				return nil, err
+			}
+			result := querySnapshot.queryResult
+			switch result.GetResultType() {
+			case workflow.QueryResultTypeAnswered:
+				return &h.QueryWorkflowResponse{
+					Response: &workflow.QueryWorkflowResponse{
+						QueryResult:   result.GetAnswer(),
+					},
+				}, nil
+			case workflow.QueryResultTypeFailed:
+				return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
+			}
+		case <-timer.C:
+			return nil, ErrQueryTimeout
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
+	}
+
+	// case 3: {Scheduled=true, Started=true}
+
+
+
+	// wait for current decision task to complete or record failure
+	// if complete you can dispatch directly through matching
+	// on failure you need to buffer (in order to buffer you need to hold the lock first to make sure the state of mutable state is not updated
+
+
+
+
+
+
 
 	// you can dispatch through matching directly safely if there are no scheduled decision tasks
 	// or if there is a started
@@ -828,42 +901,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 	//		release(nil)
 	//	}()
 	//
-	//	// ensure decision task exists to dispatch query on
-	//retryLoop:
-	//	for i := 0; i < conditionalRetryCount; i++ {
-	//		context, release, err = e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		msBuilder, err := context.loadWorkflowExecution()
-	//		if err != nil {
-	//			release(err)
-	//			return nil, err
-	//		}
-	//		// a scheduled decision task already exists - no need to schedule an in memory decision task
-	//		if (msBuilder.HasPendingDecision() && !msBuilder.HasInFlightDecision()) || msBuilder.HasScheduledInMemoryDecisionTask() {
-	//			release(nil)
-	//			break retryLoop
-	//		}
-	//		// there exists an inflight decision task - try again to schedule decision task
-	//		if msBuilder.HasInFlightDecision() {
-	//			release(nil)
-	//			// wait for currently inflight decision task to complete
-	//			select {
-	//			case <-timer.C:
-	//				return nil, ErrQueryTimeout
-	//			case <-ctx.Done():
-	//				return nil, ctx.Err()
-	//			case <-time.After(100 * time.Millisecond):
-	//				continue retryLoop
-	//			}
-	//		}
-	//		// there is no scheduled or started decision task - schedule in memory decision task
-	//		if err := msBuilder.AddInMemoryDecisionTaskScheduled(ttl); err != nil {
-	//			release(err)
-	//			return nil, err
-	//		}
-	//	}
 	//
 	//	// at this point query has been buffered and there is a pending decision task to dispatch the query on
 	//	select {
