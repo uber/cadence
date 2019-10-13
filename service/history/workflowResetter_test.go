@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
@@ -48,6 +49,7 @@ type (
 		mockDomainCache     *cache.DomainCacheMock
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockHistoryV2Mgr    *mocks.HistoryV2Manager
+		mockStateRebuilder  *MocknDCStateRebuilder
 		logger              log.Logger
 
 		controller         *gomock.Controller
@@ -79,6 +81,7 @@ func (s *workflowResetterSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.controller = gomock.NewController(s.T())
 	s.mockTransactionMgr = NewMocknDCTransactionMgr(s.controller)
+	s.mockStateRebuilder = NewMocknDCStateRebuilder(s.controller)
 
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -101,6 +104,9 @@ func (s *workflowResetterSuite) SetupTest() {
 		s.mockTransactionMgr,
 		s.logger,
 	)
+	s.workflowResetter.newStateRebuilder = func() nDCStateRebuilder {
+		return s.mockStateRebuilder
+	}
 
 	s.domainID = testDomainID
 	s.workflowID = "some random workflow ID"
@@ -217,6 +223,68 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 	s.False(resetReleaseCalled)
 }
 
+func (s *workflowResetterSuite) TestReplayResetWorkflow() {
+	ctx := context.Background()
+	baseBranchToken := []byte("some random base branch token")
+	baseRebuildLastEventID := int64(1233)
+	baseRebuildLastEventVersion := int64(12)
+	baseNodeID := baseRebuildLastEventID + 1
+
+	resetBranchToken := []byte("some random reset branch token")
+	resetRequestID := uuid.New()
+	resetHistorySize := int64(4411)
+	resetMutableState := &mockMutableState{}
+	defer resetMutableState.AssertExpectations(s.T())
+
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", &persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: baseBranchToken,
+		ForkNodeID:      baseNodeID,
+		Info:            persistence.BuildHistoryGarbageCleanupInfo(s.domainID, s.workflowID, s.resetRunID),
+		ShardID:         common.IntPtr(s.mockShard.GetShardID()),
+	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
+
+	s.mockHistoryV2Mgr.On("CompleteForkBranch", &persistence.CompleteForkBranchRequest{
+		BranchToken: resetBranchToken,
+		Success:     true,
+		ShardID:     common.IntPtr(s.mockShard.GetShardID()),
+	}).Return(nil).Times(1)
+
+	s.mockStateRebuilder.EXPECT().rebuild(
+		ctx,
+		gomock.Any(),
+		definition.NewWorkflowIdentifier(
+			s.domainID,
+			s.workflowID,
+			s.baseRunID,
+		),
+		baseBranchToken,
+		baseRebuildLastEventID,
+		baseRebuildLastEventVersion,
+		definition.NewWorkflowIdentifier(
+			s.domainID,
+			s.workflowID,
+			s.resetRunID,
+		),
+		resetBranchToken,
+		resetRequestID,
+	).Return(resetMutableState, resetHistorySize, nil).Times(1)
+
+	resetWorkflow, err := s.workflowResetter.replayResetWorkflow(
+		ctx,
+		s.domainID,
+		s.workflowID,
+		s.baseRunID,
+		baseBranchToken,
+		baseRebuildLastEventID,
+		baseRebuildLastEventVersion,
+		s.resetRunID,
+		resetRequestID,
+	)
+	s.NoError(err)
+	s.Equal(resetHistorySize, resetWorkflow.getContext().getHistorySize())
+	s.Equal(resetMutableState, resetWorkflow.getMutableState())
+}
+
 func (s *workflowResetterSuite) TestFailInflightActivity() {
 	terminateReason := "some random termination reason"
 
@@ -258,13 +326,12 @@ func (s *workflowResetterSuite) TestGenerateBranchToken() {
 	baseBranchToken := []byte("some random base branch token")
 	baseNodeID := int64(1234)
 
-	resetRunID := uuid.New()
 	resetBranchToken := []byte("some random reset branch token")
 
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseBranchToken,
 		ForkNodeID:      baseNodeID,
-		Info:            persistence.BuildHistoryGarbageCleanupInfo(s.domainID, s.workflowID, resetRunID),
+		Info:            persistence.BuildHistoryGarbageCleanupInfo(s.domainID, s.workflowID, s.resetRunID),
 		ShardID:         common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
 
@@ -275,7 +342,7 @@ func (s *workflowResetterSuite) TestGenerateBranchToken() {
 	}).Return(nil).Times(1)
 
 	newBranchToken, err := s.workflowResetter.generateBranchToken(
-		s.domainID, s.workflowID, baseBranchToken, baseNodeID, resetRunID,
+		s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
 	)
 	s.NoError(err)
 	s.Equal(resetBranchToken, newBranchToken)

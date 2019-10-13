@@ -72,14 +72,17 @@ type (
 		) error
 	}
 
+	nDCStateRebuilderProvider func() nDCStateRebuilder
+
 	workflowResetterImpl struct {
-		shard           ShardContext
-		domainCache     cache.DomainCache
-		clusterMetadata cluster.Metadata
-		historyV2Mgr    persistence.HistoryV2Manager
-		historyCache    *historyCache
-		transactionMgr  nDCTransactionMgr
-		logger          log.Logger
+		shard             ShardContext
+		domainCache       cache.DomainCache
+		clusterMetadata   cluster.Metadata
+		historyV2Mgr      persistence.HistoryV2Manager
+		historyCache      *historyCache
+		transactionMgr    nDCTransactionMgr
+		newStateRebuilder nDCStateRebuilderProvider
+		logger            log.Logger
 	}
 )
 
@@ -96,7 +99,10 @@ func newWorkflowResetter(
 		historyV2Mgr:    shard.GetHistoryV2Manager(),
 		historyCache:    historyCache,
 		transactionMgr:  transactionMgr,
-		logger:          logger,
+		newStateRebuilder: func() nDCStateRebuilder {
+			return newNDCStateRebuilder(shard, logger)
+		},
+		logger: logger,
 	}
 }
 
@@ -415,7 +421,6 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 		return nil, err
 	}
 
-	stateRebuilder := newNDCStateRebuilder(r.shard, r.logger)
 	resetContext := newWorkflowExecutionContext(
 		domainID,
 		shared.WorkflowExecution{
@@ -426,7 +431,7 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 		r.shard.GetExecutionManager(),
 		r.logger,
 	)
-	resetMutableState, resetHistorySize, err := stateRebuilder.rebuild(
+	resetMutableState, resetHistorySize, err := r.newStateRebuilder().rebuild(
 		ctx,
 		r.shard.GetTimeSource().Now(),
 		definition.NewWorkflowIdentifier(
