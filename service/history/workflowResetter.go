@@ -535,7 +535,6 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 	// first special handling the remaining events for base workflow
 	if nextRunID, err = r.reapplyWorkflowEvents(
 		resetMutableState,
-		definition.NewWorkflowIdentifier(domainID, workflowID, baseRunID),
 		baseRebuildNextEventID,
 		baseNextEventID,
 		baseBranchToken,
@@ -567,7 +566,6 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 
 		if nextRunID, err = r.reapplyWorkflowEvents(
 			resetMutableState,
-			definition.NewWorkflowIdentifier(domainID, workflowID, nextRunID),
 			common.FirstEventID,
 			nextWorkflowNextEventID,
 			nextWorkflowBranchToken,
@@ -580,7 +578,6 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 
 func (r *workflowResetterImpl) reapplyWorkflowEvents(
 	mutableState mutableState,
-	workflowIdentifier definition.WorkflowIdentifier,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -591,7 +588,6 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 	//  after the above change, this API do not have to return the continue as new run ID
 
 	iter := collection.NewPagingIterator(r.getPaginationFn(
-		workflowIdentifier,
 		firstEventID,
 		nextEventID,
 		branchToken,
@@ -644,7 +640,6 @@ func (r *workflowResetterImpl) reapplyEvents(
 }
 
 func (r *workflowResetterImpl) getPaginationFn(
-	workflowIdentifier definition.WorkflowIdentifier,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -653,13 +648,8 @@ func (r *workflowResetterImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, _, err := PaginateHistory(
-			nil,
 			r.historyV2Mgr,
 			true,
-			workflowIdentifier.DomainID,
-			workflowIdentifier.WorkflowID,
-			workflowIdentifier.RunID,
-			persistence.EventStoreVersionV2,
 			branchToken,
 			firstEventID,
 			nextEventID,

@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/collection"
-	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
@@ -87,7 +86,7 @@ func (s *workflowResetterSuite) SetupTest() {
 
 	s.mockShard = &shardContextImpl{
 		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
-		config:                    NewDynamicConfigForEventsV2Test(),
+		config:                    NewDynamicConfigForTest(),
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		domainCache:               s.mockDomainCache,
 		clusterMetadata:           s.mockClusterMetadata,
@@ -483,7 +482,6 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 
 	nextRunID, err := s.workflowResetter.reapplyWorkflowEvents(
 		mutableState,
-		definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.currentRunID),
 		firstEventID,
 		nextEventID,
 		branchToken,
@@ -541,7 +539,6 @@ func (s *workflowResetterSuite) TestPagination() {
 	firstEventID := common.FirstEventID
 	nextEventID := int64(101)
 	branchToken := []byte("some random branch token")
-	workflowIdentifier := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.baseRunID)
 
 	event1 := &shared.HistoryEvent{
 		EventId:                                 common.Int64Ptr(1),
@@ -593,7 +590,7 @@ func (s *workflowResetterSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.workflowResetter.getPaginationFn(workflowIdentifier, firstEventID, nextEventID, branchToken)
+	paginationFn := s.workflowResetter.getPaginationFn(firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*shared.History{}
