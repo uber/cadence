@@ -36,14 +36,15 @@ const (
 var defaultVersion = version{0, 0, 0}
 
 type (
-	// Feature provides information about client's capibility
+	// Feature provides information about client's capabilities
 	Feature interface {
 		SupportStickyQuery() bool
+		SupportConsistentQuery() bool
 	}
 
-	// FeatureImpl is used for determining the client's capibility.
+	// FeatureImpl is used for determining the client's capabilities.
 	// This can be useful when service support a feature, while
-	// client does not, so we can use be backward comparible
+	// client does not, so we can be backward compatible
 	FeatureImpl struct {
 		libVersion     version
 		featureVersion version

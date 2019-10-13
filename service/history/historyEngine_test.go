@@ -584,8 +584,10 @@ func (s *engineSuite) TestQueryWorkflow() {
 	}
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(testDomainID),
-		Execution:  &execution,
-		Query:      &workflow.WorkflowQuery{},
+		Request: &workflow.QueryWorkflowRequest{
+			Execution:             &execution,
+			Query:                 &workflow.WorkflowQuery{},
+		},
 	}
 
 	// time out because query is not completed in time
@@ -598,7 +600,7 @@ func (s *engineSuite) TestQueryWorkflow() {
 	resp, err = s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.True(time.Now().After(start.Add(time.Second)))
 	s.NoError(err)
-	s.Equal([]byte{1, 2, 3}, resp.GetQueryResult())
+	s.Equal([]byte{1, 2, 3}, resp.GetResponse().GetQueryResult())
 	waitGroup.Wait()
 }
 

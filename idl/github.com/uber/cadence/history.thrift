@@ -335,12 +335,11 @@ struct SyncActivityRequest {
 
 struct QueryWorkflowRequest {
   10: optional string domainUUID
-  20: optional shared.WorkflowExecution execution
-  30: optional shared.WorkflowQuery query
+  20: optional shared.QueryWorkflowRequest request
 }
 
 struct QueryWorkflowResponse {
-  10: optional binary queryResult
+  10: optional shared.QueryWorkflowResponse response
 }
 
 struct ReapplyEventsRequest {

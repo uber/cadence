@@ -28,6 +28,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	m "github.com/uber/cadence/.gen/go/matching"
+	"github.com/uber/cadence/common/client"
+	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -132,6 +136,8 @@ type (
 		replicationTaskProcessors []*ReplicationTaskProcessor
 		publicClient              workflowserviceclient.Interface
 		eventsReapplier           nDCEventsReapplier
+		matchingClient            matching.Client
+		rawMatchingClient         matching.Client
 	}
 )
 
@@ -191,6 +197,7 @@ func NewEngineWithShardContext(
 	config *Config,
 	replicationTaskFetchers *ReplicationTaskFetchers,
 	domainReplicator replicator.DomainReplicator,
+	rawMatchingClient matching.Client,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -221,7 +228,9 @@ func NewEngineWithShardContext(
 			shard.GetConfig().ArchiveRequestRPS,
 			shard.GetService().GetArchiverProvider(),
 		),
-		publicClient: publicClient,
+		publicClient:      publicClient,
+		matchingClient:    matching,
+		rawMatchingClient: rawMatchingClient,
 	}
 
 	historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -733,107 +742,219 @@ func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
 ) (retResp *h.QueryWorkflowResponse, retErr error) {
-	domainCache, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
 	if err != nil {
 		return nil, err
 	}
-	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	defer release(retErr)
+	ms, err := context.loadWorkflowExecution()
 	if err != nil {
 		return nil, err
 	}
-	msBuilder, err := context.loadWorkflowExecution()
-	if err != nil {
-		release(err)
-		return nil, err
-	}
-	queryRegistry := msBuilder.GetQueryRegistry()
-	release(nil)
-	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
-
-	ttl := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
-	timer := time.NewTimer(ttl)
-
-	// after query is finished removed query from query registry and remove any potentially created in memory decision task
-	defer func() {
-		timer.Stop()
-		queryRegistry.removeQuery(queryID)
-		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-		if err != nil {
-			retResp = nil
-			retErr = err
-			return
-		}
-		msBuilder, err := context.loadWorkflowExecution()
-		if err != nil {
-			release(err)
-			retResp = nil
-			retErr = err
-			return
-		}
-		msBuilder.DeleteInMemoryDecisionTask()
-		release(nil)
-	}()
-
-	// ensure decision task exists to dispatch query on
-retryLoop:
-	for i := 0; i < conditionalRetryCount; i++ {
-		context, release, err = e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
-		if err != nil {
-			return nil, err
-		}
-		msBuilder, err := context.loadWorkflowExecution()
-		if err != nil {
-			release(err)
-			return nil, err
-		}
-		// a scheduled decision task already exists - no need to schedule an in memory decision task
-		if (msBuilder.HasPendingDecision() && !msBuilder.HasInFlightDecision()) || msBuilder.HasScheduledInMemoryDecisionTask() {
-			release(nil)
-			break retryLoop
-		}
-		// there exists an inflight decision task - try again to schedule decision task
-		if msBuilder.HasInFlightDecision() {
-			release(nil)
-			// wait for currently inflight decision task to complete
-			select {
-			case <-timer.C:
-				return nil, ErrQueryTimeout
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(100 * time.Millisecond):
-				continue retryLoop
-			}
-		}
-		// there is no scheduled or started decision task - schedule in memory decision task
-		if err := msBuilder.AddInMemoryDecisionTaskScheduled(ttl); err != nil {
-			release(err)
-			return nil, err
-		}
-	}
-
-	// at this point query has been buffered and there is a pending decision task to dispatch the query on
-	select {
-	case <-queryTermCh:
-		querySnapshot, err := queryRegistry.getQuerySnapshot(queryID)
-		if err != nil {
-			return nil, err
-		}
-		result := querySnapshot.queryResult
-		switch result.GetResultType() {
-		case workflow.QueryResultTypeAnswered:
+	req := request.GetRequest()
+	_, closeStatus := ms.GetWorkflowStateCloseStatus()
+	if closeStatus != persistence.WorkflowCloseStatusNone && req.QueryRejectCondition != nil {
+		notOpenReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotOpen
+		notCompletedCleanlyReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotCompletedCleanly && closeStatus != persistence.WorkflowCloseStatusCompleted
+		if notOpenReject || notCompletedCleanlyReject {
 			return &h.QueryWorkflowResponse{
-				QueryResult: result.GetAnswer(),
+				Response: &workflow.QueryWorkflowResponse{
+					QueryResult: nil,
+					QueryRejected: &workflow.QueryRejected{
+						CloseStatus: persistence.ToThriftWorkflowExecutionCloseStatus(closeStatus).Ptr(),
+					},
+				},
 			}, nil
-		case workflow.QueryResultTypeFailed:
-			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
 		}
-	case <-timer.C:
-		return nil, ErrQueryTimeout
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
-	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
+
+	execInfo := ms.GetExecutionInfo()
+	clientFeature := client.NewFeatureImpl(execInfo.ClientLibraryVersion, execInfo.ClientFeatureVersion, execInfo.ClientImpl)
+	if !clientFeature.SupportConsistentQuery() || req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual {
+		return e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
+	}
+
+	// queries with read_after_write consistency are not defined on non-active cluster
+	if _, err := e.getActiveDomainEntry(request.DomainUUID); err != nil {
+		return nil, err
+	}
+
+	// you can dispatch through matching directly safely if there are no scheduled decision tasks
+	// or if there is a started
+
+	// the only case in which it is safe to dispatch directly though matching at this point is if there is no scheduled or started decision task
+
+	// determine if query can be safely dispatched through matching directly, if so just dispatch
+	// otherwise buffer query in query registry and wait for query timeout or for query to complete
+
+	//	domainCache, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	msBuilder, err := context.loadWorkflowExecution()
+	//	if err != nil {
+	//		release(err)
+	//		return nil, err
+	//	}
+	//	queryRegistry := msBuilder.GetQueryRegistry()
+	//	release(nil)
+	//	queryID, _, queryTermCh := queryRegistry.bufferQuery(request.GetQuery())
+	//
+	//	ttl := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
+	//	timer := time.NewTimer(ttl)
+	//
+	//	// after query is finished removed query from query registry and remove any potentially created in memory decision task
+	//	defer func() {
+	//		timer.Stop()
+	//		queryRegistry.removeQuery(queryID)
+	//		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	//		if err != nil {
+	//			retResp = nil
+	//			retErr = err
+	//			return
+	//		}
+	//		msBuilder, err := context.loadWorkflowExecution()
+	//		if err != nil {
+	//			release(err)
+	//			retResp = nil
+	//			retErr = err
+	//			return
+	//		}
+	//		msBuilder.DeleteInMemoryDecisionTask()
+	//		release(nil)
+	//	}()
+	//
+	//	// ensure decision task exists to dispatch query on
+	//retryLoop:
+	//	for i := 0; i < conditionalRetryCount; i++ {
+	//		context, release, err = e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetExecution())
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		msBuilder, err := context.loadWorkflowExecution()
+	//		if err != nil {
+	//			release(err)
+	//			return nil, err
+	//		}
+	//		// a scheduled decision task already exists - no need to schedule an in memory decision task
+	//		if (msBuilder.HasPendingDecision() && !msBuilder.HasInFlightDecision()) || msBuilder.HasScheduledInMemoryDecisionTask() {
+	//			release(nil)
+	//			break retryLoop
+	//		}
+	//		// there exists an inflight decision task - try again to schedule decision task
+	//		if msBuilder.HasInFlightDecision() {
+	//			release(nil)
+	//			// wait for currently inflight decision task to complete
+	//			select {
+	//			case <-timer.C:
+	//				return nil, ErrQueryTimeout
+	//			case <-ctx.Done():
+	//				return nil, ctx.Err()
+	//			case <-time.After(100 * time.Millisecond):
+	//				continue retryLoop
+	//			}
+	//		}
+	//		// there is no scheduled or started decision task - schedule in memory decision task
+	//		if err := msBuilder.AddInMemoryDecisionTaskScheduled(ttl); err != nil {
+	//			release(err)
+	//			return nil, err
+	//		}
+	//	}
+	//
+	//	// at this point query has been buffered and there is a pending decision task to dispatch the query on
+	//	select {
+	//	case <-queryTermCh:
+	//		querySnapshot, err := queryRegistry.getQuerySnapshot(queryID)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		result := querySnapshot.queryResult
+	//		switch result.GetResultType() {
+	//		case workflow.QueryResultTypeAnswered:
+	//			return &h.QueryWorkflowResponse{
+	//				QueryResult: result.GetAnswer(),
+	//			}, nil
+	//		case workflow.QueryResultTypeFailed:
+	//			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
+	//		}
+	//	case <-timer.C:
+	//		return nil, ErrQueryTimeout
+	//	case <-ctx.Done():
+	//		return nil, ctx.Err()
+	//	}
+	//	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
+	return nil, nil
 }
+
+func (e *historyEngineImpl) queryDirectlyThroughMatching(
+	ctx ctx.Context,
+	ms mutableState,
+	clientFeature client.Feature,
+	domainID string,
+	queryRequest *workflow.QueryWorkflowRequest,
+) (*h.QueryWorkflowResponse, error) {
+	matchingRequest := &m.QueryWorkflowRequest{
+		DomainUUID:   common.StringPtr(domainID),
+		QueryRequest: queryRequest,
+	}
+	execInfo := ms.GetExecutionInfo()
+	if len(execInfo.StickyTaskList) != 0 && clientFeature.SupportStickyQuery() {
+		matchingRequest.TaskList = &workflow.TaskList{Name: common.StringPtr(execInfo.StickyTaskList)}
+		stickyDecisionTimeout := execInfo.StickyScheduleToStartTimeout
+		// using a clean new context in case customer provide a context which has
+		// a really short deadline, causing we clear the stickyness
+		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(stickyDecisionTimeout)*time.Second)
+		matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, matchingRequest)
+		cancel()
+		if err == nil {
+			return &h.QueryWorkflowResponse{Response: matchingResp}, nil
+		}
+		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
+			e.logger.Info("Query directly though matching failed",
+				tag.WorkflowDomainName(queryRequest.GetDomain()),
+				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+			return nil, err
+		}
+		// this means sticky timeout, should try using the normal tasklist
+		// we should clear the stickyness of this workflow
+		e.logger.Info("QueryWorkflow timed-out with stickyTaskList, will try nonSticky one",
+			tag.WorkflowDomainName(queryRequest.GetDomain()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+			tag.WorkflowTaskListName(execInfo.StickyTaskList),
+			tag.WorkflowNextEventID(ms.GetNextEventID()))
+		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, err = e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
+			DomainUUID: common.StringPtr(domainID),
+			Execution:  queryRequest.Execution,
+		})
+		cancel()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	matchingRequest.TaskList = &workflow.TaskList{Name: common.StringPtr(execInfo.TaskList)}
+	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, matchingRequest)
+	if err != nil {
+		e.logger.Info("Query directly though matching failed",
+			tag.WorkflowDomainName(queryRequest.GetDomain()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+		return nil, err
+	}
+	return &h.QueryWorkflowResponse{Response: matchingResp}, nil
+}
+
+// create client feature and pass it in (we will need it for another check later)
 
 func (e *historyEngineImpl) getMutableState(
 	ctx ctx.Context,

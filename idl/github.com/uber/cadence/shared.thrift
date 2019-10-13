@@ -321,6 +321,13 @@ enum QueryRejectCondition {
   NOT_COMPLETED_CLEANLY
 }
 
+enum QueryConsistencyLevel {
+  // EVENTUAL indicates that query should be eventually consistent
+  EVENTUAL
+  // READ_AFTER_WRITE indicates that any events that came before query should be reflected in workflow state before running query
+  READ_AFTER_WRITE
+}
+
 struct DataBlob {
   10: optional EncodingType EncodingType
   20: optional binary Data
@@ -1361,6 +1368,7 @@ struct QueryWorkflowRequest {
   30: optional WorkflowQuery query
   // QueryRejectCondition can used to reject the query if workflow state does not satisify condition
   40: optional QueryRejectCondition queryRejectCondition
+  50: optional QueryConsistencyLevel queryConsistencyLevel
 }
 
 struct QueryRejected {
