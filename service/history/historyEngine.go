@@ -1966,12 +1966,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	workflowID := request.WorkflowExecution.GetWorkflowId()
 	baseRunID := request.WorkflowExecution.GetRunId()
 
-	if request.GetDecisionFinishEventId() <= common.FirstEventID {
-		return nil, &workflow.BadRequestError{
-			Message: "Decision finish ID must be > 1.",
-		}
-	}
-
 	baseContext, baseReleaseFn, err := e.historyCache.getOrCreateWorkflowExecution(
 		ctx,
 		domainID,
@@ -1988,6 +1982,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	baseMutableState, err := baseContext.loadWorkflowExecution()
 	if err != nil {
 		return nil, err
+	}
+	if request.GetDecisionFinishEventId() <= common.FirstEventID ||
+		request.GetDecisionFinishEventId() >= baseMutableState.GetNextEventID() {
+		return nil, &workflow.BadRequestError{
+			Message: "Decision finish ID must be > 1 && <= workflow next event ID.",
+		}
 	}
 
 	// also load the current run of the workflow, it can be different from the base runID
