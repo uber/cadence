@@ -108,7 +108,6 @@ func AdminShowWorkflow(c *cli.Context) {
 func AdminDescribeWorkflow(c *cli.Context) {
 
 	resp := describeMutableState(c)
-
 	prettyPrintJSONObject(resp)
 
 	if resp != nil {
