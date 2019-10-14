@@ -601,12 +601,12 @@ func (_m *MockHistoryEngine) GetReplicationMessages(ctx context.Context, taskID 
 }
 
 // ReapplyEvents is mock implementation for ReapplyEvents of HistoryEngine
-func (_m *MockHistoryEngine) ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, events []*shared.HistoryEvent) error {
-	ret := _m.Called(domainUUID, workflowID, events)
+func (_m *MockHistoryEngine) ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*shared.HistoryEvent) error {
+	ret := _m.Called(domainUUID, workflowID, runID, events)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, []*shared.HistoryEvent) error); ok {
-		r0 = rf(domainUUID, workflowID, events)
+	if rf, ok := ret.Get(0).(func(string, string, string, []*shared.HistoryEvent) error); ok {
+		r0 = rf(domainUUID, workflowID, runID, events)
 	} else {
 		r0 = ret.Error(0)
 	}

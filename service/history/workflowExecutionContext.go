@@ -1176,6 +1176,7 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 
 	domainID := eventBatches[0].DomainID
 	workflowID := eventBatches[0].WorkflowID
+	runID := eventBatches[0].RunID
 	var reapplyEvents []*workflow.HistoryEvent
 	for _, events := range eventBatches {
 		if events.DomainID != domainID ||
@@ -1218,6 +1219,7 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 			ctx,
 			domainID,
 			workflowID,
+			runID,
 			reapplyEvents,
 		)
 	}

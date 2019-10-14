@@ -88,6 +88,7 @@ type (
 		replicationTaskProcessors []*ReplicationTaskProcessor
 		publicClient              workflowserviceclient.Interface
 		eventsReapplier           nDCEventsReapplier
+		reapplyCache              reapplyCache
 	}
 )
 
@@ -183,6 +184,7 @@ func NewEngineWithShardContext(
 	historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, logger)
 	historyEngImpl.eventsReapplier = newNDCEventsReapplier(shard.GetMetricsClient(), logger)
+	historyEngImpl.reapplyCache = newReapplyCache(shard.GetMetricsClient(), logger)
 
 	// Only start the replicator processor if valid publisher is passed in
 	if publisher != nil {
@@ -2561,6 +2563,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	ctx ctx.Context,
 	domainUUID string,
 	workflowID string,
+	runID string,
 	reapplyEvents []*workflow.HistoryEvent,
 ) error {
 
@@ -2574,7 +2577,19 @@ func (e *historyEngineImpl) ReapplyEvents(
 		WorkflowId: common.StringPtr(workflowID),
 	}
 
-	return e.updateWorkflowExecutionWithAction(
+	lastEvent := reapplyEvents[len(reapplyEvents)-1]
+
+	if e.reapplyCache.isEventReapplied(
+		domainID,
+		runID,
+		lastEvent.GetEventId(),
+		lastEvent.GetVersion(),
+	) {
+		e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplyDuplicateCount)
+		return nil
+	}
+
+	err = e.updateWorkflowExecutionWithAction(
 		ctx,
 		domainID,
 		execution,
@@ -2611,4 +2626,12 @@ func (e *historyEngineImpl) ReapplyEvents(
 
 			return postActions, nil
 		})
+
+	_ = e.reapplyCache.updateReapplyEvent(
+		domainID,
+		runID,
+		lastEvent.GetEventId(),
+		lastEvent.GetVersion(),
+	)
+	return err
 }

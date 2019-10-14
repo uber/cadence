@@ -860,6 +860,8 @@ const (
 	ArchiverClientScope
 	// ReplicationTaskFetcherScope is scope used by all metrics emitted by ReplicationTaskFetcher
 	ReplicationTaskFetcherScope
+	// ReapplyCacheUpdateScope is the scope used by reapply cache
+	ReapplyCacheUpdateScope
 
 	NumHistoryScopes
 )
@@ -1303,6 +1305,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		WorkflowCompletionStatsScope:                           {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
 		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
+		ReapplyCacheUpdateScope:                                {operation: "ReapplyCacheUpdate"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1570,6 +1573,7 @@ const (
 	ReplicationTasksReturned
 	GetReplicationMessagesForShardLatency
 	EventReapplySkippedCount
+	EventReapplyDuplicateCount
 
 	NumHistoryMetrics
 )
@@ -1875,6 +1879,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
+		EventReapplyDuplicateCount:                        {metricName: "event_reapply_duplicate_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
