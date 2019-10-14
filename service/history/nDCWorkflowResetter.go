@@ -94,46 +94,25 @@ func newNDCWorkflowResetter(
 func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	ctx ctx.Context,
 	now time.Time,
-	baseEventID int64,
-	baseVersion int64,
+	baseLastEventID int64,
+	baseLastEventVersion int64,
 	incomingFirstEventID int64,
 	incomingVersion int64,
 ) (mutableState, error) {
 
 	baseBranchToken, err := r.getBaseBranchToken(
 		ctx,
-		baseEventID,
-		baseVersion,
+		baseLastEventID,
+		baseLastEventVersion,
 		incomingFirstEventID,
 		incomingVersion,
 	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// fork a new history branch
-	shardID := r.shard.GetShardID()
-	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
-		ForkBranchToken: baseBranchToken,
-		ForkNodeID:      baseEventID + 1,
-		Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
-		ShardID:         common.IntPtr(shardID),
-	})
-	if err != nil {
-		return nil, err
-	}
-	resetBranchToken := resp.NewBranchToken
-	defer func() {
-		if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-			BranchToken: resetBranchToken,
-			Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
-			ShardID:     common.IntPtr(shardID),
-		}); errComplete != nil {
-			r.logger.WithTags(
-				tag.Error(errComplete),
-			).Error("newNDCWorkflowResetter unable to complete creation of new branch.")
-		}
-	}()
+	resetBranchToken, err := r.getResetBranchToken(ctx, baseBranchToken, baseLastEventID)
 
 	requestID := uuid.New()
 	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.rebuild(
@@ -145,7 +124,8 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 			r.baseRunID,
 		),
 		baseBranchToken,
-		baseEventID+1,
+		baseLastEventID,
+		baseLastEventVersion,
 		definition.NewWorkflowIdentifier(
 			r.domainID,
 			r.workflowID,
@@ -158,6 +138,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		return nil, err
 	}
 
+	r.newContext.clear()
 	r.newContext.setHistorySize(rebuiltHistorySize)
 	return rebuildMutableState, nil
 }
@@ -207,4 +188,37 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 		return nil, err
 	}
 	return baseVersionHistory.GetBranchToken(), nil
+}
+
+func (r *nDCWorkflowResetterImpl) getResetBranchToken(
+	ctx ctx.Context,
+	baseBranchToken []byte,
+	baseLastEventID int64,
+) ([]byte, error) {
+
+	// fork a new history branch
+	shardID := r.shard.GetShardID()
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: baseBranchToken,
+		ForkNodeID:      baseLastEventID + 1,
+		Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
+		ShardID:         common.IntPtr(shardID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resetBranchToken := resp.NewBranchToken
+
+	if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+		BranchToken: resetBranchToken,
+		Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
+		ShardID:     common.IntPtr(shardID),
+	}); errComplete != nil {
+		r.logger.WithTags(
+			tag.Error(errComplete),
+		).Error("newNDCWorkflowResetter unable to complete creation of new branch.")
+	}
+
+	return resetBranchToken, nil
 }

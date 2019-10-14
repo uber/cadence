@@ -460,7 +460,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsMissingMutableState(
 ) (mutableState, error) {
 
 	// for non reset workflow execution replication task, just do re-replication
-	if !task.getRequest().GetResetWorkflow() {
+	if !task.isWorkflowReset() {
 		firstEvent := task.getFirstEvent()
 		return nil, newNDCRetryTaskErrorWithHint(
 			task.getDomainID(),

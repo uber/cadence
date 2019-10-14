@@ -173,7 +173,8 @@ func (s *nDCWorkflowResetterSuite) TestResetWorkflow_NoError() {
 			s.baseRunID,
 		),
 		branchToken,
-		baseEventID+1,
+		baseEventID,
+		baseVersion,
 		definition.NewWorkflowIdentifier(
 			s.domainID,
 			s.workflowID,
