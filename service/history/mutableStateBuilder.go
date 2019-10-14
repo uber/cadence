@@ -3223,7 +3223,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(continueAsNewEvent)
-
 	return nil
 }
 
