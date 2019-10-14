@@ -319,16 +319,6 @@ func (v *VersionHistory) GetLastItem() (*VersionHistoryItem, error) {
 	return v.items[len(v.items)-1].Duplicate(), nil
 }
 
-// ListItems lists all the items
-func (v *VersionHistory) ListItems() []*VersionHistoryItem {
-
-	result := []*VersionHistoryItem{}
-	for _, item := range v.items {
-		result = append(result, item.Duplicate())
-	}
-	return result
-}
-
 // GetEventVersion return the corresponding event version of an event ID
 func (v *VersionHistory) GetEventVersion(
 	eventID int64,
@@ -612,14 +602,4 @@ func (h *VersionHistories) GetCurrentVersionHistoryIndex() int {
 func (h *VersionHistories) GetCurrentVersionHistory() (*VersionHistory, error) {
 
 	return h.GetVersionHistory(h.GetCurrentVersionHistoryIndex())
-}
-
-// ListVersionHistories list all version histories
-func (h *VersionHistories) ListVersionHistories() []*VersionHistory {
-
-	versionHistories := []*VersionHistory{}
-	for _, history := range h.histories {
-		versionHistories = append(versionHistories, history.Duplicate())
-	}
-	return versionHistories
 }

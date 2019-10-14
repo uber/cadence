@@ -605,23 +605,24 @@ func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 	if err != nil {
 		return nil, err
 	}
+	firstItem, err := targetBranch.GetFirstItem()
+	if err != nil {
+		return nil, err
+	}
+	lastItem, err := targetBranch.GetLastItem()
+	if err != nil {
+		return nil, err
+	}
+
 	if request.StartEventId == nil || request.StartEventVersion == nil {
-		firstItem, err := targetBranch.GetFirstItem()
-		if err != nil {
-			return nil, err
-		}
 		// If start event is not set, get the events from the first event
 		// As the API is exclusive-exclusive, use first event id - 1 here
 		request.StartEventId = common.Int64Ptr(common.FirstEventID - 1)
 		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
 	}
 	if request.EndEventId == nil || request.EndEventVersion == nil {
-		lastItem, err := targetBranch.GetLastItem()
-		if err != nil {
-			return nil, err
-		}
 		// If end event is not set, get the events until the end event
-		// As the API is exclusive-exclusive, use end event id + 1 1 here
+		// As the API is exclusive-exclusive, use end event id + 1 here
 		request.EndEventId = common.Int64Ptr(lastItem.GetEventID() + 1)
 		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
 	}
@@ -630,34 +631,49 @@ func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 		return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 	}
 
-	// get branch based on the end event
-	endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
-	idx := findFirstVersionHistoryIndexByItem(versionHistories, endItem)
-	if idx < 0 {
-		return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
-	}
-	targetBranch, err = versionHistories.GetVersionHistory(idx)
-	if err != nil {
-		return nil, err
-	}
-
-	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
-	// Start event is not on the same branch as target branch
-	if !versionHistoryContainsItem(targetBranch, startItem) {
-		idx := findFirstVersionHistoryIndexByItem(versionHistories, startItem)
+	// get branch based on the end event if end event is defined in the request
+	if request.GetEndEventId() != lastItem.GetEventID()+1 &&
+		request.GetEndEventVersion() != lastItem.GetVersion() {
+		endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
+		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
+		if err != nil {
+			return nil, err
+		}
 		if idx < 0 {
 			return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
 		}
-		startBranch, err := versionHistories.GetVersionHistory(idx)
+
+		targetBranch, err = versionHistories.GetVersionHistory(idx)
 		if err != nil {
 			return nil, err
 		}
-		startItem, err = targetBranch.FindLCAItem(startBranch)
-		if err != nil {
-			return nil, err
+	}
+
+	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
+	// If the request start event is defined. The start event may be on a different branch as current branch.
+	// We need to find the LCA of the start event and the current branch.
+	if request.GetStartEventId() != common.FirstEventID-1 &&
+		request.GetStartEventVersion() != firstItem.GetVersion() {
+		// Start event is not on the same branch as target branch
+		if !targetBranch.ContainsItem(startItem) {
+			idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
+			if err != nil {
+				return nil, err
+			}
+			if idx < 0 {
+				return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
+			}
+			startBranch, err := versionHistories.GetVersionHistory(idx)
+			if err != nil {
+				return nil, err
+			}
+			startItem, err = targetBranch.FindLCAItem(startBranch)
+			if err != nil {
+				return nil, err
+			}
+			request.StartEventId = common.Int64Ptr(startItem.GetEventID())
+			request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
 		}
-		request.StartEventId = common.Int64Ptr(startItem.GetEventID())
-		request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
 	}
 
 	return targetBranch, nil
@@ -757,50 +773,4 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 	token := &getWorkflowRawHistoryV2Token{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
-}
-
-func versionHistoryContainsItem(
-	versionHistory *persistence.VersionHistory,
-	item *persistence.VersionHistoryItem,
-) bool {
-
-	prevEventID := common.FirstEventID - 1
-	lastItem, err := versionHistory.GetLastItem()
-	if err != nil {
-		return false
-	}
-
-	for _, currentItem := range versionHistory.ListItems() {
-		if item.GetVersion() == currentItem.GetVersion() {
-			// this is a special handling for event id = 0
-			if (item.GetEventID() == common.FirstEventID-1) && item.GetEventID() <= currentItem.GetEventID() {
-				return true
-			}
-			// this is a special handling for event id = last event id + 1
-			// because if the versions are the equal and the different between event ids is one
-			// the event is virtually appendable to this version history
-			if (*lastItem == *currentItem) && (item.GetEventID() == currentItem.GetEventID()+1) {
-				return true
-			}
-			if prevEventID < item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {
-				return true
-			}
-		} else if item.GetVersion() < currentItem.GetVersion() {
-			return false
-		}
-		prevEventID = currentItem.GetEventID()
-	}
-	return false
-}
-
-func findFirstVersionHistoryIndexByItem(
-	versionHistories *persistence.VersionHistories,
-	item *persistence.VersionHistoryItem,
-) int {
-	for index, versionHistory := range versionHistories.ListVersionHistories() {
-		if versionHistoryContainsItem(versionHistory, item) {
-			return index
-		}
-	}
-	return -1
 }
