@@ -264,8 +264,12 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 	state.SignalInfos = e.pendingSignalInfoIDs
 	state.SignalRequestedIDs = e.pendingSignalRequestedIDs
 	state.ExecutionInfo = e.executionInfo
-	state.ReplicationState = e.replicationState
 	state.BufferedEvents = e.bufferedEvents
+	state.VersionHistories = e.versionHistories
+
+	// TODO when 2DC is deprecated, remove this
+	state.ReplicationState = e.replicationState
+
 	return state
 }
 
