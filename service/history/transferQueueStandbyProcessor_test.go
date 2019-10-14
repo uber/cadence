@@ -60,7 +60,6 @@ type (
 		mockVisibilityMgr          *mocks.VisibilityManager
 		mockMatchingClient         *matchingservicetest.MockClient
 		mockExecutionMgr           *mocks.ExecutionManager
-		mockHistoryMgr             *mocks.HistoryManager
 		mockShard                  ShardContext
 		mockClusterMetadata        *mocks.ClusterMetadata
 		mockProducer               *mocks.KafkaProducer

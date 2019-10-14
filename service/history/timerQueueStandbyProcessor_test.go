@@ -57,7 +57,6 @@ type (
 		mockDomainCache            *cache.DomainCacheMock
 		mockVisibilityMgr          *mocks.VisibilityManager
 		mockExecutionMgr           *mocks.ExecutionManager
-		mockHistoryMgr             *mocks.HistoryManager
 		mockShard                  ShardContext
 		mockClusterMetadata        *mocks.ClusterMetadata
 		mockMessagingClient        messaging.Client
