@@ -32,6 +32,7 @@ import (
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -68,6 +69,11 @@ type (
 		serializer           persistence.PayloadSerializer
 		logger               log.Logger
 	}
+
+	historyBatch struct {
+		versionHistory *shared.VersionHistory
+		rawEventBatch  *shared.DataBlob
+	}
 )
 
 // NewNDCHistoryResender create a new NDCHistoryResenderImpl
@@ -99,8 +105,51 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 	endEventVersion *int64,
 ) error {
 
-	var token []byte
-	for doPaging := true; doPaging; doPaging = len(token) > 0 {
+	historyIterator := collection.NewPagingIterator(n.getPaginationFn(
+		domainID,
+		workflowID,
+		runID,
+		startEventID,
+		startEventVersion,
+		endEventID,
+		endEventVersion))
+
+	for historyIterator.HasNext() {
+		result, err := historyIterator.Next()
+		if err != nil {
+			return err
+		}
+		historyBatch := result.(*historyBatch)
+
+		// we don't need to handle continue as new here
+		// because we only care about the current run
+		// TODO: revisit to evaluate if we need to handle continue as new
+		replicationRequest := n.createReplicationRawRequest(
+			domainID,
+			workflowID,
+			runID,
+			historyBatch.rawEventBatch,
+			historyBatch.versionHistory.GetItems())
+		err = n.sendReplicationRawRequest(replicationRequest)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *NDCHistoryResenderImpl) getPaginationFn(
+	domainID string,
+	workflowID string,
+	runID string,
+	startEventID *int64,
+	startEventVersion *int64,
+	endEventID *int64,
+	endEventVersion *int64,
+) collection.PaginationFn {
+
+	return func(paginationToken []byte) ([]interface{}, []byte, error) {
+
 		response, err := n.getHistory(
 			domainID,
 			workflowID,
@@ -109,30 +158,24 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 			startEventVersion,
 			endEventID,
 			endEventVersion,
-			token,
-			defaultPageSize)
+			paginationToken,
+			defaultPageSize,
+		)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
-		token = response.NextPageToken
 
-		// we don't need to handle continue as new here
-		// because we only care about the current run
-		// TODO: revisit to evaluate if we need to handle continue as new
-		for _, batch := range response.HistoryBatches {
-			replicationRequest := n.createReplicationRawRequest(
-				domainID,
-				workflowID,
-				runID,
-				batch,
-				response.GetVersionHistory().GetItems())
-			err := n.sendReplicationRawRequest(replicationRequest)
-			if err != nil {
-				return err
+		var paginateItems []interface{}
+		versionHistory := response.GetVersionHistory()
+		for _, history := range response.GetHistoryBatches() {
+			batch := &historyBatch{
+				versionHistory: versionHistory,
+				rawEventBatch:  history,
 			}
+			paginateItems = append(paginateItems, batch)
 		}
+		return paginateItems, response.NextPageToken, nil
 	}
-	return nil
 }
 
 func (n *NDCHistoryResenderImpl) createReplicationRawRequest(
