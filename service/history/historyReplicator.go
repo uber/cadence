@@ -1092,7 +1092,9 @@ func (r *historyReplicator) terminateWorkflow(
 
 			// setting the current version to be the last write version
 			msBuilder.UpdateReplicationStateVersion(currentLastWriteVersion, true)
+			eventBatchFirstEventID := msBuilder.GetNextEventID()
 			if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
+				eventBatchFirstEventID,
 				workflowTerminationReason,
 				[]byte(fmt.Sprintf("terminated by version: %v", incomingVersion)),
 				workflowTerminationIdentity,
