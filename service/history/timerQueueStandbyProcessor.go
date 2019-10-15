@@ -52,7 +52,7 @@ type (
 		timerGate               RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		historyRereplicator     xdc.HistoryRereplicator
-		nDCHistoryRereplicator  xdc.NDCHistoryRereplicator
+		nDCHistoryResender      xdc.NDCHistoryResender
 	}
 )
 
@@ -62,7 +62,7 @@ func newTimerQueueStandbyProcessor(
 	clusterName string,
 	taskAllocator taskAllocator,
 	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
+	nDCHistoryResender xdc.NDCHistoryResender,
 	logger log.Logger,
 ) *timerQueueStandbyProcessorImpl {
 
@@ -112,8 +112,8 @@ func newTimerQueueStandbyProcessor(
 			shard.GetConfig().TimerProcessorMaxPollRPS,
 			logger,
 		),
-		historyRereplicator:    historyRereplicator,
-		nDCHistoryRereplicator: nDCHistoryRereplicator,
+		historyRereplicator: historyRereplicator,
+		nDCHistoryResender:  nDCHistoryResender,
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
 	return processor
@@ -744,7 +744,7 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 
 	var err error
 	if lastEventID != nil && lastEventVersion != nil {
-		err = t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
+		err = t.nDCHistoryResender.SendSingleWorkflowHistory(
 			timerTask.DomainID,
 			timerTask.WorkflowID,
 			timerTask.RunID,

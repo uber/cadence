@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCHistoryRereplicator_mock.go
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCHistoryResender_mock.go
 
 package xdc
 
@@ -29,7 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
-	a "github.com/uber/cadence/client/admin"
+	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -42,8 +42,8 @@ type (
 	// the provided func should be thread safe
 	nDCHistoryReplicationFn func(ctx context.Context, request *history.ReplicateEventsV2Request) error
 
-	// NDCHistoryRereplicator is the interface for resending history events to remote
-	NDCHistoryRereplicator interface {
+	// NDCHistoryResender is the interface for resending history events to remote
+	NDCHistoryResender interface {
 		// SendSingleWorkflowHistory sends multiple run IDs's history events to remote
 		SendSingleWorkflowHistory(
 			domainID string,
@@ -56,11 +56,10 @@ type (
 		) error
 	}
 
-	// NDCHistoryRereplicatorImpl is the implementation of NDCHistoryRereplicator
-	NDCHistoryRereplicatorImpl struct {
-		targetClusterName    string
+	// NDCHistoryResenderImpl is the implementation of NDCHistoryResender
+	NDCHistoryResenderImpl struct {
 		domainCache          cache.DomainCache
-		adminClient          a.Client
+		adminClient          adminClient.Client
 		historyReplicationFn nDCHistoryReplicationFn
 		serializer           persistence.PayloadSerializer
 		replicationTimeout   time.Duration
@@ -68,19 +67,17 @@ type (
 	}
 )
 
-// NewNDCHistoryRereplicator create a new NDCHistoryRereplicatorImpl
-func NewNDCHistoryRereplicator(
-	targetClusterName string,
+// NewNDCHistoryResender create a new NDCHistoryResenderImpl
+func NewNDCHistoryResender(
 	domainCache cache.DomainCache,
-	adminClient a.Client,
+	adminClient adminClient.Client,
 	historyReplicationFn nDCHistoryReplicationFn,
 	serializer persistence.PayloadSerializer,
 	replicationTimeout time.Duration,
 	logger log.Logger,
-) *NDCHistoryRereplicatorImpl {
+) *NDCHistoryResenderImpl {
 
-	return &NDCHistoryRereplicatorImpl{
-		targetClusterName:    targetClusterName,
+	return &NDCHistoryResenderImpl{
 		domainCache:          domainCache,
 		adminClient:          adminClient,
 		historyReplicationFn: historyReplicationFn,
@@ -91,7 +88,7 @@ func NewNDCHistoryRereplicator(
 }
 
 // SendSingleWorkflowHistory sends one run IDs's history events to remote
-func (n *NDCHistoryRereplicatorImpl) SendSingleWorkflowHistory(
+func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 	domainID string,
 	workflowID string,
 	runID string,
@@ -137,7 +134,7 @@ func (n *NDCHistoryRereplicatorImpl) SendSingleWorkflowHistory(
 	return nil
 }
 
-func (n *NDCHistoryRereplicatorImpl) createReplicationRawRequest(
+func (n *NDCHistoryResenderImpl) createReplicationRawRequest(
 	domainID string,
 	workflowID string,
 	runID string,
@@ -158,21 +155,16 @@ func (n *NDCHistoryRereplicatorImpl) createReplicationRawRequest(
 	return request
 }
 
-func (n *NDCHistoryRereplicatorImpl) sendReplicationRawRequest(
+func (n *NDCHistoryResenderImpl) sendReplicationRawRequest(
 	request *history.ReplicateEventsV2Request,
 ) error {
 
-	if request == nil {
-		return nil
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), n.replicationTimeout)
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 	return n.historyReplicationFn(ctx, request)
 }
 
-func (n *NDCHistoryRereplicatorImpl) getHistory(
+func (n *NDCHistoryResenderImpl) getHistory(
 	domainID string,
 	workflowID string,
 	runID string,

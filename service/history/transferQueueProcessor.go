@@ -95,8 +95,7 @@ func newTransferQueueProcessor(
 				historyRereplicationTimeout,
 				logger,
 			)
-			nDCHistoryReplicator := xdc.NewNDCHistoryRereplicator(
-				currentClusterName,
+			nDCHistoryResender := xdc.NewNDCHistoryResender(
 				shard.GetDomainCache(),
 				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 				func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -114,7 +113,7 @@ func newTransferQueueProcessor(
 				matchingClient,
 				taskAllocator,
 				historyRereplicator,
-				nDCHistoryReplicator,
+				nDCHistoryResender,
 				logger,
 			)
 		}

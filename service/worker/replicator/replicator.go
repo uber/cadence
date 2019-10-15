@@ -175,8 +175,7 @@ func (r *Replicator) createKafkaProcessors(currentClusterName string, clusterNam
 		replicationTimeout,
 		r.logger,
 	)
-	nDCHistoryReplicator := xdc.NewNDCHistoryRereplicator(
-		currentClusterName,
+	nDCHistoryReplicator := xdc.NewNDCHistoryResender(
 		r.domainCache,
 		adminClient,
 		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {

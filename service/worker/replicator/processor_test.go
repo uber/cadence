@@ -62,7 +62,7 @@ type (
 		mockDomainReplicator        *MockDomainReplicator
 		mockHistoryClient           *historyservicetest.MockClient
 		mockRereplicator            *xdc.MockHistoryRereplicator
-		mockNDCRereplicator         *xdc.MockNDCHistoryRereplicator
+		mockNDCResender             *xdc.MockNDCHistoryResender
 		mockSequentialTaskProcessor *task.MockSequentialTaskProcessor
 		mockDomainCache             *cache.DomainCacheMock
 
@@ -100,7 +100,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.mockDomainReplicator = &MockDomainReplicator{}
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
-	s.mockNDCRereplicator = &xdc.MockNDCHistoryRereplicator{}
+	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
 	s.mockSequentialTaskProcessor = &task.MockSequentialTaskProcessor{}
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(
@@ -132,7 +132,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 		s.metricsClient,
 		s.mockDomainReplicator,
 		s.mockRereplicator,
-		s.mockNDCRereplicator,
+		s.mockNDCResender,
 		s.mockHistoryClient,
 		s.mockDomainCache,
 		s.mockSequentialTaskProcessor,

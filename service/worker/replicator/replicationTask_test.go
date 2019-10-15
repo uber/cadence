@@ -52,11 +52,11 @@ type (
 		logger        log.Logger
 		metricsClient metrics.Client
 
-		mockTimeSource      *clock.EventTimeSource
-		mockMsg             *messageMocks.Message
-		mockHistoryClient   *historyservicetest.MockClient
-		mockRereplicator    *xdc.MockHistoryRereplicator
-		mockNDCRereplicator *xdc.MockNDCHistoryRereplicator
+		mockTimeSource    *clock.EventTimeSource
+		mockMsg           *messageMocks.Message
+		mockHistoryClient *historyservicetest.MockClient
+		mockRereplicator  *xdc.MockHistoryRereplicator
+		mockNDCResender   *xdc.MockNDCHistoryResender
 
 		controller *gomock.Controller
 	}
@@ -68,11 +68,11 @@ type (
 		metricsClient metrics.Client
 		sourceCluster string
 
-		mockTimeSource      *clock.EventTimeSource
-		mockMsg             *messageMocks.Message
-		mockHistoryClient   *historyservicetest.MockClient
-		mockRereplicator    *xdc.MockHistoryRereplicator
-		mockNDCRereplicator *xdc.MockNDCHistoryRereplicator
+		mockTimeSource    *clock.EventTimeSource
+		mockMsg           *messageMocks.Message
+		mockHistoryClient *historyservicetest.MockClient
+		mockRereplicator  *xdc.MockHistoryRereplicator
+		mockNDCResender   *xdc.MockNDCHistoryResender
 
 		controller *gomock.Controller
 	}
@@ -131,7 +131,7 @@ func (s *activityReplicationTaskSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
-	s.mockNDCRereplicator = &xdc.MockNDCHistoryRereplicator{}
+	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
 }
 
 func (s *activityReplicationTaskSuite) TearDownTest() {
@@ -164,7 +164,7 @@ func (s *historyReplicationTaskSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
-	s.mockNDCRereplicator = &xdc.MockNDCHistoryRereplicator{}
+	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
 }
 
 func (s *historyReplicationTaskSuite) TearDownTest() {
@@ -217,7 +217,7 @@ func (s *activityReplicationTaskSuite) TestNewActivityReplicationTask() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	// overwrite the logger for easy comparison
 	task.logger = s.logger
 
@@ -256,8 +256,8 @@ func (s *activityReplicationTaskSuite) TestNewActivityReplicationTask() {
 				LastWorkerIdentity: replicationAttr.LastWorkerIdentity,
 				LastFailureDetails: replicationAttr.LastFailureDetails,
 			},
-			historyRereplicator:    s.mockRereplicator,
-			nDCHistoryRereplicator: s.mockNDCRereplicator,
+			historyRereplicator: s.mockRereplicator,
+			nDCHistoryResender:  s.mockNDCResender,
 		},
 		task,
 	)
@@ -273,7 +273,7 @@ func (s *activityReplicationTaskSuite) TestExecute() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 
 	randomErr := errors.New("some random error")
 	s.mockHistoryClient.EXPECT().SyncActivity(gomock.Any(), task.req).Return(randomErr).Times(1)
@@ -291,7 +291,7 @@ func (s *activityReplicationTaskSuite) TestHandleErr_NotEnoughAttempt() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	randomErr := errors.New("some random error")
 
 	err := task.HandleErr(randomErr)
@@ -308,7 +308,7 @@ func (s *activityReplicationTaskSuite) TestHandleErr_EnoughAttempt_NotRetryErr()
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	task.attempt = s.config.ReplicatorActivityBufferRetryCount() + 1
 	randomErr := errors.New("some random error")
 
@@ -326,7 +326,7 @@ func (s *activityReplicationTaskSuite) TestHandleErr_EnoughAttempt_RetryErr() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	task.attempt = s.config.ReplicatorActivityBufferRetryCount() + 1
 	retryErr := &shared.RetryTaskError{
 		DomainId:    common.StringPtr(task.queueID.DomainID),
@@ -364,7 +364,7 @@ func (s *activityReplicationTaskSuite) TestRetryErr_NonRetryable() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	s.False(task.RetryErr(err))
 }
 
@@ -379,7 +379,7 @@ func (s *activityReplicationTaskSuite) TestRetryErr_Retryable() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	task.attempt = 0
 	s.True(task.RetryErr(err))
 }
@@ -395,7 +395,7 @@ func (s *activityReplicationTaskSuite) TestRetryErr_Retryable_ExceedAttempt() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	task.attempt = s.config.ReplicationTaskMaxRetryCount() + 100
 	s.False(task.RetryErr(err))
 }
@@ -411,7 +411,7 @@ func (s *activityReplicationTaskSuite) TestRetryErr_Retryable_ExceedDuration() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 	task.startTime = s.mockTimeSource.Now().Add(-2 * s.config.ReplicationTaskMaxRetryDuration())
 	s.False(task.RetryErr(err))
 }
@@ -426,7 +426,7 @@ func (s *activityReplicationTaskSuite) TestAck() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 
 	s.mockMsg.On("Ack").Return(nil).Once()
 	task.Ack()
@@ -442,7 +442,7 @@ func (s *activityReplicationTaskSuite) TestNack() {
 		s.mockHistoryClient,
 		s.metricsClient,
 		s.mockRereplicator,
-		s.mockNDCRereplicator)
+		s.mockNDCResender)
 
 	s.mockMsg.On("Nack").Return(nil).Once()
 	task.Nack()

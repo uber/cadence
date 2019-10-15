@@ -225,7 +225,7 @@ func (s *nDCWorkflowResetterSuite) TestResetWorkflow_Error() {
 	baseEventID := lastEventID + 100
 	baseVersion := version
 	incomingFirstEventID := baseEventID + 12
-	incomingVersion := baseVersion + 3
+	incomingFirstEventVersion := baseVersion + 3
 
 	mockBaseMutableState := &mockMutableState{}
 	defer mockBaseMutableState.AssertExpectations(s.T())
@@ -250,9 +250,20 @@ func (s *nDCWorkflowResetterSuite) TestResetWorkflow_Error() {
 		baseEventID,
 		baseVersion,
 		incomingFirstEventID,
-		incomingVersion,
+		incomingFirstEventVersion,
 	)
 	s.Error(err)
 	s.IsType(&shared.RetryTaskV2Error{}, err)
 	s.Nil(rebuiltMutableState)
+
+	retryErr, isRetryError := err.(*shared.RetryTaskV2Error)
+	s.True(isRetryError)
+	exepectedErr := shared.RetryTaskV2Error{
+		DomainId:        common.StringPtr(s.domainID),
+		WorkflowId:      common.StringPtr(s.workflowID),
+		RunId:           common.StringPtr(s.baseRunID),
+		EndEventId:      common.Int64Ptr(incomingFirstEventID),
+		EndEventVersion: common.Int64Ptr(incomingFirstEventVersion),
+	}
+	s.Equal(retryErr, exepectedErr)
 }

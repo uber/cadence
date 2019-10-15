@@ -45,12 +45,11 @@ import (
 )
 
 type (
-	nDChistoryRereplicatorSuite struct {
+	nDChistoryResenderSuite struct {
 		suite.Suite
 
-		domainID          string
-		domainName        string
-		targetClusterName string
+		domainID   string
+		domainName string
 
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockDomainCache     *cache.DomainCacheMock
@@ -60,23 +59,23 @@ type (
 		logger              log.Logger
 
 		controller   *gomock.Controller
-		rereplicator *NDCHistoryRereplicatorImpl
+		rereplicator *NDCHistoryResenderImpl
 	}
 )
 
-func TestNDCHistoryRereplicatorSuite(t *testing.T) {
-	s := new(nDChistoryRereplicatorSuite)
+func TestNDCHistoryResenderSuite(t *testing.T) {
+	s := new(nDChistoryResenderSuite)
 	suite.Run(t, s)
 }
 
-func (s *nDChistoryRereplicatorSuite) SetupSuite() {
+func (s *nDChistoryResenderSuite) SetupSuite() {
 }
 
-func (s *nDChistoryRereplicatorSuite) TearDownSuite() {
+func (s *nDChistoryResenderSuite) TearDownSuite() {
 
 }
 
-func (s *nDChistoryRereplicatorSuite) SetupTest() {
+func (s *nDChistoryResenderSuite) SetupTest() {
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	s.logger = loggerimpl.NewLogger(zapLogger)
@@ -86,7 +85,6 @@ func (s *nDChistoryRereplicatorSuite) SetupTest() {
 
 	s.domainID = uuid.New()
 	s.domainName = "some random domain name"
-	s.targetClusterName = "some random target cluster name"
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{ID: s.domainID, Name: s.domainName},
 		&persistence.DomainConfig{Retention: 1},
@@ -107,8 +105,7 @@ func (s *nDChistoryRereplicatorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockAdminClient = adminservicetest.NewMockClient(s.controller)
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
-	s.rereplicator = NewNDCHistoryRereplicator(
-		s.targetClusterName,
+	s.rereplicator = NewNDCHistoryResender(
 		s.mockDomainCache,
 		s.mockAdminClient,
 		func(ctx context.Context, request *history.ReplicateEventsV2Request) error {
@@ -120,11 +117,11 @@ func (s *nDChistoryRereplicatorSuite) SetupTest() {
 	)
 }
 
-func (s *nDChistoryRereplicatorSuite) TearDownTest() {
+func (s *nDChistoryResenderSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *nDChistoryRereplicatorSuite) TestSendSingleWorkflowHistory() {
+func (s *nDChistoryResenderSuite) TestSendSingleWorkflowHistory() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	startEventID := int64(123)
@@ -218,7 +215,7 @@ func (s *nDChistoryRereplicatorSuite) TestSendSingleWorkflowHistory() {
 	s.Nil(err)
 }
 
-func (s *nDChistoryRereplicatorSuite) TestCreateReplicateRawEventsRequest() {
+func (s *nDChistoryResenderSuite) TestCreateReplicateRawEventsRequest() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	blob := &shared.DataBlob{
@@ -248,7 +245,7 @@ func (s *nDChistoryRereplicatorSuite) TestCreateReplicateRawEventsRequest() {
 		versionHistoryItems))
 }
 
-func (s *nDChistoryRereplicatorSuite) TestSendReplicationRawRequest() {
+func (s *nDChistoryResenderSuite) TestSendReplicationRawRequest() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &shared.VersionHistoryItem{
@@ -273,7 +270,7 @@ func (s *nDChistoryRereplicatorSuite) TestSendReplicationRawRequest() {
 	s.Nil(err)
 }
 
-func (s *nDChistoryRereplicatorSuite) TestSendReplicationRawRequest_Err() {
+func (s *nDChistoryResenderSuite) TestSendReplicationRawRequest_Err() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &shared.VersionHistoryItem{
@@ -303,7 +300,7 @@ func (s *nDChistoryRereplicatorSuite) TestSendReplicationRawRequest_Err() {
 	s.Equal(retryErr, err)
 }
 
-func (s *nDChistoryRereplicatorSuite) TestGetHistory() {
+func (s *nDChistoryResenderSuite) TestGetHistory() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	startEventID := int64(123)
@@ -349,7 +346,7 @@ func (s *nDChistoryRereplicatorSuite) TestGetHistory() {
 	s.Equal(response, out)
 }
 
-func (s *nDChistoryRereplicatorSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
+func (s *nDChistoryResenderSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
 	blob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
 	s.Nil(err)
 	return &shared.DataBlob{

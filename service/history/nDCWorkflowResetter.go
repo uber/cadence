@@ -40,10 +40,10 @@ type (
 		resetWorkflow(
 			ctx ctx.Context,
 			now time.Time,
-			baseEventID int64,
-			baseVersion int64,
+			baseLastEventID int64,
+			baseLastEventVersion int64,
 			incomingFirstEventID int64,
-			incomingVersion int64,
+			incomingFirstEventVersion int64,
 		) (mutableState, error)
 	}
 
@@ -97,7 +97,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	baseLastEventID int64,
 	baseLastEventVersion int64,
 	incomingFirstEventID int64,
-	incomingVersion int64,
+	incomingFirstEventVersion int64,
 ) (mutableState, error) {
 
 	baseBranchToken, err := r.getBaseBranchToken(
@@ -105,7 +105,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		baseLastEventID,
 		baseLastEventVersion,
 		incomingFirstEventID,
-		incomingVersion,
+		incomingFirstEventVersion,
 	)
 
 	if err != nil {
@@ -145,10 +145,10 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 
 func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 	ctx ctx.Context,
-	baseEventID int64,
-	baseVersion int64,
+	baseLastEventID int64,
+	baseLastEventVersion int64,
 	incomingFirstEventID int64,
-	incomingVersion int64,
+	incomingFirstEventVersion int64,
 ) (baseBranchToken []byte, retError error) {
 
 	baseWorkflow, err := r.transactionMgr.loadNDCWorkflow(
@@ -166,7 +166,7 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 
 	baseVersionHistories := baseWorkflow.getMutableState().GetVersionHistories()
 	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
-		persistence.NewVersionHistoryItem(baseEventID, baseVersion),
+		persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
 	)
 	if err != nil {
 		// the base event and incoming event are from different branch
@@ -179,7 +179,7 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 			nil,
 			nil,
 			common.Int64Ptr(incomingFirstEventID),
-			common.Int64Ptr(incomingVersion),
+			common.Int64Ptr(incomingFirstEventVersion),
 		)
 	}
 

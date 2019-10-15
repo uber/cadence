@@ -37,17 +37,17 @@ type (
 		*queueProcessorBase
 		queueAckMgr
 
-		clusterName            string
-		shard                  ShardContext
-		historyService         *historyEngineImpl
-		options                *QueueProcessorOptions
-		executionManager       persistence.ExecutionManager
-		cache                  *historyCache
-		transferTaskFilter     queueTaskFilter
-		logger                 log.Logger
-		metricsClient          metrics.Client
-		historyRereplicator    xdc.HistoryRereplicator
-		nDCHistoryRereplicator xdc.NDCHistoryRereplicator
+		clusterName         string
+		shard               ShardContext
+		historyService      *historyEngineImpl
+		options             *QueueProcessorOptions
+		executionManager    persistence.ExecutionManager
+		cache               *historyCache
+		transferTaskFilter  queueTaskFilter
+		logger              log.Logger
+		metricsClient       metrics.Client
+		historyRereplicator xdc.HistoryRereplicator
+		nDCHistoryResender  xdc.NDCHistoryResender
 	}
 )
 
@@ -59,7 +59,7 @@ func newTransferQueueStandbyProcessor(
 	matchingClient matching.Client,
 	taskAllocator taskAllocator,
 	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
+	nDCHistoryResender xdc.NDCHistoryResender,
 	logger log.Logger,
 ) *transferQueueStandbyProcessorImpl {
 
@@ -114,8 +114,8 @@ func newTransferQueueStandbyProcessor(
 			transferQueueShutdown,
 			logger,
 		),
-		historyRereplicator:    historyRereplicator,
-		nDCHistoryRereplicator: nDCHistoryRereplicator,
+		historyRereplicator: historyRereplicator,
+		nDCHistoryResender:  nDCHistoryResender,
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(clusterName), logger)
@@ -735,7 +735,7 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 
 	var err error
 	if lastEventID != nil && lastEventVersion != nil {
-		err = t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
+		err = t.nDCHistoryResender.SendSingleWorkflowHistory(
 			transferTask.DomainID,
 			transferTask.WorkflowID,
 			transferTask.RunID,

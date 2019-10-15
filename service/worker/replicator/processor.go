@@ -61,7 +61,7 @@ type (
 		metricsClient           metrics.Client
 		domainReplicator        DomainReplicator
 		historyRereplicator     xdc.HistoryRereplicator
-		nDCHistoryRereplicator  xdc.NDCHistoryRereplicator
+		nDCHistoryResender      xdc.NDCHistoryResender
 		historyClient           history.Client
 		domainCache             cache.DomainCache
 		msgEncoder              codec.BinaryEncoder
@@ -93,7 +93,7 @@ func newReplicationTaskProcessor(
 	metricsClient metrics.Client,
 	domainReplicator DomainReplicator,
 	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
+	nDCHistoryResender xdc.NDCHistoryResender,
 	historyClient history.Client,
 	domainCache cache.DomainCache,
 	sequentialTaskProcessor task.SequentialTaskProcessor,
@@ -113,7 +113,7 @@ func newReplicationTaskProcessor(
 		metricsClient:           metricsClient,
 		domainReplicator:        domainReplicator,
 		historyRereplicator:     historyRereplicator,
-		nDCHistoryRereplicator:  nDCHistoryRereplicator,
+		nDCHistoryResender:      nDCHistoryResender,
 		historyClient:           retryableHistoryClient,
 		msgEncoder:              codec.NewThriftRWEncoder(),
 		timeSource:              clock.NewRealTimeSource(),
@@ -357,7 +357,7 @@ func (p *replicationTaskProcessor) handleActivityTask(
 		p.historyClient,
 		p.metricsClient,
 		p.historyRereplicator,
-		p.nDCHistoryRereplicator,
+		p.nDCHistoryResender,
 	)
 	return p.sequentialTaskProcessor.Submit(activityReplicationTask)
 }
@@ -431,7 +431,7 @@ func (p *replicationTaskProcessor) handleHistoryReplicationV2Task(
 		p.timeSource,
 		p.historyClient,
 		p.metricsClient,
-		p.nDCHistoryRereplicator,
+		p.nDCHistoryResender,
 	)
 	return p.sequentialTaskProcessor.Submit(historyReplicationTask)
 }

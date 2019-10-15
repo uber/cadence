@@ -57,9 +57,9 @@ type (
 
 	activityReplicationTask struct {
 		workflowReplicationTask
-		req                    *h.SyncActivityRequest
-		historyRereplicator    xdc.HistoryRereplicator
-		nDCHistoryRereplicator xdc.NDCHistoryRereplicator
+		req                 *h.SyncActivityRequest
+		historyRereplicator xdc.HistoryRereplicator
+		nDCHistoryResender  xdc.NDCHistoryResender
 	}
 
 	historyReplicationTask struct {
@@ -78,8 +78,8 @@ type (
 
 	historyReplicationV2Task struct {
 		workflowReplicationTask
-		req                    *h.ReplicateEventsV2Request
-		nDCHistoryRereplicator xdc.NDCHistoryRereplicator
+		req                *h.ReplicateEventsV2Request
+		nDCHistoryResender xdc.NDCHistoryResender
 	}
 )
 
@@ -101,7 +101,7 @@ func newActivityReplicationTask(
 	historyClient history.Client,
 	metricsClient metrics.Client,
 	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
+	nDCHistoryResender xdc.NDCHistoryResender,
 ) *activityReplicationTask {
 
 	attr := task.SyncActicvityTaskAttributes
@@ -143,8 +143,8 @@ func newActivityReplicationTask(
 			LastWorkerIdentity: attr.LastWorkerIdentity,
 			LastFailureDetails: attr.LastFailureDetails,
 		},
-		historyRereplicator:    historyRereplicator,
-		nDCHistoryRereplicator: nDCHistoryRereplicator,
+		historyRereplicator: historyRereplicator,
+		nDCHistoryResender:  nDCHistoryResender,
 	}
 }
 
@@ -253,7 +253,7 @@ func newHistoryReplicationV2Task(
 	timeSource clock.TimeSource,
 	historyClient history.Client,
 	metricsClient metrics.Client,
-	nDCHistoryRereplicator xdc.NDCHistoryRereplicator,
+	nDCHistoryResender xdc.NDCHistoryResender,
 ) *historyReplicationV2Task {
 
 	attr := task.HistoryTaskV2Attributes
@@ -287,7 +287,7 @@ func newHistoryReplicationV2Task(
 			Events:              attr.Events,
 			NewRunEvents:        attr.NewRunEvents,
 		},
-		nDCHistoryRereplicator: nDCHistoryRereplicator,
+		nDCHistoryResender: nDCHistoryResender,
 	}
 }
 
@@ -333,7 +333,7 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 		}
 	} else if okV2 {
 		// TODO execute v2 resend logic here before calling execute again
-		if err := t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
+		if err := t.nDCHistoryResender.SendSingleWorkflowHistory(
 			retryV2Err.GetDomainId(),
 			retryV2Err.GetWorkflowId(),
 			retryV2Err.GetRunId(),
@@ -452,7 +452,7 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	if err := t.nDCHistoryRereplicator.SendSingleWorkflowHistory(
+	if err := t.nDCHistoryResender.SendSingleWorkflowHistory(
 		retryErr.GetDomainId(),
 		retryErr.GetWorkflowId(),
 		retryErr.GetRunId(),

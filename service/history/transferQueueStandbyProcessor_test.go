@@ -53,28 +53,28 @@ type (
 	transferQueueStandbyProcessorSuite struct {
 		suite.Suite
 
-		controller                 *gomock.Controller
-		mockShardManager           *mocks.ShardManager
-		mockHistoryEngine          *historyEngineImpl
-		mockDomainCache            *cache.DomainCacheMock
-		mockVisibilityMgr          *mocks.VisibilityManager
-		mockMatchingClient         *matchingservicetest.MockClient
-		mockExecutionMgr           *mocks.ExecutionManager
-		mockShard                  ShardContext
-		mockClusterMetadata        *mocks.ClusterMetadata
-		mockProducer               *mocks.KafkaProducer
-		mockClientBean             *client.MockClientBean
-		mockMessagingClient        messaging.Client
-		mockQueueAckMgr            *MockQueueAckMgr
-		mockService                service.Service
-		mockHistoryRereplicator    *xdc.MockHistoryRereplicator
-		mockNDCHistoryRereplicator *xdc.MockNDCHistoryRereplicator
-		logger                     log.Logger
-		mockTxProcessor            *MockTransferQueueProcessor
-		mockReplicationProcessor   *MockReplicatorQueueProcessor
-		mockTimerProcessor         *MockTimerQueueProcessor
-		mockArchivalMetadata       *archiver.MockArchivalMetadata
-		mockArchiverProvider       *provider.MockArchiverProvider
+		controller               *gomock.Controller
+		mockShardManager         *mocks.ShardManager
+		mockHistoryEngine        *historyEngineImpl
+		mockDomainCache          *cache.DomainCacheMock
+		mockVisibilityMgr        *mocks.VisibilityManager
+		mockMatchingClient       *matchingservicetest.MockClient
+		mockExecutionMgr         *mocks.ExecutionManager
+		mockShard                ShardContext
+		mockClusterMetadata      *mocks.ClusterMetadata
+		mockProducer             *mocks.KafkaProducer
+		mockClientBean           *client.MockClientBean
+		mockMessagingClient      messaging.Client
+		mockQueueAckMgr          *MockQueueAckMgr
+		mockService              service.Service
+		mockHistoryRereplicator  *xdc.MockHistoryRereplicator
+		mockNDCHistoryResender   *xdc.MockNDCHistoryResender
+		logger                   log.Logger
+		mockTxProcessor          *MockTransferQueueProcessor
+		mockReplicationProcessor *MockReplicatorQueueProcessor
+		mockTimerProcessor       *MockTimerQueueProcessor
+		mockArchivalMetadata     *archiver.MockArchivalMetadata
+		mockArchiverProvider     *provider.MockArchiverProvider
 
 		domainID                      string
 		domainEntry                   *cache.DomainCacheEntry
@@ -103,7 +103,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockHistoryRereplicator = &xdc.MockHistoryRereplicator{}
-	s.mockNDCHistoryRereplicator = &xdc.MockNDCHistoryRereplicator{}
+	s.mockNDCHistoryResender = &xdc.MockNDCHistoryResender{}
 	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", testDomainName).Return(testGlobalDomainEntry, nil)
 	s.mockDomainCache.On("GetDomainByID", testTargetDomainID).Return(testGlobalTargetDomainEntry, nil)
@@ -184,7 +184,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 		s.mockMatchingClient,
 		newTaskAllocator(s.mockShard),
 		s.mockHistoryRereplicator,
-		s.mockNDCHistoryRereplicator,
+		s.mockNDCHistoryResender,
 		s.logger,
 	)
 	s.mockQueueAckMgr = &MockQueueAckMgr{}
