@@ -2447,7 +2447,10 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	}
 
 	event := e.hBuilder.AddTimeoutWorkflowEvent()
-	if err := e.ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event); err != nil {
+	if err := e.ReplicateWorkflowExecutionTimedoutEvent(
+		firstEventID,
+		event,
+	); err != nil {
 		return nil, err
 	}
 	// TODO merge active & passive task generation
@@ -3039,7 +3042,10 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(reason, details, identity)
-	if err := e.ReplicateWorkflowExecutionTerminatedEvent(firstEventID, event); err != nil {
+	if err := e.ReplicateWorkflowExecutionTerminatedEvent(
+		firstEventID,
+		event,
+	); err != nil {
 		return nil, err
 	}
 	// TODO merge active & passive task generation
