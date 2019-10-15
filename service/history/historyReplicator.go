@@ -229,7 +229,9 @@ func (r *historyReplicator) SyncActivity(
 		// compare LCA of the incoming version history with local version history
 		// if the LCA is the last item of local version history
 		// do re-send else discard this task
-		return nil
+		return &shared.InternalServiceError{
+			Message: "Cannot do sync activity with 3DC",
+		}
 	}
 
 	ai, ok := msBuilder.GetActivityInfo(scheduleID)
