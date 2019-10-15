@@ -271,7 +271,7 @@ func (t *taskProcessor) handleTaskError(
 
 	// this is a transient error
 	if _, ok := err.(*workflow.DomainNotActiveError); ok {
-		if t.timeSource.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+		if t.timeSource.Now().Sub(startTime) > 2*cache.DomainCacheRefreshInterval {
 			t.metricsClient.IncCounter(scope, metrics.TaskNotActiveCounter)
 			return nil
 		}
