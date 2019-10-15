@@ -378,7 +378,7 @@ func (c *domainCache) GetDomainName(
 }
 
 func (c *domainCache) refreshLoop() {
-	timer := time.NewTimer(DomainCacheRefreshInterval)
+	timer := time.NewTicker(DomainCacheRefreshInterval)
 	defer timer.Stop()
 
 	for {
@@ -386,10 +386,14 @@ func (c *domainCache) refreshLoop() {
 		case <-c.shutdownChan:
 			return
 		case <-timer.C:
-			timer.Reset(DomainCacheRefreshInterval)
-			if err := c.refreshDomains(); err != nil {
-				timer.Reset(DomainCacheRefreshFailureRetryInterval)
-				c.logger.Error("Error refreshing domain cache", tag.Error(err))
+			for err := c.refreshDomains(); err != nil; err = c.refreshDomains() {
+				select {
+				case <-c.shutdownChan:
+					return
+				default:
+					c.logger.Error("Error refreshing domain cache", tag.Error(err))
+					time.Sleep(DomainCacheRefreshFailureRetryInterval)
+				}
 			}
 		}
 	}
