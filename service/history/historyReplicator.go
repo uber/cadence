@@ -40,19 +40,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-var (
-	errNoHistoryFound = errors.NewInternalFailureError("no history events found")
-
-	workflowTerminationReason   = "Terminate Workflow Due To Version Conflict."
-	workflowTerminationIdentity = "worker-service"
-
-	workflowResetReason = "Reset Workflow Due To Events Re-application."
-)
-
 type (
 	conflictResolverProvider func(context workflowExecutionContext, logger log.Logger) conflictResolver
-	stateBuilderProvider     func(msBuilder mutableState, logger log.Logger) stateBuilder
-	mutableStateProvider     func(domainEntry *cache.DomainCacheEntry, logger log.Logger) mutableState
 
 	historyReplicator struct {
 		shard             ShardContext
