@@ -78,7 +78,7 @@ func newNDCStateRebuilder(
 		domainCache:     shard.GetDomainCache(),
 		eventsCache:     shard.GetEventsCache(),
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
-		historyV2Mgr:    shard.GetHistoryV2Manager(),
+		historyV2Mgr:    shard.GetHistoryManager(),
 		taskRefresher: newMutableStateTaskRefresher(
 			shard.GetConfig(),
 			shard.GetDomainCache(),

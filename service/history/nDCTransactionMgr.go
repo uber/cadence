@@ -160,7 +160,7 @@ func newNDCTransactionMgr(
 		domainCache:     shard.GetDomainCache(),
 		historyCache:    historyCache,
 		clusterMetadata: shard.GetClusterMetadata(),
-		historyV2Mgr:    shard.GetHistoryV2Manager(),
+		historyV2Mgr:    shard.GetHistoryManager(),
 		serializer:      shard.GetService().GetPayloadSerializer(),
 		metricsClient:   shard.GetMetricsClient(),
 		eventsReapplier: eventsReapplier,

@@ -77,7 +77,7 @@ func newNDCWorkflowResetter(
 	return &nDCWorkflowResetterImpl{
 		shard:          shard,
 		transactionMgr: transactionMgr,
-		historyV2Mgr:   shard.GetHistoryV2Manager(),
+		historyV2Mgr:   shard.GetHistoryManager(),
 		stateRebuilder: newNDCStateRebuilder(shard, logger),
 
 		domainID:   domainID,

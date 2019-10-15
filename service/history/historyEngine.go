@@ -152,7 +152,7 @@ func NewEngineWithShardContext(
 
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
-	historyV2Manager := shard.GetHistoryV2Manager()
+	historyV2Manager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(shard)
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,

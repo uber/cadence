@@ -789,7 +789,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 		// this function should be only called when we drop start workflow execution
 		currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 		if err == nil {
-			r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+			r.shard.GetHistoryManager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 				BranchToken: currentBranchToken,
 				ShardID:     common.IntPtr(r.shard.GetShardID()),
 			})

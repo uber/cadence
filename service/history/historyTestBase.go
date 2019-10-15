@@ -161,8 +161,8 @@ func (s *TestShardContext) GetExecutionManager() persistence.ExecutionManager {
 	return s.executionMgr
 }
 
-// GetHistoryV2Manager return historyV2
-func (s *TestShardContext) GetHistoryV2Manager() persistence.HistoryManager {
+// GetHistoryManager return historyV2
+func (s *TestShardContext) GetHistoryManager() persistence.HistoryManager {
 	return s.historyV2Mgr
 }
 
