@@ -489,9 +489,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		return nil, adh.error(err, scope)
 	}
 
-	startEventID := pageToken.StartEventID + 1
-	endEventID := pageToken.EndEventID
-	if startEventID == endEventID {
+	if pageToken.StartEventID+1 == pageToken.EndEventID {
 		// API is exclusive-exclusive. Return empty response here.
 		return &admin.GetWorkflowExecutionRawHistoryV2Response{
 			HistoryBatches: []*gen.DataBlob{},
@@ -508,8 +506,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
 		// ReadRawHistoryBranch is inclusive exclusive.
-		MinEventID:    startEventID,
-		MaxEventID:    endEventID,
+		MinEventID:    pageToken.StartEventID + 1,
+		MaxEventID:    pageToken.EndEventID,
 		PageSize:      pageSize,
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
@@ -632,15 +630,14 @@ func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 	}
 
 	// get branch based on the end event if end event is defined in the request
-	if request.GetEndEventId() != lastItem.GetEventID()+1 &&
-		request.GetEndEventVersion() != lastItem.GetVersion() {
+	if request.GetEndEventId() == lastItem.GetEventID()+1 &&
+		request.GetEndEventVersion() == lastItem.GetVersion() {
+		// this is a special case, target branch remains the same
+	} else {
 		endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
 		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
 		if err != nil {
 			return nil, err
-		}
-		if idx < 0 {
-			return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
 		}
 
 		targetBranch, err = versionHistories.GetVersionHistory(idx)
@@ -652,16 +649,14 @@ func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
 	// If the request start event is defined. The start event may be on a different branch as current branch.
 	// We need to find the LCA of the start event and the current branch.
-	if request.GetStartEventId() != common.FirstEventID-1 &&
-		request.GetStartEventVersion() != firstItem.GetVersion() {
-		// Start event is not on the same branch as target branch
+	if request.GetStartEventId() == common.FirstEventID-1 &&
+		request.GetStartEventVersion() == firstItem.GetVersion() {
+		// this is a special case, start event is on the same branch as target branch
+	} else {
 		if !targetBranch.ContainsItem(startItem) {
 			idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
 			if err != nil {
 				return nil, err
-			}
-			if idx < 0 {
-				return nil, &gen.BadRequestError{Message: "Cannot find item in all version histories"}
 			}
 			startBranch, err := versionHistories.GetVersionHistory(idx)
 			if err != nil {

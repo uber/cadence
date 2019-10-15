@@ -332,8 +332,7 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 			return err
 		}
 	} else if okV2 {
-		// TODO execute v2 resend logic here before calling execute again
-		if err := t.nDCHistoryResender.SendSingleWorkflowHistory(
+		if resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
 			retryV2Err.GetDomainId(),
 			retryV2Err.GetWorkflowId(),
 			retryV2Err.GetRunId(),
@@ -341,7 +340,7 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 			retryV2Err.StartEventVersion,
 			retryV2Err.EndEventId,
 			retryV2Err.EndEventVersion,
-		); err != nil {
+		); resendErr != nil {
 			t.logger.Error("error resend history", tag.Error(err))
 			// should return the replication error, not the resending error
 			return err
@@ -452,7 +451,7 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	if err := t.nDCHistoryResender.SendSingleWorkflowHistory(
+	if resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
 		retryErr.GetDomainId(),
 		retryErr.GetWorkflowId(),
 		retryErr.GetRunId(),
@@ -460,8 +459,8 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 		retryErr.StartEventVersion,
 		retryErr.EndEventId,
 		retryErr.EndEventVersion,
-	); err != nil {
-		t.logger.Error("error resend history", tag.Error(err))
+	); resendErr != nil {
+		t.logger.Error("error resend history", tag.Error(resendErr))
 		// should return the replication error, not the resending error
 		return err
 	}
