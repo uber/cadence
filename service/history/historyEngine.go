@@ -738,6 +738,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 	return response, nil
 }
 
+// TODO: emit metric on how often we are timing out queries
 func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
@@ -752,9 +753,9 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 	req := request.GetRequest()
-	_, closeStatus := ms.GetWorkflowStateCloseStatus()
-	if closeStatus != persistence.WorkflowCloseStatusNone && req.QueryRejectCondition != nil {
+	if !ms.IsWorkflowExecutionRunning() && req.QueryRejectCondition != nil {
 		notOpenReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotOpen
+		_, closeStatus := ms.GetWorkflowStateCloseStatus()
 		notCompletedCleanlyReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotCompletedCleanly && closeStatus != persistence.WorkflowCloseStatusCompleted
 		if notOpenReject || notCompletedCleanlyReject {
 			return &h.QueryWorkflowResponse{
@@ -769,24 +770,41 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	execInfo := ms.GetExecutionInfo()
 	clientFeature := client.NewFeatureImpl(execInfo.ClientLibraryVersion, execInfo.ClientFeatureVersion, execInfo.ClientImpl)
-	if !ms.IsWorkflowExecutionRunning() || !clientFeature.SupportConsistentQuery() || req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual {
-		mresp, err := e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
-		release(err)
-		return mresp, err
-	}
 
-	// queries with read_after_write consistency are not defined on non-active cluster
-	de, err := e.getActiveDomainEntry(request.DomainUUID)
+	de, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
 	if err != nil {
 		return nil, err
 	}
 
-	if !ms.HasPendingDecision() && !ms.HasInFlightDecision() {
+	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope)
+
+	// There are two ways in which queries get dispatched to decider. First, queries can be dispatched on decision tasks.
+	// These decision tasks potentially contain new events and queries. The events are treated as coming before the query in time.
+	// The second way in which queries are dispatched to decider is directly through matching; in this approach queries can be
+	// dispatched to decider immediately even if there are outstanding events that came before the query. The following logic
+	// is used to determine if a query can be safely dispatched directly through matching or if given the desired consistency
+	// level must be dispatched on a decision task. There are five cases in which a query can be dispatched directly through
+	// matching safely, without violating the desired consistency level:
+	// 1. the domain is not active, in this case history is immutable so a query dispatched at any time is consistent
+	// 2. the workflow is not running, whenever a workflow is not running dispatching query directly is consistent
+	// 3. the client does not enable consistent query, in this case the only option is to dispatch directly through matching
+	// 4. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
+	// 5. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
+	safeToDispatchDirectly := !de.IsDomainActive() ||
+		!ms.IsWorkflowExecutionRunning() ||
+		!clientFeature.SupportConsistentQuery() ||
+		req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual ||
+		(!ms.HasPendingDecision() && !ms.HasInFlightDecision())
+	if safeToDispatchDirectly {
+		sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
+		defer sw.Stop()
 		mresp, err := e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
 		release(err)
 		return mresp, err
 	}
 
+	// If we get here it means query could not be dispatched through matching directly, so it must be buffered to be dispatched on the next decision task.
+	// There is a hard guarantee in the system that at this point a new decision task will get generated.
 	qr := ms.GetQueryRegistry()
 	queryID, _, termCh := qr.bufferQuery(req.GetQuery())
 	ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
@@ -796,6 +814,8 @@ func (e *historyEngineImpl) QueryWorkflow(
 		qr.removeQuery(queryID)
 	}()
 	release(nil)
+	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
+	defer sw.Stop()
 	select {
 	case <-termCh:
 		querySnapshot, err := qr.getQuerySnapshot(queryID)
@@ -884,8 +904,6 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	}
 	return &h.QueryWorkflowResponse{Response: matchingResp}, nil
 }
-
-// create client feature and pass it in (we will need it for another check later)
 
 func (e *historyEngineImpl) getMutableState(
 	ctx ctx.Context,

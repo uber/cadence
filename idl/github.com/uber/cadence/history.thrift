@@ -209,7 +209,7 @@ struct RecordDecisionTaskStartedResponse {
   110: optional binary branchToken
   120: optional i64 (js.type = "Long") scheduledTimestamp
   130: optional i64 (js.type = "Long") startedTimestamp
-  140: optional list<shared.WorkflowQuery> queries
+  140: optional map<string, shared.WorkflowQuery> queries
 }
 
 struct SignalWorkflowExecutionRequest {

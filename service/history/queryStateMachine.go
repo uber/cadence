@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	errAlreadyCompleted      = errors.New("query has already been completed, cannot post any new events")
-	errInvalidEvent          = errors.New("event cannot be applied to query in state")
+	errAlreadyCompleted = errors.New("query has already been completed, cannot post any new events")
+	errInvalidEvent     = errors.New("event cannot be applied to query in state")
 )
 
 const (
@@ -60,11 +60,11 @@ type (
 	queryStateMachineImpl struct {
 		sync.RWMutex
 
-		id                            string
-		queryInput                    *shared.WorkflowQuery
-		queryResult                   *shared.WorkflowQueryResult
-		termCh                        chan struct{}
-		state                         queryState
+		id          string
+		queryInput  *shared.WorkflowQuery
+		queryResult *shared.WorkflowQueryResult
+		termCh      chan struct{}
+		state       queryState
 	}
 
 	querySnapshot struct {
@@ -77,11 +77,11 @@ type (
 
 func newQueryStateMachine(queryInput *shared.WorkflowQuery) queryStateMachine {
 	return &queryStateMachineImpl{
-		id:                            uuid.New(),
-		queryInput:                    queryInput,
-		queryResult:                   nil,
-		termCh:                        make(chan struct{}),
-		state:                         queryStateBuffered,
+		id:          uuid.New(),
+		queryInput:  queryInput,
+		queryResult: nil,
+		termCh:      make(chan struct{}),
+		state:       queryStateBuffered,
 	}
 }
 

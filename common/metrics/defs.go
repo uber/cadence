@@ -1570,6 +1570,8 @@ const (
 	ReplicationTasksReturned
 	GetReplicationMessagesForShardLatency
 	EventReapplySkippedCount
+	DirectQueryDispatchLatency
+	DecisionTaskQueryLatency
 
 	NumHistoryMetrics
 )
@@ -1875,6 +1877,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
+		DirectQueryDispatchLatency:                        {metricName: "direct_query_dispatch_latency", metricType: Timer},
+		DecisionTaskQueryLatency:                          {metricName: "decision_task_query_latency", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

@@ -255,6 +255,10 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 		})
 }
 
+// things to do here
+// 1. if there are unanswered queries make sure I generate a new decision task
+// 2. for each query that I got an answer to try to answer it in query registry (this can only be done after call completes)
+
 func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 	ctx ctx.Context,
 	req *h.RespondDecisionTaskCompletedRequest,
@@ -558,6 +562,11 @@ Update_History_Loop:
 			}
 		}
 
+		qr := msBuilder.GetQueryRegistry()
+		for id, result := range req.GetCompleteRequest().GetQueryResults() {
+			
+		}
+
 		resp = &h.RespondDecisionTaskCompletedResponse{}
 		if request.GetReturnNewDecisionTask() && createNewDecisionTask {
 			decision, _ := msBuilder.GetDecisionInfo(newDecisionTaskScheduledID)
@@ -619,10 +628,14 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 
 	qr := msBuilder.GetQueryRegistry()
 	buffered := qr.getBufferedSnapshot()
-	for _, b := range buffered {
-		query, _ := qr.getQuerySnapshot(b)
-		response.Queries = append(response.Queries, query.queryInput)
+	queries := make(map[string]*workflow.WorkflowQuery)
+	for _, id := range buffered {
+		snapshot, err := qr.recordEvent(id, queryEventStart, nil)
+		if err != nil {
+			continue
+		}
+		queries[snapshot.id] = snapshot.queryInput
 	}
-
+	response.Queries = queries
 	return response, nil
 }
