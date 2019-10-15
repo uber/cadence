@@ -37,6 +37,10 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+const (
+	resendContextTimeout = 30 * time.Second
+)
+
 type (
 	// nDCHistoryReplicationFn provides the functionality to deliver replication raw history request to history
 	// the provided func should be thread safe
@@ -62,7 +66,6 @@ type (
 		adminClient          adminClient.Client
 		historyReplicationFn nDCHistoryReplicationFn
 		serializer           persistence.PayloadSerializer
-		replicationTimeout   time.Duration
 		logger               log.Logger
 	}
 )
@@ -73,7 +76,6 @@ func NewNDCHistoryResender(
 	adminClient adminClient.Client,
 	historyReplicationFn nDCHistoryReplicationFn,
 	serializer persistence.PayloadSerializer,
-	replicationTimeout time.Duration,
 	logger log.Logger,
 ) *NDCHistoryResenderImpl {
 
@@ -82,7 +84,6 @@ func NewNDCHistoryResender(
 		adminClient:          adminClient,
 		historyReplicationFn: historyReplicationFn,
 		serializer:           serializer,
-		replicationTimeout:   replicationTimeout,
 		logger:               logger,
 	}
 }
@@ -159,7 +160,7 @@ func (n *NDCHistoryResenderImpl) sendReplicationRawRequest(
 	request *history.ReplicateEventsV2Request,
 ) error {
 
-	ctx, cancel := context.WithTimeout(context.Background(), n.replicationTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), resendContextTimeout)
 	defer cancel()
 	return n.historyReplicationFn(ctx, request)
 }
@@ -185,7 +186,7 @@ func (n *NDCHistoryResenderImpl) getHistory(
 	}
 	domainName := domainEntry.GetInfo().Name
 
-	ctx, cancel := context.WithTimeout(context.Background(), n.replicationTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), resendContextTimeout)
 	defer cancel()
 	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &admin.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(domainName),

@@ -182,7 +182,6 @@ func (r *Replicator) createKafkaProcessors(currentClusterName string, clusterNam
 			return historyClient.ReplicateEventsV2(ctx, request)
 		},
 		r.historySerializer,
-		replicationTimeout,
 		logger,
 	)
 	r.processors = append(r.processors, newReplicationTaskProcessor(

@@ -112,7 +112,6 @@ func (s *nDChistoryResenderSuite) SetupTest() {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
 		persistence.NewPayloadSerializer(),
-		30*time.Second,
 		s.logger,
 	)
 }
