@@ -28,11 +28,12 @@
 package history
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
-	history "github.com/uber/cadence/.gen/go/history"
+	"github.com/golang/mock/gomock"
+
+	"github.com/uber/cadence/.gen/go/history"
 )
 
 // MockactivityReplicator is a mock of activityReplicator interface
