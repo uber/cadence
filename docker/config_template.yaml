@@ -89,6 +89,7 @@ services:
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
+                timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT }}
         {{- end }}
 
@@ -104,6 +105,7 @@ services:
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
+                timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT }}
         {{- end }}
 
@@ -119,6 +121,7 @@ services:
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
+                timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT }}
         {{- end }}
 
@@ -134,6 +137,7 @@ services:
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
+                timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT }}
         {{- end }}
 
