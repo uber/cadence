@@ -48,7 +48,7 @@ const (
 	// below are templates for history_tree table
 	v2templateInsertTree = `INSERT INTO history_tree (` +
 		`tree_id, branch_id, ancestors, fork_time, info) ` +
-		`VALUES (?, ?, ?, ?, ?, ?) `
+		`VALUES (?, ?, ?, ?, ?) `
 
 	v2templateReadAllBranches = `SELECT branch_id, ancestors, fork_time, info FROM history_tree WHERE tree_id = ? `
 
