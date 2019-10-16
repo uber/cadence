@@ -229,7 +229,8 @@ func (r *activityReplicatorImpl) SyncActivity(
 	timeSource := clock.NewEventTimeSource()
 	timeSource.Update(now)
 	timerBuilder := newTimerBuilder(timeSource)
-	if tt := timerBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+	tt, err := timerBuilder.GetActivityTimerTaskIfNeeded(msBuilder)
+	if err != nil {
 		timerTasks = append(timerTasks, tt)
 	}
 
