@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination activityProgressReplicator_mock.go
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination activityReplicator_mock.go
 
 package history
 
@@ -39,34 +39,34 @@ import (
 )
 
 type (
-	activityProgressReplicator interface {
+	activityReplicator interface {
 		SyncActivity(
 			ctx ctx.Context,
 			request *h.SyncActivityRequest,
 		) error
 	}
 
-	activityProgressReplicatorImpl struct {
+	activityReplicatorImpl struct {
 		historyCache    *historyCache
 		clusterMetadata cluster.Metadata
 		logger          log.Logger
 	}
 )
 
-func newActivityProgressReplicator(
+func newActivityReplicator(
 	shard ShardContext,
 	historyCache *historyCache,
 	logger log.Logger,
-) *activityProgressReplicatorImpl {
+) *activityReplicatorImpl {
 
-	return &activityProgressReplicatorImpl{
+	return &activityReplicatorImpl{
 		historyCache:    historyCache,
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		logger:          logger.WithTags(tag.ComponentHistoryReplicator),
 	}
 }
 
-func (r *activityProgressReplicatorImpl) SyncActivity(
+func (r *activityReplicatorImpl) SyncActivity(
 	ctx ctx.Context,
 	request *h.SyncActivityRequest,
 ) (retError error) {

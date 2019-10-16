@@ -74,7 +74,7 @@ type (
 		taskAllocator             taskAllocator
 		replicator                *historyReplicator
 		nDCReplicator             nDCHistoryReplicator
-		activityReplicator        activityProgressReplicator
+		activityReplicator        activityReplicator
 		replicatorProcessor       ReplicatorQueueProcessor
 		historyEventNotifier      historyEventNotifier
 		tokenSerializer           common.TaskTokenSerializer
@@ -209,7 +209,7 @@ func NewEngineWithShardContext(
 			historyEngImpl.eventsReapplier,
 			logger,
 		)
-		historyEngImpl.activityReplicator = newActivityProgressReplicator(
+		historyEngImpl.activityReplicator = newActivityReplicator(
 			shard,
 			historyCache,
 			logger,

@@ -49,7 +49,7 @@ import (
 )
 
 type (
-	activityProgressReplicatorSuite struct {
+	activityReplicatorSuite struct {
 		suite.Suite
 		logger                   log.Logger
 		mockCtrl                 *gomock.Controller
@@ -68,24 +68,24 @@ type (
 		mockTimerProcessor       *MockTimerQueueProcessor
 		historyCache             *historyCache
 
-		activityProgressReplicator activityProgressReplicator
+		activityReplicator activityReplicator
 	}
 )
 
-func TestActivityProgressReplicatorSuite(t *testing.T) {
-	s := new(activityProgressReplicatorSuite)
+func TestActivityReplicatorSuite(t *testing.T) {
+	s := new(activityReplicatorSuite)
 	suite.Run(t, s)
 }
 
-func (s *activityProgressReplicatorSuite) SetupSuite() {
+func (s *activityReplicatorSuite) SetupSuite() {
 
 }
 
-func (s *activityProgressReplicatorSuite) TearDownSuite() {
+func (s *activityReplicatorSuite) TearDownSuite() {
 
 }
 
-func (s *activityProgressReplicatorSuite) SetupTest() {
+func (s *activityReplicatorSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockCtrl = gomock.NewController(s.T())
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
@@ -152,14 +152,14 @@ func (s *activityProgressReplicatorSuite) SetupTest() {
 	}
 	s.mockShard.SetEngine(engine)
 
-	s.activityProgressReplicator = newActivityProgressReplicator(
+	s.activityReplicator = newActivityReplicator(
 		s.mockShard,
 		s.historyCache,
 		s.logger,
 	)
 }
 
-func (s *activityProgressReplicatorSuite) TearDownTest() {
+func (s *activityReplicatorSuite) TearDownTest() {
 	s.mockCtrl.Finish()
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
@@ -172,7 +172,7 @@ func (s *activityProgressReplicatorSuite) TearDownTest() {
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
+func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -207,11 +207,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 		), nil,
 	)
 
-	err := s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err := s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_WorkflowClosed() {
+func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -253,11 +253,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 		), nil,
 	)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionSmaller() {
+func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionSmaller() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -307,11 +307,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_IncomingScheduleIDLar
 		), nil,
 	)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionLarger() {
+func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionLarger() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -362,11 +362,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_IncomingScheduleIDLar
 		), nil,
 	)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(newRetryTaskErrorWithHint(ErrRetrySyncActivityMsg, domainID, workflowID, runID, nextEventID), err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityCompleted() {
+func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -416,11 +416,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	)
 	msBuilder.On("GetActivityInfo", scheduleID).Return(nil, false)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityVersionLarger() {
+func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityVersionLarger() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -472,11 +472,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Local
 		Version: lastWriteVersion - 1,
 	}, true)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionSameAttempt() {
+func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionSameAttempt() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -546,11 +546,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Updat
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
 	msBuilder.On("ReplicateActivityInfo", request, false).Return(expectedErr)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(expectedErr, err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionLargerAttempt() {
+func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionLargerAttempt() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -620,11 +620,11 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Updat
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
 	msBuilder.On("ReplicateActivityInfo", request, true).Return(expectedErr)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(expectedErr, err)
 }
 
-func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerVersion() {
+func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerVersion() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -694,6 +694,6 @@ func (s *activityProgressReplicatorSuite) TestSyncActivity_ActivityRunning_Updat
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
 	msBuilder.On("ReplicateActivityInfo", request, true).Return(expectedErr)
 
-	err = s.activityProgressReplicator.SyncActivity(ctx.Background(), request)
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(expectedErr, err)
 }
