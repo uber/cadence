@@ -154,31 +154,21 @@ func (r *activityReplicatorImpl) SyncActivity(
 		if err != nil {
 			return err
 		}
-
-		lastLocalItem, err := currentVersionHistory.GetLastItem()
+		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
 		if err != nil {
 			return err
 		}
-		// if the LCA is the last item of local version history od resend
-		if lcaItem.GetEventID() == lastLocalItem.GetEventID() && lcaItem.GetVersion() == lastLocalItem.GetVersion() {
-			lastIncomingItem, err := incomingVersionHistory.GetLastItem()
-			if err != nil {
-				return err
-			}
 
-			return newNDCRetryTaskErrorWithHint(
-				domainID,
-				execution.GetWorkflowId(),
-				execution.GetRunId(),
-				common.Int64Ptr(lastLocalItem.GetEventID()),
-				common.Int64Ptr(lastLocalItem.GetVersion()),
-				common.Int64Ptr(lastIncomingItem.GetEventID()),
-				common.Int64Ptr(lastIncomingItem.GetVersion()),
-			)
-		}
-
-		//discard this task because they are not on the same branch
-		return nil
+		// Send history from the LCA item to the last item on the incoming branch
+		return newNDCRetryTaskErrorWithHint(
+			domainID,
+			execution.GetWorkflowId(),
+			execution.GetRunId(),
+			common.Int64Ptr(lcaItem.GetEventID()),
+			common.Int64Ptr(lcaItem.GetVersion()),
+			common.Int64Ptr(lastIncomingItem.GetEventID()),
+			common.Int64Ptr(lastIncomingItem.GetVersion()),
+		)
 	}
 
 	ai, ok := msBuilder.GetActivityInfo(scheduleID)
