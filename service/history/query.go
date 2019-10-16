@@ -30,34 +30,21 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
-var (
-	errAlreadyCompleted = errors.New("query has already been completed, cannot post any new events")
-	errInvalidEvent     = errors.New("event cannot be applied to query in state")
-)
-
 const (
 	queryStateBuffered queryState = iota
-	queryStateStarted
 	queryStateCompleted
-)
-
-const (
-	queryEventBuffer queryEvent = iota
-	queryEventStart
-	queryEventComplete
 )
 
 type (
 	queryState int
-	queryEvent int
 
-	queryStateMachine interface {
+	query interface {
 		getQuerySnapshot() *querySnapshot
 		getQueryTermCh() <-chan struct{}
-		recordEvent(queryEvent, *shared.WorkflowQueryResult) error
+		completeQuery(*shared.WorkflowQueryResult) error
 	}
 
-	queryStateMachineImpl struct {
+	queryImpl struct {
 		sync.RWMutex
 
 		id          string
@@ -75,8 +62,8 @@ type (
 	}
 )
 
-func newQueryStateMachine(queryInput *shared.WorkflowQuery) queryStateMachine {
-	return &queryStateMachineImpl{
+func newQuery(queryInput *shared.WorkflowQuery) query {
+	return &queryImpl{
 		id:          uuid.New(),
 		queryInput:  queryInput,
 		queryResult: nil,
@@ -85,7 +72,7 @@ func newQueryStateMachine(queryInput *shared.WorkflowQuery) queryStateMachine {
 	}
 }
 
-func (q *queryStateMachineImpl) getQuerySnapshot() *querySnapshot {
+func (q *queryImpl) getQuerySnapshot() *querySnapshot {
 	q.RLock()
 	defer q.RUnlock()
 
@@ -97,43 +84,32 @@ func (q *queryStateMachineImpl) getQuerySnapshot() *querySnapshot {
 	}
 }
 
-func (q *queryStateMachineImpl) getQueryTermCh() <-chan struct{} {
+func (q *queryImpl) getQueryTermCh() <-chan struct{} {
 	q.RLock()
 	defer q.RUnlock()
 
 	return q.termCh
 }
 
-func (q *queryStateMachineImpl) recordEvent(event queryEvent, queryResult *shared.WorkflowQueryResult) error {
+func (q *queryImpl) completeQuery(queryResult *shared.WorkflowQueryResult) error {
 	q.Lock()
 	defer q.Unlock()
 
 	if q.state == queryStateCompleted {
-		return errAlreadyCompleted
+		return errors.New("query already completed")
+	}
+	if queryResult == nil {
+		return errors.New("query result is nil")
+	}
+	// TODO: add unit tests for this
+	validAnswered := queryResult.GetResultType().Equals(shared.QueryResultTypeAnswered) && queryResult.Answer != nil && queryResult.ErrorDetails == nil && queryResult.ErrorReason == nil
+	validFailed := queryResult.GetResultType().Equals(shared.QueryResultTypeFailed) && queryResult.Answer == nil && queryResult.ErrorDetails != nil && queryResult.ErrorReason != nil
+	if  !validAnswered && !validFailed {
+		return errors.New("invalid query result")
 	}
 
-	switch event {
-	case queryEventBuffer:
-		if queryResult != nil || q.state != queryStateStarted {
-			return errInvalidEvent
-		}
-		q.state = queryStateBuffered
-		return nil
-	case queryEventStart:
-		if queryResult != nil || q.state != queryStateBuffered {
-			return errInvalidEvent
-		}
-		q.state = queryStateStarted
-		return nil
-	case queryEventComplete:
-		if queryResult == nil || q.state != queryStateStarted {
-			return errInvalidEvent
-		}
-		q.queryResult = queryResult
-		q.state = queryStateCompleted
-		close(q.termCh)
-		return nil
-	default:
-		panic("invalid event")
-	}
+	q.state = queryStateCompleted
+	q.queryResult = queryResult
+	close(q.termCh)
+	return nil
 }

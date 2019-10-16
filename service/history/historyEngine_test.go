@@ -536,7 +536,6 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 }
 
 func (s *engineSuite) TestQueryWorkflow() {
-
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
 		RunId:      common.StringPtr(testRunID),
@@ -557,21 +556,16 @@ func (s *engineSuite) TestQueryWorkflow() {
 		<-time.After(delay)
 		builder := s.getBuilder(testDomainID, execution)
 		s.NotNil(builder)
-		queryRegistry := builder.GetQueryRegistry()
-		buffered := queryRegistry.getBufferedSnapshot()
+		qr := builder.GetQueryRegistry()
+		buffered := qr.getBufferedSnapshot()
 		for _, id := range buffered {
-			err := queryRegistry.recordEvent(id, queryEventStart, nil)
-			s.NoError(err)
-		}
-		started := queryRegistry.getStartedSnapshot()
-		for _, id := range started {
 			resultType := workflow.QueryResultTypeAnswered
-			err := queryRegistry.recordEvent(id, queryEventComplete, &workflow.WorkflowQueryResult{
+			err := qr.completeQuery(id, &workflow.WorkflowQueryResult{
 				ResultType: &resultType,
 				Answer:     answer,
 			})
 			s.NoError(err)
-			querySnapshot, err := queryRegistry.getQuerySnapshot(id)
+			querySnapshot, err := qr.getQuerySnapshot(id)
 			s.NoError(err)
 			s.Equal(queryStateCompleted, querySnapshot.state)
 		}

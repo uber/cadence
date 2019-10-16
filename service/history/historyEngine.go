@@ -806,7 +806,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// If we get here it means query could not be dispatched through matching directly, so it must be buffered to be dispatched on the next decision task.
 	// There is a hard guarantee in the system that at this point a new decision task will get generated.
 	qr := ms.GetQueryRegistry()
-	queryID, _, termCh := qr.bufferQuery(req.GetQuery())
+	queryID, termCh := qr.bufferQuery(req.GetQuery())
 	ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
 	timer := time.NewTimer(ttl)
 	defer func() {

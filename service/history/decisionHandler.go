@@ -460,9 +460,21 @@ Update_History_Loop:
 			continueAsNewBuilder = nil
 		}
 
-		// Schedule another decision task if new events came in during this decision or if request forced to
-		createNewDecisionTask := msBuilder.IsWorkflowExecutionRunning() &&
-			(hasUnhandledEvents || request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
+		queryResults := req.GetCompleteRequest().GetQueryResults()
+		bufferedQueries := msBuilder.GetQueryRegistry().getBufferedSnapshot()
+		hasUnhandledQueries := false
+		if len(queryResults) < len(bufferedQueries) {
+			hasUnhandledQueries = true
+		} else {
+			for _, bid := range bufferedQueries {
+				if _, ok := queryResults[bid]; !ok {
+					hasUnhandledQueries = true
+					break
+				}
+			}
+		}
+
+		createNewDecisionTask := msBuilder.IsWorkflowExecutionRunning() && (hasUnhandledEvents || request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled || hasUnhandledQueries)
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
 			var newDecision *decisionInfo
@@ -517,6 +529,14 @@ Update_History_Loop:
 			)
 		} else {
 			updateErr = context.updateWorkflowExecutionAsActive(handler.shard.GetTimeSource().Now())
+			if updateErr == nil {
+				qr := msBuilder.GetQueryRegistry()
+				for id, result := range req.GetCompleteRequest().GetQueryResults() {
+					if err := qr.completeQuery(id, result); err != nil {
+						handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CompleteQueryFailedCount)
+					}
+				}
+			}
 		}
 
 		if updateErr != nil {
@@ -560,11 +580,6 @@ Update_History_Loop:
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("decision heartbeat timeout"),
 			}
-		}
-
-		qr := msBuilder.GetQueryRegistry()
-		for id, result := range req.GetCompleteRequest().GetQueryResults() {
-			
 		}
 
 		resp = &h.RespondDecisionTaskCompletedResponse{}
@@ -630,7 +645,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	buffered := qr.getBufferedSnapshot()
 	queries := make(map[string]*workflow.WorkflowQuery)
 	for _, id := range buffered {
-		snapshot, err := qr.recordEvent(id, queryEventStart, nil)
+		snapshot, err := qr.getQuerySnapshot(id)
 		if err != nil {
 			continue
 		}

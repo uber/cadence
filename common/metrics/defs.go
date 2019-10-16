@@ -1572,6 +1572,7 @@ const (
 	EventReapplySkippedCount
 	DirectQueryDispatchLatency
 	DecisionTaskQueryLatency
+	CompleteQueryFailedCount
 
 	NumHistoryMetrics
 )
@@ -1879,6 +1880,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
 		DirectQueryDispatchLatency:                        {metricName: "direct_query_dispatch_latency", metricType: Timer},
 		DecisionTaskQueryLatency:                          {metricName: "decision_task_query_latency", metricType: Timer},
+		CompleteQueryFailedCount:                          {metricName: "complete_query_failed", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

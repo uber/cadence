@@ -47,11 +47,11 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	qr := newQueryRegistry()
 	var ids []string
 	for i := 0; i < 10; i++ {
-		id, _, _ := qr.bufferQuery(&shared.WorkflowQuery{})
+		id, _ := qr.bufferQuery(&shared.WorkflowQuery{})
 		ids = append(ids, id)
 	}
-	s.assertHasQueries(qr, true, false, false)
-	s.assertQuerySizes(qr, 10, 0, 0)
+	s.assertHasQueries(qr, true, false)
+	s.assertQuerySizes(qr, 10, 0)
 
 	found, err := qr.getQuerySnapshot(ids[0])
 	s.NoError(err)
@@ -61,63 +61,39 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.Nil(notFound)
 
 	for i := 0; i < 5; i++ {
-		_, err := qr.recordEvent(ids[i], queryEventStart, nil)
+		err := qr.completeQuery(ids[i], &shared.WorkflowQueryResult{})
 		s.NoError(err)
 	}
-	s.assertHasQueries(qr, true, true, false)
-	s.assertQuerySizes(qr, 5, 5, 0)
+	s.assertHasQueries(qr, true, true)
+	s.assertQuerySizes(qr, 5, 5)
 
-	completeQuery := func(id string) {
-		querySnapshot, err := qr.getQuerySnapshot(id)
+	for i := 0; i < 5; i++ {
+		qs, err := qr.getQuerySnapshot(ids[i])
 		s.NoError(err)
-		if querySnapshot.state == queryStateBuffered {
-			_, err := qr.recordEvent(id, queryEventStart, nil)
-			s.NoError(err)
+		s.Nil(qs)
+		s.Equal(queryStateCompleted, qs.state)
+		s.NotNil(qs.queryResult)
+
+		termCh, err := qr.getQueryTermCh(ids[i])
+		s.NoError(err)
+		select {
+		case <-termCh:
+		default:
+			s.Fail("termination channel should be closed")
 		}
-		_, err = qr.recordEvent(id, queryEventComplete, &shared.WorkflowQueryResult{})
-		s.NoError(err)
+
+		qr.removeQuery(ids[i])
 	}
-
-	q0, err := qr.getQuerySnapshot(ids[0])
-	s.NoError(err)
-	s.NotNil(q0)
-	s.Equal(queryStateStarted, q0.state)
-	completeQuery(q0.id)
-	q0, err = qr.getQuerySnapshot(q0.id)
-	s.NotNil(q0)
-	s.NoError(err)
-	s.Equal(queryStateCompleted, q0.state)
-	s.assertHasQueries(qr, true, true, true)
-	s.assertQuerySizes(qr, 5, 4, 1)
-
-	q9, err := qr.getQuerySnapshot(ids[9])
-	s.NoError(err)
-	s.NotNil(q9)
-	s.Equal(queryStateBuffered, q9.state)
-	completeQuery(q9.id)
-	q9, err = qr.getQuerySnapshot(q9.id)
-	s.NotNil(q9)
-	s.NoError(err)
-	s.Equal(queryStateCompleted, q9.state)
-	s.assertHasQueries(qr, true, true, true)
-	s.assertQuerySizes(qr, 4, 4, 2)
-
-	qr.removeQuery(ids[0])
-	qr.removeQuery(ids[1])
-	qr.removeQuery(ids[2])
-	qr.removeQuery(ids[5])
-	s.assertHasQueries(qr, true, true, true)
-	s.assertQuerySizes(qr, 3, 2, 1)
+	s.assertHasQueries(qr, true, false)
+	s.assertQuerySizes(qr, 5, 0)
 }
 
-func (s *QueryRegistrySuite) assertHasQueries(qr queryRegistry, buffered, started, completed bool) {
+func (s *QueryRegistrySuite) assertHasQueries(qr queryRegistry, buffered, completed bool) {
 	s.Equal(buffered, qr.hasBuffered())
-	s.Equal(started, qr.hasStarted())
 	s.Equal(completed, qr.hasCompleted())
 }
 
-func (s *QueryRegistrySuite) assertQuerySizes(qr queryRegistry, buffered, started, completed int) {
+func (s *QueryRegistrySuite) assertQuerySizes(qr queryRegistry, buffered, completed int) {
 	s.Len(qr.getBufferedSnapshot(), buffered)
-	s.Len(qr.getStartedSnapshot(), started)
 	s.Len(qr.getCompletedSnapshot(), completed)
 }
