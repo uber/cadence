@@ -1208,7 +1208,11 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(
 ) error {
 	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledId()]
 	if !ok {
-		return fmt.Errorf("unable to find activity with schedule event id: %v in mutable state", ai.ScheduleID)
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity: %v in mutable state", request.GetScheduledId()),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingActivityInfo
 	}
 
 	ai.Version = request.GetVersion()
@@ -1239,10 +1243,15 @@ func (e *mutableStateBuilder) UpdateActivity(
 	ai *persistence.ActivityInfo,
 ) error {
 
-	_, ok := e.pendingActivityInfoIDs[ai.ScheduleID]
-	if !ok {
+	if _, ok := e.pendingActivityInfoIDs[ai.ScheduleID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity: %v in mutable state", ai.ActivityID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
 		return ErrMissingActivityInfo
 	}
+
+	e.pendingActivityInfoIDs[ai.ScheduleID] = ai
 	e.updateActivityInfos[ai] = struct{}{}
 	return nil
 }
@@ -1252,21 +1261,25 @@ func (e *mutableStateBuilder) DeleteActivity(
 	scheduleEventID int64,
 ) error {
 
-	a, ok := e.pendingActivityInfoIDs[scheduleEventID]
+	ai, ok := e.pendingActivityInfoIDs[scheduleEventID]
 	if !ok {
-		errorMsg := fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID)
-		e.logger.Error(errorMsg, tag.ErrorTypeInvalidMutableStateAction)
-		return errors.NewInternalFailureError(errorMsg)
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingActivityInfo
 	}
 	delete(e.pendingActivityInfoIDs, scheduleEventID)
 
-	_, ok = e.pendingActivityInfoByActivityID[a.ActivityID]
+	_, ok = e.pendingActivityInfoByActivityID[ai.ActivityID]
 	if !ok {
-		errorMsg := fmt.Sprintf("Unable to find activity: %v in mutable state", a.ActivityID)
-		e.logger.Error(errorMsg, tag.ErrorTypeInvalidMutableStateAction)
-		return errors.NewInternalFailureError(errorMsg)
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity: %v in mutable state", ai.ActivityID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingActivityInfo
 	}
-	delete(e.pendingActivityInfoByActivityID, a.ActivityID)
+	delete(e.pendingActivityInfoByActivityID, ai.ActivityID)
 
 	e.deleteActivityInfos[scheduleEventID] = struct{}{}
 	return nil
@@ -1285,19 +1298,37 @@ func (e *mutableStateBuilder) GetUserTimer(
 func (e *mutableStateBuilder) UpdateUserTimer(
 	timerID string,
 	ti *persistence.TimerInfo,
-) {
+) error {
+
+	if _, ok := e.pendingTimerInfoIDs[timerID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find timer: %v in mutable state", timerID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingTimerInfo
+	}
 
 	e.pendingTimerInfoIDs[timerID] = ti
 	e.updateTimerInfos[ti] = struct{}{}
+	return nil
 }
 
 // DeleteUserTimer deletes an user timer.
 func (e *mutableStateBuilder) DeleteUserTimer(
 	timerID string,
-) {
+) error {
+
+	if _, ok := e.pendingTimerInfoIDs[timerID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find timer: %v in mutable state", timerID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingTimerInfo
+	}
 
 	delete(e.pendingTimerInfoIDs, timerID)
 	e.deleteTimerInfos[timerID] = struct{}{}
+	return nil
 }
 
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
@@ -2940,8 +2971,7 @@ func (e *mutableStateBuilder) ReplicateTimerFiredEvent(
 	attributes := event.TimerFiredEventAttributes
 	timerID := attributes.GetTimerId()
 
-	e.DeleteUserTimer(timerID)
-	return nil
+	return e.DeleteUserTimer(timerID)
 }
 
 func (e *mutableStateBuilder) AddTimerCanceledEvent(
@@ -2992,8 +3022,7 @@ func (e *mutableStateBuilder) ReplicateTimerCanceledEvent(
 	attributes := event.TimerCanceledEventAttributes
 	timerID := attributes.GetTimerId()
 
-	e.DeleteUserTimer(timerID)
-	return nil
+	return e.DeleteUserTimer(timerID)
 }
 
 func (e *mutableStateBuilder) AddCancelTimerFailedEvent(

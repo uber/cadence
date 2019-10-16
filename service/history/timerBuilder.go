@@ -168,7 +168,7 @@ func (tb *timerBuilder) AddActivityTimeoutTask(scheduleID int64,
 }
 
 // GetUserTimerTaskIfNeeded - if we need create a timer task for the user timers
-func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder mutableState) persistence.Task {
+func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder mutableState) (persistence.Task, error) {
 	if !tb.isLoadedUserTimers {
 		tb.loadUserTimers(msBuilder)
 	}
@@ -178,9 +178,11 @@ func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder mutableState) persist
 		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
 		ti.TaskID = TimerTaskStatusCreated
 		// TODO: We append updates to timer tasks twice.  Why?
-		msBuilder.UpdateUserTimer(ti.TimerID, ti)
+		if err := msBuilder.UpdateUserTimer(ti.TimerID, ti); err != nil {
+			return nil, err
+		}
 	}
-	return timerTask
+	return timerTask, nil
 }
 
 // GetUserTimers - Get all user timers.
@@ -208,7 +210,7 @@ func (tb *timerBuilder) GetActivityTimers(msBuilder mutableState) timers {
 }
 
 // GetActivityTimerTaskIfNeeded - if we need create a activity timer task for the activities
-func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) persistence.Task {
+func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) (persistence.Task, error) {
 	if !tb.isLoadedActivityTimers {
 		tb.loadActivityTimers(msBuilder)
 	}
@@ -223,10 +225,12 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) per
 		if w.TimeoutType(at.TimeoutType) == w.TimeoutTypeHeartbeat {
 			ai.LastHeartbeatTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
 		}
-		msBuilder.UpdateActivity(ai)
+		if err := msBuilder.UpdateActivity(ai); err != nil {
+			return nil, err
+		}
 
 	}
-	return timerTask
+	return timerTask, nil
 }
 
 // loadUserTimers - Load all user timers from mutable state.
