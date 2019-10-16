@@ -1376,7 +1376,6 @@ type (
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
 		Branches                  []*workflow.HistoryBranch
-		ForkingInProgressBranches []HistoryBranchDetail
 	}
 
 	// GetAllHistoryTreeBranchesRequest is a request of GetAllHistoryTreeBranches

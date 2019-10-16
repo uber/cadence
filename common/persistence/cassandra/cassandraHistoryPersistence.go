@@ -360,15 +360,6 @@ func (h *cassandraHistoryV2Persistence) DeleteHistoryBranch(
 	if err != nil {
 		return err
 	}
-	// We won't delete the branch if there is any branch forking in progress. We will return error.
-	if len(rsp.ForkingInProgressBranches) > 0 {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Some branch is in progress of forking"),
-		}
-	}
-
-	// If there is no branch forking in progress we see here, it means that we are safe to calculate the deleting ranges based on the current result,
-	// because all the forking branches in the future would fail.
 
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(v2templateDeleteBranch, treeID, branch.BranchID)
@@ -473,7 +464,6 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(
 
 	pagingToken := []byte{}
 	branches := make([]*workflow.HistoryBranch, 0)
-	forkingBranches := make([]p.HistoryBranchDetail, 0)
 
 	var iter *gocql.Iter
 	for {
@@ -492,15 +482,6 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(
 		info := ""
 
 		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress, &forkTime, &info) {
-			if forkingInProgress {
-				br := p.HistoryBranchDetail{
-					TreeID:   treeID,
-					BranchID: branchUUID.String(),
-					ForkTime: forkTime,
-					Info:     info,
-				}
-				forkingBranches = append(forkingBranches, br)
-			}
 			ancs := h.parseBranchAncestors(ancsResult)
 			br := &workflow.HistoryBranch{
 				TreeID:    &treeID,
@@ -529,7 +510,6 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(
 
 	return &p.GetHistoryTreeResponse{
 		Branches:                  branches,
-		ForkingInProgressBranches: forkingBranches,
 	}, nil
 }
 

@@ -24,8 +24,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
-
 	"github.com/go-sql-driver/mysql"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -401,15 +399,6 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 	if err != nil {
 		return err
 	}
-	// We won't delete the branch if there is any branch forking in progress. We will return error.
-	if len(rsp.ForkingInProgressBranches) > 0 {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("There are branches in progress of forking"),
-		}
-	}
-
-	// If there is no branch forking in progress we see here, it means that we are safe to calculate the deleting ranges based on the current result,
-	// Because before getting here, we've already deleted mutableState record, so all the forking branches in the future should fail.
 
 	// validBRsMaxEndNode is to for each branch range that is being used, we want to know what is the max nodeID referred by other valid branch
 	validBRsMaxEndNode := map[string]int64{}
@@ -481,7 +470,6 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 
 	treeID := sqldb.MustParseUUID(request.TreeID)
 	branches := make([]*shared.HistoryBranch, 0)
-	forkingBranches := make([]p.HistoryBranchDetail, 0)
 
 	treeFilter := &sqldb.HistoryTreeFilter{
 		TreeID:  treeID,
@@ -496,15 +484,6 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		if err != nil {
 			return nil, err
 		}
-		if row.InProgress {
-			br := p.HistoryBranchDetail{
-				TreeID:   request.TreeID,
-				BranchID: row.BranchID.String(),
-				ForkTime: time.Unix(0, treeInfo.GetCreatedTimeNanos()),
-				Info:     treeInfo.GetInfo(),
-			}
-			forkingBranches = append(forkingBranches, br)
-		}
 		br := &shared.HistoryBranch{
 			TreeID:    &request.TreeID,
 			BranchID:  common.StringPtr(row.BranchID.String()),
@@ -515,6 +494,5 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 
 	return &p.GetHistoryTreeResponse{
 		Branches:                  branches,
-		ForkingInProgressBranches: forkingBranches,
 	}, nil
 }

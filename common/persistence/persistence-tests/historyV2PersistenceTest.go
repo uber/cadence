@@ -560,9 +560,9 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 			s.Nil(err)
 			s.Equal((concurrency)*2+1, len(events))
 
-			s.descInProgress(treeID)
 			if idx == 0 {
-				s.deleteHistoryBranch(bi)
+				err = s.deleteHistoryBranch(bi)
+				s.Nil(err)
 			}
 
 		}(i)
@@ -733,21 +733,7 @@ func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryB
 		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
-	s.True(len(resp.ForkingInProgressBranches) == 0)
 	return resp.Branches
-}
-
-// persistence helper
-func (s *HistoryV2PersistenceSuite) descInProgress(treeID string) {
-	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID:  treeID,
-		ShardID: common.IntPtr(s.ShardInfo.ShardID),
-	})
-	s.Nil(err)
-	s.True(len(resp.ForkingInProgressBranches) > 0)
-	forkTime := p.UnixNanoToDBTimestamp(resp.ForkingInProgressBranches[0].ForkTime.UnixNano())
-	s.True(forkTime > defaultVisibilityTimestamp)
-	s.Equal(testForkRunID, resp.ForkingInProgressBranches[0].Info)
 }
 
 // persistence helper
