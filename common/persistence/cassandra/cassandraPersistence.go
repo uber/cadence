@@ -63,6 +63,9 @@ const (
 	rowTypeReplicationDomainID   = "10000000-5000-f000-f000-000000000000"
 	rowTypeReplicationWorkflowID = "20000000-5000-f000-f000-000000000000"
 	rowTypeReplicationRunID      = "30000000-5000-f000-f000-000000000000"
+	// Row Constants for Replication Task DLQ Row. Source cluster name will be used as WorkflowID.
+	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
+	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
 	// Special TaskId constants
 	rowTypeExecutionTaskID  = int64(-10)
 	rowTypeShardTaskID      = int64(-11)
@@ -82,6 +85,7 @@ const (
 	rowTypeTransferTask
 	rowTypeTimerTask
 	rowTypeReplicationTask
+	rowTypeDLQ
 )
 
 const (
@@ -2690,4 +2694,46 @@ func (d *cassandraPersistence) GetTimerIndexTasks(request *p.GetTimerIndexTasksR
 	}
 
 	return response, nil
+}
+
+func (d *cassandraPersistence) PutReplicationTaskToDLQ(request *p.PutReplicationTaskToDLQRequest) error {
+	task := request.TaskInfo
+	query := d.session.Query(templateCreateReplicationTaskQuery,
+		d.shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		request.SourceClusterName,
+		rowTypeDLQRunID,
+		task.DomainID,
+		task.WorkflowID,
+		task.RunID,
+		task.TaskID,
+		task.TaskType,
+		task.FirstEventID,
+		task.NextEventID,
+		task.Version,
+		task.LastReplicationInfo,
+		task.ScheduledID,
+		defaultEventStoreVersionValue,
+		task.BranchToken,
+		task.ResetWorkflow,
+		defaultEventStoreVersionValue,
+		task.NewRunBranchToken,
+		defaultVisibilityTimestamp,
+		task.GetTaskID())
+
+	result := make(map[string]interface{})
+	err := query.MapScan(result)
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("PutReplicationTaskToDLQ operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("PutReplicationTaskToDLQ operation failed. Error: %v", err),
+		}
+	}
+
+	return nil
 }

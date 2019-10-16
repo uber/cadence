@@ -118,6 +118,20 @@ VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 	deleteBufferedEventsQury = `DELETE FROM buffered_events WHERE shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 	getBufferedEventsQury    = `SELECT data, data_encoding FROM buffered_events WHERE
 shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
+
+	insertReplicationTaskDLQQry = `
+INSERT INTO replication_tasks_dlq 
+            (source_cluster_name, 
+             shard_id, 
+             task_id, 
+             data, 
+             data_encoding) 
+VALUES     (:source_cluster_name, 
+            :shard_id, 
+            :task_id, 
+            :data, 
+            :data_encoding)
+`
 )
 
 // InsertIntoExecutions inserts a row into executions table
@@ -292,4 +306,9 @@ func (mdb *DB) SelectFromReplicationTasks(filter *sqldb.ReplicationTasksFilter) 
 // DeleteFromReplicationTasks deletes one or more rows from replication_tasks table
 func (mdb *DB) DeleteFromReplicationTasks(filter *sqldb.ReplicationTasksFilter) (sql.Result, error) {
 	return mdb.conn.Exec(deleteReplicationTaskQry, filter.ShardID, *filter.TaskID)
+}
+
+// InsertIntoReplicationTasks inserts one or more rows into replication_tasks table
+func (mdb *DB) InsertIntoReplicationTasksDLQ(row *sqldb.ReplicationTaskDLQRow) (sql.Result, error) {
+	return mdb.conn.NamedExec(insertReplicationTaskDLQQry, row)
 }

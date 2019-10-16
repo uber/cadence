@@ -307,6 +307,20 @@ func (_m *ExecutionManager) CompleteReplicationTask(request *persistence.Complet
 	return r0
 }
 
+// PutReplicationTaskToDLQ provides a mock function with given fields: request
+func (_m *ExecutionManager) PutReplicationTaskToDLQ(request *persistence.PutReplicationTaskToDLQRequest) error {
+	ret := _m.Called(request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*persistence.PutReplicationTaskToDLQRequest) error); ok {
+		r0 = rf(request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetTimerIndexTasks provides a mock function with given fields: request
 func (_m *ExecutionManager) GetTimerIndexTasks(request *persistence.GetTimerIndexTasksRequest) (*persistence.GetTimerIndexTasksResponse, error) {
 	ret := _m.Called(request)

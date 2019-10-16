@@ -960,6 +960,12 @@ type (
 		TaskID int64
 	}
 
+	// PutReplicationTaskToDLQRequest is used to put a replication task to dlq
+	PutReplicationTaskToDLQRequest struct {
+		SourceClusterName string
+		TaskInfo          *ReplicationTaskInfo
+	}
+
 	// RangeCompleteTimerTaskRequest is used to complete a range of tasks in the timer task queue
 	RangeCompleteTimerTaskRequest struct {
 		InclusiveBeginTimestamp time.Time
@@ -1500,6 +1506,7 @@ type (
 		// Replication task related methods
 		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
 		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
+		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)

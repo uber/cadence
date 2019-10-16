@@ -317,6 +317,15 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(
 	return err
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.PutReplicationTaskToDLQ(request)
+	return err
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded

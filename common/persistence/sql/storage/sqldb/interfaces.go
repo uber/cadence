@@ -205,6 +205,15 @@ type (
 		DataEncoding string
 	}
 
+	// ReplicationTaskDLQRow represents a row in replication_tasks_dlq table
+	ReplicationTaskDLQRow struct {
+		SourceClusterName string
+		ShardID           int
+		TaskID            int64
+		Data              []byte
+		DataEncoding      string
+	}
+
 	// ReplicationTasksFilter contains the column names within domain table that
 	// can be used to filter results through a WHERE clause
 	ReplicationTasksFilter struct {
@@ -576,6 +585,8 @@ type (
 		// DeleteFromReplicationTasks deletes a row from replication_tasks table
 		// Required filter params - {shardID, taskID}
 		DeleteFromReplicationTasks(filter *ReplicationTasksFilter) (sql.Result, error)
+		// InsertIntoReplicationTasksDLQ puts the replication task into DLQ
+		InsertIntoReplicationTasksDLQ(row *ReplicationTaskDLQRow) (sql.Result, error)
 
 		ReplaceIntoActivityInfoMaps(rows []ActivityInfoMapsRow) (sql.Result, error)
 		// SelectFromActivityInfoMaps returns one or more rows from activity_info_maps

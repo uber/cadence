@@ -22,10 +22,9 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
-
-	"go.uber.org/yarpc/yarpcerrors"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
@@ -36,15 +35,20 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/replicator"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (
-	dropSyncShardTaskTimeThreshold            = 10 * time.Minute
-	replicationTimeout                        = 30 * time.Second
-	taskProcessorErrorRetryWait               = time.Second
-	taskProcessorErrorRetryBackoffCoefficient = 1
-	taskProcessorErrorRetryMaxAttampts        = 5
+	dropSyncShardTaskTimeThreshold   = 10 * time.Minute
+	replicationTimeout               = 30 * time.Second
+	taskErrorRetryWait               = time.Second
+	taskErrorRetryBackoffCoefficient = 1.2
+	taskErrorRetryMaxInterval        = 10 * time.Second
+	taskErrorRetryMaxAttampts        = 20
+	dlqErrorRetryWait                = time.Second
+	dlqErrorRetryMaxInterval         = 10 * time.Second
 )
 
 var (
@@ -55,17 +59,19 @@ var (
 type (
 	// ReplicationTaskProcessor is responsible for processing replication tasks for a shard.
 	ReplicationTaskProcessor struct {
-		currentCluster   string
-		sourceCluster    string
-		status           int32
-		shard            ShardContext
-		historyEngine    Engine
-		domainCache      cache.DomainCache
-		metricsClient    metrics.Client
-		domainReplicator replicator.DomainReplicator
-		logger           log.Logger
+		currentCluster    string
+		sourceCluster     string
+		status            int32
+		shard             ShardContext
+		historyEngine     Engine
+		historySerializer persistence.PayloadSerializer
+		domainCache       cache.DomainCache
+		metricsClient     metrics.Client
+		domainReplicator  replicator.DomainReplicator
+		logger            log.Logger
 
-		retryPolicy          backoff.RetryPolicy
+		taskRetryPolicy      backoff.RetryPolicy
+		dlqRetryPolicy       backoff.RetryPolicy
 		noTaskBackoffRetrier backoff.Retrier
 
 		lastProcessedMessageID int64
@@ -89,9 +95,14 @@ func NewReplicationTaskProcessor(
 	metricsClient metrics.Client,
 	replicationTaskFetcher *ReplicationTaskFetcher,
 ) *ReplicationTaskProcessor {
-	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
-	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
-	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
+	taskRetryPolicy := backoff.NewExponentialRetryPolicy(taskErrorRetryWait)
+	taskRetryPolicy.SetBackoffCoefficient(taskErrorRetryBackoffCoefficient)
+	taskRetryPolicy.SetMaximumInterval(taskErrorRetryMaxInterval)
+	taskRetryPolicy.SetMaximumAttempts(taskErrorRetryMaxAttampts)
+
+	dlqRetryPolicy := backoff.NewExponentialRetryPolicy(dlqErrorRetryWait)
+	dlqRetryPolicy.SetMaximumInterval(dlqErrorRetryMaxInterval)
+	dlqRetryPolicy.SetExpirationInterval(backoff.NoInterval)
 
 	var noTaskBackoffRetrier backoff.Retrier
 	config := shard.GetClusterMetadata().GetReplicationConsumerConfig().ProcessorConfig
@@ -114,7 +125,7 @@ func NewReplicationTaskProcessor(
 		metricsClient:        metricsClient,
 		domainReplicator:     domainReplicator,
 		logger:               shard.GetLogger(),
-		retryPolicy:          retryPolicy,
+		taskRetryPolicy:      taskRetryPolicy,
 		noTaskBackoffRetrier: noTaskBackoffRetrier,
 		requestChan:          replicationTaskFetcher.GetRequestChan(),
 		done:                 make(chan struct{}),
@@ -210,22 +221,18 @@ Loop:
 }
 
 func (p *ReplicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) {
-	var err error
+	err := backoff.Retry(func() error {
+		return p.processTaskOnce(replicationTask)
+	}, p.taskRetryPolicy, isTransientRetryableError)
 
-	for execute := true; execute; execute = err != nil {
-		err = backoff.Retry(func() error {
-			return p.processTaskOnce(replicationTask)
-		}, p.retryPolicy, isTransientRetryableError)
+	if err != nil {
+		p.logger.Error(
+			"Failed to apply replication task after retry.",
+			tag.TaskID(replicationTask.GetSourceTaskId()),
+			tag.Error(err),
+		)
 
-		if err != nil {
-			// TODO: insert into our own dlq in cadence persistence?
-			// p.nackMsg(msg, err, logger)
-			p.logger.Error(
-				"Failed to apply replication task after retry.",
-				tag.TaskID(replicationTask.GetSourceTaskId()),
-				tag.Error(err),
-			)
-		}
+		p.putReplicationTaskToDLQ(replicationTask)
 	}
 }
 
@@ -269,6 +276,86 @@ func (p *ReplicationTaskProcessor) processTaskOnce(replicationTask *r.Replicatio
 	return err
 }
 
+func (p *ReplicationTaskProcessor) putReplicationTaskToDLQ(replicationTask *r.ReplicationTask) {
+	request, err := p.generateDLQRequest(replicationTask)
+	if err != nil {
+		p.logger.Warn("Failed to generate DLQ replication task.", tag.Error(err))
+		return
+	}
+
+	// The following is guaranteed to success or retry forever
+	backoff.Retry(func() error {
+		return p.shard.GetExecutionManager().PutReplicationTaskToDLQ(request)
+	}, p.dlqRetryPolicy, errorNotNil)
+}
+
+func (p *ReplicationTaskProcessor) generateDLQRequest(
+	replicationTask *r.ReplicationTask,
+) (*persistence.PutReplicationTaskToDLQRequest, error) {
+	switch *replicationTask.TaskType {
+	case r.ReplicationTaskTypeSyncActivity:
+		taskAttributes := replicationTask.GetSyncActicvityTaskAttributes()
+		return &persistence.PutReplicationTaskToDLQRequest{
+			SourceClusterName: p.sourceCluster,
+			TaskInfo: &persistence.ReplicationTaskInfo{
+				DomainID:    taskAttributes.GetDomainId(),
+				WorkflowID:  taskAttributes.GetWorkflowId(),
+				RunID:       taskAttributes.GetRunId(),
+				TaskID:      replicationTask.GetSourceTaskId(),
+				TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+				ScheduledID: taskAttributes.GetScheduledId(),
+			},
+		}, nil
+
+	case r.ReplicationTaskTypeHistory:
+		taskAttributes := replicationTask.GetHistoryTaskAttributes()
+		return &persistence.PutReplicationTaskToDLQRequest{
+			SourceClusterName: p.sourceCluster,
+			TaskInfo: &persistence.ReplicationTaskInfo{
+				DomainID:            taskAttributes.GetDomainId(),
+				WorkflowID:          taskAttributes.GetWorkflowId(),
+				RunID:               taskAttributes.GetRunId(),
+				TaskID:              replicationTask.GetSourceTaskId(),
+				TaskType:            persistence.ReplicationTaskTypeHistory,
+				FirstEventID:        taskAttributes.GetFirstEventId(),
+				NextEventID:         taskAttributes.GetNextEventId(),
+				Version:             taskAttributes.GetVersion(),
+				LastReplicationInfo: toPersistenceReplicationInfo(taskAttributes.GetReplicationInfo()),
+				ResetWorkflow:       taskAttributes.GetResetWorkflow(),
+			},
+		}, nil
+	case r.ReplicationTaskTypeHistoryV2:
+		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
+
+		eventsDataBlob := persistence.NewDataBlobFromThrift(taskAttributes.GetEvents())
+		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(events) == 0 {
+			p.logger.Error("Empty events in a batch")
+			return nil, fmt.Errorf("corrupted history event batch, empty events")
+		}
+
+		return &persistence.PutReplicationTaskToDLQRequest{
+			SourceClusterName: p.sourceCluster,
+			TaskInfo: &persistence.ReplicationTaskInfo{
+				DomainID:     taskAttributes.GetDomainId(),
+				WorkflowID:   taskAttributes.GetWorkflowId(),
+				RunID:        taskAttributes.GetRunId(),
+				TaskID:       replicationTask.GetSourceTaskId(),
+				TaskType:     persistence.ReplicationTaskTypeHistory,
+				FirstEventID: events[0].GetEventId(),
+				NextEventID:  events[len(events)-1].GetEventId(),
+				Version:      events[0].GetVersion(),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown replication task type")
+	}
+}
+
 func isTransientRetryableError(err error) bool {
 	switch err.(type) {
 	case *shared.BadRequestError:
@@ -276,6 +363,22 @@ func isTransientRetryableError(err error) bool {
 	default:
 		return true
 	}
+}
+
+func errorNotNil(err error) bool {
+	return err != nil
+}
+
+func toPersistenceReplicationInfo(info map[string]*shared.ReplicationInfo) map[string]*persistence.ReplicationInfo {
+	replicationInfoMap := make(map[string]*persistence.ReplicationInfo)
+	for k, v := range info {
+		replicationInfoMap[k] = &persistence.ReplicationInfo{
+			Version:     v.GetVersion(),
+			LastEventID: v.GetLastEventId(),
+		}
+	}
+
+	return replicationInfoMap
 }
 
 func (p *ReplicationTaskProcessor) updateFailureMetric(scope int, err error) {

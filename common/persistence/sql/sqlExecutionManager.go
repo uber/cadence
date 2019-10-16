@@ -29,6 +29,7 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -1105,4 +1106,57 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(
 		}
 	}
 	return nil
+}
+
+func (m *sqlExecutionManager) PutReplicationTaskToDLQ(request *p.PutReplicationTaskToDLQRequest) error {
+	replicationTask := request.TaskInfo
+	blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+		DomainID:            sqldb.MustParseUUID(replicationTask.DomainID),
+		WorkflowID:          &replicationTask.WorkflowID,
+		RunID:               sqldb.MustParseUUID(replicationTask.RunID),
+		TaskType:            common.Int16Ptr(int16(replicationTask.TaskType)),
+		FirstEventID:        &replicationTask.FirstEventID,
+		NextEventID:         &replicationTask.NextEventID,
+		Version:             &replicationTask.Version,
+		LastReplicationInfo: toSqldbReplicationInfo(replicationTask.LastReplicationInfo),
+		ScheduledID:         &replicationTask.ScheduledID,
+		BranchToken:         replicationTask.BranchToken,
+		NewRunBranchToken:   replicationTask.NewRunBranchToken,
+		ResetWorkflow:       &replicationTask.ResetWorkflow,
+	})
+	if err != nil {
+		return err
+	}
+
+	row := &sqldb.ReplicationTaskDLQRow{
+		SourceClusterName: request.SourceClusterName,
+		ShardID:           m.shardID,
+		TaskID:            replicationTask.TaskID,
+		Data:              blob.Data,
+		DataEncoding:      string(blob.Encoding),
+	}
+
+	_, err = m.db.InsertIntoReplicationTasksDLQ(row)
+
+	// Tasks are immutable. So it's fine if we already persisted it before.
+	// This can happen when tasks are retried (ack and cleanup can have lag on source side).
+	if err != nil && !isDupEntry(err) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to create replication tasks. Error: %v", err),
+		}
+	}
+
+	return nil
+}
+
+func toSqldbReplicationInfo(info map[string]*p.ReplicationInfo) map[string]*sqlblobs.ReplicationInfo {
+	replicationInfoMap := make(map[string]*sqlblobs.ReplicationInfo)
+	for k, v := range info {
+		replicationInfoMap[k] = &sqlblobs.ReplicationInfo{
+			Version:     common.Int64Ptr(v.Version),
+			LastEventID: common.Int64Ptr(v.LastEventID),
+		}
+	}
+
+	return replicationInfoMap
 }
