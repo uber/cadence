@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -50,7 +49,7 @@ type (
 		shard           ShardContext
 		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
-		historyV2Mgr    persistence.HistoryV2Manager
+		historyV2Mgr    persistence.HistoryManager
 
 		context      workflowExecutionContext
 		mutableState mutableState
@@ -71,7 +70,7 @@ func newNDCBranchMgr(
 		shard:           shard,
 		domainCache:     shard.GetDomainCache(),
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
-		historyV2Mgr:    shard.GetHistoryV2Manager(),
+		historyV2Mgr:    shard.GetHistoryManager(),
 
 		context:      context,
 		mutableState: mutableState,
@@ -238,20 +237,8 @@ func (r *nDCBranchMgrImpl) createNewBranch(
 	if err != nil {
 		return 0, err
 	}
-	newBranchToken := resp.NewBranchToken
-	defer func() {
-		if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-			BranchToken: newBranchToken,
-			Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
-			ShardID:     common.IntPtr(shardID),
-		}); errComplete != nil {
-			r.logger.WithTags(
-				tag.Error(errComplete),
-			).Error("nDCBranchMgr unable to complete creation of new branch.")
-		}
-	}()
 
-	if err := newVersionHistory.SetBranchToken(newBranchToken); err != nil {
+	if err := newVersionHistory.SetBranchToken(resp.NewBranchToken); err != nil {
 		return 0, err
 	}
 	branchChanged, newIndex, err := r.mutableState.GetVersionHistories().AddVersionHistory(

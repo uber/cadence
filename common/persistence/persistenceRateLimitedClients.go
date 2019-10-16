@@ -54,7 +54,7 @@ type (
 
 	historyV2RateLimitedPersistenceClient struct {
 		rateLimiter quotas.Limiter
-		persistence HistoryV2Manager
+		persistence HistoryManager
 		logger      log.Logger
 	}
 
@@ -80,7 +80,7 @@ type (
 var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionRateLimitedPersistenceClient)(nil)
 var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
-var _ HistoryV2Manager = (*historyV2RateLimitedPersistenceClient)(nil)
+var _ HistoryManager = (*historyV2RateLimitedPersistenceClient)(nil)
 var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ Queue = (*queueRateLimitedPersistenceClient)(nil)
@@ -112,8 +112,8 @@ func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter qu
 	}
 }
 
-// NewHistoryV2PersistenceRateLimitedClient creates a HistoryV2Manager client to manage workflow execution history
-func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter quotas.Limiter, logger log.Logger) HistoryV2Manager {
+// NewHistoryV2PersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
+func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryManager, rateLimiter quotas.Limiter, logger log.Logger) HistoryManager {
 	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -233,15 +233,6 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(r
 	}
 
 	err := p.persistence.ResetWorkflowExecution(request)
-	return err
-}
-
-// CompleteForkBranch complete forking process
-func (p *historyV2RateLimitedPersistenceClient) CompleteForkBranch(request *CompleteForkBranchRequest) error {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
-	}
-	err := p.persistence.CompleteForkBranch(request)
 	return err
 }
 

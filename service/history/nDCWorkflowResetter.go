@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -50,7 +49,7 @@ type (
 	nDCWorkflowResetterImpl struct {
 		shard          ShardContext
 		transactionMgr nDCTransactionMgr
-		historyV2Mgr   persistence.HistoryV2Manager
+		historyV2Mgr   persistence.HistoryManager
 		stateRebuilder nDCStateRebuilder
 
 		domainID   string
@@ -79,7 +78,7 @@ func newNDCWorkflowResetter(
 	return &nDCWorkflowResetterImpl{
 		shard:          shard,
 		transactionMgr: transactionMgr,
-		historyV2Mgr:   shard.GetHistoryV2Manager(),
+		historyV2Mgr:   shard.GetHistoryManager(),
 		stateRebuilder: newNDCStateRebuilder(shard, logger),
 
 		domainID:   domainID,
@@ -208,17 +207,5 @@ func (r *nDCWorkflowResetterImpl) getResetBranchToken(
 		return nil, err
 	}
 
-	resetBranchToken := resp.NewBranchToken
-
-	if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-		BranchToken: resetBranchToken,
-		Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
-		ShardID:     common.IntPtr(shardID),
-	}); errComplete != nil {
-		r.logger.WithTags(
-			tag.Error(errComplete),
-		).Error("newNDCWorkflowResetter unable to complete creation of new branch.")
-	}
-
-	return resetBranchToken, nil
+	return resp.NewBranchToken, nil
 }

@@ -37,7 +37,7 @@ type (
 	// historyManagerImpl implements HistoryManager based on HistoryStore and PayloadSerializer
 	historyV2ManagerImpl struct {
 		historySerializer     PayloadSerializer
-		persistence           HistoryV2Store
+		persistence           HistoryStore
 		logger                log.Logger
 		thriftEncoder         codec.BinaryEncoder
 		pagingTokenSerializer *jsonHistoryTokenSerializer
@@ -50,14 +50,14 @@ const (
 	defaultLastTransactionID = int64(0)
 )
 
-var _ HistoryV2Manager = (*historyV2ManagerImpl)(nil)
+var _ HistoryManager = (*historyV2ManagerImpl)(nil)
 
 // NewHistoryV2ManagerImpl returns new HistoryManager
 func NewHistoryV2ManagerImpl(
-	persistence HistoryV2Store,
+	persistence HistoryStore,
 	logger log.Logger,
 	transactionSizeLimit dynamicconfig.IntPropertyFn,
-) HistoryV2Manager {
+) HistoryManager {
 
 	return &historyV2ManagerImpl{
 		historySerializer:     NewPayloadSerializer(),
@@ -142,33 +142,6 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(
 	}
 
 	return m.persistence.DeleteHistoryBranch(req)
-}
-
-// CompleteForkBranch complete the forking process
-func (m *historyV2ManagerImpl) CompleteForkBranch(
-	request *CompleteForkBranchRequest,
-) error {
-
-	var branch workflow.HistoryBranch
-	err := m.thriftEncoder.Decode(request.BranchToken, &branch)
-	if err != nil {
-		return err
-	}
-
-	shardID, err := getShardID(request.ShardID)
-	if err != nil {
-		m.logger.Error("shardID is not set in complete fork branch operation", tag.Error(err))
-		return &workflow.InternalServiceError{
-			Message: err.Error(),
-		}
-	}
-	req := &InternalCompleteForkBranchRequest{
-		BranchInfo: branch,
-		Success:    request.Success,
-		ShardID:    shardID,
-	}
-
-	return m.persistence.CompleteForkBranch(req)
 }
 
 // GetHistoryTree returns all branch information of a tree
