@@ -23,6 +23,7 @@
 package history
 
 import (
+	"github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,10 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.Nil(notFound)
 
 	for i := 0; i < 5; i++ {
-		err := qr.completeQuery(ids[i], &shared.WorkflowQueryResult{})
+		err := qr.completeQuery(ids[i], &shared.WorkflowQueryResult{
+			ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+			Answer: []byte{1, 2, 3},
+		})
 		s.NoError(err)
 	}
 	s.assertHasQueries(qr, true, true)
@@ -70,7 +74,7 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	for i := 0; i < 5; i++ {
 		qs, err := qr.getQuerySnapshot(ids[i])
 		s.NoError(err)
-		s.Nil(qs)
+		s.NotNil(qs)
 		s.Equal(queryStateCompleted, qs.state)
 		s.NotNil(qs.queryResult)
 
