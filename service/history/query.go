@@ -104,7 +104,7 @@ func (q *queryImpl) completeQuery(queryResult *shared.WorkflowQueryResult) error
 	// TODO: add unit tests for this
 	validAnswered := queryResult.GetResultType().Equals(shared.QueryResultTypeAnswered) && queryResult.Answer != nil && queryResult.ErrorDetails == nil && queryResult.ErrorReason == nil
 	validFailed := queryResult.GetResultType().Equals(shared.QueryResultTypeFailed) && queryResult.Answer == nil && queryResult.ErrorDetails != nil && queryResult.ErrorReason != nil
-	if  !validAnswered && !validFailed {
+	if !validAnswered && !validFailed {
 		return errors.New("invalid query result")
 	}
 
