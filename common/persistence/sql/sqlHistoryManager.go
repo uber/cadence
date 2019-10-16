@@ -493,6 +493,6 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 	}
 
 	return &p.GetHistoryTreeResponse{
-		Branches:                  branches,
+		Branches: branches,
 	}, nil
 }

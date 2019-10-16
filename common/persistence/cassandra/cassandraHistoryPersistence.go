@@ -509,7 +509,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(
 	}
 
 	return &p.GetHistoryTreeResponse{
-		Branches:                  branches,
+		Branches: branches,
 	}, nil
 }
 

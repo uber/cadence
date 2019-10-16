@@ -108,8 +108,8 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		}
 	}()
 	err = container.HistoryV2Manager.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
-		BranchToken:request.BranchToken,
-		ShardID:common.IntPtr(request.ShardID),
+		BranchToken: request.BranchToken,
+		ShardID:     common.IntPtr(request.ShardID),
 	})
 	if err == nil {
 		return nil
