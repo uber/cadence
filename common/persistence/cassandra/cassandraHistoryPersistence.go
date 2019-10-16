@@ -47,14 +47,12 @@ const (
 
 	// below are templates for history_tree table
 	v2templateInsertTree = `INSERT INTO history_tree (` +
-		`tree_id, branch_id, ancestors, in_progress, fork_time, info) ` +
+		`tree_id, branch_id, ancestors, fork_time, info) ` +
 		`VALUES (?, ?, ?, ?, ?, ?) `
 
-	v2templateReadAllBranches = `SELECT branch_id, ancestors, in_progress, fork_time, info FROM history_tree WHERE tree_id = ? `
+	v2templateReadAllBranches = `SELECT branch_id, ancestors, fork_time, info FROM history_tree WHERE tree_id = ? `
 
 	v2templateDeleteBranch = `DELETE FROM history_tree WHERE tree_id = ? AND branch_id = ? `
-
-	v2templateUpdateBranch = `UPDATE history_tree set in_progress = ? WHERE tree_id = ? AND branch_id = ? `
 
 	v2templateScanAllTreeBranches = `SELECT tree_id, branch_id, fork_time, info FROM history_tree `
 )
@@ -146,7 +144,7 @@ func (h *cassandraHistoryV2Persistence) AppendHistoryNodes(
 		cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 		batch := h.session.NewBatch(gocql.LoggedBatch)
 		batch.Query(v2templateInsertTree,
-			branchInfo.TreeID, branchInfo.BranchID, ancs, false, cqlNowTimestamp, request.Info)
+			branchInfo.TreeID, branchInfo.BranchID, ancs, cqlNowTimestamp, request.Info)
 		batch.Query(v2templateUpsertData,
 			branchInfo.TreeID, branchInfo.BranchID, request.NodeID, request.TransactionID, request.Events.Data, request.Events.Encoding)
 		err = h.session.ExecuteBatch(batch)
@@ -331,7 +329,7 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	query := h.session.Query(v2templateInsertTree,
-		treeID, request.NewBranchID, ancs, false, cqlNowTimestamp, request.Info)
+		treeID, request.NewBranchID, ancs, cqlNowTimestamp, request.Info)
 
 	err := query.Exec()
 	if err != nil {
@@ -477,11 +475,10 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(
 
 		branchUUID := gocql.UUID{}
 		ancsResult := []map[string]interface{}{}
-		forkingInProgress := false
 		forkTime := time.Time{}
 		info := ""
 
-		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress, &forkTime, &info) {
+		for iter.Scan(&branchUUID, &ancsResult, &forkTime, &info) {
 			ancs := h.parseBranchAncestors(ancsResult)
 			br := &workflow.HistoryBranch{
 				TreeID:    &treeID,
@@ -492,7 +489,6 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(
 
 			branchUUID = gocql.UUID{}
 			ancsResult = []map[string]interface{}{}
-			forkingInProgress = false
 			forkTime = time.Time{}
 			info = ""
 		}

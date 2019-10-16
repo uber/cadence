@@ -120,7 +120,6 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			ShardID:      request.ShardID,
 			TreeID:       sqldb.MustParseUUID(branchInfo.GetTreeID()),
 			BranchID:     sqldb.MustParseUUID(branchInfo.GetBranchID()),
-			InProgress:   false,
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		}
@@ -360,7 +359,6 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		ShardID:      request.ShardID,
 		TreeID:       sqldb.MustParseUUID(treeID),
 		BranchID:     sqldb.MustParseUUID(request.NewBranchID),
-		InProgress:   false,
 		Data:         blob.Data,
 		DataEncoding: string(blob.Encoding),
 	}
