@@ -177,7 +177,7 @@ func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder mutableState) (persis
 		// Update the task ID tracking if it has created timer task or not.
 		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
 		ti.TaskID = TimerTaskStatusCreated
-		// TODO: We append updates to timer tasks twice.  Why?
+		// update timer task mask indicating that task created
 		if err := msBuilder.UpdateUserTimer(ti.TimerID, ti); err != nil {
 			return nil, err
 		}
@@ -225,6 +225,7 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) (pe
 		if w.TimeoutType(at.TimeoutType) == w.TimeoutTypeHeartbeat {
 			ai.LastHeartbeatTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
 		}
+		// update timer task mask indicating that task created
 		if err := msBuilder.UpdateActivity(ai); err != nil {
 			return nil, err
 		}
