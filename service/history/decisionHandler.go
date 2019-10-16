@@ -255,10 +255,6 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 		})
 }
 
-// things to do here
-// 1. if there are unanswered queries make sure I generate a new decision task
-// 2. for each query that I got an answer to try to answer it in query registry (this can only be done after call completes)
-
 func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 	ctx ctx.Context,
 	req *h.RespondDecisionTaskCompletedRequest,
@@ -477,6 +473,12 @@ Update_History_Loop:
 		createNewDecisionTask := msBuilder.IsWorkflowExecutionRunning() && (hasUnhandledEvents || request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled || hasUnhandledQueries)
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
+			// emit metric is decision task was generated just because there was buffered queries, if this happens a lot then
+			// consider an optimization in which instead of a decision task being created a transfer task is created and is
+			// used to dispatch queries directly through matching
+			if !hasUnhandledEvents && !request.GetForceCreateNewDecisionTask() && !activityNotStartedCancelled && hasUnhandledQueries {
+				handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DecisionTaskCreatedForBufferedQueriesCount)
+			}
 			var newDecision *decisionInfo
 			var err error
 			if decisionHeartbeating && !decisionHeartbeatTimeout {

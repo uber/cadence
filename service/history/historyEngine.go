@@ -28,22 +28,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	m "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/common/client"
-	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
 	"time"
 
 	"github.com/pborman/uuid"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-
 	h "github.com/uber/cadence/.gen/go/history"
+	m "github.com/uber/cadence/.gen/go/matching"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
@@ -56,6 +52,9 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/replicator"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -738,7 +737,6 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 	return response, nil
 }
 
-// TODO: emit metric on how often we are timing out queries
 func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
@@ -796,10 +794,14 @@ func (e *historyEngineImpl) QueryWorkflow(
 		req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual ||
 		(!ms.HasPendingDecision() && !ms.HasInFlightDecision())
 	if safeToDispatchDirectly {
+		release(nil)
+		msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+		if err != nil {
+			return nil, err
+		}
 		sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 		defer sw.Stop()
-		mresp, err := e.queryDirectlyThroughMatching(ctx, ms, clientFeature, request.GetDomainUUID(), req)
-		release(err)
+		mresp, err := e.queryDirectlyThroughMatching(ctx, msResp, clientFeature, request.GetDomainUUID(), req)
 		return mresp, err
 	}
 
@@ -834,8 +836,10 @@ func (e *historyEngineImpl) QueryWorkflow(
 			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
 		}
 	case <-timer.C:
+		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
 		return nil, ErrQueryTimeout
 	case <-ctx.Done():
+		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
 		return nil, ctx.Err()
 	}
 	return nil, &workflow.InternalServiceError{Message: "query entered unexpected state, this should be impossible"}
@@ -843,7 +847,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	ctx ctx.Context,
-	ms mutableState,
+	msResp *h.GetMutableStateResponse,
 	clientFeature client.Feature,
 	domainID string,
 	queryRequest *workflow.QueryWorkflowRequest,
@@ -852,13 +856,11 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		DomainUUID:   common.StringPtr(domainID),
 		QueryRequest: queryRequest,
 	}
-	execInfo := ms.GetExecutionInfo()
-	if len(execInfo.StickyTaskList) != 0 && clientFeature.SupportStickyQuery() {
-		matchingRequest.TaskList = &workflow.TaskList{Name: common.StringPtr(execInfo.StickyTaskList)}
-		stickyDecisionTimeout := execInfo.StickyScheduleToStartTimeout
+	if len(msResp.GetStickyTaskList().GetName()) != 0 && clientFeature.SupportStickyQuery() {
+		matchingRequest.TaskList = msResp.StickyTaskList
 		// using a clean new context in case customer provide a context which has
 		// a really short deadline, causing we clear the stickyness
-		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(stickyDecisionTimeout)*time.Second)
+		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(msResp.GetStickyTaskListScheduleToStartTimeout())*time.Second)
 		matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, matchingRequest)
 		cancel()
 		if err == nil {
@@ -879,8 +881,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
 			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-			tag.WorkflowTaskListName(execInfo.StickyTaskList),
-			tag.WorkflowNextEventID(ms.GetNextEventID()))
+			tag.WorkflowTaskListName(msResp.GetStickyTaskList().GetName()),
+			tag.WorkflowNextEventID(msResp.GetNextEventId()))
 		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_, err = e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
@@ -892,7 +894,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		}
 	}
 
-	matchingRequest.TaskList = &workflow.TaskList{Name: common.StringPtr(execInfo.TaskList)}
+	matchingRequest.TaskList = msResp.TaskList
 	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
 		e.logger.Info("Query directly though matching failed",

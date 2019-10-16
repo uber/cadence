@@ -153,6 +153,11 @@ func ClientArchivalStatusPtr(t shared.ArchivalStatus) *shared.ArchivalStatus {
 	return &t
 }
 
+// QueryResultTypePtr makes a copy and returns the pointer to a QueryResultType
+func QueryResultTypePtr(t s.QueryResultType) *s.QueryResultType {
+	return &t
+}
+
 // StringDefault returns value if string pointer is set otherwise default value of string
 func StringDefault(v *string) string {
 	var defaultString string
