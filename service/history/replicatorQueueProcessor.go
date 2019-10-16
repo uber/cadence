@@ -544,13 +544,14 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
 			//Version history uses when replicate the sync activity task
+			versionHistories := mutableState.GetVersionHistories()
 			var versionHistory *shared.VersionHistory
-			if mutableState.GetReplicationState() == nil {
-				rawVerrsionHistory, err := mutableState.GetVersionHistories().GetCurrentVersionHistory()
+			if versionHistories != nil {
+				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err
 				}
-				versionHistory = rawVerrsionHistory.ToThrift()
+				versionHistory = rawVersionHistory.ToThrift()
 			}
 
 			return &replicator.ReplicationTask{

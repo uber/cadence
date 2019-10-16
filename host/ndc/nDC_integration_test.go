@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -37,13 +38,13 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/.gen/go/admin"
+	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/client/frontend"
-
 	"github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -62,6 +63,7 @@ type (
 		*require.Assertions
 		suite.Suite
 		active     *host.TestCluster
+		standby    *host.TestCluster
 		generator  test.Generator
 		serializer persistence.PayloadSerializer
 		logger     log.Logger
@@ -108,8 +110,8 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 
 	var clusterConfigs []*host.TestClusterConfig
 	s.Require().NoError(yaml.Unmarshal(confContent, &clusterConfigs))
-	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
-	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
+	//clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
+	//clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
 
 	s.mockFrontendClient = make(map[string]frontend.Client)
 	controller := gomock.NewController(s.T())
@@ -129,6 +131,10 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.active = cluster
 
+	cluster2, err := host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterName[1])))
+	s.Require().NoError(err)
+	s.standby = cluster2
+
 	s.registerDomain()
 
 	s.version = clusterConfigs[1].ClusterMetadata.ClusterInformation[clusterConfigs[1].ClusterMetadata.CurrentClusterName].InitialFailoverVersion
@@ -147,6 +153,7 @@ func (s *nDCIntegrationTestSuite) TearDownSuite() {
 		s.generator.Reset()
 	}
 	s.active.TearDownCluster()
+	s.standby.TearDownCluster()
 }
 
 func (s *nDCIntegrationTestSuite) TestSingleBranch() {
@@ -1247,6 +1254,216 @@ func (s *nDCIntegrationTestSuite) TestGetWorkflowExecutionRawHistoryV2() {
 		token = resp.NextPageToken
 	}
 	s.Equal(batchCount, 10)
+}
+
+func (s *nDCIntegrationTestSuite) TestActivityHeartbeatFailover() {
+	domainName := "test-activity-heartbeat-workflow-failover-" + common.GenerateRandomString(5)
+	client1 := s.active.GetFrontendClient() // active
+	regReq := &workflow.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		IsGlobalDomain:                         common.BoolPtr(true),
+		Clusters:                               clusterReplicationConfig,
+		ActiveClusterName:                      common.StringPtr(clusterName[0]),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+	}
+	err := client1.RegisterDomain(s.createContext(), regReq)
+	s.NoError(err)
+
+	descReq := &workflow.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	}
+	resp, err := client1.DescribeDomain(s.createContext(), descReq)
+	s.NoError(err)
+	s.NotNil(resp)
+	// Wait for domain cache to pick the change
+	time.Sleep(2 * cache.DomainCacheRefreshInterval)
+
+	client2 := s.standby.GetFrontendClient() // standby
+
+	// Start a workflow
+	id := "integration-activity-heartbeat-workflow-failover-test"
+	wt := "integration-activity-heartbeat-workflow-failover-test-type"
+	tl := "integration-activity-heartbeat-workflow-failover-test-tasklist"
+	identity1 := "worker1"
+	identity2 := "worker2"
+	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
+	startReq := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(300),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		Identity:                            common.StringPtr(identity1),
+	}
+	var we *workflow.StartWorkflowExecutionResponse
+	for i := 0; i < 10; i++ {
+		we, err = client1.StartWorkflowExecution(s.createContext(), startReq)
+		if err == nil {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	s.NoError(err)
+	s.NotNil(we.GetRunId())
+
+	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunId()))
+
+	activitySent := false
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		if !activitySent {
+			activitySent = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(1)),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("some random activity type")},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         []byte("some random input"),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1000),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(1000),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(3),
+					RetryPolicy: &workflow.RetryPolicy{
+						InitialIntervalInSeconds:    common.Int32Ptr(1),
+						MaximumAttempts:             common.Int32Ptr(3),
+						MaximumIntervalInSeconds:    common.Int32Ptr(1),
+						NonRetriableErrorReasons:    []string{"bad-bug"},
+						BackoffCoefficient:          common.Float64Ptr(1),
+						ExpirationIntervalInSeconds: common.Int32Ptr(100),
+					},
+				},
+			}}, nil
+		}
+
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	// activity handler
+	activity1Called := false
+	heartbeatDetails := []byte("details")
+	atHandler1 := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		activity1Called = true
+		_, err = client1.RecordActivityTaskHeartbeat(s.createContext(), &workflow.RecordActivityTaskHeartbeatRequest{
+			TaskToken: taskToken, Details: heartbeatDetails})
+		s.Nil(err)
+		time.Sleep(5 * time.Second)
+		return []byte("Activity Result."), false, nil
+	}
+
+	// activity handler
+	activity2Called := false
+	atHandler2 := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		activity2Called = true
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller1 := &host.TaskPoller{
+		Engine:          client1,
+		Domain:          domainName,
+		TaskList:        taskList,
+		Identity:        identity1,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler1,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	poller2 := &host.TaskPoller{
+		Engine:          client2,
+		Domain:          domainName,
+		TaskList:        taskList,
+		Identity:        identity2,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler2,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	describeWorkflowExecution := func(client wsc.Interface) (*workflow.DescribeWorkflowExecutionResponse, error) {
+		return client.DescribeWorkflowExecution(s.createContext(), &workflow.DescribeWorkflowExecutionRequest{
+			Domain: common.StringPtr(domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+				RunId:      we.RunId,
+			},
+		})
+	}
+
+	_, err = poller1.PollAndProcessDecisionTask(false, false)
+	s.Nil(err)
+	err = poller1.PollAndProcessActivityTask(false)
+	s.IsType(&workflow.EntityNotExistsError{}, err)
+
+	// Update domain to fail over
+	updateReq := &workflow.UpdateDomainRequest{
+		Name: common.StringPtr(domainName),
+		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(clusterName[1]),
+		},
+	}
+	updateResp, err := client1.UpdateDomain(s.createContext(), updateReq)
+	s.NoError(err)
+	s.NotNil(updateResp)
+	s.Equal(clusterName[1], updateResp.ReplicationConfiguration.GetActiveClusterName())
+	s.Equal(int64(1), updateResp.GetFailoverVersion())
+
+	// Wait for domain cache to pick the change
+	time.Sleep(2 * cache.DomainCacheRefreshInterval)
+
+	// Make sure the heartbeat details are sent to cluster2 even when the activity at cluster1
+	// has heartbeat timeout. Also make sure the information is recorded when the activity state
+	// is "Scheduled"
+	dweResponse, err := describeWorkflowExecution(client2)
+	s.Nil(err)
+	pendingActivities := dweResponse.GetPendingActivities()
+	s.Equal(1, len(pendingActivities))
+	s.Equal(workflow.PendingActivityStateScheduled, pendingActivities[0].GetState())
+	s.Equal(heartbeatDetails, pendingActivities[0].GetHeartbeatDetails())
+	s.Equal("cadenceInternal:Timeout HEARTBEAT", pendingActivities[0].GetLastFailureReason())
+	s.Equal(identity1, pendingActivities[0].GetLastWorkerIdentity())
+
+	for i := 0; i < 10; i++ {
+		poller2.PollAndProcessActivityTask(false)
+		if activity2Called {
+			break
+		} else {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	s.True(activity1Called)
+	s.True(activity2Called)
+
+	historyResponse, err := client2.GetWorkflowExecutionHistory(s.createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domainName),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+		},
+	})
+	s.Nil(err)
+	history := historyResponse.History
+
+	activityRetryFound := false
+	for _, event := range history.Events {
+		if event.GetEventType() == workflow.EventTypeActivityTaskStarted {
+			attribute := event.ActivityTaskStartedEventAttributes
+			s.True(attribute.GetAttempt() > 0)
+			activityRetryFound = true
+		}
+	}
+	s.True(activityRetryFound)
 }
 
 func (s *nDCIntegrationTestSuite) registerDomain() {
