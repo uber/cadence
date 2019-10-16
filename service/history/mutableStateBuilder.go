@@ -62,6 +62,10 @@ var (
 	ErrMissingWorkflowStartEvent = &workflow.InternalServiceError{Message: "unable to get workflow start event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
 	ErrMissingWorkflowCompletionEvent = &workflow.InternalServiceError{Message: "unable to get workflow completion event"}
+	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
+	ErrMissingActivityScheduledEvent = &workflow.InternalServiceError{Message: "unable to get activity scheduled event"}
+	// ErrMissingChildWorkflowInitiatedEvent indicates missing child workflow initiated event
+	ErrMissingChildWorkflowInitiatedEvent = &workflow.InternalServiceError{Message: "unable to get child workflow initiated event"}
 )
 
 type (
@@ -935,7 +939,10 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingActivityScheduledEvent
 	}
 	return scheduledEvent, nil
 }
@@ -1013,7 +1020,10 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingChildWorkflowInitiatedEvent
 	}
 	return initiatedEvent, nil
 }
@@ -1185,7 +1195,7 @@ func (e *mutableStateBuilder) DeletePendingSignal(
 	initiatedEventID int64,
 ) error {
 
-	if _, ok := e.pendingRequestCancelInfoIDs[initiatedEventID]; !ok {
+	if _, ok := e.pendingSignalInfoIDs[initiatedEventID]; !ok {
 		e.logger.Error(
 			fmt.Sprintf("Unable to find signal info: %v in mutable state", initiatedEventID),
 			tag.ErrorTypeInvalidMutableStateAction,
