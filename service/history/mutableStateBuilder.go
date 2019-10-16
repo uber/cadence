@@ -58,8 +58,6 @@ var (
 	ErrMissingRequestCancelInfo = &workflow.InternalServiceError{Message: "unable to get request cancel info"}
 	// ErrMissingSignalInfo indicates missing signal external
 	ErrMissingSignalInfo = &workflow.InternalServiceError{Message: "unable to get signal info"}
-	// ErrMissingSignalRequested indicates missing signal requested entry
-	ErrMissingSignalRequested = &workflow.InternalServiceError{Message: "unable to get signal requested entry"}
 	// ErrMissingWorkflowStartEvent indicates missing workflow start event
 	ErrMissingWorkflowStartEvent = &workflow.InternalServiceError{Message: "unable to get workflow start event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
@@ -1112,7 +1110,10 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingWorkflowCompletionEvent
 	}
 
 	return completionEvent, nil
@@ -1135,7 +1136,10 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingWorkflowStartEvent
 	}
 	return startEvent, nil
 }
@@ -4006,7 +4010,7 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 	if err != nil {
 		return nil, err
 	}
-	workflowEventsSeq := []*persistence.WorkflowEvents{}
+	var workflowEventsSeq []*persistence.WorkflowEvents
 	if len(e.hBuilder.transientHistory) != 0 {
 		workflowEventsSeq = append(workflowEventsSeq, &persistence.WorkflowEvents{
 			DomainID:    e.executionInfo.DomainID,
