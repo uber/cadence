@@ -1491,8 +1491,6 @@ type (
 		ReadRawHistoryBranch(request *ReadHistoryBranchRequest) (*ReadRawHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
 		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
-		// CompleteForkBranch will complete the forking process after update mutableState, this is to help preventing data leakage
-		CompleteForkBranch(request *CompleteForkBranchRequest) error
 		// DeleteHistoryBranch removes a branch
 		// If this is the last branch to delete, it will also remove the root node
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error

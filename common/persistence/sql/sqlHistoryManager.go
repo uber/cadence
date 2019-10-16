@@ -362,7 +362,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		ShardID:      request.ShardID,
 		TreeID:       sqldb.MustParseUUID(treeID),
 		BranchID:     sqldb.MustParseUUID(request.NewBranchID),
-		InProgress:   true,
+		InProgress:   false,
 		Data:         blob.Data,
 		DataEncoding: string(blob.Encoding),
 	}
@@ -460,68 +460,6 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 			if done {
 				break
 			}
-		}
-		return nil
-	})
-}
-
-// UpdateHistoryBranch update a branch
-func (m *sqlHistoryV2Manager) CompleteForkBranch(
-	request *p.InternalCompleteForkBranchRequest,
-) error {
-
-	branch := request.BranchInfo
-	treeID := sqldb.MustParseUUID(*branch.TreeID)
-	branchID := sqldb.MustParseUUID(*branch.BranchID)
-
-	if request.Success {
-		row := &sqldb.HistoryTreeRow{
-			TreeID:     treeID,
-			BranchID:   branchID,
-			InProgress: false,
-			ShardID:    request.ShardID,
-		}
-		result, err := m.db.UpdateHistoryTree(row)
-		if err != nil {
-			return err
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rowsAffected != 1 {
-			return fmt.Errorf("expected 1 row to be affected for tree table, got %v", rowsAffected)
-		}
-		return nil
-	}
-	// request.Success == false
-	treeFilter := &sqldb.HistoryTreeFilter{
-		TreeID:   treeID,
-		BranchID: &branchID,
-		ShardID:  request.ShardID,
-	}
-	nodeFilter := &sqldb.HistoryNodeFilter{
-		TreeID:    treeID,
-		BranchID:  branchID,
-		ShardID:   request.ShardID,
-		MinNodeID: common.Int64Ptr(1),
-	}
-	return m.txExecute("CompleteForkBranch", func(tx sqldb.Tx) error {
-		_, err := tx.DeleteFromHistoryNode(nodeFilter)
-		if err != nil {
-			return err
-		}
-		// Note: we don't check result for DeleteFromHistoryNode because there can be deleting zero nodes.
-		result, err := tx.DeleteFromHistoryTree(treeFilter)
-		if err != nil {
-			return err
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rowsAffected != 1 {
-			return fmt.Errorf("expected 1 row to be affected for tree table, got %v", rowsAffected)
 		}
 		return nil
 	})

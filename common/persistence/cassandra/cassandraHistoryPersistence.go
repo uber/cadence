@@ -330,46 +330,14 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(
 	}
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
-	// NOTE: To prevent leaking event data caused by forking, we introduce this in_progress flag.
 	query := h.session.Query(v2templateInsertTree,
-		treeID, request.NewBranchID, ancs, true, cqlNowTimestamp, request.Info)
+		treeID, request.NewBranchID, ancs, false, cqlNowTimestamp, request.Info)
 
 	err := query.Exec()
 	if err != nil {
 		return nil, convertCommonErrors("ForkHistoryBranch", err)
 	}
 	return resp, nil
-}
-
-// UpdateHistoryBranch update a branch
-func (h *cassandraHistoryV2Persistence) CompleteForkBranch(
-	request *p.InternalCompleteForkBranchRequest,
-) error {
-
-	branch := request.BranchInfo
-	treeID := *branch.TreeID
-	branchID := *branch.BranchID
-
-	var query *gocql.Query
-	if request.Success {
-		query = h.session.Query(v2templateUpdateBranch,
-			false, treeID, branchID)
-		err := query.Exec()
-		if err != nil {
-			return convertCommonErrors("CompleteForkBranch", err)
-		}
-	} else {
-		batch := h.session.NewBatch(gocql.LoggedBatch)
-		batch.Query(v2templateDeleteBranch, treeID, branchID)
-		batch.Query(v2templateRangeDeleteData,
-			treeID, branchID, 1)
-		err := h.session.ExecuteBatch(batch)
-		if err != nil {
-			return convertCommonErrors("CompleteForkBranch", err)
-		}
-	}
-
-	return nil
 }
 
 // DeleteHistoryBranch removes a branch
