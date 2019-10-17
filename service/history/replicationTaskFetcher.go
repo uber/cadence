@@ -133,7 +133,7 @@ func newReplicationTaskFetcher(
 	return &ReplicationTaskFetcher{
 		status:        common.DaemonStatusInitialized,
 		config:        config,
-		logger:        logger,
+		logger:        logger.WithTags(tag.ClusterName(sourceCluster)),
 		remotePeer:    sourceFrontend,
 		sourceCluster: sourceCluster,
 		requestChan:   make(chan *request, requestChanBufferSize),
@@ -150,7 +150,7 @@ func (f *ReplicationTaskFetcher) Start() {
 	for i := 0; i < f.config.RPCParallelism; i++ {
 		go f.fetchTasks()
 	}
-	f.logger.Info("Replication task fetcher started.", tag.ClusterName(f.sourceCluster), tag.Counter(f.config.RPCParallelism))
+	f.logger.Info("Replication task fetcher started.", tag.Counter(f.config.RPCParallelism))
 }
 
 // Stop stops the fetcher
@@ -160,7 +160,7 @@ func (f *ReplicationTaskFetcher) Stop() {
 	}
 
 	close(f.done)
-	f.logger.Info("Replication task fetcher stopped.", tag.ClusterName(f.sourceCluster))
+	f.logger.Info("Replication task fetcher stopped.")
 }
 
 // fetchTasks collects getReplicationTasks request from shards and send out aggregated request to source frontend.
