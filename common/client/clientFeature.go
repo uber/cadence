@@ -34,7 +34,6 @@ const (
 
 	// TestMajorVersion is a version used to disable a feature because client does not support it yet, but still make testing possible
 	TestMajorVersion = 10000
-
 	// TestVersionStr is a version used to disable a feature because client does not support it yet, but still make testing possible
 	TestVersionStr = "10001.0.0"
 )
@@ -83,7 +82,7 @@ func (feature *FeatureImpl) SupportStickyQuery() bool {
 
 // SupportConsistentQuery whether a client supports consistent query
 func (feature *FeatureImpl) SupportConsistentQuery() bool {
-	// TODO: andrewjdawson2016 this is set to some huge value to make testing before client release possible this condition should be updated once client is released
+	// TODO: update once client side support for consistent query is released
 	return feature.featureVersion.major > TestMajorVersion
 }
 
