@@ -534,8 +534,8 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 		runID,
 		common.Int64Ptr(50),
 		common.Int64Ptr(2),
-		common.Int64Ptr(scheduleID),
-		common.Int64Ptr(version),
+		nil,
+		nil,
 	),
 		err,
 	)
@@ -546,7 +546,99 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
-	scheduleID := int64(144)
+	scheduleID := int64(99)
+	version := int64(100)
+
+	lastWriteVersion := version - 100
+	incomingVersionHistory := persistence.VersionHistory{
+		BranchToken: []byte{},
+		Items: []*persistence.VersionHistoryItem{
+			{
+				EventID: 50,
+				Version: 2,
+			},
+			{
+				EventID: scheduleID,
+				Version: version,
+			},
+			{
+				EventID: scheduleID + 100,
+				Version: version + 100,
+			},
+		},
+	}
+	context, release, err := s.historyCache.getOrCreateWorkflowExecutionForBackground(
+		domainID,
+		shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+	)
+	s.Nil(err)
+	msBuilder := &mockMutableState{}
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
+	release(nil)
+	request := &h.SyncActivityRequest{
+		DomainId:       common.StringPtr(domainID),
+		WorkflowId:     common.StringPtr(workflowID),
+		RunId:          common.StringPtr(runID),
+		Version:        common.Int64Ptr(version),
+		ScheduledId:    common.Int64Ptr(scheduleID),
+		VersionHistory: incomingVersionHistory.ToThrift(),
+	}
+	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
+	localVersionHistories := &persistence.VersionHistories{
+		CurrentVersionHistoryIndex: 0,
+		Histories: []*persistence.VersionHistory{
+			{
+				BranchToken: []byte{},
+				Items: []*persistence.VersionHistoryItem{
+					{
+						EventID: scheduleID - 10,
+						Version: version,
+					},
+				},
+			},
+		},
+	}
+	msBuilder.On("GetVersionHistories").Return(localVersionHistories)
+	s.mockDomainCache.On("GetDomainByID", domainID).Return(
+		cache.NewGlobalDomainCacheEntryForTest(
+			&persistence.DomainInfo{ID: domainID, Name: domainName},
+			&persistence.DomainConfig{Retention: 1},
+			&persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					{ClusterName: cluster.TestCurrentClusterName},
+					{ClusterName: cluster.TestAlternativeClusterName},
+				},
+			},
+			lastWriteVersion,
+			nil,
+		), nil,
+	)
+
+	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
+	s.Equal(newNDCRetryTaskErrorWithHint(
+		domainID,
+		workflowID,
+		runID,
+		common.Int64Ptr(scheduleID-10),
+		common.Int64Ptr(version),
+		common.Int64Ptr(scheduleID+1),
+		common.Int64Ptr(version),
+	),
+		err,
+	)
+}
+
+func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameScheduleID() {
+	domainName := "some random domain name"
+	domainID := testDomainID
+	workflowID := "some random workflow ID"
+	runID := uuid.New()
+	scheduleID := int64(99)
 	version := int64(100)
 
 	lastWriteVersion := version - 100
@@ -591,7 +683,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 				BranchToken: []byte{},
 				Items: []*persistence.VersionHistoryItem{
 					{
-						EventID: 100,
+						EventID: scheduleID,
 						Version: version,
 					},
 				},
@@ -599,6 +691,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 		},
 	}
 	msBuilder.On("GetVersionHistories").Return(localVersionHistories)
+	msBuilder.On("GetActivityInfo", scheduleID).Return(nil, false)
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -616,17 +709,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 	)
 
 	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(newNDCRetryTaskErrorWithHint(
-		domainID,
-		workflowID,
-		runID,
-		common.Int64Ptr(100),
-		common.Int64Ptr(version),
-		common.Int64Ptr(scheduleID),
-		common.Int64Ptr(version),
-	),
-		err,
-	)
+	s.Nil(err)
 }
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
