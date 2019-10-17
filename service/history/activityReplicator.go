@@ -224,17 +224,20 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		if !currentVersionHistory.IsLCAAppendable(lcaItem) || scheduleID > lastLocalItem.GetEventID() {
-			// incoming branch will win the local branch
-			// resend the events with higher version
-			var endEventID *int64
-			var endEventVersion *int64
-			if scheduleID+1 <= lastIncomingItem.GetEventID() {
-				endEventID, endEventVersion = calculateSyncActivityResendEndEvent(
-					scheduleID+1,
-					incomingVersionHistory,
-				)
+		// version history matches and activity schedule ID appears in local version history
+		if currentVersionHistory.IsLCAAppendable(lcaItem) && scheduleID <= lastLocalItem.GetEventID() {
+			return true, nil
+		}
 
+		// incoming branch will win the local branch
+		// resend the events with higher version
+		if scheduleID+1 <= lastIncomingItem.GetEventID() {
+			// according to the incoming version history, we can calculate the
+			// the end event ID & version to fetch from remote
+			endEventID := scheduleID + 1
+			endEventVersion, err := incomingVersionHistory.GetEventVersion(scheduleID + 1)
+			if err != nil {
+				return false, err
 			}
 			return false, newNDCRetryTaskErrorWithHint(
 				domainID,
@@ -242,8 +245,20 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 				runID,
 				common.Int64Ptr(lcaItem.GetEventID()),
 				common.Int64Ptr(lcaItem.GetVersion()),
-				endEventID,
-				endEventVersion,
+				common.Int64Ptr(endEventID),
+				common.Int64Ptr(endEventVersion),
+			)
+		} else {
+			// activity schedule event is the last event
+			// use nil event ID & version indicating re-send to end
+			return false, newNDCRetryTaskErrorWithHint(
+				domainID,
+				workflowID,
+				runID,
+				common.Int64Ptr(lcaItem.GetEventID()),
+				common.Int64Ptr(lcaItem.GetVersion()),
+				nil,
+				nil,
 			)
 		}
 	} else if msBuilder.GetReplicationState() != nil {
@@ -276,20 +291,4 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 		return false, &shared.InternalServiceError{Message: "The workflow is neither 2DC or 3DC enabled."}
 	}
 	return true, nil
-}
-
-func calculateSyncActivityResendEndEvent(
-	scheduleNextID int64,
-	incomingVersionHistory *persistence.VersionHistory,
-) (*int64, *int64) {
-
-	var endEventVersion *int64
-	endEventID := common.Int64Ptr(scheduleNextID)
-	for _, item := range incomingVersionHistory.Items {
-		if item.GetEventID() > *endEventID {
-			break
-		}
-		endEventVersion = common.Int64Ptr(item.GetVersion())
-	}
-	return endEventID, endEventVersion
 }

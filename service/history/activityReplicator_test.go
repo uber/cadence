@@ -627,7 +627,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 		common.Int64Ptr(scheduleID-10),
 		common.Int64Ptr(version),
 		common.Int64Ptr(scheduleID+1),
-		common.Int64Ptr(version),
+		common.Int64Ptr(version+100),
 	),
 		err,
 	)
