@@ -64,7 +64,7 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	for i := 0; i < 5; i++ {
 		err := qr.completeQuery(ids[i], &shared.WorkflowQueryResult{
 			ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
-			Answer: []byte{1, 2, 3},
+			Answer:     []byte{1, 2, 3},
 		})
 		s.NoError(err)
 	}
