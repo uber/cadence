@@ -47,7 +47,7 @@ type (
 
 		attempt   int
 		startTime time.Time
-		logger    log.Logger // TODO logger initialization logic
+		logger    log.Logger
 
 		// used by 2DC task life cycle
 		// TODO remove when NDC task life cycle is implemented
