@@ -237,6 +237,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 	}
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(false)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -291,6 +294,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
 	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion, nil)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -345,6 +351,8 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
 	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion, nil)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
@@ -410,10 +418,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		VersionHistory: incomingVersionHistory.ToThrift(),
 	}
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion, nil)
-	msBuilder.On("GetReplicationState").Return(nil)
 	localVersionHistories := &persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
 		Histories: []*persistence.VersionHistory{
@@ -492,6 +497,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -546,6 +554,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -613,6 +624,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -687,6 +701,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -761,6 +778,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
+	var versionHistories *persistence.VersionHistories
+	msBuilder.On("GetVersionHistories").Return(versionHistories)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
 	s.mockDomainCache.On("GetDomainByID", domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},

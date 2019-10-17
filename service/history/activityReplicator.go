@@ -107,34 +107,33 @@ func (r *activityReplicatorImpl) SyncActivity(
 	version := request.GetVersion()
 	scheduleID := request.GetScheduledId()
 	if msBuilder.GetVersionHistories() != nil {
-		lastWriteVersion, err := msBuilder.GetLastWriteVersion()
+		currentVersionHistory, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
 		if err != nil {
 			return err
 		}
-		version := request.GetVersion()
-		scheduleID := request.GetScheduledId()
-		if version < lastWriteVersion {
-			// this can happen if target workflow has different history branch
+		lastLocalItem, err := currentVersionHistory.GetLastItem()
+		if err != nil {
+			return err
+		}
+		incomingVersionHistory := persistence.NewVersionHistoryFromThrift(request.GetVersionHistory())
+		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
+		if err != nil {
+			return err
+		}
+		if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
+			// the incoming branch will not overwrite the local branch
+			// discard this task
 			return nil
 		}
 
-		if scheduleID >= msBuilder.GetNextEventID() {
-			// compare LCA of the incoming version history with local version history
-			currentVersionHistory, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
-			if err != nil {
-				return err
-			}
-			incomingVersionHistory := persistence.NewVersionHistoryFromThrift(request.GetVersionHistory())
-			lcaItem, err := incomingVersionHistory.FindLCAItem(currentVersionHistory)
-			if err != nil {
-				return err
-			}
-			lastIncomingItem, err := incomingVersionHistory.GetLastItem()
-			if err != nil {
-				return err
-			}
+		lcaItem, err := currentVersionHistory.FindLCAItem(incomingVersionHistory)
+		if err != nil {
+			return err
+		}
 
-			// Send history from the LCA item to the last item on the incoming branch
+		if !currentVersionHistory.IsLCAAppendable(lcaItem) || scheduleID >= msBuilder.GetNextEventID() {
+			// incoming branch will overwrite the local branch
+			// resend the events with higher version
 			return newNDCRetryTaskErrorWithHint(
 				domainID,
 				execution.GetWorkflowId(),
