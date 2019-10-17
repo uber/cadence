@@ -118,7 +118,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 		}
 		if version < lastWriteVersion {
 			// activity version < workflow last write version
-			// this can happen if target workflow has
+			// this can happen if target workflow has different history branch
 			return nil
 		}
 
