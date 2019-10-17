@@ -104,26 +104,63 @@ func (r *activityReplicatorImpl) SyncActivity(
 		return nil
 	}
 
-	if !msBuilder.IsWorkflowExecutionRunning() {
-		// perhaps conflict resolution force termination
-		return nil
-	}
-
 	version := request.GetVersion()
 	scheduleID := request.GetScheduledId()
-	if scheduleID >= msBuilder.GetNextEventID() {
+	if msBuilder.GetVersionHistories() != nil {
 		lastWriteVersion, err := msBuilder.GetLastWriteVersion()
 		if err != nil {
 			return err
 		}
+		version := request.GetVersion()
+		scheduleID := request.GetScheduledId()
 		if version < lastWriteVersion {
-			// activity version < workflow last write version
 			// this can happen if target workflow has different history branch
 			return nil
 		}
 
+		if scheduleID >= msBuilder.GetNextEventID() {
+			// compare LCA of the incoming version history with local version history
+			currentVersionHistory, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
+			if err != nil {
+				return err
+			}
+			incomingVersionHistory := persistence.NewVersionHistoryFromThrift(request.GetVersionHistory())
+			lcaItem, err := incomingVersionHistory.FindLCAItem(currentVersionHistory)
+			if err != nil {
+				return err
+			}
+			lastIncomingItem, err := incomingVersionHistory.GetLastItem()
+			if err != nil {
+				return err
+			}
+
+			// Send history from the LCA item to the last item on the incoming branch
+			return newNDCRetryTaskErrorWithHint(
+				domainID,
+				execution.GetWorkflowId(),
+				execution.GetRunId(),
+				common.Int64Ptr(lcaItem.GetEventID()),
+				common.Int64Ptr(lcaItem.GetVersion()),
+				common.Int64Ptr(lastIncomingItem.GetEventID()),
+				common.Int64Ptr(lastIncomingItem.GetVersion()),
+			)
+		}
+	} else if msBuilder.GetReplicationState() != nil {
 		// TODO when 2DC is deprecated, remove this block
-		if msBuilder.GetReplicationState() != nil {
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			// perhaps conflict resolution force termination
+			return nil
+		}
+
+		if scheduleID >= msBuilder.GetNextEventID() {
+			lastWriteVersion, err := msBuilder.GetLastWriteVersion()
+			if err != nil {
+				return err
+			}
+			if version < lastWriteVersion {
+				// this can happen if target workflow has different history branch
+				return nil
+			}
 			// version >= last write version
 			// this can happen if out of order delivery happens
 			return newRetryTaskErrorWithHint(
@@ -134,41 +171,8 @@ func (r *activityReplicatorImpl) SyncActivity(
 				msBuilder.GetNextEventID(),
 			)
 		}
-
-		if request.VersionHistory == nil {
-			// sanity check on 2DC or 3DC
-			r.logger.Error(
-				"The workflow is not 2DC or 3DC enabled.",
-				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
-			)
-			return &shared.InternalServiceError{Message: "The workflow is not 2DC or 3DC enabled."}
-		}
-		// compare LCA of the incoming version history with local version history
-		currentVersionHistory, err := msBuilder.GetVersionHistories().GetCurrentVersionHistory()
-		if err != nil {
-			return err
-		}
-		incomingVersionHistory := persistence.NewVersionHistoryFromThrift(request.GetVersionHistory())
-		lcaItem, err := incomingVersionHistory.FindLCAItem(currentVersionHistory)
-		if err != nil {
-			return err
-		}
-		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
-		if err != nil {
-			return err
-		}
-
-		// Send history from the LCA item to the last item on the incoming branch
-		return newNDCRetryTaskErrorWithHint(
-			domainID,
-			execution.GetWorkflowId(),
-			execution.GetRunId(),
-			common.Int64Ptr(lcaItem.GetEventID()),
-			common.Int64Ptr(lcaItem.GetVersion()),
-			common.Int64Ptr(lastIncomingItem.GetEventID()),
-			common.Int64Ptr(lastIncomingItem.GetVersion()),
-		)
+	} else {
+		return &shared.InternalServiceError{Message: "The workflow is neither 2DC or 3DC enabled."}
 	}
 
 	ai, ok := msBuilder.GetActivityInfo(scheduleID)
