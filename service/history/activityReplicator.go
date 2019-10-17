@@ -121,7 +121,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 			return err
 		}
 		if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
-			// the incoming branch will not overwrite the local branch
+			// the incoming branch will lose to the local branch
 			// discard this task
 			return nil
 		}
@@ -131,8 +131,8 @@ func (r *activityReplicatorImpl) SyncActivity(
 			return err
 		}
 
-		if !currentVersionHistory.IsLCAAppendable(lcaItem) || scheduleID >= msBuilder.GetNextEventID() {
-			// incoming branch will overwrite the local branch
+		if !currentVersionHistory.IsLCAAppendable(lcaItem) || scheduleID >= lastLocalItem.GetVersion() {
+			// incoming branch will win the local branch
 			// resend the events with higher version
 			return newNDCRetryTaskErrorWithHint(
 				domainID,
