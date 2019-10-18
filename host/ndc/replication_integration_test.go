@@ -4,6 +4,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	test "github.com/uber/cadence/common/testing"
 	"time"
 )
@@ -74,7 +75,7 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
 
 	s.NotNil(historyBatch)
-	//historyBatch = historyBatch[1:]
+	historyBatch[0].Events[1].Version = common.Int64Ptr(2)
 	standbyClient := s.mockFrontendClient["standby"].(*workflowservicetest.MockClient)
 
 	s.applyEventsThroughFetcher(
@@ -90,5 +91,4 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	time.Sleep(10 * time.Second)
 
-	s.verifyEventHistory(workflowID, runID, historyBatch)
 }

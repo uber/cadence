@@ -2722,8 +2722,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(request *p.PutReplication
 		defaultVisibilityTimestamp,
 		task.GetTaskID())
 
-	result := make(map[string]interface{})
-	err := query.MapScan(result)
+	err := query.Exec()
 	if err != nil {
 		if isThrottlingError(err) {
 			return &workflow.ServiceBusyError{

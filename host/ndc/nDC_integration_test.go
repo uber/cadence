@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc"
 	"io/ioutil"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -71,6 +72,7 @@ type (
 		versionIncrement            int64
 		mockFrontendClient          map[string]frontend.Client
 		standByReplicationTasksChan chan *replicator.ReplicationTask
+		standByTaskId               int64
 	}
 )
 
@@ -113,6 +115,7 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 
 	s.standByReplicationTasksChan = make(chan *replicator.ReplicationTask, 100)
 
+	s.standByTaskId = 0
 	s.mockFrontendClient = make(map[string]frontend.Client)
 	controller := gomock.NewController(s.T())
 	mockStandbyClient := workflowservicetest.NewMockClient(controller)
@@ -120,9 +123,14 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 		func(ctx context.Context, Request *replicator.GetReplicationMessagesRequest, opts ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error) {
 			select {
 			case task := <-s.standByReplicationTasksChan:
+				taskId := atomic.AddInt64(&s.standByTaskId, 1)
+				task.SourceTaskId = common.Int64Ptr(taskId)
 				tasks := []*replicator.ReplicationTask{task}
 				for len(s.standByReplicationTasksChan) > 0 {
-					tasks = append(tasks, <-s.standByReplicationTasksChan)
+					task = <-s.standByReplicationTasksChan
+					taskId := atomic.AddInt64(&s.standByTaskId, 1)
+					task.SourceTaskId = common.Int64Ptr(taskId)
+					tasks = append(tasks, task)
 				}
 
 				replicationMessage := &replicator.ReplicationMessages{

@@ -49,7 +49,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
-	"github.com/uber/cadence/service/worker/replicator"
 )
 
 const (
@@ -146,7 +145,6 @@ func NewEngineWithShardContext(
 	publisher messaging.Producer,
 	config *Config,
 	replicationTaskFetchers *ReplicationTaskFetchers,
-	domainReplicator replicator.DomainReplicator,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -225,7 +223,12 @@ func NewEngineWithShardContext(
 
 	var replicationTaskProcessors []*ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
-		replicationTaskProcessor := NewReplicationTaskProcessor(shard, historyEngImpl, domainReplicator, shard.GetMetricsClient(), replicationTaskFetcher)
+		replicationTaskProcessor := NewReplicationTaskProcessor(
+			shard,
+			historyEngImpl,
+			config,
+			shard.GetMetricsClient(),
+			replicationTaskFetcher)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
