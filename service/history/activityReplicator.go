@@ -249,6 +249,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 				common.Int64Ptr(endEventVersion),
 			)
 		}
+
 		// activity schedule event is the last event
 		// use nil event ID & version indicating re-send to end
 		return false, newNDCRetryTaskErrorWithHint(
