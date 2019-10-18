@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination activityReplicator_mock.go
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCActivityReplicator_mock.go
 
 package history
 
@@ -39,34 +39,34 @@ import (
 )
 
 type (
-	activityReplicator interface {
+	nDCActivityReplicator interface {
 		SyncActivity(
 			ctx ctx.Context,
 			request *h.SyncActivityRequest,
 		) error
 	}
 
-	activityReplicatorImpl struct {
+	nDCActivityReplicatorImpl struct {
 		historyCache    *historyCache
 		clusterMetadata cluster.Metadata
 		logger          log.Logger
 	}
 )
 
-func newActivityReplicator(
+func newNDCActivityReplicator(
 	shard ShardContext,
 	historyCache *historyCache,
 	logger log.Logger,
-) *activityReplicatorImpl {
+) *nDCActivityReplicatorImpl {
 
-	return &activityReplicatorImpl{
+	return &nDCActivityReplicatorImpl{
 		historyCache:    historyCache,
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		logger:          logger.WithTags(tag.ComponentHistoryReplicator),
 	}
 }
 
-func (r *activityReplicatorImpl) SyncActivity(
+func (r *nDCActivityReplicatorImpl) SyncActivity(
 	ctx ctx.Context,
 	request *h.SyncActivityRequest,
 ) (retError error) {
@@ -189,7 +189,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 	return context.updateWorkflowExecutionAsPassive(now)
 }
 
-func (r *activityReplicatorImpl) shouldApplySyncActivity(
+func (r *nDCActivityReplicatorImpl) shouldApplySyncActivity(
 	domainID string,
 	workflowID string,
 	runID string,
@@ -248,19 +248,19 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 				common.Int64Ptr(endEventID),
 				common.Int64Ptr(endEventVersion),
 			)
-		} else {
-			// activity schedule event is the last event
-			// use nil event ID & version indicating re-send to end
-			return false, newNDCRetryTaskErrorWithHint(
-				domainID,
-				workflowID,
-				runID,
-				common.Int64Ptr(lcaItem.GetEventID()),
-				common.Int64Ptr(lcaItem.GetVersion()),
-				nil,
-				nil,
-			)
 		}
+
+		// activity schedule event is the last event
+		// use nil event ID & version indicating re-send to end
+		return false, newNDCRetryTaskErrorWithHint(
+			domainID,
+			workflowID,
+			runID,
+			common.Int64Ptr(lcaItem.GetEventID()),
+			common.Int64Ptr(lcaItem.GetVersion()),
+			nil,
+			nil,
+		)
 	} else if msBuilder.GetReplicationState() != nil {
 		// TODO when 2DC is deprecated, remove this block
 		if !msBuilder.IsWorkflowExecutionRunning() {
