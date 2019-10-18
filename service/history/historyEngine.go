@@ -66,7 +66,7 @@ type (
 		timeSource                clock.TimeSource
 		decisionHandler           decisionHandler
 		clusterMetadata           cluster.Metadata
-		historyV2Mgr              persistence.HistoryV2Manager
+		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             persistence.VisibilityManager
 		txProcessor               transferQueueProcessor
@@ -74,6 +74,7 @@ type (
 		taskAllocator             taskAllocator
 		replicator                *historyReplicator
 		nDCReplicator             nDCHistoryReplicator
+		activityReplicator        activityReplicator
 		replicatorProcessor       ReplicatorQueueProcessor
 		historyEventNotifier      historyEventNotifier
 		tokenSerializer           common.TaskTokenSerializer
@@ -152,7 +153,7 @@ func NewEngineWithShardContext(
 
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
-	historyV2Manager := shard.GetHistoryV2Manager()
+	historyV2Manager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(shard)
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
@@ -206,6 +207,11 @@ func NewEngineWithShardContext(
 			shard,
 			historyCache,
 			historyEngImpl.eventsReapplier,
+			logger,
+		)
+		historyEngImpl.activityReplicator = newActivityReplicator(
+			shard,
+			historyCache,
 			logger,
 		)
 	}
@@ -848,7 +854,7 @@ func (e *historyEngineImpl) getMutableState(
 func (e *historyEngineImpl) DescribeMutableState(
 	ctx ctx.Context,
 	request *h.DescribeMutableStateRequest,
-) (retResp *h.DescribeMutableStateResponse, retError error) {
+) (response *h.DescribeMutableStateResponse, retError error) {
 
 	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
@@ -860,22 +866,34 @@ func (e *historyEngineImpl) DescribeMutableState(
 		RunId:      request.Execution.RunId,
 	}
 
-	cacheCtx, dbCtx, release, cacheHit, err := e.historyCache.getAndCreateWorkflowExecution(ctx, domainID, execution)
+	cacheCtx, dbCtx, release, cacheHit, err := e.historyCache.getAndCreateWorkflowExecution(
+		ctx, domainID, execution,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { release(retError) }()
-	retResp = &h.DescribeMutableStateResponse{}
+
+	response = &h.DescribeMutableStateResponse{}
 
 	if cacheHit && cacheCtx.(*workflowExecutionContextImpl).msBuilder != nil {
 		msb := cacheCtx.(*workflowExecutionContextImpl).msBuilder
-		retResp.MutableStateInCache, retError = e.toMutableStateJSON(msb)
+		response.MutableStateInCache, err = e.toMutableStateJSON(msb)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	msb, retError := dbCtx.loadWorkflowExecution()
-	retResp.MutableStateInDatabase, retError = e.toMutableStateJSON(msb)
+	msb, err := dbCtx.loadWorkflowExecution()
+	if err != nil {
+		return nil, err
+	}
+	response.MutableStateInDatabase, err = e.toMutableStateJSON(msb)
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	return response, nil
 }
 
 func (e *historyEngineImpl) toMutableStateJSON(msb mutableState) (*string, error) {
@@ -1839,15 +1857,14 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 				return ErrWorkflowCompleted
 			}
 
-			if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
+			eventBatchFirstEventID := msBuilder.GetNextEventID()
+			return terminateWorkflow(
+				msBuilder,
+				eventBatchFirstEventID,
 				request.GetReason(),
 				request.GetDetails(),
 				request.GetIdentity(),
-			); err != nil {
-				return &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
-			}
-
-			return nil
+			)
 		})
 }
 
@@ -1953,7 +1970,7 @@ func (e *historyEngineImpl) SyncActivity(
 	request *h.SyncActivityRequest,
 ) (retError error) {
 
-	return e.replicator.SyncActivity(ctx, request)
+	return e.activityReplicator.SyncActivity(ctx, request)
 }
 
 func (e *historyEngineImpl) ResetWorkflowExecution(

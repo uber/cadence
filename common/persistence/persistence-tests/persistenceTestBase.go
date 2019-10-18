@@ -65,7 +65,7 @@ type (
 		ExecutionMgrFactory    pfactory.Factory
 		ExecutionManager       p.ExecutionManager
 		TaskMgr                p.TaskManager
-		HistoryV2Mgr           p.HistoryV2Manager
+		HistoryV2Mgr           p.HistoryManager
 		MetadataManager        p.MetadataManager
 		VisibilityMgr          p.VisibilityManager
 		DomainReplicationQueue p.DomainReplicationQueue
@@ -264,6 +264,7 @@ func (s *TestBase) UpdateShard(updatedInfo *p.ShardInfo, previousRangeID int64) 
 	})
 }
 
+// CreateWorkflowExecutionWithBranchToken test util function
 func (s *TestBase) CreateWorkflowExecutionWithBranchToken(domainID string, workflowExecution workflow.WorkflowExecution, taskList,
 	wType string, wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, branchToken []byte, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {

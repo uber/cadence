@@ -22,7 +22,6 @@ package history
 
 import (
 	ctx "context"
-	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -178,532 +177,6 @@ func (s *historyReplicatorSuite) TearDownTest() {
 	s.mockWorkflowResetor.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	version := int64(100)
-
-	request := &h.SyncActivityRequest{
-		DomainId:   common.StringPtr(domainID),
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
-		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	}).Return(nil, &shared.EntityNotExistsError{})
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			version,
-			nil,
-		), nil,
-	)
-
-	err := s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Nil(err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_WorkflowClosed() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	version := int64(100)
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:   common.StringPtr(domainID),
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(false)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			version,
-			nil,
-		), nil,
-	)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Nil(err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionSmaller() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	scheduleID := int64(144)
-	version := int64(100)
-
-	lastWriteVersion := version + 100
-	nextEventID := scheduleID - 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:    common.StringPtr(domainID),
-		WorkflowId:  common.StringPtr(workflowID),
-		RunId:       common.StringPtr(runID),
-		Version:     common.Int64Ptr(version),
-		ScheduledId: common.Int64Ptr(scheduleID),
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion, nil)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			lastWriteVersion,
-			nil,
-		), nil,
-	)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Nil(err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionLarger() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	scheduleID := int64(144)
-	version := int64(100)
-
-	lastWriteVersion := version - 100
-	nextEventID := scheduleID - 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:    common.StringPtr(domainID),
-		WorkflowId:  common.StringPtr(workflowID),
-		RunId:       common.StringPtr(runID),
-		Version:     common.Int64Ptr(version),
-		ScheduledId: common.Int64Ptr(scheduleID),
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion, nil)
-	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{})
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			lastWriteVersion,
-			nil,
-		), nil,
-	)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(newRetryTaskErrorWithHint(ErrRetrySyncActivityMsg, domainID, workflowID, runID, nextEventID), err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_ActivityCompleted() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	scheduleID := int64(144)
-	version := int64(100)
-
-	lastWriteVersion := version
-	nextEventID := scheduleID + 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:    common.StringPtr(domainID),
-		WorkflowId:  common.StringPtr(workflowID),
-		RunId:       common.StringPtr(runID),
-		Version:     common.Int64Ptr(version),
-		ScheduledId: common.Int64Ptr(scheduleID),
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			lastWriteVersion,
-			nil,
-		), nil,
-	)
-	msBuilder.On("GetActivityInfo", scheduleID).Return(nil, false)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Nil(err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityVersionLarger() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	scheduleID := int64(144)
-	version := int64(100)
-
-	lastWriteVersion := version + 10
-	nextEventID := scheduleID + 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:    common.StringPtr(domainID),
-		WorkflowId:  common.StringPtr(workflowID),
-		RunId:       common.StringPtr(runID),
-		Version:     common.Int64Ptr(version),
-		ScheduledId: common.Int64Ptr(scheduleID),
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			lastWriteVersion,
-			nil,
-		), nil,
-	)
-	msBuilder.On("GetActivityInfo", scheduleID).Return(&persistence.ActivityInfo{
-		Version: lastWriteVersion - 1,
-	}, true)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Nil(err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionSameAttempt() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	version := int64(100)
-	scheduleID := int64(144)
-	scheduledTime := time.Now()
-	startedID := scheduleID + 1
-	startedTime := scheduledTime.Add(time.Minute)
-	heartBeatUpdatedTime := startedTime.Add(time.Minute)
-	attempt := int32(0)
-	details := []byte("some random activity heartbeat progress")
-
-	nextEventID := scheduleID + 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:          common.StringPtr(domainID),
-		WorkflowId:        common.StringPtr(workflowID),
-		RunId:             common.StringPtr(runID),
-		Version:           common.Int64Ptr(version),
-		ScheduledId:       common.Int64Ptr(scheduleID),
-		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedId:         common.Int64Ptr(startedID),
-		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
-		Attempt:           common.Int32Ptr(attempt),
-		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
-		Details:           details,
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			version,
-			nil,
-		), nil,
-	)
-	activityInfo := &persistence.ActivityInfo{
-		Version:    version,
-		ScheduleID: scheduleID,
-		Attempt:    attempt,
-	}
-	msBuilder.On("GetActivityInfo", scheduleID).Return(activityInfo, true)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", version, activityInfo.Version).Return(true)
-
-	expectedErr := errors.New("this is error is used to by pass lots of mocking")
-	msBuilder.On("ReplicateActivityInfo", request, false).Return(expectedErr)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(expectedErr, err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionLargerAttempt() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	version := int64(100)
-	scheduleID := int64(144)
-	scheduledTime := time.Now()
-	startedID := scheduleID + 1
-	startedTime := scheduledTime.Add(time.Minute)
-	heartBeatUpdatedTime := startedTime.Add(time.Minute)
-	attempt := int32(100)
-	details := []byte("some random activity heartbeat progress")
-
-	nextEventID := scheduleID + 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:          common.StringPtr(domainID),
-		WorkflowId:        common.StringPtr(workflowID),
-		RunId:             common.StringPtr(runID),
-		Version:           common.Int64Ptr(version),
-		ScheduledId:       common.Int64Ptr(scheduleID),
-		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedId:         common.Int64Ptr(startedID),
-		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
-		Attempt:           common.Int32Ptr(attempt),
-		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
-		Details:           details,
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			version,
-			nil,
-		), nil,
-	)
-	activityInfo := &persistence.ActivityInfo{
-		Version:    version,
-		ScheduleID: scheduleID,
-		Attempt:    attempt - 1,
-	}
-	msBuilder.On("GetActivityInfo", scheduleID).Return(activityInfo, true)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", version, activityInfo.Version).Return(true)
-
-	expectedErr := errors.New("this is error is used to by pass lots of mocking")
-	msBuilder.On("ReplicateActivityInfo", request, true).Return(expectedErr)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(expectedErr, err)
-}
-
-func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerVersion() {
-	domainName := "some random domain name"
-	domainID := testDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-	version := int64(100)
-	scheduleID := int64(144)
-	scheduledTime := time.Now()
-	startedID := scheduleID + 1
-	startedTime := scheduledTime.Add(time.Minute)
-	heartBeatUpdatedTime := startedTime.Add(time.Minute)
-	attempt := int32(100)
-	details := []byte("some random activity heartbeat progress")
-
-	nextEventID := scheduleID + 10
-
-	context, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecutionForBackground(
-		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
-	s.Nil(err)
-	msBuilder := &mockMutableState{}
-	defer msBuilder.AssertExpectations(s.T())
-	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
-	release(nil)
-	request := &h.SyncActivityRequest{
-		DomainId:          common.StringPtr(domainID),
-		WorkflowId:        common.StringPtr(workflowID),
-		RunId:             common.StringPtr(runID),
-		Version:           common.Int64Ptr(version),
-		ScheduledId:       common.Int64Ptr(scheduleID),
-		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedId:         common.Int64Ptr(startedID),
-		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
-		Attempt:           common.Int32Ptr(attempt),
-		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
-		Details:           details,
-	}
-	msBuilder.On("StartTransaction", mock.Anything).Return(false, nil).Once()
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockDomainCache.On("GetDomainByID", domainID).Return(
-		cache.NewGlobalDomainCacheEntryForTest(
-			&persistence.DomainInfo{ID: domainID, Name: domainName},
-			&persistence.DomainConfig{Retention: 1},
-			&persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			version,
-			nil,
-		), nil,
-	)
-	activityInfo := &persistence.ActivityInfo{
-		Version:    version - 1,
-		ScheduleID: scheduleID,
-		Attempt:    attempt + 1,
-	}
-	msBuilder.On("GetActivityInfo", scheduleID).Return(activityInfo, true)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", version, activityInfo.Version).Return(false)
-
-	expectedErr := errors.New("this is error is used to by pass lots of mocking")
-	msBuilder.On("ReplicateActivityInfo", request, true).Return(expectedErr)
-
-	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(expectedErr, err)
 }
 
 func (s *historyReplicatorSuite) TestApplyStartEvent() {
@@ -1194,7 +667,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	}, nil)
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
-		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
+		currentNextEventID, workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.ApplyOtherEventsMissingMutableState(ctx.Background(), domainID, workflowID, runID, req, s.logger)
@@ -4166,6 +3639,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
+	currentNextEventID := int64(2333)
 	currentVersion := version - 1
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateRunning
@@ -4228,6 +3702,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
+	msBuilderCurrent.On("GetNextEventID").Return(currentNextEventID)
 	msBuilderCurrent.On("GetLastWriteVersion").Return(currentVersion, nil)
 	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(true) // this is used to update the version on mutable state
 	msBuilderCurrent.On("UpdateReplicationStateVersion", currentVersion, true).Once()
@@ -4236,7 +3711,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentClusterName)
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
-		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
+		currentNextEventID, workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
@@ -4357,10 +3832,12 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
+	currentNextEventID := int64(2333)
 	currentVersion := incomingVersion - 10
 	currentCluster := cluster.TestCurrentClusterName
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentCluster)
 
+	msBuilderCurrent.On("GetNextEventID").Return(currentNextEventID)
 	msBuilderCurrent.On("GetLastWriteVersion").Return(currentVersion, nil)
 	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(true) // this is used to update the version on mutable state
 	msBuilderCurrent.On("UpdateReplicationStateVersion", currentVersion, true).Once()
@@ -4376,7 +3853,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	}, nil)
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
-		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
+		currentNextEventID, workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	prevRunID, prevLastWriteVersion, prevState, err := s.historyReplicator.conflictResolutionTerminateCurrentRunningIfNotSelf(ctx.Background(), msBuilderTarget, incomingVersion, incomingTimestamp, s.logger)

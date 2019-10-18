@@ -243,12 +243,6 @@ func (s *workflowResetterSuite) TestReplayResetWorkflow() {
 		ShardID:         common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
 
-	s.mockHistoryV2Mgr.On("CompleteForkBranch", &persistence.CompleteForkBranchRequest{
-		BranchToken: resetBranchToken,
-		Success:     true,
-		ShardID:     common.IntPtr(s.mockShard.GetShardID()),
-	}).Return(nil).Times(1)
-
 	s.mockStateRebuilder.EXPECT().rebuild(
 		ctx,
 		gomock.Any(),
@@ -335,12 +329,6 @@ func (s *workflowResetterSuite) TestGenerateBranchToken() {
 		ShardID:         common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
 
-	s.mockHistoryV2Mgr.On("CompleteForkBranch", &persistence.CompleteForkBranchRequest{
-		BranchToken: resetBranchToken,
-		Success:     true,
-		ShardID:     common.IntPtr(s.mockShard.GetShardID()),
-	}).Return(nil).Times(1)
-
 	newBranchToken, err := s.workflowResetter.generateBranchToken(
 		s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
 	)
@@ -354,11 +342,13 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 		ScheduleID: 1234,
 		StartedID:  5678,
 	}
+	nextEventID := int64(666)
 	terminateReason := "some random terminate reason"
 
 	mutableState := &mockMutableState{}
 	defer mutableState.AssertExpectations(s.T())
 
+	mutableState.On("GetNextEventID").Return(nextEventID)
 	mutableState.On("GetInFlightDecision").Return(decision, true).Times(1)
 	mutableState.On("AddDecisionTaskFailedEvent",
 		decision.ScheduleID,
@@ -373,6 +363,7 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 	).Return(&shared.HistoryEvent{}, nil).Times(1)
 	mutableState.On("FlushBufferedEvents").Return(nil).Once()
 	mutableState.On("AddWorkflowExecutionTerminatedEvent",
+		nextEventID,
 		terminateReason,
 		([]byte)(nil),
 		identityHistoryService,
