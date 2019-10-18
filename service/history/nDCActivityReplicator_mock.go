@@ -32,7 +32,6 @@ import (
 	"reflect"
 
 	"github.com/golang/mock/gomock"
-
 	"github.com/uber/cadence/.gen/go/history"
 )
 
