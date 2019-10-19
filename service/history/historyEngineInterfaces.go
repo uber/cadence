@@ -133,25 +133,6 @@ type (
 		queueShutdown() error
 	}
 
-	transferQueueProcessor interface {
-		common.Daemon
-		FailoverDomain(domainIDs map[string]struct{})
-		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
-		LockTaskPrrocessing()
-		UnlockTaskPrrocessing()
-	}
-
-	// TODO the timer queue processor and the one below, timer processor
-	// in combination are confusing, we should consider a better naming
-	// convention, or at least come with a better name for this case.
-	timerQueueProcessor interface {
-		common.Daemon
-		FailoverDomain(domainIDs map[string]struct{})
-		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
-		LockTaskPrrocessing()
-		UnlockTaskPrrocessing()
-	}
-
 	timerProcessor interface {
 		taskExecutor
 		notifyNewTimers(timerTask []persistence.Task)

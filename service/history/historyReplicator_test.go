@@ -57,24 +57,25 @@ const (
 
 type (
 	historyReplicatorSuite struct {
-		controller *gomock.Controller
-
 		suite.Suite
-		logger                   log.Logger
-		mockExecutionMgr         *mocks.ExecutionManager
-		mockHistoryV2Mgr         *mocks.HistoryV2Manager
-		mockShardManager         *mocks.ShardManager
-		mockClusterMetadata      *mocks.ClusterMetadata
-		mockProducer             *mocks.KafkaProducer
-		mockDomainCache          *cache.DomainCacheMock
-		mockMessagingClient      messaging.Client
-		mockService              service.Service
-		mockShard                *shardContextImpl
-		mockClientBean           *client.MockClientBean
-		mockWorkflowResetor      *mockWorkflowResetor
-		mockTxProcessor          *MockTransferQueueProcessor
+
+		controller               *gomock.Controller
+		mockWorkflowResetor      *MockworkflowResetor
+		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
-		mockTimerProcessor       *MockTimerQueueProcessor
+		mockTimerProcessor       *MocktimerQueueProcessor
+
+		logger              log.Logger
+		mockExecutionMgr    *mocks.ExecutionManager
+		mockHistoryV2Mgr    *mocks.HistoryV2Manager
+		mockShardManager    *mocks.ShardManager
+		mockClusterMetadata *mocks.ClusterMetadata
+		mockProducer        *mocks.KafkaProducer
+		mockDomainCache     *cache.DomainCacheMock
+		mockMessagingClient messaging.Client
+		mockService         service.Service
+		mockShard           *shardContextImpl
+		mockClientBean      *client.MockClientBean
 
 		historyReplicator *historyReplicator
 	}
@@ -95,6 +96,13 @@ func (s *historyReplicatorSuite) TearDownSuite() {
 
 func (s *historyReplicatorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
+	s.mockWorkflowResetor = NewMockworkflowResetor(s.controller)
+	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
+	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
+	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
+	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
+	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
@@ -136,12 +144,6 @@ func (s *historyReplicatorSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.mockTxProcessor = &MockTransferQueueProcessor{}
-	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
-	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
-	s.mockTimerProcessor = &MockTimerQueueProcessor{}
-	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
 
 	historyCache := newHistoryCache(s.mockShard)
 	engine := &historyEngineImpl{
@@ -162,7 +164,6 @@ func (s *historyReplicatorSuite) SetupTest() {
 	s.mockShard.SetEngine(engine)
 
 	s.historyReplicator = newHistoryReplicator(s.mockShard, clock.NewEventTimeSource(), engine, historyCache, s.mockShard.domainCache, s.mockHistoryV2Mgr, s.logger)
-	s.mockWorkflowResetor = &mockWorkflowResetor{}
 	s.historyReplicator.resetor = s.mockWorkflowResetor
 }
 
@@ -172,12 +173,7 @@ func (s *historyReplicatorSuite) TearDownTest() {
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
-	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockTimerProcessor.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
-	s.mockWorkflowResetor.AssertExpectations(s.T())
-	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockTimerProcessor.AssertExpectations(s.T())
 	s.controller.Finish()
 }
 
@@ -804,7 +800,9 @@ func (s *historyReplicatorSuite) TestWorkflowReset() {
 
 	reqCtx := ctx.Background()
 
-	s.mockWorkflowResetor.On("ApplyResetEvent", reqCtx, req, domainID, workflowID, currentRunID).Return(nil).Once()
+	s.mockWorkflowResetor.EXPECT().ApplyResetEvent(
+		reqCtx, req, domainID, workflowID, currentRunID,
+	).Return(nil).Times(1)
 
 	err := s.historyReplicator.ApplyOtherEventsMissingMutableState(reqCtx, domainID, workflowID, runID, req, s.logger)
 	s.Nil(err)

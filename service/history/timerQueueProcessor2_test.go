@@ -52,28 +52,30 @@ import (
 type (
 	timerQueueProcessor2Suite struct {
 		suite.Suite
+
+		controller               *gomock.Controller
+		mockTxProcessor          *MocktransferQueueProcessor
+		mockReplicationProcessor *MockReplicatorQueueProcessor
+		mockTimerProcessor       *MocktimerQueueProcessor
+
 		mockShardManager *mocks.ShardManager
 		shardClosedCh    chan int
 		config           *Config
 		logger           log.Logger
 
-		controller               *gomock.Controller
-		mockHistoryEngine        *historyEngineImpl
-		mockMatchingClient       *matchingservicetest.MockClient
-		mockDomainCache          *cache.DomainCacheMock
-		mockVisibilityMgr        *mocks.VisibilityManager
-		mockExecutionMgr         *mocks.ExecutionManager
-		mockHistoryV2Mgr         *mocks.HistoryV2Manager
-		mockShard                ShardContext
-		mockClusterMetadata      *mocks.ClusterMetadata
-		mockProducer             *mocks.KafkaProducer
-		mockClientBean           *client.MockClientBean
-		mockMessagingClient      messaging.Client
-		mockService              service.Service
-		mockEventsCache          *MockEventsCache
-		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *MockReplicatorQueueProcessor
-		mockTimerProcessor       *MockTimerQueueProcessor
+		mockHistoryEngine   *historyEngineImpl
+		mockMatchingClient  *matchingservicetest.MockClient
+		mockDomainCache     *cache.DomainCacheMock
+		mockVisibilityMgr   *mocks.VisibilityManager
+		mockExecutionMgr    *mocks.ExecutionManager
+		mockHistoryV2Mgr    *mocks.HistoryV2Manager
+		mockShard           ShardContext
+		mockClusterMetadata *mocks.ClusterMetadata
+		mockProducer        *mocks.KafkaProducer
+		mockClientBean      *client.MockClientBean
+		mockMessagingClient messaging.Client
+		mockService         service.Service
+		mockEventsCache     *MockEventsCache
 
 		domainID                  string
 		domainEntry               *cache.DomainCacheEntry
@@ -95,8 +97,14 @@ func (s *timerQueueProcessor2Suite) SetupSuite() {
 }
 
 func (s *timerQueueProcessor2Suite) SetupTest() {
-	shardID := 0
 	s.controller = gomock.NewController(s.T())
+	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
+	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
+	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
+	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
+	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
+
 	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockShardManager = &mocks.ShardManager{}
@@ -120,7 +128,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockShard = &shardContextImpl{
 		service: s.mockService,
 		shardInfo: &persistence.ShardInfo{
-			ShardID:                 shardID,
+			ShardID:                 0,
 			RangeID:                 1,
 			TransferAckLevel:        0,
 			ClusterTransferAckLevel: make(map[string]int64),
@@ -148,12 +156,6 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
-	s.mockTxProcessor = &MockTransferQueueProcessor{}
-	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
-	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
-	s.mockTimerProcessor = &MockTimerQueueProcessor{}
-	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
 	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 
 	h := &historyEngineImpl{
@@ -187,7 +189,6 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 }
 
 func (s *timerQueueProcessor2Suite) TearDownTest() {
-	s.controller.Finish()
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
@@ -195,8 +196,7 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockEventsCache.AssertExpectations(s.T())
-	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockTimerProcessor.AssertExpectations(s.T())
+	s.controller.Finish()
 }
 
 func (s *timerQueueProcessor2Suite) startProcessor() {

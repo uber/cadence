@@ -318,8 +318,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 		e.shard.GetShardID(),
 		e.shard.GetDomainNotificationVersion(),
 		func() {
-			e.txProcessor.LockTaskPrrocessing()
-			e.timerProcessor.LockTaskPrrocessing()
+			e.txProcessor.LockTaskProcessing()
+			e.timerProcessor.LockTaskProcessing()
 		},
 		func(prevDomains []*cache.DomainCacheEntry, nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
