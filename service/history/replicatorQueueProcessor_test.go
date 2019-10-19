@@ -128,6 +128,7 @@ func (s *replicatorQueueProcessorSuite) TearDownTest() {
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.controller.Finish()
 }
 
 func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {

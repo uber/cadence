@@ -134,6 +134,7 @@ func (s *stateBuilderSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.controller.Finish()
 }
 
 func (s *stateBuilderSuite) mockUpdateVersion(events ...*shared.HistoryEvent) {
@@ -191,7 +192,6 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
 	}
 
-	s.mockMutableState.EXPECT().GetStartEvent().Return(event, nil).Times(1)
 	s.mockDomainCache.On("GetDomain", testParentDomainName).Return(testGlobalParentDomainEntry, nil).Once()
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionStartedEvent(&testParentDomainID, execution, requestID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
@@ -1277,7 +1277,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 	s.mockMutableState.EXPECT().ReplicateDecisionTaskStartedEvent(
 		(*decisionInfo)(nil), event.GetVersion(), scheduleID, event.GetEventId(), decisionRequestID, event.GetTimestamp(),
 	).Return(di, nil).Times(1)
-	s.mockMutableState.EXPECT().UpdateDecision(di).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 
@@ -1337,7 +1336,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 	s.mockMutableState.EXPECT().ReplicateDecisionTaskScheduledEvent(
 		event.GetVersion(), event.GetEventId(), tasklist, timeoutSecond, decisionAttempt, event.GetTimestamp(), event.GetTimestamp(),
 	).Return(di, nil).Times(1)
-	s.mockMutableState.EXPECT().UpdateDecision(di).Times(1)
 	s.mockUpdateVersion(event)
 
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)

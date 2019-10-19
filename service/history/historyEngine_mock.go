@@ -28,12 +28,12 @@
 package history
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	history "github.com/uber/cadence/.gen/go/history"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	persistence "github.com/uber/cadence/common/persistence"
-	context "golang.org/x/net/context"
 	reflect "reflect"
 )
 

@@ -70,7 +70,6 @@ func (s *mutableStateSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockEventsCache = NewMockeventsCache(s.controller)
-	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockShard = &shardContextImpl{
@@ -83,12 +82,11 @@ func (s *mutableStateSuite) SetupTest() {
 		timeSource:                clock.NewRealTimeSource(),
 	}
 
-	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache,
-		s.logger, testLocalDomainEntry)
+	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
 }
 
 func (s *mutableStateSuite) TearDownTest() {
-
+	s.controller.Finish()
 }
 
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_ReplicateDecisionCompleted() {

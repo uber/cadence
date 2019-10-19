@@ -92,6 +92,10 @@ func (s *timerBuilderProcessorSuite) SetupTest() {
 	}
 }
 
+func (s *timerBuilderProcessorSuite) TearDownTest() {
+	s.controller.Finish()
+}
+
 func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 	tb := newTimerBuilder(&mockTimeSource{currTime: time.Now()})
 
