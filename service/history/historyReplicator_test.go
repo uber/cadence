@@ -1417,15 +1417,15 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
-	mockConflictResolver := &mockConflictResolver{}
+	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := NewMockmutableState(s.controller)
 	msBuilderMid.EXPECT().GetNextEventID().Return(int64(12345)).AnyTimes() // this is used by log
-	mockConflictResolver.On("reset",
-		runID, currentLastWriteVersion, currentState, mock.Anything, currentReplicationInfoLastEventID, exeInfo, updateCondition,
-	).Return(msBuilderMid, nil)
+	mockConflictResolver.EXPECT().reset(
+		runID, currentLastWriteVersion, currentState, gomock.Any(), currentReplicationInfoLastEventID, exeInfo, updateCondition,
+	).Return(msBuilderMid, nil).Times(1)
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
@@ -1488,15 +1488,15 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
-	mockConflictResolver := &mockConflictResolver{}
+	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := NewMockmutableState(s.controller)
 	msBuilderMid.EXPECT().GetNextEventID().Return(int64(12345)).AnyTimes() // this is used by log
-	mockConflictResolver.On("reset",
-		runID, currentLastWriteVersion, currentState, mock.Anything, currentReplicationInfoLastEventID, exeInfo, updateCondition,
-	).Return(msBuilderMid, nil)
+	mockConflictResolver.EXPECT().reset(
+		runID, currentLastWriteVersion, currentState, gomock.Any(), currentReplicationInfoLastEventID, exeInfo, updateCondition,
+	).Return(msBuilderMid, nil).Times(1)
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
@@ -1585,15 +1585,15 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
-	mockConflictResolver := &mockConflictResolver{}
+	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := NewMockmutableState(s.controller)
 	msBuilderMid.EXPECT().GetNextEventID().Return(int64(12345)).AnyTimes() // this is used by log
-	mockConflictResolver.On("reset",
-		runID, currentLastWriteVersion, currentState, mock.Anything, incomingReplicationInfoLastEventID, exeInfo, updateCondition,
-	).Return(msBuilderMid, nil)
+	mockConflictResolver.EXPECT().reset(
+		runID, currentLastWriteVersion, currentState, gomock.Any(), incomingReplicationInfoLastEventID, exeInfo, updateCondition,
+	).Return(msBuilderMid, nil).Times(1)
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
@@ -1762,15 +1762,15 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
-	mockConflictResolver := &mockConflictResolver{}
+	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := NewMockmutableState(s.controller)
 	msBuilderMid.EXPECT().GetNextEventID().Return(int64(12345)).AnyTimes() // this is used by log
-	mockConflictResolver.On("reset",
-		runID, currentLastWriteVersion, currentState, mock.Anything, incomingReplicationInfoLastEventID, exeInfo, updateCondition,
-	).Return(msBuilderMid, nil)
+	mockConflictResolver.EXPECT().reset(
+		runID, currentLastWriteVersion, currentState, gomock.Any(), incomingReplicationInfoLastEventID, exeInfo, updateCondition,
+	).Return(msBuilderMid, nil).Times(1)
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)

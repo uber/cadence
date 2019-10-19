@@ -63,7 +63,6 @@ type (
 		mockShard             ShardContext
 		mockClusterMetadata   *mocks.ClusterMetadata
 		mockMessagingClient   messaging.Client
-		mockProcessor         *MockTimerProcessor
 		mockQueueAckMgr       *MockTimerQueueAckMgr
 		mockClientBean        *client.MockClientBean
 		mockExecutionManager  *mocks.ExecutionManager
@@ -102,7 +101,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.clusterName = cluster.TestAlternativeClusterName
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.mockProcessor = &MockTimerProcessor{}
 	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClientBean = &client.MockClientBean{}
@@ -146,11 +144,9 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		dynamicconfig.GetIntPropertyFn(10),
 		s.logger,
 	)
-	s.timerQueueProcessor.timerProcessor = s.mockProcessor
 }
 
 func (s *timerQueueProcessorBaseSuite) TearDownTest() {
-	s.mockProcessor.AssertExpectations(s.T())
 	s.mockQueueAckMgr.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockExecutionManager.AssertExpectations(s.T())
