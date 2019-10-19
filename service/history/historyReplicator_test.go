@@ -3404,7 +3404,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		State:            currentState,
 		LastWriteVersion: currentVersion,
 	}
-	// the test above already assert the create workflow request, so here just use anyting
+	// the test above already assert the create workflow request, so here just use anything
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
 	contextCurrent := NewMockworkflowExecutionContext(s.controller)
