@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -41,6 +42,7 @@ import (
 type (
 	nDCConflictResolverSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller       *gomock.Controller
 		mockContext      *MockworkflowExecutionContext
@@ -66,6 +68,8 @@ func TestNDCConflictResolverSuite(t *testing.T) {
 }
 
 func (s *nDCConflictResolverSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockService = service.NewTestService(

@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -45,6 +46,7 @@ import (
 type (
 	nDCWorkflowResetterSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller              *gomock.Controller
 		mockBaseMutableState    *MockmutableState
@@ -74,6 +76,8 @@ func TestNDCWorkflowResetterSuite(t *testing.T) {
 }
 
 func (s *nDCWorkflowResetterSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 	s.mockBaseMutableState = NewMockmutableState(s.controller)
 	s.mockRebuiltMutableState = NewMockmutableState(s.controller)

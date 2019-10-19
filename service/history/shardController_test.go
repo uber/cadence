@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client"
@@ -47,6 +48,8 @@ import (
 type (
 	shardControllerSuite struct {
 		suite.Suite
+		*require.Assertions
+
 		hostInfo                *membership.HostInfo
 		controller              *shardController
 		mockShardManager        *mmocks.ShardManager
@@ -72,6 +75,8 @@ func TestShardControllerSuite(t *testing.T) {
 }
 
 func (s *shardControllerSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.config = NewDynamicConfigForTest()
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)

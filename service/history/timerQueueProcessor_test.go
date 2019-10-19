@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -48,6 +49,7 @@ import (
 type (
 	timerQueueProcessorSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller         *gomock.Controller
 		mockMatchingClient *matchingservicetest.MockClient
@@ -61,7 +63,6 @@ type (
 		mockVisibilityMgr *mocks.VisibilityManager
 
 		mockClusterMetadata *mocks.ClusterMetadata
-		mockEventsCache     *MockEventsCache
 	}
 )
 
@@ -71,6 +72,7 @@ func TestTimerQueueProcessorSuite(t *testing.T) {
 }
 
 func (s *timerQueueProcessorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
 	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)

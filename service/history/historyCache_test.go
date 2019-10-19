@@ -47,12 +47,10 @@ import (
 type (
 	historyCacheSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller *gomock.Controller
 
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
 		logger              log.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockClusterMetadata *mocks.ClusterMetadata
@@ -79,6 +77,8 @@ func (s *historyCacheSuite) TearDownSuite() {
 }
 
 func (s *historyCacheSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)

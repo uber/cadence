@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -48,6 +49,9 @@ import (
 
 type (
 	replicatorQueueProcessorSuite struct {
+		suite.Suite
+		*require.Assertions
+
 		controller       *gomock.Controller
 		mockMutableState *MockmutableState
 
@@ -62,7 +66,6 @@ type (
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 
-		suite.Suite
 		replicatorQueueProcessor *replicatorQueueProcessorImpl
 	}
 )
@@ -81,6 +84,8 @@ func (s *replicatorQueueProcessorSuite) TearDownSuite() {
 }
 
 func (s *replicatorQueueProcessorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 	s.mockMutableState = NewMockmutableState(s.controller)
 

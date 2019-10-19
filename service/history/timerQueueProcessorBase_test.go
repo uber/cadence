@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -48,6 +49,9 @@ import (
 
 type (
 	timerQueueProcessorBaseSuite struct {
+		suite.Suite
+		*require.Assertions
+
 		clusterName string
 		logger      log.Logger
 
@@ -70,7 +74,6 @@ type (
 		scope            int
 		notificationChan chan struct{}
 
-		suite.Suite
 		timerQueueProcessor *timerQueueProcessorBase
 	}
 )
@@ -89,6 +92,8 @@ func (s *timerQueueProcessorBaseSuite) TearDownSuite() {
 }
 
 func (s *timerQueueProcessorBaseSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 	s.mockWorkflowExecutionContext = NewMockworkflowExecutionContext(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)

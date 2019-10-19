@@ -58,15 +58,14 @@ import (
 type (
 	engineSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller               *gomock.Controller
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
+		mockEventsCache          *MockeventsCache
 
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
 		mockHistoryEngine   *historyEngineImpl
 		mockArchivalClient  *archiver.ClientMock
 		mockMatchingClient  *matchingservicetest.MockClient
@@ -79,7 +78,6 @@ type (
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
 		mockClientBean      *client.MockClientBean
-		mockEventsCache     *MockEventsCache
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockMetricClient    metrics.Client
@@ -202,16 +200,17 @@ func (s *engineSuite) TearDownSuite() {
 }
 
 func (s *engineSuite) SetupTest() {
-	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
 	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
+	s.mockEventsCache = NewMockeventsCache(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
@@ -235,7 +234,6 @@ func (s *engineSuite) SetupTest() {
 		nil,
 		nil,
 		nil)
-	s.mockEventsCache = &MockEventsCache{}
 
 	historyEventNotifier := newHistoryEventNotifier(
 		clock.NewRealTimeSource(),

@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -46,6 +47,7 @@ import (
 type (
 	nDCWorkflowSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller       *gomock.Controller
 		mockContext      *MockworkflowExecutionContext
@@ -69,6 +71,8 @@ func TestNDCWorkflowSuite(t *testing.T) {
 }
 
 func (s *nDCWorkflowSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 	s.mockContext = NewMockworkflowExecutionContext(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)

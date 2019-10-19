@@ -26,9 +26,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -47,10 +48,13 @@ import (
 
 type (
 	stateBuilderSuite struct {
+		suite.Suite
+		*require.Assertions
+
 		controller       *gomock.Controller
+		mockEventsCache  *MockeventsCache
 		mockMutableState *MockmutableState
 
-		suite.Suite
 		logger              log.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockShardManager    *mocks.ShardManager
@@ -61,7 +65,6 @@ type (
 		mockService         service.Service
 		mockShard           *shardContextImpl
 		mockClientBean      *client.MockClientBean
-		mockEventsCache     *MockEventsCache
 
 		sourceCluster string
 
@@ -83,8 +86,12 @@ func (s *stateBuilderSuite) TearDownSuite() {
 }
 
 func (s *stateBuilderSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
+	s.mockEventsCache = NewMockeventsCache(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)
+	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -96,7 +103,6 @@ func (s *stateBuilderSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil, nil)
-	s.mockEventsCache = &MockEventsCache{}
 
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
@@ -128,7 +134,6 @@ func (s *stateBuilderSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
-	s.mockEventsCache.AssertExpectations(s.T())
 }
 
 func (s *stateBuilderSuite) mockUpdateVersion(events ...*shared.HistoryEvent) {
@@ -454,7 +459,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
-	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
 
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(
 		testDomainID, requestID, execution,

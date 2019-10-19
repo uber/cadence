@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -39,6 +40,7 @@ import (
 type (
 	nDCEventReapplicationSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller *gomock.Controller
 
@@ -52,6 +54,8 @@ func TestNDCEventReapplicationSuite(t *testing.T) {
 }
 
 func (s *nDCEventReapplicationSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 
 	logger := loggerimpl.NewDevelopmentForTest(s.Suite)

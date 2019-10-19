@@ -29,6 +29,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -58,6 +59,7 @@ const (
 type (
 	historyReplicatorSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller               *gomock.Controller
 		mockWorkflowResetor      *MockworkflowResetor
@@ -95,6 +97,8 @@ func (s *historyReplicatorSuite) TearDownSuite() {
 }
 
 func (s *historyReplicatorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 	s.mockWorkflowResetor = NewMockworkflowResetor(s.controller)
 	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)

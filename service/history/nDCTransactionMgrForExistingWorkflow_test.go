@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -40,6 +41,7 @@ import (
 type (
 	nDCTransactionMgrForExistingWorkflowSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller         *gomock.Controller
 		mockTransactionMgr *MocknDCTransactionMgr
@@ -58,6 +60,8 @@ func TestNDCTransactionMgrForExistingWorkflowSuite(t *testing.T) {
 }
 
 func (s *nDCTransactionMgrForExistingWorkflowSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil, nil)

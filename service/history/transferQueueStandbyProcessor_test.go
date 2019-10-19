@@ -27,6 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
@@ -52,6 +53,7 @@ import (
 type (
 	transferQueueStandbyProcessorSuite struct {
 		suite.Suite
+		*require.Assertions
 
 		controller               *gomock.Controller
 		mockTxProcessor          *MocktransferQueueProcessor
@@ -98,6 +100,8 @@ func (s *transferQueueStandbyProcessorSuite) SetupSuite() {
 }
 
 func (s *transferQueueStandbyProcessorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
 	s.controller = gomock.NewController(s.T())
 	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
