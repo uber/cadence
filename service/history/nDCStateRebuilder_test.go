@@ -153,9 +153,8 @@ func (s *nDCStateRebuilderSuite) TestApplyEvents() {
 
 	workflowIdentifier := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID)
 
-	mockStateBuilder := &mockStateBuilder{}
-	defer mockStateBuilder.AssertExpectations(s.T())
-	mockStateBuilder.On("applyEvents",
+	mockStateBuilder := NewMockstateBuilder(s.controller)
+	mockStateBuilder.EXPECT().applyEvents(
 		s.domainID,
 		requestID,
 		shared.WorkflowExecution{
@@ -165,7 +164,7 @@ func (s *nDCStateRebuilderSuite) TestApplyEvents() {
 		events,
 		[]*shared.HistoryEvent(nil),
 		true,
-	).Return(nil, nil, nil, nil).Once()
+	).Return(nil, nil, nil, nil).Times(1)
 
 	err := s.nDCStateRebuilder.applyEvents(workflowIdentifier, mockStateBuilder, events, requestID)
 	s.NoError(err)

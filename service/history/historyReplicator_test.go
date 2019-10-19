@@ -66,6 +66,7 @@ type (
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
+		mockStateBuilder         *MockstateBuilder
 
 		logger              log.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
@@ -104,6 +105,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
+	s.mockStateBuilder = NewMockstateBuilder(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
@@ -1891,7 +1893,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -1977,7 +1979,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2009,7 +2011,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2091,7 +2093,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Equal(errRet, err)
 }
 
@@ -2123,7 +2125,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2211,7 +2213,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2252,7 +2254,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2364,7 +2366,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2396,7 +2398,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2500,7 +2502,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2532,7 +2534,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2636,7 +2638,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2668,7 +2670,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2784,7 +2786,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		// other attributes are not used
 	}, nil)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2820,7 +2822,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -2960,7 +2962,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -2996,7 +2998,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -3148,7 +3150,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -3180,7 +3182,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -3302,7 +3304,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Equal(newRetryTaskErrorWithHint(ErrRetryExistingWorkflowMsg, domainID, workflowID, currentRunID, currentNextEventID), err)
 }
 
@@ -3335,7 +3337,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -3458,7 +3460,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		), nil,
 	)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -3499,7 +3501,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		DecisionTimeout: decisionTimeout,
 		TaskList:        tasklist,
 	}
-	sBuilder := &mockStateBuilder{}
+
 	requestID := uuid.New()
 	now := time.Now()
 	history := &shared.History{
@@ -3643,7 +3645,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	).Return(&workflow.HistoryEvent{}, nil).Times(1)
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
-	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
 }
 
