@@ -121,7 +121,7 @@ func (s *nDCStateRebuilderSuite) TearDownTest() {
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockEventsCache.AssertExpectations(s.T())
-	// s.controller.Finish()
+	s.controller.Finish()
 }
 
 func (s *nDCStateRebuilderSuite) TestInitializeBuilders() {
