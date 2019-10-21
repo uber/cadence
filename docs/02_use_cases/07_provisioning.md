@@ -6,6 +6,7 @@ a lot of possibilities for intermittent failures. The scale is also a concern wh
 A lot of operations require some sort of locking to ensure that no more than one mutation is executed on a resource at a time.
 Cadence provides strong guarantees of uniqueness by business ID. This can be used to implement such locking behavior in a fault tolerant and scalable manner.
 
-A real-world use case:
+Some real-world use cases:
 
- * [Using Cadence workflows to spin up Kubernetes by Banzai Cloud](https://banzaicloud.com/blog/introduction-to-cadence/)
+ * [Using Cadence workflows to spin up Kubernetes, by Banzai Cloud](https://banzaicloud.com/blog/introduction-to-cadence/)
+ * [Using Cadence to orchestrate cluster life cycle in HashiCorp Consul, by HashiCorp](https://www.youtube.com/watch?v=kDlrM6sgk2k&feature=youtu.be&t=1188)
