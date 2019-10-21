@@ -2093,6 +2093,12 @@ func (d *cassandraPersistence) GetReplicationTasks(
 		request.MaxReadLevel,
 	).PageSize(request.BatchSize).PageState(request.NextPageToken)
 
+	return d.populateGetReplicationTasksResponse(query)
+}
+
+func (d *cassandraPersistence) populateGetReplicationTasksResponse(
+	query *gocql.Query,
+) (*p.GetReplicationTasksResponse, error) {
 	iter := query.Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
@@ -2735,4 +2741,22 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(request *p.PutReplication
 	}
 
 	return nil
+}
+
+func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
+	request *p.GetReplicationTasksFromDLQRequest,
+) (*p.GetReplicationTasksFromDLQResponse, error) {
+	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
+	query := d.session.Query(templateGetReplicationTasksQuery,
+		d.shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		request.SourceClusterName,
+		rowTypeDLQRunID,
+		defaultVisibilityTimestamp,
+		request.ReadLevel,
+		request.ReadLevel+int64(request.BatchSize),
+	).PageSize(request.BatchSize).PageState(request.NextPageToken)
+
+	return d.populateGetReplicationTasksResponse(query)
 }

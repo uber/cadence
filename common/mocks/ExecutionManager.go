@@ -321,6 +321,29 @@ func (_m *ExecutionManager) PutReplicationTaskToDLQ(request *persistence.PutRepl
 	return r0
 }
 
+// GetReplicationTasksFromDLQ provides a mock function with given fields: request
+func (_m *ExecutionManager) GetReplicationTasksFromDLQ(request *persistence.GetReplicationTasksFromDLQRequest) (*persistence.GetReplicationTasksFromDLQResponse, error) {
+	ret := _m.Called(request)
+
+	var r0 *persistence.GetReplicationTasksFromDLQResponse
+	if rf, ok := ret.Get(0).(func(*persistence.GetReplicationTasksFromDLQRequest) *persistence.GetReplicationTasksFromDLQResponse); ok {
+		r0 = rf(request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.GetReplicationTasksFromDLQResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.GetReplicationTasksFromDLQRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTimerIndexTasks provides a mock function with given fields: request
 func (_m *ExecutionManager) GetTimerIndexTasks(request *persistence.GetTimerIndexTasksRequest) (*persistence.GetTimerIndexTasksResponse, error) {
 	ret := _m.Called(request)

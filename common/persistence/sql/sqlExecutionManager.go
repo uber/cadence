@@ -908,37 +908,49 @@ func (m *sqlExecutionManager) GetReplicationTasks(
 	request *p.GetReplicationTasksRequest,
 ) (*p.GetReplicationTasksResponse, error) {
 
-	var readLevel int64
-	var maxReadLevelInclusive int64
-	var err error
-	if len(request.NextPageToken) > 0 {
-		readLevel, err = deserializePageToken(request.NextPageToken)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		readLevel = request.ReadLevel
-	}
-	maxReadLevelInclusive = collection.MaxInt64(
-		readLevel+int64(request.BatchSize), request.MaxReadLevel)
-
-	rows, err := m.db.SelectFromReplicationTasks(&sqldb.ReplicationTasksFilter{
-		ShardID:   m.shardID,
-		MinTaskID: &readLevel,
-		MaxTaskID: &maxReadLevelInclusive,
-		PageSize:  &request.BatchSize,
-	})
+	readLevel, maxReadLevelInclusive, err := getReadLevels(request)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
-			}
+		return nil, err
+	}
+
+	rows, err := m.db.SelectFromReplicationTasks(
+		&sqldb.ReplicationTasksFilter{
+			ShardID:   m.shardID,
+			MinTaskID: readLevel,
+			MaxTaskID: maxReadLevelInclusive,
+			PageSize:  request.BatchSize,
+		})
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
 		}
 	}
+
 	if len(rows) == 0 {
 		return &p.GetReplicationTasksResponse{}, nil
 	}
 
+	return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
+}
+
+func getReadLevels(request *p.GetReplicationTasksRequest) (readLevel int64, maxReadLevelInclusive int64, err error) {
+	readLevel = request.ReadLevel
+	if len(request.NextPageToken) > 0 {
+		readLevel, err = deserializePageToken(request.NextPageToken)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	maxReadLevelInclusive = collection.MaxInt64(readLevel+int64(request.BatchSize), request.MaxReadLevel)
+	return readLevel, maxReadLevelInclusive, nil
+}
+
+func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
+	rows []sqldb.ReplicationTasksRow,
+	requestMaxReadLevel int64,
+) (*p.GetReplicationTasksResponse, error) {
 	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
 	for i, row := range rows {
 		info, err := replicationTaskInfoFromBlob(row.Data, row.DataEncoding)
@@ -972,7 +984,7 @@ func (m *sqlExecutionManager) GetReplicationTasks(
 	}
 	var nextPageToken []byte
 	lastTaskID := rows[len(rows)-1].TaskID
-	if lastTaskID < request.MaxReadLevel {
+	if lastTaskID < requestMaxReadLevel {
 		nextPageToken = serializePageToken(lastTaskID)
 	}
 	return &p.GetReplicationTasksResponse{
@@ -985,15 +997,45 @@ func (m *sqlExecutionManager) CompleteReplicationTask(
 	request *p.CompleteReplicationTaskRequest,
 ) error {
 
-	if _, err := m.db.DeleteFromReplicationTasks(&sqldb.ReplicationTasksFilter{
-		ShardID: m.shardID,
-		TaskID:  &request.TaskID,
-	}); err != nil {
+	if _, err := m.db.DeleteFromReplicationTasks(m.shardID, int(request.TaskID)); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
 		}
 	}
 	return nil
+}
+
+func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
+	request *p.GetReplicationTasksFromDLQRequest,
+) (*p.GetReplicationTasksFromDLQResponse, error) {
+
+	readLevel, maxReadLevelInclusive, err := getReadLevels(&request.GetReplicationTasksRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := sqldb.ReplicationTasksFilter{
+		ShardID:   m.shardID,
+		MinTaskID: readLevel,
+		MaxTaskID: maxReadLevelInclusive,
+		PageSize:  request.BatchSize,
+	}
+	rows, err := m.db.SelectFromReplicationTasksDLQ(&sqldb.ReplicationTasksDLQFilter{
+		ReplicationTasksFilter: filter,
+		SourceClusterName:      request.SourceClusterName,
+	})
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
+			}
+		}
+	}
+	if len(rows) == 0 {
+		return &p.GetReplicationTasksResponse{}, nil
+	}
+
+	return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
 }
 
 type timerTaskPageToken struct {

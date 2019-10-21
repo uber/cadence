@@ -819,6 +819,12 @@ func (m *executionManagerImpl) PutReplicationTaskToDLQ(
 	return m.persistence.PutReplicationTaskToDLQ(request)
 }
 
+func (m *executionManagerImpl) GetReplicationTasksFromDLQ(
+	request *GetReplicationTasksFromDLQRequest,
+) (*GetReplicationTasksFromDLQResponse, error) {
+	return m.persistence.GetReplicationTasksFromDLQ(request)
+}
+
 // Timer related methods.
 func (m *executionManagerImpl) GetTimerIndexTasks(
 	request *GetTimerIndexTasksRequest,

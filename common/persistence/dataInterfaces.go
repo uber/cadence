@@ -966,6 +966,15 @@ type (
 		TaskInfo          *ReplicationTaskInfo
 	}
 
+	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq
+	GetReplicationTasksFromDLQRequest struct {
+		SourceClusterName string
+		GetReplicationTasksRequest
+	}
+
+	// GetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
+	GetReplicationTasksFromDLQResponse = GetReplicationTasksResponse
+
 	// RangeCompleteTimerTaskRequest is used to complete a range of tasks in the timer task queue
 	RangeCompleteTimerTaskRequest struct {
 		InclusiveBeginTimestamp time.Time
@@ -1507,6 +1516,7 @@ type (
 		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
 		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
 		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
+		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
