@@ -35,8 +35,8 @@ const (
 )
 
 var (
-	errQueryResultIsNil = &shared.InternalServiceError{Message: "query result is nil"}
-	errQueryResultIsInvalid = &shared.InternalServiceError{Message: "query result is invalid"}
+	errQueryResultIsNil      = &shared.InternalServiceError{Message: "query result is nil"}
+	errQueryResultIsInvalid  = &shared.InternalServiceError{Message: "query result is invalid"}
 	errQueryAlreadyCompleted = &shared.InternalServiceError{Message: "query already completed"}
 )
 
@@ -50,9 +50,9 @@ type (
 	}
 
 	queryImpl struct {
-		id          string
-		queryInput  *shared.WorkflowQuery
-		termCh      chan struct{}
+		id         string
+		queryInput *shared.WorkflowQuery
+		termCh     chan struct{}
 
 		sync.RWMutex
 		queryResult *shared.WorkflowQueryResult
