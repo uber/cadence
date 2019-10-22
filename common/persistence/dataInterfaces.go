@@ -2511,6 +2511,7 @@ func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID st
 	return
 }
 
+// NewGetReplicationTasksFromDLQRequest creates a new GetReplicationTasksFromDLQRequest
 func NewGetReplicationTasksFromDLQRequest(
 	sourceClusterName string,
 	readLevel int64,

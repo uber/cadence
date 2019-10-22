@@ -72,7 +72,7 @@ type (
 		versionIncrement            int64
 		mockFrontendClient          map[string]frontend.Client
 		standByReplicationTasksChan chan *replicator.ReplicationTask
-		standByTaskId               int64
+		standByTaskID               int64
 	}
 )
 
@@ -115,40 +115,11 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 
 	s.standByReplicationTasksChan = make(chan *replicator.ReplicationTask, 100)
 
-	s.standByTaskId = 0
+	s.standByTaskID = 0
 	s.mockFrontendClient = make(map[string]frontend.Client)
 	controller := gomock.NewController(s.T())
 	mockStandbyClient := workflowservicetest.NewMockClient(controller)
-	mockStandbyClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, Request *replicator.GetReplicationMessagesRequest, opts ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error) {
-			select {
-			case task := <-s.standByReplicationTasksChan:
-				taskId := atomic.AddInt64(&s.standByTaskId, 1)
-				task.SourceTaskId = common.Int64Ptr(taskId)
-				tasks := []*replicator.ReplicationTask{task}
-				for len(s.standByReplicationTasksChan) > 0 {
-					task = <-s.standByReplicationTasksChan
-					taskId := atomic.AddInt64(&s.standByTaskId, 1)
-					task.SourceTaskId = common.Int64Ptr(taskId)
-					tasks = append(tasks, task)
-				}
-
-				replicationMessage := &replicator.ReplicationMessages{
-					ReplicationTasks:      tasks,
-					LastRetrivedMessageId: tasks[len(tasks)-1].SourceTaskId,
-					HasMore:               common.BoolPtr(true),
-				}
-
-				return &replicator.GetReplicationMessagesResponse{
-					MessagesByShard: map[int32]*replicator.ReplicationMessages{0: replicationMessage},
-				}, nil
-			default:
-				return &replicator.GetReplicationMessagesResponse{
-					MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
-				}, nil
-			}
-
-		}).AnyTimes()
+	mockStandbyClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).DoAndReturn(s.GetReplicationMessagesMock).AnyTimes()
 	mockOtherClient := workflowservicetest.NewMockClient(controller)
 	mockOtherClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).Return(&replicator.GetReplicationMessagesResponse{
 		MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
@@ -166,6 +137,39 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 	s.version = clusterConfigs[1].ClusterMetadata.ClusterInformation[clusterConfigs[1].ClusterMetadata.CurrentClusterName].InitialFailoverVersion
 	s.versionIncrement = clusterConfigs[0].ClusterMetadata.FailoverVersionIncrement
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, s.version)
+}
+
+func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
+	ctx context.Context,
+	request *replicator.GetReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetReplicationMessagesResponse, error) {
+	select {
+	case task := <-s.standByReplicationTasksChan:
+		taskID := atomic.AddInt64(&s.standByTaskID, 1)
+		task.SourceTaskId = common.Int64Ptr(taskID)
+		tasks := []*replicator.ReplicationTask{task}
+		for len(s.standByReplicationTasksChan) > 0 {
+			task = <-s.standByReplicationTasksChan
+			taskID := atomic.AddInt64(&s.standByTaskID, 1)
+			task.SourceTaskId = common.Int64Ptr(taskID)
+			tasks = append(tasks, task)
+		}
+
+		replicationMessage := &replicator.ReplicationMessages{
+			ReplicationTasks:      tasks,
+			LastRetrivedMessageId: tasks[len(tasks)-1].SourceTaskId,
+			HasMore:               common.BoolPtr(true),
+		}
+
+		return &replicator.GetReplicationMessagesResponse{
+			MessagesByShard: map[int32]*replicator.ReplicationMessages{0: replicationMessage},
+		}, nil
+	default:
+		return &replicator.GetReplicationMessagesResponse{
+			MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
+		}, nil
+	}
 }
 
 func (s *nDCIntegrationTestSuite) SetupTest() {

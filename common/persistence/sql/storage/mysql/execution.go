@@ -315,7 +315,7 @@ func (mdb *DB) DeleteFromReplicationTasks(shardID, taskID int) (sql.Result, erro
 	return mdb.conn.Exec(deleteReplicationTaskQry, shardID, taskID)
 }
 
-// InsertIntoReplicationTasks inserts one or more rows into replication_tasks_dlq table
+// InsertIntoReplicationTasksDLQ inserts one or more rows into replication_tasks_dlq table
 func (mdb *DB) InsertIntoReplicationTasksDLQ(row *sqldb.ReplicationTaskDLQRow) (sql.Result, error) {
 	return mdb.conn.NamedExec(insertReplicationTaskDLQQry, row)
 }

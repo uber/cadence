@@ -570,7 +570,7 @@ const (
 	ReplicationTaskProcessorErrorRetryWait
 	// ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks
 	ReplicationTaskProcessorErrorRetryMaxAttempts
-	// ReplicationTaskProcessorNoTaskRetryWait is the wait time when not ask is returned
+	// ReplicationTaskProcessorNoTaskInitialWait is the wait time when not ask is returned
 	ReplicationTaskProcessorNoTaskInitialWait
 
 	// lastKeyForTest must be the last one in this const group for testing purpose

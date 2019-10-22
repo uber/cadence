@@ -274,6 +274,7 @@ func (tc *TestCluster) GetHistoryClient() HistoryClient {
 	return tc.host.GetHistoryClient()
 }
 
+// GetReplicationTasksFromDLQ returns all replication tasks from DLQ
 func (tc *TestCluster) GetReplicationTasksFromDLQ(
 	sourceClusterName string,
 ) ([]*persistence.ReplicationTaskInfo, error) {
