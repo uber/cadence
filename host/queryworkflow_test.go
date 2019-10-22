@@ -553,9 +553,9 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 }
 
 func (s *integrationSuite) TestQueryWorkflow_Consistent() {
-	id := "interation-query-workflow-test-non-sticky"
-	wt := "interation-query-workflow-test-non-sticky-type"
-	tl := "interation-query-workflow-test-non-sticky-tasklist"
+	id := "interation-query-workflow-test-consistent"
+	wt := "interation-query-workflow-test-consistent-type"
+	tl := "interation-query-workflow-test-consistent-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 	queryType := "test-query"
