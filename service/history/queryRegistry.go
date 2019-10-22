@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	errQueryNotExists =  &shared.InternalServiceError{Message: "query does not exist"}
+	errQueryNotExists = &shared.InternalServiceError{Message: "query does not exist"}
 )
 
 type (
