@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -704,6 +705,11 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent() {
 	// call QueryWorkflow in separate goroutine (because it is blocking). That will generate a query task
 	// notice that the query comes after signal here but is consistent so it should reflect the state of the signal having been applied
 	go queryWorkflowFn(queryType, nil)
+	// ensure query has had enough time to at least start before a decision task is polled
+	// if the decision task containing the signal is polled before query is started it will not impact
+	// correctness but it will mean query will be able to be dispatched directly after signal
+	// without being attached to the decision task signal is on
+	<-time.After(time.Second)
 
 	isQueryTask, _, errInner := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(
 		false,
