@@ -640,7 +640,7 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 			Query:     &workflow.WorkflowQuery{},
 			// since workflow is open this filter does not reject query
 			QueryRejectCondition:  common.QueryRejectConditionPtr(workflow.QueryRejectConditionNotOpen),
-			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
+			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelEventual),
 		},
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
