@@ -23,7 +23,6 @@
 package history
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -33,6 +32,12 @@ import (
 const (
 	queryStateBuffered queryState = iota
 	queryStateCompleted
+)
+
+var (
+	errQueryResultIsNil = &shared.InternalServiceError{Message: "query result is nil"}
+	errQueryResultIsInvalid = &shared.InternalServiceError{Message: "query result is invalid"}
+	errQueryAlreadyCompleted = &shared.InternalServiceError{Message: "query already completed"}
 )
 
 type (
@@ -45,12 +50,12 @@ type (
 	}
 
 	queryImpl struct {
-		sync.RWMutex
-
 		id          string
 		queryInput  *shared.WorkflowQuery
-		queryResult *shared.WorkflowQueryResult
 		termCh      chan struct{}
+
+		sync.RWMutex
+		queryResult *shared.WorkflowQueryResult
 		state       queryState
 	}
 
@@ -85,18 +90,18 @@ func (q *queryImpl) getQuerySnapshot() *querySnapshot {
 }
 
 func (q *queryImpl) getQueryTermCh() <-chan struct{} {
-	q.RLock()
-	defer q.RUnlock()
-
 	return q.termCh
 }
 
-func (q *queryImpl) completeQuery(queryResult *shared.WorkflowQueryResult) error {
+func (q *queryImpl) completeQuery(
+	queryResult *shared.WorkflowQueryResult,
+) error {
+
 	q.Lock()
 	defer q.Unlock()
 
 	if q.state == queryStateCompleted {
-		return errors.New("query already completed")
+		return errQueryAlreadyCompleted
 	}
 	if err := validateQueryResult(queryResult); err != nil {
 		return err
@@ -107,14 +112,25 @@ func (q *queryImpl) completeQuery(queryResult *shared.WorkflowQueryResult) error
 	return nil
 }
 
-func validateQueryResult(queryResult *shared.WorkflowQueryResult) error {
+func validateQueryResult(
+	queryResult *shared.WorkflowQueryResult,
+) error {
+
 	if queryResult == nil {
-		return errors.New("query result is nil")
+		return errQueryResultIsNil
 	}
-	validAnswered := queryResult.GetResultType().Equals(shared.QueryResultTypeAnswered) && queryResult.Answer != nil && queryResult.ErrorDetails == nil && queryResult.ErrorReason == nil
-	validFailed := queryResult.GetResultType().Equals(shared.QueryResultTypeFailed) && queryResult.Answer == nil && queryResult.ErrorDetails != nil && queryResult.ErrorReason != nil
+	validAnswered := queryResult.GetResultType().Equals(shared.QueryResultTypeAnswered) &&
+		queryResult.Answer != nil &&
+		queryResult.ErrorDetails == nil &&
+		queryResult.ErrorReason == nil
+
+	validFailed := queryResult.GetResultType().Equals(shared.QueryResultTypeFailed) &&
+		queryResult.Answer == nil &&
+		queryResult.ErrorDetails != nil &&
+		queryResult.ErrorReason != nil
+
 	if !validAnswered && !validFailed {
-		return errors.New("invalid query result")
+		return errQueryResultIsInvalid
 	}
 	return nil
 }

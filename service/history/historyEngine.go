@@ -746,15 +746,15 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
-	defer release(retErr)
-	ms, err := context.loadWorkflowExecution()
+	defer func() { release(retErr) }()
+	mutableState, err := context.loadWorkflowExecution()
 	if err != nil {
 		return nil, err
 	}
 	req := request.GetRequest()
-	if !ms.IsWorkflowExecutionRunning() && req.QueryRejectCondition != nil {
+	if !mutableState.IsWorkflowExecutionRunning() && req.QueryRejectCondition != nil {
 		notOpenReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotOpen
-		_, closeStatus := ms.GetWorkflowStateCloseStatus()
+		_, closeStatus := mutableState.GetWorkflowStateCloseStatus()
 		notCompletedCleanlyReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotCompletedCleanly && closeStatus != persistence.WorkflowCloseStatusCompleted
 		if notOpenReject || notCompletedCleanlyReject {
 			return &h.QueryWorkflowResponse{
@@ -786,9 +786,9 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// 3. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
 	// 4. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
 	safeToDispatchDirectly := !de.IsDomainActive() ||
-		!ms.IsWorkflowExecutionRunning() ||
+		!mutableState.IsWorkflowExecutionRunning() ||
 		req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual ||
-		(!ms.HasPendingDecision() && !ms.HasInFlightDecision())
+		(!mutableState.HasPendingDecision() && !mutableState.HasInFlightDecision())
 	if safeToDispatchDirectly {
 		release(nil)
 		msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
@@ -803,20 +803,20 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	// If we get here it means query could not be dispatched through matching directly, so it must be buffered to be dispatched on the next decision task.
 	// There is a hard guarantee in the system that at this point a new decision task will get generated.
-	qr := ms.GetQueryRegistry()
-	queryID, termCh := qr.bufferQuery(req.GetQuery())
+	queryReg := mutableState.GetQueryRegistry()
+	queryID, termCh := queryReg.bufferQuery(req.GetQuery())
 	ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
 	timer := time.NewTimer(ttl)
 	defer func() {
 		timer.Stop()
-		qr.removeQuery(queryID)
+		queryReg.removeQuery(queryID)
 	}()
 	release(nil)
 	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
 	defer sw.Stop()
 	select {
 	case <-termCh:
-		querySnapshot, err := qr.getQuerySnapshot(queryID)
+		querySnapshot, err := queryReg.getQuerySnapshot(queryID)
 		if err != nil {
 			return nil, err
 		}
