@@ -767,9 +767,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 		}
 	}
 
-	execInfo := ms.GetExecutionInfo()
-	clientFeature := client.NewFeatureImpl(execInfo.ClientLibraryVersion, execInfo.ClientFeatureVersion, execInfo.ClientImpl)
-
 	de, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
 	if err != nil {
 		return nil, err
@@ -786,12 +783,10 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// matching safely, without violating the desired consistency level:
 	// 1. the domain is not active, in this case history is immutable so a query dispatched at any time is consistent
 	// 2. the workflow is not running, whenever a workflow is not running dispatching query directly is consistent
-	// 3. the client does not enable consistent query, in this case the only option is to dispatch directly through matching
-	// 4. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
-	// 5. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
+	// 3. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
+	// 4. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
 	safeToDispatchDirectly := !de.IsDomainActive() ||
 		!ms.IsWorkflowExecutionRunning() ||
-		!clientFeature.SupportConsistentQuery() ||
 		req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual ||
 		(!ms.HasPendingDecision() && !ms.HasInFlightDecision())
 	if safeToDispatchDirectly {
@@ -802,7 +797,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		}
 		sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 		defer sw.Stop()
-		mresp, err := e.queryDirectlyThroughMatching(ctx, msResp, clientFeature, request.GetDomainUUID(), req)
+		mresp, err := e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
 		return mresp, err
 	}
 
@@ -849,7 +844,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	ctx ctx.Context,
 	msResp *h.GetMutableStateResponse,
-	clientFeature client.Feature,
 	domainID string,
 	queryRequest *workflow.QueryWorkflowRequest,
 ) (*h.QueryWorkflowResponse, error) {
@@ -857,6 +851,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		DomainUUID:   common.StringPtr(domainID),
 		QueryRequest: queryRequest,
 	}
+	clientFeature := client.NewFeatureImpl(msResp.GetClientLibraryVersion(), msResp.GetClientFeatureVersion(), msResp.GetClientImpl())
 	if len(msResp.GetStickyTaskList().GetName()) != 0 && clientFeature.SupportStickyQuery() {
 		matchingRequest.TaskList = msResp.StickyTaskList
 		// using a clean new context in case customer provide a context which has

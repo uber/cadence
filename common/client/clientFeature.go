@@ -31,11 +31,6 @@ const (
 
 	versionDelim = "."
 	versionLen   = 3
-
-	// TestMajorVersion is a version used to disable a feature because client does not support it yet, but still make testing possible
-	TestMajorVersion = 10000
-	// TestVersionStr is a version used to disable a feature because client does not support it yet, but still make testing possible
-	TestVersionStr = "10001.0.0"
 )
 
 var defaultVersion = version{0, 0, 0}
@@ -44,7 +39,6 @@ type (
 	// Feature provides information about client's capabilities
 	Feature interface {
 		SupportStickyQuery() bool
-		SupportConsistentQuery() bool
 	}
 
 	// FeatureImpl is used for determining the client's capabilities.
@@ -78,12 +72,6 @@ func NewFeatureImpl(libVersion string, featureVersion string, lang string) *Feat
 // SupportStickyQuery whether a client support sticky query
 func (feature *FeatureImpl) SupportStickyQuery() bool {
 	return feature.featureVersion.major > 0
-}
-
-// SupportConsistentQuery whether a client supports consistent query
-func (feature *FeatureImpl) SupportConsistentQuery() bool {
-	// TODO: update once client side support for consistent query is released
-	return feature.featureVersion.major > TestMajorVersion
 }
 
 func parseVersion(versionStr string) version {
