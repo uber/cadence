@@ -816,11 +816,11 @@ func (e *historyEngineImpl) QueryWorkflow(
 	defer sw.Stop()
 	select {
 	case <-termCh:
-		querySnapshot, err := queryReg.getQuerySnapshot(queryID)
+		state, err := queryReg.getQueryInternalState(queryID)
 		if err != nil {
 			return nil, err
 		}
-		result := querySnapshot.queryResult
+		result := state.queryResult
 		switch result.GetResultType() {
 		case workflow.QueryResultTypeAnswered:
 			return &h.QueryWorkflowResponse{

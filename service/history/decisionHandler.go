@@ -647,11 +647,11 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	buffered := qr.getBufferedSnapshot()
 	queries := make(map[string]*workflow.WorkflowQuery)
 	for _, id := range buffered {
-		snapshot, err := qr.getQuerySnapshot(id)
+		state, err := qr.getQueryInternalState(id)
 		if err != nil {
 			continue
 		}
-		queries[snapshot.id] = snapshot.queryInput
+		queries[state.id] = state.queryInput
 	}
 	response.Queries = queries
 	return response, nil

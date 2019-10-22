@@ -727,9 +727,9 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 				Answer:     answer,
 			})
 			s.NoError(err)
-			querySnapshot, err := qr.getQuerySnapshot(id)
+			state, err := qr.getQueryInternalState(id)
 			s.NoError(err)
-			s.Equal(queryStateCompleted, querySnapshot.state)
+			s.Equal(queryStateCompleted, state.state)
 		}
 		waitGroup.Done()
 	}
@@ -4167,16 +4167,16 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
 	s.True(executionBuilder.HasPendingDecision()) // ensure new decision task was created
 	s.Len(qr.getCompletedSnapshot(), 2)
-	completed1, err := qr.getQuerySnapshot(id1)
+	completed1, err := qr.getQueryInternalState(id1)
 	s.NoError(err)
 	s.True(result1.Equals(completed1.queryResult))
 	s.Equal(queryStateCompleted, completed1.state)
-	completed2, err := qr.getQuerySnapshot(id2)
+	completed2, err := qr.getQueryInternalState(id2)
 	s.NoError(err)
 	s.True(result2.Equals(completed2.queryResult))
 	s.Equal(queryStateCompleted, completed2.state)
 	s.Len(qr.getBufferedSnapshot(), 1)
-	buffered1, err := qr.getQuerySnapshot(id3)
+	buffered1, err := qr.getQueryInternalState(id3)
 	s.NoError(err)
 	s.Nil(buffered1.queryResult)
 	s.Equal(queryStateBuffered, buffered1.state)

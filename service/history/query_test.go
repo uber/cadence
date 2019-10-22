@@ -121,7 +121,7 @@ func (s *QuerySuite) TestValidateQueryResult() {
 }
 
 func (s *QuerySuite) assertBufferedState(q query) {
-	snapshot := q.getQuerySnapshot()
+	snapshot := q.getQueryInternalState()
 	s.Equal(queryStateBuffered, snapshot.state)
 	s.NotNil(snapshot.queryInput)
 	s.Nil(snapshot.queryResult)
@@ -130,7 +130,7 @@ func (s *QuerySuite) assertBufferedState(q query) {
 }
 
 func (s *QuerySuite) assertCompletedState(q query) {
-	snapshot := q.getQuerySnapshot()
+	snapshot := q.getQueryInternalState()
 	s.Equal(queryStateCompleted, snapshot.state)
 	s.NotNil(snapshot.queryInput)
 	s.NotNil(snapshot.queryResult)

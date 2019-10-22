@@ -44,7 +44,7 @@ type (
 	queryState int
 
 	query interface {
-		getQuerySnapshot() *querySnapshot
+		getQueryInternalState() *queryInternalState
 		getQueryTermCh() <-chan struct{}
 		completeQuery(*shared.WorkflowQueryResult) error
 	}
@@ -59,7 +59,7 @@ type (
 		state       queryState
 	}
 
-	querySnapshot struct {
+	queryInternalState struct {
 		id          string
 		queryInput  *shared.WorkflowQuery
 		queryResult *shared.WorkflowQueryResult
@@ -77,11 +77,11 @@ func newQuery(queryInput *shared.WorkflowQuery) query {
 	}
 }
 
-func (q *queryImpl) getQuerySnapshot() *querySnapshot {
+func (q *queryImpl) getQueryInternalState() *queryInternalState {
 	q.RLock()
 	defer q.RUnlock()
 
-	return &querySnapshot{
+	return &queryInternalState{
 		id:          q.id,
 		queryInput:  q.queryInput,
 		queryResult: q.queryResult,

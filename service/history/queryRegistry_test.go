@@ -54,10 +54,10 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.assertHasQueries(qr, true, false)
 	s.assertQuerySizes(qr, 10, 0)
 
-	found, err := qr.getQuerySnapshot(ids[0])
+	found, err := qr.getQueryInternalState(ids[0])
 	s.NoError(err)
 	s.NotNil(found)
-	notFound, err := qr.getQuerySnapshot("not_exists")
+	notFound, err := qr.getQueryInternalState("not_exists")
 	s.Error(err)
 	s.Nil(notFound)
 
@@ -72,7 +72,7 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.assertQuerySizes(qr, 5, 5)
 
 	for i := 0; i < 5; i++ {
-		qs, err := qr.getQuerySnapshot(ids[i])
+		qs, err := qr.getQueryInternalState(ids[i])
 		s.NoError(err)
 		s.NotNil(qs)
 		s.Equal(queryStateCompleted, qs.state)

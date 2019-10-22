@@ -40,7 +40,7 @@ type (
 		hasCompleted() bool
 		getCompletedSnapshot() []string
 
-		getQuerySnapshot(string) (*querySnapshot, error)
+		getQueryInternalState(string) (*queryInternalState, error)
 		getQueryTermCh(string) (<-chan struct{}, error)
 
 		bufferQuery(*shared.WorkflowQuery) (string, <-chan struct{})
@@ -91,7 +91,7 @@ func (r *queryRegistryImpl) getCompletedSnapshot() []string {
 	return getIDs(r.completed)
 }
 
-func (r *queryRegistryImpl) getQuerySnapshot(id string) (*querySnapshot, error) {
+func (r *queryRegistryImpl) getQueryInternalState(id string) (*queryInternalState, error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -99,7 +99,7 @@ func (r *queryRegistryImpl) getQuerySnapshot(id string) (*querySnapshot, error) 
 	if err != nil {
 		return nil, err
 	}
-	return q.getQuerySnapshot(), nil
+	return q.getQueryInternalState(), nil
 }
 
 func (r *queryRegistryImpl) getQueryTermCh(id string) (<-chan struct{}, error) {
@@ -118,7 +118,7 @@ func (r *queryRegistryImpl) bufferQuery(queryInput *shared.WorkflowQuery) (strin
 	defer r.Unlock()
 
 	q := newQuery(queryInput)
-	id := q.getQuerySnapshot().id
+	id := q.getQueryInternalState().id
 	r.buffered[id] = q
 	return id, q.getQueryTermCh()
 }
