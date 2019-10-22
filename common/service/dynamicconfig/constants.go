@@ -190,6 +190,13 @@ var keys = map[Key]string{
 	DecisionHeartbeatTimeout:                              "history.decisionHeartbeatTimeout",
 	ParentClosePolicyThreshold:                            "history.parentClosePolicyThreshold",
 	NumParentClosePolicySystemWorkflows:                   "history.numParentClosePolicySystemWorkflows",
+	ReplicationTaskFetcherParallelism:                     "history.ReplicationTaskFetcherParallelism",
+	ReplicationTaskFetcherAggregationInterval:             "history.ReplicationTaskFetcherAggregationInterval",
+	ReplicationTaskFetcherTimerJitterCoefficient:          "history.ReplicationTaskFetcherTimerJitterCoefficient",
+	ReplicationTaskFetcherErrorRetryWait:                  "history.ReplicationTaskFetcherErrorRetryWait",
+	ReplicationTaskProcessorErrorRetryWait:                "history.ReplicationTaskProcessorErrorRetryWait",
+	ReplicationTaskProcessorErrorRetryMaxAttempts:         "history.ReplicationTaskProcessorErrorRetryMaxAttempts",
+	ReplicationTaskProcessorNoTaskInitialWait:             "history.ReplicationTaskProcessorNoTaskInitialWait",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
