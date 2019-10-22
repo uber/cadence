@@ -23,14 +23,13 @@
 package history
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
 var (
-	errQueryNotExists = errors.New("query does not exist")
+	errQueryNotExists =  &shared.InternalServiceError{Message: "query does not exist"}
 )
 
 type (
