@@ -346,10 +346,11 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 
 	for _, task := range timerTasks {
 		if shutdown := t.taskProcessor.addTask(
-			&taskInfo{
-				processor: t.timerProcessor,
-				task:      task,
-			},
+			newTaskInfo(
+				t.timerProcessor,
+				task,
+				initializeLoggerForTask(t.shard.GetShardID(), task, t.logger),
+			),
 		); shutdown {
 			return nil, nil
 		}
@@ -481,6 +482,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
+			DomainName: domainCacheEntry.GetInfo().Name,
 		},
 		CallerService:        common.HistoryServiceName,
 		AttemptArchiveInline: true, // archive inline by default
@@ -492,7 +494,6 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 		}
 		req.AttemptArchiveInline = executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
 		req.ArchiveRequest.ShardID = t.shard.GetShardID()
-		req.ArchiveRequest.DomainName = domainCacheEntry.GetInfo().Name
 		req.ArchiveRequest.BranchToken, err = msBuilder.GetCurrentBranchToken()
 		if err != nil {
 			return err
@@ -599,15 +600,10 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(
 		if err != nil {
 			return err
 		}
-
-		logger := t.logger.WithTags(tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
-			tag.WorkflowDomainID(task.DomainID),
-			tag.ShardID(t.shard.GetShardID()),
-			tag.TaskID(task.GetTaskID()),
-			tag.FailoverVersion(task.GetVersion()),
-			tag.TaskType(task.GetTaskType()))
-		return persistence.DeleteWorkflowExecutionHistoryV2(t.historyService.historyV2Mgr, branchToken, common.IntPtr(t.shard.GetShardID()), logger)
+		return t.historyService.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+			ShardID:     common.IntPtr(t.shard.GetShardID()),
+		})
 
 	}
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)

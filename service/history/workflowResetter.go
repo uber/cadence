@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination workflowResetter_mock.go
+
 package history
 
 import (
@@ -31,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -61,7 +62,7 @@ type (
 		shard             ShardContext
 		domainCache       cache.DomainCache
 		clusterMetadata   cluster.Metadata
-		historyV2Mgr      persistence.HistoryV2Manager
+		historyV2Mgr      persistence.HistoryManager
 		historyCache      *historyCache
 		transactionMgr    nDCTransactionMgr
 		newStateRebuilder nDCStateRebuilderProvider
@@ -81,7 +82,7 @@ func newWorkflowResetter(
 		shard:           shard,
 		domainCache:     shard.GetDomainCache(),
 		clusterMetadata: shard.GetClusterMetadata(),
-		historyV2Mgr:    shard.GetHistoryV2Manager(),
+		historyV2Mgr:    shard.GetHistoryManager(),
 		historyCache:    historyCache,
 		transactionMgr:  transactionMgr,
 		newStateRebuilder: func() nDCStateRebuilder {
@@ -416,19 +417,7 @@ func (r *workflowResetterImpl) generateBranchToken(
 		return nil, err
 	}
 
-	resetBranchToken := resp.NewBranchToken
-
-	if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-		BranchToken: resetBranchToken,
-		Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
-		ShardID:     common.IntPtr(shardID),
-	}); errComplete != nil {
-		r.logger.WithTags(
-			tag.Error(errComplete),
-		).Error("workflowResetter unable to complete creation of new branch.")
-	}
-
-	return resetBranchToken, nil
+	return resp.NewBranchToken, nil
 }
 
 func (r *workflowResetterImpl) terminateWorkflow(
@@ -436,22 +425,14 @@ func (r *workflowResetterImpl) terminateWorkflow(
 	terminateReason string,
 ) error {
 
-	if decision, ok := mutableState.GetInFlightDecision(); ok {
-		if err := failDecision(
-			mutableState,
-			decision,
-			shared.DecisionTaskFailedCauseForceCloseDecision,
-		); err != nil {
-			return err
-		}
-	}
-
-	_, err := mutableState.AddWorkflowExecutionTerminatedEvent(
+	eventBatchFirstEventID := mutableState.GetNextEventID()
+	return terminateWorkflow(
+		mutableState,
+		eventBatchFirstEventID,
 		terminateReason,
 		nil,
 		identityHistoryService,
 	)
-	return err
 }
 
 func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(

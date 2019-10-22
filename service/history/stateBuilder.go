@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination stateBuilder_mock.go
+
 package history
 
 import (
@@ -264,7 +266,11 @@ func (b *stateBuilderImpl) applyEvents(
 
 			b.transferTasks = append(b.transferTasks, b.scheduleActivityTransferTask(domainID, b.getTaskList(b.msBuilder),
 				ai.ScheduleID))
-			if timerTask := b.scheduleActivityTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleActivityTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -273,7 +279,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.scheduleActivityTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleActivityTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -282,7 +292,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.scheduleActivityTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleActivityTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -291,7 +305,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.scheduleActivityTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleActivityTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -300,7 +318,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.scheduleActivityTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleActivityTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -314,7 +336,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.scheduleActivityTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleActivityTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -327,7 +353,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.scheduleUserTimerTask(event, ti, b.msBuilder); timerTask != nil {
+			timerTask, err := b.scheduleUserTimerTask(event, ti, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -336,7 +366,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.refreshUserTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.refreshUserTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -345,7 +379,11 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, nil, nil, err
 			}
 
-			if timerTask := b.refreshUserTimerTask(event, b.msBuilder); timerTask != nil {
+			timerTask, err := b.refreshUserTimerTask(event, b.msBuilder)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if timerTask != nil {
 				b.timerTasks = append(b.timerTasks, timerTask)
 			}
 
@@ -707,7 +745,7 @@ func (b *stateBuilderImpl) scheduleUserTimerTask(
 	event *shared.HistoryEvent,
 	ti *persistence.TimerInfo,
 	msBuilder mutableState,
-) persistence.Task {
+) (persistence.Task, error) {
 	timerBuilder := b.getTimerBuilder(event)
 	return timerBuilder.GetUserTimerTaskIfNeeded(msBuilder)
 }
@@ -715,7 +753,7 @@ func (b *stateBuilderImpl) scheduleUserTimerTask(
 func (b *stateBuilderImpl) refreshUserTimerTask(
 	event *shared.HistoryEvent,
 	msBuilder mutableState,
-) persistence.Task {
+) (persistence.Task, error) {
 	timerBuilder := b.getTimerBuilder(event)
 	timerBuilder.loadUserTimers(msBuilder)
 	return timerBuilder.GetUserTimerTaskIfNeeded(msBuilder)
@@ -724,7 +762,7 @@ func (b *stateBuilderImpl) refreshUserTimerTask(
 func (b *stateBuilderImpl) scheduleActivityTimerTask(
 	event *shared.HistoryEvent,
 	msBuilder mutableState,
-) persistence.Task {
+) (persistence.Task, error) {
 	return b.getTimerBuilder(event).GetActivityTimerTaskIfNeeded(msBuilder)
 }
 

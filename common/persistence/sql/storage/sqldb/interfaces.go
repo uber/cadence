@@ -304,7 +304,6 @@ type (
 		ShardID      int
 		TreeID       UUID
 		BranchID     UUID
-		InProgress   bool
 		Data         []byte
 		DataEncoding string
 	}
@@ -536,7 +535,6 @@ type (
 		DeleteFromHistoryNode(filter *HistoryNodeFilter) (sql.Result, error)
 		InsertIntoHistoryTree(row *HistoryTreeRow) (sql.Result, error)
 		SelectFromHistoryTree(filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
-		UpdateHistoryTree(row *HistoryTreeRow) (sql.Result, error)
 		DeleteFromHistoryTree(filter *HistoryTreeFilter) (sql.Result, error)
 
 		InsertIntoExecutions(row *ExecutionsRow) (sql.Result, error)

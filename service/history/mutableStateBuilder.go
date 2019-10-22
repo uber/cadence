@@ -62,6 +62,10 @@ var (
 	ErrMissingWorkflowStartEvent = &workflow.InternalServiceError{Message: "unable to get workflow start event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
 	ErrMissingWorkflowCompletionEvent = &workflow.InternalServiceError{Message: "unable to get workflow completion event"}
+	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
+	ErrMissingActivityScheduledEvent = &workflow.InternalServiceError{Message: "unable to get activity scheduled event"}
+	// ErrMissingChildWorkflowInitiatedEvent indicates missing child workflow initiated event
+	ErrMissingChildWorkflowInitiatedEvent = &workflow.InternalServiceError{Message: "unable to get child workflow initiated event"}
 )
 
 type (
@@ -228,30 +232,6 @@ func newMutableStateBuilderWithVersionHistories(
 	s := newMutableStateBuilder(shard, eventsCache, logger, domainEntry)
 	s.versionHistories = persistence.NewVersionHistories(&persistence.VersionHistory{})
 	return s
-}
-
-func (e *mutableStateBuilder) AddInMemoryDecisionTaskScheduled(ttl time.Duration) error {
-	return e.decisionTaskManager.AddInMemoryDecisionTaskScheduled(ttl)
-}
-
-func (e *mutableStateBuilder) AddInMemoryDecisionTaskStarted() error {
-	return e.decisionTaskManager.AddInMemoryDecisionTaskStarted()
-}
-
-func (e *mutableStateBuilder) DeleteInMemoryDecisionTask() {
-	e.decisionTaskManager.DeleteInMemoryDecisionTask()
-}
-
-func (e *mutableStateBuilder) HasScheduledInMemoryDecisionTask() bool {
-	return e.decisionTaskManager.HasScheduledInMemoryDecisionTask()
-}
-
-func (e *mutableStateBuilder) HasStartedInMemoryDecisionTask() bool {
-	return e.decisionTaskManager.HasStartedInMemoryDecisionTask()
-}
-
-func (e *mutableStateBuilder) HasInMemoryDecisionTask() bool {
-	return e.decisionTaskManager.HasInMemoryDecisionTask()
 }
 
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
@@ -935,7 +915,10 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingActivityScheduledEvent
 	}
 	return scheduledEvent, nil
 }
@@ -1013,7 +996,10 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingChildWorkflowInitiatedEvent
 	}
 	return initiatedEvent, nil
 }
@@ -1110,7 +1096,10 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingWorkflowCompletionEvent
 	}
 
 	return completionEvent, nil
@@ -1133,7 +1122,10 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 		currentBranchToken,
 	)
 	if err != nil {
-		return nil, err
+		// do not return the original error
+		// since original error can be of type entity not exists
+		// which can cause task processing side to fail silently
+		return nil, ErrMissingWorkflowStartEvent
 	}
 	return startEvent, nil
 }
@@ -1141,28 +1133,55 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
 func (e *mutableStateBuilder) DeletePendingChildExecution(
 	initiatedEventID int64,
-) {
+) error {
+
+	if _, ok := e.pendingChildExecutionInfoIDs[initiatedEventID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find child workflow: %v in mutable state", initiatedEventID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingChildWorkflowInfo
+	}
 
 	delete(e.pendingChildExecutionInfoIDs, initiatedEventID)
 	e.deleteChildExecutionInfo = common.Int64Ptr(initiatedEventID)
+	return nil
 }
 
 // DeletePendingRequestCancel deletes details about a RequestCancelInfo.
 func (e *mutableStateBuilder) DeletePendingRequestCancel(
 	initiatedEventID int64,
-) {
+) error {
+
+	if _, ok := e.pendingRequestCancelInfoIDs[initiatedEventID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find request cancel info: %v in mutable state", initiatedEventID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingRequestCancelInfo
+	}
 
 	delete(e.pendingRequestCancelInfoIDs, initiatedEventID)
 	e.deleteRequestCancelInfo = common.Int64Ptr(initiatedEventID)
+	return nil
 }
 
 // DeletePendingSignal deletes details about a SignalInfo
 func (e *mutableStateBuilder) DeletePendingSignal(
 	initiatedEventID int64,
-) {
+) error {
+
+	if _, ok := e.pendingSignalInfoIDs[initiatedEventID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find signal info: %v in mutable state", initiatedEventID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingSignalInfo
+	}
 
 	delete(e.pendingSignalInfoIDs, initiatedEventID)
 	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
+	return nil
 }
 
 func (e *mutableStateBuilder) writeEventToCache(
@@ -1208,7 +1227,11 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(
 ) error {
 	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledId()]
 	if !ok {
-		return fmt.Errorf("unable to find activity with schedule event id: %v in mutable state", ai.ScheduleID)
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity: %v in mutable state", request.GetScheduledId()),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingActivityInfo
 	}
 
 	ai.Version = request.GetVersion()
@@ -1239,10 +1262,15 @@ func (e *mutableStateBuilder) UpdateActivity(
 	ai *persistence.ActivityInfo,
 ) error {
 
-	_, ok := e.pendingActivityInfoIDs[ai.ScheduleID]
-	if !ok {
+	if _, ok := e.pendingActivityInfoIDs[ai.ScheduleID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity: %v in mutable state", ai.ActivityID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
 		return ErrMissingActivityInfo
 	}
+
+	e.pendingActivityInfoIDs[ai.ScheduleID] = ai
 	e.updateActivityInfos[ai] = struct{}{}
 	return nil
 }
@@ -1252,21 +1280,25 @@ func (e *mutableStateBuilder) DeleteActivity(
 	scheduleEventID int64,
 ) error {
 
-	a, ok := e.pendingActivityInfoIDs[scheduleEventID]
+	ai, ok := e.pendingActivityInfoIDs[scheduleEventID]
 	if !ok {
-		errorMsg := fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID)
-		e.logger.Error(errorMsg, tag.ErrorTypeInvalidMutableStateAction)
-		return errors.NewInternalFailureError(errorMsg)
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingActivityInfo
 	}
 	delete(e.pendingActivityInfoIDs, scheduleEventID)
 
-	_, ok = e.pendingActivityInfoByActivityID[a.ActivityID]
+	_, ok = e.pendingActivityInfoByActivityID[ai.ActivityID]
 	if !ok {
-		errorMsg := fmt.Sprintf("Unable to find activity: %v in mutable state", a.ActivityID)
-		e.logger.Error(errorMsg, tag.ErrorTypeInvalidMutableStateAction)
-		return errors.NewInternalFailureError(errorMsg)
+		e.logger.Error(
+			fmt.Sprintf("Unable to find activity: %v in mutable state", ai.ActivityID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingActivityInfo
 	}
-	delete(e.pendingActivityInfoByActivityID, a.ActivityID)
+	delete(e.pendingActivityInfoByActivityID, ai.ActivityID)
 
 	e.deleteActivityInfos[scheduleEventID] = struct{}{}
 	return nil
@@ -1285,19 +1317,37 @@ func (e *mutableStateBuilder) GetUserTimer(
 func (e *mutableStateBuilder) UpdateUserTimer(
 	timerID string,
 	ti *persistence.TimerInfo,
-) {
+) error {
+
+	if _, ok := e.pendingTimerInfoIDs[timerID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find timer: %v in mutable state", timerID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingTimerInfo
+	}
 
 	e.pendingTimerInfoIDs[timerID] = ti
 	e.updateTimerInfos[ti] = struct{}{}
+	return nil
 }
 
 // DeleteUserTimer deletes an user timer.
 func (e *mutableStateBuilder) DeleteUserTimer(
 	timerID string,
-) {
+) error {
+
+	if _, ok := e.pendingTimerInfoIDs[timerID]; !ok {
+		e.logger.Error(
+			fmt.Sprintf("Unable to find timer: %v in mutable state", timerID),
+			tag.ErrorTypeInvalidMutableStateAction,
+		)
+		return ErrMissingTimerInfo
+	}
 
 	delete(e.pendingTimerInfoIDs, timerID)
 	e.deleteTimerInfos[timerID] = struct{}{}
+	return nil
 }
 
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
@@ -2437,7 +2487,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(
 	return nil
 }
 
-func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() (*workflow.HistoryEvent, error) {
+func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
+	firstEventID int64,
+) (*workflow.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionWorkflowTimeout
 	if err := e.checkMutability(opTag); err != nil {
@@ -2445,7 +2497,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() (*workflow.HistoryEvent,
 	}
 
 	event := e.hBuilder.AddTimeoutWorkflowEvent()
-	if err := e.ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event); err != nil {
+	if err := e.ReplicateWorkflowExecutionTimedoutEvent(firstEventID, event); err != nil {
 		return nil, err
 	}
 	// TODO merge active & passive task generation
@@ -2632,8 +2684,8 @@ func (e *mutableStateBuilder) ReplicateExternalWorkflowExecutionCancelRequested(
 ) error {
 
 	initiatedID := event.ExternalWorkflowExecutionCancelRequestedEventAttributes.GetInitiatedEventId()
-	e.DeletePendingRequestCancel(initiatedID)
-	return nil
+
+	return e.DeletePendingRequestCancel(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(
@@ -2672,8 +2724,8 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionFai
 ) error {
 
 	initiatedID := event.RequestCancelExternalWorkflowExecutionFailedEventAttributes.GetInitiatedEventId()
-	e.DeletePendingRequestCancel(initiatedID)
-	return nil
+
+	return e.DeletePendingRequestCancel(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
@@ -2805,8 +2857,8 @@ func (e *mutableStateBuilder) ReplicateExternalWorkflowExecutionSignaled(
 ) error {
 
 	initiatedID := event.ExternalWorkflowExecutionSignaledEventAttributes.GetInitiatedEventId()
-	e.DeletePendingSignal(initiatedID)
-	return nil
+
+	return e.DeletePendingSignal(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionFailedEvent(
@@ -2846,8 +2898,8 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionFailedEven
 ) error {
 
 	initiatedID := event.SignalExternalWorkflowExecutionFailedEventAttributes.GetInitiatedEventId()
-	e.DeletePendingSignal(initiatedID)
-	return nil
+
+	return e.DeletePendingSignal(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddTimerStartedEvent(
@@ -2938,8 +2990,7 @@ func (e *mutableStateBuilder) ReplicateTimerFiredEvent(
 	attributes := event.TimerFiredEventAttributes
 	timerID := attributes.GetTimerId()
 
-	e.DeleteUserTimer(timerID)
-	return nil
+	return e.DeleteUserTimer(timerID)
 }
 
 func (e *mutableStateBuilder) AddTimerCanceledEvent(
@@ -2990,8 +3041,7 @@ func (e *mutableStateBuilder) ReplicateTimerCanceledEvent(
 	attributes := event.TimerCanceledEventAttributes
 	timerID := attributes.GetTimerId()
 
-	e.DeleteUserTimer(timerID)
-	return nil
+	return e.DeleteUserTimer(timerID)
 }
 
 func (e *mutableStateBuilder) AddCancelTimerFailedEvent(
@@ -3025,6 +3075,7 @@ func (e *mutableStateBuilder) AddRecordMarkerEvent(
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
+	firstEventID int64,
 	reason string,
 	details []byte,
 	identity string,
@@ -3036,7 +3087,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(reason, details, identity)
-	if err := e.ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event); err != nil {
+	if err := e.ReplicateWorkflowExecutionTerminatedEvent(firstEventID, event); err != nil {
 		return nil, err
 	}
 	// TODO merge active & passive task generation
@@ -3362,8 +3413,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionFailedEvent(
 	attributes := event.StartChildWorkflowExecutionFailedEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
-	e.DeletePendingChildExecution(initiatedID)
-	return nil
+	return e.DeletePendingChildExecution(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
@@ -3410,8 +3460,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionCompletedEvent(
 	attributes := event.ChildWorkflowExecutionCompletedEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
-	e.DeletePendingChildExecution(initiatedID)
-	return nil
+	return e.DeletePendingChildExecution(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
@@ -3458,8 +3507,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionFailedEvent(
 	attributes := event.ChildWorkflowExecutionFailedEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
-	e.DeletePendingChildExecution(initiatedID)
-	return nil
+	return e.DeletePendingChildExecution(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
@@ -3506,8 +3554,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionCanceledEvent(
 	attributes := event.ChildWorkflowExecutionCanceledEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
-	e.DeletePendingChildExecution(initiatedID)
-	return nil
+	return e.DeletePendingChildExecution(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
@@ -3554,8 +3601,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTerminatedEvent(
 	attributes := event.ChildWorkflowExecutionTerminatedEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
-	e.DeletePendingChildExecution(initiatedID)
-	return nil
+	return e.DeletePendingChildExecution(initiatedID)
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
@@ -3598,11 +3644,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTimedOutEvent(
 	event *workflow.HistoryEvent,
 ) error {
+
 	attributes := event.ChildWorkflowExecutionTimedOutEventAttributes
 	initiatedID := attributes.GetInitiatedEventId()
 
-	e.DeletePendingChildExecution(initiatedID)
-	return nil
+	return e.DeletePendingChildExecution(initiatedID)
 }
 
 func (e *mutableStateBuilder) RetryActivity(
@@ -3950,7 +3996,7 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 	if err != nil {
 		return nil, err
 	}
-	workflowEventsSeq := []*persistence.WorkflowEvents{}
+	var workflowEventsSeq []*persistence.WorkflowEvents
 	if len(e.hBuilder.transientHistory) != 0 {
 		workflowEventsSeq = append(workflowEventsSeq, &persistence.WorkflowEvents{
 			DomainID:    e.executionInfo.DomainID,

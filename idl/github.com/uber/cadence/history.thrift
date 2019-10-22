@@ -207,8 +207,9 @@ struct RecordDecisionTaskStartedResponse {
   90: optional shared.TaskList WorkflowExecutionTaskList
   100: optional i32 eventStoreVersion
   110: optional binary branchToken
-  120:  optional i64 (js.type = "Long") scheduledTimestamp
-  130:  optional i64 (js.type = "Long") startedTimestamp
+  120: optional i64 (js.type = "Long") scheduledTimestamp
+  130: optional i64 (js.type = "Long") startedTimestamp
+  140: optional map<string, shared.WorkflowQuery> queries
 }
 
 struct SignalWorkflowExecutionRequest {
@@ -330,16 +331,16 @@ struct SyncActivityRequest {
   120: optional string lastFailureReason
   130: optional string lastWorkerIdentity
   140: optional binary lastFailureDetails
+  150: optional shared.VersionHistory versionHistory
 }
 
 struct QueryWorkflowRequest {
   10: optional string domainUUID
-  20: optional shared.WorkflowExecution execution
-  30: optional shared.WorkflowQuery query
+  20: optional shared.QueryWorkflowRequest request
 }
 
 struct QueryWorkflowResponse {
-  10: optional binary queryResult
+  10: optional shared.QueryWorkflowResponse response
 }
 
 struct ReapplyEventsRequest {

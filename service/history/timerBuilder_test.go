@@ -27,9 +27,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
@@ -42,11 +44,15 @@ import (
 type (
 	timerBuilderProcessorSuite struct {
 		suite.Suite
-		tb              *timerBuilder
-		mockShard       *shardContextImpl
-		mockEventsCache *MockEventsCache
-		config          *Config
-		logger          log.Logger
+		*require.Assertions
+
+		controller      *gomock.Controller
+		mockEventsCache *MockeventsCache
+
+		tb        *timerBuilder
+		mockShard *shardContextImpl
+		config    *Config
+		logger    log.Logger
 	}
 )
 
@@ -69,6 +75,12 @@ func (s *timerBuilderProcessorSuite) SetupSuite() {
 }
 
 func (s *timerBuilderProcessorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
+	s.controller = gomock.NewController(s.T())
+	s.mockEventsCache = NewMockeventsCache(s.controller)
+	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
 	s.mockShard = &shardContextImpl{
 		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
@@ -78,8 +90,10 @@ func (s *timerBuilderProcessorSuite) SetupTest() {
 		logger:                    s.logger,
 		timeSource:                clock.NewRealTimeSource(),
 	}
-	s.mockEventsCache = &MockEventsCache{}
-	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
+}
+
+func (s *timerBuilderProcessorSuite) TearDownTest() {
+	s.controller.Finish()
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
@@ -97,8 +111,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 	})
 	s.Nil(err)
 
-	t1 := tb.GetUserTimerTaskIfNeeded(msb)
-
+	t1, err := tb.GetUserTimerTaskIfNeeded(msb)
+	s.NoError(err)
 	s.NotNil(t1)
 	s.Equal(int64(201), t1.(*persistence.UserTimerTask).EventID)
 	s.Equal(ti1.ExpiryTime.Unix(), t1.(*persistence.UserTimerTask).VisibilityTimestamp.Unix())
@@ -136,7 +150,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	})
 	s.Nil(err)
 
-	t1 := tb.GetUserTimerTaskIfNeeded(msb)
+	t1, err := tb.GetUserTimerTaskIfNeeded(msb)
+	s.NoError(err)
 	s.NotNil(t1)
 	s.Equal(tiBefore.StartedID, t1.(*persistence.UserTimerTask).EventID)
 	s.Equal(tiBefore.ExpiryTime.Unix(), t1.(*persistence.UserTimerTask).VisibilityTimestamp.Unix())
@@ -157,7 +172,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	})
 	s.Nil(err)
 
-	t1 = tb.GetUserTimerTaskIfNeeded(msb)
+	t1, err = tb.GetUserTimerTaskIfNeeded(msb)
+	s.NoError(err)
 	s.NotNil(t1)
 	s.Equal(int64(201), t1.(*persistence.UserTimerTask).EventID)
 	s.Equal(tp2.ExpiryTime.Unix(), t1.(*persistence.UserTimerTask).VisibilityTimestamp.Unix())
@@ -201,7 +217,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilder_GetActivityTimer() {
 	s.Nil(err)
 	// create a schedule to start timeout
 	tb := newTimerBuilder(&mockTimeSource{currTime: time.Now()})
-	tt := tb.GetActivityTimerTaskIfNeeded(builder)
+	tt, err := tb.GetActivityTimerTaskIfNeeded(builder)
+	s.NoError(err)
 	s.NotNil(tt)
 	s.Equal(workflow.TimeoutTypeScheduleToStart, workflow.TimeoutType(tt.(*persistence.ActivityTimeoutTask).TimeoutType))
 
@@ -209,7 +226,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilder_GetActivityTimer() {
 
 	// create a heart beat timeout
 	tb = newTimerBuilder(&mockTimeSource{currTime: time.Now()})
-	tt = tb.GetActivityTimerTaskIfNeeded(builder)
+	tt, err = tb.GetActivityTimerTaskIfNeeded(builder)
+	s.NoError(err)
 	s.NotNil(tt)
 	s.Equal(workflow.TimeoutTypeHeartbeat, workflow.TimeoutType(tt.(*persistence.ActivityTimeoutTask).TimeoutType))
 }

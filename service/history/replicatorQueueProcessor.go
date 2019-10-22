@@ -42,9 +42,9 @@ type (
 		currentClusterNamer   string
 		shard                 ShardContext
 		historyCache          *historyCache
-		replicationTaskFilter queueTaskFilter
+		replicationTaskFilter taskFilter
 		executionMgr          persistence.ExecutionManager
-		historyV2Mgr          persistence.HistoryV2Manager
+		historyV2Mgr          persistence.HistoryManager
 		replicator            messaging.Producer
 		metricsClient         metrics.Client
 		options               *QueueProcessorOptions
@@ -70,7 +70,7 @@ func newReplicatorQueueProcessor(
 	historyCache *historyCache,
 	replicator messaging.Producer,
 	executionMgr persistence.ExecutionManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	logger log.Logger,
 ) ReplicatorQueueProcessor {
 
@@ -91,7 +91,7 @@ func newReplicatorQueueProcessor(
 
 	logger = logger.WithTags(tag.ComponentReplicatorQueue)
 
-	replicationTaskFilter := func(qTask queueTaskInfo) (bool, error) {
+	replicationTaskFilter := func(taskInfo *taskInfo) (bool, error) {
 		return true, nil
 	}
 
@@ -122,16 +122,21 @@ func newReplicatorQueueProcessor(
 	return processor
 }
 
-func (p *replicatorQueueProcessorImpl) getTaskFilter() queueTaskFilter {
+func (p *replicatorQueueProcessorImpl) getTaskFilter() taskFilter {
 	return p.replicationTaskFilter
 }
 
-func (p *replicatorQueueProcessorImpl) complete(qTask queueTaskInfo) {
-	p.queueProcessorBase.complete(qTask)
+func (p *replicatorQueueProcessorImpl) complete(
+	taskInfo *taskInfo,
+) {
+	p.queueProcessorBase.complete(taskInfo.task)
 }
 
-func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo, shouldProcessTask bool) (int, error) {
-	task, ok := qTask.(*persistence.ReplicationTaskInfo)
+func (p *replicatorQueueProcessorImpl) process(
+	taskInfo *taskInfo,
+) (int, error) {
+
+	task, ok := taskInfo.task.(*persistence.ReplicationTaskInfo)
 	if !ok {
 		return metrics.ReplicatorQueueProcessorScope, errUnexpectedQueueTask
 	}
@@ -212,7 +217,7 @@ func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetCluster
 func GenerateReplicationTask(
 	targetClusters []string,
 	task *persistence.ReplicationTaskInfo,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	metricsClient metrics.Client,
 	history *shared.History,
 	shardID *int,
@@ -301,7 +306,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 
 // GetAllHistory return history
 func GetAllHistory(
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	metricsClient metrics.Client,
 	byBatch bool,
 	firstEventID int64,
@@ -350,7 +355,7 @@ func GetAllHistory(
 
 // PaginateHistory return paged history
 func PaginateHistory(
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	byBatch bool,
 	branchToken []byte,
 	firstEventID int64,
@@ -543,6 +548,17 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 			// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
 			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
+			//Version history uses when replicate the sync activity task
+			versionHistories := mutableState.GetVersionHistories()
+			var versionHistory *shared.VersionHistory
+			if versionHistories != nil {
+				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
+				if err != nil {
+					return nil, err
+				}
+				versionHistory = rawVersionHistory.ToThrift()
+			}
+
 			return &replicator.ReplicationTask{
 				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
 				SyncActicvityTaskAttributes: &replicator.SyncActicvityTaskAttributes{
@@ -560,6 +576,7 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
 					LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
 					LastFailureDetails: activityInfo.LastFailureDetails,
+					VersionHistory:     versionHistory,
 				},
 			}, nil
 		},
