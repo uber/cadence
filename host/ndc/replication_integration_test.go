@@ -1,12 +1,13 @@
 package ndc
 
 import (
+	"time"
+
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	test "github.com/uber/cadence/common/testing"
-	"time"
 )
 
 func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
@@ -91,4 +92,7 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	time.Sleep(10 * time.Second)
 
+	replicationTasks, err := s.active.GetReplicationTasksFromDLQ("standby")
+	s.NoError(err, "Failed to get messages from DLQ.")
+	s.Equal(len(replicationTasks), len(historyBatch))
 }

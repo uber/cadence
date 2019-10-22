@@ -2510,3 +2510,21 @@ func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID st
 	workflowID = info[len(domainID)+1 : workflowEnd]
 	return
 }
+
+func NewGetReplicationTasksFromDLQRequest(
+	sourceClusterName string,
+	readLevel int64,
+	maxReadLevel int64,
+	batchSize int,
+	nextPageToken []byte,
+) *GetReplicationTasksFromDLQRequest {
+	return &GetReplicationTasksFromDLQRequest{
+		SourceClusterName: sourceClusterName,
+		GetReplicationTasksRequest: GetReplicationTasksRequest{
+			ReadLevel:     readLevel,
+			MaxReadLevel:  maxReadLevel,
+			BatchSize:     batchSize,
+			NextPageToken: nextPageToken,
+		},
+	}
+}

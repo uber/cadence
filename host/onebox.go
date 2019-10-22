@@ -789,6 +789,22 @@ func (c *cadenceImpl) createSystemDomain() error {
 	return nil
 }
 
+func (c *cadenceImpl) GetReplicationTasksFromDLQ(
+	sourceClusterName string,
+) ([]*persistence.ReplicationTaskInfo, error) {
+
+	var tasksFromDLQ []*persistence.ReplicationTaskInfo
+	for _, handler := range c.historyHandlers {
+		tasks, err := handler.GetReplicationTasksFromDLQ(sourceClusterName)
+		if err != nil {
+			return nil, err
+		}
+		tasksFromDLQ = append(tasksFromDLQ, tasks...)
+	}
+
+	return tasksFromDLQ, nil
+}
+
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {
 	return &membershipFactoryImpl{
 		serviceName: serviceName,

@@ -111,7 +111,7 @@ ORDER BY task_id LIMIT ?`
 
 	deleteReplicationTaskQry = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
 
-	getReplicationTasksDLQQry = `SELECT task_id, data, data_encoding FROM replication_tasks WHERE 
+	getReplicationTasksDLQQry = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE 
 source_cluster_name = ? AND
 shard_id = ? AND
 task_id > ? AND

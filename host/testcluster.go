@@ -21,6 +21,7 @@
 package host
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 
@@ -271,4 +272,15 @@ func (tc *TestCluster) GetAdminClient() AdminClient {
 // GetHistoryClient returns a history client from the test cluster
 func (tc *TestCluster) GetHistoryClient() HistoryClient {
 	return tc.host.GetHistoryClient()
+}
+
+func (tc *TestCluster) GetReplicationTasksFromDLQ(
+	sourceClusterName string,
+) ([]*persistence.ReplicationTaskInfo, error) {
+	hostImpl, ok := tc.host.(*cadenceImpl)
+	if !ok {
+		return nil, errors.New("host implementation does not support dlq")
+	}
+
+	return hostImpl.GetReplicationTasksFromDLQ(sourceClusterName)
 }

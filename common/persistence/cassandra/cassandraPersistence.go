@@ -882,8 +882,11 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Lo
 }
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
-func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
-	logger log.Logger) (p.ExecutionStore, error) {
+func NewWorkflowExecutionPersistence(
+	shardID int,
+	session *gocql.Session,
+	logger log.Logger,
+) (p.ExecutionStore, error) {
 	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
 }
 
