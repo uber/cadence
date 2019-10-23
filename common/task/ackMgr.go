@@ -49,10 +49,9 @@ type (
 	}
 
 	ackMgrImpl struct {
-		ackMgrBase    AckMgrBase
-		logger        log.Logger
-		metricsClient metrics.Client
-		metricsScope  metrics.Scope
+		ackMgrBase   AckMgrBase
+		logger       log.Logger
+		metricsScope metrics.Scope
 
 		sync.RWMutex
 		iterator         collection.Iterator
@@ -67,7 +66,6 @@ type (
 func NewAckMgr(
 	ackMgrBase AckMgrBase,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	metricsScope metrics.Scope,
 	ackLevel SequenceID,
 	readLevel SequenceID,
@@ -75,7 +73,6 @@ func NewAckMgr(
 	return &ackMgrImpl{
 		ackMgrBase:       ackMgrBase,
 		logger:           logger,
-		metricsClient:    metricsClient,
 		outstandingTasks: make(map[SequenceID]bool),
 		readLevel:        readLevel,
 		ackLevel:         ackLevel,
