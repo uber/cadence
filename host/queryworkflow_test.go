@@ -724,7 +724,6 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent() {
 			Answer:     []byte("consistent query result"),
 		})
 
-	// I believe at this point there is no decision task created to poll
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(errInner)
 	s.False(isQueryTask)
@@ -853,7 +852,6 @@ func (s *integrationSuite) TestQueryWorkflow_ConsistentNewDecisionTask_NonSticky
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *workflow.QueryRejectCondition) {
-		// signal should already be handled because query was blocked waiting for signal to complete
 		s.False(handledSignal)
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
 			Domain: common.StringPtr(s.domainName),
@@ -868,13 +866,11 @@ func (s *integrationSuite) TestQueryWorkflow_ConsistentNewDecisionTask_NonSticky
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		})
 		s.True(handledSignal)
-		// after the query is answered the signal is handled because query is consistent and since
-		// signal came before query signal must be handled by the time query returns
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
-	// send signal to ensure there is an outstanding decision task to dispatch query on
-	// otherwise query will just go through matching
+	// send a signal that will take 5 seconds to handle
+	// this causes the signal to still be outstanding at the time query arrives
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
@@ -900,6 +896,15 @@ func (s *integrationSuite) TestQueryWorkflow_ConsistentNewDecisionTask_NonSticky
 
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.NoError(err)
+	<-time.After(time.Second)
+
+	// query should not have been dispatched on the decision task which contains signal
+	// because signal was already outstanding by the time query arrived
+	select {
+	case <-queryResultCh:
+		s.Fail("query should not be ready yet")
+	default:
+	}
 
 	// now poll for decision task which contains the query which was buffered
 	isQueryTask, _, errInner := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(
@@ -1047,7 +1052,6 @@ func (s *integrationSuite) TestQueryWorkflow_ConsistentNewDecisionTask_Sticky() 
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *workflow.QueryRejectCondition) {
-		// signal should already be handled because query was blocked waiting for signal to complete
 		s.False(handledSignal)
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
 			Domain: common.StringPtr(s.domainName),
@@ -1062,13 +1066,11 @@ func (s *integrationSuite) TestQueryWorkflow_ConsistentNewDecisionTask_Sticky() 
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		})
 		s.True(handledSignal)
-		// after the query is answered the signal is handled because query is consistent and since
-		// signal came before query signal must be handled by the time query returns
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
-	// send signal to ensure there is an outstanding decision task to dispatch query on
-	// otherwise query will just go through matching
+	// send a signal that will take 5 seconds to handle
+	// this causes the signal to still be outstanding at the time query arrives
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
@@ -1094,6 +1096,15 @@ func (s *integrationSuite) TestQueryWorkflow_ConsistentNewDecisionTask_Sticky() 
 
 	_, err = poller.PollAndProcessDecisionTaskWithSticky(false, false)
 	s.NoError(err)
+	<-time.After(time.Second)
+
+	// query should not have been dispatched on the decision task which contains signal
+	// because signal was already outstanding by the time query arrived
+	select {
+	case <-queryResultCh:
+		s.Fail("query should not be ready yet")
+	default:
+	}
 
 	// now poll for decision task which contains the query which was buffered
 	isQueryTask, _, errInner := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(
