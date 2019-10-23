@@ -68,15 +68,14 @@ func NewAckMgr(
 	logger log.Logger,
 	metricsScope metrics.Scope,
 	ackLevel SequenceID,
-	readLevel SequenceID,
 ) AckMgr {
 	return &ackMgrImpl{
 		ackMgrBase:       ackMgrBase,
 		logger:           logger,
 		metricsScope:     metricsScope,
 		outstandingTasks: make(map[SequenceID]bool),
-		readLevel:        readLevel,
-		maxReadLevel:     readLevel,
+		readLevel:        ackLevel,
+		maxReadLevel:     ackLevel,
 		ackLevel:         ackLevel,
 	}
 }
