@@ -111,7 +111,6 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 	})
 	s.Nil(err)
 
-
 	t1, err := tb.GetUserTimerTaskIfNeeded(msb)
 	s.NoError(err)
 	s.NotNil(t1)
