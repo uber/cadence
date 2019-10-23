@@ -82,12 +82,15 @@ func NewAckMgr(
 func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 	if a.iterator == nil || !a.iterator.HasNext() {
 		// try to create a new iterator
-		if a.readLevel == a.maxReadLevel {
+		a.RLock()
+		readLevel := a.readLevel
+		a.RUnlock()
+		if readLevel == a.maxReadLevel {
 			a.maxReadLevel = a.ackMgrBase.UpdateMaxReadLevel()
 		}
-		if compareTaskSequenceIDLess(&a.readLevel, &a.maxReadLevel) {
+		if compareTaskSequenceIDLess(&readLevel, &a.maxReadLevel) {
 			// ack manager assumes the paginationFn will return task in the range (readLevel, maxReadLevel]
-			a.iterator = collection.NewPagingIterator(a.ackMgrBase.PaginationFn(a.readLevel, a.maxReadLevel))
+			a.iterator = collection.NewPagingIterator(a.ackMgrBase.PaginationFn(readLevel, a.maxReadLevel))
 		}
 	}
 
