@@ -171,12 +171,8 @@ func (p *replicatorQueueProcessorImpl) queueShutdown() error {
 
 func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence.ReplicationTaskInfo) error {
 	replicationTask, err := p.generateSyncActivityTask(ctx.Background(), task)
-	if err != nil {
+	if err != nil || replicationTask == nil {
 		return err
-	}
-
-	if replicationTask == nil {
-		return nil
 	}
 
 	return p.replicator.Publish(replicationTask)
@@ -185,7 +181,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persistence.ReplicationTaskInfo) error {
 
 	replicationTask, err := p.toReplicationTask(ctx.Background(), task)
-	if err != nil {
+	if err != nil || replicationTask == nil {
 		return err
 	}
 
