@@ -306,9 +306,14 @@ Loop:
 	}
 
 	tBuilder := newTimerBuilder(r.getTimeSource(now))
-	if timerTask := tBuilder.GetActivityTimerTaskIfNeeded(
+	timerTask, err := tBuilder.GetActivityTimerTaskIfNeeded(
 		mutableState,
-	); timerTask != nil {
+	)
+	if err != nil {
+		return err
+	}
+
+	if timerTask != nil {
 		// no need to set the version, since activity timer task
 		// is just a trigger to check all activities
 		mutableState.AddTimerTasks(timerTask)
@@ -331,9 +336,14 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 	}
 
 	tBuilder := newTimerBuilder(r.getTimeSource(now))
-	if timerTask := tBuilder.GetUserTimerTaskIfNeeded(
+	timerTask, err := tBuilder.GetUserTimerTaskIfNeeded(
 		mutableState,
-	); timerTask != nil {
+	)
+	if err != nil {
+		return err
+	}
+
+	if timerTask != nil {
 		// no need to set the version, since activity timer task
 		// is just a trigger to check all activities
 		mutableState.AddTimerTasks(timerTask)

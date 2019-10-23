@@ -219,7 +219,7 @@ type (
 		UpdateDecision(*decisionInfo)
 		UpdateReplicationStateVersion(int64, bool)
 		UpdateReplicationStateLastEventID(int64, int64)
-		UpdateUserTimer(string, *persistence.TimerInfo)
+		UpdateUserTimer(string, *persistence.TimerInfo) error
 		UpdateCurrentVersion(version int64, forceUpdate bool) error
 		UpdateWorkflowStateCloseStatus(state int, closeStatus int) error
 

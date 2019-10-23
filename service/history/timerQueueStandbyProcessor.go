@@ -347,7 +347,12 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(
 			}
 		}
 		newTimerTasks := []persistence.Task{}
-		if newTimerTask := t.getTimerBuilder().GetActivityTimerTaskIfNeeded(msBuilder); newTimerTask != nil {
+		newTimerTask, err := t.getTimerBuilder().GetActivityTimerTaskIfNeeded(msBuilder)
+		if err != nil {
+			return err
+		}
+
+		if newTimerTask != nil {
 			doUpdate = true
 			newTimerTasks = append(newTimerTasks, newTimerTask)
 		}

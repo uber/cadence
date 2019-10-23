@@ -98,7 +98,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 	s.Nil(err)
 
 	tb.AddUserTimer(ti1, msb)
-	t1 := tb.GetUserTimerTaskIfNeeded(msb)
+	t1, err := tb.GetUserTimerTaskIfNeeded(msb)
+	s.NoError(err)
 
 	s.NotNil(t1)
 	s.Equal(int64(201), t1.(*persistence.UserTimerTask).EventID)
@@ -139,7 +140,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	s.Nil(err)
 	tb.AddUserTimer(tiAfter, msb)
 
-	t1 := tb.GetUserTimerTaskIfNeeded(msb)
+	t1, err := tb.GetUserTimerTaskIfNeeded(msb)
+	s.NoError(err)
 	s.NotNil(t1)
 	s.Equal(tiBefore.StartedID, t1.(*persistence.UserTimerTask).EventID)
 	s.Equal(tiBefore.ExpiryTime.Unix(), t1.(*persistence.UserTimerTask).VisibilityTimestamp.Unix())
@@ -161,7 +163,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	s.Nil(err)
 	tb.AddUserTimer(ti3, msb)
 
-	t1 = tb.GetUserTimerTaskIfNeeded(msb)
+	t1, err = tb.GetUserTimerTaskIfNeeded(msb)
+	s.NoError(err)
 	s.NotNil(t1)
 	s.Equal(int64(201), t1.(*persistence.UserTimerTask).EventID)
 	s.Equal(tp2.ExpiryTime.Unix(), t1.(*persistence.UserTimerTask).VisibilityTimestamp.Unix())
@@ -205,7 +208,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilder_GetActivityTimer() {
 	s.Nil(err)
 	// create a schedule to start timeout
 	tb := newTimerBuilder(&mockTimeSource{currTime: time.Now()})
-	tt := tb.GetActivityTimerTaskIfNeeded(builder)
+	tt, err := tb.GetActivityTimerTaskIfNeeded(builder)
+	s.NoError(err)
 	s.NotNil(tt)
 	s.Equal(workflow.TimeoutTypeScheduleToStart, workflow.TimeoutType(tt.(*persistence.ActivityTimeoutTask).TimeoutType))
 
@@ -213,7 +217,8 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilder_GetActivityTimer() {
 
 	// create a heart beat timeout
 	tb = newTimerBuilder(&mockTimeSource{currTime: time.Now()})
-	tt = tb.GetActivityTimerTaskIfNeeded(builder)
+	tt, err = tb.GetActivityTimerTaskIfNeeded(builder)
+	s.NoError(err)
 	s.NotNil(tt)
 	s.Equal(workflow.TimeoutTypeHeartbeat, workflow.TimeoutType(tt.(*persistence.ActivityTimeoutTask).TimeoutType))
 }

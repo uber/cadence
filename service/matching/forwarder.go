@@ -227,7 +227,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 		})
 		if err != nil {
 			// Ignore error result
-			_ := fwdr.handleErr(err)
+			_ = fwdr.handleErr(err)
 			return nil, err
 		}
 		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil

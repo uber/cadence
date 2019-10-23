@@ -1290,10 +1290,16 @@ func (e *mutableStateBuilder) GetUserTimer(
 func (e *mutableStateBuilder) UpdateUserTimer(
 	timerID string,
 	ti *persistence.TimerInfo,
-) {
+) error {
+
+	_, ok := e.pendingTimerInfoIDs[timerID]
+	if !ok {
+		return ErrMissingTimerInfo
+	}
 
 	e.pendingTimerInfoIDs[timerID] = ti
 	e.updateTimerInfos[ti] = struct{}{}
+	return nil
 }
 
 // DeleteUserTimer deletes an user timer.

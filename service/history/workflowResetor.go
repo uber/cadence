@@ -23,11 +23,11 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/prometheus/common/log"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"

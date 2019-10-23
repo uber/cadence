@@ -220,6 +220,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 
 	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
+	task, err := tBuilder.GetUserTimerTaskIfNeeded(msBuilder)
+	s.NoError(err)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
 		DomainID:            s.domainID,
@@ -228,7 +230,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: tBuilder.GetUserTimerTaskIfNeeded(msBuilder).(*persistence.UserTimerTask).GetVisibilityTimestamp(),
+		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
 		EventID:             di.ScheduleID,
 	}
 
@@ -284,6 +286,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 
 	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
+	task, err := tBuilder.GetUserTimerTaskIfNeeded(msBuilder)
+	s.NoError(err)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
 		DomainID:            s.domainID,
@@ -292,7 +296,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: tBuilder.GetUserTimerTaskIfNeeded(msBuilder).(*persistence.UserTimerTask).GetVisibilityTimestamp(),
+		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
 		EventID:             di.ScheduleID,
 	}
 
@@ -347,6 +351,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	tBuilder.AddUserTimer(timerInfo1, msBuilder)
 	tBuilder.AddUserTimer(timerInfo2, msBuilder)
 
+	task, err := tBuilder.GetUserTimerTaskIfNeeded(msBuilder)
+	s.NoError(err)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
 		DomainID:            s.domainID,
@@ -355,7 +361,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: tBuilder.GetUserTimerTaskIfNeeded(msBuilder).(*persistence.UserTimerTask).GetVisibilityTimestamp(),
+		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
 		EventID:             di.ScheduleID,
 	}
 
@@ -407,7 +413,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	nextEventID := scheduledEvent.GetEventId() + 1
 
 	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
-
+	task, err := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder)
+	s.NoError(err)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
 		DomainID:            s.domainID,
@@ -416,7 +423,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeScheduleToClose),
-		VisibilityTimestamp: tBuilder.GetActivityTimerTaskIfNeeded(msBuilder).(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
+		VisibilityTimestamp: task.(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
 		EventID:             di.ScheduleID,
 	}
 
@@ -478,7 +485,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	tBuilder := newTimerBuilder(clock.NewRealTimeSource())
 	_, err = tBuilder.AddStartToCloseActivityTimeout(timerInfo)
 	s.Nil(err)
-
+	task, err := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder)
+	s.NoError(err)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
 		DomainID:            s.domainID,
@@ -487,7 +495,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeScheduleToClose),
-		VisibilityTimestamp: tBuilder.GetActivityTimerTaskIfNeeded(msBuilder).(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
+		VisibilityTimestamp: task.(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
 		EventID:             di.ScheduleID,
 	}
 

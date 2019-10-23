@@ -604,21 +604,20 @@ func (s *TestBase) SetupDomains() {
 		FailoverVersion: version,
 	}
 
-	_, _ = s.MetadataManager.CreateDomain(createDomainRequest)
-	createDomainRequest.Info.ID = testDomainStandbyID
-	createDomainRequest.Info.Name = testDomainStandbyName
-	createDomainRequest.ReplicationConfig.ActiveClusterName = testDomainStandbyClusterName
-	_, _ = s.MetadataManager.CreateDomain(createDomainRequest)
+	createDomainRequest.Info.ID = testDomainActiveID
+	createDomainRequest.Info.Name = testDomainActiveName
+	createDomainRequest.ReplicationConfig.ActiveClusterName = testDomainActiveClusterName
 	_, err := s.MetadataManager.CreateDomain(createDomainRequest)
 	if err != nil {
-		s.Fail(err.Error())
+		panic(err.Error())
 	}
+
 	createDomainRequest.Info.ID = testDomainStandbyID
 	createDomainRequest.Info.Name = testDomainStandbyName
 	createDomainRequest.ReplicationConfig.ActiveClusterName = testDomainStandbyClusterName
 	_, err = s.MetadataManager.CreateDomain(createDomainRequest)
 	if err != nil {
-		s.Fail(err.Error())
+		panic(err.Error())
 	}
 	s.ShardContext.domainCache.Start()
 }
@@ -631,10 +630,10 @@ func (s *TestBase) TeardownDomains() {
 	s.ShardContext.domainCache.Stop()
 	err := s.MetadataManager.DeleteDomain(&persistence.DeleteDomainRequest{ID: testDomainActiveID})
 	if err != nil {
-		s.Fail(err.Error())
+		panic(err.Error())
 	}
 	err = s.MetadataManager.DeleteDomain(&persistence.DeleteDomainRequest{ID: testDomainStandbyID})
 	if err != nil {
-		s.Fail(err.Error())
+		panic(err.Error())
 	}
 }
