@@ -53,11 +53,11 @@ type (
 		logger       log.Logger
 		metricsScope metrics.Scope
 		iterator     collection.Iterator
+		maxReadLevel SequenceID
 
 		sync.RWMutex
 		outstandingTasks map[SequenceID]bool
 		readLevel        SequenceID
-		maxReadLevel     SequenceID
 		ackLevel         SequenceID
 	}
 )
@@ -82,7 +82,6 @@ func NewAckMgr(
 func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 	if a.iterator == nil || !a.iterator.HasNext() {
 		// try to create a new iterator
-		a.Lock()
 		if a.readLevel == a.maxReadLevel {
 			a.maxReadLevel = a.ackMgrBase.UpdateMaxReadLevel()
 		}
@@ -90,7 +89,6 @@ func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 			// ack manager assumes the paginationFn will return task in the range (readLevel, maxReadLevel]
 			a.iterator = collection.NewPagingIterator(a.ackMgrBase.PaginationFn(a.readLevel, a.maxReadLevel))
 		}
-		a.Unlock()
 	}
 
 	if a.iterator == nil || !a.iterator.HasNext() {
