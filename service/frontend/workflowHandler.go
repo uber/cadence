@@ -47,7 +47,6 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
@@ -71,8 +70,7 @@ type (
 	WorkflowHandler struct {
 		domainCache               cache.DomainCache
 		metadataMgr               persistence.MetadataManager
-		historyMgr                persistence.HistoryManager
-		historyV2Mgr              persistence.HistoryV2Manager
+		historyV2Mgr              persistence.HistoryManager
 		visibilityMgr             persistence.VisibilityManager
 		history                   history.Client
 		matching                  matching.Client
@@ -97,7 +95,6 @@ type (
 		IsWorkflowRunning bool
 		PersistenceToken  []byte
 		TransientDecision *gen.TransientDecisionInfo
-		EventStoreVersion int32
 		BranchToken       []byte
 		ReplicationInfo   map[string]*gen.ReplicationInfo
 	}
@@ -153,8 +150,7 @@ func NewWorkflowHandler(
 	sVice service.Service,
 	config *Config,
 	metadataMgr persistence.MetadataManager,
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	visibilityMgr persistence.VisibilityManager,
 	replicationMessageSink messaging.Producer,
 	domainReplicationQueue persistence.DomainReplicationQueue,
@@ -164,7 +160,6 @@ func NewWorkflowHandler(
 		Service:         sVice,
 		config:          config,
 		metadataMgr:     metadataMgr,
-		historyMgr:      historyMgr,
 		historyV2Mgr:    historyV2Mgr,
 		visibilityMgr:   visibilityMgr,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
@@ -233,7 +228,6 @@ func (wh *WorkflowHandler) Stop() {
 	wh.domainCache.Stop()
 	wh.metadataMgr.Close()
 	wh.visibilityMgr.Close()
-	wh.historyMgr.Close()
 	wh.Service.Stop()
 }
 
@@ -569,8 +563,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, nil
 	}
 
-	eventStoreVersion := matchingResp.GetEventStoreVersion()
-	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, eventStoreVersion, matchingResp.GetBranchToken())
+	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, matchingResp.GetBranchToken())
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1442,8 +1435,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		}
 		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
 
-		eventStoreVersion := matchingResp.GetEventStoreVersion()
-		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, eventStoreVersion, matchingResp.GetBranchToken())
+		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, matchingResp.GetBranchToken())
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -1770,7 +1762,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		execution *gen.WorkflowExecution,
 		expectedNextEventID int64,
 		currentBranchToken []byte,
-	) (int32, []byte, string, int64, int64, bool, error) {
+	) ([]byte, string, int64, int64, bool, error) {
 		response, err := wh.history.PollMutableState(ctx, &h.PollMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
@@ -1779,18 +1771,11 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		})
 
 		if err != nil {
-			return 0, nil, "", 0, 0, false, err
+			return nil, "", 0, 0, false, err
 		}
 		isWorkflowRunning := response.GetWorkflowCloseState() == persistence.WorkflowCloseStatusNone
 
-		// calculate event store version based on if branch token exist
-		eventStoreVersion := persistence.EventStoreVersionV2
-		if len(response.GetCurrentBranchToken()) == 0 {
-			eventStoreVersion = 0
-		}
-
-		return int32(eventStoreVersion),
-			response.CurrentBranchToken,
+		return response.CurrentBranchToken,
 			response.Execution.GetRunId(),
 			response.GetLastFirstEventId(),
 			response.GetNextEventId(),
@@ -1826,7 +1811,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if !isCloseEventOnly {
 				queryNextEventID = token.NextEventID
 			}
-			token.EventStoreVersion, token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+			token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err =
 				queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
 			if err != nil {
 				return nil, wh.error(err, scope)
@@ -1839,7 +1824,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if !isCloseEventOnly {
 			queryNextEventID = common.FirstEventID
 		}
-		token.EventStoreVersion, token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+		token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
 			queryHistory(domainID, execution, queryNextEventID, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
@@ -2859,7 +2844,6 @@ func (wh *WorkflowHandler) QueryWorkflow(
 	if queryRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
-
 	if err := wh.validateExecutionAndEmitMetrics(queryRequest.Execution, scope); err != nil {
 		return nil, err
 	}
@@ -2877,120 +2861,15 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(err, scope)
 	}
 
-	// we should always use the mutable state, since it contains the sticky tasklist information
-	response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
+	req := &h.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Execution:  queryRequest.Execution,
-	})
+		Request:    queryRequest,
+	}
+	hResponse, err := wh.history.QueryWorkflow(ctx, req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-
-	// if workflow is closed and a rejection condition is given then check if query should be rejected before proceeding
-	workflowCloseStatus := response.GetWorkflowCloseState()
-	if workflowCloseStatus != persistence.WorkflowCloseStatusNone && queryRequest.QueryRejectCondition != nil {
-		notOpenReject := queryRequest.GetQueryRejectCondition() == gen.QueryRejectConditionNotOpen
-		notCompletedCleanlyReject := queryRequest.GetQueryRejectCondition() == gen.QueryRejectConditionNotCompletedCleanly &&
-			workflowCloseStatus != persistence.WorkflowCloseStatusCompleted
-		if notOpenReject || notCompletedCleanlyReject {
-			return &gen.QueryWorkflowResponse{
-				QueryResult: nil,
-				QueryRejected: &gen.QueryRejected{
-					CloseStatus: persistence.ToThriftWorkflowExecutionCloseStatus(
-						int(response.GetWorkflowCloseState()),
-					).Ptr(),
-				},
-			}, nil
-		}
-	}
-
-	clientFeature := client.NewFeatureImpl(
-		response.GetClientLibraryVersion(),
-		response.GetClientFeatureVersion(),
-		response.GetClientImpl(),
-	)
-	queryRequest.Execution.RunId = response.Execution.RunId
-	if clientFeature.SupportConsistentQuery() {
-		req := &h.QueryWorkflowRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  queryRequest.GetExecution(),
-			Query:      queryRequest.GetQuery(),
-		}
-		resp, err := wh.history.QueryWorkflow(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		return &gen.QueryWorkflowResponse{
-			QueryResult:   resp.GetQueryResult(),
-			QueryRejected: nil,
-		}, nil
-	}
-	return wh.queryDirectlyThroughMatching(ctx, response, clientFeature, domainID, queryRequest, scope)
-}
-
-func (wh *WorkflowHandler) queryDirectlyThroughMatching(
-	ctx context.Context,
-	getMutableStateResponse *h.GetMutableStateResponse,
-	clientFeature client.Feature,
-	domainID string,
-	queryRequest *gen.QueryWorkflowRequest,
-	scope metrics.Scope,
-) (*gen.QueryWorkflowResponse, error) {
-	matchingRequest := &m.QueryWorkflowRequest{
-		DomainUUID:   common.StringPtr(domainID),
-		QueryRequest: queryRequest,
-	}
-	if len(getMutableStateResponse.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() {
-		matchingRequest.TaskList = getMutableStateResponse.StickyTaskList
-		stickyDecisionTimeout := getMutableStateResponse.GetStickyTaskListScheduleToStartTimeout()
-		// using a clean new context in case customer provide a context which has
-		// a really short deadline, causing we clear the stickyness
-		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(stickyDecisionTimeout)*time.Second)
-		matchingResp, err := wh.matchingRawClient.QueryWorkflow(stickyContext, matchingRequest)
-		cancel()
-		if err == nil {
-			return matchingResp, nil
-		}
-		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
-			wh.Service.GetLogger().Info("QueryWorkflowFailed.",
-				tag.WorkflowDomainName(queryRequest.GetDomain()),
-				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
-			return nil, wh.error(err, scope)
-		}
-		// this means sticky timeout, should try using the normal tasklist
-		// we should clear the stickyness of this workflow
-		wh.GetLogger().Info("QueryWorkflowTimeouted with stickyTaskList, will try nonSticky one",
-			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-			tag.WorkflowTaskListName(getMutableStateResponse.GetStickyTaskList().GetName()),
-			tag.WorkflowNextEventID(getMutableStateResponse.GetNextEventId()))
-		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, err = wh.history.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  queryRequest.Execution,
-		})
-		cancel()
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
-	}
-
-	matchingRequest.TaskList = getMutableStateResponse.TaskList
-	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
-	if err != nil {
-		wh.Service.GetLogger().Info("QueryWorkflowFailed.",
-			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
-		return nil, wh.error(err, scope)
-	}
-
-	return matchingResp, nil
+	return hResponse.GetResponse(), nil
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
@@ -3110,37 +2989,21 @@ func (wh *WorkflowHandler) getHistory(
 
 	historyEvents := []*gen.HistoryEvent{}
 	var size int
-	if len(branchToken) != 0 {
-		shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
-		var err error
-		historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.historyV2Mgr, &persistence.ReadHistoryBranchRequest{
-			BranchToken:   branchToken,
-			MinEventID:    firstEventID,
-			MaxEventID:    nextEventID,
-			PageSize:      int(pageSize),
-			NextPageToken: nextPageToken,
-			ShardID:       common.IntPtr(shardID),
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID:      domainID,
-			Execution:     execution,
-			FirstEventID:  firstEventID,
-			NextEventID:   nextEventID,
-			PageSize:      int(pageSize),
-			NextPageToken: nextPageToken,
-		})
 
-		if err != nil {
-			return nil, nil, err
-		}
-		historyEvents = append(historyEvents, response.History.Events...)
-		nextPageToken = response.NextPageToken
-		size = response.Size
+	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
+	var err error
+	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.historyV2Mgr, &persistence.ReadHistoryBranchRequest{
+		BranchToken:   branchToken,
+		MinEventID:    firstEventID,
+		MaxEventID:    nextEventID,
+		PageSize:      int(pageSize),
+		NextPageToken: nextPageToken,
+		ShardID:       common.IntPtr(shardID),
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 	if len(nextPageToken) == 0 && transientDecision != nil {
@@ -3289,7 +3152,6 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 	scope metrics.Scope,
 	domainID string,
 	matchingResp *m.PollForDecisionTaskResponse,
-	eventStoreVersion int32,
 	branchToken []byte,
 ) (*gen.PollForDecisionTaskResponse, error) {
 
@@ -3350,7 +3212,6 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 				NextEventID:       nextEventID,
 				PersistenceToken:  persistenceToken,
 				TransientDecision: matchingResp.DecisionInfo,
-				EventStoreVersion: eventStoreVersion,
 				BranchToken:       branchToken,
 			})
 			if err != nil {
@@ -3373,6 +3234,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		WorkflowExecutionTaskList: matchingResp.WorkflowExecutionTaskList,
 		ScheduledTimestamp:        matchingResp.ScheduledTimestamp,
 		StartedTimestamp:          matchingResp.StartedTimestamp,
+		Queries:                   matchingResp.Queries,
 	}
 
 	return resp, nil

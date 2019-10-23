@@ -61,8 +61,7 @@ type (
 		history       history.Client
 		domainCache   cache.DomainCache
 		metricsClient metrics.Client
-		historyMgr    persistence.HistoryManager
-		historyV2Mgr  persistence.HistoryV2Manager
+		historyV2Mgr  persistence.HistoryManager
 		startWG       sync.WaitGroup
 		params        *service.BootstrapParams
 	}
@@ -85,8 +84,7 @@ func NewAdminHandler(
 	sVice service.Service,
 	numberOfHistoryShards int,
 	domainCache cache.DomainCache,
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	params *service.BootstrapParams,
 ) *AdminHandler {
 	handler := &AdminHandler{
@@ -94,7 +92,6 @@ func NewAdminHandler(
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
 		domainCache:           domainCache,
-		historyMgr:            historyMgr,
 		historyV2Mgr:          historyV2Mgr,
 		params:                params,
 	}
@@ -323,7 +320,6 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		// IsWorkflowRunning: not used
 		// TransientDecision: not used
 		// PersistenceToken: trust
-		// EventStoreVersion: trust
 		// ReplicationInfo: trust
 
 	} else {
@@ -354,19 +350,13 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			PersistenceToken: nil, // this is the initialized value
 			ReplicationInfo:  response.ReplicationInfo,
 		}
-		// calculate event store version based on if branch token exist
-		token.EventStoreVersion = persistence.EventStoreVersionV2
-		if token.BranchToken == nil {
-			token.EventStoreVersion = 0
-		}
 	}
 
 	if token.FirstEventID >= token.NextEventID {
 		return &admin.GetWorkflowExecutionRawHistoryResponse{
-			HistoryBatches:    []*gen.DataBlob{},
-			ReplicationInfo:   token.ReplicationInfo,
-			EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
-			NextPageToken:     nil, // no further pagination
+			HistoryBatches:  []*gen.DataBlob{},
+			ReplicationInfo: token.ReplicationInfo,
+			NextPageToken:   nil, // no further pagination
 		}, nil
 	}
 
@@ -374,13 +364,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	var historyBatches []*gen.History
 	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
 	_, historyBatches, token.PersistenceToken, size, err = historyService.PaginateHistory(
-		adh.historyMgr,
 		adh.historyV2Mgr,
 		true, // this means that we are getting history by batch
-		domainID,
-		execution.GetWorkflowId(),
-		token.RunID,
-		token.EventStoreVersion,
 		token.BranchToken,
 		token.FirstEventID,
 		token.NextEventID,
@@ -393,10 +378,9 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			// when no events can be returned from DB, DB layer will return
 			// EntityNotExistsError, this API shall return empty response
 			return &admin.GetWorkflowExecutionRawHistoryResponse{
-				HistoryBatches:    []*gen.DataBlob{},
-				ReplicationInfo:   token.ReplicationInfo,
-				EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
-				NextPageToken:     nil, // no further pagination
+				HistoryBatches:  []*gen.DataBlob{},
+				ReplicationInfo: token.ReplicationInfo,
+				NextPageToken:   nil, // no further pagination
 			}, nil
 		}
 		return nil, err
@@ -420,9 +404,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	}
 
 	result := &admin.GetWorkflowExecutionRawHistoryResponse{
-		HistoryBatches:    blobs,
-		ReplicationInfo:   token.ReplicationInfo,
-		EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
+		HistoryBatches:  blobs,
+		ReplicationInfo: token.ReplicationInfo,
 	}
 	if len(token.PersistenceToken) == 0 {
 		result.NextPageToken = nil
@@ -459,7 +442,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 
 	execution := request.Execution
 	var pageToken *getWorkflowRawHistoryV2Token
-	var versionHistory *persistence.VersionHistory
+	var targetVersionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
 		response, err := adh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID: common.StringPtr(domainID),
@@ -472,7 +455,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		versionHistories := persistence.NewVersionHistoriesFromThrift(
 			response.GetVersionHistories(),
 		)
-		versionHistory, err = adh.updateEventRange(
+		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
 			request,
 			versionHistories,
 		)
@@ -490,7 +473,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		if versionHistories == nil {
 			return nil, adh.error(&gen.BadRequestError{Message: "Invalid version histories."}, scope)
 		}
-		versionHistory, err = adh.updateEventRange(
+		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
 			request,
 			persistence.NewVersionHistoriesFromThrift(versionHistories),
 		)
@@ -506,13 +489,21 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		return nil, adh.error(err, scope)
 	}
 
+	if pageToken.StartEventID+1 == pageToken.EndEventID {
+		// API is exclusive-exclusive. Return empty response here.
+		return &admin.GetWorkflowExecutionRawHistoryV2Response{
+			HistoryBatches: []*gen.DataBlob{},
+			NextPageToken:  nil, // no further pagination
+			VersionHistory: targetVersionHistory.ToThrift(),
+		}, nil
+	}
 	pageSize := int(request.GetMaximumPageSize())
 	shardID := common.WorkflowIDToHistoryShard(
 		execution.GetWorkflowId(),
 		adh.numberOfHistoryShards,
 	)
 	rawHistoryResponse, err := adh.historyV2Mgr.ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
-		BranchToken: versionHistory.GetBranchToken(),
+		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
 		// ReadRawHistoryBranch is inclusive exclusive.
 		MinEventID:    pageToken.StartEventID + 1,
@@ -528,7 +519,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 			return &admin.GetWorkflowExecutionRawHistoryV2Response{
 				HistoryBatches: []*gen.DataBlob{},
 				NextPageToken:  nil, // no further pagination
-				VersionHistory: versionHistory.ToThrift(),
+				VersionHistory: targetVersionHistory.ToThrift(),
 			}, nil
 		}
 		return nil, err
@@ -550,7 +541,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 
 	result := &admin.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: blobs,
-		VersionHistory: versionHistory.ToThrift(),
+		VersionHistory: targetVersionHistory.ToThrift(),
 	}
 	if len(pageToken.PersistenceToken) == 0 {
 		result.NextPageToken = nil
@@ -603,7 +594,7 @@ func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(
 	return nil
 }
 
-func (adh *AdminHandler) updateEventRange(
+func (adh *AdminHandler) setRequestDefaultValueAndGetTargetVersionHistory(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	versionHistories *persistence.VersionHistories,
 ) (*persistence.VersionHistory, error) {
@@ -612,40 +603,43 @@ func (adh *AdminHandler) updateEventRange(
 	if err != nil {
 		return nil, err
 	}
+	firstItem, err := targetBranch.GetFirstItem()
+	if err != nil {
+		return nil, err
+	}
+	lastItem, err := targetBranch.GetLastItem()
+	if err != nil {
+		return nil, err
+	}
+
 	if request.StartEventId == nil || request.StartEventVersion == nil {
-		firstItem, err := targetBranch.GetFirstItem()
-		if err != nil {
-			return nil, err
-		}
 		// If start event is not set, get the events from the first event
 		// As the API is exclusive-exclusive, use first event id - 1 here
 		request.StartEventId = common.Int64Ptr(common.FirstEventID - 1)
 		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
 	}
-	isEndBoundarySet := true
 	if request.EndEventId == nil || request.EndEventVersion == nil {
-		lastItem, err := targetBranch.GetLastItem()
-		if err != nil {
-			return nil, err
-		}
 		// If end event is not set, get the events until the end event
-		// As the API is exclusive-exclusive, use end event id + 1 1 here
+		// As the API is exclusive-exclusive, use end event id + 1 here
 		request.EndEventId = common.Int64Ptr(lastItem.GetEventID() + 1)
 		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
-		isEndBoundarySet = false
 	}
 
 	if request.GetStartEventId() < 0 {
 		return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 	}
 
-	// get branch based on the end event
-	if isEndBoundarySet {
+	// get branch based on the end event if end event is defined in the request
+	if request.GetEndEventId() == lastItem.GetEventID()+1 &&
+		request.GetEndEventVersion() == lastItem.GetVersion() {
+		// this is a special case, target branch remains the same
+	} else {
 		endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
 		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
 		if err != nil {
 			return nil, err
 		}
+
 		targetBranch, err = versionHistories.GetVersionHistory(idx)
 		if err != nil {
 			return nil, err
@@ -653,22 +647,28 @@ func (adh *AdminHandler) updateEventRange(
 	}
 
 	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
-	// Start event is not on the same branch as target branch
-	if !targetBranch.ContainsItem(startItem) {
-		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
-		if err != nil {
-			return nil, err
+	// If the request start event is defined. The start event may be on a different branch as current branch.
+	// We need to find the LCA of the start event and the current branch.
+	if request.GetStartEventId() == common.FirstEventID-1 &&
+		request.GetStartEventVersion() == firstItem.GetVersion() {
+		// this is a special case, start event is on the same branch as target branch
+	} else {
+		if !targetBranch.ContainsItem(startItem) {
+			idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
+			if err != nil {
+				return nil, err
+			}
+			startBranch, err := versionHistories.GetVersionHistory(idx)
+			if err != nil {
+				return nil, err
+			}
+			startItem, err = targetBranch.FindLCAItem(startBranch)
+			if err != nil {
+				return nil, err
+			}
+			request.StartEventId = common.Int64Ptr(startItem.GetEventID())
+			request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
 		}
-		startBranch, err := versionHistories.GetVersionHistory(idx)
-		if err != nil {
-			return nil, err
-		}
-		startItem, err = targetBranch.FindLCAItem(startBranch)
-		if err != nil {
-			return nil, err
-		}
-		request.StartEventId = common.Int64Ptr(startItem.GetEventID())
-		request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
 	}
 
 	return targetBranch, nil

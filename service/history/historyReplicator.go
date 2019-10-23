@@ -40,19 +40,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-var (
-	errNoHistoryFound = errors.NewInternalFailureError("no history events found")
-
-	workflowTerminationReason   = "Terminate Workflow Due To Version Conflict."
-	workflowTerminationIdentity = "worker-service"
-
-	workflowResetReason = "Reset Workflow Due To Events Re-application."
-)
-
 type (
 	conflictResolverProvider func(context workflowExecutionContext, logger log.Logger) conflictResolver
-	stateBuilderProvider     func(msBuilder mutableState, logger log.Logger) stateBuilder
-	mutableStateProvider     func(domainEntry *cache.DomainCacheEntry, logger log.Logger) mutableState
 
 	historyReplicator struct {
 		shard             ShardContext
@@ -61,7 +50,6 @@ type (
 		historyCache      *historyCache
 		domainCache       cache.DomainCache
 		historySerializer persistence.PayloadSerializer
-		historyMgr        persistence.HistoryManager
 		clusterMetadata   cluster.Metadata
 		metricsClient     metrics.Client
 		logger            log.Logger
@@ -123,8 +111,7 @@ func newHistoryReplicator(
 	historyEngine *historyEngineImpl,
 	historyCache *historyCache,
 	domainCache cache.DomainCache,
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	logger log.Logger,
 ) *historyReplicator {
 
@@ -135,13 +122,12 @@ func newHistoryReplicator(
 		historyCache:      historyCache,
 		domainCache:       domainCache,
 		historySerializer: persistence.NewPayloadSerializer(),
-		historyMgr:        historyMgr,
 		clusterMetadata:   shard.GetService().GetClusterMetadata(),
 		metricsClient:     shard.GetMetricsClient(),
 		logger:            logger.WithTags(tag.ComponentHistoryReplicator),
 
 		getNewConflictResolver: func(context workflowExecutionContext, logger log.Logger) conflictResolver {
-			return newConflictResolver(shard, context, historyMgr, historyV2Mgr, logger)
+			return newConflictResolver(shard, context, historyV2Mgr, logger)
 		},
 		getNewStateBuilder: func(msBuilder mutableState, logger log.Logger) stateBuilder {
 			return newStateBuilder(shard, msBuilder, logger)
@@ -158,148 +144,6 @@ func newHistoryReplicator(
 	replicator.resetor = newWorkflowResetor(historyEngine)
 
 	return replicator
-}
-
-func (r *historyReplicator) SyncActivity(
-	ctx ctx.Context,
-	request *h.SyncActivityRequest,
-) (retError error) {
-
-	// sync activity info will only be sent from active side, when
-	// 1. activity has retry policy and activity got started
-	// 2. activity heart beat
-	// no sync activity task will be sent when active side fail / timeout activity,
-	// since standby side does not have activity retry timer
-
-	domainID := request.GetDomainId()
-	execution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowId,
-		RunId:      request.RunId,
-	}
-
-	context, release, err := r.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
-	if err != nil {
-		// for get workflow execution context, with valid run id
-		// err will not be of type EntityNotExistsError
-		return err
-	}
-	defer func() { release(retError) }()
-
-	msBuilder, err := context.loadWorkflowExecution()
-	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
-			return err
-		}
-
-		// this can happen if the workflow start event and this sync activity task are out of order
-		// or the target workflow is long gone
-		// the safe solution to this is to throw away the sync activity task
-		// or otherwise, worker attempt will exceeds limit and put this message to DLQ
-		return nil
-	}
-
-	if !msBuilder.IsWorkflowExecutionRunning() {
-		// perhaps conflict resolution force termination
-		return nil
-	}
-
-	version := request.GetVersion()
-	scheduleID := request.GetScheduledId()
-	if scheduleID >= msBuilder.GetNextEventID() {
-		lastWriteVersion, err := msBuilder.GetLastWriteVersion()
-		if err != nil {
-			return err
-		}
-		if version < lastWriteVersion {
-			// activity version < workflow last write version
-			// this can happen if target workflow has
-			return nil
-		}
-
-		// TODO when 2DC is deprecated, remove this block
-		if msBuilder.GetReplicationState() != nil {
-			// version >= last write version
-			// this can happen if out of order delivery happens
-			return newRetryTaskErrorWithHint(
-				ErrRetrySyncActivityMsg,
-				domainID,
-				execution.GetWorkflowId(),
-				execution.GetRunId(),
-				msBuilder.GetNextEventID(),
-			)
-		}
-		return newNDCRetryTaskErrorWithHint()
-	}
-
-	ai, ok := msBuilder.GetActivityInfo(scheduleID)
-	if !ok {
-		// this should not retry, can be caused by out of order delivery
-		// since the activity is already finished
-		return nil
-	}
-
-	if ai.Version > request.GetVersion() {
-		// this should not retry, can be caused by failover or reset
-		return nil
-	}
-
-	if ai.Version == request.GetVersion() {
-		if ai.Attempt > request.GetAttempt() {
-			// this should not retry, can be caused by failover or reset
-			return nil
-		}
-		if ai.Attempt == request.GetAttempt() {
-			lastHeartbeatTime := time.Unix(0, request.GetLastHeartbeatTime())
-			if ai.LastHeartBeatUpdatedTime.After(lastHeartbeatTime) {
-				// this should not retry, can be caused by out of order delivery
-				return nil
-			}
-			// version equal & attempt equal & last heartbeat after existing heartbeat
-			// should update activity
-		}
-		// version equal & attempt larger then existing, should update activity
-	}
-	// version larger then existing, should update activity
-
-	// calculate whether to reset the activity timer task status bits
-	// reset timer task status bits if
-	// 1. same source cluster & attempt changes
-	// 2. different source cluster
-	resetActivityTimerTaskStatus := false
-	if !r.clusterMetadata.IsVersionFromSameCluster(request.GetVersion(), ai.Version) {
-		resetActivityTimerTaskStatus = true
-	} else if ai.Attempt < request.GetAttempt() {
-		resetActivityTimerTaskStatus = true
-	}
-	err = msBuilder.ReplicateActivityInfo(request, resetActivityTimerTaskStatus)
-	if err != nil {
-		return err
-	}
-
-	// see whether we need to refresh the activity timer
-	eventTime := request.GetScheduledTime()
-	if eventTime < request.GetStartedTime() {
-		eventTime = request.GetStartedTime()
-	}
-	if eventTime < request.GetLastHeartbeatTime() {
-		eventTime = request.GetLastHeartbeatTime()
-	}
-	now := time.Unix(0, eventTime)
-	timerTasks := []persistence.Task{}
-	timeSource := clock.NewEventTimeSource()
-	timeSource.Update(now)
-	timerBuilder := newTimerBuilder(timeSource)
-	task, err := timerBuilder.GetActivityTimerTaskIfNeeded(msBuilder)
-	if err != nil {
-		return err
-	}
-
-	if task != nil {
-		timerTasks = append(timerTasks, task)
-	}
-
-	msBuilder.AddTimerTasks(timerTasks...)
-	return context.updateWorkflowExecutionAsPassive(now)
 }
 
 func (r *historyReplicator) ApplyRawEvents(
@@ -322,17 +166,15 @@ func (r *historyReplicator) ApplyRawEvents(
 	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(version)
 
 	requestOut := &h.ReplicateEventsRequest{
-		SourceCluster:           common.StringPtr(sourceCluster),
-		DomainUUID:              requestIn.DomainUUID,
-		WorkflowExecution:       requestIn.WorkflowExecution,
-		FirstEventId:            common.Int64Ptr(firstEventID),
-		NextEventId:             common.Int64Ptr(nextEventID),
-		Version:                 common.Int64Ptr(version),
-		ReplicationInfo:         requestIn.ReplicationInfo,
-		History:                 &shared.History{Events: events},
-		EventStoreVersion:       requestIn.EventStoreVersion,
-		NewRunHistory:           nil,
-		NewRunEventStoreVersion: nil,
+		SourceCluster:     common.StringPtr(sourceCluster),
+		DomainUUID:        requestIn.DomainUUID,
+		WorkflowExecution: requestIn.WorkflowExecution,
+		FirstEventId:      common.Int64Ptr(firstEventID),
+		NextEventId:       common.Int64Ptr(nextEventID),
+		Version:           common.Int64Ptr(version),
+		ReplicationInfo:   requestIn.ReplicationInfo,
+		History:           &shared.History{Events: events},
+		NewRunHistory:     nil,
 	}
 
 	if requestIn.NewRunHistory != nil {
@@ -341,7 +183,6 @@ func (r *historyReplicator) ApplyRawEvents(
 			return err
 		}
 		requestOut.NewRunHistory = &shared.History{Events: newRunEvents}
-		requestOut.NewRunEventStoreVersion = requestIn.NewRunEventStoreVersion
 	}
 
 	return r.ApplyEvents(ctx, requestOut)
@@ -736,8 +577,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 
 	// directly use stateBuilder to apply events for other events(including continueAsNew)
 	lastEvent, _, newMutableState, err := sBuilder.applyEvents(
-		domainID, requestID, execution, request.History.Events, newRunHistory,
-		request.GetEventStoreVersion(), request.GetNewRunEventStoreVersion(), request.GetNewRunNDC(),
+		domainID, requestID, execution, request.History.Events, newRunHistory, request.GetNewRunNDC(),
 	)
 	if err != nil {
 		return err
@@ -810,25 +650,16 @@ func (r *historyReplicator) replicateWorkflowStarted(
 
 	deleteHistory := func() {
 		// this function should be only called when we drop start workflow execution
-		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-			currentBranchToken, err := msBuilder.GetCurrentBranchToken()
-			if err == nil {
-				err = r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
-					BranchToken: currentBranchToken,
-					ShardID:     common.IntPtr(r.shard.GetShardID()),
-				})
-				r.logger.Error("failed to delete history branch", tag.Error(err))
-			}
-		} else {
-			err := r.shard.GetHistoryManager().DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
-				DomainID:  domainID,
-				Execution: execution,
+		currentBranchToken, err := msBuilder.GetCurrentBranchToken()
+		if err == nil {
+			r.shard.GetHistoryManager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+				BranchToken: currentBranchToken,
+				ShardID:     common.IntPtr(r.shard.GetShardID()),
 			})
 			if err != nil {
 				r.logger.Error("failed to delete workflow execution history", tag.Error(err))
 			}
 		}
-
 	}
 
 	// try to create the workflow execution
@@ -1116,7 +947,9 @@ func (r *historyReplicator) terminateWorkflow(
 
 			// setting the current version to be the last write version
 			msBuilder.UpdateReplicationStateVersion(currentLastWriteVersion, true)
+			eventBatchFirstEventID := msBuilder.GetNextEventID()
 			if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
+				eventBatchFirstEventID,
 				workflowTerminationReason,
 				[]byte(fmt.Sprintf("terminated by version: %v", incomingVersion)),
 				workflowTerminationIdentity,

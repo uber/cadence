@@ -290,7 +290,6 @@ Loop:
 			executionInfo.RunID,
 			activityInfo.ScheduledEventBatchID,
 			activityInfo.ScheduleID,
-			mutableState.GetEventStoreVersion(),
 			currentBranchToken,
 		)
 		if err != nil {
@@ -306,13 +305,10 @@ Loop:
 	}
 
 	tBuilder := newTimerBuilder(r.getTimeSource(now))
-	timerTask, err := tBuilder.GetActivityTimerTaskIfNeeded(
-		mutableState,
-	)
+	timerTask, err := tBuilder.GetActivityTimerTaskIfNeeded(mutableState)
 	if err != nil {
 		return err
 	}
-
 	if timerTask != nil {
 		// no need to set the version, since activity timer task
 		// is just a trigger to check all activities
@@ -378,7 +374,6 @@ Loop:
 			executionInfo.RunID,
 			childWorkflowInfo.InitiatedEventBatchID,
 			childWorkflowInfo.InitiatedID,
-			mutableState.GetEventStoreVersion(),
 			currentBranchToken,
 		)
 		if err != nil {
@@ -417,7 +412,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 			executionInfo.RunID,
 			requestCancelInfo.InitiatedEventBatchID,
 			requestCancelInfo.InitiatedID,
-			mutableState.GetEventStoreVersion(),
 			currentBranchToken,
 		)
 		if err != nil {
@@ -456,7 +450,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 			executionInfo.RunID,
 			signalInfo.InitiatedEventBatchID,
 			signalInfo.InitiatedID,
-			mutableState.GetEventStoreVersion(),
 			currentBranchToken,
 		)
 		if err != nil {

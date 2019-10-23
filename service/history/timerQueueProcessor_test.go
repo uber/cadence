@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -48,20 +49,20 @@ import (
 type (
 	timerQueueProcessorSuite struct {
 		suite.Suite
+		*require.Assertions
+
+		controller         *gomock.Controller
+		mockMatchingClient *matchingservicetest.MockClient
+
 		TestBase
 		engineImpl     *historyEngineImpl
 		matchingClient matching.Client
 		shardClosedCh  chan int
 		logger         log.Logger
 
-		controller               *gomock.Controller
-		mockVisibilityMgr        *mocks.VisibilityManager
-		mockMatchingClient       *matchingservicetest.MockClient
-		mockClusterMetadata      *mocks.ClusterMetadata
-		mockEventsCache          *MockEventsCache
-		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *MockReplicatorQueueProcessor
-		mockTimerProcessor       *MockTimerQueueProcessor
+		mockVisibilityMgr *mocks.VisibilityManager
+
+		mockClusterMetadata *mocks.ClusterMetadata
 	}
 )
 
@@ -79,6 +80,10 @@ func (s *timerQueueProcessorSuite) TearDownSuite() {
 }
 
 func (s *timerQueueProcessorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
+	s.controller = gomock.NewController(s.T())
+	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 
@@ -92,20 +97,11 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.ShardContext.config.TransferProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 	s.ShardContext.config.TimerProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 
-	s.controller = gomock.NewController(s.T())
-
-	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
-	s.mockTxProcessor = &MockTransferQueueProcessor{}
-	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
-	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
-	s.mockTimerProcessor = &MockTimerQueueProcessor{}
-	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
 
 	historyCache := newHistoryCache(s.ShardContext)
 	historyCache.disabled = true
@@ -117,22 +113,18 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		currentClusterName:   s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.ShardContext,
 		clusterMetadata:      s.ShardContext.GetClusterMetadata(),
-		historyMgr:           s.HistoryMgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		metricsClient:        metrics.NewClient(tally.NoopScope, metrics.History),
 		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
-		txProcessor:          s.mockTxProcessor,
-		replicatorProcessor:  s.mockReplicationProcessor,
-		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.ShardContext.SetEngine(s.engineImpl)
 	s.engineImpl.historyEventNotifier = newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 })
 	s.engineImpl.txProcessor = newTransferQueueProcessor(
 		s.ShardContext, s.engineImpl, s.mockVisibilityMgr, nil, nil, s.logger,
 	)
-	s.engineImpl.replicatorProcessor = newReplicatorQueueProcessor(s.ShardContext, historyCache, nil, s.ExecutionManager, s.HistoryMgr, s.HistoryV2Mgr, s.logger)
+	s.engineImpl.replicatorProcessor = newReplicatorQueueProcessor(s.ShardContext, historyCache, nil, s.ExecutionManager, s.HistoryV2Mgr, s.logger)
 	s.engineImpl.timerProcessor = newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.mockMatchingClient, s.logger)
 	s.ShardContext.SetEngine(s.engineImpl)
 }
@@ -140,6 +132,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 func (s *timerQueueProcessorSuite) TearDownTest() {
 	s.TeardownDomains()
 	s.TearDownWorkflowStore()
+	s.controller.Finish()
 }
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
@@ -181,8 +174,8 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 
 	createState := createMutableState(builder)
 	info := createState.ExecutionInfo
-	task0, err0 := s.CreateWorkflowExecution(domainID, we, tl, info.WorkflowTypeName, info.WorkflowTimeout, info.DecisionTimeoutValue,
-		info.ExecutionContext, info.NextEventID, info.LastProcessedEvent, info.DecisionScheduleID, nil)
+	task0, err0 := s.CreateWorkflowExecutionWithBranchToken(domainID, we, tl, info.WorkflowTypeName, info.WorkflowTimeout, info.DecisionTimeoutValue,
+		info.ExecutionContext, info.NextEventID, info.LastProcessedEvent, info.DecisionScheduleID, info.BranchToken, nil)
 	s.NoError(err0, "No error expected.")
 	s.NotNil(task0, "Expected non empty task identifier.")
 
@@ -207,13 +200,12 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 			})
 		s.Nil(err)
 		timerInfos = append(timerInfos, ti)
-		tBuilder.AddUserTimer(ti, builder)
 	}
 
-	task, err := tBuilder.GetUserTimerTaskIfNeeded(builder)
+	timer, err := tBuilder.GetUserTimerTaskIfNeeded(builder)
 	s.NoError(err)
-	if task != nil {
-		timerTasks = append(timerTasks, task)
+	if timer != nil {
+		timerTasks = append(timerTasks, timer)
 	}
 
 	s.ShardContext.Lock()
@@ -259,14 +251,13 @@ func (s *timerQueueProcessorSuite) addUserTimer(domainID string, we workflow.Wor
 	condition := state.ExecutionInfo.NextEventID
 
 	// create a user timer
-	_, ti, err := builder.AddTimerStartedEvent(common.EmptyEventID,
+	_, _, err = builder.AddTimerStartedEvent(common.EmptyEventID,
 		&workflow.StartTimerDecisionAttributes{TimerId: common.StringPtr(timerID), StartToFireTimeoutSeconds: common.Int64Ptr(1)})
 	s.Nil(err)
-	tb.AddUserTimer(ti, builder)
-	task, err := tb.GetUserTimerTaskIfNeeded(builder)
+	timer, err := tb.GetUserTimerTaskIfNeeded(builder)
 	s.NoError(err)
-	s.NotNil(task)
-	timerTasks := []persistence.Task{task}
+	s.NotNil(timer)
+	timerTasks := []persistence.Task{timer}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
 	return timerTasks
@@ -980,11 +971,9 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers_SameExpiry() {
 		&workflow.StartTimerDecisionAttributes{TimerId: common.StringPtr("tid2"), StartToFireTimeoutSeconds: common.Int64Ptr(1)})
 	s.Nil(err)
 
-	tBuilder.AddUserTimer(ti, builder)
-	tBuilder.AddUserTimer(ti2, builder)
-	task, err := tBuilder.GetUserTimerTaskIfNeeded(builder)
+	timer, err := tBuilder.GetUserTimerTaskIfNeeded(builder)
 	s.NoError(err)
-	timerTasks = append(timerTasks, task)
+	timerTasks = append(timerTasks, timer)
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
 	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)

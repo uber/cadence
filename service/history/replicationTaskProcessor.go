@@ -352,17 +352,15 @@ func (p *ReplicationTaskProcessor) handleHistoryReplicationTask(
 			WorkflowId: attr.WorkflowId,
 			RunId:      attr.RunId,
 		},
-		FirstEventId:            attr.FirstEventId,
-		NextEventId:             attr.NextEventId,
-		Version:                 attr.Version,
-		ReplicationInfo:         attr.ReplicationInfo,
-		History:                 attr.History,
-		NewRunHistory:           attr.NewRunHistory,
-		ForceBufferEvents:       common.BoolPtr(false),
-		EventStoreVersion:       attr.EventStoreVersion,
-		NewRunEventStoreVersion: attr.NewRunEventStoreVersion,
-		ResetWorkflow:           attr.ResetWorkflow,
-		NewRunNDC:               attr.NewRunNDC,
+		FirstEventId:      attr.FirstEventId,
+		NextEventId:       attr.NextEventId,
+		Version:           attr.Version,
+		ReplicationInfo:   attr.ReplicationInfo,
+		History:           attr.History,
+		NewRunHistory:     attr.NewRunHistory,
+		ForceBufferEvents: common.BoolPtr(false),
+		ResetWorkflow:     attr.ResetWorkflow,
+		NewRunNDC:         attr.NewRunNDC,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
@@ -388,8 +386,7 @@ func (p *ReplicationTaskProcessor) handleHistoryReplicationTaskV2(
 		VersionHistoryItems: attr.VersionHistoryItems,
 		Events:              attr.Events,
 		// new run events does not need version history since there is no prior events
-		NewRunEvents:  attr.NewRunEvents,
-		ResetWorkflow: attr.ResetWorkflow,
+		NewRunEvents: attr.NewRunEvents,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()

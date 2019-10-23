@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -41,6 +42,9 @@ import (
 
 type (
 	taskProcessorSuite struct {
+		suite.Suite
+		*require.Assertions
+
 		clusterName     string
 		logger          log.Logger
 		mockService     service.Service
@@ -52,7 +56,6 @@ type (
 		scope            int
 		notificationChan chan struct{}
 
-		suite.Suite
 		taskProcessor *taskProcessor
 	}
 )
@@ -71,7 +74,8 @@ func (s *taskProcessorSuite) TearDownSuite() {
 }
 
 func (s *taskProcessorSuite) SetupTest() {
-	shardID := 0
+	s.Assertions = require.New(s.T())
+
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.clusterName = cluster.TestAlternativeClusterName
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
@@ -81,7 +85,7 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil, nil)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
+		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
@@ -125,121 +129,119 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_ShutDown() {
 }
 
 func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainErrRetry_ProcessNoErr() {
-	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
-	var taskFilterErr queueTaskFilter = func(timer queueTaskInfo) (bool, error) {
+	task := newTaskInfo(s.mockProcessor, &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}, s.logger)
+	var taskFilterErr taskFilter = func(task *taskInfo) (bool, error) {
 		return false, errors.New("some random error")
 	}
-	var taskFilter queueTaskFilter = func(timer queueTaskInfo) (bool, error) {
+	var taskFilter taskFilter = func(task *taskInfo) (bool, error) {
 		return true, nil
 	}
 	s.mockProcessor.On("getTaskFilter").Return(taskFilterErr).Once()
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
-	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&taskInfo{
-			processor: s.mockProcessor,
-			task:      task,
-		},
+		task,
 	)
 }
 
 func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainFalse_ProcessNoErr() {
-	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
-	var taskFilter queueTaskFilter = func(timer queueTaskInfo) (bool, error) {
+	task := newTaskInfo(s.mockProcessor, &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}, s.logger)
+	task.shouldProcessTask = false
+	var taskFilter taskFilter = func(task *taskInfo) (bool, error) {
 		return false, nil
 	}
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
-	s.mockProcessor.On("process", task, false).Return(s.scope, nil).Once()
+	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&taskInfo{
-			processor: s.mockProcessor,
-			task:      task,
-		},
+		task,
 	)
 }
 
 func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessNoErr() {
-	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
-	var taskFilter queueTaskFilter = func(timer queueTaskInfo) (bool, error) {
+	task := newTaskInfo(s.mockProcessor, &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}, s.logger)
+	var taskFilter taskFilter = func(task *taskInfo) (bool, error) {
 		return true, nil
 	}
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
-	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&taskInfo{
-			processor: s.mockProcessor,
-			task:      task,
-		},
+		task,
 	)
 }
 
 func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessErrNoErr() {
 	err := errors.New("some random err")
-	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
-	var taskFilter queueTaskFilter = func(timer queueTaskInfo) (bool, error) {
+	task := newTaskInfo(s.mockProcessor, &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}, s.logger)
+	var taskFilter taskFilter = func(task *taskInfo) (bool, error) {
 		return true, nil
 	}
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
-	s.mockProcessor.On("process", task, true).Return(s.scope, err).Once()
-	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockProcessor.On("process", task).Return(s.scope, err).Once()
+	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&taskInfo{
-			processor: s.mockProcessor,
-			task:      task,
-		},
+		task,
 	)
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_EntityNotExists() {
 	err := &workflow.EntityNotExistsError{}
-	s.Nil(s.taskProcessor.handleTaskError(s.scope, time.Now(), s.notificationChan, err, s.logger))
+
+	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger)
+	s.Nil(s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_ErrTaskRetry() {
 	err := ErrTaskRetry
 	delay := time.Second
 
-	startTime := time.Now()
+	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger)
 	go func() {
 		time.Sleep(delay)
 		s.notificationChan <- struct{}{}
 	}()
 
-	err = s.taskProcessor.handleTaskError(s.scope, time.Now(), s.notificationChan, err, s.logger)
-	duration := time.Since(startTime)
+	err = s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err)
+	duration := time.Since(taskInfo.startTime)
 	s.True(duration >= delay)
 	s.Equal(ErrTaskRetry, err)
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_ErrTaskDiscarded() {
 	err := ErrTaskDiscarded
-	s.Nil(s.taskProcessor.handleTaskError(s.scope, time.Now(), s.notificationChan, err, s.logger))
+
+	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger)
+	s.Nil(s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_DomainNotActiveError() {
 	err := &workflow.DomainNotActiveError{}
 
-	startTime := time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
-	s.Nil(s.taskProcessor.handleTaskError(s.scope, startTime, s.notificationChan, err, s.logger))
+	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger)
+	taskInfo.startTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
+	s.Nil(s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
 
-	startTime = time.Now()
-	s.Equal(err, s.taskProcessor.handleTaskError(s.scope, startTime, s.notificationChan, err, s.logger))
+	taskInfo.startTime = time.Now()
+	s.Equal(err, s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_CurrentWorkflowConditionFailedError() {
 	err := &persistence.CurrentWorkflowConditionFailedError{}
-	s.Nil(s.taskProcessor.handleTaskError(s.scope, time.Now(), s.notificationChan, err, s.logger))
+
+	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger)
+	s.Nil(s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_RandomErr() {
 	err := errors.New("random error")
-	s.Equal(err, s.taskProcessor.handleTaskError(s.scope, time.Now(), s.notificationChan, err, s.logger))
+
+	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger)
+	s.Equal(err, s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
 }

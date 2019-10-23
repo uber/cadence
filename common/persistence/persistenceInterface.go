@@ -87,23 +87,8 @@ type (
 		DeleteTask(request *DeleteTaskRequest) error
 	}
 
-	// HistoryStore is used to manage Workflow Execution HistoryEventBatch for Persistence layer
-	// DEPRECATED: use HistoryV2Store instead
+	// HistoryStore is to manager workflow history events
 	HistoryStore interface {
-		Closeable
-		GetName() string
-		//The below two APIs are related to serialization/deserialization
-
-		//DEPRECATED in favor of V2 APIs-AppendHistoryNodes
-		AppendHistoryEvents(request *InternalAppendHistoryEventsRequest) error
-		//DEPRECATED in favor of V2 APIs-ReadHistoryBranch
-		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
-		//DEPRECATED in favor of V2 APIs-DeleteHistoryBranch
-		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
-	}
-
-	// HistoryV2Store is to manager workflow history events
-	HistoryV2Store interface {
 		Closeable
 		GetName() string
 
@@ -118,8 +103,6 @@ type (
 		ForkHistoryBranch(request *InternalForkHistoryBranchRequest) (*InternalForkHistoryBranchResponse, error)
 		// DeleteHistoryBranch removes a branch
 		DeleteHistoryBranch(request *InternalDeleteHistoryBranchRequest) error
-		// UpdateHistoryBranch update a branch
-		CompleteForkBranch(request *InternalCompleteForkBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 		// GetAllHistoryTreeBranches returns all branches of all trees
@@ -235,13 +218,11 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		// events V2 related
-		EventStoreVersion int32
-		BranchToken       []byte
-		CronSchedule      string
-		ExpirationSeconds int32
-		Memo              map[string][]byte
-		SearchAttributes  map[string][]byte
+		BranchToken        []byte
+		CronSchedule       string
+		ExpirationSeconds  int32
+		Memo               map[string][]byte
+		SearchAttributes   map[string][]byte
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
@@ -453,33 +434,6 @@ type (
 	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
 	InternalGetWorkflowExecutionResponse struct {
 		State *InternalWorkflowMutableState
-	}
-
-	// InternalGetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
-	InternalGetWorkflowExecutionHistoryRequest struct {
-		// an extra field passing from GetWorkflowExecutionHistoryRequest
-		LastEventBatchVersion int64
-
-		DomainID  string
-		Execution workflow.WorkflowExecution
-		// Get the history events from FirstEventID. Inclusive.
-		FirstEventID int64
-		// Get the history events upto NextEventID.  Not Inclusive.
-		NextEventID int64
-		// Maximum number of history append transactions per page
-		PageSize int
-		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
-		NextPageToken []byte
-	}
-
-	// InternalGetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest for Persistence Interface
-	InternalGetWorkflowExecutionHistoryResponse struct {
-		History []*DataBlob
-		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
-		NextPageToken []byte
-		// an extra field passing to DataInterface
-		LastEventBatchVersion int64
 	}
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch

@@ -32,12 +32,6 @@ import (
 	"github.com/uber/cadence/common/codec"
 )
 
-// TODO remove this event store version
-const (
-	// 0/1 or empty are all considered as V1
-	EventStoreVersionV2 = 2
-)
-
 // Domain status
 const (
 	DomainStatusRegistered = iota
@@ -315,9 +309,7 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		// events V2 related
-		EventStoreVersion int32
-		BranchToken       []byte
+		BranchToken        []byte
 		// Cron
 		CronSchedule      string
 		ExpirationSeconds int32
@@ -372,9 +364,7 @@ type (
 		ResetWorkflow     bool
 
 		// TODO deprecate when NDC is fully released && migrated
-		EventStoreVersion       int32
-		NewRunEventStoreVersion int32
-		LastReplicationInfo     map[string]*ReplicationInfo
+		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -573,17 +563,17 @@ type (
 
 	// HistoryReplicationTask is the replication task created for shipping history replication events to other clusters
 	HistoryReplicationTask struct {
-		VisibilityTimestamp     time.Time
-		TaskID                  int64
-		FirstEventID            int64
-		NextEventID             int64
-		Version                 int64
-		LastReplicationInfo     map[string]*ReplicationInfo
-		EventStoreVersion       int32
-		BranchToken             []byte
-		ResetWorkflow           bool
-		NewRunEventStoreVersion int32
-		NewRunBranchToken       []byte
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		BranchToken         []byte
+		NewRunBranchToken   []byte
+
+		// TODO when 2DC is deprecated remove these 2 attributes
+		ResetWorkflow       bool
+		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters
@@ -602,20 +592,20 @@ type (
 
 	// VersionHistoryItem contains the event id and the associated version
 	VersionHistoryItem struct {
-		eventID int64
-		version int64
+		EventID int64
+		Version int64
 	}
 
 	// VersionHistory provides operations on version history
 	VersionHistory struct {
-		branchToken []byte
-		items       []*VersionHistoryItem
+		BranchToken []byte
+		Items       []*VersionHistoryItem
 	}
 
 	// VersionHistories contains a set of VersionHistory
 	VersionHistories struct {
-		currentVersionHistoryIndex int
-		histories                  []*VersionHistory
+		CurrentVersionHistoryIndex int
+		Histories                  []*VersionHistory
 	}
 
 	// WorkflowMutableState indicates workflow related state
@@ -1087,68 +1077,6 @@ type (
 		NextPageToken []byte
 	}
 
-	// AppendHistoryEventsRequest is used to append new events to workflow execution history
-	// Deprecated: use v2 API-AppendHistoryNodes() instead
-	AppendHistoryEventsRequest struct {
-		DomainID          string
-		Execution         workflow.WorkflowExecution
-		FirstEventID      int64
-		EventBatchVersion int64
-		RangeID           int64
-		TransactionID     int64
-		Events            []*workflow.HistoryEvent
-		Overwrite         bool
-		Encoding          common.EncodingType // optional binary encoding type
-	}
-
-	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
-	// Deprecated: use v2 API-AppendHistoryNodes() instead
-	GetWorkflowExecutionHistoryRequest struct {
-		DomainID  string
-		Execution workflow.WorkflowExecution
-		// Get the history events from FirstEventID. Inclusive.
-		FirstEventID int64
-		// Get the history events upto NextEventID.  Not Inclusive.
-		NextEventID int64
-		// Maximum number of history append transactions per page
-		PageSize int
-		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
-		NextPageToken []byte
-	}
-
-	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
-	// Deprecated: use V2 API instead-ReadHistoryBranch()
-	GetWorkflowExecutionHistoryResponse struct {
-		History *workflow.History
-		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on GetWorkflowExecutionHistoryRequest to read the next page.
-		NextPageToken []byte
-		// the first_event_id of last loaded batch
-		LastFirstEventID int64
-		// Size of history read from store
-		Size int
-	}
-
-	// GetWorkflowExecutionHistoryByBatchResponse is the response to GetWorkflowExecutionHistoryRequest
-	// Deprecated: use V2 API instead-ReadHistoryBranchByBatch()
-	GetWorkflowExecutionHistoryByBatchResponse struct {
-		History []*workflow.History
-		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on GetWorkflowExecutionHistoryRequest to read the next page.
-		NextPageToken []byte
-		// the first_event_id of last loaded batch
-		LastFirstEventID int64
-		// Size of history read from store
-		Size int
-	}
-
-	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
-	// Deprecated: use v2 API-AppendHistoryNodes() instead
-	DeleteWorkflowExecutionHistoryRequest struct {
-		DomainID  string
-		Execution workflow.WorkflowExecution
-	}
-
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
 		ID          string
@@ -1447,8 +1375,7 @@ type (
 	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches                  []*workflow.HistoryBranch
-		ForkingInProgressBranches []HistoryBranchDetail
+		Branches []*workflow.HistoryBranch
 	}
 
 	// GetAllHistoryTreeBranchesRequest is a request of GetAllHistoryTreeBranches
@@ -1465,12 +1392,6 @@ type (
 		NextPageToken []byte
 		// all branches of all trees
 		Branches []HistoryBranchDetail
-	}
-
-	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
-	// Deprecated: uses V2 API-AppendHistoryNodesRequest
-	AppendHistoryEventsResponse struct {
-		Size int
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
@@ -1549,25 +1470,8 @@ type (
 		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
 	}
 
-	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
-	// Deprecated: use HistoryV2Manager instead
+	// HistoryManager is used to manager workflow history events
 	HistoryManager interface {
-		Closeable
-		GetName() string
-
-		// Deprecated: use v2 API-AppendHistoryNodes() instead
-		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
-		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
-		// Deprecated: use v2 API-ReadHistoryBranch() instead
-		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
-		// Deprecated: use v2 API-ReadHistoryBranchByBatch() instead
-		GetWorkflowExecutionHistoryByBatch(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryByBatchResponse, error)
-		// Deprecated: use v2 API-DeleteHistoryBranch instead
-		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
-	}
-
-	// HistoryV2Manager is used to manager workflow history events
-	HistoryV2Manager interface {
 		Closeable
 		GetName() string
 
@@ -1586,8 +1490,6 @@ type (
 		ReadRawHistoryBranch(request *ReadHistoryBranchRequest) (*ReadRawHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
 		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
-		// CompleteForkBranch will complete the forking process after update mutableState, this is to help preventing data leakage
-		CompleteForkBranch(request *CompleteForkBranchRequest) error
 		// DeleteHistoryBranch removes a branch
 		// If this is the last branch to delete, it will also remove the root node
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error

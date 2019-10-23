@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package store
+package cassandra
 
-import (
-	"github.com/gocql/gocql"
-)
+// NOTE: whenever there is a new data base schema update, plz update the following versions
 
-// CassandraStoreService store service
-type CassandraStoreService struct {
-	session *gocql.Session
-}
+// Version is the Cassandra database release version
+const Version = "0.23"
+
+// VisibilityVersion is the Cassandra visibility database release version
+const VisibilityVersion = "0.4"

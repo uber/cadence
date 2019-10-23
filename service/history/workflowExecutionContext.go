@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination workflowExecutionContext_mock.go
+
 package history
 
 import (
@@ -193,7 +195,9 @@ func (c *workflowExecutionContextImpl) unlock() {
 func (c *workflowExecutionContextImpl) clear() {
 	c.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.WorkflowContextCleared)
 	c.msBuilder = nil
-	c.stats = &persistence.ExecutionStats{}
+	c.stats = &persistence.ExecutionStats{
+		HistorySize: 0,
+	}
 }
 
 func (c *workflowExecutionContextImpl) getDomainID() string {
@@ -301,7 +305,13 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 	createMode persistence.CreateWorkflowMode,
 	prevRunID string,
 	prevLastWriteVersion int64,
-) error {
+) (retError error) {
+
+	defer func() {
+		if retError != nil {
+			c.clear()
+		}
+	}()
 
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		// workflow create mode & prev run ID & version
@@ -312,6 +322,8 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 		NewWorkflowSnapshot: *newWorkflow,
 	}
 
+	historySize += c.getHistorySize()
+	c.setHistorySize(historySize)
 	createRequest.NewWorkflowSnapshot.ExecutionStats = &persistence.ExecutionStats{
 		HistorySize: historySize,
 	}
@@ -491,7 +503,7 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 		)
 	}
 
-	c.clear()
+	c.clear() // TODO when 2DC is deprecated remove this line
 	return nil
 }
 
@@ -745,13 +757,11 @@ func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
 	newWorkflowSnapshot.ReplicationTasks = nil
 
 	newRunBranchToken := newRunTask.BranchToken
-	newRunEventStoreVersion := newRunTask.EventStoreVersion
 	taskUpdated := false
 	for _, replicationTask := range currentWorkflowMutation.ReplicationTasks {
 		if task, ok := replicationTask.(*persistence.HistoryReplicationTask); ok {
 			taskUpdated = true
 			task.NewRunBranchToken = newRunBranchToken
-			task.NewRunEventStoreVersion = newRunEventStoreVersion
 		}
 	}
 	if !taskUpdated {
@@ -781,19 +791,6 @@ func (c *workflowExecutionContextImpl) persistFirstWorkflowEvents(
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
-	firstEvent := events[0]
-
-	if len(branchToken) == 0 {
-		size, err := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
-			DomainID:          domainID,
-			Execution:         execution,
-			FirstEventID:      firstEvent.GetEventId(),
-			EventBatchVersion: firstEvent.GetVersion(),
-			Events:            events,
-			// TransactionID is set by shard context
-		})
-		return int64(size), err
-	}
 
 	size, err := c.appendHistoryV2EventsWithRetry(
 		domainID,
@@ -824,19 +821,6 @@ func (c *workflowExecutionContextImpl) persistNonFirstWorkflowEvents(
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
-	firstEvent := events[0]
-
-	if len(branchToken) == 0 {
-		size, err := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
-			DomainID:          domainID,
-			Execution:         execution,
-			FirstEventID:      firstEvent.GetEventId(),
-			EventBatchVersion: firstEvent.GetVersion(),
-			Events:            events,
-			// TransactionID is set by shard context
-		})
-		return int64(size), err
-	}
 
 	size, err := c.appendHistoryV2EventsWithRetry(
 		domainID,
@@ -849,25 +833,6 @@ func (c *workflowExecutionContextImpl) persistNonFirstWorkflowEvents(
 		},
 	)
 	return int64(size), err
-}
-
-func (c *workflowExecutionContextImpl) appendHistoryEventsWithRetry(
-	request *persistence.AppendHistoryEventsRequest,
-) (int64, error) {
-
-	resp := 0
-	op := func() error {
-		var err error
-		resp, err = c.shard.AppendHistoryEvents(request)
-		return err
-	}
-
-	err := backoff.Retry(
-		op,
-		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
-	)
-	return int64(resp), err
 }
 
 func (c *workflowExecutionContextImpl) appendHistoryV2EventsWithRetry(

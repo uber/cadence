@@ -496,13 +496,10 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
 	now time.Time,
 ) error {
 
-	timerTask, err := r.getTimerBuilder(now).GetActivityTimerTaskIfNeeded(
-		r.mutableState,
-	)
+	timerTask, err := r.getTimerBuilder(now).GetActivityTimerTaskIfNeeded(r.mutableState)
 	if err != nil {
 		return err
 	}
-
 	if timerTask != nil {
 		// no need to set the version, since activity timer task
 		// is just a trigger to check all activities

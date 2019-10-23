@@ -39,7 +39,6 @@ type (
 		DomainName           string
 		WorkflowID           string
 		RunID                string
-		EventStoreVersion    int32
 		BranchToken          []byte
 		NextEventID          int64
 		CloseFailoverVersion int64
@@ -63,8 +62,7 @@ type (
 
 	// HistoryBootstrapContainer contains components needed by all history Archiver implementations
 	HistoryBootstrapContainer struct {
-		HistoryManager   persistence.HistoryManager
-		HistoryV2Manager persistence.HistoryV2Manager
+		HistoryV2Manager persistence.HistoryManager
 		Logger           log.Logger
 		MetricsClient    metrics.Client
 		ClusterMetadata  cluster.Metadata

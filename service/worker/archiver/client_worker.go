@@ -55,8 +55,7 @@ type (
 		PublicClient     workflowserviceclient.Interface
 		MetricsClient    metrics.Client
 		Logger           log.Logger
-		HistoryManager   persistence.HistoryManager
-		HistoryV2Manager persistence.HistoryV2Manager
+		HistoryV2Manager persistence.HistoryManager
 		DomainCache      cache.DomainCache
 		Config           *Config
 		ArchiverProvider provider.ArchiverProvider

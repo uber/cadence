@@ -170,24 +170,6 @@ func (s *integrationSuite) isHistoryArchived(domain string, execution *workflow.
 }
 
 func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow.WorkflowExecution) bool {
-	if !s.testClusterConfig.EnableEventsV2 {
-		request := &persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID:     domainID,
-			Execution:    *execution,
-			FirstEventID: common.FirstEventID,
-			NextEventID:  common.EndEventID,
-			PageSize:     1,
-		}
-		for i := 0; i < retryLimit; i++ {
-			_, err := s.testCluster.testBase.HistoryMgr.GetWorkflowExecutionHistory(request)
-			if _, ok := err.(*workflow.EntityNotExistsError); ok {
-				return true
-			}
-			time.Sleep(retryBackoffTime)
-		}
-		return false
-	}
-
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, s.testClusterConfig.HistoryConfig.NumHistoryShards)
 	request := &persistence.GetHistoryTreeRequest{
 		TreeID:  execution.GetRunId(),
@@ -196,7 +178,7 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 	for i := 0; i < retryLimit; i++ {
 		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(request)
 		s.Nil(err)
-		if len(resp.Branches) == 0 && len(resp.ForkingInProgressBranches) == 0 {
+		if len(resp.Branches) == 0 {
 			return true
 		}
 		time.Sleep(retryBackoffTime)

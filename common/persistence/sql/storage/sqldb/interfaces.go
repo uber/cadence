@@ -289,7 +289,6 @@ type (
 		ShardID      int
 		TreeID       UUID
 		BranchID     UUID
-		InProgress   bool
 		Data         []byte
 		DataEncoding string
 	}
@@ -515,20 +514,12 @@ type (
 		DeleteFromTaskLists(filter *TaskListsFilter) (sql.Result, error)
 		LockTaskLists(filter *TaskListsFilter) (int64, error)
 
-		// eventsV1: will be deprecated in favor of eventsV2
-		InsertIntoEvents(row *EventsRow) (sql.Result, error)
-		UpdateEvents(rows *EventsRow) (sql.Result, error)
-		SelectFromEvents(filter *EventsFilter) ([]EventsRow, error)
-		DeleteFromEvents(filter *EventsFilter) (sql.Result, error)
-		LockEvents(filter *EventsFilter) (*EventsRow, error)
-
 		// eventsV2
 		InsertIntoHistoryNode(row *HistoryNodeRow) (sql.Result, error)
 		SelectFromHistoryNode(filter *HistoryNodeFilter) ([]HistoryNodeRow, error)
 		DeleteFromHistoryNode(filter *HistoryNodeFilter) (sql.Result, error)
 		InsertIntoHistoryTree(row *HistoryTreeRow) (sql.Result, error)
 		SelectFromHistoryTree(filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
-		UpdateHistoryTree(row *HistoryTreeRow) (sql.Result, error)
 		DeleteFromHistoryTree(filter *HistoryTreeFilter) (sql.Result, error)
 
 		InsertIntoExecutions(row *ExecutionsRow) (sql.Result, error)

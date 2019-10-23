@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -40,15 +39,17 @@ type (
 		resetWorkflow(
 			ctx ctx.Context,
 			now time.Time,
-			baseEventID int64,
-			baseVersion int64,
+			baseLastEventID int64,
+			baseLastEventVersion int64,
+			incomingFirstEventID int64,
+			incomingFirstEventVersion int64,
 		) (mutableState, error)
 	}
 
 	nDCWorkflowResetterImpl struct {
 		shard          ShardContext
 		transactionMgr nDCTransactionMgr
-		historyV2Mgr   persistence.HistoryV2Manager
+		historyV2Mgr   persistence.HistoryManager
 		stateRebuilder nDCStateRebuilder
 
 		domainID   string
@@ -77,7 +78,7 @@ func newNDCWorkflowResetter(
 	return &nDCWorkflowResetterImpl{
 		shard:          shard,
 		transactionMgr: transactionMgr,
-		historyV2Mgr:   shard.GetHistoryV2Manager(),
+		historyV2Mgr:   shard.GetHistoryManager(),
 		stateRebuilder: newNDCStateRebuilder(shard, logger),
 
 		domainID:   domainID,
@@ -92,38 +93,25 @@ func newNDCWorkflowResetter(
 func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	ctx ctx.Context,
 	now time.Time,
-	baseEventID int64,
-	baseVersion int64,
+	baseLastEventID int64,
+	baseLastEventVersion int64,
+	incomingFirstEventID int64,
+	incomingFirstEventVersion int64,
 ) (mutableState, error) {
 
-	baseBranchToken, err := r.getBaseBranchToken(ctx, baseEventID, baseVersion)
+	baseBranchToken, err := r.getBaseBranchToken(
+		ctx,
+		baseLastEventID,
+		baseLastEventVersion,
+		incomingFirstEventID,
+		incomingFirstEventVersion,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// fork a new history branch
-	shardID := r.shard.GetShardID()
-	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
-		ForkBranchToken: baseBranchToken,
-		ForkNodeID:      baseEventID + 1,
-		Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
-		ShardID:         common.IntPtr(shardID),
-	})
-	if err != nil {
-		return nil, err
-	}
-	resetBranchToken := resp.NewBranchToken
-	defer func() {
-		if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
-			BranchToken: resetBranchToken,
-			Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
-			ShardID:     common.IntPtr(shardID),
-		}); errComplete != nil {
-			r.logger.WithTags(
-				tag.Error(errComplete),
-			).Error("newNDCWorkflowResetter unable to complete creation of new branch.")
-		}
-	}()
+	resetBranchToken, err := r.getResetBranchToken(ctx, baseBranchToken, baseLastEventID)
 
 	requestID := uuid.New()
 	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.rebuild(
@@ -135,7 +123,8 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 			r.baseRunID,
 		),
 		baseBranchToken,
-		baseEventID+1,
+		baseLastEventID,
+		baseLastEventVersion,
 		definition.NewWorkflowIdentifier(
 			r.domainID,
 			r.workflowID,
@@ -148,14 +137,17 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		return nil, err
 	}
 
+	r.newContext.clear()
 	r.newContext.setHistorySize(rebuiltHistorySize)
 	return rebuildMutableState, nil
 }
 
 func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 	ctx ctx.Context,
-	baseEventID int64,
-	baseVersion int64,
+	baseLastEventID int64,
+	baseLastEventVersion int64,
+	incomingFirstEventID int64,
+	incomingFirstEventVersion int64,
 ) (baseBranchToken []byte, retError error) {
 
 	baseWorkflow, err := r.transactionMgr.loadNDCWorkflow(
@@ -173,10 +165,21 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 
 	baseVersionHistories := baseWorkflow.getMutableState().GetVersionHistories()
 	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
-		persistence.NewVersionHistoryItem(baseEventID, baseVersion),
+		persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
 	)
 	if err != nil {
-		return nil, newNDCRetryTaskErrorWithHint()
+		// the base event and incoming event are from different branch
+		// only re-replicate the gap on the incoming branch
+		// the base branch event will eventually arrived
+		return nil, newNDCRetryTaskErrorWithHint(
+			r.domainID,
+			r.workflowID,
+			r.newRunID,
+			nil,
+			nil,
+			common.Int64Ptr(incomingFirstEventID),
+			common.Int64Ptr(incomingFirstEventVersion),
+		)
 	}
 
 	baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
@@ -184,4 +187,25 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 		return nil, err
 	}
 	return baseVersionHistory.GetBranchToken(), nil
+}
+
+func (r *nDCWorkflowResetterImpl) getResetBranchToken(
+	ctx ctx.Context,
+	baseBranchToken []byte,
+	baseLastEventID int64,
+) ([]byte, error) {
+
+	// fork a new history branch
+	shardID := r.shard.GetShardID()
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: baseBranchToken,
+		ForkNodeID:      baseLastEventID + 1,
+		Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
+		ShardID:         common.IntPtr(shardID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.NewBranchToken, nil
 }

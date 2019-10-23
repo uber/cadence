@@ -42,10 +42,9 @@ type (
 		currentClusterNamer   string
 		shard                 ShardContext
 		historyCache          *historyCache
-		replicationTaskFilter queueTaskFilter
+		replicationTaskFilter taskFilter
 		executionMgr          persistence.ExecutionManager
-		historyMgr            persistence.HistoryManager
-		historyV2Mgr          persistence.HistoryV2Manager
+		historyV2Mgr          persistence.HistoryManager
 		replicator            messaging.Producer
 		metricsClient         metrics.Client
 		options               *QueueProcessorOptions
@@ -71,8 +70,7 @@ func newReplicatorQueueProcessor(
 	historyCache *historyCache,
 	replicator messaging.Producer,
 	executionMgr persistence.ExecutionManager,
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	logger log.Logger,
 ) ReplicatorQueueProcessor {
 
@@ -93,7 +91,7 @@ func newReplicatorQueueProcessor(
 
 	logger = logger.WithTags(tag.ComponentReplicatorQueue)
 
-	replicationTaskFilter := func(qTask queueTaskInfo) (bool, error) {
+	replicationTaskFilter := func(taskInfo *taskInfo) (bool, error) {
 		return true, nil
 	}
 
@@ -107,7 +105,6 @@ func newReplicatorQueueProcessor(
 		historyCache:          historyCache,
 		replicationTaskFilter: replicationTaskFilter,
 		executionMgr:          executionMgr,
-		historyMgr:            historyMgr,
 		historyV2Mgr:          historyV2Mgr,
 		replicator:            replicator,
 		metricsClient:         shard.GetMetricsClient(),
@@ -125,16 +122,21 @@ func newReplicatorQueueProcessor(
 	return processor
 }
 
-func (p *replicatorQueueProcessorImpl) getTaskFilter() queueTaskFilter {
+func (p *replicatorQueueProcessorImpl) getTaskFilter() taskFilter {
 	return p.replicationTaskFilter
 }
 
-func (p *replicatorQueueProcessorImpl) complete(qTask queueTaskInfo) {
-	p.queueProcessorBase.complete(qTask)
+func (p *replicatorQueueProcessorImpl) complete(
+	taskInfo *taskInfo,
+) {
+	p.queueProcessorBase.complete(taskInfo.task)
 }
 
-func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo, shouldProcessTask bool) (int, error) {
-	task, ok := qTask.(*persistence.ReplicationTaskInfo)
+func (p *replicatorQueueProcessorImpl) process(
+	taskInfo *taskInfo,
+) (int, error) {
+
+	task, ok := taskInfo.task.(*persistence.ReplicationTaskInfo)
 	if !ok {
 		return metrics.ReplicatorQueueProcessorScope, errUnexpectedQueueTask
 	}
@@ -167,23 +169,24 @@ func (p *replicatorQueueProcessorImpl) queueShutdown() error {
 	return nil
 }
 
-func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence.ReplicationTaskInfo) error {
-	replicationTask, err := p.generateSyncActivityTask(ctx.Background(), task)
-	if err != nil {
-		return err
-	}
+func (p *replicatorQueueProcessorImpl) processSyncActivityTask(
+	task *persistence.ReplicationTaskInfo,
+) error {
 
-	if replicationTask == nil {
-		return nil
+	replicationTask, err := p.generateSyncActivityTask(ctx.Background(), task)
+	if err != nil || replicationTask == nil {
+		return err
 	}
 
 	return p.replicator.Publish(replicationTask)
 }
 
-func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persistence.ReplicationTaskInfo) error {
+func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(
+	task *persistence.ReplicationTaskInfo,
+) error {
 
 	replicationTask, err := p.toReplicationTask(ctx.Background(), task)
-	if err != nil {
+	if err != nil || replicationTask == nil {
 		return err
 	}
 
@@ -215,16 +218,15 @@ func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetCluster
 func GenerateReplicationTask(
 	targetClusters []string,
 	task *persistence.ReplicationTaskInfo,
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	metricsClient metrics.Client,
 	history *shared.History,
 	shardID *int,
 ) (*replicator.ReplicationTask, string, error) {
 	var err error
 	if history == nil {
-		history, _, err = GetAllHistory(historyMgr, historyV2Mgr, metricsClient, false,
-			task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken, shardID)
+		history, _, err = GetAllHistory(historyV2Mgr, metricsClient, false,
+			task.FirstEventID, task.NextEventID, task.BranchToken, shardID)
 		if err != nil {
 			return nil, "", err
 		}
@@ -244,16 +246,11 @@ func GenerateReplicationTask(
 			// Check if this is replication task for ContinueAsNew event, then retrieve the history for new execution
 			newRunID = lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
 			newRunHistory, _, err = GetAllHistory(
-				historyMgr,
 				historyV2Mgr,
 				metricsClient,
 				false,
-				task.DomainID,
-				task.WorkflowID,
-				newRunID,
 				common.FirstEventID,
 				common.FirstEventID+1, // [common.FirstEventID to common.FirstEventID+1) will get the first batch
-				task.NewRunEventStoreVersion,
 				task.NewRunBranchToken,
 				shardID)
 			if err != nil {
@@ -265,19 +262,17 @@ func GenerateReplicationTask(
 	ret := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
 		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			TargetClusters:          targetClusters,
-			DomainId:                common.StringPtr(task.DomainID),
-			WorkflowId:              common.StringPtr(task.WorkflowID),
-			RunId:                   common.StringPtr(task.RunID),
-			FirstEventId:            common.Int64Ptr(task.FirstEventID),
-			NextEventId:             common.Int64Ptr(task.NextEventID),
-			Version:                 common.Int64Ptr(task.Version),
-			ReplicationInfo:         convertLastReplicationInfo(task.LastReplicationInfo),
-			History:                 history,
-			NewRunHistory:           newRunHistory,
-			EventStoreVersion:       common.Int32Ptr(task.EventStoreVersion),
-			NewRunEventStoreVersion: common.Int32Ptr(task.NewRunEventStoreVersion),
-			ResetWorkflow:           common.BoolPtr(task.ResetWorkflow),
+			TargetClusters:  targetClusters,
+			DomainId:        common.StringPtr(task.DomainID),
+			WorkflowId:      common.StringPtr(task.WorkflowID),
+			RunId:           common.StringPtr(task.RunID),
+			FirstEventId:    common.Int64Ptr(task.FirstEventID),
+			NextEventId:     common.Int64Ptr(task.NextEventID),
+			Version:         common.Int64Ptr(task.Version),
+			ReplicationInfo: convertLastReplicationInfo(task.LastReplicationInfo),
+			History:         history,
+			NewRunHistory:   newRunHistory,
+			ResetWorkflow:   common.BoolPtr(task.ResetWorkflow),
 		},
 	}
 	return ret, newRunID, nil
@@ -312,16 +307,11 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 
 // GetAllHistory return history
 func GetAllHistory(
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	metricsClient metrics.Client,
 	byBatch bool,
-	domainID string,
-	workflowID string,
-	runID string,
 	firstEventID int64,
 	nextEventID int64,
-	eventStoreVersion int32,
 	branchToken []byte,
 	shardID *int,
 ) (*shared.History, []*shared.History, error) {
@@ -340,8 +330,7 @@ func GetAllHistory(
 
 	for hasMore := true; hasMore; hasMore = len(pageToken) > 0 {
 		pageHistoryEvents, pageHistoryBatches, pageToken, pageHistorySize, err = PaginateHistory(
-			historyMgr, historyV2Mgr, byBatch,
-			domainID, workflowID, runID, eventStoreVersion,
+			historyV2Mgr, byBatch,
 			branchToken, firstEventID, nextEventID,
 			pageToken, defaultHistoryPageSize, shardID,
 		)
@@ -367,13 +356,8 @@ func GetAllHistory(
 
 // PaginateHistory return paged history
 func PaginateHistory(
-	historyMgr persistence.HistoryManager,
-	historyV2Mgr persistence.HistoryV2Manager,
+	historyV2Mgr persistence.HistoryManager,
 	byBatch bool,
-	domainID string,
-	workflowID string,
-	runID string,
-	eventStoreVersion int32,
 	branchToken []byte,
 	firstEventID int64,
 	nextEventID int64,
@@ -387,73 +371,35 @@ func PaginateHistory(
 	var tokenOut []byte
 	var historySize int
 
-	switch eventStoreVersion {
-	case persistence.EventStoreVersionV2:
-		req := &persistence.ReadHistoryBranchRequest{
-			BranchToken:   branchToken,
-			MinEventID:    firstEventID,
-			MaxEventID:    nextEventID,
-			PageSize:      pageSize,
-			NextPageToken: tokenIn,
-			ShardID:       shardID,
-		}
-		if byBatch {
-			response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
-			if err != nil {
-				return nil, nil, nil, 0, err
-			}
-
-			// Keep track of total history size
-			historySize += response.Size
-			historyBatches = append(historyBatches, response.History...)
-			tokenOut = response.NextPageToken
-
-		} else {
-			response, err := historyV2Mgr.ReadHistoryBranch(req)
-			if err != nil {
-				return nil, nil, nil, 0, err
-			}
-
-			// Keep track of total history size
-			historySize += response.Size
-			historyEvents = append(historyEvents, response.HistoryEvents...)
-			tokenOut = response.NextPageToken
-		}
-	default:
-		req := &persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID: domainID,
-			Execution: shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
-			},
-			FirstEventID:  firstEventID,
-			NextEventID:   nextEventID,
-			PageSize:      pageSize,
-			NextPageToken: tokenIn,
+	req := &persistence.ReadHistoryBranchRequest{
+		BranchToken:   branchToken,
+		MinEventID:    firstEventID,
+		MaxEventID:    nextEventID,
+		PageSize:      pageSize,
+		NextPageToken: tokenIn,
+		ShardID:       shardID,
+	}
+	if byBatch {
+		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
+		if err != nil {
+			return nil, nil, nil, 0, err
 		}
 
-		if byBatch {
-			response, err := historyMgr.GetWorkflowExecutionHistoryByBatch(req)
-			if err != nil {
-				return nil, nil, nil, 0, err
-			}
+		// Keep track of total history size
+		historySize += response.Size
+		historyBatches = append(historyBatches, response.History...)
+		tokenOut = response.NextPageToken
 
-			// Keep track of total history size
-			historySize += response.Size
-			historyBatches = append(historyBatches, response.History...)
-			tokenOut = response.NextPageToken
-
-		} else {
-			response, err := historyMgr.GetWorkflowExecutionHistory(req)
-			if err != nil {
-				return nil, nil, nil, 0, err
-			}
-
-			// Keep track of total history size
-			historySize += response.Size
-			historyEvents = append(historyEvents, response.History.Events...)
-			tokenOut = response.NextPageToken
+	} else {
+		response, err := historyV2Mgr.ReadHistoryBranch(req)
+		if err != nil {
+			return nil, nil, nil, 0, err
 		}
+
+		// Keep track of total history size
+		historySize += response.Size
+		historyEvents = append(historyEvents, response.HistoryEvents...)
+		tokenOut = response.NextPageToken
 	}
 
 	return historyEvents, historyBatches, tokenOut, historySize, nil
@@ -603,6 +549,17 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 			// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
 			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
+			//Version history uses when replicate the sync activity task
+			versionHistories := mutableState.GetVersionHistories()
+			var versionHistory *shared.VersionHistory
+			if versionHistories != nil {
+				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
+				if err != nil {
+					return nil, err
+				}
+				versionHistory = rawVersionHistory.ToThrift()
+			}
+
 			return &replicator.ReplicationTask{
 				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
 				SyncActicvityTaskAttributes: &replicator.SyncActicvityTaskAttributes{
@@ -620,6 +577,7 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
 					LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
 					LastFailureDetails: activityInfo.LastFailureDetails,
+					VersionHistory:     versionHistory,
 				},
 			}, nil
 		},
@@ -654,7 +612,6 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 				replicationTask, newRunID, err := GenerateReplicationTask(
 					targetClusters,
 					task,
-					p.historyMgr,
 					p.historyV2Mgr,
 					p.metricsClient,
 					nil,
@@ -716,7 +673,6 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 					VersionHistoryItems: versionHistoryItems,
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
-					ResetWorkflow:       common.BoolPtr(task.ResetWorkflow),
 				},
 			}
 			return replicationTask, nil

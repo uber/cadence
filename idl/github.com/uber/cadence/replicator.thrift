@@ -93,6 +93,7 @@ struct SyncActicvityTaskAttributes {
   120: optional string lastFailureReason
   130: optional string lastWorkerIdentity
   140: optional binary lastFailureDetails
+  150: optional shared.VersionHistory versionHistory
 }
 
 struct HistoryTaskV2Attributes {
@@ -104,7 +105,6 @@ struct HistoryTaskV2Attributes {
   50: optional shared.DataBlob events
   // new run events does not need version history since there is no prior events
   70: optional shared.DataBlob newRunEvents
-  80: optional bool resetWorkflow
 }
 
 struct ReplicationTask {

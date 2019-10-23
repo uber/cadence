@@ -52,15 +52,9 @@ type (
 		logger      log.Logger
 	}
 
-	historyRateLimitedPersistenceClient struct {
-		rateLimiter quotas.Limiter
-		persistence HistoryManager
-		logger      log.Logger
-	}
-
 	historyV2RateLimitedPersistenceClient struct {
 		rateLimiter quotas.Limiter
-		persistence HistoryV2Manager
+		persistence HistoryManager
 		logger      log.Logger
 	}
 
@@ -86,8 +80,7 @@ type (
 var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionRateLimitedPersistenceClient)(nil)
 var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
-var _ HistoryManager = (*historyRateLimitedPersistenceClient)(nil)
-var _ HistoryV2Manager = (*historyV2RateLimitedPersistenceClient)(nil)
+var _ HistoryManager = (*historyV2RateLimitedPersistenceClient)(nil)
 var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ Queue = (*queueRateLimitedPersistenceClient)(nil)
@@ -119,17 +112,8 @@ func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter qu
 	}
 }
 
-// NewHistoryPersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryPersistenceRateLimitedClient(persistence HistoryManager, rateLimiter quotas.Limiter, logger log.Logger) HistoryManager {
-	return &historyRateLimitedPersistenceClient{
-		persistence: persistence,
-		rateLimiter: rateLimiter,
-		logger:      logger,
-	}
-}
-
 // NewHistoryV2PersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter quotas.Limiter, logger log.Logger) HistoryV2Manager {
+func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryManager, rateLimiter quotas.Limiter, logger log.Logger) HistoryManager {
 	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -249,15 +233,6 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(r
 	}
 
 	err := p.persistence.ResetWorkflowExecution(request)
-	return err
-}
-
-// CompleteForkBranch complete forking process
-func (p *historyV2RateLimitedPersistenceClient) CompleteForkBranch(request *CompleteForkBranchRequest) error {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
-	}
-	err := p.persistence.CompleteForkBranch(request)
 	return err
 }
 
@@ -444,50 +419,6 @@ func (p *taskRateLimitedPersistenceClient) DeleteTaskList(request *DeleteTaskLis
 }
 
 func (p *taskRateLimitedPersistenceClient) Close() {
-	p.persistence.Close()
-}
-
-func (p *historyRateLimitedPersistenceClient) GetName() string {
-	return p.persistence.GetName()
-}
-
-func (p *historyRateLimitedPersistenceClient) AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error) {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return nil, ErrPersistenceLimitExceeded
-	}
-
-	resp, err := p.persistence.AppendHistoryEvents(request)
-	return resp, err
-}
-
-func (p *historyRateLimitedPersistenceClient) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error) {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return nil, ErrPersistenceLimitExceeded
-	}
-
-	response, err := p.persistence.GetWorkflowExecutionHistory(request)
-	return response, err
-}
-
-func (p *historyRateLimitedPersistenceClient) GetWorkflowExecutionHistoryByBatch(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryByBatchResponse, error) {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return nil, ErrPersistenceLimitExceeded
-	}
-
-	response, err := p.persistence.GetWorkflowExecutionHistoryByBatch(request)
-	return response, err
-}
-
-func (p *historyRateLimitedPersistenceClient) DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
-	}
-
-	err := p.persistence.DeleteWorkflowExecutionHistory(request)
-	return err
-}
-
-func (p *historyRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }
 

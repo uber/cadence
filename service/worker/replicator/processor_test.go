@@ -62,6 +62,7 @@ type (
 		mockDomainReplicator        *MockDomainReplicator
 		mockHistoryClient           *historyservicetest.MockClient
 		mockRereplicator            *xdc.MockHistoryRereplicator
+		mockNDCResender             *xdc.MockNDCHistoryResender
 		mockSequentialTaskProcessor *task.MockSequentialTaskProcessor
 		mockDomainCache             *cache.DomainCacheMock
 
@@ -99,6 +100,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.mockDomainReplicator = &MockDomainReplicator{}
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
+	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
 	s.mockSequentialTaskProcessor = &task.MockSequentialTaskProcessor{}
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(
@@ -130,6 +132,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 		s.metricsClient,
 		s.mockDomainReplicator,
 		s.mockRereplicator,
+		s.mockNDCResender,
 		s.mockHistoryClient,
 		s.mockDomainCache,
 		s.mockSequentialTaskProcessor,
@@ -326,10 +329,8 @@ func (s *replicationTaskProcessorSuite) TestDecodeMsgAndSubmit_History_Success()
 		History: &shared.History{
 			Events: []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(1)}},
 		},
-		NewRunHistory:           nil,
-		EventStoreVersion:       common.Int32Ptr(144),
-		NewRunEventStoreVersion: nil,
-		ResetWorkflow:           common.BoolPtr(true),
+		NewRunHistory: nil,
+		ResetWorkflow: common.BoolPtr(true),
 	}
 	replicationTask := &replicator.ReplicationTask{
 		TaskType:              replicator.ReplicationTaskTypeHistory.Ptr(),
@@ -356,10 +357,8 @@ func (s *replicationTaskProcessorSuite) TestDecodeMsgAndSubmit_History_FailedThe
 		History: &shared.History{
 			Events: []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(1)}},
 		},
-		NewRunHistory:           nil,
-		EventStoreVersion:       common.Int32Ptr(144),
-		NewRunEventStoreVersion: nil,
-		ResetWorkflow:           common.BoolPtr(true),
+		NewRunHistory: nil,
+		ResetWorkflow: common.BoolPtr(true),
 	}
 	replicationTask := &replicator.ReplicationTask{
 		TaskType:              replicator.ReplicationTaskTypeHistory.Ptr(),

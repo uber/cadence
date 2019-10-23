@@ -167,23 +167,8 @@ func (tb *timerBuilder) AddActivityTimeoutTask(scheduleID int64,
 	return timeOutTask
 }
 
-// AddUserTimer - Adds an user timeout request.
-func (tb *timerBuilder) AddUserTimer(ti *persistence.TimerInfo, msBuilder mutableState) {
-	if !tb.isLoadedUserTimers {
-		tb.loadUserTimers(msBuilder)
-	}
-	seqNum := tb.localSeqNumGen.NextSeq()
-	timer := &timerDetails{
-		TimerSequenceID: TimerSequenceID{VisibilityTimestamp: ti.ExpiryTime, TaskID: seqNum},
-		TimerID:         ti.TimerID,
-		TaskCreated:     ti.TaskID == TimerTaskStatusCreated}
-	tb.insertTimer(timer)
-}
-
 // GetUserTimerTaskIfNeeded - if we need create a timer task for the user timers
-func (tb *timerBuilder) GetUserTimerTaskIfNeeded(
-	msBuilder mutableState,
-) (persistence.Task, error) {
+func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder mutableState) (persistence.Task, error) {
 	if !tb.isLoadedUserTimers {
 		tb.loadUserTimers(msBuilder)
 	}
@@ -193,6 +178,7 @@ func (tb *timerBuilder) GetUserTimerTaskIfNeeded(
 		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
 		ti.TaskID = TimerTaskStatusCreated
 
+		// update timer task mask indicating that task created
 		if err := msBuilder.UpdateUserTimer(ti.TimerID, ti); err != nil {
 			return nil, err
 		}
@@ -225,9 +211,7 @@ func (tb *timerBuilder) GetActivityTimers(msBuilder mutableState) timers {
 }
 
 // GetActivityTimerTaskIfNeeded - if we need create a activity timer task for the activities
-func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(
-	msBuilder mutableState,
-) (persistence.Task, error) {
+func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) (persistence.Task, error) {
 	if !tb.isLoadedActivityTimers {
 		tb.loadActivityTimers(msBuilder)
 	}
@@ -242,6 +226,8 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(
 		if w.TimeoutType(at.TimeoutType) == w.TimeoutTypeHeartbeat {
 			ai.LastHeartbeatTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
 		}
+
+		// update timer task mask indicating that task created
 		if err := msBuilder.UpdateActivity(ai); err != nil {
 			return nil, err
 		}

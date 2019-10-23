@@ -266,10 +266,6 @@ func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	var eventStoreVersion int32
-	if handler.config.EnableEventsV2(domainEntry.GetInfo().Name) {
-		eventStoreVersion = persistence.EventStoreVersionV2
-	}
 	request := req.CompleteRequest
 	token, err0 := handler.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
@@ -411,7 +407,6 @@ Update_History_Loop:
 			decisionTaskHandler := newDecisionTaskHandler(
 				request.GetIdentity(),
 				completedEvent.GetEventId(),
-				eventStoreVersion,
 				domainEntry,
 				msBuilder,
 				handler.decisionAttrValidator,
@@ -461,11 +456,29 @@ Update_History_Loop:
 			continueAsNewBuilder = nil
 		}
 
-		// Schedule another decision task if new events came in during this decision or if request forced to
-		createNewDecisionTask := msBuilder.IsWorkflowExecutionRunning() &&
-			(hasUnhandledEvents || request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
+		queryResults := req.GetCompleteRequest().GetQueryResults()
+		bufferedQueries := msBuilder.GetQueryRegistry().getBufferedSnapshot()
+		hasUnhandledQueries := false
+		if len(queryResults) < len(bufferedQueries) {
+			hasUnhandledQueries = true
+		} else {
+			for _, bid := range bufferedQueries {
+				if _, ok := queryResults[bid]; !ok {
+					hasUnhandledQueries = true
+					break
+				}
+			}
+		}
+
+		createNewDecisionTask := msBuilder.IsWorkflowExecutionRunning() && (hasUnhandledEvents || request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled || hasUnhandledQueries)
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
+			// emit metric is decision task was generated just because there was buffered queries, if this happens a lot then
+			// consider an optimization in which instead of a decision task being created a transfer task is created and is
+			// used to dispatch queries directly through matching
+			if !hasUnhandledEvents && !request.GetForceCreateNewDecisionTask() && !activityNotStartedCancelled && hasUnhandledQueries {
+				handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DecisionTaskCreatedForBufferedQueriesCount)
+			}
 			var newDecision *decisionInfo
 			var err error
 			if decisionHeartbeating && !decisionHeartbeatTimeout {
@@ -518,6 +531,14 @@ Update_History_Loop:
 			)
 		} else {
 			updateErr = context.updateWorkflowExecutionAsActive(handler.shard.GetTimeSource().Now())
+			if updateErr == nil {
+				qr := msBuilder.GetQueryRegistry()
+				for id, result := range req.GetCompleteRequest().GetQueryResults() {
+					if err := qr.completeQuery(id, result); err != nil {
+						handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CompleteQueryFailedCount)
+					}
+				}
+			}
 		}
 
 		if updateErr != nil {
@@ -536,10 +557,13 @@ Update_History_Loop:
 					return nil, err
 				}
 
-				if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
+				eventBatchFirstEventID := msBuilder.GetNextEventID()
+				if err := terminateWorkflow(
+					msBuilder,
+					eventBatchFirstEventID,
 					common.FailureReasonTransactionSizeExceedsLimit,
 					[]byte(updateErr.Error()),
-					"cadence-history-server",
+					identityHistoryService,
 				); err != nil {
 					return nil, err
 				}
@@ -613,12 +637,22 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		response.DecisionInfo.ScheduledEvent = scheduledEvent
 		response.DecisionInfo.StartedEvent = startedEvent
 	}
-	response.EventStoreVersion = common.Int32Ptr(msBuilder.GetEventStoreVersion())
 	currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 	if err != nil {
 		return nil, err
 	}
 	response.BranchToken = currentBranchToken
 
+	qr := msBuilder.GetQueryRegistry()
+	buffered := qr.getBufferedSnapshot()
+	queries := make(map[string]*workflow.WorkflowQuery)
+	for _, id := range buffered {
+		state, err := qr.getQueryInternalState(id)
+		if err != nil {
+			continue
+		}
+		queries[state.id] = state.queryInput
+	}
+	response.Queries = queries
 	return response, nil
 }

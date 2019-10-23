@@ -55,7 +55,7 @@ require (
 	github.com/sirupsen/logrus v1.2.0
 	github.com/stretchr/testify v1.4.0
 	github.com/uber-common/bark v1.2.1 // indirect
-	github.com/uber-go/kafka-client v0.2.2
+	github.com/uber-go/kafka-client v0.2.3-0.20191018205945-8b3555b395f9
 	github.com/uber-go/tally v3.3.11+incompatible
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.14.0
@@ -63,7 +63,7 @@ require (
 	github.com/valyala/fastjson v1.4.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.uber.org/atomic v1.4.0
-	go.uber.org/cadence v0.9.1-0.20191001004132-413d13621ce8
+	go.uber.org/cadence v0.9.1-0.20191023030824-883f86358883
 	go.uber.org/config v1.3.1
 	go.uber.org/multierr v1.1.0
 	go.uber.org/net/metrics v1.1.0 // indirect
@@ -74,7 +74,6 @@ require (
 	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect
 	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20191009170203-06d7bd2c5f4f // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/tools v0.0.0-20191010171213-8abd42400456 // indirect

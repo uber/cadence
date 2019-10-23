@@ -38,7 +38,22 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+var (
+	workflowTerminationReason   = "Terminate Workflow Due To Version Conflict."
+	workflowTerminationIdentity = "worker-service"
+	workflowResetReason         = "Reset Workflow Due To Events Re-application."
+)
+
 type (
+	stateBuilderProvider func(
+		msBuilder mutableState,
+		logger log.Logger) stateBuilder
+
+	mutableStateProvider func(
+		domainEntry *cache.DomainCacheEntry,
+		logger log.Logger,
+	) mutableState
+
 	nDCBranchMgrProvider func(
 		context workflowExecutionContext,
 		mutableState mutableState,
@@ -70,7 +85,7 @@ type (
 	nDCHistoryReplicatorImpl struct {
 		shard             ShardContext
 		clusterMetadata   cluster.Metadata
-		historyV2Mgr      persistence.HistoryV2Manager
+		historyV2Mgr      persistence.HistoryManager
 		historySerializer persistence.PayloadSerializer
 		metricsClient     metrics.Client
 		domainCache       cache.DomainCache
@@ -100,7 +115,7 @@ func newNDCHistoryReplicator(
 	replicator := &nDCHistoryReplicatorImpl{
 		shard:             shard,
 		clusterMetadata:   shard.GetService().GetClusterMetadata(),
-		historyV2Mgr:      shard.GetHistoryV2Manager(),
+		historyV2Mgr:      shard.GetHistoryManager(),
 		historySerializer: persistence.NewPayloadSerializer(),
 		metricsClient:     shard.GetMetricsClient(),
 		domainCache:       shard.GetDomainCache(),
@@ -265,8 +280,6 @@ func (r *nDCHistoryReplicatorImpl) applyStartEvents(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		nDCProtocolVersion,
-		nDCProtocolVersion,
 		true,
 	)
 	if err != nil {
@@ -304,6 +317,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsPrepareBranch(
 		ctx,
 		incomingVersionHistory,
 		task.getFirstEvent().GetEventId(),
+		task.getFirstEvent().GetVersion(),
 	)
 	if err != nil {
 		return false, 0, err
@@ -346,8 +360,6 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToCurrentBranch(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		nDCProtocolVersion,
-		nDCProtocolVersion,
 		true,
 	)
 	if err != nil {
@@ -462,9 +474,18 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsMissingMutableState(
 	task nDCReplicationTask,
 ) (mutableState, error) {
 
-	// for non reset workflow execution replication task, just do re-application
-	if !task.getRequest().GetResetWorkflow() {
-		return nil, newNDCRetryTaskErrorWithHint()
+	// for non reset workflow execution replication task, just do re-replication
+	if !task.isWorkflowReset() {
+		firstEvent := task.getFirstEvent()
+		return nil, newNDCRetryTaskErrorWithHint(
+			task.getDomainID(),
+			task.getWorkflowID(),
+			task.getRunID(),
+			nil,
+			nil,
+			common.Int64Ptr(firstEvent.GetEventId()),
+			common.Int64Ptr(firstEvent.GetVersion()),
+		)
 	}
 
 	decisionTaskFailedEvent := task.getFirstEvent()
@@ -483,7 +504,14 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsMissingMutableState(
 		task.getLogger(),
 	)
 
-	return workflowResetter.resetWorkflow(ctx, task.getEventTime(), baseEventID, baseEventVersion)
+	return workflowResetter.resetWorkflow(
+		ctx,
+		task.getEventTime(),
+		baseEventID,
+		baseEventVersion,
+		task.getFirstEvent().GetEventId(),
+		task.getVersion(),
+	)
 }
 
 func (r *nDCHistoryReplicatorImpl) applyNonStartEventsResetWorkflow(
@@ -501,8 +529,6 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsResetWorkflow(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		nDCProtocolVersion,
-		nDCProtocolVersion,
 		true,
 	)
 	if err != nil {
@@ -542,7 +568,23 @@ func (r *nDCHistoryReplicatorImpl) notify(
 	r.shard.SetCurrentTime(clusterName, now)
 }
 
-func newNDCRetryTaskErrorWithHint() error {
-	// TODO add detail info here
-	return &shared.RetryTaskV2Error{}
+func newNDCRetryTaskErrorWithHint(
+	domainID string,
+	workflowID string,
+	runID string,
+	startEventID *int64,
+	startEventVersion *int64,
+	endEventID *int64,
+	endEventVersion *int64,
+) error {
+
+	return &shared.RetryTaskV2Error{
+		DomainId:          common.StringPtr(domainID),
+		WorkflowId:        common.StringPtr(workflowID),
+		RunId:             common.StringPtr(runID),
+		StartEventId:      startEventID,
+		StartEventVersion: startEventVersion,
+		EndEventId:        endEventID,
+		EndEventVersion:   endEventVersion,
+	}
 }
