@@ -52,9 +52,9 @@ type (
 		ackMgrBase   AckMgrBase
 		logger       log.Logger
 		metricsScope metrics.Scope
+		iterator     collection.Iterator
 
 		sync.RWMutex
-		iterator         collection.Iterator
 		outstandingTasks map[SequenceID]bool
 		readLevel        SequenceID
 		maxReadLevel     SequenceID
@@ -82,6 +82,7 @@ func NewAckMgr(
 func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 	if a.iterator == nil || !a.iterator.HasNext() {
 		// try to create a new iterator
+		a.Lock()
 		if a.readLevel == a.maxReadLevel {
 			a.maxReadLevel = a.ackMgrBase.UpdateMaxReadLevel()
 		}
@@ -89,6 +90,7 @@ func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 			// ack manager assumes the paginationFn will return task in the range (readLevel, maxReadLevel]
 			a.iterator = collection.NewPagingIterator(a.ackMgrBase.PaginationFn(a.readLevel, a.maxReadLevel))
 		}
+		a.Unlock()
 	}
 
 	if a.iterator == nil || !a.iterator.HasNext() {
@@ -105,6 +107,8 @@ func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 		return nil, false, errors.New("unrecognized response from paging iterator")
 	}
 
+	a.Lock()
+	defer a.Unlock()
 	filteredTasks := []Info{}
 	for _, task := range tasks {
 		SequenceID := ToSequenceID(task)
@@ -152,19 +156,19 @@ func (a *ackMgrImpl) CompleteTask(ID SequenceID) {
 }
 
 func (a *ackMgrImpl) ReadLevel() SequenceID {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	return a.readLevel
 }
 
 func (a *ackMgrImpl) AckLevel() SequenceID {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	return a.ackLevel
 }
 
 func (a *ackMgrImpl) PendingTasks() int64 {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	return int64(len(a.outstandingTasks))
 }
