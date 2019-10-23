@@ -25,15 +25,40 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
+	// SequentialTaskProcessor is the generic coroutine pool interface
+	// which process sequential task
+	SequentialTaskProcessor interface {
+		common.Daemon
+		Submit(task SequentialTask) error
+	}
+
+	// SequentialTaskQueueFactory is the function which generate a new SequentialTaskQueue
+	// for a give SequentialTask
+	SequentialTaskQueueFactory func(task SequentialTask) SequentialTaskQueue
+
+	// SequentialTaskQueue is the generic task queue interface which group
+	// sequential tasks to be executed one by one
+	SequentialTaskQueue interface {
+		// QueueID return the ID of the queue, as well as the tasks inside (same)
+		QueueID() interface{}
+		// Offer push an task to the task set
+		Add(task SequentialTask)
+		// Poll pop an task from the task set
+		Remove() SequentialTask
+		// IsEmpty indicate if the task set is empty
+		IsEmpty() bool
+		// Len return the size of the queue
+		Len() int
+	}
+
 	sequentialTaskProcessorImpl struct {
 		status       int32
 		shutdownChan chan struct{}

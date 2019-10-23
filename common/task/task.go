@@ -21,18 +21,32 @@
 package task
 
 import (
-	"github.com/uber/cadence/common"
+	"time"
 )
 
 type (
-	// SequentialTaskProcessor is the generic coroutine pool interface
-	// which process sequential task
-	SequentialTaskProcessor interface {
-		common.Daemon
-		Submit(task SequentialTask) error
+	// Info is the interface for describing a task
+	Info interface {
+		GetVersion() int64
+		GetTaskID() int64
+		GetTaskType() int
+		GetVisibilityTimestamp() time.Time
+		GetWorkflowID() string
+		GetRunID() string
+		GetDomainID() string
+	}
+
+	// SequenceIDs is a list of task SequenceID
+	SequenceIDs []SequenceID
+
+	// SequenceID determines the total order of tasks
+	SequenceID struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
 	}
 
 	// SequentialTask is the interface for tasks which should be executed sequentially
+	// TODO: rename this interface to Task
 	SequentialTask interface {
 		// Execute process this task
 		Execute() error
@@ -45,23 +59,40 @@ type (
 		// Nack marks the task as unsuccessful completed
 		Nack()
 	}
-
-	// SequentialTaskQueueFactory is the function which generate a new SequentialTaskQueue
-	// for a give SequentialTask
-	SequentialTaskQueueFactory func(task SequentialTask) SequentialTaskQueue
-
-	// SequentialTaskQueue is the generic task queue interface which group
-	// sequential tasks to be executed one by one
-	SequentialTaskQueue interface {
-		// QueueID return the ID of the queue, as well as the tasks inside (same)
-		QueueID() interface{}
-		// Offer push an task to the task set
-		Add(task SequentialTask)
-		// Poll pop an task from the task set
-		Remove() SequentialTask
-		// IsEmpty indicate if the task set is empty
-		IsEmpty() bool
-		// Len return the size of the queue
-		Len() int
-	}
 )
+
+// ToSequenceID generates SequenceID from Info
+func ToSequenceID(taskInfo Info) SequenceID {
+	return SequenceID{
+		VisibilityTimestamp: taskInfo.GetVisibilityTimestamp(),
+		TaskID:              taskInfo.GetTaskID(),
+	}
+}
+
+// Len implements sort.Interace
+func (t SequenceIDs) Len() int {
+	return len(t)
+}
+
+// Swap implements sort.Interface.
+func (t SequenceIDs) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
+}
+
+// Less implements sort.Interface
+func (t SequenceIDs) Less(i, j int) bool {
+	return compareTaskSequenceIDLess(&t[i], &t[j])
+}
+
+func compareTaskSequenceIDLess(
+	first *SequenceID,
+	second *SequenceID,
+) bool {
+	if first.VisibilityTimestamp.Before(second.VisibilityTimestamp) {
+		return true
+	}
+	if first.VisibilityTimestamp.Equal(second.VisibilityTimestamp) {
+		return first.TaskID < second.TaskID
+	}
+	return false
+}
