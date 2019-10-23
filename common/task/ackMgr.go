@@ -73,8 +73,10 @@ func NewAckMgr(
 	return &ackMgrImpl{
 		ackMgrBase:       ackMgrBase,
 		logger:           logger,
+		metricsScope:     metricsScope,
 		outstandingTasks: make(map[SequenceID]bool),
 		readLevel:        readLevel,
+		maxReadLevel:     readLevel,
 		ackLevel:         ackLevel,
 	}
 }
