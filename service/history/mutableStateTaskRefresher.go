@@ -280,6 +280,10 @@ Loop:
 		// clear all activity timer task mask for later activity timer task re-generation
 		activityInfo.TimerTaskStatus = TimerTaskStatusNone
 
+		if err := mutableState.UpdateActivity(activityInfo); err != nil {
+			return err
+		}
+
 		if activityInfo.StartedID != common.EmptyEventID {
 			continue Loop
 		}
@@ -329,6 +333,13 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 	for _, timerInfo := range pendingTimerInfos {
 		// clear all timer task mask for later timer task re-generation
 		timerInfo.TaskID = TimerTaskStatusNone
+
+		if err := mutableState.UpdateUserTimer(
+			timerInfo.TimerID,
+			timerInfo,
+		); err != nil {
+			return err
+		}
 	}
 
 	tBuilder := newTimerBuilder(r.getTimeSource(now))
