@@ -1295,7 +1295,7 @@ func (e *mutableStateBuilder) DeleteActivity(
 	return nil
 }
 
-// GetUserTimer gives details about a user timer.
+// GetUserTimerInfo gives details about a user timer.
 func (e *mutableStateBuilder) GetUserTimerInfo(
 	timerID string,
 ) (*persistence.TimerInfo, bool) {
@@ -1304,7 +1304,7 @@ func (e *mutableStateBuilder) GetUserTimerInfo(
 	return timerInfo, ok
 }
 
-// GetUserTimer gives details about a user timer.
+// GetUserTimerInfoByEventID gives details about a user timer.
 func (e *mutableStateBuilder) GetUserTimerInfoByEventID(
 	startEventID int64,
 ) (*persistence.TimerInfo, bool) {
