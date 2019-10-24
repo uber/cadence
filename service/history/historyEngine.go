@@ -868,7 +868,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
 				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-				tag.Error(yarpcError))
+				tag.Error(err))
 			return nil, err
 		}
 		// this means sticky timeout, should try using the normal tasklist
