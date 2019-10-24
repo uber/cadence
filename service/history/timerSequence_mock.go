@@ -29,7 +29,6 @@ package history
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	persistence "github.com/uber/cadence/common/persistence"
 	reflect "reflect"
 )
 
@@ -57,12 +56,11 @@ func (m *MocktimerSequence) EXPECT() *MocktimerSequenceMockRecorder {
 }
 
 // createNextUserTimer mocks base method
-func (m *MocktimerSequence) createNextUserTimer() (*persistence.UserTimerTask, error) {
+func (m *MocktimerSequence) createNextUserTimer() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "createNextUserTimer")
-	ret0, _ := ret[0].(*persistence.UserTimerTask)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // createNextUserTimer indicates an expected call of createNextUserTimer
@@ -72,12 +70,11 @@ func (mr *MocktimerSequenceMockRecorder) createNextUserTimer() *gomock.Call {
 }
 
 // createNextActivityTimer mocks base method
-func (m *MocktimerSequence) createNextActivityTimer() (*persistence.ActivityTimeoutTask, error) {
+func (m *MocktimerSequence) createNextActivityTimer() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "createNextActivityTimer")
-	ret0, _ := ret[0].(*persistence.ActivityTimeoutTask)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // createNextActivityTimer indicates an expected call of createNextActivityTimer
@@ -87,12 +84,11 @@ func (mr *MocktimerSequenceMockRecorder) createNextActivityTimer() *gomock.Call 
 }
 
 // loadAndSortUserTimers mocks base method
-func (m *MocktimerSequence) loadAndSortUserTimers() ([]timerSequenceID, error) {
+func (m *MocktimerSequence) loadAndSortUserTimers() []timerSequenceID {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "loadAndSortUserTimers")
 	ret0, _ := ret[0].([]timerSequenceID)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // loadAndSortUserTimers indicates an expected call of loadAndSortUserTimers
@@ -102,12 +98,11 @@ func (mr *MocktimerSequenceMockRecorder) loadAndSortUserTimers() *gomock.Call {
 }
 
 // loadAndSortActivityTimers mocks base method
-func (m *MocktimerSequence) loadAndSortActivityTimers() ([]timerSequenceID, error) {
+func (m *MocktimerSequence) loadAndSortActivityTimers() []timerSequenceID {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "loadAndSortActivityTimers")
 	ret0, _ := ret[0].([]timerSequenceID)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // loadAndSortActivityTimers indicates an expected call of loadAndSortActivityTimers

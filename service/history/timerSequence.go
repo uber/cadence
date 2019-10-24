@@ -55,11 +55,11 @@ type (
 	timerSequenceIDs []timerSequenceID
 
 	timerSequence interface {
-		createNextUserTimer() (*persistence.UserTimerTask, error)
-		createNextActivityTimer() (*persistence.ActivityTimeoutTask, error)
+		createNextUserTimer() error
+		createNextActivityTimer() error
 
-		loadAndSortUserTimers() ([]timerSequenceID, error)
-		loadAndSortActivityTimers() ([]timerSequenceID, error)
+		loadAndSortUserTimers() []timerSequenceID
+		loadAndSortActivityTimers() []timerSequenceID
 	}
 
 	timerSequenceImpl struct {
@@ -67,6 +67,8 @@ type (
 		mutableState mutableState
 	}
 )
+
+var _ timerSequence = (*timerSequenceImpl)(nil)
 
 func newTimerSequence(
 	timeSource clock.TimeSource,
