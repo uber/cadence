@@ -25,7 +25,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -35,18 +34,16 @@ type (
 	AckMgr interface {
 		AddTasks([]Info)
 		CompleteTask(Info)
-		UpdateAckLevel() SequenceID
-		PendingTasks() int64
+		AckLevel() Info
 	}
 
 	ackMgrImpl struct {
+		sync.RWMutex
+		outstandingTasks map[Info]bool
+		ackLevel         Info
+
 		logger       log.Logger
 		metricsScope metrics.Scope
-		iterator     collection.Iterator
-
-		sync.RWMutex
-		outstandingTasks map[SequenceID]bool
-		ackLevel         SequenceID
 	}
 )
 
@@ -54,13 +51,11 @@ type (
 func NewAckMgr(
 	logger log.Logger,
 	metricsScope metrics.Scope,
-	ackLevel SequenceID,
 ) AckMgr {
 	return &ackMgrImpl{
 		logger:           logger,
 		metricsScope:     metricsScope,
-		outstandingTasks: make(map[SequenceID]bool),
-		ackLevel:         ackLevel,
+		outstandingTasks: make(map[Info]bool),
 	}
 }
 
@@ -68,40 +63,42 @@ func (a *ackMgrImpl) AddTasks(tasks []Info) {
 	a.Lock()
 	defer a.Unlock()
 	for _, task := range tasks {
-		SequenceID := ToSequenceID(task)
-		if _, isLoaded := a.outstandingTasks[SequenceID]; isLoaded {
-			a.logger.Debug(fmt.Sprintf("Skipping task: %v. WorkflowID: %v, RunID: %v, Type: %v",
-				SequenceID, task.GetWorkflowID(), task.GetRunID(), task.GetTaskType()))
+		if _, isLoaded := a.outstandingTasks[task]; isLoaded {
+			a.logger.Debug(fmt.Sprintf("Skipping task: TaskID: %v, VisibilityTimestamp: %v, WorkflowID: %v, RunID: %v, Type: %v",
+				task.GetTaskID(), task.GetVisibilityTimestamp(), task.GetWorkflowID(), task.GetRunID(), task.GetTaskType()))
 			continue
 		}
-		a.outstandingTasks[SequenceID] = false
+		a.outstandingTasks[task] = false
 	}
 }
 
-func (a *ackMgrImpl) CompleteTask(taskInfo Info) {
+func (a *ackMgrImpl) CompleteTask(task Info) {
 	a.Lock()
 	defer a.Unlock()
-	ID := ToSequenceID(taskInfo)
-	if _, ok := a.outstandingTasks[ID]; ok {
-		a.outstandingTasks[ID] = true
+	if _, ok := a.outstandingTasks[task]; ok {
+		a.outstandingTasks[task] = true
 	}
 }
 
-func (a *ackMgrImpl) UpdateAckLevel() SequenceID {
+func (a *ackMgrImpl) AckLevel() Info {
 	a.metricsScope.IncCounter(metrics.AckLevelUpdateCounter)
 	a.Lock()
 	defer a.Unlock()
 
-	var SequenceIDs SequenceIDs
-	for ID := range a.outstandingTasks {
-		SequenceIDs = append(SequenceIDs, ID)
+	var tasks []Info
+	for task := range a.outstandingTasks {
+		tasks = append(tasks, task)
 	}
-	sort.Sort(SequenceIDs)
+	sort.Slice(tasks, func(i, j int) bool {
+		return compareTaskInfoLess(tasks[i], tasks[j])
+	})
+	// TODO: setup new metrics for # of pending tasks and emit such metrics here.
+	// may need to pass in addition parameters for the metrics when create the ackMgr.
 
-	for _, currentLevel := range SequenceIDs {
-		if a.outstandingTasks[currentLevel] {
-			a.ackLevel = currentLevel
-			delete(a.outstandingTasks, currentLevel)
+	for _, current := range tasks {
+		if a.outstandingTasks[current] {
+			a.ackLevel = current
+			delete(a.outstandingTasks, current)
 			a.logger.Debug(fmt.Sprintf("Moving task ack level to %v.", a.ackLevel))
 		} else {
 			break
@@ -110,8 +107,15 @@ func (a *ackMgrImpl) UpdateAckLevel() SequenceID {
 	return a.ackLevel
 }
 
-func (a *ackMgrImpl) PendingTasks() int64 {
-	a.RLock()
-	defer a.RUnlock()
-	return int64(len(a.outstandingTasks))
+func compareTaskInfoLess(
+	first Info,
+	second Info,
+) bool {
+	if first.GetVisibilityTimestamp().Before(second.GetVisibilityTimestamp()) {
+		return true
+	}
+	if first.GetVisibilityTimestamp().Equal(second.GetVisibilityTimestamp()) {
+		return first.GetTaskID() < second.GetTaskID()
+	}
+	return false
 }

@@ -36,15 +36,6 @@ type (
 		GetDomainID() string
 	}
 
-	// SequenceIDs is a list of task SequenceID
-	SequenceIDs []SequenceID
-
-	// SequenceID determines the total order of tasks
-	SequenceID struct {
-		VisibilityTimestamp time.Time
-		TaskID              int64
-	}
-
 	// SequentialTask is the interface for tasks which should be executed sequentially
 	// TODO: rename this interface to Task
 	SequentialTask interface {
@@ -60,39 +51,3 @@ type (
 		Nack()
 	}
 )
-
-// ToSequenceID generates SequenceID from Info
-func ToSequenceID(taskInfo Info) SequenceID {
-	return SequenceID{
-		VisibilityTimestamp: taskInfo.GetVisibilityTimestamp(),
-		TaskID:              taskInfo.GetTaskID(),
-	}
-}
-
-// Len implements sort.Interace
-func (t SequenceIDs) Len() int {
-	return len(t)
-}
-
-// Swap implements sort.Interface.
-func (t SequenceIDs) Swap(i, j int) {
-	t[i], t[j] = t[j], t[i]
-}
-
-// Less implements sort.Interface
-func (t SequenceIDs) Less(i, j int) bool {
-	return compareTaskSequenceIDLess(&t[i], &t[j])
-}
-
-func compareTaskSequenceIDLess(
-	first *SequenceID,
-	second *SequenceID,
-) bool {
-	if first.VisibilityTimestamp.Before(second.VisibilityTimestamp) {
-		return true
-	}
-	if first.VisibilityTimestamp.Equal(second.VisibilityTimestamp) {
-		return first.TaskID < second.TaskID
-	}
-	return false
-}
