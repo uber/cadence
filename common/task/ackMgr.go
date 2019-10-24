@@ -21,7 +21,6 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -34,84 +33,40 @@ import (
 type (
 	// AckMgr is the interface for reading/acknowledging Tasks
 	AckMgr interface {
-		ReadTasks() ([]Info, bool, error)
-		CompleteTask(SequenceID)
-		AckLevel() SequenceID
-		ReadLevel() SequenceID
+		AddTasks([]Info)
+		CompleteTask(Info)
 		UpdateAckLevel() SequenceID
 		PendingTasks() int64
 	}
 
-	// AckMgrBase is the interface for the functionality that AckMgr relies on
-	AckMgrBase interface {
-		PaginationFn(SequenceID, SequenceID) collection.PaginationFn
-		UpdateMaxReadLevel() SequenceID
-	}
-
 	ackMgrImpl struct {
-		ackMgrBase   AckMgrBase
 		logger       log.Logger
 		metricsScope metrics.Scope
 		iterator     collection.Iterator
-		maxReadLevel SequenceID
 
 		sync.RWMutex
 		outstandingTasks map[SequenceID]bool
-		readLevel        SequenceID
 		ackLevel         SequenceID
 	}
 )
 
 // NewAckMgr creates a new AckMgr
 func NewAckMgr(
-	ackMgrBase AckMgrBase,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 	ackLevel SequenceID,
 ) AckMgr {
 	return &ackMgrImpl{
-		ackMgrBase:       ackMgrBase,
 		logger:           logger,
 		metricsScope:     metricsScope,
 		outstandingTasks: make(map[SequenceID]bool),
-		readLevel:        ackLevel,
-		maxReadLevel:     ackLevel,
 		ackLevel:         ackLevel,
 	}
 }
 
-func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
-	if a.iterator == nil || !a.iterator.HasNext() {
-		// try to create a new iterator
-		a.RLock()
-		readLevel := a.readLevel
-		a.RUnlock()
-		if readLevel == a.maxReadLevel {
-			a.maxReadLevel = a.ackMgrBase.UpdateMaxReadLevel()
-		}
-		if compareTaskSequenceIDLess(&readLevel, &a.maxReadLevel) {
-			// ack manager assumes the paginationFn will return task in the range (readLevel, maxReadLevel]
-			a.iterator = collection.NewPagingIterator(a.ackMgrBase.PaginationFn(readLevel, a.maxReadLevel))
-		}
-	}
-
-	if a.iterator == nil || !a.iterator.HasNext() {
-		// no more tasks
-		return nil, false, nil
-	}
-
-	page, err := a.iterator.Next()
-	if err != nil {
-		return nil, false, err
-	}
-	tasks, ok := page.([]Info)
-	if !ok {
-		return nil, false, errors.New("unrecognized response from paging iterator")
-	}
-
+func (a *ackMgrImpl) AddTasks(tasks []Info) {
 	a.Lock()
 	defer a.Unlock()
-	filteredTasks := []Info{}
 	for _, task := range tasks {
 		SequenceID := ToSequenceID(task)
 		if _, isLoaded := a.outstandingTasks[SequenceID]; isLoaded {
@@ -119,11 +74,17 @@ func (a *ackMgrImpl) ReadTasks() ([]Info, bool, error) {
 				SequenceID, task.GetWorkflowID(), task.GetRunID(), task.GetTaskType()))
 			continue
 		}
-		a.readLevel = SequenceID
 		a.outstandingTasks[SequenceID] = false
 	}
+}
 
-	return filteredTasks, a.iterator.HasNext(), nil
+func (a *ackMgrImpl) CompleteTask(taskInfo Info) {
+	a.Lock()
+	defer a.Unlock()
+	ID := ToSequenceID(taskInfo)
+	if _, ok := a.outstandingTasks[ID]; ok {
+		a.outstandingTasks[ID] = true
+	}
 }
 
 func (a *ackMgrImpl) UpdateAckLevel() SequenceID {
@@ -146,26 +107,6 @@ func (a *ackMgrImpl) UpdateAckLevel() SequenceID {
 			break
 		}
 	}
-	return a.ackLevel
-}
-
-func (a *ackMgrImpl) CompleteTask(ID SequenceID) {
-	a.Lock()
-	defer a.Unlock()
-	if _, ok := a.outstandingTasks[ID]; ok {
-		a.outstandingTasks[ID] = true
-	}
-}
-
-func (a *ackMgrImpl) ReadLevel() SequenceID {
-	a.RLock()
-	defer a.RUnlock()
-	return a.readLevel
-}
-
-func (a *ackMgrImpl) AckLevel() SequenceID {
-	a.RLock()
-	defer a.RUnlock()
 	return a.ackLevel
 }
 
