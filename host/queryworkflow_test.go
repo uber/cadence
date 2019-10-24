@@ -22,6 +22,7 @@ package host
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"strconv"
@@ -797,7 +798,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 		} else if previousStartedEventID > 0 {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
-					<-time.After(15 * time.Second) // wait for longer than query timeout, causing query to timeout
+					<-time.After(3 * time.Second) // take longer to respond to the decision task than the query waits for
 					handledSignal = true
 					return nil, []*workflow.Decision{}, nil
 				}
@@ -852,7 +853,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *workflow.QueryRejectCondition) {
 		s.False(handledSignal)
-		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
+		shortCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		queryResp, err := s.engine.QueryWorkflow(shortCtx, &workflow.QueryWorkflowRequest{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(id),
@@ -864,13 +866,11 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		})
+		cancel()
 		s.False(handledSignal)
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
-	// send a signal which takes longer to handle than the query timeout
-	// this means there will be a started decision task query will be blocked behind
-	// for longer than the query timeout
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
@@ -885,25 +885,23 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	})
 	s.Nil(err)
 
-	go func() {
-		// wait for decision task for signal to get started before querying workflow
-		// this ensures there is already a decision task started when query arrives
-		<-time.After(time.Second)
-		queryWorkflowFn(queryType, nil)
-	}()
+	// call QueryWorkflow in separate goroutine (because it is blocking). That will generate a query task
+	// notice that the query comes after signal here but is consistent so it should reflect the state of the signal having been applied
+	go queryWorkflowFn(queryType, nil)
+	// ensure query has had enough time to at least start before a decision task is polled
+	// if the decision task containing the signal is polled before query is started it will not impact
+	// correctness but it will mean query will be able to be dispatched directly after signal
+	// without being attached to the decision task signal is on
+	<-time.After(time.Second)
 
 	_, err = poller.PollAndProcessDecisionTask(false, false)
-	// the decision task will timeout
-	s.Error(err)
+	s.NoError(err)
 
 	// wait for query to timeout
 	queryResult := <-queryResultCh
-	s.NoError(queryResult.Err)
-	s.NotNil(queryResult.Resp)
-	s.NotNil(queryResult.Resp.QueryResult)
-	s.Nil(queryResult.Resp.QueryRejected)
-	queryResultString := string(queryResult.Resp.QueryResult)
-	s.Equal("consistent query result", queryResultString)
+	s.Error(queryResult.Err) // got a timeout error
+	s.Nil(queryResult.Resp)
+	s.True(handledSignal) // signal is now handled, but was not handled by the time the query timedout
 }
 
 func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_NonSticky() {
