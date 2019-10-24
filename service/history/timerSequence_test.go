@@ -485,3 +485,403 @@ func (s *timerSequenceSuite) TestLoadAndSortActivityTimers_Multiple() {
 		},
 	}, timerSequenceIDs)
 }
+
+func (s *timerSequenceSuite) TestGetUserTimerTimeout() {
+	now := time.Now()
+	timerInfo := &persistence.TimerInfo{
+		Version:    123,
+		TimerID:    "some random timer ID",
+		StartedID:  456,
+		ExpiryTime: now.Add(100 * time.Second),
+		TaskID:     TimerTaskStatusCreated,
+	}
+
+	expectedTimerSequence := &timerSequenceID{
+		eventID:      timerInfo.StartedID,
+		timestamp:    timerInfo.ExpiryTime,
+		timerType:    timerTypeStartToClose,
+		timerCreated: true,
+		attempt:      0,
+	}
+
+	timerSequence := s.timerSequence.getUserTimerTimeout(timerInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+
+	timerInfo.TaskID = TimerTaskStatusNone
+	expectedTimerSequence.timerCreated = false
+	timerSequence = s.timerSequence.getUserTimerTimeout(timerInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityScheduleToStartTimeout_NotScheduled() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               common.EmptyEventID,
+		ScheduledTime:            time.Time{},
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusNone,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityScheduleToStartTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityScheduleToStartTimeout_Scheduled_NotStarted() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusCreatedScheduleToStart,
+		Attempt:                  12,
+	}
+
+	expectedTimerSequence := &timerSequenceID{
+		eventID: activityInfo.ScheduleID,
+		timestamp: activityInfo.ScheduledTime.Add(
+			time.Duration(activityInfo.ScheduleToStartTimeout) * time.Second,
+		),
+		timerType:    timerTypeScheduleToStart,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequence := s.timerSequence.getActivityScheduleToStartTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	expectedTimerSequence.timerCreated = false
+	timerSequence = s.timerSequence.getActivityScheduleToStartTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityScheduleToStartTimeout_Scheduled_Started() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                345,
+		StartedTime:              now.Add(200 * time.Second),
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusCreatedScheduleToStart,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityScheduleToStartTimeout(activityInfo)
+	s.Empty(timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	timerSequence = s.timerSequence.getActivityScheduleToStartTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityScheduleToCloseTimeout_NotScheduled() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               common.EmptyEventID,
+		ScheduledTime:            time.Time{},
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusNone,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityScheduleToCloseTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityScheduleToCloseTimeout_Scheduled() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusCreatedScheduleToClose,
+		Attempt:                  12,
+	}
+
+	expectedTimerSequence := &timerSequenceID{
+		eventID: activityInfo.ScheduleID,
+		timestamp: activityInfo.ScheduledTime.Add(
+			time.Duration(activityInfo.ScheduleToCloseTimeout) * time.Second,
+		),
+		timerType:    timerTypeScheduleToClose,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequence := s.timerSequence.getActivityScheduleToCloseTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	expectedTimerSequence.timerCreated = false
+	timerSequence = s.timerSequence.getActivityScheduleToCloseTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityStartToCloseTimeout_NotStarted() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusNone,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityStartToCloseTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityStartToCloseTimeout_Started() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                345,
+		StartedTime:              now.Add(200 * time.Millisecond),
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusCreatedStartToClose,
+		Attempt:                  12,
+	}
+
+	expectedTimerSequence := &timerSequenceID{
+		eventID: activityInfo.ScheduleID,
+		timestamp: activityInfo.StartedTime.Add(
+			time.Duration(activityInfo.StartToCloseTimeout) * time.Second,
+		),
+		timerType:    timerTypeStartToClose,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequence := s.timerSequence.getActivityStartToCloseTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	expectedTimerSequence.timerCreated = false
+	timerSequence = s.timerSequence.getActivityStartToCloseTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithHeartbeat_NotStarted() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         1,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusNone,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithHeartbeat_Started_NoHeartbeat() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                345,
+		StartedTime:              now.Add(200 * time.Millisecond),
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         1,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          TimerTaskStatusCreatedHeartbeat,
+		Attempt:                  12,
+	}
+
+	expectedTimerSequence := &timerSequenceID{
+		eventID: activityInfo.ScheduleID,
+		timestamp: activityInfo.StartedTime.Add(
+			time.Duration(activityInfo.HeartbeatTimeout) * time.Second,
+		),
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequence := s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	expectedTimerSequence.timerCreated = false
+	timerSequence = s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithHeartbeat_Started_Heartbeated() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                345,
+		StartedTime:              now.Add(200 * time.Millisecond),
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         1,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusCreatedHeartbeat,
+		Attempt:                  12,
+	}
+
+	expectedTimerSequence := &timerSequenceID{
+		eventID: activityInfo.ScheduleID,
+		timestamp: activityInfo.LastHeartBeatUpdatedTime.Add(
+			time.Duration(activityInfo.HeartbeatTimeout) * time.Second,
+		),
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequence := s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	expectedTimerSequence.timerCreated = false
+	timerSequence = s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Equal(expectedTimerSequence, timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithoutHeartbeat_NotStarted() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusNone,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithoutHeartbeat_Started_NoHeartbeat() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                345,
+		StartedTime:              now.Add(200 * time.Millisecond),
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          TimerTaskStatusCreatedHeartbeat,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Empty(timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	timerSequence = s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
+
+func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithoutHeartbeat_Started_Heartbeated() {
+	now := time.Now()
+	activityInfo := &persistence.ActivityInfo{
+		Version:                  123,
+		ScheduleID:               234,
+		ScheduledTime:            now,
+		StartedID:                345,
+		StartedTime:              now.Add(200 * time.Millisecond),
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   10,
+		ScheduleToCloseTimeout:   1000,
+		StartToCloseTimeout:      100,
+		HeartbeatTimeout:         0,
+		LastHeartBeatUpdatedTime: now.Add(400 * time.Millisecond),
+		TimerTaskStatus:          TimerTaskStatusCreatedHeartbeat,
+		Attempt:                  12,
+	}
+
+	timerSequence := s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Empty(timerSequence)
+
+	activityInfo.TimerTaskStatus = TimerTaskStatusNone
+	timerSequence = s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
+	s.Empty(timerSequence)
+}
