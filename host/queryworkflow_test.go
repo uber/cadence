@@ -901,7 +901,6 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	queryResult := <-queryResultCh
 	s.Error(queryResult.Err) // got a timeout error
 	s.Nil(queryResult.Resp)
-	s.True(handledSignal) // signal is now handled, but was not handled by the time the query timedout
 }
 
 func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_NonSticky() {
