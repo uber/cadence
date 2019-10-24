@@ -2972,6 +2972,7 @@ func (e *mutableStateBuilder) ReplicateTimerStartedEvent(
 	}
 
 	e.pendingTimerInfoIDs[timerID] = ti
+	e.pendingTimerEventIDToID[event.GetEventId()] = timerID
 	e.updateTimerInfos[ti] = struct{}{}
 
 	return ti, nil
