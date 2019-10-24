@@ -885,3 +885,72 @@ func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithoutHeartbeat_St
 	timerSequence = s.timerSequence.getActivityHeartbeatTimeout(activityInfo)
 	s.Empty(timerSequence)
 }
+
+func (s *timerSequenceSuite) TestLess_CompareTime() {
+	now := time.Now()
+	timerSequenceID1 := timerSequenceID{
+		eventID:      123,
+		timestamp:    now,
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequenceID2 := timerSequenceID{
+		eventID:      123,
+		timestamp:    now.Add(time.Second),
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequenceIDs := timerSequenceIDs([]timerSequenceID{timerSequenceID1, timerSequenceID2})
+	s.True(timerSequenceIDs.Less(0, 1))
+	s.False(timerSequenceIDs.Less(1, 0))
+}
+
+func (s *timerSequenceSuite) TestLess_CompareEventID() {
+	now := time.Now()
+	timerSequenceID1 := timerSequenceID{
+		eventID:      122,
+		timestamp:    now,
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequenceID2 := timerSequenceID{
+		eventID:      123,
+		timestamp:    now,
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequenceIDs := timerSequenceIDs([]timerSequenceID{timerSequenceID1, timerSequenceID2})
+	s.True(timerSequenceIDs.Less(0, 1))
+	s.False(timerSequenceIDs.Less(1, 0))
+}
+
+func (s *timerSequenceSuite) TestLess_CompareType() {
+	now := time.Now()
+	timerSequenceID1 := timerSequenceID{
+		eventID:      123,
+		timestamp:    now,
+		timerType:    timerTypeScheduleToClose,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequenceID2 := timerSequenceID{
+		eventID:      123,
+		timestamp:    now,
+		timerType:    timerTypeHeartbeat,
+		timerCreated: true,
+		attempt:      12,
+	}
+
+	timerSequenceIDs := timerSequenceIDs([]timerSequenceID{timerSequenceID1, timerSequenceID2})
+	s.True(timerSequenceIDs.Less(0, 1))
+	s.False(timerSequenceIDs.Less(1, 0))
+}
