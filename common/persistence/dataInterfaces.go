@@ -669,7 +669,7 @@ type (
 		TimerID    string
 		StartedID  int64
 		ExpiryTime time.Time
-		// TaskID is a misleading variable, it actually server
+		// TaskID is a misleading variable, it actually serves
 		// the purpose of indicating whether a timer task is
 		// generated for this timer info
 		TaskID int64
