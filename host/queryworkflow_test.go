@@ -773,7 +773,6 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	// decider logic
 	activityScheduled := false
 	activityData := int32(1)
-	handledSignal := false
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 
@@ -799,7 +798,6 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
 					<-time.After(3 * time.Second) // take longer to respond to the decision task than the query waits for
-					handledSignal = true
 					return nil, []*workflow.Decision{}, nil
 				}
 			}
@@ -852,7 +850,6 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *workflow.QueryRejectCondition) {
-		s.False(handledSignal)
 		shortCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 		queryResp, err := s.engine.QueryWorkflow(shortCtx, &workflow.QueryWorkflowRequest{
 			Domain: common.StringPtr(s.domainName),
@@ -867,7 +864,6 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		})
 		cancel()
-		s.False(handledSignal)
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
