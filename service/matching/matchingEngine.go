@@ -327,19 +327,14 @@ pollLoop:
 			})
 			if err != nil {
 				// will notify query client that the query task failed
-				if err := e.deliverQueryResult(task.query.taskID, &queryResult{err: err}); err != nil {
-					e.logger.Error("failed to delivery query result", tag.Error(err))
-				}
+				e.deliverQueryResult(task.query.taskID, &queryResult{err: err})
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
 			if mutableStateResp.GetPreviousStartedEventId() <= 0 {
 				// first decision task is not processed by worker yet.
-				err := e.deliverQueryResult(task.query.taskID,
+				e.deliverQueryResult(task.query.taskID,
 					&queryResult{err: errQueryBeforeFirstDecisionCompleted, waitNextEventID: mutableStateResp.GetNextEventId()})
-				if err != nil {
-					e.logger.Error("failed to delivery query result", tag.Error(err))
-				}
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
@@ -541,31 +536,24 @@ type queryResult struct {
 	waitNextEventID int64
 }
 
-func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *queryResult) error {
+func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *queryResult) {
 	e.queryMapLock.Lock()
 	queryResultCh, ok := e.queryTaskMap[taskID]
 	e.queryMapLock.Unlock()
 
 	if !ok {
 		e.metricsClient.IncCounter(metrics.MatchingRespondQueryTaskCompletedScope, metrics.RespondQueryTaskFailedCounter)
-		return &workflow.EntityNotExistsError{Message: "query task not found, or already expired"}
+		return
 	}
 
 	queryResultCh <- queryResult
-	return nil
 }
 
 func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
 	if *request.CompletedRequest.CompletedType == workflow.QueryTaskCompletedTypeFailed {
-		err := e.deliverQueryResult(request.GetTaskID(), &queryResult{err: errors.New(request.CompletedRequest.GetErrorMessage())})
-		if err != nil {
-			e.logger.Error("failed to deliver query result", tag.Error(err))
-		}
+		e.deliverQueryResult(request.GetTaskID(), &queryResult{err: errors.New(request.CompletedRequest.GetErrorMessage())})
 	} else {
-		err := e.deliverQueryResult(request.GetTaskID(), &queryResult{result: request.CompletedRequest.QueryResult})
-		if err != nil {
-			e.logger.Error("failed to deliver query result", tag.Error(err))
-		}
+		e.deliverQueryResult(request.GetTaskID(), &queryResult{result: request.CompletedRequest.QueryResult})
 	}
 
 	return nil

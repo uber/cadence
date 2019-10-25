@@ -760,18 +760,18 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 	ctx context.Context,
 	request *h.ReplicateEventsRequest,
 	domainID, workflowID, currentRunID string,
-) (rerr error) {
+) error {
 	var currContext workflowExecutionContext
 	var baseMutableState, currMutableState, newMsBuilder mutableState
 	var newHistorySize int64
 	var newRunTransferTasks, newRunTimerTasks []persistence.Task
 
-	resetAttr, retError := validateResetReplicationTask(request)
+	resetAttr, err := validateResetReplicationTask(request)
 	historyAfterReset := request.History.Events
 	lastEvent := historyAfterReset[len(historyAfterReset)-1]
 	decisionFinishEventID := historyAfterReset[0].GetEventId()
-	if retError != nil {
-		return retError
+	if err != nil {
+		return err
 	}
 	baseExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -782,10 +782,10 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 	if baseErr != nil {
 		return baseErr
 	}
-	defer func() { baseRelease(retError) }()
-	baseMutableState, retError = baseContext.loadWorkflowExecution()
-	if retError != nil {
-		return retError
+	defer func() { baseRelease(nil) }()
+	baseMutableState, err = baseContext.loadWorkflowExecution()
+	if err != nil {
+		return err
 	}
 	if baseMutableState.GetNextEventID() < decisionFinishEventID {
 		// re-replicate the whole new run
@@ -806,16 +806,16 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 		if currErr != nil {
 			return currErr
 		}
-		defer func() { currRelease(retError) }()
-		currMutableState, retError = currContext.loadWorkflowExecution()
-		if retError != nil {
-			return retError
+		defer func() { currRelease(nil) }()
+		currMutableState, err = currContext.loadWorkflowExecution()
+		if err != nil {
+			return err
 		}
 	}
 	// before changing mutable state
-	newMsBuilder, newHistorySize, newRunTransferTasks, newRunTimerTasks, retError = w.replicateResetEvent(baseMutableState, &baseExecution, historyAfterReset, resetAttr.GetForkEventVersion())
-	if retError != nil {
-		return retError
+	newMsBuilder, newHistorySize, newRunTransferTasks, newRunTimerTasks, err = w.replicateResetEvent(baseMutableState, &baseExecution, historyAfterReset, resetAttr.GetForkEventVersion())
+	if err != nil {
+		return err
 	}
 
 	// fork a new history branch
