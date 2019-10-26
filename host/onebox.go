@@ -74,6 +74,7 @@ type Cadence interface {
 	FrontendAddress() string
 	GetFrontendService() service.Service
 	GetHistoryClient() historyserviceclient.Interface
+	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
 
 type (
@@ -789,20 +790,8 @@ func (c *cadenceImpl) createSystemDomain() error {
 	return nil
 }
 
-func (c *cadenceImpl) GetReplicationTasksFromDLQ(
-	sourceClusterName string,
-) ([]*persistence.ReplicationTaskInfo, error) {
-
-	var tasksFromDLQ []*persistence.ReplicationTaskInfo
-	for _, handler := range c.historyHandlers {
-		tasks, err := handler.GetReplicationTasksFromDLQ(sourceClusterName)
-		if err != nil {
-			return nil, err
-		}
-		tasksFromDLQ = append(tasksFromDLQ, tasks...)
-	}
-
-	return tasksFromDLQ, nil
+func (c *cadenceImpl) GetExecutionManagerFactory() persistence.ExecutionManagerFactory {
+	return c.executionMgrFactory
 }
 
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {

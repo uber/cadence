@@ -21,6 +21,8 @@
 package ndc
 
 import (
+	"github.com/uber/cadence/common/persistence"
+	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -112,7 +114,14 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	time.Sleep(10 * time.Second)
 
-	replicationTasks, err := s.active.GetReplicationTasksFromDLQ("standby")
+	execMgrFactory := s.active.GetExecutionManagerFactory()
+	executionManager, err := execMgrFactory.NewExecutionManager(0)
+	s.NoError(err)
+	defer executionManager.Close()
+
+	request := persistence.NewGetReplicationTasksFromDLQRequest(
+		"standby", -1, math.MaxInt64, math.MaxInt64, nil)
+	response, err := executionManager.GetReplicationTasksFromDLQ(request)
 	s.NoError(err, "Failed to get messages from DLQ.")
-	s.Equal(len(replicationTasks), len(historyBatch))
+	s.Equal(len(response.Tasks), len(historyBatch))
 }

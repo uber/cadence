@@ -23,7 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -1570,25 +1569,6 @@ func (h *Handler) ReapplyEvents(
 		return h.error(err, scope, domainID, workflowID)
 	}
 	return nil
-}
-
-// GetReplicationTasksFromDLQ is only used for integration test verification purpose
-func (h *Handler) GetReplicationTasksFromDLQ(sourceClusterName string) ([]*persistence.ReplicationTaskInfo, error) {
-	var tasksFromDLQ []*persistence.ReplicationTaskInfo
-	for i := 0; i < h.config.NumberOfShards; i++ {
-		shardItem := h.controller.getHistoryShardItem(i)
-		if shardItem != nil {
-			request := persistence.NewGetReplicationTasksFromDLQRequest(
-				sourceClusterName, -1, math.MaxInt64, math.MaxInt64, nil)
-			response, err := shardItem.executionMgr.GetReplicationTasksFromDLQ(request)
-			if err != nil {
-				return nil, err
-			}
-			tasksFromDLQ = append(tasksFromDLQ, response.Tasks...)
-		}
-	}
-
-	return tasksFromDLQ, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

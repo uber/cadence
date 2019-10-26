@@ -237,6 +237,7 @@ func (p *ReplicationTaskProcessor) processTaskOnce(replicationTask *r.Replicatio
 	switch replicationTask.GetTaskType() {
 	case r.ReplicationTaskTypeDomain:
 		// Domain replication task should be handled in worker (domainReplicationMessageProcessor)
+		panic("task type not supported")
 	case r.ReplicationTaskTypeSyncShardStatus:
 		scope = metrics.SyncShardTaskScope
 		err = p.handleSyncShardTask(replicationTask)
@@ -378,7 +379,9 @@ func (p *ReplicationTaskProcessor) shouldRetryDLQ(err error) bool {
 	}
 }
 
-func toPersistenceReplicationInfo(info map[string]*shared.ReplicationInfo) map[string]*persistence.ReplicationInfo {
+func toPersistenceReplicationInfo(
+	info map[string]*shared.ReplicationInfo,
+) map[string]*persistence.ReplicationInfo {
 	replicationInfoMap := make(map[string]*persistence.ReplicationInfo)
 	for k, v := range info {
 		replicationInfoMap[k] = &persistence.ReplicationInfo{
