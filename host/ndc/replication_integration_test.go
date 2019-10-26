@@ -117,7 +117,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 	execMgrFactory := s.active.GetExecutionManagerFactory()
 	executionManager, err := execMgrFactory.NewExecutionManager(0)
 	s.NoError(err)
-	defer executionManager.Close()
 
 	request := persistence.NewGetReplicationTasksFromDLQRequest(
 		"standby", -1, math.MaxInt64, math.MaxInt64, nil)

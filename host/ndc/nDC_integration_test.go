@@ -121,9 +121,10 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 	mockStandbyClient := workflowservicetest.NewMockClient(controller)
 	mockStandbyClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).DoAndReturn(s.GetReplicationMessagesMock).AnyTimes()
 	mockOtherClient := workflowservicetest.NewMockClient(controller)
-	mockOtherClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).Return(&replicator.GetReplicationMessagesResponse{
-		MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
-	}, nil).AnyTimes()
+	mockOtherClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).Return(
+		&replicator.GetReplicationMessagesResponse{
+			MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
+		}, nil).AnyTimes()
 	s.mockFrontendClient["standby"] = mockStandbyClient
 	s.mockFrontendClient["other"] = mockOtherClient
 	clusterConfigs[0].MockFrontendClient = s.mockFrontendClient
