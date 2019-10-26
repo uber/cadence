@@ -140,7 +140,6 @@ func (p *ReplicationTaskProcessor) Stop() {
 
 func (p *ReplicationTaskProcessor) processorLoop() {
 	p.lastProcessedMessageID = p.shard.GetClusterReplicationLevel(p.sourceCluster)
-	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
 
 	defer func() {
 		p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
@@ -156,16 +155,7 @@ Loop:
 		default:
 		}
 
-		respChan := make(chan *r.ReplicationMessages, 1)
-		// TODO: when we support prefetching, LastRetrivedMessageId can be different than LastProcessedMessageId
-		p.requestChan <- &request{
-			token: &r.ReplicationToken{
-				ShardID:                common.Int32Ptr(int32(p.shard.GetShardID())),
-				LastRetrivedMessageId:  common.Int64Ptr(p.lastRetrievedMessageID),
-				LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
-			},
-			respChan: respChan,
-		}
+		respChan := p.sendFetchMessageRequest()
 
 		select {
 		case response, ok := <-respChan:
@@ -180,32 +170,7 @@ Loop:
 				tag.Counter(len(response.GetReplicationTasks())),
 			)
 
-			// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
-			// we will receive replication tasks but hasMore is false (meaning that we are always catching up).
-			// So hasMore might not be a good indicator for additional wait.
-			if len(response.ReplicationTasks) == 0 {
-				backoffDuration := p.noTaskRetrier.NextBackOff()
-				time.Sleep(backoffDuration)
-				continue
-			}
-
-			for _, replicationTask := range response.ReplicationTasks {
-				err := p.processTask(replicationTask)
-				if err != nil {
-					// Processor is shutdown. Exit without updating the checkpoint.
-					return
-				}
-			}
-
-			p.lastProcessedMessageID = response.GetLastRetrivedMessageId()
-			p.lastRetrievedMessageID = response.GetLastRetrivedMessageId()
-			err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.lastRetrievedMessageID)
-			if err != nil {
-				p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
-			}
-
-			scope.UpdateGauge(metrics.LastRetrievedMessageID, float64(p.lastRetrievedMessageID))
-			p.noTaskRetrier.Reset()
+			p.processResponse(response)
 		case <-p.done:
 			p.logger.Info("ReplicationTaskProcessor shutting down.")
 			return
@@ -213,7 +178,51 @@ Loop:
 	}
 }
 
-func (p *ReplicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) error {
+func (p *ReplicationTaskProcessor) sendFetchMessageRequest() <-chan *r.ReplicationMessages {
+	respChan := make(chan *r.ReplicationMessages, 1)
+	// TODO: when we support prefetching, LastRetrivedMessageId can be different than LastProcessedMessageId
+	p.requestChan <- &request{
+		token: &r.ReplicationToken{
+			ShardID:                common.Int32Ptr(int32(p.shard.GetShardID())),
+			LastRetrivedMessageId:  common.Int64Ptr(p.lastRetrievedMessageID),
+			LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
+		},
+		respChan: respChan,
+	}
+	return respChan
+}
+
+func (p *ReplicationTaskProcessor) processResponse(response *r.ReplicationMessages) {
+	// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
+	// we will receive replication tasks but hasMore is false (meaning that we are always catching up).
+	// So hasMore might not be a good indicator for additional wait.
+	if len(response.ReplicationTasks) == 0 {
+		backoffDuration := p.noTaskRetrier.NextBackOff()
+		time.Sleep(backoffDuration)
+		return
+	}
+
+	for _, replicationTask := range response.ReplicationTasks {
+		err := p.processSingleTask(replicationTask)
+		if err != nil {
+			// Processor is shutdown. Exit without updating the checkpoint.
+			return
+		}
+	}
+
+	p.lastProcessedMessageID = response.GetLastRetrivedMessageId()
+	p.lastRetrievedMessageID = response.GetLastRetrivedMessageId()
+	err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.lastRetrievedMessageID)
+	if err != nil {
+		p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
+	}
+
+	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
+	scope.UpdateGauge(metrics.LastRetrievedMessageID, float64(p.lastRetrievedMessageID))
+	p.noTaskRetrier.Reset()
+}
+
+func (p *ReplicationTaskProcessor) processSingleTask(replicationTask *r.ReplicationTask) error {
 	err := backoff.Retry(func() error {
 		return p.processTaskOnce(replicationTask)
 	}, p.taskRetryPolicy, isTransientRetryableError)
