@@ -38,7 +38,8 @@ var (
 )
 
 type (
-	timerSequenceIDs []TimerSequenceID
+	// TimerSequenceIDs is used for sorting timers
+	TimerSequenceIDs []TimerSequenceID
 
 	timerQueueAckMgrImpl struct {
 		scope               int
@@ -84,17 +85,17 @@ type (
 var _ timerQueueAckMgr = (*timerQueueAckMgrImpl)(nil)
 
 // Len implements sort.Interace
-func (t timerSequenceIDs) Len() int {
+func (t TimerSequenceIDs) Len() int {
 	return len(t)
 }
 
 // Swap implements sort.Interface.
-func (t timerSequenceIDs) Swap(i, j int) {
+func (t TimerSequenceIDs) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
 
 // Less implements sort.Interface
-func (t timerSequenceIDs) Less(i, j int) bool {
+func (t TimerSequenceIDs) Less(i, j int) bool {
 	return compareTimerIDLess(&t[i], &t[j])
 }
 
@@ -311,7 +312,7 @@ func (t *timerQueueAckMgrImpl) updateAckLevel() {
 
 	// Timer Sequence IDs can have holes in the middle. So we sort the map to get the order to
 	// check. TODO: we can maintain a sorted slice as well.
-	var sequenceIDs timerSequenceIDs
+	var sequenceIDs TimerSequenceIDs
 	for k := range outstandingTasks {
 		sequenceIDs = append(sequenceIDs, k)
 	}

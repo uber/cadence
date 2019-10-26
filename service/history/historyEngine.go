@@ -744,7 +744,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
 ) (retResp *h.QueryWorkflowResponse, retErr error) {
-
 	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
 	if err != nil {
 		return nil, err
@@ -800,6 +799,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		}
 		sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 		defer sw.Stop()
+		req.Execution.RunId = msResp.Execution.RunId
 		mresp, err := e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
 		return mresp, err
 	}
@@ -866,11 +866,12 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			return &h.QueryWorkflowResponse{Response: matchingResp}, nil
 		}
 		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
-			e.logger.Info("Query directly though matching failed",
+			e.logger.Error("Query directly though matching on sticky failed",
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+				tag.Error(err))
 			return nil, err
 		}
 		// this means sticky timeout, should try using the normal tasklist
@@ -882,6 +883,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
 			tag.WorkflowTaskListName(msResp.GetStickyTaskList().GetName()),
 			tag.WorkflowNextEventID(msResp.GetNextEventId()))
+
 		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_, err = e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
@@ -894,13 +896,23 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	}
 
 	matchingRequest.TaskList = msResp.TaskList
-	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, matchingRequest)
-	if err != nil {
-		e.logger.Info("Query directly though matching failed",
+	if err := common.IsValidContext(ctx); err != nil {
+		e.logger.Error("Context expired before query could be attempted on nonSticky",
 			tag.WorkflowDomainName(queryRequest.GetDomain()),
 			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+			tag.Error(err))
+		return nil, err
+	}
+	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, matchingRequest)
+	if err != nil {
+		e.logger.Error("Query directly though matching on non-sticky failed",
+			tag.WorkflowDomainName(queryRequest.GetDomain()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+			tag.Error(err))
 		return nil, err
 	}
 	return &h.QueryWorkflowResponse{Response: matchingResp}, nil
@@ -2536,11 +2548,11 @@ func getScheduleID(
 	if activityID == "" {
 		return 0, &workflow.BadRequestError{Message: "Neither ActivityID nor ScheduleID is provided"}
 	}
-	scheduleID, err := msBuilder.GetScheduleIDByActivityID(activityID)
-	if err != nil {
-		return 0, err
+	activityInfo, ok := msBuilder.GetActivityByActivityID(activityID)
+	if !ok {
+		return 0, &workflow.BadRequestError{Message: "Cannot locate Activity ScheduleID"}
 	}
-	return scheduleID, nil
+	return activityInfo.ScheduleID, nil
 }
 
 func getStartRequest(
