@@ -1745,10 +1745,6 @@ func (e *historyEngineImpl) ReplicateEvents(
 	replicateRequest *h.ReplicateEventsRequest,
 ) error {
 
-	// This is to make new release after event v1 deprecation forward-compatible
-	replicateRequest.EventStoreVersion = common.Int32Ptr(persistence.EventStoreVersionV2)
-	replicateRequest.NewRunEventStoreVersion = common.Int32Ptr(persistence.EventStoreVersionV2)
-
 	return e.replicator.ApplyEvents(ctx, replicateRequest)
 }
 
@@ -1756,10 +1752,6 @@ func (e *historyEngineImpl) ReplicateRawEvents(
 	ctx ctx.Context,
 	replicateRequest *h.ReplicateRawEventsRequest,
 ) error {
-
-	// This is to make new release after event v1 deprecation forward-compatible
-	replicateRequest.EventStoreVersion = common.Int32Ptr(persistence.EventStoreVersionV2)
-	replicateRequest.NewRunEventStoreVersion = common.Int32Ptr(persistence.EventStoreVersionV2)
 
 	return e.replicator.ApplyRawEvents(ctx, replicateRequest)
 }
