@@ -206,24 +206,16 @@ func (c *shardController) removeEngineForShard(shardID int) {
 	}
 }
 
-func (c *shardController) getHistoryShardItem(shardID int) *historyShardsItem {
+func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShardsItem, error) {
 	c.RLock()
-	defer c.RUnlock()
-
 	if item, ok := c.historyShards[shardID]; ok {
 		if item.isValid() {
-			return item
+			c.RUnlock()
+			return item, nil
 		}
+		// if item not valid then process to create a new one
 	}
-
-	return nil
-}
-
-func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShardsItem, error) {
-	item := c.getHistoryShardItem(shardID)
-	if item != nil {
-		return item, nil
-	}
+	c.RUnlock()
 
 	c.Lock()
 	defer c.Unlock()
