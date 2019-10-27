@@ -96,7 +96,7 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 	}
 	tm := newTestTaskManager(logger)
 	mockDomainCache := cache.NewMockDomainCache(controller)
-	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil)
+	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	me := newMatchingEngine(
 		cfg, tm, nil, logger, mockDomainCache,
 	)

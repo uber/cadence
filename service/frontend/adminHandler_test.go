@@ -53,9 +53,9 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller    *gomock.Controller
-		historyClient *historyservicetest.MockClient
-		domainCache   *cache.MockDomainCache
+		controller        *gomock.Controller
+		mockHistoryClient *historyservicetest.MockClient
+		mockDomainCache   *cache.MockDomainCache
 
 		logger                 log.Logger
 		domainName             string
@@ -80,10 +80,10 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.historyClient = historyservicetest.NewMockClient(s.controller)
-	s.domainCache = cache.NewMockDomainCache(s.controller)
-	s.domainCache.EXPECT().Start().AnyTimes()
-	s.domainCache.EXPECT().Stop().AnyTimes()
+	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+	s.mockDomainCache.EXPECT().Start().AnyTimes()
+	s.mockDomainCache.EXPECT().Stop().AnyTimes()
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.domainName = "some random domain name"
@@ -97,10 +97,10 @@ func (s *adminHandlerSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.Frontend)
 	s.mockClientBean = &client.MockClientBean{}
 
-	s.mockClientBean.On("GetHistoryClient").Return(s.historyClient)
+	s.mockClientBean.On("GetHistoryClient").Return(s.mockHistoryClient)
 	s.service = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.handler = NewAdminHandler(s.service, 1, s.domainCache, s.mockHistoryV2Mgr, nil)
+	s.handler = NewAdminHandler(s.service, 1, s.mockDomainCache, s.mockHistoryV2Mgr, nil)
 	s.handler.Start()
 }
 
@@ -209,7 +209,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomainCache() {
 	ctx := context.Background()
-	s.domainCache.EXPECT().GetDomainID(s.domainName).Return("", fmt.Errorf("test"))
+	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return("", fmt.Errorf("test")).Times(1)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&admin.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
@@ -229,7 +229,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	ctx := context.Background()
-	s.domainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil)
+	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
 	branchToken := []byte{1}
 	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
@@ -242,7 +242,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 		VersionHistories:   versionHistories,
 		ReplicationInfo:    make(map[string]*shared.ReplicationInfo),
 	}
-	s.historyClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 
 	s.mockHistoryV2Mgr.On("ReadRawHistoryBranch", mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
 		HistoryEventBlobs: []*persistence.DataBlob{},
@@ -268,7 +268,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAndEndID() {
 	ctx := context.Background()
-	s.domainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil)
+	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
 	branchToken := []byte{1}
 	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
@@ -281,7 +281,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 		VersionHistories:   versionHistories,
 		ReplicationInfo:    make(map[string]*shared.ReplicationInfo),
 	}
-	s.historyClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 
 	resp, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&admin.GetWorkflowExecutionRawHistoryV2Request{

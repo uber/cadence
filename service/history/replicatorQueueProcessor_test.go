@@ -167,7 +167,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {
 		},
 		1234,
 		nil,
-	), nil)
+	), nil).AnyTimes()
 
 	_, err := s.replicatorQueueProcessor.process(newTaskInfo(nil, task, s.logger))
 	s.Nil(err)
@@ -214,7 +214,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowCompleted() {
 		},
 		version,
 		nil,
-	), nil)
+	), nil).AnyTimes()
 
 	_, err := s.replicatorQueueProcessor.process(newTaskInfo(nil, task, s.logger))
 	s.Nil(err)
@@ -263,7 +263,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 		},
 		version,
 		nil,
-	), nil)
+	), nil).AnyTimes()
 
 	_, err := s.replicatorQueueProcessor.process(newTaskInfo(nil, task, s.logger))
 	s.Nil(err)
@@ -352,7 +352,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
 		},
 		version,
 		nil,
-	), nil)
+	), nil).AnyTimes()
 
 	s.mockProducer.On("Publish", &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
@@ -462,7 +462,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 		},
 		version,
 		nil,
-	), nil)
+	), nil).AnyTimes()
 	s.mockProducer.On("Publish", &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
 		SyncActicvityTaskAttributes: &replicator.SyncActicvityTaskAttributes{
