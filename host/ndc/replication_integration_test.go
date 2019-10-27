@@ -68,9 +68,17 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 		standbyClient,
 	)
 
-	time.Sleep(10 * time.Second)
+	// Applying replication messages through fetcher is Async.
+	// So we need to retry a couple of times.
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Second)
+		err := s.verifyEventHistory(workflowID, runID, historyBatch)
+		if err == nil {
+			return
+		}
+	}
 
-	s.verifyEventHistory(workflowID, runID, historyBatch)
+	s.Fail("Verification of replicated messages failed")
 }
 
 func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
@@ -112,15 +120,21 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 		standbyClient,
 	)
 
-	time.Sleep(10 * time.Second)
-
 	execMgrFactory := s.active.GetExecutionManagerFactory()
 	executionManager, err := execMgrFactory.NewExecutionManager(0)
 	s.NoError(err)
 
-	request := persistence.NewGetReplicationTasksFromDLQRequest(
-		"standby", -1, math.MaxInt64, math.MaxInt64, nil)
-	response, err := executionManager.GetReplicationTasksFromDLQ(request)
-	s.NoError(err, "Failed to get messages from DLQ.")
-	s.Equal(len(response.Tasks), len(historyBatch))
+	// Applying replication messages through fetcher is Async.
+	// So we need to retry a couple of times.
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Second)
+		request := persistence.NewGetReplicationTasksFromDLQRequest(
+			"standby", -1, math.MaxInt64, math.MaxInt64, nil)
+		response, err := executionManager.GetReplicationTasksFromDLQ(request)
+		if err == nil && len(response.Tasks) == len(historyBatch) {
+			return
+		}
+	}
+
+	s.Fail("Failed to get messages from DLQ.")
 }

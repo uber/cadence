@@ -223,11 +223,16 @@ func (s *nDCIntegrationTestSuite) TestSingleBranch() {
 			historyClient,
 		)
 
-		s.verifyEventHistory(workflowID, runID, historyBatch)
+		err := s.verifyEventHistory(workflowID, runID, historyBatch)
+		s.Require().NoError(err)
 	}
 }
 
-func (s *nDCIntegrationTestSuite) verifyEventHistory(workflowID string, runID string, historyBatch []*workflow.History) {
+func (s *nDCIntegrationTestSuite) verifyEventHistory(
+	workflowID string,
+	runID string,
+	historyBatch []*workflow.History,
+) error {
 	// get replicated history events from passive side
 	passiveClient := s.active.GetFrontendClient()
 	replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(
@@ -244,7 +249,10 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(workflowID string, runID st
 			HistoryEventFilterType: shared.HistoryEventFilterTypeAllEvent.Ptr(),
 		},
 	)
-	s.Nil(err, "Failed to get history event from passive side")
+
+	if err != nil {
+		return fmt.Errorf("failed to get history event from passive side: %v", err)
+	}
 
 	// compare origin events with replicated events
 	batchIndex := 0
@@ -258,8 +266,13 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(workflowID string, runID st
 		}
 		originEvent := batch[eventIndex]
 		eventIndex++
-		s.Equal(originEvent.GetEventType().String(), event.GetEventType().String(), "The replicated event and the origin event are not the same")
+		if originEvent.GetEventType() != event.GetEventType() {
+			return fmt.Errorf("the replicated event (%v) and the origin event (%v) are not the same",
+				originEvent.GetEventType().String(), event.GetEventType().String())
+		}
 	}
+
+	return nil
 }
 
 func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
