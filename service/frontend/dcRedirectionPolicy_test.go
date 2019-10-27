@@ -144,7 +144,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TearDownTest() {
-
+	s.controller.Finish()
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_LocalDomain() {

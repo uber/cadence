@@ -212,7 +212,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 			version,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err := s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
@@ -259,7 +259,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 			version,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
@@ -315,7 +315,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
@@ -371,7 +371,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(newRetryTaskErrorWithHint(ErrRetrySyncActivityMsg, domainID, workflowID, runID, nextEventID), err)
@@ -449,7 +449,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
@@ -526,7 +526,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(newNDCRetryTaskErrorWithHint(
@@ -617,7 +617,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(newNDCRetryTaskErrorWithHint(
@@ -705,7 +705,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
 	s.Nil(err)
@@ -760,7 +760,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(nil, false).AnyTimes()
 
 	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
@@ -816,7 +816,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 			lastWriteVersion,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(&persistence.ActivityInfo{
 		Version: lastWriteVersion - 1,
 	}, true).AnyTimes()
@@ -885,7 +885,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 			version,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
 		Version:    version,
 		ScheduleID: scheduleID,
@@ -961,7 +961,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 			version,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
 		Version:    version,
 		ScheduleID: scheduleID,
@@ -1037,7 +1037,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 			version,
 			nil,
 		), nil,
-	)
+	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
 		Version:    version - 1,
 		ScheduleID: scheduleID,

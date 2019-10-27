@@ -129,7 +129,6 @@ func (s *engine3Suite) SetupTest() {
 		nil,
 		nil,
 		nil)
-
 	s.mockArchivalClient = &archiver.ClientMock{}
 
 	mockShard := &shardContextImpl{

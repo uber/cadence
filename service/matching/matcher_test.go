@@ -392,7 +392,7 @@ func (t *MatcherTestSuite) newDomainCache() cache.DomainCache {
 		"",
 		nil)
 	dc := cache.NewMockDomainCache(t.controller)
-	dc.EXPECT().GetDomainByID(gomock.Any()).Return(entry, nil)
+	dc.EXPECT().GetDomainByID(gomock.Any()).Return(entry, nil).AnyTimes()
 	return dc
 }
 
