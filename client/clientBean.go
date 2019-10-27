@@ -109,7 +109,12 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 
 	remoteAdminClients := map[string]admin.Client{}
 	remoteFrontendClients := map[string]frontend.Client{}
+Loop:
 	for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue Loop
+		}
+
 		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress)
 		if err != nil {
 			return nil, err
