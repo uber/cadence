@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+
 	gohistory "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/matching"
@@ -49,23 +50,24 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/common/cache"
 )
 
 type (
 	matchingEngineSuite struct {
 		suite.Suite
-		controller           *gomock.Controller
-		historyClient        *historyservicetest.MockClient
+		controller    *gomock.Controller
+		historyClient *historyservicetest.MockClient
+		domainCache   *cache.MockDomainCache
+
 		matchingEngine       *matchingEngineImpl
 		taskManager          *testTaskManager
 		mockExecutionManager *mocks.ExecutionManager
 		logger               log.Logger
 		callContext          context.Context
-		domainCache          *cache.DomainCacheMock
 		sync.Mutex
 	}
 )
@@ -110,8 +112,8 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.historyClient = historyservicetest.NewMockClient(s.controller)
 	s.taskManager = newTestTaskManager(s.logger)
-	s.domainCache = &cache.DomainCacheMock{}
-	s.domainCache.On("GetDomainByID", mock.Anything).Return(cache.CreateDomainCacheEntry("domainName"), nil)
+	s.domainCache = cache.NewMockDomainCache(s.controller)
+	s.domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
 	s.matchingEngine.Start()

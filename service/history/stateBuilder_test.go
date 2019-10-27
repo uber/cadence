@@ -54,13 +54,14 @@ type (
 		controller       *gomock.Controller
 		mockEventsCache  *MockeventsCache
 		mockMutableState *MockmutableState
+		mockDomainCache  *cache.MockDomainCache
 
 		logger              log.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockShardManager    *mocks.ShardManager
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
-		mockDomainCache     *cache.DomainCacheMock
+
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockShard           *shardContextImpl
@@ -91,6 +92,7 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockEventsCache = NewMockeventsCache(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
@@ -99,7 +101,6 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockDomainCache = &cache.DomainCacheMock{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil, nil)
@@ -132,7 +133,6 @@ func (s *stateBuilderSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
-	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.controller.Finish()
 }
@@ -192,7 +192,7 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
 	}
 
-	s.mockDomainCache.On("GetDomain", testParentDomainName).Return(testGlobalParentDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomain(testParentDomainName).Return(testGlobalParentDomainEntry, nil).Times(1)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionStartedEvent(&testParentDomainID, execution, requestID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(executionInfo).AnyTimes()
@@ -249,7 +249,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 		WorkflowExecutionTimedOutEventAttributes: &shared.WorkflowExecutionTimedOutEventAttributes{},
 	}
 
-	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).Times(1)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
@@ -286,7 +286,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 		WorkflowExecutionTerminatedEventAttributes: &shared.WorkflowExecutionTerminatedEventAttributes{},
 	}
 
-	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).Times(1)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
@@ -355,7 +355,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 		WorkflowExecutionFailedEventAttributes: &shared.WorkflowExecutionFailedEventAttributes{},
 	}
 
-	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).Times(1)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionFailedEvent(event.GetEventId(), event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
@@ -445,8 +445,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			Attempt:                    common.Int64Ptr(newRunDecisionAttempt),
 		},
 	}
-	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil).Once()
-	s.mockDomainCache.On("GetDomain", testParentDomainName).Return(testGlobalParentDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).Times(1)
+	s.mockDomainCache.EXPECT().GetDomain(testParentDomainName).Return(testGlobalParentDomainEntry, nil).Times(1)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(s.sourceCluster)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionContinuedAsNewEvent(
 		continueAsNewEvent.GetEventId(),
@@ -546,7 +546,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 		WorkflowExecutionCompletedEventAttributes: &shared.WorkflowExecutionCompletedEventAttributes{},
 	}
 
-	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).Times(1)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionCompletedEvent(event.GetEventId(), event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
@@ -583,7 +583,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 		WorkflowExecutionCanceledEventAttributes: &shared.WorkflowExecutionCanceledEventAttributes{},
 	}
 
-	s.mockDomainCache.On("GetDomainByID", testDomainID).Return(testGlobalDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).Times(1)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionCanceledEvent(event.GetEventId(), event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
@@ -817,7 +817,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	s.mockMutableState.EXPECT().ReplicateStartChildWorkflowExecutionInitiatedEvent(
 		event.GetEventId(), event, gomock.Any(),
 	).Return(ci, nil).Times(1)
-	s.mockDomainCache.On("GetDomain", testTargetDomainName).Return(testGlobalTargetDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomain(testTargetDomainName).Return(testGlobalTargetDomainEntry, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 
@@ -913,7 +913,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	s.mockMutableState.EXPECT().ReplicateSignalExternalWorkflowExecutionInitiatedEvent(
 		event.GetEventId(), event, gomock.Any(),
 	).Return(si, nil).Times(1)
-	s.mockDomainCache.On("GetDomain", testTargetDomainName).Return(testGlobalTargetDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomain(testTargetDomainName).Return(testGlobalTargetDomainEntry, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 
@@ -1008,7 +1008,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	s.mockMutableState.EXPECT().ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(
 		event.GetEventId(), event, gomock.Any(),
 	).Return(rci, nil).Times(1)
-	s.mockDomainCache.On("GetDomain", testTargetDomainName).Return(testGlobalTargetDomainEntry, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomain(testTargetDomainName).Return(testGlobalTargetDomainEntry, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 
