@@ -140,6 +140,24 @@ go-generate:
 	@echo "running go generate ./..."
 	@go generate ./...
 
+lint:
+	@echo "running linter"
+	@lintFail=0; for file in $(ALL_SRC); do \
+		golint "$$file"; \
+		if [ $$? -eq 1 ]; then lintFail=1; fi; \
+	done; \
+	if [ $$lintFail -eq 1 ]; then exit 1; fi;
+	@OUTPUT=`gofmt -l $(ALL_SRC) 2>&1`; \
+	if [ "$$OUTPUT" ]; then \
+		echo "Run 'make fmt'. gofmt must be run on the following files:"; \
+		echo "$$OUTPUT"; \
+		exit 1; \
+	fi
+
+fmt:
+	@echo "running goimports"
+	@goimports -w $(ALL_SRC)
+
 bins_nothrift: go-generate fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
@@ -214,23 +232,6 @@ cover: $(COVER_ROOT)/cover.out
 
 cover_ci: $(COVER_ROOT)/cover.out
 	goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
-
-lint:
-	@echo Running linter
-	@lintFail=0; for file in $(ALL_SRC); do \
-		golint "$$file"; \
-		if [ $$? -eq 1 ]; then lintFail=1; fi; \
-	done; \
-	if [ $$lintFail -eq 1 ]; then exit 1; fi;
-	@OUTPUT=`gofmt -l $(ALL_SRC) 2>&1`; \
-	if [ "$$OUTPUT" ]; then \
-		echo "Run 'make fmt'. gofmt must be run on the following files:"; \
-		echo "$$OUTPUT"; \
-		exit 1; \
-	fi
-
-fmt:
-	@goimports -w $(ALL_SRC)
 
 clean:
 	rm -f cadence
