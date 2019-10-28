@@ -40,11 +40,15 @@ type (
 		hasCompleted() bool
 		getCompletedSnapshot() []string
 
+		hasUnblocked() bool
+		getUnblockedSnapshot() []string
+
 		getQueryInternalState(string) (*queryInternalState, error)
 		getQueryTermCh(string) (<-chan struct{}, error)
 
 		bufferQuery(*shared.WorkflowQuery) (string, <-chan struct{})
 		completeQuery(string, *shared.WorkflowQueryResult) error
+		unblockQuery(string) error
 		removeQuery(string)
 	}
 
@@ -53,6 +57,7 @@ type (
 
 		buffered  map[string]query
 		completed map[string]query
+		unblocked map[string]query
 	}
 )
 
@@ -60,6 +65,7 @@ func newQueryRegistry() queryRegistry {
 	return &queryRegistryImpl{
 		buffered:  make(map[string]query),
 		completed: make(map[string]query),
+		unblocked: make(map[string]query),
 	}
 }
 
@@ -89,6 +95,20 @@ func (r *queryRegistryImpl) getCompletedSnapshot() []string {
 	defer r.RUnlock()
 
 	return getIDs(r.completed)
+}
+
+func (r *queryRegistryImpl) hasUnblocked() bool {
+	r.RLock()
+	defer r.RUnlock()
+
+	return len(r.unblocked) > 0
+}
+
+func (r *queryRegistryImpl) getUnblockedSnapshot() []string {
+	r.RLock()
+	defer r.RUnlock()
+
+	return getIDs(r.unblocked)
 }
 
 func (r *queryRegistryImpl) getQueryInternalState(id string) (*queryInternalState, error) {
@@ -139,12 +159,29 @@ func (r *queryRegistryImpl) completeQuery(id string, queryResult *shared.Workflo
 	return nil
 }
 
+func (r *queryRegistryImpl) unblockQuery(id string) error {
+	r.Lock()
+	defer r.Unlock()
+
+	q, ok := r.buffered[id]
+	if !ok {
+		return errQueryNotExists
+	}
+	if err := q.unblockQuery(); err != nil {
+		return err
+	}
+	delete(r.buffered, id)
+	r.unblocked[id] = q
+	return nil
+}
+
 func (r *queryRegistryImpl) removeQuery(id string) {
 	r.Lock()
 	defer r.Unlock()
 
 	delete(r.buffered, id)
 	delete(r.completed, id)
+	delete(r.unblocked, id)
 }
 
 func (r *queryRegistryImpl) getQuery(id string) (query, error) {
@@ -152,6 +189,9 @@ func (r *queryRegistryImpl) getQuery(id string) (query, error) {
 		return q, nil
 	}
 	if q, ok := r.completed[id]; ok {
+		return q, nil
+	}
+	if q, ok := r.unblocked[id]; ok {
 		return q, nil
 	}
 	return nil, errQueryNotExists
