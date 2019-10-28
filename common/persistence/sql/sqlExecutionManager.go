@@ -950,6 +950,10 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 	rows []sqldb.ReplicationTasksRow,
 	requestMaxReadLevel int64,
 ) (*p.GetReplicationTasksResponse, error) {
+	if len(rows) == 0 {
+		return &p.GetReplicationTasksResponse{}, nil
+	}
+
 	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
 	for i, row := range rows {
 		info, err := replicationTaskInfoFromBlob(row.Data, row.DataEncoding)
