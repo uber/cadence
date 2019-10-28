@@ -332,6 +332,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(
 			}
 		}
 
+		// passive logic need to explicitly call create timer
 		if err := timerSequence.createNextActivityTimer(); err != nil {
 			return nil, err
 		}

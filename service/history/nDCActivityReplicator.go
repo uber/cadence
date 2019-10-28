@@ -176,6 +176,7 @@ func (r *nDCActivityReplicatorImpl) SyncActivity(
 		eventTime = request.GetLastHeartbeatTime()
 	}
 
+	// passive logic need to explicitly call create timer
 	now := time.Unix(0, eventTime)
 	if err := newTimerSequence(
 		clock.NewEventTimeSource().Update(now),

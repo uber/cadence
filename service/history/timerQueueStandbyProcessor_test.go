@@ -534,9 +534,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	persistenceMutableState := createMutableState(mutableState)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	// TODO remove this after mutable state has the ability to detect changes
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{}, nil).Times(1)
-
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
