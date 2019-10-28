@@ -153,7 +153,7 @@ lint:
 		echo "$$OUTPUT"; \
 		exit 1; \
 	fi
- 
+
 fmt:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
 	GOOS= GOARCH= gobin -mod=readonly golang.org/x/tools/cmd/goimports
