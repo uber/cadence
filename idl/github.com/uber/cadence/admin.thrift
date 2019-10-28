@@ -167,6 +167,7 @@ struct DescribeClusterRequest {
 }
 
 struct DescribeClusterResponse {
-  10: optional string hostName
-  20: optional string identity
+  10: optional string version
+  20: optional string buildDate
+  30: optional string buildUnixTime
 }

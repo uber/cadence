@@ -362,8 +362,9 @@ func (v *DescribeClusterRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 }
 
 type DescribeClusterResponse struct {
-	HostName *string `json:"hostName,omitempty"`
-	Identity *string `json:"identity,omitempty"`
+	Version       *string `json:"version,omitempty"`
+	BuildDate     *string `json:"buildDate,omitempty"`
+	BuildUnixTime *string `json:"buildUnixTime,omitempty"`
 }
 
 // ToWire translates a DescribeClusterResponse struct into a Thrift-level intermediate
@@ -383,26 +384,34 @@ type DescribeClusterResponse struct {
 //   }
 func (v *DescribeClusterResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.HostName != nil {
-		w, err = wire.NewValueString(*(v.HostName)), error(nil)
+	if v.Version != nil {
+		w, err = wire.NewValueString(*(v.Version)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
-	if v.Identity != nil {
-		w, err = wire.NewValueString(*(v.Identity)), error(nil)
+	if v.BuildDate != nil {
+		w, err = wire.NewValueString(*(v.BuildDate)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.BuildUnixTime != nil {
+		w, err = wire.NewValueString(*(v.BuildUnixTime)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 
@@ -435,7 +444,7 @@ func (v *DescribeClusterResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.HostName = &x
+				v.Version = &x
 				if err != nil {
 					return err
 				}
@@ -445,7 +454,17 @@ func (v *DescribeClusterResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.Identity = &x
+				v.BuildDate = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.BuildUnixTime = &x
 				if err != nil {
 					return err
 				}
@@ -464,14 +483,18 @@ func (v *DescribeClusterResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
-	if v.HostName != nil {
-		fields[i] = fmt.Sprintf("HostName: %v", *(v.HostName))
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
 		i++
 	}
-	if v.Identity != nil {
-		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
+	if v.BuildDate != nil {
+		fields[i] = fmt.Sprintf("BuildDate: %v", *(v.BuildDate))
+		i++
+	}
+	if v.BuildUnixTime != nil {
+		fields[i] = fmt.Sprintf("BuildUnixTime: %v", *(v.BuildUnixTime))
 		i++
 	}
 
@@ -498,10 +521,13 @@ func (v *DescribeClusterResponse) Equals(rhs *DescribeClusterResponse) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !_String_EqualsPtr(v.HostName, rhs.HostName) {
+	if !_String_EqualsPtr(v.Version, rhs.Version) {
 		return false
 	}
-	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
+	if !_String_EqualsPtr(v.BuildDate, rhs.BuildDate) {
+		return false
+	}
+	if !_String_EqualsPtr(v.BuildUnixTime, rhs.BuildUnixTime) {
 		return false
 	}
 
@@ -514,43 +540,61 @@ func (v *DescribeClusterResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	if v == nil {
 		return nil
 	}
-	if v.HostName != nil {
-		enc.AddString("hostName", *v.HostName)
+	if v.Version != nil {
+		enc.AddString("version", *v.Version)
 	}
-	if v.Identity != nil {
-		enc.AddString("identity", *v.Identity)
+	if v.BuildDate != nil {
+		enc.AddString("buildDate", *v.BuildDate)
+	}
+	if v.BuildUnixTime != nil {
+		enc.AddString("buildUnixTime", *v.BuildUnixTime)
 	}
 	return err
 }
 
-// GetHostName returns the value of HostName if it is set or its
+// GetVersion returns the value of Version if it is set or its
 // zero value if it is unset.
-func (v *DescribeClusterResponse) GetHostName() (o string) {
-	if v != nil && v.HostName != nil {
-		return *v.HostName
+func (v *DescribeClusterResponse) GetVersion() (o string) {
+	if v != nil && v.Version != nil {
+		return *v.Version
 	}
 
 	return
 }
 
-// IsSetHostName returns true if HostName is not nil.
-func (v *DescribeClusterResponse) IsSetHostName() bool {
-	return v != nil && v.HostName != nil
+// IsSetVersion returns true if Version is not nil.
+func (v *DescribeClusterResponse) IsSetVersion() bool {
+	return v != nil && v.Version != nil
 }
 
-// GetIdentity returns the value of Identity if it is set or its
+// GetBuildDate returns the value of BuildDate if it is set or its
 // zero value if it is unset.
-func (v *DescribeClusterResponse) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+func (v *DescribeClusterResponse) GetBuildDate() (o string) {
+	if v != nil && v.BuildDate != nil {
+		return *v.BuildDate
 	}
 
 	return
 }
 
-// IsSetIdentity returns true if Identity is not nil.
-func (v *DescribeClusterResponse) IsSetIdentity() bool {
-	return v != nil && v.Identity != nil
+// IsSetBuildDate returns true if BuildDate is not nil.
+func (v *DescribeClusterResponse) IsSetBuildDate() bool {
+	return v != nil && v.BuildDate != nil
+}
+
+// GetBuildUnixTime returns the value of BuildUnixTime if it is set or its
+// zero value if it is unset.
+func (v *DescribeClusterResponse) GetBuildUnixTime() (o string) {
+	if v != nil && v.BuildUnixTime != nil {
+		return *v.BuildUnixTime
+	}
+
+	return
+}
+
+// IsSetBuildUnixTime returns true if BuildUnixTime is not nil.
+func (v *DescribeClusterResponse) IsSetBuildUnixTime() bool {
+	return v != nil && v.BuildUnixTime != nil
 }
 
 type DescribeWorkflowExecutionRequest struct {
@@ -2501,14 +2545,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "e0fcc71ac559f0090f76f1dc53391e7a6cc164d9",
+	SHA1:     "6b657051df0e1879a5e7afa9081ce42b8dce2271",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n    /**\n      * DescribeCluster Gets cadence cluster info like verison, status, roles, memberhip etc.\n      **/\n      DescribeClusterResponse DescribeCluster(1: DescribeClusterRequest request)\n        throws (\n          1: shared.BadRequestError badRequestError,\n          2: shared.InternalServiceError internalServiceError,\n          3: shared.ServiceBusyError serviceBusyError,\n        )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n\nstruct DescribeClusterRequest {\n\n}\n\nstruct DescribeClusterResponse {\n  10: optional string hostName\n  20: optional string identity\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n    /**\n      * DescribeCluster Gets cadence cluster info like verison, status, roles, memberhip etc.\n      **/\n      DescribeClusterResponse DescribeCluster(1: DescribeClusterRequest request)\n        throws (\n          1: shared.BadRequestError badRequestError,\n          2: shared.InternalServiceError internalServiceError,\n          3: shared.ServiceBusyError serviceBusyError,\n        )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n}\n\nstruct DescribeClusterRequest {\n\n}\n\nstruct DescribeClusterResponse {\n  10: optional string version\n  20: optional string buildDate\n  30: optional string buildUnixTime\n}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //

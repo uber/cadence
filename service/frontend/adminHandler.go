@@ -567,8 +567,9 @@ func (adh *AdminHandler) DescribeCluster(
 	defer sw.Stop()
 
 	response = &admin.DescribeClusterResponse{
-		HostName: common.StringPtr(adh.Service.GetHostName()),
-		Identity: common.StringPtr(adh.Service.GetHostInfo().Identity()),
+		Version:       common.StringPtr(metrics.Version),
+		BuildDate:     common.StringPtr(metrics.BuildDate),
+		BuildUnixTime: common.StringPtr(metrics.BuildTimeUnix),
 	}
 
 	return response, nil

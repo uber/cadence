@@ -504,12 +504,13 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 
 func (s *cliAppSuite) TestAdminDescribeCluster() {
 	resp := &admin.DescribeClusterResponse{
-		HostName: common.StringPtr("test-host"),
-		Identity: common.StringPtr("test-identity"),
+		Version:       common.StringPtr("test-host"),
+		BuildDate:     common.StringPtr("fake-date"),
+		BuildUnixTime: common.StringPtr("fake-time"),
 	}
 
 	s.serverAdminClient.EXPECT().DescribeCluster(gomock.Any(), gomock.Any()).Return(resp, nil)
-	err := s.app.Run([]string{"",  "adm", "cluster", "describe"})
+	err := s.app.Run([]string{"", "adm", "cluster", "describe"})
 	s.Nil(err)
 }
 
