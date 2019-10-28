@@ -921,17 +921,16 @@ func (m *sqlExecutionManager) GetReplicationTasks(
 			PageSize:  request.BatchSize,
 		})
 
-	if err != nil && err != sql.ErrNoRows {
+	switch err {
+	case nil:
+		return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
+	case sql.ErrNoRows:
+		return &p.GetReplicationTasksResponse{}, nil
+	default:
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
 		}
 	}
-
-	if len(rows) == 0 {
-		return &p.GetReplicationTasksResponse{}, nil
-	}
-
-	return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
 }
 
 func getReadLevels(request *p.GetReplicationTasksRequest) (readLevel int64, maxReadLevelInclusive int64, err error) {
@@ -1024,18 +1023,17 @@ func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 		ReplicationTasksFilter: filter,
 		SourceClusterName:      request.SourceClusterName,
 	})
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
-			}
+
+	switch err {
+	case nil:
+		return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
+	case sql.ErrNoRows:
+		return &p.GetReplicationTasksResponse{}, nil
+	default:
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
 		}
 	}
-	if len(rows) == 0 {
-		return &p.GetReplicationTasksResponse{}, nil
-	}
-
-	return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
 }
 
 type timerTaskPageToken struct {

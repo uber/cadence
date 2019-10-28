@@ -21,9 +21,10 @@
 package ndc
 
 import (
-	"github.com/uber/cadence/common/persistence"
 	"math"
 	"time"
+
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"

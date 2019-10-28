@@ -24,12 +24,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"go.uber.org/yarpc"
 	"io/ioutil"
 	"os"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"go.uber.org/yarpc"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"

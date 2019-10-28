@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (serviceConfig) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	c "github.com/uber/cadence/common/service/config"
+	serviceConfig "github.com/uber/cadence/common/service/config"
 )
 
 const (
@@ -65,13 +65,13 @@ type (
 func NewReplicationTaskFetchers(
 	logger log.Logger,
 	config *Config,
-	consumerConfig *c.ReplicationConsumerConfig,
+	consumerConfig *serviceConfig.ReplicationConsumerConfig,
 	clusterMetadata cluster.Metadata,
 	clientBean client.Bean,
 ) *ReplicationTaskFetchers {
 
 	var fetchers []*ReplicationTaskFetcher
-	if consumerConfig.Type == c.ReplicationConsumerTypeRPC {
+	if consumerConfig.Type == serviceConfig.ReplicationConsumerTypeRPC {
 		for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
 			if !info.Enabled {
 				continue
