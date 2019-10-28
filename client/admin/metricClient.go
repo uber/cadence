@@ -168,3 +168,21 @@ func (c *metricClient) GetWorkflowExecutionRawHistoryV2(
 	}
 	return resp, err
 }
+
+func (c *metricClient) DescribeCluster(
+	ctx context.Context,
+	request *admin.DescribeClusterRequest,
+	opts ...yarpc.CallOption,
+) (*admin.DescribeClusterResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.AdminDescribeCluster, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminDescribeCluster, metrics.CadenceClientLatency)
+	resp, err := c.client.DescribeCluster(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminDescribeCluster, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}

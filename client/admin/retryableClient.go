@@ -151,3 +151,19 @@ func (c *retryableClient) GetWorkflowExecutionRawHistoryV2(
 	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
+
+func (c *retryableClient) DescribeCluster(
+	ctx context.Context,
+	request *admin.DescribeClusterRequest,
+	opts ...yarpc.CallOption,
+) (*admin.DescribeClusterResponse, error) {
+
+	var resp *admin.DescribeClusterResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.DescribeCluster(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}

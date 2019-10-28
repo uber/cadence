@@ -588,6 +588,8 @@ const (
 	AdminRemoveTaskScope
 	//AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminCloseShardTaskScope
+	//AdminDescribeCluster is the metric scope for admin.AdminDescribeCluster
+	AdminDescribeCluster
 
 	NumAdminScopes
 )
@@ -1169,6 +1171,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
 		AdminGetWorkflowExecutionRawHistoryV2Scope: {operation: "GetWorkflowExecutionRawHistoryV2"},
+		AdminDescribeCluster:                       {operation: "AdminDescribeCluster"},
 
 		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},

@@ -502,6 +502,23 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 	},
 }
 
+func (s *cliAppSuite) TestAdminDescribeCluster() {
+	resp := &admin.DescribeClusterResponse{
+		HostName: common.StringPtr("test-host"),
+		Identity: common.StringPtr("test-identity"),
+	}
+
+	s.serverAdminClient.EXPECT().DescribeCluster(gomock.Any(), gomock.Any()).Return(resp, nil)
+	err := s.app.Run([]string{"",  "adm", "cluster", "describe"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestAdminDescribeCluster_Failed() {
+	s.serverAdminClient.EXPECT().DescribeCluster(gomock.Any(), gomock.Any()).Return(nil, &serverShared.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "adm", "cluster", "describe"})
+	s.Equal(1, errorCode)
+}
+
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 	resp := &admin.DescribeWorkflowExecutionResponse{
 		ShardId:                common.StringPtr("test-shard-id"),

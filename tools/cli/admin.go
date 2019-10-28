@@ -694,5 +694,16 @@ func newAdminClusterCommands() []cli.Command {
 				AdminAddSearchAttribute(c)
 			},
 		},
+		{
+			Name:    "describe",
+			Aliases: []string{"desc"},
+			Usage:   "describe cluster details",
+			Flags:   []cli.Flag{
+				// TODO: add flags for getting specific details for the cluster
+			},
+			Action: func(c *cli.Context) {
+				AdminDescribeCluster(c)
+			},
+		},
 	}
 }

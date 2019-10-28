@@ -65,6 +65,21 @@ func AdminAddSearchAttribute(c *cli.Context) {
 	fmt.Println("Success")
 }
 
+// AdminDescribeCluster to describe details of a cadence cluster
+func AdminDescribeCluster(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	request := &admin.DescribeClusterRequest{}
+	response, err := adminClient.DescribeCluster(ctx, request)
+	if err != nil {
+		ErrorAndExit("Describe cluster failed.", err)
+	}
+
+	prettyPrintJSONObject(response)
+}
+
 func intValTypeToString(valType int) string {
 	switch valType {
 	case 0:
