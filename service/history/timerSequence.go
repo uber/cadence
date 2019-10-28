@@ -42,6 +42,20 @@ const (
 	timerTypeHeartbeat       = timerType(shared.TimeoutTypeHeartbeat)
 )
 
+const (
+	// user timer task status
+	timerTaskStatusNone = iota
+	timerTaskStatusCreated
+)
+
+const (
+	// activity timer task status
+	timerTaskStatusCreatedStartToClose = 1 << iota
+	timerTaskStatusCreatedScheduleToStart
+	timerTaskStatusCreatedScheduleToClose
+	timerTaskStatusCreatedHeartbeat
+)
+
 type (
 	// timerSequenceID
 	timerSequenceID struct {
@@ -55,6 +69,8 @@ type (
 	timerSequenceIDs []timerSequenceID
 
 	timerSequence interface {
+		isExpired(referenceTime time.Time, timerSequenceID timerSequenceID) bool
+
 		createNextUserTimer() error
 		createNextActivityTimer() error
 
@@ -80,6 +96,16 @@ func newTimerSequence(
 	}
 }
 
+func (t *timerSequenceImpl) isExpired(
+	referenceTime time.Time,
+	timerSequenceID timerSequenceID,
+) bool {
+
+	// Cassandra timestamp resolution is in millisecond
+	// here we do the check in terms of second resolution.
+	return timerSequenceID.timestamp.Unix() <= referenceTime.Unix()
+}
+
 func (t *timerSequenceImpl) createNextUserTimer() error {
 
 	sequenceIDs := t.loadAndSortUserTimers()
@@ -101,7 +127,8 @@ func (t *timerSequenceImpl) createNextUserTimer() error {
 		}
 	}
 	// mark timer task mask as indication that timer task is generated
-	timerInfo.TaskID = TimerTaskStatusCreated
+	// here TaskID is misleading attr, should be called timer created flag or something
+	timerInfo.TaskID = timerTaskStatusCreated
 	if err := t.mutableState.UpdateUserTimer(timerInfo); err != nil {
 		return err
 	}
@@ -135,7 +162,7 @@ func (t *timerSequenceImpl) createNextActivityTimer() error {
 		}
 	}
 	// mark timer task mask as indication that timer task is generated
-	activityInfo.TimerTaskStatus |= t.timeoutTypeToTimerMask(firstTimerTask.timerType)
+	activityInfo.TimerTaskStatus |= timerTypeToTimerMask(firstTimerTask.timerType)
 	if err := t.mutableState.UpdateActivity(activityInfo); err != nil {
 		return err
 	}
@@ -145,6 +172,22 @@ func (t *timerSequenceImpl) createNextActivityTimer() error {
 		TimeoutType:         int(firstTimerTask.timerType),
 		EventID:             firstTimerTask.eventID,
 		Attempt:             int64(firstTimerTask.attempt),
+		Version:             t.mutableState.GetCurrentVersion(),
+	})
+	return nil
+}
+
+func (t *timerSequenceImpl) createDeleteHistoryEventTimer() error {
+
+	retention := time.Duration(
+		t.mutableState.GetDomainEntry().GetRetentionDays(
+			t.mutableState.GetExecutionInfo().WorkflowID,
+		),
+	) * time.Hour * 24
+
+	t.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
+		// TaskID is set by shard
+		VisibilityTimestamp: t.timeSource.Now().Add(retention),
 		Version:             t.mutableState.GetCurrentVersion(),
 	})
 	return nil
@@ -213,7 +256,7 @@ func (t *timerSequenceImpl) getUserTimerTimeout(
 		eventID:      timerInfo.StartedID,
 		timestamp:    timerInfo.ExpiryTime,
 		timerType:    timerTypeStartToClose,
-		timerCreated: timerInfo.TaskID == TimerTaskStatusCreated,
+		timerCreated: timerInfo.TaskID == timerTaskStatusCreated,
 		attempt:      0,
 	}
 }
@@ -240,7 +283,7 @@ func (t *timerSequenceImpl) getActivityScheduleToStartTimeout(
 		eventID:      activityInfo.ScheduleID,
 		timestamp:    startTimeout,
 		timerType:    timerTypeScheduleToStart,
-		timerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedScheduleToStart) > 0,
+		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedScheduleToStart) > 0,
 		attempt:      activityInfo.Attempt,
 	}
 }
@@ -262,7 +305,7 @@ func (t *timerSequenceImpl) getActivityScheduleToCloseTimeout(
 		eventID:      activityInfo.ScheduleID,
 		timestamp:    closeTimeout,
 		timerType:    timerTypeScheduleToClose,
-		timerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedScheduleToClose) > 0,
+		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedScheduleToClose) > 0,
 		attempt:      activityInfo.Attempt,
 	}
 }
@@ -289,7 +332,7 @@ func (t *timerSequenceImpl) getActivityStartToCloseTimeout(
 		eventID:      activityInfo.ScheduleID,
 		timestamp:    closeTimeout,
 		timerType:    timerTypeStartToClose,
-		timerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedStartToClose) > 0,
+		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedStartToClose) > 0,
 		attempt:      activityInfo.Attempt,
 	}
 }
@@ -327,27 +370,69 @@ func (t *timerSequenceImpl) getActivityHeartbeatTimeout(
 		eventID:      activityInfo.ScheduleID,
 		timestamp:    heartbeatTimeout,
 		timerType:    timerTypeHeartbeat,
-		timerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedHeartbeat) > 0,
+		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedHeartbeat) > 0,
 		attempt:      activityInfo.Attempt,
 	}
 }
 
-func (t *timerSequenceImpl) timeoutTypeToTimerMask(
+func timerTypeToTimerMask(
 	timerType timerType,
 ) int32 {
 
 	switch timerType {
 	case timerTypeStartToClose:
-		return TimerTaskStatusCreatedStartToClose
+		return timerTaskStatusCreatedStartToClose
 	case timerTypeScheduleToStart:
-		return TimerTaskStatusCreatedScheduleToStart
+		return timerTaskStatusCreatedScheduleToStart
 	case timerTypeScheduleToClose:
-		return TimerTaskStatusCreatedScheduleToClose
+		return timerTaskStatusCreatedScheduleToClose
 	case timerTypeHeartbeat:
-		return TimerTaskStatusCreatedHeartbeat
+		return timerTaskStatusCreatedHeartbeat
 	default:
 		panic("invalid timeout type")
 	}
+}
+
+func timerTypeToThrift(
+	timerType timerType,
+) shared.TimeoutType {
+
+	switch timerType {
+	case timerTypeStartToClose:
+		return shared.TimeoutTypeStartToClose
+	case timerTypeScheduleToStart:
+		return shared.TimeoutTypeScheduleToStart
+	case timerTypeScheduleToClose:
+		return shared.TimeoutTypeScheduleToClose
+	case timerTypeHeartbeat:
+		return shared.TimeoutTypeHeartbeat
+	default:
+		panic(fmt.Sprintf("invalid timer type: %v", timerType))
+	}
+}
+
+func timerTypeFromThrift(
+	timerType shared.TimeoutType,
+) timerType {
+
+	switch timerType {
+	case shared.TimeoutTypeStartToClose:
+		return timerTypeStartToClose
+	case shared.TimeoutTypeScheduleToStart:
+		return timerTypeScheduleToStart
+	case shared.TimeoutTypeScheduleToClose:
+		return timerTypeScheduleToClose
+	case shared.TimeoutTypeHeartbeat:
+		return timerTypeHeartbeat
+	default:
+		panic(fmt.Sprintf("invalid timeout type: %v", timerType))
+	}
+}
+
+func timerTypeToReason(
+	timerType timerType,
+) string {
+	return fmt.Sprintf("cadenceInternal:Timeout %v", timerTypeToThrift(timerType))
 }
 
 // Len implements sort.Interface

@@ -108,7 +108,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 	}
 
 	return handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, execution,
-		func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+		func(msBuilder mutableState) (*updateWorkflowAction, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
@@ -154,7 +154,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 
 	var resp *h.RecordDecisionTaskStartedResponse
 	err = handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, execution,
-		func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+		func(msBuilder mutableState) (*updateWorkflowAction, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
@@ -238,7 +238,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 	}
 
 	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
-		func(msBuilder mutableState, tBuilder *timerBuilder) error {
+		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -303,9 +303,6 @@ Update_History_Loop:
 		}
 
 		executionInfo := msBuilder.GetExecutionInfo()
-		timerBuilderProvider := func() *timerBuilder {
-			return handler.historyEngine.getTimerBuilder(context.getExecution())
-		}
 
 		scheduleID := token.ScheduleID
 		currentDecision, isRunning := msBuilder.GetDecisionInfo(scheduleID)
@@ -412,7 +409,6 @@ Update_History_Loop:
 				handler.decisionAttrValidator,
 				workflowSizeChecker,
 				handler.logger,
-				timerBuilderProvider,
 				handler.domainCache,
 				handler.metricsClient,
 				handler.config,
