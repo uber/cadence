@@ -256,6 +256,69 @@ func (s *timerQueueActiveProcessorSuite) TestProcessUserTimerTimeout_Fire() {
 
 func (s *timerQueueActiveProcessorSuite) TestProcessUserTimerTimeout_Noop() {
 
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("some random workflow ID"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+	workflowType := "some random workflow type"
+	taskListName := "some random task list"
+
+	mutableState := newMutableStateBuilderWithReplicationStateWithEventV2(
+		s.mockShard,
+		s.mockShard.GetEventsCache(),
+		s.logger,
+		s.version,
+		execution.GetRunId(),
+	)
+	_, err := mutableState.AddWorkflowExecutionStartedEvent(
+		execution,
+		&history.StartWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(s.domainID),
+			StartRequest: &workflow.StartWorkflowExecutionRequest{
+				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+			},
+		},
+	)
+	s.Nil(err)
+
+	di := addDecisionTaskScheduledEvent(mutableState)
+	event := addDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
+	di.StartedID = event.GetEventId()
+	event = addDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
+
+	timerID := "timer"
+	timerTimeout := 2 * time.Second
+	_, _ = addTimerStartedEvent(mutableState, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
+
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
+	mutableState.insertTimerTasks = nil
+	modified, err := timerSequence.createNextUserTimer()
+	s.NoError(err)
+	s.True(modified)
+	task := mutableState.insertTimerTasks[0]
+	timerTask := &persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          execution.GetWorkflowId(),
+		RunID:               execution.GetRunId(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeUserTimer,
+		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
+		EventID:             di.ScheduleID,
+	}
+
+	event = addTimerFiredEvent(mutableState, timerID)
+
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+
+	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	_, err = s.timerQueueActiveProcessor.process(newTaskInfo(nil, timerTask, s.logger))
+	s.NoError(err)
 }
 
 func (s *timerQueueActiveProcessorSuite) TestProcessActivityTimeout_Fire() {
