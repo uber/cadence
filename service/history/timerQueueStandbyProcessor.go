@@ -294,6 +294,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(
 
 		timerTask := taskInfo.task.(*persistence.TimerTaskInfo)
 		timerSequence := t.getTimerSequence(mutableState)
+		updateMutableState := false
 
 	Loop:
 		for _, timerSequenceID := range timerSequence.loadAndSortActivityTimers() {
@@ -330,11 +331,18 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(
 			if err := mutableState.UpdateActivity(activityInfo); err != nil {
 				return nil, err
 			}
+			updateMutableState = true
 		}
 
 		// passive logic need to explicitly call create timer
-		if err := timerSequence.createNextActivityTimer(); err != nil {
+		modified, err := timerSequence.createNextActivityTimer()
+		if err != nil {
 			return nil, err
+		}
+		updateMutableState = updateMutableState || modified
+
+		if !updateMutableState {
+			return nil, nil
 		}
 
 		now := t.getStandbyClusterTime()

@@ -86,8 +86,9 @@ func (s *timerSequenceSuite) TestCreateNextUserTimer_AlreadyCreated() {
 	timerInfos := map[string]*persistence.TimerInfo{timerInfo.TimerID: timerInfo}
 	s.mockMutableState.EXPECT().GetPendingTimerInfos().Return(timerInfos).Times(1)
 
-	err := s.timerSequence.createNextUserTimer()
+	modified, err := s.timerSequence.createNextUserTimer()
 	s.NoError(err)
+	s.False(modified)
 }
 
 func (s *timerSequenceSuite) TestCreateNextUserTimer_NotCreated() {
@@ -115,8 +116,9 @@ func (s *timerSequenceSuite) TestCreateNextUserTimer_NotCreated() {
 		Version:             currentVersion,
 	}).Times(1)
 
-	err := s.timerSequence.createNextUserTimer()
+	modified, err := s.timerSequence.createNextUserTimer()
 	s.NoError(err)
+	s.True(modified)
 }
 
 func (s *timerSequenceSuite) TestCreateNextActivityTimer_AlreadyCreated() {
@@ -139,8 +141,9 @@ func (s *timerSequenceSuite) TestCreateNextActivityTimer_AlreadyCreated() {
 	activityInfos := map[int64]*persistence.ActivityInfo{activityInfo.ScheduleID: activityInfo}
 	s.mockMutableState.EXPECT().GetPendingActivityInfos().Return(activityInfos).Times(1)
 
-	err := s.timerSequence.createNextActivityTimer()
+	modified, err := s.timerSequence.createNextActivityTimer()
 	s.NoError(err)
+	s.False(modified)
 }
 
 func (s *timerSequenceSuite) TestCreateNextActivityTimer_NotCreated() {
@@ -180,8 +183,9 @@ func (s *timerSequenceSuite) TestCreateNextActivityTimer_NotCreated() {
 		Version:     currentVersion,
 	}).Times(1)
 
-	err := s.timerSequence.createNextActivityTimer()
+	modified, err := s.timerSequence.createNextActivityTimer()
 	s.NoError(err)
+	s.True(modified)
 }
 
 func (s *timerSequenceSuite) TestLoadAndSortUserTimers_None() {

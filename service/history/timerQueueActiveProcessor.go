@@ -321,7 +321,7 @@ func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(
 
 	timerSequence := t.getTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
-	scheduleDecision := false
+	timerFired := false
 
 Loop:
 	for _, timerSequenceID := range timerSequence.loadAndSortUserTimers() {
@@ -341,10 +341,14 @@ Loop:
 		if _, err := mutableState.AddTimerFiredEvent(timerInfo.TimerID); err != nil {
 			return err
 		}
-		scheduleDecision = true
+		timerFired = true
 	}
 
-	return t.updateWorkflowExecution(context, mutableState, scheduleDecision)
+	if !timerFired {
+		return nil
+	}
+
+	return t.updateWorkflowExecution(context, mutableState, timerFired)
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
@@ -368,6 +372,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 
 	timerSequence := t.getTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
+	updateMutableState := false
 	scheduleDecision := false
 
 	// need to clear activity heartbeat timer task mask for new activity timer task creation
@@ -377,6 +382,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 		if err := mutableState.UpdateActivity(activityInfo); err != nil {
 			return err
 		}
+		updateMutableState = true
 	}
 
 Loop:
@@ -408,7 +414,7 @@ Loop:
 			); err != nil {
 				return err
 			} else if ok {
-				// retry activity success
+				updateMutableState = true
 				continue Loop
 			}
 		}
@@ -426,9 +432,13 @@ Loop:
 		); err != nil {
 			return err
 		}
+		updateMutableState = true
 		scheduleDecision = true
 	}
 
+	if !updateMutableState {
+		return nil
+	}
 	return t.updateWorkflowExecution(context, mutableState, scheduleDecision)
 }
 

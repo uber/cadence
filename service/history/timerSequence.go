@@ -71,8 +71,8 @@ type (
 	timerSequence interface {
 		isExpired(referenceTime time.Time, timerSequenceID timerSequenceID) bool
 
-		createNextUserTimer() error
-		createNextActivityTimer() error
+		createNextUserTimer() (bool, error)
+		createNextActivityTimer() (bool, error)
 
 		loadAndSortUserTimers() []timerSequenceID
 		loadAndSortActivityTimers() []timerSequenceID
@@ -106,23 +106,23 @@ func (t *timerSequenceImpl) isExpired(
 	return timerSequenceID.timestamp.Unix() <= referenceTime.Unix()
 }
 
-func (t *timerSequenceImpl) createNextUserTimer() error {
+func (t *timerSequenceImpl) createNextUserTimer() (bool, error) {
 
 	sequenceIDs := t.loadAndSortUserTimers()
 	if len(sequenceIDs) == 0 {
-		return nil
+		return false, nil
 	}
 
 	firstTimerTask := sequenceIDs[0]
 
 	// timer has already been created
 	if firstTimerTask.timerCreated {
-		return nil
+		return false, nil
 	}
 
 	timerInfo, ok := t.mutableState.GetUserTimerInfoByEventID(firstTimerTask.eventID)
 	if !ok {
-		return &shared.InternalServiceError{
+		return false, &shared.InternalServiceError{
 			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.eventID),
 		}
 	}
@@ -130,7 +130,7 @@ func (t *timerSequenceImpl) createNextUserTimer() error {
 	// here TaskID is misleading attr, should be called timer created flag or something
 	timerInfo.TaskID = timerTaskStatusCreated
 	if err := t.mutableState.UpdateUserTimer(timerInfo); err != nil {
-		return err
+		return false, err
 	}
 	t.mutableState.AddTimerTasks(&persistence.UserTimerTask{
 		// TaskID is set by shard
@@ -138,33 +138,33 @@ func (t *timerSequenceImpl) createNextUserTimer() error {
 		EventID:             firstTimerTask.eventID,
 		Version:             t.mutableState.GetCurrentVersion(),
 	})
-	return nil
+	return true, nil
 }
 
-func (t *timerSequenceImpl) createNextActivityTimer() error {
+func (t *timerSequenceImpl) createNextActivityTimer() (bool, error) {
 
 	sequenceIDs := t.loadAndSortActivityTimers()
 	if len(sequenceIDs) == 0 {
-		return nil
+		return false, nil
 	}
 
 	firstTimerTask := sequenceIDs[0]
 
 	// timer has already been created
 	if firstTimerTask.timerCreated {
-		return nil
+		return false, nil
 	}
 
 	activityInfo, ok := t.mutableState.GetActivityInfo(firstTimerTask.eventID)
 	if !ok {
-		return &shared.InternalServiceError{
+		return false, &shared.InternalServiceError{
 			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.eventID),
 		}
 	}
 	// mark timer task mask as indication that timer task is generated
 	activityInfo.TimerTaskStatus |= timerTypeToTimerMask(firstTimerTask.timerType)
 	if err := t.mutableState.UpdateActivity(activityInfo); err != nil {
-		return err
+		return false, err
 	}
 	t.mutableState.AddTimerTasks(&persistence.ActivityTimeoutTask{
 		// TaskID is set by shard
@@ -174,23 +174,7 @@ func (t *timerSequenceImpl) createNextActivityTimer() error {
 		Attempt:             int64(firstTimerTask.attempt),
 		Version:             t.mutableState.GetCurrentVersion(),
 	})
-	return nil
-}
-
-func (t *timerSequenceImpl) createDeleteHistoryEventTimer() error {
-
-	retention := time.Duration(
-		t.mutableState.GetDomainEntry().GetRetentionDays(
-			t.mutableState.GetExecutionInfo().WorkflowID,
-		),
-	) * time.Hour * 24
-
-	t.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: t.timeSource.Now().Add(retention),
-		Version:             t.mutableState.GetCurrentVersion(),
-	})
-	return nil
+	return true, nil
 }
 
 func (t *timerSequenceImpl) loadAndSortUserTimers() []timerSequenceID {

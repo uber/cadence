@@ -229,8 +229,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	now := time.Now()
 	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
 	mutableState.insertTimerTasks = nil
-	err = timerSequence.createNextUserTimer()
+	modified, err := timerSequence.createNextUserTimer()
 	s.NoError(err)
+	s.True(modified)
 	task := mutableState.insertTimerTasks[0]
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -302,8 +303,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	now := time.Now()
 	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
 	mutableState.insertTimerTasks = nil
-	err = timerSequence.createNextUserTimer()
+	modified, err := timerSequence.createNextUserTimer()
 	s.NoError(err)
+	s.True(modified)
 	task := mutableState.insertTimerTasks[0]
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -368,8 +370,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	now := time.Now()
 	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
 	mutableState.insertTimerTasks = nil
-	err = timerSequence.createNextUserTimer()
+	modified, err := timerSequence.createNextUserTimer()
 	s.NoError(err)
+	s.True(modified)
 	task := mutableState.insertTimerTasks[0]
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -434,8 +437,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	now := time.Now()
 	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
 	mutableState.insertTimerTasks = nil
-	err = timerSequence.createNextActivityTimer()
+	modified, err := timerSequence.createNextActivityTimer()
 	s.NoError(err)
+	s.True(modified)
 	task := mutableState.insertTimerTasks[0]
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -512,8 +516,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	now := time.Now()
 	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
 	mutableState.insertTimerTasks = nil
-	err = timerSequence.createNextActivityTimer()
+	modified, err := timerSequence.createNextActivityTimer()
 	s.NoError(err)
+	s.True(modified)
 	task := mutableState.insertTimerTasks[0]
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -591,9 +596,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	now := time.Now()
 	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
 	mutableState.insertTimerTasks = nil
-	err = timerSequence.createNextUserTimer()
+	modified, err := timerSequence.createNextActivityTimer()
 	s.NoError(err)
-
+	s.True(modified)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
 		DomainID:            s.domainID,

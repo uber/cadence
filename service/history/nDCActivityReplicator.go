@@ -178,7 +178,7 @@ func (r *nDCActivityReplicatorImpl) SyncActivity(
 
 	// passive logic need to explicitly call create timer
 	now := time.Unix(0, eventTime)
-	if err := newTimerSequence(
+	if _, err := newTimerSequence(
 		clock.NewEventTimeSource().Update(now),
 		mutableState,
 	).createNextActivityTimer(); err != nil {

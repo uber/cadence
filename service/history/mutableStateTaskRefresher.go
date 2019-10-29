@@ -311,7 +311,7 @@ Loop:
 		}
 	}
 
-	if err := newTimerSequence(
+	if _, err := newTimerSequence(
 		r.getTimeSource(now),
 		mutableState,
 	).createNextActivityTimer(); err != nil {
@@ -344,7 +344,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 		}
 	}
 
-	if err := newTimerSequence(
+	if _, err := newTimerSequence(
 		r.getTimeSource(now),
 		mutableState,
 	).createNextUserTimer(); err != nil {

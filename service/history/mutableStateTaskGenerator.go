@@ -510,14 +510,16 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
 	now time.Time,
 ) error {
 
-	return r.getTimerSequence(now).createNextActivityTimer()
+	_, err := r.getTimerSequence(now).createNextActivityTimer()
+	return err
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateUserTimerTasks(
 	now time.Time,
 ) error {
 
-	return r.getTimerSequence(now).createNextUserTimer()
+	_, err := r.getTimerSequence(now).createNextUserTimer()
+	return err
 }
 
 func (r *mutableStateTaskGeneratorImpl) getTimerSequence(now time.Time) timerSequence {

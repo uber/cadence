@@ -573,7 +573,7 @@ func (w *workflowResetorImpl) generateTimerTasksForReset(
 				return nil, err
 			}
 		}
-		if err := timerSequence.createNextUserTimer(); err != nil {
+		if _, err := timerSequence.createNextUserTimer(); err != nil {
 			return nil, err
 		}
 		// temporary hack to make the logic as is
@@ -590,7 +590,7 @@ func (w *workflowResetorImpl) generateTimerTasksForReset(
 				return nil, err
 			}
 		}
-		if err := timerSequence.createNextActivityTimer(); err != nil {
+		if _, err := timerSequence.createNextActivityTimer(); err != nil {
 			return nil, err
 		}
 		// temporary hack to make the logic as is
