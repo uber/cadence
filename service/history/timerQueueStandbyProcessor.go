@@ -188,7 +188,7 @@ func (t *timerQueueStandbyProcessorImpl) process(
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
 		if taskInfo.shouldProcessTask {
-			err = t.processExpiredUserTimer(taskInfo)
+			err = t.processUserTimerTimeout(taskInfo)
 		}
 		return metrics.TimerStandbyTaskUserTimerScope, err
 
@@ -228,7 +228,7 @@ func (t *timerQueueStandbyProcessorImpl) process(
 	}
 }
 
-func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(
+func (t *timerQueueStandbyProcessorImpl) processUserTimerTimeout(
 	taskInfo *taskInfo,
 ) error {
 

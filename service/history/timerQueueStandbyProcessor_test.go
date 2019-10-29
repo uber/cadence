@@ -72,14 +72,16 @@ type (
 		mockNDCHistoryResender  *xdc.MockNDCHistoryResender
 		logger                  log.Logger
 
-		domainID                   string
-		domainEntry                *cache.DomainCacheEntry
-		version                    int64
-		clusterName                string
-		timerQueueStandbyProcessor *timerQueueStandbyProcessorImpl
-
+		domainID             string
+		domainEntry          *cache.DomainCacheEntry
+		version              int64
+		clusterName          string
+		now                  time.Time
+		timeSource           *clock.EventTimeSource
 		fetchHistoryDuration time.Duration
 		discardDuration      time.Duration
+
+		timerQueueStandbyProcessor *timerQueueStandbyProcessorImpl
 	}
 )
 
@@ -104,6 +106,17 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
+	config := NewDynamicConfigForTest()
+	s.domainID = testDomainID
+	s.domainEntry = testGlobalDomainEntry
+	s.version = s.domainEntry.GetFailoverVersion()
+	s.clusterName = cluster.TestAlternativeClusterName
+	s.now = time.Now()
+	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.fetchHistoryDuration = config.StandbyTaskMissingEventsResendDelay() +
+		(config.StandbyTaskMissingEventsDiscardDelay()-config.StandbyTaskMissingEventsResendDelay())/2
+	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2
+
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -117,7 +130,6 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, nil, nil, nil)
 
-	config := NewDynamicConfigForTest()
 	shardContext := &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{RangeID: 1, TransferAckLevel: 0},
@@ -133,13 +145,14 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		metricsClient:             metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		standbyClusterCurrentTime: make(map[string]time.Time),
-		timeSource:                clock.NewRealTimeSource(),
+		timeSource:                s.timeSource,
 	}
 	shardContext.eventsCache = newEventsCache(shardContext)
 	s.mockShard = shardContext
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(s.clusterName)
 
 	historyCache := newHistoryCache(s.mockShard)
 	h := &historyEngineImpl{
@@ -151,14 +164,14 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		logger:               s.logger,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		metricsClient:        s.mockShard.GetMetricsClient(),
-		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
+		historyEventNotifier: newHistoryEventNotifier(s.timeSource, metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.mockShard.SetEngine(h)
 	s.mockHistoryEngine = h
-	s.clusterName = cluster.TestAlternativeClusterName
+
 	s.timerQueueStandbyProcessor = newTimerQueueStandbyProcessor(
 		s.mockShard,
 		h,
@@ -168,14 +181,6 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		s.mockNDCHistoryResender,
 		s.logger,
 	)
-
-	s.domainID = testDomainID
-	s.domainEntry = testGlobalDomainEntry
-	s.version = s.domainEntry.GetFailoverVersion()
-
-	s.fetchHistoryDuration = config.StandbyTaskMissingEventsResendDelay() +
-		(config.StandbyTaskMissingEventsDiscardDelay()-config.StandbyTaskMissingEventsResendDelay())/2
-	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2
 }
 
 func (s *timerQueueStandbyProcessorSuite) TearDownTest() {
@@ -187,7 +192,7 @@ func (s *timerQueueStandbyProcessorSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() {
+func (s *timerQueueStandbyProcessorSuite) TestProcessUserTimerTimeout_Pending() {
 
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
@@ -227,8 +232,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	event, _ = addTimerStartedEvent(mutableState, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 	nextEventID := event.GetEventId() + 1
 
-	now := time.Now()
-	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
 	mutableState.insertTimerTasks = nil
 	modified, err := timerSequence.createNextUserTimer()
 	s.NoError(err)
@@ -246,14 +250,14 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 		EventID:             di.ScheduleID,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.fetchHistoryDuration))
 	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
 		timerTask.DomainID, timerTask.WorkflowID,
 		timerTask.RunID, nextEventID,
@@ -262,12 +266,12 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.discardDuration))
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskDiscarded, err)
 }
 
-func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() {
+func (s *timerQueueStandbyProcessorSuite) TestProcessUserTimerTimeout_Success() {
 
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
@@ -300,8 +304,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	timerTimeout := 2 * time.Second
 	_, _ = addTimerStartedEvent(mutableState, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 
-	now := time.Now()
-	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
 	mutableState.insertTimerTasks = nil
 	modified, err := timerSequence.createNextUserTimer()
 	s.NoError(err)
@@ -319,17 +322,17 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 		EventID:             di.ScheduleID,
 	}
 
-	addTimerFiredEvent(mutableState, timerID)
+	event = addTimerFiredEvent(mutableState, timerID)
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
 
-func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple() {
+func (s *timerQueueStandbyProcessorSuite) TestProcessUserTimerTimeout_Multiple() {
 
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
@@ -366,8 +369,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	timerTimeout2 := 50 * time.Second
 	_, _ = addTimerStartedEvent(mutableState, event.GetEventId(), timerID2, int64(timerTimeout2.Seconds()))
 
-	now := time.Now()
-	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
 	mutableState.insertTimerTasks = nil
 	modified, err := timerSequence.createNextUserTimer()
 	s.NoError(err)
@@ -385,12 +387,12 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 		EventID:             di.ScheduleID,
 	}
 
-	addTimerFiredEvent(mutableState, timerID1)
+	event = addTimerFiredEvent(mutableState, timerID1)
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
@@ -432,8 +434,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	nextEventID := scheduledEvent.GetEventId() + 1
 
-	now := time.Now()
-	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
 	mutableState.insertTimerTasks = nil
 	modified, err := timerSequence.createNextActivityTimer()
 	s.NoError(err)
@@ -451,14 +452,14 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		EventID:             di.ScheduleID,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, scheduledEvent.GetEventId(), scheduledEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.fetchHistoryDuration))
 	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
 		timerTask.DomainID, timerTask.WorkflowID,
 		timerTask.RunID, nextEventID,
@@ -467,7 +468,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.discardDuration))
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskDiscarded, err)
 }
@@ -510,8 +511,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	startedEvent := addActivityTaskStartedEvent(mutableState, scheduleEvent.GetEventId(), identity)
 
-	now := time.Now()
-	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
 	mutableState.insertTimerTasks = nil
 	modified, err := timerSequence.createNextActivityTimer()
 	s.NoError(err)
@@ -530,13 +530,11 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	}
 
 	completeEvent := addActivityTaskCompletedEvent(mutableState, scheduleEvent.GetEventId(), startedEvent.GetEventId(), []byte(nil), identity)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(s.mockClusterMetadata.GetCurrentClusterName())
-	mutableState.UpdateReplicationStateLastEventID(completeEvent.GetVersion(), completeEvent.GetEventId())
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, completeEvent.GetEventId(), completeEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
@@ -589,8 +587,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	activityInfo2.TimerTaskStatus |= timerTaskStatusCreatedHeartbeat
 	activityInfo2.LastHeartBeatUpdatedTime = time.Now()
 
-	now := time.Now()
-	timerSequence := newTimerSequence(clock.NewEventTimeSource().Update(now), mutableState)
+	timerSequence := newTimerSequence(s.timeSource, mutableState)
 	mutableState.insertTimerTasks = nil
 	modified, err := timerSequence.createNextActivityTimer()
 	s.NoError(err)
@@ -608,13 +605,9 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	}
 
 	completeEvent1 := addActivityTaskCompletedEvent(mutableState, scheduleEvent1.GetEventId(), startedEvent1.GetEventId(), []byte(nil), identity)
-	// make the version match the cluster name in standby cluster, so standby cluster can do update on mutable state
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(s.clusterName)
-	mutableState.UpdateReplicationStateLastEventID(completeEvent1.GetVersion(), completeEvent1.GetEventId())
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, completeEvent1.GetEventId(), completeEvent1.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
-
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.MatchedBy(func(input *persistence.UpdateWorkflowExecutionRequest) bool {
 		s.Equal(1, len(input.UpdateWorkflowMutation.TimerTasks))
 		s.Equal(1, len(input.UpdateWorkflowMutation.UpsertActivityInfos))
@@ -653,7 +646,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 		return true
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
@@ -686,7 +679,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	startedEvent := addDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
 	nextEventID := startedEvent.GetEventId() + 1
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -695,18 +687,18 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 		EventID:             di.ScheduleID,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, startedEvent.GetEventId(), startedEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.fetchHistoryDuration))
 	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
 		timerTask.DomainID, timerTask.WorkflowID,
 		timerTask.RunID, nextEventID,
@@ -715,7 +707,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.discardDuration))
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskDiscarded, err)
 }
@@ -729,7 +721,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_ScheduleToS
 
 	decisionScheduleID := int64(16384)
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -738,11 +729,11 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_ScheduleToS
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeScheduleToStart),
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 		EventID:             decisionScheduleID,
 	}
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err := s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(nil, err)
 }
@@ -774,9 +765,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 	di := addDecisionTaskScheduledEvent(mutableState)
 	event := addDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
 	di.StartedID = event.GetEventId()
-	addDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
+	event = addDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -785,14 +775,14 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 		EventID:             di.ScheduleID,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
@@ -822,7 +812,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Pendin
 	s.Nil(err)
 	nextEventID := event.GetEventId() + 1
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -830,13 +819,13 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Pendin
 		RunID:               execution.GetRunId(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowBackoffTimer,
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
@@ -878,9 +867,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Succes
 	)
 	s.Nil(err)
 
-	addDecisionTaskScheduledEvent(mutableState)
+	di := addDecisionTaskScheduledEvent(mutableState)
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -888,13 +876,13 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Succes
 		RunID:               execution.GetRunId(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowBackoffTimer,
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, di.ScheduleID, di.Version)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
@@ -929,7 +917,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 	completionEvent := addDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 	nextEventID := completionEvent.GetEventId() + 1
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -938,17 +925,17 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, completionEvent.GetEventId(), completionEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.fetchHistoryDuration))
 	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
 		timerTask.DomainID, timerTask.WorkflowID,
 		timerTask.RunID, nextEventID,
@@ -957,7 +944,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskRetry, err)
 
-	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
+	s.mockShard.SetCurrentTime(s.clusterName, s.now.Add(s.discardDuration))
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Equal(ErrTaskDiscarded, err)
 }
@@ -990,9 +977,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 	event := addDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
 	di.StartedID = event.GetEventId()
 	event = addDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
-	addCompleteWorkflowEvent(mutableState, event.GetEventId(), nil)
+	event = addCompleteWorkflowEvent(mutableState, event.GetEventId(), nil)
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -1001,13 +987,13 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 	}
 
-	persistenceMutableState := createMutableState(mutableState)
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
 }
@@ -1036,7 +1022,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessRetryTimeout() {
 	)
 	s.Nil(err)
 
-	now := time.Now()
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
@@ -1045,10 +1030,30 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessRetryTimeout() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityRetryTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
-		VisibilityTimestamp: now,
+		VisibilityTimestamp: s.now,
 	}
 
-	s.mockShard.SetCurrentTime(s.clusterName, now)
+	s.mockShard.SetCurrentTime(s.clusterName, s.now)
 	_, err = s.timerQueueStandbyProcessor.process(newTaskInfo(nil, timerTask, s.logger))
 	s.Nil(err)
+}
+
+func (s *timerQueueStandbyProcessorSuite) createPersistenceMutableState(
+	ms mutableState,
+	lastEventID int64,
+	lastEventVersion int64,
+) *persistence.WorkflowMutableState {
+
+	if ms.GetReplicationState() != nil {
+		ms.UpdateReplicationStateLastEventID(lastEventVersion, lastEventID)
+	} else if ms.GetVersionHistories() != nil {
+		currentVersionHistory, err := ms.GetVersionHistories().GetCurrentVersionHistory()
+		s.NoError(err)
+		err = currentVersionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(
+			lastEventID, lastEventVersion,
+		))
+		s.NoError(err)
+	}
+
+	return createMutableState(ms)
 }

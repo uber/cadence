@@ -25,12 +25,12 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -255,7 +255,7 @@ func (t *timerQueueActiveProcessorImpl) process(
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
 		if taskInfo.shouldProcessTask {
-			err = t.processExpiredUserTimer(timerTask)
+			err = t.processUserTimerTimeout(timerTask)
 		}
 		return metrics.TimerActiveTaskUserTimerScope, err
 
@@ -300,7 +300,7 @@ func (t *timerQueueActiveProcessorImpl) process(
 	}
 }
 
-func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(
+func (t *timerQueueActiveProcessorImpl) processUserTimerTimeout(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
@@ -723,7 +723,7 @@ func (t *timerQueueActiveProcessorImpl) getTimerSequence(
 	mutableState mutableState,
 ) timerSequence {
 
-	timeSource := clock.NewRealTimeSource()
+	timeSource := t.shard.GetTimeSource()
 	return newTimerSequence(timeSource, mutableState)
 }
 
