@@ -13,7 +13,6 @@ endif
 
 THRIFT_GENDIR=.gen
 
-# default target
 default: test
 
 # define the list of thrift files the service depends on
