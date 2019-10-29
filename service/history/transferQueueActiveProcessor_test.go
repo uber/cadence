@@ -132,7 +132,6 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.version = testGlobalDomainEntry.GetFailoverVersion()
 	s.mockProducer = &mocks.KafkaProducer{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
@@ -207,7 +206,8 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.transferQueueActiveProcessor.parentClosePolicyClient = s.mockParentClosePolicyClient
 
 	s.domainID = testDomainID
-	s.domainEntry = cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: s.domainID}, &persistence.DomainConfig{}, "", nil)
+	s.domainEntry = testGlobalDomainEntry
+	s.version = s.domainEntry.GetFailoverVersion()
 }
 
 func (s *transferQueueActiveProcessorSuite) TearDownTest() {
@@ -774,7 +774,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 		ExecutionContext: nil,
 		Identity:         common.StringPtr("some random identity"),
 		Decisions: []*workflow.Decision{
-			&workflow.Decision{
+			{
 				DecisionType: &dt,
 				StartChildWorkflowExecutionDecisionAttributes: &workflow.StartChildWorkflowExecutionDecisionAttributes{
 					WorkflowId: common.StringPtr("child workflow1"),
@@ -786,7 +786,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 					ParentClosePolicy: &parentClosePolicy1,
 				},
 			},
-			&workflow.Decision{
+			{
 				DecisionType: &dt,
 				StartChildWorkflowExecutionDecisionAttributes: &workflow.StartChildWorkflowExecutionDecisionAttributes{
 					WorkflowId: common.StringPtr("child workflow2"),
@@ -798,7 +798,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 					ParentClosePolicy: &parentClosePolicy2,
 				},
 			},
-			&workflow.Decision{
+			{
 				DecisionType: &dt,
 				StartChildWorkflowExecutionDecisionAttributes: &workflow.StartChildWorkflowExecutionDecisionAttributes{
 					WorkflowId: common.StringPtr("child workflow3"),
@@ -844,7 +844,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 	})
 	s.Nil(err)
 
-	msBuilder.FlushBufferedEvents()
+	s.NoError(msBuilder.FlushBufferedEvents())
 
 	taskID := int64(59)
 	event = addCompleteWorkflowEvent(msBuilder, event.GetEventId(), nil)
@@ -937,7 +937,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 		s.Nil(err)
 	}
 
-	msBuilder.FlushBufferedEvents()
+	s.NoError(msBuilder.FlushBufferedEvents())
 
 	taskID := int64(59)
 	event = addCompleteWorkflowEvent(msBuilder, event.GetEventId(), nil)
@@ -1893,8 +1893,13 @@ func (s *transferQueueActiveProcessorSuite) createSignalWorkflowExecutionRequest
 	}
 }
 
-func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
-	msBuilder mutableState, ci *persistence.ChildExecutionInfo, testDomainName string, targetDomainName string) *history.StartWorkflowExecutionRequest {
+func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(
+	task *persistence.TransferTaskInfo,
+	msBuilder mutableState,
+	ci *persistence.ChildExecutionInfo,
+	testDomainName string,
+	targetDomainName string,
+) *history.StartWorkflowExecutionRequest {
 
 	event, err := msBuilder.GetChildExecutionInitiatedEvent(task.ScheduleID)
 	if err != nil {
