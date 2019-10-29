@@ -693,9 +693,11 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	qr := builder.GetQueryRegistry()
 	s.True(qr.hasBuffered())
 	s.False(qr.hasCompleted())
+	s.False(qr.hasUnblocked())
 	wg.Wait()
 	s.False(qr.hasBuffered())
 	s.False(qr.hasCompleted())
+	s.False(qr.hasUnblocked())
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
@@ -755,6 +757,63 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 	qr := builder.GetQueryRegistry()
 	s.False(qr.hasBuffered())
 	s.False(qr.hasCompleted())
+	waitGroup.Wait()
+}
+
+func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Unblocked"),
+		RunId:      common.StringPtr(testRunID),
+	}
+	tasklist := "testTaskList"
+	identity := "testIdentity"
+	msBuilder := newMutableStateBuilderWithEventV2(s.mockHistoryEngine.shard, s.eventsCache, loggerimpl.NewDevelopmentForTest(s.Suite), execution.GetRunId())
+	addWorkflowExecutionStartedEvent(msBuilder, execution, "wType", tasklist, []byte("input"), 100, 200, identity)
+	di := addDecisionTaskScheduledEvent(msBuilder)
+	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
+
+	ms := createMutableState(msBuilder)
+	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gweResponse, nil).Once()
+	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&workflow.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
+	s.mockHistoryEngine.matchingClient = s.mockMatchingClient
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(1)
+	asyncQueryUpdate := func(delay time.Duration, answer []byte) {
+		defer waitGroup.Done()
+		<-time.After(delay)
+		builder := s.getBuilder(testDomainID, execution)
+		s.NotNil(builder)
+		qr := builder.GetQueryRegistry()
+		buffered := qr.getBufferedSnapshot()
+		for _, id := range buffered {
+			s.NoError(qr.unblockQuery(id))
+			state, err := qr.getQueryInternalState(id)
+			s.NoError(err)
+			s.Equal(queryStateUnblocked, state.state)
+		}
+	}
+
+	request := &history.QueryWorkflowRequest{
+		DomainUUID: common.StringPtr(testDomainID),
+		Request: &workflow.QueryWorkflowRequest{
+			Execution:             &execution,
+			Query:                 &workflow.WorkflowQuery{},
+			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
+		},
+	}
+	go asyncQueryUpdate(time.Second*2, []byte{1, 2, 3})
+	start := time.Now()
+	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
+	s.True(time.Now().After(start.Add(time.Second)))
+	s.NoError(err)
+	s.Equal([]byte{1, 2, 3}, resp.GetResponse().GetQueryResult())
+	builder := s.getBuilder(testDomainID, execution)
+	s.NotNil(builder)
+	qr := builder.GetQueryRegistry()
+	s.False(qr.hasBuffered())
+	s.False(qr.hasCompleted())
+	s.False(qr.hasUnblocked())
 	waitGroup.Wait()
 }
 
@@ -4148,10 +4207,10 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.Nil(err)
 
 	executionBuilder := s.getBuilder(testDomainID, we)
-	s.Equal(int64(12), executionBuilder.GetExecutionInfo().NextEventID)
+	s.Equal(int64(11), executionBuilder.GetExecutionInfo().NextEventID)
 	s.Equal(int64(8), executionBuilder.GetExecutionInfo().LastProcessedEvent)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
-	s.True(executionBuilder.HasPendingDecision()) // ensure new decision task was created
+	s.False(executionBuilder.HasPendingDecision())
 	s.Len(qr.getCompletedSnapshot(), 2)
 	completed1, err := qr.getQueryInternalState(id1)
 	s.NoError(err)
@@ -4161,11 +4220,12 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.NoError(err)
 	s.True(result2.Equals(completed2.queryResult))
 	s.Equal(queryStateCompleted, completed2.state)
-	s.Len(qr.getBufferedSnapshot(), 1)
-	buffered1, err := qr.getQueryInternalState(id3)
+	s.Len(qr.getBufferedSnapshot(), 0)
+	s.Len(qr.getUnblockedSnapshot(), 1)
+	unblocked1, err := qr.getQueryInternalState(id3)
 	s.NoError(err)
-	s.Nil(buffered1.queryResult)
-	s.Equal(queryStateBuffered, buffered1.state)
+	s.Nil(unblocked1.queryResult)
+	s.Equal(queryStateUnblocked, unblocked1.state)
 
 	// Try recording activity heartbeat
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
