@@ -26,10 +26,11 @@ import (
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
+	"github.com/uber/ringpop-go/discovery"
+
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/ringpop-go/discovery"
 )
 
 const (
@@ -261,18 +262,6 @@ type (
 	ReplicationConsumerConfig struct {
 		// Type determines how we consume replication tasks. It can be either kafka(default) or rpc.
 		Type string `yaml:"type"`
-		// FetcherConfig is the config for replication task fetcher.
-		FetcherConfig *FetcherConfig `yaml:"fetcher"`
-		// ProcessorConfig is the config for replication task processor.
-		ProcessorConfig *ReplicationTaskProcessorConfig `yaml:"processor"`
-	}
-
-	// FetcherConfig is the config for replication task fetcher.
-	FetcherConfig struct {
-		RPCParallelism          int     `yaml:"rpcParallelism"`
-		AggregationIntervalSecs int     `yaml:"aggregationIntervalSecs"`
-		ErrorRetryWaitSecs      int     `yaml:"errorRetryWaitSecs"`
-		TimerJitterCoefficient  float64 `yaml:"timerJitterCoefficient"`
 	}
 
 	// ReplicationTaskProcessorConfig is the config for replication task processor.

@@ -13,7 +13,6 @@ endif
 
 THRIFT_GENDIR=.gen
 
-# default target
 default: test
 
 # define the list of thrift files the service depends on
@@ -158,7 +157,7 @@ fmt:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
 	GOOS= GOARCH= gobin -mod=readonly golang.org/x/tools/cmd/goimports
 	@echo "running goimports"
-	@goimports -w $(ALL_SRC)
+	@goimports -local "github.com/uber/cadence" -w $(ALL_SRC)
 
 bins_nothrift: go-generate fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
@@ -278,8 +277,19 @@ install-schema-cdc: bins
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_standby setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_standby update-schema -d ./schema/cassandra/visibility/versioned
 
+	@echo Setting up cadence_other key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_other --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_other setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_other update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_other --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_other setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_other update-schema -d ./schema/cassandra/visibility/versioned
+
 start-cdc-active: bins
 	./cadence-server --zone active start
 
 start-cdc-standby: bins
 	./cadence-server --zone standby start
+
+start-cdc-other: bins
+	./cadence-server --zone other start

@@ -31,6 +31,10 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	r "github.com/uber/cadence/.gen/go/replicator"
@@ -51,10 +55,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
-	"github.com/uber/cadence/service/worker/replicator"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -195,7 +195,6 @@ func NewEngineWithShardContext(
 	publisher messaging.Producer,
 	config *Config,
 	replicationTaskFetchers *ReplicationTaskFetchers,
-	domainReplicator replicator.DomainReplicator,
 	rawMatchingClient matching.Client,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -282,7 +281,12 @@ func NewEngineWithShardContext(
 
 	var replicationTaskProcessors []*ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
-		replicationTaskProcessor := NewReplicationTaskProcessor(shard, historyEngImpl, domainReplicator, shard.GetMetricsClient(), replicationTaskFetcher)
+		replicationTaskProcessor := NewReplicationTaskProcessor(
+			shard,
+			historyEngImpl,
+			config,
+			shard.GetMetricsClient(),
+			replicationTaskFetcher)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
@@ -829,7 +833,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 				},
 			}, nil
 		case workflow.QueryResultTypeFailed:
-			return nil, &workflow.QueryFailedError{Message: fmt.Sprintf("%v: %v", result.GetErrorReason(), result.GetErrorDetails())}
+			return nil, &workflow.QueryFailedError{Message: result.GetErrorMessage()}
 		}
 	case <-timer.C:
 		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
