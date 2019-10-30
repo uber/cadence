@@ -43,7 +43,7 @@ const (
 )
 
 const (
-	// user timer task status
+	// activity / user timer task not created
 	timerTaskStatusNone = iota
 	timerTaskStatusCreated
 )

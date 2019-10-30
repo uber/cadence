@@ -4746,6 +4746,34 @@ func addActivityTaskScheduledEvent(builder mutableState, decisionCompletedID int
 	return event, ai
 }
 
+func addActivityTaskScheduledEventWithRetry(
+	builder mutableState,
+	decisionCompletedID int64,
+	activityID, activityType,
+	taskList string,
+	input []byte,
+	scheduleToCloseTimeout int32,
+	scheduleToStartTimeout int32,
+	startToCloseTimeout int32,
+	heartbeatTimeout int32,
+	retryPolicy *workflow.RetryPolicy,
+) (*workflow.HistoryEvent, *persistence.ActivityInfo) {
+
+	event, ai, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
+		ActivityId:                    common.StringPtr(activityID),
+		ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
+		TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
+		Input:                         input,
+		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
+		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
+		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
+		RetryPolicy:                   retryPolicy,
+	})
+
+	return event, ai
+}
+
 func addActivityTaskStartedEvent(builder mutableState, scheduleID int64, identity string) *workflow.HistoryEvent {
 	ai, _ := builder.GetActivityInfo(scheduleID)
 	event, _ := builder.AddActivityTaskStartedEvent(ai, scheduleID, testRunID, identity)

@@ -1738,8 +1738,11 @@ func (s *transferQueueActiveProcessorSuite) TestCopySearchAttributes() {
 	s.Equal(byte('1'), val[0])
 }
 
-func (s *transferQueueActiveProcessorSuite) createAddActivityTaskRequest(task *persistence.TransferTaskInfo,
-	ai *persistence.ActivityInfo) *matching.AddActivityTaskRequest {
+func (s *transferQueueActiveProcessorSuite) createAddActivityTaskRequest(
+	task *persistence.TransferTaskInfo,
+	ai *persistence.ActivityInfo,
+) *matching.AddActivityTaskRequest {
+
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
@@ -1756,8 +1759,11 @@ func (s *transferQueueActiveProcessorSuite) createAddActivityTaskRequest(task *p
 	}
 }
 
-func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(task *persistence.TransferTaskInfo,
-	mutableState mutableState) *matching.AddDecisionTaskRequest {
+func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(
+	task *persistence.TransferTaskInfo,
+	mutableState mutableState,
+) *matching.AddDecisionTaskRequest {
+
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
@@ -1779,8 +1785,12 @@ func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(task *p
 	}
 }
 
-func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStartedRequest(task *persistence.TransferTaskInfo,
-	mutableState mutableState, backoffSeconds int32) *persistence.RecordWorkflowExecutionStartedRequest {
+func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStartedRequest(
+	task *persistence.TransferTaskInfo,
+	mutableState mutableState,
+	backoffSeconds int32,
+) *persistence.RecordWorkflowExecutionStartedRequest {
+
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
@@ -1802,8 +1812,11 @@ func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStarted
 	}
 }
 
-func (s *transferQueueActiveProcessorSuite) createRequetCancelWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
-	rci *persistence.RequestCancelInfo) *history.RequestCancelWorkflowExecutionRequest {
+func (s *transferQueueActiveProcessorSuite) createRequetCancelWorkflowExecutionRequest(
+	task *persistence.TransferTaskInfo,
+	rci *persistence.RequestCancelInfo,
+) *history.RequestCancelWorkflowExecutionRequest {
+
 	sourceExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
@@ -1828,8 +1841,10 @@ func (s *transferQueueActiveProcessorSuite) createRequetCancelWorkflowExecutionR
 	}
 }
 
-func (s *transferQueueActiveProcessorSuite) createSignalWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
-	si *persistence.SignalInfo) *history.SignalWorkflowExecutionRequest {
+func (s *transferQueueActiveProcessorSuite) createSignalWorkflowExecutionRequest(
+	task *persistence.TransferTaskInfo,
+	si *persistence.SignalInfo,
+) *history.SignalWorkflowExecutionRequest {
 
 	sourceExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),

@@ -1016,6 +1016,13 @@ func (s *timerSequenceSuite) TestConversion() {
 	s.Equal(int32(timerTaskStatusCreatedScheduleToStart), timerTypeToTimerMask(timerTypeScheduleToStart))
 	s.Equal(int32(timerTaskStatusCreatedScheduleToClose), timerTypeToTimerMask(timerTypeScheduleToClose))
 	s.Equal(int32(timerTaskStatusCreatedHeartbeat), timerTypeToTimerMask(timerTypeHeartbeat))
+
+	s.Equal(timerTaskStatusNone, 0)
+	s.Equal(timerTaskStatusCreated, 1)
+	s.Equal(timerTaskStatusCreatedStartToClose, 1)
+	s.Equal(timerTaskStatusCreatedScheduleToStart, 2)
+	s.Equal(timerTaskStatusCreatedScheduleToClose, 4)
+	s.Equal(timerTaskStatusCreatedHeartbeat, 8)
 }
 
 func (s *timerSequenceSuite) TestLess_CompareTime() {

@@ -2061,6 +2061,14 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 ) (*persistence.ActivityInfo, error) {
 
 	attributes := event.ActivityTaskScheduledEventAttributes
+	targetDomainID := e.executionInfo.DomainID
+	if attributes.Domain != nil {
+		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+		if err != nil {
+			return nil, err
+		}
+		targetDomainID = targetDomainEntry.GetInfo().ID
+	}
 
 	scheduleEventID := event.GetEventId()
 	scheduleToCloseTimeout := attributes.GetScheduleToCloseTimeoutSeconds()
@@ -2073,6 +2081,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
 		ActivityID:               common.StringDefault(attributes.ActivityId),
+		DomainID:                 targetDomainID,
 		ScheduleToStartTimeout:   attributes.GetScheduleToStartTimeoutSeconds(),
 		ScheduleToCloseTimeout:   scheduleToCloseTimeout,
 		StartToCloseTimeout:      attributes.GetStartToCloseTimeoutSeconds(),
@@ -2174,7 +2183,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(
 }
 
 func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(
-	scheduleEventID,
+	scheduleEventID int64,
 	startedEventID int64,
 	request *workflow.RespondActivityTaskCompletedRequest,
 ) (*workflow.HistoryEvent, error) {

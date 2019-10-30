@@ -394,7 +394,7 @@ Loop:
 			//  this case can happen since each activity can have 4 timers
 			//  and one of those 4 timers may have fired in this loop
 			// 2. timerSequenceID.attempt < activityInfo.Attempt
-			//  retry could update activity attempt, should not timeouts about previous attempt
+			//  retry could update activity attempt, should not timeouts new attempt
 			continue Loop
 		}
 
@@ -569,7 +569,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 	// generate activity task
 	scheduledID := task.EventID
 	activityInfo, ok := mutableState.GetActivityInfo(scheduledID)
-	if !ok || task.ScheduleAttempt < int64(activityInfo.Attempt) {
+	if !ok || task.ScheduleAttempt < int64(activityInfo.Attempt) || activityInfo.StartedID != common.EmptyEventID {
 		if ok {
 			t.logger.Info("Duplicate activity retry timer task",
 				tag.WorkflowID(mutableState.GetExecutionInfo().WorkflowID),
@@ -590,23 +590,31 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 
 	domainID := task.DomainID
 	targetDomainID := domainID
-	scheduledEvent, err := mutableState.GetActivityScheduledEvent(scheduledID)
-	if err != nil {
-		return err
-	}
-	if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
-		domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
+	if activityInfo.DomainID != "" {
+		targetDomainID = activityInfo.DomainID
+	} else {
+		// TODO remove this block after Mar, 1th, 2020
+		//  previously, DomainID in activity info is not used, so need to get
+		//  schedule event from DB checking whether activity to be scheduled
+		//  belongs to this domain
+		scheduledEvent, err := mutableState.GetActivityScheduledEvent(scheduledID)
 		if err != nil {
-			return &workflow.InternalServiceError{Message: "unable to re-schedule activity across domain."}
+			return err
 		}
-		targetDomainID = domainEntry.GetInfo().ID
+		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
+			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
+			if err != nil {
+				return &workflow.InternalServiceError{Message: "unable to re-schedule activity across domain."}
+			}
+			targetDomainID = domainEntry.GetInfo().ID
+		}
 	}
 
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID)}
 	taskList := &workflow.TaskList{
-		Name: &activityInfo.TaskList,
+		Name: common.StringPtr(activityInfo.TaskList),
 	}
 	scheduleToStartTimeout := activityInfo.ScheduleToStartTimeout
 
@@ -617,7 +625,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 		SourceDomainUUID:              common.StringPtr(domainID),
 		Execution:                     &execution,
 		TaskList:                      taskList,
-		ScheduleId:                    &scheduledID,
+		ScheduleId:                    common.Int64Ptr(scheduledID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 	})
 }
