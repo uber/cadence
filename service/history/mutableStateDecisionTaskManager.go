@@ -126,8 +126,8 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskScheduledEven
 	originalScheduledTimestamp int64,
 ) (*decisionInfo, error) {
 
-	// set workflow state to running
-	// since decision is scheduled
+	// set workflow state to running, since decision is scheduled
+	// NOTE: for zombie workflow, should not change the state
 	state, _ := m.msb.GetWorkflowStateCloseStatus()
 	if state != persistence.WorkflowStateZombie {
 		if err := m.msb.UpdateWorkflowStateCloseStatus(
