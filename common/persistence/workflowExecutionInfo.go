@@ -61,7 +61,9 @@ func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
 				return e.createInvalidStateTransitionErr(e.State, state, closeStatus)
 			}
 		case WorkflowStateCompleted:
-			if closeStatus != WorkflowCloseStatusTerminated && closeStatus != WorkflowCloseStatusTimedOut {
+			if closeStatus != WorkflowCloseStatusTerminated &&
+				closeStatus != WorkflowCloseStatusTimedOut &&
+				closeStatus != WorkflowCloseStatusContinuedAsNew {
 				return e.createInvalidStateTransitionErr(e.State, state, closeStatus)
 			}
 		case WorkflowStateZombie:
