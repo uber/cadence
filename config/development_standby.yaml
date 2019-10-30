@@ -149,4 +149,3 @@ domainDefaults:
 
 publicClient:
   hostPort: "localhost:8933"
-
