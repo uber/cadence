@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -82,9 +83,9 @@ func (s *QuerySuite) TestValidateQueryResult() {
 		},
 		{
 			wqr: &shared.WorkflowQueryResult{
-				ResultType:  common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
-				Answer:      []byte{1, 2, 3},
-				ErrorReason: common.StringPtr("should not exist"),
+				ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+				Answer:       []byte{1, 2, 3},
+				ErrorMessage: common.StringPtr("should not exist"),
 			},
 			expectErr: true,
 		},
@@ -97,16 +98,8 @@ func (s *QuerySuite) TestValidateQueryResult() {
 		},
 		{
 			wqr: &shared.WorkflowQueryResult{
-				ResultType:  common.QueryResultTypePtr(shared.QueryResultTypeFailed),
-				ErrorReason: common.StringPtr("some error reason"),
-			},
-			expectErr: true,
-		},
-		{
-			wqr: &shared.WorkflowQueryResult{
 				ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeFailed),
-				ErrorReason:  common.StringPtr("some error reason"),
-				ErrorDetails: []byte{1, 2, 3},
+				ErrorMessage: common.StringPtr("some error reason"),
 			},
 			expectErr: false,
 		},
