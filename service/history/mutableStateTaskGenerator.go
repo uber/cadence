@@ -318,7 +318,6 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
 
 	attr := event.ActivityTaskScheduledEventAttributes
 	activityScheduleID := event.GetEventId()
-	activityTargetDomain := attr.GetDomain()
 
 	activityInfo, ok := r.mutableState.GetActivityInfo(activityScheduleID)
 	if !ok {
@@ -327,9 +326,19 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
 		}
 	}
 
-	targetDomainID, err := r.getTargetDomainID(activityTargetDomain)
-	if err != nil {
-		return err
+	var targetDomainID string
+	var err error
+	if activityInfo.DomainID != "" {
+		targetDomainID = activityInfo.DomainID
+	} else {
+		// TODO remove this block after Mar, 1th, 2020
+		//  previously, DomainID in activity info is not used, so need to get
+		//  schedule event from DB checking whether activity to be scheduled
+		//  belongs to this domain
+		targetDomainID, err = r.getTargetDomainID(attr.GetDomain())
+		if err != nil {
+			return err
+		}
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.ActivityTask{
