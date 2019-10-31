@@ -686,6 +686,13 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 		parentDomainName = parentDomainEntry.GetInfo().Name
 	}
 
+	// handler cron workflow with continue as new
+	if len(executionInfo.CronSchedule) != 0 {
+		// do not calculate the backoff start interval
+		// because the new run should start immediately
+		attr.CronSchedule = common.StringPtr(executionInfo.CronSchedule)
+	}
+
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
 		handler.decisionTaskCompletedID,
 		handler.decisionTaskCompletedID,
