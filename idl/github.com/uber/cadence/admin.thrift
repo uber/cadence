@@ -99,7 +99,7 @@ service AdminService {
     )
 
     /**
-      * DescribeCluster Gets cadence cluster info like verison, status, roles, memberhip etc.
+      * DescribeCluster Gets cadence cluster version and build info
       **/
       DescribeClusterResponse DescribeCluster(1: DescribeClusterRequest request)
         throws (

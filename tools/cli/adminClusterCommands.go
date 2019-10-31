@@ -65,7 +65,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 	fmt.Println("Success")
 }
 
-// AdminDescribeCluster to describe details of a cadence cluster
+// AdminDescribeCluster to describe version and build info of a cadence cluster
 func AdminDescribeCluster(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 	ctx, cancel := newContext(c)
