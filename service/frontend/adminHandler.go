@@ -555,7 +555,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	return result, nil
 }
 
-// DescribeCluster - describes various properties of a Cadence cluster like status, membership, roles etc.
+// DescribeCluster - describes version and build info for a cluster
 func (adh *AdminHandler) DescribeCluster(
 	ctx context.Context,
 	Request *admin.DescribeClusterRequest,
