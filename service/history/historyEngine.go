@@ -59,6 +59,7 @@ import (
 
 const (
 	conditionalRetryCount                     = 5
+	retryCountForContextReload                = 50
 	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
 	timerCancellationMsgTimerIDUnknown        = "TIMER_ID_UNKNOWN"
@@ -1624,7 +1625,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, true,
+	return e.updateWorkflowExecutionWithContextReload(ctx, domainID, execution, true,
 		func(mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
@@ -1681,7 +1682,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution, func(mutableState mutableState) (*updateWorkflowAction, error) {
+	return e.updateWorkflowExecutionWithActionAndContextReload(ctx, domainID, execution, func(mutableState mutableState) (*updateWorkflowAction, error) {
 		executionInfo := mutableState.GetExecutionInfo()
 		createDecisionTask := true
 		// Do not create decision task when the workflow is cron and the cron has not been started yet
@@ -1994,7 +1995,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false,
+	return e.updateWorkflowExecutionWithContextReload(ctx, domainID, execution, false,
 		func(mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
@@ -2270,20 +2271,83 @@ type updateWorkflowAction struct {
 	createDecision bool
 }
 
-func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
+type workflowLockedContext struct {
+	context workflowExecutionContext
+	release releaseWorkflowExecutionFunc
+	err     error
+}
+
+type updateWorkflowActionFunc func(builder mutableState) (*updateWorkflowAction, error)
+
+func (e *historyEngineImpl) updateWorkflowExecutionWithActionAndContextReload(
 	ctx ctx.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
-	action func(builder mutableState) (*updateWorkflowAction, error),
+	action updateWorkflowActionFunc,
 ) (retError error) {
 
-	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
-	if err0 != nil {
-		return err0
+	if execution.GetRunId() != "" {
+		workflowContext := e.getWorkflowLockedContext(ctx, domainID, execution)
+		return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
 	}
-	defer func() { release(retError) }()
 
-Update_History_Loop:
+	for attempt := 0; attempt < retryCountForContextReload; attempt++ {
+		context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
+		if err0 != nil {
+			return err0
+		}
+		msBuilder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			release(err1)
+			return err1
+		}
+		if msBuilder.IsWorkflowExecutionRunning() { // action
+			workflowContext := &workflowLockedContext{
+				context, release, err0,
+			}
+			return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
+		} else {
+			resp, err2 := e.historyCache.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
+				DomainID:   domainID,
+				WorkflowID: execution.GetWorkflowId(),
+			})
+			if err2 != nil {
+				release(err2)
+				return err2
+			}
+			if context.getExecution().GetRunId() == resp.RunID {
+				release(ErrWorkflowCompleted)
+				return ErrWorkflowCompleted
+			}
+			execution.RunId = common.StringPtr(resp.RunID)
+		}
+	}
+	return ErrMaxAttemptsExceeded
+}
+
+func (e *historyEngineImpl) getWorkflowLockedContext(
+	ctx ctx.Context,
+	domainID string,
+	execution workflow.WorkflowExecution) *workflowLockedContext {
+
+	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
+	return &workflowLockedContext{
+		context, release, err0,
+	}
+}
+
+func (e *historyEngineImpl) updateWorkflowExecutionWithContextAndAction(
+	workflowLockedContext *workflowLockedContext,
+	action updateWorkflowActionFunc,
+) (retError error) {
+
+	if workflowLockedContext.err != nil {
+		return workflowLockedContext.err
+	}
+	defer func() { workflowLockedContext.release(retError) }()
+	context := workflowLockedContext.context
+
+UpdateHistoryLoop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		mutableState, err1 := context.loadWorkflowExecution()
 		if err1 != nil {
@@ -2297,7 +2361,7 @@ Update_History_Loop:
 				// Handler detected that cached workflow mutable could potentially be stale
 				// Reload workflow execution history
 				context.clear()
-				continue Update_History_Loop
+				continue UpdateHistoryLoop
 			}
 
 			// Returned error back to the caller
@@ -2319,11 +2383,34 @@ Update_History_Loop:
 
 		err = context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
 		if err == ErrConflict {
-			continue Update_History_Loop
+			continue UpdateHistoryLoop
 		}
 		return err
 	}
 	return ErrMaxAttemptsExceeded
+}
+
+func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
+	ctx ctx.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+	action func(builder mutableState) (*updateWorkflowAction, error),
+) (retError error) {
+
+	workflowContext := e.getWorkflowLockedContext(ctx, domainID, execution)
+	return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
+}
+
+func (e *historyEngineImpl) updateWorkflowExecutionWithContextReload(
+	ctx ctx.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+	createDecisionTask bool,
+	action func(builder mutableState) error,
+) error {
+
+	return e.updateWorkflowExecutionWithActionAndContextReload(ctx, domainID, execution,
+		getUpdateWorkflowActionFunc(createDecisionTask, action))
 }
 
 func (e *historyEngineImpl) updateWorkflowExecution(
@@ -2335,16 +2422,24 @@ func (e *historyEngineImpl) updateWorkflowExecution(
 ) error {
 
 	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution,
-		func(mutableState mutableState) (*updateWorkflowAction, error) {
-			err := action(mutableState)
-			if err != nil {
-				return nil, err
-			}
-			postActions := &updateWorkflowAction{
-				createDecision: createDecisionTask,
-			}
-			return postActions, nil
-		})
+		getUpdateWorkflowActionFunc(createDecisionTask, action))
+}
+
+func getUpdateWorkflowActionFunc(
+	createDecisionTask bool,
+	action func(builder mutableState) error,
+) updateWorkflowActionFunc {
+
+	return func(builder mutableState) (*updateWorkflowAction, error) {
+		err := action(builder)
+		if err != nil {
+			return nil, err
+		}
+		postActions := &updateWorkflowAction{
+			createDecision: createDecisionTask,
+		}
+		return postActions, nil
+	}
 }
 
 func (e *historyEngineImpl) failDecision(
