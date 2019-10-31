@@ -59,7 +59,6 @@ import (
 
 const (
 	conditionalRetryCount                     = 5
-	retryCountForContextReload                = 50
 	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
 	timerCancellationMsgTimerIDUnknown        = "TIMER_ID_UNKNOWN"
@@ -2271,13 +2270,7 @@ type updateWorkflowAction struct {
 	createDecision bool
 }
 
-type workflowLockedContext struct {
-	context workflowExecutionContext
-	release releaseWorkflowExecutionFunc
-	err     error
-}
-
-type updateWorkflowActionFunc func(builder mutableState) (*updateWorkflowAction, error)
+type updateWorkflowActionFunc func(mutableState mutableState) (*updateWorkflowAction, error)
 
 func (e *historyEngineImpl) updateWorkflowExecutionWithActionAndContextReload(
 	ctx ctx.Context,
@@ -2294,43 +2287,40 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithActionAndContextReload(
 
 	// for execution without runID,
 	// reload current run in case continueAsNew caused unexpected workflow already completed error
-	var release releaseWorkflowExecutionFunc
-	for attempt := 0; attempt < retryCountForContextReload; attempt++ {
-		context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
-		if err0 != nil {
-			return err0
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
+		if err != nil {
+			return err
 		}
-		msBuilder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			release(err1)
-			return err1
-		}
-
-		if msBuilder.IsWorkflowExecutionRunning() {
-			workflowContext := &workflowLockedContext{
-				context, release, err0,
-			}
-			return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
+		mutableState, err := context.loadWorkflowExecution()
+		if err != nil {
+			release(err)
+			return err
 		}
 
-		// workflow is completed because of continue as new, fetch latest run
-		resp, err2 := e.historyCache.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
+		if mutableState.IsWorkflowExecutionRunning() {
+			return e.updateWorkflowExecutionWithContextAndAction(
+				newWorkflowLockedContext(context, release, nil),
+				action)
+		}
+
+		// if workflow is not running, we need to get latest run
+		resp, err := e.historyCache.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
 			WorkflowID: execution.GetWorkflowId(),
 		})
-		if err2 != nil {
-			release(err2)
-			return err2
+		if err != nil {
+			release(err)
+			return err
 		}
 		if context.getExecution().GetRunId() == resp.RunID {
 			release(ErrWorkflowCompleted)
 			return ErrWorkflowCompleted
 		}
 		execution.RunId = common.StringPtr(resp.RunID)
+		release(nil)
 	}
-	if release != nil {
-		release(ErrMaxAttemptsExceeded)
-	}
+
 	return ErrMaxAttemptsExceeded
 }
 
@@ -2391,11 +2381,7 @@ UpdateHistoryLoop:
 			}
 		}
 
-		err = context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
-		if err == ErrConflict {
-			continue UpdateHistoryLoop
-		}
-		return err
+		return context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
 	}
 	return ErrMaxAttemptsExceeded
 }

@@ -139,3 +139,21 @@ func terminateWorkflow(
 	)
 	return err
 }
+
+type workflowLockedContext struct {
+	context workflowExecutionContext
+	release releaseWorkflowExecutionFunc
+	err     error
+}
+
+func newWorkflowLockedContext(
+	context workflowExecutionContext,
+	release releaseWorkflowExecutionFunc,
+	err error) *workflowLockedContext {
+
+	return &workflowLockedContext{
+		context: context,
+		release: release,
+		err:     err,
+	}
+}
