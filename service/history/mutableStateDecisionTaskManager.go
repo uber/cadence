@@ -213,16 +213,6 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskStartedEvent(
 		decision.Attempt = 0
 	}
 
-	// set workflow state to running, since decision is scheduled
-	if state, _ := m.msb.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCreated {
-		if err := m.msb.UpdateWorkflowStateCloseStatus(
-			persistence.WorkflowStateRunning,
-			persistence.WorkflowCloseStatusNone,
-		); err != nil {
-			return nil, err
-		}
-	}
-
 	// Update mutable decision state
 	decision = &decisionInfo{
 		Version:                    version,
