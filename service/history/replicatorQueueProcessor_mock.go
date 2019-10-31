@@ -26,9 +26,11 @@ package history
 
 import (
 	"context"
-	gomock "github.com/golang/mock/gomock"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	replicator "github.com/uber/cadence/.gen/go/replicator"
 )
 
 // MockReplicatorQueueProcessor is a mock of ReplicatorQueueProcessor interface

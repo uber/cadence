@@ -23,11 +23,13 @@
 package history
 
 import (
-	"github.com/uber/cadence/common"
 	"testing"
+
+	"github.com/uber/cadence/common"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/.gen/go/shared"
 )
 

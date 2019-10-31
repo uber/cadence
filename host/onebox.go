@@ -30,6 +30,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 
+	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
@@ -59,10 +64,6 @@ import (
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
-	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/tchannel"
 )
 
 // Cadence hosts all of cadence services in one process
@@ -74,6 +75,7 @@ type Cadence interface {
 	FrontendAddress() string
 	GetFrontendService() service.Service
 	GetHistoryClient() historyserviceclient.Interface
+	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
 
 type (
@@ -521,13 +523,21 @@ func (c *cadenceImpl) startHistory(
 		service := service.New(params)
 		c.historyService = service
 		hConfig := c.historyConfig
-		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger),
-			hConfig.NumHistoryShards, config.StoreTypeCassandra, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
+		historyConfig := history.NewConfig(
+			dynamicconfig.NewCollection(params.DynamicConfig, c.logger),
+			hConfig.NumHistoryShards,
+			config.StoreTypeCassandra,
+			params.PersistenceConfig.IsAdvancedVisibilityConfigExist(),
+		)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.DecisionHeartbeatTimeout = dynamicconfig.GetDurationPropertyFnFilteredByDomain(time.Second * 5)
 		historyConfig.TimerProcessorHistoryArchivalSizeLimit = dynamicconfig.GetIntPropertyFn(5 * 1024)
 		historyConfig.EnableNDC = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableNDC)
+		historyConfig.ReplicationTaskFetcherAggregationInterval = dynamicconfig.GetDurationPropertyFn(200 * time.Millisecond)
+		historyConfig.ReplicationTaskFetcherErrorRetryWait = dynamicconfig.GetDurationPropertyFn(50 * time.Millisecond)
+		historyConfig.ReplicationTaskProcessorErrorRetryWait = dynamicconfig.GetDurationPropertyFn(time.Millisecond)
+		historyConfig.ReplicationTaskProcessorErrorRetryMaxAttempts = dynamicconfig.GetIntPropertyFn(1)
 
 		if c.workerConfig.EnableIndexer {
 			historyConfig.AdvancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual)
@@ -779,6 +789,10 @@ func (c *cadenceImpl) createSystemDomain() error {
 		return fmt.Errorf("failed to create cadence-system domain: %v", err)
 	}
 	return nil
+}
+
+func (c *cadenceImpl) GetExecutionManagerFactory() persistence.ExecutionManagerFactory {
+	return c.executionMgrFactory
 }
 
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -269,7 +270,7 @@ type (
 		TaskList                           string
 		WorkflowTypeName                   string
 		WorkflowTimeout                    int32
-		DecisionTimeoutValue               int32
+		DecisionStartToCloseTimeout        int32
 		ExecutionContext                   []byte
 		State                              int
 		CloseStatus                        int
@@ -633,6 +634,7 @@ type (
 		StartedID                int64
 		StartedEvent             *workflow.HistoryEvent
 		StartedTime              time.Time
+		DomainID                 string
 		ActivityID               string
 		RequestID                string
 		Details                  []byte
@@ -646,7 +648,6 @@ type (
 		TimerTaskStatus          int32
 		// For retry
 		Attempt            int32
-		DomainID           string
 		StartedIdentity    string
 		TaskList           string
 		HasRetryPolicy     bool
@@ -669,7 +670,10 @@ type (
 		TimerID    string
 		StartedID  int64
 		ExpiryTime time.Time
-		TaskID     int64
+		// TaskID is a misleading variable, it actually serves
+		// the purpose of indicating whether a timer task is
+		// generated for this timer info
+		TaskID int64
 	}
 
 	// ChildExecutionInfo has details for pending child executions.
@@ -959,6 +963,21 @@ type (
 	CompleteReplicationTaskRequest struct {
 		TaskID int64
 	}
+
+	// PutReplicationTaskToDLQRequest is used to put a replication task to dlq
+	PutReplicationTaskToDLQRequest struct {
+		SourceClusterName string
+		TaskInfo          *ReplicationTaskInfo
+	}
+
+	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq
+	GetReplicationTasksFromDLQRequest struct {
+		SourceClusterName string
+		GetReplicationTasksRequest
+	}
+
+	// GetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
+	GetReplicationTasksFromDLQResponse = GetReplicationTasksResponse
 
 	// RangeCompleteTimerTaskRequest is used to complete a range of tasks in the timer task queue
 	RangeCompleteTimerTaskRequest struct {
@@ -1431,6 +1450,8 @@ type (
 		// Replication task related methods
 		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
 		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
+		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
+		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
@@ -2421,4 +2442,23 @@ func SplitHistoryGarbageCleanupInfo(info string) (domainID, workflowID, runID st
 	workflowEnd := len(info) - len(runID) - 1
 	workflowID = info[len(domainID)+1 : workflowEnd]
 	return
+}
+
+// NewGetReplicationTasksFromDLQRequest creates a new GetReplicationTasksFromDLQRequest
+func NewGetReplicationTasksFromDLQRequest(
+	sourceClusterName string,
+	readLevel int64,
+	maxReadLevel int64,
+	batchSize int,
+	nextPageToken []byte,
+) *GetReplicationTasksFromDLQRequest {
+	return &GetReplicationTasksFromDLQRequest{
+		SourceClusterName: sourceClusterName,
+		GetReplicationTasksRequest: GetReplicationTasksRequest{
+			ReadLevel:     readLevel,
+			MaxReadLevel:  maxReadLevel,
+			BatchSize:     batchSize,
+			NextPageToken: nextPageToken,
+		},
+	}
 }

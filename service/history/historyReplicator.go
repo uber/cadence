@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -130,7 +131,14 @@ func newHistoryReplicator(
 			return newConflictResolver(shard, context, historyV2Mgr, logger)
 		},
 		getNewStateBuilder: func(msBuilder mutableState, logger log.Logger) stateBuilder {
-			return newStateBuilder(shard, msBuilder, logger)
+			return newStateBuilder(
+				shard,
+				logger,
+				msBuilder,
+				func(mutableState mutableState) mutableStateTaskGenerator {
+					return newMutableStateTaskGenerator(shard.GetDomainCache(), logger, mutableState)
+				},
+			)
 		},
 		getNewMutableState: func(domainEntry *cache.DomainCacheEntry, logger log.Logger) mutableState {
 			return newMutableStateBuilderWithReplicationState(
@@ -565,6 +573,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 	if len(request.History.Events) == 0 {
 		return nil
 	}
+	lastEvent := request.History.Events[len(request.History.Events)-1]
 
 	execution := *request.WorkflowExecution
 
@@ -576,7 +585,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 	}
 
 	// directly use stateBuilder to apply events for other events(including continueAsNew)
-	lastEvent, _, newMutableState, err := sBuilder.applyEvents(
+	newMutableState, err := sBuilder.applyEvents(
 		domainID, requestID, execution, request.History.Events, newRunHistory, request.GetNewRunNDC(),
 	)
 	if err != nil {
@@ -903,7 +912,7 @@ func (r *historyReplicator) terminateWorkflow(
 	var currentLastWriteVersion int64
 	var err error
 	err = r.historyEngine.updateWorkflowExecution(ctx, domainID, execution, false,
-		func(msBuilder mutableState, tBuilder *timerBuilder) error {
+		func(msBuilder mutableState) error {
 
 			// compare the current last write version first
 			// since this function has assumption that

@@ -24,14 +24,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/olivere/elastic"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/olivere/elastic"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	h "github.com/uber/cadence/.gen/go/history"

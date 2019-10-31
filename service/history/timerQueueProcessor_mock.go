@@ -28,9 +28,11 @@
 package history
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	persistence "github.com/uber/cadence/common/persistence"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	persistence "github.com/uber/cadence/common/persistence"
 )
 
 // MocktimerQueueProcessor is a mock of timerQueueProcessor interface
