@@ -21,7 +21,7 @@
 package history
 
 import (
-	"context"
+	ctx "context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -329,7 +329,7 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 }
 
 func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerTaskInfo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), loadTimerTaskThrottleRetryDelay)
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), loadTimerTaskThrottleRetryDelay)
 	if err := t.rateLimiter.Wait(ctx); err != nil {
 		cancel()
 		t.notifyNewTimer(time.Time{}) // re-enqueue the event
@@ -373,7 +373,10 @@ func (t *timerQueueProcessorBase) retryTasks() {
 	t.taskProcessor.retryTasks()
 }
 
-func (t *timerQueueProcessorBase) complete(timerTask *persistence.TimerTaskInfo) {
+func (t *timerQueueProcessorBase) complete(
+	timerTask *persistence.TimerTaskInfo,
+) {
+
 	t.timerQueueAckMgr.completeTimerTask(timerTask)
 	atomic.AddUint64(&t.timerFiredCount, 1)
 }
@@ -403,21 +406,17 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(
 	defer func() { release(retError) }()
 
 	msBuilder, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
-	if err != nil {
+	if err != nil || msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
 		return err
-	} else if msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
-		return nil
 	}
+
 	lastWriteVersion, err := msBuilder.GetLastWriteVersion()
 	if err != nil {
 		return err
 	}
 	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, lastWriteVersion, task.Version, task)
-	if err != nil {
+	if err != nil || !ok {
 		return err
-	}
-	if !ok {
-		return nil
 	}
 
 	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
@@ -529,7 +528,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 		req.ArchiveRequest.Targets = append(req.ArchiveRequest.Targets, archiver.ArchiveTargetVisibility)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorArchivalTimeLimit())
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), t.config.TimerProcessorArchivalTimeLimit())
 	defer cancel()
 	resp, err := t.historyService.archivalClient.Archive(ctx, req)
 	if err != nil {

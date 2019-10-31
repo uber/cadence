@@ -350,10 +350,8 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(
 		// since event replication should be done by active cluster
 		return nil, t.recordWorkflowClosed(
 			transferTask.DomainID,
-			workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(transferTask.WorkflowID),
-				RunId:      common.StringPtr(transferTask.RunID),
-			},
+			transferTask.WorkflowID,
+			transferTask.RunID,
 			workflowTypeName,
 			workflowStartTimestamp,
 			workflowExecutionTimestamp.UnixNano(),
@@ -538,17 +536,11 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsert
 			return err
 		}
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, startVersion, transferTask.Version, transferTask)
-		if err != nil {
+		if err != nil || !ok {
 			return err
-		} else if !ok {
-			return nil
 		}
 	}
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(transferTask.WorkflowID),
-		RunId:      common.StringPtr(transferTask.RunID),
-	}
 	executionInfo := mutableState.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
@@ -564,7 +556,8 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsert
 	if isRecordStart {
 		return t.recordWorkflowStarted(
 			transferTask.DomainID,
-			execution,
+			transferTask.WorkflowID,
+			transferTask.RunID,
 			wfTypeName,
 			startTimestamp,
 			executionTimestamp.UnixNano(),
@@ -576,7 +569,8 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsert
 	}
 	return t.upsertWorkflowExecution(
 		transferTask.DomainID,
-		execution,
+		transferTask.WorkflowID,
+		transferTask.RunID,
 		wfTypeName,
 		startTimestamp,
 		executionTimestamp.UnixNano(),
@@ -724,14 +718,4 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(
 
 func (t *transferQueueStandbyProcessorImpl) getCurrentTime() time.Time {
 	return t.shard.GetCurrentTime(t.clusterName)
-}
-
-func (t *transferQueueStandbyProcessorImpl) getDomainIDAndWorkflowExecution(
-	transferTask *persistence.TransferTaskInfo,
-) (string, workflow.WorkflowExecution) {
-
-	return transferTask.DomainID, workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(transferTask.WorkflowID),
-		RunId:      common.StringPtr(transferTask.RunID),
-	}
 }

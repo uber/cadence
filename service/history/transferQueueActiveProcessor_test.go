@@ -1389,7 +1389,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	taskID := int64(59)
 
 	event, ci := addStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		testChildDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		s.childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
@@ -1409,7 +1409,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.EXPECT().StartWorkflowExecution(nil, s.createChildWorkflowExecutionRequest(
 		s.domainName,
-		testChildDomainName,
+		s.childDomainName,
 		transferTask,
 		mutableState,
 		ci,
