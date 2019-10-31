@@ -544,26 +544,29 @@ Update_History_Loop:
 			}
 
 			return nil, updateErr
-		} else {
-			// at this point the update is successful, so answer all the queries which we have answers for
-			qr := msBuilder.GetQueryRegistry()
-			for id, result := range req.GetCompleteRequest().GetQueryResults() {
-				if err := qr.completeQuery(id, result); err != nil {
-					handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CompleteQueryFailedCount)
-				}
-			}
+		}
 
-			// if no decision task was created then it means no buffered events came in during this decision task's handling
-			// this means all buffered queries can be dispatched directly through matching at this point
-			if !createNewDecisionTask {
-				buffered := qr.getBufferedSnapshot()
-				for _, id := range buffered {
-					if err := qr.unblockQuery(id); err != nil {
-						handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.UnblockQueryFailedCount)
-					}
+		// at this point the update is successful, so answer all the queries which we have answers for
+		qr := msBuilder.GetQueryRegistry()
+		for id, result := range req.GetCompleteRequest().GetQueryResults() {
+			if err := qr.completeQuery(id, result); err != nil {
+				handler.logger.Error("failed to complete query", tag.QueryID(id), tag.Error(err))
+				handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CompleteQueryFailedCount)
+			}
+		}
+
+		// if no decision task was created then it means no buffered events came in during this decision task's handling
+		// this means all buffered queries can be dispatched directly through matching at this point
+		if !createNewDecisionTask {
+			buffered := qr.getBufferedSnapshot()
+			for _, id := range buffered {
+				if err := qr.unblockQuery(id); err != nil {
+					handler.logger.Error("failed to unblock query", tag.QueryID(id), tag.Error(err))
+					handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.UnblockQueryFailedCount)
 				}
 			}
 		}
+
 
 		if decisionHeartbeatTimeout {
 			// at this point, update is successful, but we still return an error to client so that the worker will give up this workflow
