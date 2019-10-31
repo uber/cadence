@@ -2286,11 +2286,15 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithActionAndContextReload(
 	action updateWorkflowActionFunc,
 ) (retError error) {
 
+	// for execution with runID, just update with action
 	if execution.GetRunId() != "" {
 		workflowContext := e.getWorkflowLockedContext(ctx, domainID, execution)
 		return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
 	}
 
+	// for execution without runID,
+	// reload current run in case continueAsNew caused unexpected workflow already completed error
+	var release releaseWorkflowExecutionFunc
 	for attempt := 0; attempt < retryCountForContextReload; attempt++ {
 		context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
 		if err0 != nil {
@@ -2301,30 +2305,36 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithActionAndContextReload(
 			release(err1)
 			return err1
 		}
-		if msBuilder.IsWorkflowExecutionRunning() { // action
+
+		if msBuilder.IsWorkflowExecutionRunning() {
 			workflowContext := &workflowLockedContext{
 				context, release, err0,
 			}
 			return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
-		} else {
-			resp, err2 := e.historyCache.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
-				DomainID:   domainID,
-				WorkflowID: execution.GetWorkflowId(),
-			})
-			if err2 != nil {
-				release(err2)
-				return err2
-			}
-			if context.getExecution().GetRunId() == resp.RunID {
-				release(ErrWorkflowCompleted)
-				return ErrWorkflowCompleted
-			}
-			execution.RunId = common.StringPtr(resp.RunID)
 		}
+
+		// workflow is completed because of continue as new, fetch latest run
+		resp, err2 := e.historyCache.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
+			DomainID:   domainID,
+			WorkflowID: execution.GetWorkflowId(),
+		})
+		if err2 != nil {
+			release(err2)
+			return err2
+		}
+		if context.getExecution().GetRunId() == resp.RunID {
+			release(ErrWorkflowCompleted)
+			return ErrWorkflowCompleted
+		}
+		execution.RunId = common.StringPtr(resp.RunID)
+	}
+	if release != nil {
+		release(ErrMaxAttemptsExceeded)
 	}
 	return ErrMaxAttemptsExceeded
 }
 
+// TODO: This can be refactored if we change getOrCreateWorkflowExecution return type
 func (e *historyEngineImpl) getWorkflowLockedContext(
 	ctx ctx.Context,
 	domainID string,
