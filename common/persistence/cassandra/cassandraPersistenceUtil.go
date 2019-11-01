@@ -33,7 +33,7 @@ import (
 
 // eventStoreVersion is already deprecated, this is just a constant for place holder.
 // TODO we can remove it after fixing all the query templates
-const defaultEventStoreVersionValue = -1
+const defaultEventStoreVersionValue = 2
 
 func applyWorkflowMutationBatch(
 	batch *gocql.Batch,
