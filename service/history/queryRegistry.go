@@ -67,46 +67,46 @@ func newQueryRegistry() queryRegistry {
 	}
 }
 
-func (r *queryRegistryImpl) hasBuffered() bool {
+func (r *queryRegistryImpl) hasBufferedQuery() bool {
 	r.RLock()
 	defer r.RUnlock()
 
 	return len(r.buffered) > 0
 }
 
-func (r *queryRegistryImpl) getBufferedSnapshot() []string {
+func (r *queryRegistryImpl) getBufferedIDs() []string {
 	r.RLock()
 	defer r.RUnlock()
 
-	return getIDs(r.buffered)
+	return r.getIDs(r.buffered)
 }
 
-func (r *queryRegistryImpl) hasCompleted() bool {
+func (r *queryRegistryImpl) hasCompletedQuery() bool {
 	r.RLock()
 	defer r.RUnlock()
 
 	return len(r.completed) > 0
 }
 
-func (r *queryRegistryImpl) getCompletedSnapshot() []string {
+func (r *queryRegistryImpl) getCompletedIDs() []string {
 	r.RLock()
 	defer r.RUnlock()
 
-	return getIDs(r.completed)
+	return r.getIDs(r.completed)
 }
 
-func (r *queryRegistryImpl) hasUnblocked() bool {
+func (r *queryRegistryImpl) hasUnblockedQuery() bool {
 	r.RLock()
 	defer r.RUnlock()
 
 	return len(r.unblocked) > 0
 }
 
-func (r *queryRegistryImpl) getUnblockedSnapshot() []string {
+func (r *queryRegistryImpl) getUnblockedIDs() []string {
 	r.RLock()
 	defer r.RUnlock()
 
-	return getIDs(r.unblocked)
+	return r.getIDs(r.unblocked)
 }
 
 func (r *queryRegistryImpl) getQueryInternalState(id string) (*queryInternalState, error) {
