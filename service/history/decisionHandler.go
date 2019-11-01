@@ -567,7 +567,6 @@ Update_History_Loop:
 			}
 		}
 
-
 		if decisionHeartbeatTimeout {
 			// at this point, update is successful, but we still return an error to client so that the worker will give up this workflow
 			return nil, &workflow.EntityNotExistsError{
