@@ -386,17 +386,16 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 	version := int64(99)
 
 	lastWriteVersion := version - 100
-	nextEventID := scheduleID - 10
 	incomingVersionHistory := persistence.VersionHistory{
 		BranchToken: []byte{},
 		Items: []*persistence.VersionHistoryItem{
 			{
-				EventID: 50,
-				Version: 2,
+				EventID: scheduleID - 1,
+				Version: version - 1,
 			},
 			{
-				EventID: 144,
-				Version: 99,
+				EventID: scheduleID,
+				Version: version,
 			},
 		},
 	}
@@ -427,8 +426,12 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 				BranchToken: []byte{},
 				Items: []*persistence.VersionHistoryItem{
 					{
-						EventID: nextEventID - 1,
-						Version: 100,
+						EventID: scheduleID - 1,
+						Version: version - 1,
+					},
+					{
+						EventID: scheduleID + 1,
+						Version: version + 1,
 					},
 				},
 			},
@@ -455,7 +458,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 	s.Nil(err)
 }
 
-func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_IncomingVersionSLarger_ReturnRetryError() {
+func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_IncomingVersionLarger_ReturnRetryError() {
 	domainName := "some random domain name"
 	domainID := testDomainID
 	workflowID := "some random workflow ID"
@@ -684,6 +687,84 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 					{
 						EventID: scheduleID,
 						Version: version,
+					},
+				},
+			},
+		},
+	}
+	s.mockMutableState.EXPECT().GetVersionHistories().Return(localVersionHistories).AnyTimes()
+	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(nil, false).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
+		cache.NewGlobalDomainCacheEntryForTest(
+			&persistence.DomainInfo{ID: domainID, Name: domainName},
+			&persistence.DomainConfig{Retention: 1},
+			&persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					{ClusterName: cluster.TestCurrentClusterName},
+					{ClusterName: cluster.TestAlternativeClusterName},
+				},
+			},
+			lastWriteVersion,
+			nil,
+		), nil,
+	).AnyTimes()
+
+	err = s.nDCActivityReplicator.SyncActivity(ctx.Background(), request)
+	s.Nil(err)
+}
+
+func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersionHistoryWin() {
+	domainName := "some random domain name"
+	domainID := testDomainID
+	workflowID := "some random workflow ID"
+	runID := uuid.New()
+	scheduleID := int64(99)
+	version := int64(100)
+
+	lastWriteVersion := version - 100
+	incomingVersionHistory := persistence.VersionHistory{
+		BranchToken: []byte{},
+		Items: []*persistence.VersionHistoryItem{
+			{
+				EventID: scheduleID,
+				Version: version,
+			},
+		},
+	}
+	context, release, err := s.historyCache.getOrCreateWorkflowExecutionForBackground(
+		domainID,
+		shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+	)
+	s.Nil(err)
+
+	context.(*workflowExecutionContextImpl).mutableState = s.mockMutableState
+	release(nil)
+	request := &h.SyncActivityRequest{
+		DomainId:       common.StringPtr(domainID),
+		WorkflowId:     common.StringPtr(workflowID),
+		RunId:          common.StringPtr(runID),
+		Version:        common.Int64Ptr(version),
+		ScheduledId:    common.Int64Ptr(scheduleID),
+		VersionHistory: incomingVersionHistory.ToThrift(),
+	}
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).Times(1)
+	localVersionHistories := &persistence.VersionHistories{
+		CurrentVersionHistoryIndex: 0,
+		Histories: []*persistence.VersionHistory{
+			{
+				BranchToken: []byte{},
+				Items: []*persistence.VersionHistoryItem{
+					{
+						EventID: scheduleID,
+						Version: version,
+					},
+					{
+						EventID: scheduleID + 1,
+						Version: version + 1,
 					},
 				},
 			},
