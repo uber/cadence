@@ -23,6 +23,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -139,6 +140,9 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 	if len(request.GetSearchAttribute()) == 0 {
 		return &gen.BadRequestError{Message: "SearchAttributes are not provided"}
 	}
+	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
+		return &gen.BadRequestError{Message: fmt.Sprintf("Config related to advancedVisibilityStore is not found")}
+	}
 
 	searchAttr := request.GetSearchAttribute()
 	currentValidAttr, _ := adh.params.DynamicConfig.GetMapValue(
@@ -180,6 +184,13 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 		}
 	}
 
+	return nil
+}
+
+func (adh *AdminHandler) validateConfigForAdvanceVisibility() error {
+	if adh.params.ESConfig == nil || adh.params.ESClient == nil {
+		return errors.New("ES related config not found")
+	}
 	return nil
 }
 
