@@ -202,19 +202,16 @@ func (r *nDCActivityReplicatorImpl) shouldApplySyncActivity(
 		if err != nil {
 			return false, err
 		}
+
 		lastLocalItem, err := currentVersionHistory.GetLastItem()
 		if err != nil {
 			return false, err
 		}
+
 		incomingVersionHistory := persistence.NewVersionHistoryFromThrift(incomingRawVersionHistory)
 		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
 		if err != nil {
 			return false, err
-		}
-		if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
-			// the incoming branch will lose to the local branch
-			// discard this task
-			return false, nil
 		}
 
 		lcaItem, err := currentVersionHistory.FindLCAItem(incomingVersionHistory)
@@ -222,43 +219,46 @@ func (r *nDCActivityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		// version history matches and activity schedule ID appears in local version history
-		if currentVersionHistory.IsLCAAppendable(lcaItem) && scheduleID <= lastLocalItem.GetEventID() {
-			return true, nil
-		}
-
-		// incoming branch will win the local branch
-		// resend the events with higher version
-		if scheduleID+1 <= lastIncomingItem.GetEventID() {
-			// according to the incoming version history, we can calculate the
-			// the end event ID & version to fetch from remote
-			endEventID := scheduleID + 1
-			endEventVersion, err := incomingVersionHistory.GetEventVersion(scheduleID + 1)
-			if err != nil {
-				return false, err
+		// case 1: lcaItem is the last item of local version history
+		// indicates incoming version >= local version
+		// do resend if local version history doesn't have schedule event
+		if currentVersionHistory.IsLCAAppendable(lcaItem) {
+			if scheduleID > lastLocalItem.GetEventID() {
+				return false, newNDCRetryTaskErrorWithHint(
+					domainID,
+					workflowID,
+					runID,
+					common.Int64Ptr(lcaItem.GetEventID()),
+					common.Int64Ptr(lcaItem.GetVersion()),
+					nil,
+					nil,
+				)
 			}
-			return false, newNDCRetryTaskErrorWithHint(
-				domainID,
-				workflowID,
-				runID,
-				common.Int64Ptr(lcaItem.GetEventID()),
-				common.Int64Ptr(lcaItem.GetVersion()),
-				common.Int64Ptr(endEventID),
-				common.Int64Ptr(endEventVersion),
-			)
-		}
+		} else if !incomingVersionHistory.IsLCAAppendable(lcaItem) {
+			// case 2: lcaItem is not the last item of incoming version history nor local version history
+			// indicates incoming version <> local version
 
-		// activity schedule event is the last event
-		// use nil event ID & version indicating re-send to end
-		return false, newNDCRetryTaskErrorWithHint(
-			domainID,
-			workflowID,
-			runID,
-			common.Int64Ptr(lcaItem.GetEventID()),
-			common.Int64Ptr(lcaItem.GetVersion()),
-			nil,
-			nil,
-		)
+			if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
+				// the incoming branch will lose to the local branch
+				// discard this task
+				return false, nil
+			} else if lastIncomingItem.GetVersion() > lastLocalItem.GetVersion() {
+				// the incoming branch will lose to the local branch
+				// discard this task
+				return false, newNDCRetryTaskErrorWithHint(
+					domainID,
+					workflowID,
+					runID,
+					common.Int64Ptr(lcaItem.GetEventID()),
+					common.Int64Ptr(lcaItem.GetVersion()),
+					nil,
+					nil,
+				)
+			}
+		}
+		// case 3: lcaItem is the last item of the incoming version history
+		// indicates the incoming version <= local version
+		// local version history must contain the schedule event
 	} else if mutableState.GetReplicationState() != nil {
 		// TODO when 2DC is deprecated, remove this block
 		if !mutableState.IsWorkflowExecutionRunning() {
