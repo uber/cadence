@@ -558,7 +558,7 @@ Update_History_Loop:
 		// if no decision task was created then it means no buffered events came in during this decision task's handling
 		// this means all buffered queries can be dispatched directly through matching at this point
 		if !createNewDecisionTask {
-			buffered := qr.getBufferedSnapshot()
+			buffered := qr.getBufferedIDs()
 			for _, id := range buffered {
 				if err := qr.unblockQuery(id); err != nil {
 					handler.logger.Error("failed to unblock query", tag.QueryID(id), tag.Error(err))
@@ -635,7 +635,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	response.BranchToken = currentBranchToken
 
 	qr := msBuilder.GetQueryRegistry()
-	buffered := qr.getBufferedSnapshot()
+	buffered := qr.getBufferedIDs()
 	queries := make(map[string]*workflow.WorkflowQuery)
 	for _, id := range buffered {
 		state, err := qr.getQueryInternalState(id)

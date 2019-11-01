@@ -121,13 +121,13 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 }
 
 func (s *QueryRegistrySuite) assertHasQueries(qr queryRegistry, buffered, completed, unblocked bool) {
-	s.Equal(buffered, qr.hasBuffered())
-	s.Equal(completed, qr.hasCompleted())
-	s.Equal(unblocked, qr.hasUnblocked())
+	s.Equal(buffered, qr.hasBufferedQuery())
+	s.Equal(completed, qr.hasCompletedQuery())
+	s.Equal(unblocked, qr.hasUnblockedQuery())
 }
 
 func (s *QueryRegistrySuite) assertQuerySizes(qr queryRegistry, buffered, completed, unblocked int) {
-	s.Len(qr.getBufferedSnapshot(), buffered)
-	s.Len(qr.getCompletedSnapshot(), completed)
-	s.Len(qr.getUnblockedSnapshot(), unblocked)
+	s.Len(qr.getBufferedIDs(), buffered)
+	s.Len(qr.getCompletedIDs(), completed)
+	s.Len(qr.getUnblockedIDs(), unblocked)
 }

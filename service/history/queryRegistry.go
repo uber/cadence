@@ -34,14 +34,12 @@ var (
 
 type (
 	queryRegistry interface {
-		hasBuffered() bool
-		getBufferedSnapshot() []string
-
-		hasCompleted() bool
-		getCompletedSnapshot() []string
-
-		hasUnblocked() bool
-		getUnblockedSnapshot() []string
+		hasBufferedQuery() bool
+		getBufferedIDs() []string
+		hasCompletedQuery() bool
+		getCompletedIDs() []string
+		hasUnblockedQuery() bool
+		getUnblockedIDs() []string
 
 		getQueryInternalState(string) (*queryInternalState, error)
 		getQueryTermCh(string) (<-chan struct{}, error)
@@ -197,7 +195,7 @@ func (r *queryRegistryImpl) getQuery(id string) (query, error) {
 	return nil, errQueryNotExists
 }
 
-func getIDs(m map[string]query) []string {
+func (r *queryRegistryImpl) getIDs(m map[string]query) []string {
 	result := make([]string, len(m), len(m))
 	index := 0
 	for id := range m {

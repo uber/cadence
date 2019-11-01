@@ -691,13 +691,13 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	builder := s.getBuilder(testDomainID, execution)
 	s.NotNil(builder)
 	qr := builder.GetQueryRegistry()
-	s.True(qr.hasBuffered())
-	s.False(qr.hasCompleted())
-	s.False(qr.hasUnblocked())
+	s.True(qr.hasBufferedQuery())
+	s.False(qr.hasCompletedQuery())
+	s.False(qr.hasUnblockedQuery())
 	wg.Wait()
-	s.False(qr.hasBuffered())
-	s.False(qr.hasCompleted())
-	s.False(qr.hasUnblocked())
+	s.False(qr.hasBufferedQuery())
+	s.False(qr.hasCompletedQuery())
+	s.False(qr.hasUnblockedQuery())
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
@@ -724,7 +724,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 		builder := s.getBuilder(testDomainID, execution)
 		s.NotNil(builder)
 		qr := builder.GetQueryRegistry()
-		buffered := qr.getBufferedSnapshot()
+		buffered := qr.getBufferedIDs()
 		for _, id := range buffered {
 			resultType := workflow.QueryResultTypeAnswered
 			err := qr.completeQuery(id, &workflow.WorkflowQueryResult{
@@ -755,8 +755,8 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 	builder := s.getBuilder(testDomainID, execution)
 	s.NotNil(builder)
 	qr := builder.GetQueryRegistry()
-	s.False(qr.hasBuffered())
-	s.False(qr.hasCompleted())
+	s.False(qr.hasBufferedQuery())
+	s.False(qr.hasCompletedQuery())
 	waitGroup.Wait()
 }
 
@@ -785,7 +785,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 		builder := s.getBuilder(testDomainID, execution)
 		s.NotNil(builder)
 		qr := builder.GetQueryRegistry()
-		buffered := qr.getBufferedSnapshot()
+		buffered := qr.getBufferedIDs()
 		for _, id := range buffered {
 			s.NoError(qr.unblockQuery(id))
 			state, err := qr.getQueryInternalState(id)
@@ -811,9 +811,9 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 	builder := s.getBuilder(testDomainID, execution)
 	s.NotNil(builder)
 	qr := builder.GetQueryRegistry()
-	s.False(qr.hasBuffered())
-	s.False(qr.hasCompleted())
-	s.False(qr.hasUnblocked())
+	s.False(qr.hasBufferedQuery())
+	s.False(qr.hasCompletedQuery())
+	s.False(qr.hasUnblockedQuery())
 	waitGroup.Wait()
 }
 
@@ -4211,7 +4211,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.Equal(int64(8), executionBuilder.GetExecutionInfo().LastProcessedEvent)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
 	s.False(executionBuilder.HasPendingDecision())
-	s.Len(qr.getCompletedSnapshot(), 2)
+	s.Len(qr.getCompletedIDs(), 2)
 	completed1, err := qr.getQueryInternalState(id1)
 	s.NoError(err)
 	s.True(result1.Equals(completed1.queryResult))
@@ -4220,8 +4220,8 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.NoError(err)
 	s.True(result2.Equals(completed2.queryResult))
 	s.Equal(queryStateCompleted, completed2.state)
-	s.Len(qr.getBufferedSnapshot(), 0)
-	s.Len(qr.getUnblockedSnapshot(), 1)
+	s.Len(qr.getBufferedIDs(), 0)
+	s.Len(qr.getUnblockedIDs(), 1)
 	unblocked1, err := qr.getQueryInternalState(id3)
 	s.NoError(err)
 	s.Nil(unblocked1.queryResult)
