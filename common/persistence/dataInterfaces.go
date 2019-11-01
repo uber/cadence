@@ -642,6 +642,7 @@ type (
 		StartedID                int64
 		StartedEvent             *workflow.HistoryEvent
 		StartedTime              time.Time
+		DomainID                 string
 		ActivityID               string
 		RequestID                string
 		Details                  []byte
@@ -655,7 +656,6 @@ type (
 		TimerTaskStatus          int32
 		// For retry
 		Attempt            int32
-		DomainID           string
 		StartedIdentity    string
 		TaskList           string
 		HasRetryPolicy     bool
