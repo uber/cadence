@@ -141,7 +141,7 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 		return &gen.BadRequestError{Message: "SearchAttributes are not provided"}
 	}
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		return &gen.BadRequestError{Message: fmt.Sprintf("Config related to advancedVisibilityStore is not found")}
+		return &gen.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}
 	}
 
 	searchAttr := request.GetSearchAttribute()
