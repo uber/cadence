@@ -149,7 +149,7 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
 	for k, v := range searchAttr {
 		if definition.IsSystemIndexedKey(k) {
-			return &gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserverd by system", k)}
+			return &gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", k)}
 		}
 		if _, exist := currentValidAttr[k]; exist {
 			return &gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelist", k)}

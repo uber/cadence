@@ -471,7 +471,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"CustomKeywordField": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "Config related to advancedVisibilityStore is not found"},
+			Expected: &shared.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"},
 		},
 	}
 	for _, testCase := range testCases1 {
@@ -500,16 +500,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"WorkflowID": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "Key [WorkflowID] is reserverd by system"},
-		},
-		{
-			Name: "key already whitelisted",
-			Request: &admin.AddSearchAttributeRequest{
-				SearchAttribute: map[string]shared.IndexedValueType{
-					"testkey": 1,
-				},
-			},
-			Expected: &shared.BadRequestError{Message: "Key [testkey] is already whitelist"},
+			Expected: &shared.BadRequestError{Message: "Key [WorkflowID] is reserved by system"},
 		},
 		{
 			Name: "key already whitelisted",
