@@ -219,12 +219,11 @@ func (r *nDCActivityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		if currentVersionHistory.IsLCAAppendable(lcaItem) {
-			// case 1: lcaItem is the last item of local version history
-			// indicates incoming version >= local version
-			// do resend if local version history doesn't have schedule event
-			if scheduleID > lastLocalItem.GetEventID() {
-				// get event from the lca item to the schedule event
+		if currentVersionHistory.IsLCAAppendable(lcaItem) || incomingVersionHistory.IsLCAAppendable(lcaItem) {
+			// case 1: local version history is superset of incoming version history
+			// or incoming version history is superset of local version history
+			if scheduleID > lcaItem.GetEventID() {
+				// get event from the incoming cluster
 				var endEventID *int64
 				var endEventVersion *int64
 				if scheduleID < lastIncomingItem.GetEventID() {
@@ -247,15 +246,10 @@ func (r *nDCActivityReplicatorImpl) shouldApplySyncActivity(
 					endEventVersion,
 				)
 			}
-		} else if incomingVersionHistory.IsLCAAppendable(lcaItem) {
-			// case 2: lcaItem is the last item of the incoming version history
-			// indicates the incoming version <= local version
-			// local version history must contain the schedule event
-			return true, nil
 		} else {
-			// case 3: lcaItem is not the last item of incoming version history nor local version history
+			// case 2: lcaItem is not the last item of incoming version history nor local version history
 			// indicates incoming version <> local version
-			if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() && scheduleID > lcaItem.GetEventID() {
+			if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
 				// the incoming branch will lose to the local branch
 				// discard this task if the schedule event is on the incoming branch
 				return false, nil
