@@ -405,12 +405,15 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(
 	}
 	defer func() { release(retError) }()
 
-	msBuilder, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
-	if err != nil || msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
+	mutableState, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
+	if err != nil {
 		return err
 	}
+	if mutableState == nil || mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
 
-	lastWriteVersion, err := msBuilder.GetLastWriteVersion()
+	lastWriteVersion, err := mutableState.GetLastWriteVersion()
 	if err != nil {
 		return err
 	}
@@ -434,11 +437,11 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(
 	// TODO: @ycyang once archival backfill is in place cluster:paused && domain:enabled should be a nop rather than a delete
 	if archiveHistory || archiveVisibility {
 		t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupArchiveCount)
-		return t.archiveWorkflow(task, context, msBuilder, domainCacheEntry, archiveHistory, archiveVisibility)
+		return t.archiveWorkflow(task, context, mutableState, domainCacheEntry, archiveHistory, archiveVisibility)
 	}
 
 	t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteCount)
-	return t.deleteWorkflow(task, context, msBuilder)
+	return t.deleteWorkflow(task, context, mutableState)
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflow(
