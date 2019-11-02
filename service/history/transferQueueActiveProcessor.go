@@ -926,7 +926,7 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(
 		return err
 	}
 	if currentMutableState == nil {
-		return err
+		return nil
 	}
 
 	logger := t.logger.WithTags(
