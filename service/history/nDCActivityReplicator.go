@@ -219,42 +219,33 @@ func (r *nDCActivityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		if currentVersionHistory.IsLCAAppendable(lcaItem) || incomingVersionHistory.IsLCAAppendable(lcaItem) {
-			// case 1: local version history is superset of incoming version history
-			// or incoming version history is superset of local version history
-			if scheduleID > lcaItem.GetEventID() {
-				// get event from the incoming cluster
-				var endEventID *int64
-				var endEventVersion *int64
-				if scheduleID < lastIncomingItem.GetEventID() {
-					// resend is exclusive-exclusive. Get the last event to be the schedule event
-					endEventID = common.Int64Ptr(scheduleID + 1)
-					endVersion, err := incomingVersionHistory.GetEventVersion(scheduleID + 1)
-					if err != nil {
-						return false, err
-					}
-					endEventVersion = common.Int64Ptr(endVersion)
-				}
+		// case 1: local version history is superset of incoming version history
+		// or incoming version history is superset of local version history
+		// resend the missing event if local version history doesn't have the schedule event
 
+		// case 2: local version history and incoming version history diverged
+		// case 2-1: local version history is the dominator and discard the incoming event
+		// case 2-2: incoming version history is the dominator and resend the missing incoming events
+		if currentVersionHistory.IsLCAAppendable(lcaItem) || incomingVersionHistory.IsLCAAppendable(lcaItem) {
+			// case 1
+			if scheduleID > lcaItem.GetEventID() {
 				return false, newNDCRetryTaskErrorWithHint(
 					domainID,
 					workflowID,
 					runID,
 					common.Int64Ptr(lcaItem.GetEventID()),
 					common.Int64Ptr(lcaItem.GetVersion()),
-					endEventID,
-					endEventVersion,
+					nil,
+					nil,
 				)
 			}
 		} else {
-			// case 2: lcaItem is not the last item of incoming version history nor local version history
-			// indicates incoming version <> local version
+			// case 2
 			if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
-				// the incoming branch will lose to the local branch
-				// discard this task if the schedule event is on the incoming branch
+				// case 2-1
 				return false, nil
 			} else if lastIncomingItem.GetVersion() > lastLocalItem.GetVersion() {
-				// the incoming branch will dominate the local branch
+				// case 2-2
 				return false, newNDCRetryTaskErrorWithHint(
 					domainID,
 					workflowID,
