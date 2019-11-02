@@ -1008,28 +1008,19 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(
 		}
 	}
 
-	resp, err := t.historyService.resetor.ResetWorkflowExecution(ctx.Background(), &workflow.ResetWorkflowExecutionRequest{
-		Domain:            common.StringPtr(domainEntry.GetInfo().Name),
-		WorkflowExecution: &baseExecution,
-		Reason: common.StringPtr(
-			fmt.Sprintf("auto-reset reason:%v, binaryChecksum:%v ", reason, resetPoint.GetBinaryChecksum()),
-		),
-		DecisionFinishEventId: common.Int64Ptr(resetPoint.GetFirstDecisionCompletedId()),
-		RequestId:             common.StringPtr(uuid.New()),
-	}, baseContext, baseMutableState, currentContext, currentMutableState)
-	if err != nil {
-		if _, ok := err.(*workflow.BadRequestError); ok {
-			// This means the reset point is corrupted and not retry able.
-			// There must be a bug in our system that we must fix.(for example, history is not the same in active/passive)
-			t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.AutoResetPointCorruptionCounter)
-			logger.Error("Auto-Reset workflow failed and not retryable. The reset point is corrupted.", tag.Error(err))
-			return nil
-		}
-		// log this error and retry
-		logger.Error("Auto-Reset workflow failed", tag.Error(err))
+	if err := t.resetWorkflowWithRetry(
+		task,
+		domainEntry.GetInfo().Name,
+		reason,
+		resetPoint,
+		baseContext,
+		baseMutableState,
+		currentContext,
+		currentMutableState,
+		logger,
+	); err != nil {
 		return err
 	}
-	logger.Info("Auto-Reset workflow finished", tag.WorkflowResetNewRunID(resp.GetRunId()))
 	return nil
 }
 
@@ -1433,6 +1424,103 @@ func (t *transferQueueActiveProcessorImpl) startWorkflowWithRetry(
 		return "", err
 	}
 	return response.GetRunId(), nil
+}
+
+func (t *transferQueueActiveProcessorImpl) resetWorkflowWithRetry(
+	task *persistence.TransferTaskInfo,
+	domain string,
+	reason string,
+	resetPoint *workflow.ResetPointInfo,
+	baseContext workflowExecutionContext,
+	baseMutableState mutableState,
+	currentContext workflowExecutionContext,
+	currentMutableState mutableState,
+	logger log.Logger,
+) error {
+
+	var err error
+	ctx := ctx.Background()
+	domainID := task.DomainID
+	workflowID := task.WorkflowID
+	baseRunID := baseMutableState.GetExecutionInfo().RunID
+
+	// TODO when NDC is rolled out, remove this block
+	if baseMutableState.GetVersionHistories() == nil {
+		_, err = t.historyService.resetor.ResetWorkflowExecution(
+			ctx,
+			&workflow.ResetWorkflowExecutionRequest{
+				Domain: common.StringPtr(domain),
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(workflowID),
+					RunId:      common.StringPtr(baseRunID),
+				},
+				Reason: common.StringPtr(
+					fmt.Sprintf("auto-reset reason:%v, binaryChecksum:%v ", reason, resetPoint.GetBinaryChecksum()),
+				),
+				DecisionFinishEventId: common.Int64Ptr(resetPoint.GetFirstDecisionCompletedId()),
+				RequestId:             common.StringPtr(uuid.New()),
+			},
+			baseContext,
+			baseMutableState,
+			currentContext,
+			currentMutableState,
+		)
+	} else {
+		resetRunID := uuid.New()
+		baseRunID := baseMutableState.GetExecutionInfo().RunID
+		baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
+		baseVersionHistories := baseMutableState.GetVersionHistories()
+		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return err
+		}
+		baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
+		if err != nil {
+			return err
+		}
+		baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
+		baseNextEventID := baseMutableState.GetNextEventID()
+
+		err = t.historyService.workflowResetter.resetWorkflow(
+			ctx,
+			domainID,
+			workflowID,
+			baseRunID,
+			baseCurrentBranchToken,
+			baseRebuildLastEventID,
+			baseRebuildLastEventVersion,
+			baseNextEventID,
+			resetRunID,
+			uuid.New(),
+			newNDCWorkflow(
+				ctx,
+				t.domainCache,
+				t.shard.GetClusterMetadata(),
+				currentContext,
+				currentMutableState,
+				noopReleaseFn, // this is fine since caller will defer on release
+			),
+			reason,
+			nil,
+		)
+	}
+
+	switch err.(type) {
+	case nil:
+		return nil
+
+	case *workflow.BadRequestError:
+		// This means the reset point is corrupted and not retry able.
+		// There must be a bug in our system that we must fix.(for example, history is not the same in active/passive)
+		t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.AutoResetPointCorruptionCounter)
+		logger.Error("Auto-Reset workflow failed and not retryable. The reset point is corrupted.", tag.Error(err))
+		return nil
+
+	default:
+		// log this error and retry
+		logger.Error("Auto-Reset workflow failed", tag.Error(err))
+		return err
+	}
 }
 
 func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(
