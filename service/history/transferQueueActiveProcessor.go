@@ -23,6 +23,7 @@ package history
 import (
 	ctx "context"
 	"fmt"
+	"time"
 
 	"github.com/pborman/uuid"
 
@@ -41,6 +42,8 @@ import (
 )
 
 const identityHistoryService = "history-service"
+
+const transferActiveTaskDefaultTimeout = 30 * time.Second
 
 type (
 	transferQueueActiveProcessorImpl struct {
@@ -511,7 +514,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 		return err
 	}
 
-	return t.processParentClosePolicy(domainName, task.DomainID, children)
+	return t.processParentClosePolicy(task.DomainID, domainName, children)
 }
 
 func (t *transferQueueActiveProcessorImpl) processCancelExecution(
@@ -1316,8 +1319,10 @@ func (t *transferQueueActiveProcessorImpl) requestCancelExternalExecutionWithRet
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
 
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
 	op := func() error {
-		return t.historyClient.RequestCancelWorkflowExecution(nil, request)
+		return t.historyClient.RequestCancelWorkflowExecution(ctx, request)
 	}
 
 	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
@@ -1359,8 +1364,10 @@ func (t *transferQueueActiveProcessorImpl) signalExternalExecutionWithRetry(
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
 
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
 	op := func() error {
-		return t.historyClient.SignalWorkflowExecution(nil, request)
+		return t.historyClient.SignalWorkflowExecution(ctx, request)
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
@@ -1412,10 +1419,12 @@ func (t *transferQueueActiveProcessorImpl) startWorkflowWithRetry(
 		),
 	}
 
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
 	var response *workflow.StartWorkflowExecutionResponse
 	var err error
 	op := func() error {
-		response, err = t.historyClient.StartWorkflowExecution(nil, request)
+		response, err = t.historyClient.StartWorkflowExecution(ctx, request)
 		return err
 	}
 
@@ -1439,7 +1448,9 @@ func (t *transferQueueActiveProcessorImpl) resetWorkflow(
 ) error {
 
 	var err error
-	ctx := ctx.Background()
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
+
 	domainID := task.DomainID
 	workflowID := task.WorkflowID
 	baseRunID := baseMutableState.GetExecutionInfo().RunID
@@ -1524,76 +1535,47 @@ func (t *transferQueueActiveProcessorImpl) resetWorkflow(
 }
 
 func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(
+	domainID string,
 	domainName string,
-	domainUUID string,
-	children map[int64]*persistence.ChildExecutionInfo,
+	childInfos map[int64]*persistence.ChildExecutionInfo,
 ) error {
 
-	if len(children) == 0 {
+	if len(childInfos) == 0 {
 		return nil
 	}
 
 	scope := t.metricsClient.Scope(metrics.TransferActiveTaskCloseExecutionScope)
 
 	if t.shard.GetConfig().EnableParentClosePolicyWorker() &&
-		len(children) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
+		len(childInfos) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
 
-		executions := make([]parentclosepolicy.RequestDetail, 0, len(children))
-		for _, child := range children {
-			if child.ParentClosePolicy == workflow.ParentClosePolicyAbandon {
+		executions := make([]parentclosepolicy.RequestDetail, 0, len(childInfos))
+		for _, childInfo := range childInfos {
+			if childInfo.ParentClosePolicy == workflow.ParentClosePolicyAbandon {
 				continue
 			}
 
 			executions = append(executions, parentclosepolicy.RequestDetail{
-				WorkflowID: child.StartedWorkflowID,
-				RunID:      child.StartedRunID,
-				Policy:     child.ParentClosePolicy,
+				WorkflowID: childInfo.StartedWorkflowID,
+				RunID:      childInfo.StartedRunID,
+				Policy:     childInfo.ParentClosePolicy,
 			})
 		}
 
 		request := parentclosepolicy.Request{
+			DomainUUID: domainID,
 			DomainName: domainName,
-			DomainUUID: domainUUID,
 			Executions: executions,
 		}
 		return t.parentClosePolicyClient.SendParentClosePolicyRequest(request)
 	}
 
-	var err error
-	for _, child := range children {
-		switch child.ParentClosePolicy {
-		case workflow.ParentClosePolicyAbandon:
-			continue
-
-		case workflow.ParentClosePolicyTerminate:
-			err = t.historyClient.TerminateWorkflowExecution(nil, &h.TerminateWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(domainUUID),
-				TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
-					Domain: common.StringPtr(domainName),
-					WorkflowExecution: &workflow.WorkflowExecution{
-						WorkflowId: common.StringPtr(child.StartedWorkflowID),
-						RunId:      common.StringPtr(child.StartedRunID),
-					},
-					Reason:   common.StringPtr("by parent close policy"),
-					Identity: common.StringPtr(identityHistoryService),
-				},
-			})
-
-		case workflow.ParentClosePolicyRequestCancel:
-			err = t.historyClient.RequestCancelWorkflowExecution(nil, &h.RequestCancelWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(domainUUID),
-				CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-					Domain: common.StringPtr(domainName),
-					WorkflowExecution: &workflow.WorkflowExecution{
-						WorkflowId: common.StringPtr(child.StartedWorkflowID),
-						RunId:      common.StringPtr(child.StartedRunID),
-					},
-					Identity: common.StringPtr(identityHistoryService),
-				},
-			})
-		}
-
-		if err != nil {
+	for _, childInfo := range childInfos {
+		if err := t.applyParentClosePolicy(
+			domainID,
+			domainName,
+			childInfo,
+		); err != nil {
 			if _, ok := err.(*workflow.EntityNotExistsError); !ok {
 				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 				return err
@@ -1602,4 +1584,52 @@ func (t *transferQueueActiveProcessorImpl) processParentClosePolicy(
 		scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 	}
 	return nil
+}
+
+func (t *transferQueueActiveProcessorImpl) applyParentClosePolicy(
+	domainID string,
+	domainName string,
+	childInfo *persistence.ChildExecutionInfo,
+) error {
+
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
+
+	switch childInfo.ParentClosePolicy {
+	case workflow.ParentClosePolicyAbandon:
+		// noop
+		return nil
+
+	case workflow.ParentClosePolicyTerminate:
+		return t.historyClient.TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
+				Domain: common.StringPtr(domainName),
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(childInfo.StartedWorkflowID),
+					RunId:      common.StringPtr(childInfo.StartedRunID),
+				},
+				Reason:   common.StringPtr("by parent close policy"),
+				Identity: common.StringPtr(identityHistoryService),
+			},
+		})
+
+	case workflow.ParentClosePolicyRequestCancel:
+		return t.historyClient.RequestCancelWorkflowExecution(ctx, &h.RequestCancelWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+				Domain: common.StringPtr(domainName),
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(childInfo.StartedWorkflowID),
+					RunId:      common.StringPtr(childInfo.StartedRunID),
+				},
+				Identity: common.StringPtr(identityHistoryService),
+			},
+		})
+
+	default:
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("unknown parent close policy: %v", childInfo.ParentClosePolicy),
+		}
+	}
 }

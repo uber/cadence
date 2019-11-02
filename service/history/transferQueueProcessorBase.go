@@ -21,6 +21,7 @@
 package history
 
 import (
+	ctx "context"
 	"time"
 
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -129,11 +130,14 @@ func (t *transferQueueProcessorBase) pushActivity(
 	activityScheduleToStartTimeout int32,
 ) error {
 
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
+
 	if task.TaskType != persistence.TransferTaskTypeActivityTask {
 		t.logger.Fatal("Cannot process non activity task", tag.TaskType(task.GetTaskType()))
 	}
 
-	err := t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
+	err := t.matchingClient.AddActivityTask(ctx, &m.AddActivityTaskRequest{
 		DomainUUID:       common.StringPtr(task.TargetDomainID),
 		SourceDomainUUID: common.StringPtr(task.DomainID),
 		Execution: &workflow.WorkflowExecution{
@@ -154,11 +158,14 @@ func (t *transferQueueProcessorBase) pushDecision(
 	decisionScheduleToStartTimeout int32,
 ) error {
 
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
+
 	if task.TaskType != persistence.TransferTaskTypeDecisionTask {
 		t.logger.Fatal("Cannot process non decision task", tag.TaskType(task.GetTaskType()))
 	}
 
-	err := t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
+	err := t.matchingClient.AddDecisionTask(ctx, &m.AddDecisionTaskRequest{
 		DomainUUID: common.StringPtr(task.DomainID),
 		Execution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(task.WorkflowID),
