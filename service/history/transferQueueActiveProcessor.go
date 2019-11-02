@@ -489,7 +489,9 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
-		err = t.historyClient.RecordChildExecutionCompleted(nil, &h.RecordChildExecutionCompletedRequest{
+		ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+		defer cancel()
+		err = t.historyClient.RecordChildExecutionCompleted(ctx, &h.RecordChildExecutionCompletedRequest{
 			DomainUUID: common.StringPtr(parentDomainID),
 			WorkflowExecution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
@@ -699,15 +701,16 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(
 	// the rest of logic is making RPC call, which takes time.
 	release(retError)
 	// remove signalRequestedID from target workflow, after Signal detail is removed from source workflow
-	removeRequest := &h.RemoveSignalMutableStateRequest{
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
+	return t.historyClient.RemoveSignalMutableState(ctx, &h.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
 		WorkflowExecution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(task.TargetWorkflowID),
 			RunId:      common.StringPtr(task.TargetRunID),
 		},
 		RequestId: common.StringPtr(signalInfo.SignalRequestID),
-	}
-	return t.historyClient.RemoveSignalMutableState(nil, removeRequest)
+	})
 }
 
 func (t *transferQueueActiveProcessorImpl) processStartChildExecution(
@@ -1094,7 +1097,9 @@ func (t *transferQueueActiveProcessorImpl) createFirstDecisionTask(
 	execution *workflow.WorkflowExecution,
 ) error {
 
-	err := t.historyClient.ScheduleDecisionTask(nil, &h.ScheduleDecisionTaskRequest{
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), transferActiveTaskDefaultTimeout)
+	defer cancel()
+	err := t.historyClient.ScheduleDecisionTask(ctx, &h.ScheduleDecisionTaskRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: execution,
 		IsFirstDecision:   common.BoolPtr(true),
