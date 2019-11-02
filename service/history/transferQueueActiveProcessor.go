@@ -1008,7 +1008,7 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(
 		}
 	}
 
-	if err := t.resetWorkflowWithRetry(
+	if err := t.resetWorkflow(
 		task,
 		domainEntry.GetInfo().Name,
 		reason,
@@ -1426,7 +1426,7 @@ func (t *transferQueueActiveProcessorImpl) startWorkflowWithRetry(
 	return response.GetRunId(), nil
 }
 
-func (t *transferQueueActiveProcessorImpl) resetWorkflowWithRetry(
+func (t *transferQueueActiveProcessorImpl) resetWorkflow(
 	task *persistence.TransferTaskInfo,
 	domain string,
 	reason string,
