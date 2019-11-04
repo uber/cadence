@@ -48,29 +48,29 @@ func (s *QuerySuite) SetupTest() {
 
 func (s *QuerySuite) TestValidateTerminationState() {
 	testCases := []struct {
-		ts       *terminationState
+		ts        *queryTerminationState
 		expectErr bool
 	}{
 		{
-			ts:       nil,
+			ts:        nil,
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
 			},
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
-				queryResult: &shared.WorkflowQueryResult{},
-				failure: errors.New("err"),
+				queryResult:          &shared.WorkflowQueryResult{},
+				failure:              errors.New("err"),
 			},
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
 				queryResult: &shared.WorkflowQueryResult{
 					ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
@@ -79,7 +79,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
 				queryResult: &shared.WorkflowQueryResult{
 					ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
@@ -90,7 +90,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
 				queryResult: &shared.WorkflowQueryResult{
 					ResultType: common.QueryResultTypePtr(shared.QueryResultTypeFailed),
@@ -100,7 +100,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
 				queryResult: &shared.WorkflowQueryResult{
 					ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeFailed),
@@ -110,7 +110,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 			expectErr: false,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
 				queryResult: &shared.WorkflowQueryResult{
 					ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
@@ -120,42 +120,42 @@ func (s *QuerySuite) TestValidateTerminationState() {
 			expectErr: false,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeUnblocked,
-				queryResult: &shared.WorkflowQueryResult{},
+				queryResult:          &shared.WorkflowQueryResult{},
 			},
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeUnblocked,
-				failure: errors.New("err"),
+				failure:              errors.New("err"),
 			},
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeUnblocked,
 			},
 			expectErr: false,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeFailed,
 			},
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeFailed,
-				queryResult: &shared.WorkflowQueryResult{},
+				queryResult:          &shared.WorkflowQueryResult{},
 			},
 			expectErr: true,
 		},
 		{
-			ts: &terminationState{
+			ts: &queryTerminationState{
 				queryTerminationType: queryTerminationTypeFailed,
-				failure: errors.New("err"),
+				failure:              errors.New("err"),
 			},
 			expectErr: false,
 		},
@@ -172,32 +172,32 @@ func (s *QuerySuite) TestValidateTerminationState() {
 }
 
 func (s *QuerySuite) TestTerminationState_Failed() {
-	failedTerminationState := &terminationState{
+	failedTerminationState := &queryTerminationState{
 		queryTerminationType: queryTerminationTypeFailed,
-		failure: errors.New("err"),
+		failure:              errors.New("err"),
 	}
 	s.testSetTerminationState(failedTerminationState)
 }
 
 func (s *QuerySuite) TestTerminationState_Completed() {
-	answeredTerminationState := &terminationState{
+	answeredTerminationState := &queryTerminationState{
 		queryTerminationType: queryTerminationTypeCompleted,
 		queryResult: &shared.WorkflowQueryResult{
-			ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
-			Answer:       []byte{1, 2, 3},
+			ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+			Answer:     []byte{1, 2, 3},
 		},
 	}
 	s.testSetTerminationState(answeredTerminationState)
 }
 
 func (s *QuerySuite) TestTerminationState_Unblocked() {
-	unblockedTerminationState := &terminationState{
+	unblockedTerminationState := &queryTerminationState{
 		queryTerminationType: queryTerminationTypeUnblocked,
 	}
 	s.testSetTerminationState(unblockedTerminationState)
 }
 
-func (s *QuerySuite) testSetTerminationState(terminationState *terminationState) {
+func (s *QuerySuite) testSetTerminationState(terminationState *queryTerminationState) {
 	query := newQuery(nil)
 	ts, err := query.getTerminationState()
 	s.Equal(errQueryNotInTerminalState, err)
@@ -211,7 +211,7 @@ func (s *QuerySuite) testSetTerminationState(terminationState *terminationState)
 	s.assertTerminationStateEqual(terminationState, actualTerminationState)
 }
 
-func (s *QuerySuite) assertTerminationStateEqual(expected *terminationState, actual *terminationState) {
+func (s *QuerySuite) assertTerminationStateEqual(expected *queryTerminationState, actual *queryTerminationState) {
 	s.Equal(expected.queryTerminationType, actual.queryTerminationType)
 	if expected.failure != nil {
 		s.Equal(expected.failure.Error(), actual.failure.Error())

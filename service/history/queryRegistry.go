@@ -45,10 +45,10 @@ type (
 
 		getQueryTermCh(string) (<-chan struct{}, error)
 		getQueryInput(string) (*shared.WorkflowQuery, error)
-		getTerminationState(string) (*terminationState, error)
+		getTerminationState(string) (*queryTerminationState, error)
 
 		bufferQuery(queryInput *shared.WorkflowQuery) (string, <-chan struct{})
-		setTerminationState(string, *terminationState) error
+		setTerminationState(string, *queryTerminationState) error
 		removeQuery(id string)
 	}
 
@@ -58,7 +58,7 @@ type (
 		buffered  map[string]query
 		completed map[string]query
 		unblocked map[string]query
-		failed map[string]query
+		failed    map[string]query
 	}
 )
 
@@ -67,7 +67,7 @@ func newQueryRegistry() queryRegistry {
 		buffered:  make(map[string]query),
 		completed: make(map[string]query),
 		unblocked: make(map[string]query),
-		failed: make(map[string]query),
+		failed:    make(map[string]query),
 	}
 }
 
@@ -139,7 +139,7 @@ func (r *queryRegistryImpl) getQueryInput(id string) (*shared.WorkflowQuery, err
 	return q.getQueryInput(), nil
 }
 
-func (r *queryRegistryImpl) getTerminationState(id string) (*terminationState, error) {
+func (r *queryRegistryImpl) getTerminationState(id string) (*queryTerminationState, error) {
 	r.RLock()
 	defer r.RUnlock()
 	q, err := r.getQuery(id)
@@ -158,7 +158,7 @@ func (r *queryRegistryImpl) bufferQuery(queryInput *shared.WorkflowQuery) (strin
 	return id, q.getQueryTermCh()
 }
 
-func (r *queryRegistryImpl) setTerminationState(id string, terminationState *terminationState) error {
+func (r *queryRegistryImpl) setTerminationState(id string, terminationState *queryTerminationState) error {
 	r.Lock()
 	defer r.Unlock()
 	q, ok := r.buffered[id]

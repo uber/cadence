@@ -1582,6 +1582,7 @@ const (
 	DecisionTaskQueryLatency
 	CompleteQueryFailedCount
 	UnblockQueryFailedCount
+	FailQueryFailedCount
 	ConsistentQueryTimeoutCount
 
 	NumHistoryMetrics
@@ -1894,6 +1895,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionTaskQueryLatency:                          {metricName: "decision_task_query_latency", metricType: Timer},
 		CompleteQueryFailedCount:                          {metricName: "complete_query_failed", metricType: Counter},
 		UnblockQueryFailedCount:                           {metricName: "unblock_query_failed", metricType: Counter},
+		FailQueryFailedCount:                              {metricName: "fail_query_failed", metricType: Counter},
 		ConsistentQueryTimeoutCount:                       {metricName: "consistent_query_timeout", metricType: Counter},
 	},
 	Matching: {

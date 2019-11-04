@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -36,8 +37,8 @@ const (
 )
 
 var (
-	errTerminationStateInvalid   = &shared.InternalServiceError{Message: "query termination state invalid"}
-	errAlreadyInTerminalState = &shared.InternalServiceError{Message: "query already in terminal state"}
+	errTerminationStateInvalid = &shared.InternalServiceError{Message: "query termination state invalid"}
+	errAlreadyInTerminalState  = &shared.InternalServiceError{Message: "query already in terminal state"}
 	errQueryNotInTerminalState = &shared.InternalServiceError{Message: "query not in terminal state"}
 )
 
@@ -48,8 +49,8 @@ type (
 		getQueryID() string
 		getQueryTermCh() <-chan struct{}
 		getQueryInput() *shared.WorkflowQuery
-		getTerminationState() (*terminationState, error)
-		setTerminationState(*terminationState) error
+		getTerminationState() (*queryTerminationState, error)
+		setTerminationState(*queryTerminationState) error
 	}
 
 	queryImpl struct {
@@ -60,18 +61,18 @@ type (
 		terminationState atomic.Value
 	}
 
-	terminationState struct {
+	queryTerminationState struct {
 		queryTerminationType queryTerminationType
-		queryResult *shared.WorkflowQueryResult
-		failure     error
+		queryResult          *shared.WorkflowQueryResult
+		failure              error
 	}
 )
 
 func newQuery(queryInput *shared.WorkflowQuery) query {
 	return &queryImpl{
-		id:          uuid.New(),
-		queryInput:  queryInput,
-		termCh:      make(chan struct{}),
+		id:         uuid.New(),
+		queryInput: queryInput,
+		termCh:     make(chan struct{}),
 	}
 }
 
@@ -87,15 +88,15 @@ func (q *queryImpl) getQueryInput() *shared.WorkflowQuery {
 	return q.queryInput
 }
 
-func (q *queryImpl) getTerminationState() (*terminationState, error) {
+func (q *queryImpl) getTerminationState() (*queryTerminationState, error) {
 	ts := q.terminationState.Load()
 	if ts == nil {
 		return nil, errQueryNotInTerminalState
 	}
-	return ts.(*terminationState), nil
+	return ts.(*queryTerminationState), nil
 }
 
-func (q *queryImpl) setTerminationState(terminationState *terminationState) error {
+func (q *queryImpl) setTerminationState(terminationState *queryTerminationState) error {
 	if err := q.validateTerminationState(terminationState); err != nil {
 		return err
 	}
@@ -109,12 +110,12 @@ func (q *queryImpl) setTerminationState(terminationState *terminationState) erro
 }
 
 func (q *queryImpl) validateTerminationState(
-	terminationState *terminationState,
+	terminationState *queryTerminationState,
 ) error {
 	if terminationState == nil {
 		return errTerminationStateInvalid
 	}
-	switch 	terminationState.queryTerminationType {
+	switch terminationState.queryTerminationType {
 	case queryTerminationTypeCompleted:
 		if terminationState.queryResult == nil || terminationState.failure != nil {
 			return errTerminationStateInvalid

@@ -22,8 +22,13 @@ package client
 
 import (
 	"context"
-	"github.com/uber/cadence/.gen/go/shared"
 	"testing"
+
+	"go.uber.org/yarpc/api/encoding"
+	"go.uber.org/yarpc/api/transport"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -45,79 +50,65 @@ func (s *VersionCheckerSuite) SetupTest() {
 }
 
 func (s *VersionCheckerSuite) TestClientVersionSupported() {
-	testCases := []struct{
-		versionChecker VersionChecker
-		callContext context.Context
-		expectErr bool
+	testCases := []struct {
+		callContext              context.Context
+		enableClientVersionCheck bool
+		expectErr                bool
 	}{
 		{
-			versionChecker: NewVersionChecker(false),
-			expectErr: false,
+			enableClientVersionCheck: false,
+			expectErr:                false,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: context.Background(),
-			expectErr: false,
+			callContext:              context.Background(),
+			enableClientVersionCheck: true,
+			expectErr:                false,
 		},
 		{
-				versionChecker: NewVersionChecker(true),
-				callContext: s.constructCallContext("unknown-client", "0.0.0"),
-				expectErr: false,
+			callContext:              s.constructCallContext("unknown-client", "0.0.0"),
+			enableClientVersionCheck: true,
+			expectErr:                false,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(GoSDK, "malformed-version"),
-			expectErr: true,
+			callContext:              s.constructCallContext(GoSDK, "malformed-version"),
+			enableClientVersionCheck: true,
+			expectErr:                true,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(GoSDK, SupportedGoSDKVersion),
-			expectErr: false,
+			callContext:              s.constructCallContext(GoSDK, "999.999.999"),
+			enableClientVersionCheck: true,
+			expectErr:                true,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(JavaSDK, SupportedJavaSDKVersion),
-			expectErr: false,
+			callContext:              s.constructCallContext(JavaSDK, "999.999.999"),
+			enableClientVersionCheck: true,
+			expectErr:                true,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(CLI, SupportedCLIVersion),
-			expectErr: false,
+			callContext:              s.constructCallContext(CLI, "999.999.999"),
+			enableClientVersionCheck: true,
+			expectErr:                true,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(GoSDK, "999.999.999"),
-			expectErr: true,
+			callContext:              s.constructCallContext(GoSDK, "1.4.0"),
+			enableClientVersionCheck: true,
+			expectErr:                false,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(JavaSDK, "999.999.999"),
-			expectErr: true,
+			callContext:              s.constructCallContext(JavaSDK, "1.4.0"),
+			enableClientVersionCheck: true,
+			expectErr:                false,
 		},
 		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(CLI, "999.999.999"),
-			expectErr: true,
-		},
-		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(GoSDK, "1.4.0"),
-			expectErr: false,
-		},
-		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(JavaSDK, "1.4.0"),
-			expectErr: false,
-		},
-		{
-			versionChecker: NewVersionChecker(true),
-			callContext: s.constructCallContext(CLI, "1.4.0"),
-			expectErr: false,
+			callContext:              s.constructCallContext(CLI, "1.4.0"),
+			enableClientVersionCheck: true,
+			expectErr:                false,
 		},
 	}
 
 	for _, tc := range testCases {
-		err := tc.versionChecker.ClientVersionSupported(tc.callContext)
+		versionChecker := NewVersionChecker()
+		err := versionChecker.ClientSupported(tc.callContext, tc.enableClientVersionCheck)
 		if tc.expectErr {
 			s.Error(err)
 			s.IsType(&shared.ClientVersionNotSupportedError{}, err)
@@ -127,8 +118,138 @@ func (s *VersionCheckerSuite) TestClientVersionSupported() {
 	}
 }
 
-func (s *VersionCheckerSuite) constructCallContext(clientImpl string, featureVersion string) context.Context {
-	// TODO: this needs to be populated with yarpc headers
-	return context.Background()
+func (s *VersionCheckerSuite) TestSupportsStickyQuery() {
+	testCases := []struct {
+		clientImpl           string
+		clientFeatureVersion string
+		expectErr            bool
+	}{
+		{
+			clientImpl: "",
+			expectErr:  true,
+		},
+		{
+			clientImpl: GoSDK,
+			expectErr:  true,
+		},
+		{
+			clientImpl:           CLI,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "malformed-feature-version",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "1.0.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.0.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "0.9.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "0.9.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "2.0.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "2.0.0",
+			expectErr:            false,
+		},
+	}
 
+	for _, tc := range testCases {
+		vc := NewVersionChecker()
+		if tc.expectErr {
+			err := vc.SupportsStickyQuery(tc.clientImpl, tc.clientFeatureVersion)
+			s.Error(err)
+			s.IsType(&shared.ClientVersionNotSupportedError{}, err)
+		} else {
+			s.NoError(vc.SupportsStickyQuery(tc.clientImpl, tc.clientFeatureVersion))
+		}
+	}
+}
+
+func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
+	testCases := []struct {
+		clientImpl           string
+		clientFeatureVersion string
+		expectErr            bool
+	}{
+		{
+			clientImpl: "",
+			expectErr:  true,
+		},
+		{
+			clientImpl: GoSDK,
+			expectErr:  true,
+		},
+		{
+			clientImpl:           CLI,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "malformed-feature-version",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "1.4.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "2.0.0",
+			expectErr:            false,
+		},
+	}
+
+	for _, tc := range testCases {
+		vc := NewVersionChecker()
+		if tc.expectErr {
+			err := vc.SupportsConsistentQuery(tc.clientImpl, tc.clientFeatureVersion)
+			s.Error(err)
+			s.IsType(&shared.ClientVersionNotSupportedError{}, err)
+		} else {
+			s.NoError(vc.SupportsConsistentQuery(tc.clientImpl, tc.clientFeatureVersion))
+		}
+	}
+}
+
+func (s *VersionCheckerSuite) constructCallContext(clientImpl string, featureVersion string) context.Context {
+	ctx := context.Background()
+	ctx, call := encoding.NewInboundCall(ctx)
+	err := call.ReadFromRequest(&transport.Request{
+		Headers: transport.NewHeaders().With(common.ClientImplHeaderName, clientImpl).With(common.FeatureVersionHeaderName, featureVersion),
+	})
+	s.NoError(err)
+	return ctx
 }

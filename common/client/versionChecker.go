@@ -22,12 +22,12 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/go-version"
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"go.uber.org/yarpc"
 )
 
 const (
@@ -46,57 +46,57 @@ const (
 	SupportedCLIVersion = "<1.5.0"
 
 	// GoWorkerStickyQueryVersion indicates the minimum client version of go worker which supports StickyQuery
-	GoWorkerStickQueryVersion = ">=1.0.0"
+	GoWorkerStickyQueryVersion = ">=1.0.0"
 	// JavaWorkerStickyQueryVersion indicates the minimum client version of the java worker which supports StickyQuery
-	JavaWorkerStickQueryVersion = ">=1.0.0"
+	JavaWorkerStickyQueryVersion = ">=1.0.0"
 	// GoWorkerConsistentQueryVersion indicates the minimum client version of the go worker which supports ConsistentQuery
 	GoWorkerConsistentQueryVersion = ">=1.5.0"
 
-	stickyQueryVersion = "stick-query-version"
-	consistentQueryVersion = "consistent-query-version"
+	stickyQuery     = "sticky-query"
+	consistentQuery = "consistent-query"
 )
 
 type (
 	// VersionChecker is used to check client/server compatibility and client's capabilities
 	VersionChecker interface {
-		ClientVersionSupported(context.Context) error
+		ClientSupported(context.Context, bool) error
 
-		SupportsStickyQuery(context.Context) error
-		SupportsConsistentQuery(context.Context) error
+		SupportsStickyQuery(clientImpl string, clientFeatureVersion string) error
+		SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error
 	}
 
 	versionChecker struct {
-		featureVersions map[string]map[string]version.Constraints
-		supportedVersions map[string]version.Constraints
-		checkVersion bool
+		supportedFeatures map[string]map[string]version.Constraints
+		supportedClients  map[string]version.Constraints
 	}
 )
 
 // NewVersionChecker constructs a new VersionChecker
-func NewVersionChecker(checkVersion bool) VersionChecker {
-	requiredFeatureVersions := map[string]map[string]version.Constraints{
+func NewVersionChecker() VersionChecker {
+	supportedFeatures := map[string]map[string]version.Constraints{
 		GoSDK: {
-			stickyQueryVersion:     mustNewConstraint(GoWorkerStickQueryVersion),
-			consistentQueryVersion: mustNewConstraint(GoWorkerConsistentQueryVersion),
+			stickyQuery:     mustNewConstraint(GoWorkerStickyQueryVersion),
+			consistentQuery: mustNewConstraint(GoWorkerConsistentQueryVersion),
 		},
 		JavaSDK: {
-			stickyQueryVersion: mustNewConstraint(JavaWorkerStickQueryVersion),
+			stickyQuery: mustNewConstraint(JavaWorkerStickyQueryVersion),
 		},
 	}
-	supportedVersions := map[string]version.Constraints{
-		GoSDK: mustNewConstraint(SupportedGoSDKVersion),
+	supportedClients := map[string]version.Constraints{
+		GoSDK:   mustNewConstraint(SupportedGoSDKVersion),
 		JavaSDK: mustNewConstraint(SupportedJavaSDKVersion),
-		CLI: mustNewConstraint(SupportedCLIVersion),
+		CLI:     mustNewConstraint(SupportedCLIVersion),
 	}
 	return &versionChecker{
-		featureVersions: requiredFeatureVersions,
-		supportedVersions: supportedVersions,
-		checkVersion: checkVersion,
+		supportedFeatures: supportedFeatures,
+		supportedClients:  supportedClients,
 	}
 }
 
-func (vc *versionChecker) ClientVersionSupported(ctx context.Context) error {
-	if !vc.checkVersion {
+// ClientSupported returns an error if client is unsupported, nil otherwise.
+// In case client version lookup fails assume the client is supported.
+func (vc *versionChecker) ClientSupported(ctx context.Context, enableClientVersionCheck bool) error {
+	if !enableClientVersionCheck {
 		return nil
 	}
 
@@ -107,52 +107,50 @@ func (vc *versionChecker) ClientVersionSupported(ctx context.Context) error {
 	if clientFeatureVersion == "" {
 		return nil
 	}
-	versionSupported, ok := vc.supportedVersions[clientImpl]
+	supportedVersions, ok := vc.supportedClients[clientImpl]
 	if !ok {
 		return nil
 	}
-	clientVersion, err := version.NewVersion(clientFeatureVersion)
-	if clientFeatureVersion == "malformed-version" {
-		fmt.Println(err)
-		fmt.Println(clientVersion)
-	}
+	version, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: versionSupported.String()}
+		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
-	if !versionSupported.Check(clientVersion) {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: versionSupported.String()}
+	if !supportedVersions.Check(version) {
+		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
 }
 
-// SupportsStickyQuery returns error if sticky query is not supported otherwise nil
-func (vc *versionChecker) SupportsStickyQuery(ctx context.Context) error {
-	return vc.checkFeature(ctx, stickyQueryVersion)
+// SupportsStickyQuery returns error if sticky query is not supported otherwise nil.
+// In case client version lookup fails assume the client does not support feature.
+func (vc *versionChecker) SupportsStickyQuery(clientImpl string, clientFeatureVersion string) error {
+	return vc.featureSupported(clientImpl, clientFeatureVersion, stickyQuery)
 }
 
-// SupportConsistentQuery returns error if consistent query is not supported otherwise nil
-func (vc *versionChecker) SupportsConsistentQuery(ctx context.Context) error {
-	return vc.checkFeature(ctx, consistentQueryVersion)
+// SupportConsistentQuery returns error if consistent query is not supported otherwise nil.
+// In case client version lookup fails assume the client does not support feature.
+func (vc *versionChecker) SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error {
+	return vc.featureSupported(clientImpl, clientFeatureVersion, consistentQuery)
 }
 
-func (vc *versionChecker) checkFeature(ctx context.Context, feature string) error {
-	call := yarpc.CallFromContext(ctx)
-	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
-	clientImpl := call.Header(common.ClientImplHeaderName)
-
-	if clientFeatureVersion == "" || clientImpl == "" {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl}
+func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersion string, feature string) error {
+	if clientImpl == "" || clientFeatureVersion == "" {
+		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
-	versionSupported, ok := vc.featureVersions[clientImpl][feature]
+	implMap, ok := vc.supportedFeatures[clientImpl]
 	if !ok {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl}
+		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
-	workerVersion, err := version.NewVersion(clientFeatureVersion)
+	supportedVersions, ok := implMap[feature]
+	if !ok {
+		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+	}
+	v, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: versionSupported.String()}
+		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
-	if !versionSupported.Check(workerVersion) {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: versionSupported.String()}
+	if !supportedVersions.Check(v) {
+		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
 }

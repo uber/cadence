@@ -171,8 +171,6 @@ var (
 	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "exceeded workflow execution limit for signal events"}
 	// ErrEventsAterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
 	ErrEventsAterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
-	// ErrQueryTimeout is the error indicating query timed out before being answered
-	ErrQueryTimeout = errors.New("query timed out")
 	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
 	ErrQueryEnteredInvalidState = &workflow.InternalServiceError{Message: "query entered invalid state, this should be impossible"}
 
@@ -865,8 +863,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		DomainUUID:   common.StringPtr(domainID),
 		QueryRequest: queryRequest,
 	}
-	clientFeature := client.NewFeatureImpl(msResp.GetClientLibraryVersion(), msResp.GetClientFeatureVersion(), msResp.GetClientImpl())
-	if len(msResp.GetStickyTaskList().GetName()) != 0 && clientFeature.SupportStickyQuery() {
+
+	supportsStickyQuery := client.NewVersionChecker().SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
+	if len(msResp.GetStickyTaskList().GetName()) != 0 && supportsStickyQuery {
 		matchingRequest.TaskList = msResp.StickyTaskList
 		// using a clean new context in case customer provide a context which has
 		// a really short deadline, causing we clear the stickyness

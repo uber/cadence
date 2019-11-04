@@ -28,6 +28,11 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/encoding"
+	"go.uber.org/yarpc/api/transport"
+
+	cc "github.com/uber/cadence/common/client"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -687,8 +692,10 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
-		s.Equal(ErrQueryTimeout, err)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		defer cancel()
+		resp, err := s.mockHistoryEngine.QueryWorkflow(ctx, request)
+		s.Error(err)
 		s.Nil(resp)
 		wg.Done()
 	}()
@@ -700,10 +707,12 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	s.True(qr.hasBufferedQuery())
 	s.False(qr.hasCompletedQuery())
 	s.False(qr.hasUnblockedQuery())
+	s.False(qr.hasFailedQuery())
 	wg.Wait()
 	s.False(qr.hasBufferedQuery())
 	s.False(qr.hasCompletedQuery())
 	s.False(qr.hasUnblockedQuery())
+	s.False(qr.hasFailedQuery())
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
@@ -733,14 +742,18 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 		buffered := qr.getBufferedIDs()
 		for _, id := range buffered {
 			resultType := workflow.QueryResultTypeAnswered
-			err := qr.completeQuery(id, &workflow.WorkflowQueryResult{
-				ResultType: &resultType,
-				Answer:     answer,
-			})
+			completedTerminationState := &queryTerminationState{
+				queryTerminationType: queryTerminationTypeCompleted,
+				queryResult: &workflow.WorkflowQueryResult{
+					ResultType: &resultType,
+					Answer:     answer,
+				},
+			}
+			err := qr.setTerminationState(id, completedTerminationState)
 			s.NoError(err)
-			state, err := qr.getQueryInternalState(id)
+			state, err := qr.getTerminationState(id)
 			s.NoError(err)
-			s.Equal(queryStateCompleted, state.state)
+			s.Equal(queryTerminationTypeCompleted, state.queryTerminationType)
 		}
 	}
 
@@ -793,10 +806,10 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 		qr := builder.GetQueryRegistry()
 		buffered := qr.getBufferedIDs()
 		for _, id := range buffered {
-			s.NoError(qr.unblockQuery(id))
-			state, err := qr.getQueryInternalState(id)
+			s.NoError(qr.setTerminationState(id, &queryTerminationState{queryTerminationType: queryTerminationTypeUnblocked}))
+			state, err := qr.getTerminationState(id)
 			s.NoError(err)
-			s.Equal(queryStateUnblocked, state.state)
+			s.Equal(queryTerminationTypeUnblocked, state.queryTerminationType)
 		}
 	}
 
@@ -4200,7 +4213,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 		id1: result1,
 		id2: result2,
 	}
-	_, err = s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
+	_, err = s.mockHistoryEngine.RespondDecisionTaskCompleted(s.constructCallContext("1.5.0"), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
 			TaskToken:        taskToken,
@@ -4218,20 +4231,21 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
 	s.False(executionBuilder.HasPendingDecision())
 	s.Len(qr.getCompletedIDs(), 2)
-	completed1, err := qr.getQueryInternalState(id1)
+	completed1, err := qr.getTerminationState(id1)
 	s.NoError(err)
 	s.True(result1.Equals(completed1.queryResult))
-	s.Equal(queryStateCompleted, completed1.state)
-	completed2, err := qr.getQueryInternalState(id2)
+	s.Equal(queryTerminationTypeCompleted, completed1.queryTerminationType)
+	completed2, err := qr.getTerminationState(id2)
 	s.NoError(err)
 	s.True(result2.Equals(completed2.queryResult))
-	s.Equal(queryStateCompleted, completed2.state)
+	s.Equal(queryTerminationTypeCompleted, completed2.queryTerminationType)
 	s.Len(qr.getBufferedIDs(), 0)
+	s.Len(qr.getFailedIDs(), 0)
 	s.Len(qr.getUnblockedIDs(), 1)
-	unblocked1, err := qr.getQueryInternalState(id3)
+	unblocked1, err := qr.getTerminationState(id3)
 	s.NoError(err)
 	s.Nil(unblocked1.queryResult)
-	s.Equal(queryStateUnblocked, unblocked1.state)
+	s.Equal(queryTerminationTypeUnblocked, unblocked1.queryTerminationType)
 
 	// Try recording activity heartbeat
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -4273,6 +4287,16 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.Equal(int64(8), executionBuilder.GetExecutionInfo().LastProcessedEvent)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
 	s.True(executionBuilder.HasPendingDecision())
+}
+
+func (s *engineSuite) constructCallContext(featureVersion string) context.Context {
+	ctx := context.Background()
+	ctx, call := encoding.NewInboundCall(ctx)
+	err := call.ReadFromRequest(&transport.Request{
+		Headers: transport.NewHeaders().With(common.ClientImplHeaderName, cc.GoSDK).With(common.FeatureVersionHeaderName, featureVersion),
+	})
+	s.NoError(err)
+	return ctx
 }
 
 func (s *engineSuite) TestStarTimer_DuplicateTimerID() {

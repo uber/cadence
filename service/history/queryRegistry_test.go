@@ -24,8 +24,9 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/.gen/go/shared"
 	"testing"
+
+	"github.com/uber/cadence/.gen/go/shared"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -53,25 +54,25 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	}
 	s.assertBufferedState(qr, ids...)
 	s.assertHasQueries(qr, true, false, false, false)
-	s.assertQuerySizes(qr, 100, 0,0, 0)
+	s.assertQuerySizes(qr, 100, 0, 0, 0)
 	s.assertChanState(false, termChans...)
 
 	for i := 0; i < 25; i++ {
-		err := qr.setTerminationState(ids[i], &terminationState{
+		err := qr.setTerminationState(ids[i], &queryTerminationState{
 			queryTerminationType: queryTerminationTypeCompleted,
-			queryResult: &shared.WorkflowQueryResult{},
+			queryResult:          &shared.WorkflowQueryResult{},
 		})
 		s.NoError(err)
 	}
 	s.assertCompletedState(qr, ids[0:25]...)
 	s.assertBufferedState(qr, ids[25:]...)
 	s.assertHasQueries(qr, true, true, false, false)
-	s.assertQuerySizes(qr, 75, 25,0, 0)
+	s.assertQuerySizes(qr, 75, 25, 0, 0)
 	s.assertChanState(true, termChans[0:25]...)
 	s.assertChanState(false, termChans[25:]...)
 
 	for i := 25; i < 50; i++ {
-		err := qr.setTerminationState(ids[i], &terminationState{
+		err := qr.setTerminationState(ids[i], &queryTerminationState{
 			queryTerminationType: queryTerminationTypeUnblocked,
 		})
 		s.NoError(err)
@@ -80,14 +81,14 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.assertUnblockedState(qr, ids[25:50]...)
 	s.assertBufferedState(qr, ids[50:]...)
 	s.assertHasQueries(qr, true, true, true, false)
-	s.assertQuerySizes(qr, 50, 25,25, 0)
+	s.assertQuerySizes(qr, 50, 25, 25, 0)
 	s.assertChanState(true, termChans[0:50]...)
 	s.assertChanState(false, termChans[50:]...)
 
 	for i := 50; i < 75; i++ {
-		err := qr.setTerminationState(ids[i], &terminationState{
+		err := qr.setTerminationState(ids[i], &queryTerminationState{
 			queryTerminationType: queryTerminationTypeFailed,
-			failure: errors.New("err"),
+			failure:              errors.New("err"),
 		})
 		s.NoError(err)
 	}
@@ -96,25 +97,25 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.assertFailedState(qr, ids[50:75]...)
 	s.assertBufferedState(qr, ids[75:]...)
 	s.assertHasQueries(qr, true, true, true, true)
-	s.assertQuerySizes(qr, 25, 25,25, 25)
+	s.assertQuerySizes(qr, 25, 25, 25, 25)
 	s.assertChanState(true, termChans[0:75]...)
 	s.assertChanState(false, termChans[75:]...)
 
 	for i := 0; i < 75; i++ {
 		switch i % 3 {
 		case 0:
-			s.Equal(errAlreadyInTerminalState, qr.setTerminationState(ids[i], &terminationState{
+			s.Equal(errAlreadyInTerminalState, qr.setTerminationState(ids[i], &queryTerminationState{
 				queryTerminationType: queryTerminationTypeCompleted,
-				queryResult: &shared.WorkflowQueryResult{},
+				queryResult:          &shared.WorkflowQueryResult{},
 			}))
 		case 1:
-			s.Equal(errAlreadyInTerminalState, qr.setTerminationState(ids[i], &terminationState{
+			s.Equal(errAlreadyInTerminalState, qr.setTerminationState(ids[i], &queryTerminationState{
 				queryTerminationType: queryTerminationTypeUnblocked,
 			}))
 		case 2:
-			s.Equal(errAlreadyInTerminalState, qr.setTerminationState(ids[i], &terminationState{
+			s.Equal(errAlreadyInTerminalState, qr.setTerminationState(ids[i], &queryTerminationState{
 				queryTerminationType: queryTerminationTypeFailed,
-				failure: errors.New("err"),
+				failure:              errors.New("err"),
 			}))
 		}
 	}
@@ -123,29 +124,29 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	s.assertFailedState(qr, ids[50:75]...)
 	s.assertBufferedState(qr, ids[75:]...)
 	s.assertHasQueries(qr, true, true, true, true)
-	s.assertQuerySizes(qr, 25, 25,25, 25)
+	s.assertQuerySizes(qr, 25, 25, 25, 25)
 	s.assertChanState(true, termChans[0:75]...)
 	s.assertChanState(false, termChans[75:]...)
 
 	for i := 0; i < 25; i++ {
 		qr.removeQuery(ids[i])
 		s.assertHasQueries(qr, true, i < 24, true, true)
-		s.assertQuerySizes(qr, 25, 25-i-1,25, 25)
+		s.assertQuerySizes(qr, 25, 25-i-1, 25, 25)
 	}
 	for i := 25; i < 50; i++ {
 		qr.removeQuery(ids[i])
 		s.assertHasQueries(qr, true, false, i < 24, true)
-		s.assertQuerySizes(qr, 25, 0,25-i-1, 25)
+		s.assertQuerySizes(qr, 25, 0, 25-i-1, 25)
 	}
 	for i := 50; i < 75; i++ {
 		qr.removeQuery(ids[i])
 		s.assertHasQueries(qr, true, false, false, i < 24)
-		s.assertQuerySizes(qr, 25, 0,0, 25-i-1)
+		s.assertQuerySizes(qr, 25, 0, 0, 25-i-1)
 	}
 	for i := 75; i < 100; i++ {
 		qr.removeQuery(ids[i])
 		s.assertHasQueries(qr, i < 24, false, false, false)
-		s.assertQuerySizes(qr, i-25-1, 0,0, 0)
+		s.assertQuerySizes(qr, i-25-1, 0, 0, 0)
 	}
 	s.assertChanState(true, termChans[0:75]...)
 	s.assertChanState(false, termChans[75:]...)
