@@ -1624,8 +1624,8 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecutionWithContextReload(ctx, domainID, execution, true,
-		func(mutableState mutableState) error {
+	return e.updateWorkflowExecutionWithActionAndContextReload(ctx, domainID, execution,
+		getUpdateWorkflowActionFunc(true, func(mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -1659,7 +1659,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			}
 
 			return nil
-		})
+		}))
 }
 
 func (e *historyEngineImpl) SignalWorkflowExecution(
@@ -1994,8 +1994,8 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecutionWithContextReload(ctx, domainID, execution, false,
-		func(mutableState mutableState) error {
+	return e.updateWorkflowExecutionWithActionAndContextReload(ctx, domainID, execution,
+		getUpdateWorkflowActionFunc(false, func(mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -2008,7 +2008,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 				request.GetDetails(),
 				request.GetIdentity(),
 			)
-		})
+		}))
 }
 
 // RecordChildExecutionCompleted records the completion of child execution into parent execution history
@@ -2292,6 +2292,7 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithActionAndContextReload(
 		if err != nil {
 			return err
 		}
+		defer func() { release(retError) } () // to guarantee release
 		mutableState, err := context.loadWorkflowExecution()
 		if err != nil {
 			release(err)
@@ -2399,18 +2400,6 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
 
 	workflowContext := e.getWorkflowLockedContext(ctx, domainID, execution)
 	return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
-}
-
-func (e *historyEngineImpl) updateWorkflowExecutionWithContextReload(
-	ctx ctx.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	createDecisionTask bool,
-	action func(builder mutableState) error,
-) error {
-
-	return e.updateWorkflowExecutionWithActionAndContextReload(ctx, domainID, execution,
-		getUpdateWorkflowActionFunc(createDecisionTask, action))
 }
 
 func (e *historyEngineImpl) updateWorkflowExecution(
