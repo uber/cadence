@@ -45,7 +45,7 @@ func newAdminWorkflowCommands() []cli.Command {
 
 				// for cassandra connection
 				cli.StringFlag{
-					Name:  FlagAddress,
+					Name:  FlagCassandraAddress,
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
@@ -113,7 +113,7 @@ func newAdminWorkflowCommands() []cli.Command {
 
 				// for cassandra connection
 				cli.StringFlag{
-					Name:  FlagAddress,
+					Name:  FlagCassandraAddress,
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
@@ -276,7 +276,7 @@ func newAdminDomainCommands() []cli.Command {
 
 				// for cassandra connection
 				cli.StringFlag{
-					Name:  FlagAddress,
+					Name:  FlagCassandraAddress,
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
@@ -477,7 +477,7 @@ clusters:
 
 				// for cassandra connection
 				cli.StringFlag{
-					Name:  FlagAddress,
+					Name:  FlagCassandraAddress,
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
