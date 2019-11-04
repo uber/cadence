@@ -22,6 +22,8 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"go.uber.org/yarpc/api/encoding"
@@ -75,32 +77,32 @@ func (s *VersionCheckerSuite) TestClientVersionSupported() {
 			expectErr:                true,
 		},
 		{
-			callContext:              s.constructCallContext(GoSDK, "999.999.999"),
+			callContext:              s.constructCallContext(GoSDK, s.getHigherVersion(SupportedGoSDKVersion)),
 			enableClientVersionCheck: true,
 			expectErr:                true,
 		},
 		{
-			callContext:              s.constructCallContext(JavaSDK, "999.999.999"),
+			callContext:              s.constructCallContext(JavaSDK, s.getHigherVersion(SupportedJavaSDKVersion)),
 			enableClientVersionCheck: true,
 			expectErr:                true,
 		},
 		{
-			callContext:              s.constructCallContext(CLI, "999.999.999"),
+			callContext:              s.constructCallContext(CLI, s.getHigherVersion(SupportedCLIVersion)),
 			enableClientVersionCheck: true,
 			expectErr:                true,
 		},
 		{
-			callContext:              s.constructCallContext(GoSDK, "1.4.0"),
+			callContext:              s.constructCallContext(GoSDK, SupportedGoSDKVersion),
 			enableClientVersionCheck: true,
 			expectErr:                false,
 		},
 		{
-			callContext:              s.constructCallContext(JavaSDK, "1.4.0"),
+			callContext:              s.constructCallContext(JavaSDK, SupportedJavaSDKVersion),
 			enableClientVersionCheck: true,
 			expectErr:                false,
 		},
 		{
-			callContext:              s.constructCallContext(CLI, "1.4.0"),
+			callContext:              s.constructCallContext(CLI, SupportedCLIVersion),
 			enableClientVersionCheck: true,
 			expectErr:                false,
 		},
@@ -133,8 +135,8 @@ func (s *VersionCheckerSuite) TestSupportsStickyQuery() {
 			expectErr:  true,
 		},
 		{
-			clientImpl:           CLI,
-			clientFeatureVersion: "1.5.0",
+			clientImpl:           "unknown",
+			clientFeatureVersion: "0.0.0",
 			expectErr:            true,
 		},
 		{
@@ -201,8 +203,8 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 			expectErr:  true,
 		},
 		{
-			clientImpl:           CLI,
-			clientFeatureVersion: "1.5.0",
+			clientImpl:           "unknown",
+			clientFeatureVersion: "0.0.0",
 			expectErr:            true,
 		},
 		{
@@ -242,6 +244,12 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 			s.NoError(vc.SupportsConsistentQuery(tc.clientImpl, tc.clientFeatureVersion))
 		}
 	}
+}
+
+func (s *VersionCheckerSuite) getHigherVersion(version string) string {
+	split := strings.Split(version, ".")
+	s.Len(split, 3)
+	return fmt.Sprintf("%v.%v.%v", split[0], split[1], split[2][0]-'0'+1)
 }
 
 func (s *VersionCheckerSuite) constructCallContext(clientImpl string, featureVersion string) context.Context {

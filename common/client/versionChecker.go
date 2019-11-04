@@ -26,6 +26,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -39,11 +40,11 @@ const (
 	CLI = "cli"
 
 	// SupportedGoSDKVersion indicates the highest go sdk version server will accept requests from
-	SupportedGoSDKVersion = "1.5.0"
+	SupportedGoSDKVersion = "1.4.0"
 	// SupportedJavaSDKVersion indicates the highest java sdk version server will accept requests from
-	SupportedJavaSDKVersion = "1.5.0"
+	SupportedJavaSDKVersion = "1.4.0"
 	// SupportedCLIVersion indicates the highest cli version server will accept requests from
-	SupportedCLIVersion = "1.5.0"
+	SupportedCLIVersion = "1.4.0"
 
 	// GoWorkerStickyQueryVersion indicates the minimum client version of go worker which supports StickyQuery
 	GoWorkerStickyQueryVersion = "1.0.0"
@@ -83,9 +84,9 @@ func NewVersionChecker() VersionChecker {
 		},
 	}
 	supportedClients := map[string]version.Constraints{
-		GoSDK:   mustNewConstraint(fmt.Sprintf("<%v", SupportedGoSDKVersion)),
-		JavaSDK: mustNewConstraint(fmt.Sprintf("<%v", SupportedJavaSDKVersion)),
-		CLI:     mustNewConstraint(fmt.Sprintf("<%v", SupportedCLIVersion)),
+		GoSDK:   mustNewConstraint(fmt.Sprintf("<=%v", SupportedGoSDKVersion)),
+		JavaSDK: mustNewConstraint(fmt.Sprintf("<=%v", SupportedJavaSDKVersion)),
+		CLI:     mustNewConstraint(fmt.Sprintf("<=%v", SupportedCLIVersion)),
 	}
 	return &versionChecker{
 		supportedFeatures: supportedFeatures,
@@ -127,7 +128,7 @@ func (vc *versionChecker) SupportsStickyQuery(clientImpl string, clientFeatureVe
 	return vc.featureSupported(clientImpl, clientFeatureVersion, stickyQuery)
 }
 
-// SupportConsistentQuery returns error if consistent query is not supported otherwise nil.
+// SupportsConsistentQuery returns error if consistent query is not supported otherwise nil.
 // In case client version lookup fails assume the client does not support feature.
 func (vc *versionChecker) SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error {
 	return vc.featureSupported(clientImpl, clientFeatureVersion, consistentQuery)
@@ -145,11 +146,11 @@ func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersi
 	if !ok {
 		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
-	v, err := version.NewVersion(clientFeatureVersion)
+	version, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
 		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
-	if !supportedVersions.Check(v) {
+	if !supportedVersions.Check(version) {
 		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
