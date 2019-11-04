@@ -109,28 +109,28 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 	}
 
 	return handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, execution,
-		func(msBuilder mutableState) (*updateWorkflowAction, error) {
+		func(msBuilder mutableState) (updateWorkflowAction, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return emptyUpdateAction, ErrWorkflowCompleted
 			}
 
 			if msBuilder.HasProcessedOrPendingDecision() {
-				return &updateWorkflowAction{
+				return updateWorkflowAction{
 					noop: true,
 				}, nil
 			}
 
 			startEvent, err := msBuilder.GetStartEvent()
 			if err != nil {
-				return nil, err
+				return emptyUpdateAction, err
 			}
 			if err := msBuilder.AddFirstDecisionTaskScheduled(
 				startEvent,
 			); err != nil {
-				return nil, err
+				return emptyUpdateAction, err
 			}
 
-			return &updateWorkflowAction{}, nil
+			return updateWorkflowAction{}, nil
 		})
 }
 
@@ -155,9 +155,9 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 
 	var resp *h.RecordDecisionTaskStartedResponse
 	err = handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, execution,
-		func(msBuilder mutableState) (*updateWorkflowAction, error) {
+		func(msBuilder mutableState) (updateWorkflowAction, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return emptyUpdateAction, ErrWorkflowCompleted
 			}
 
 			decision, isRunning := msBuilder.GetDecisionInfo(scheduleID)
@@ -168,7 +168,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 				handler.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.StaleMutableStateCounter)
 				// Reload workflow execution history
 				// ErrStaleState will trigger updateWorkflowExecutionWithAction function to reload the mutable state
-				return nil, ErrStaleState
+				return emptyUpdateAction, ErrStaleState
 			}
 
 			// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
@@ -176,17 +176,17 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 			if !isRunning {
 				// Looks like DecisionTask already completed as a result of another call.
 				// It is OK to drop the task at this point.
-				return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
+				return emptyUpdateAction, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			updateAction := &updateWorkflowAction{}
+			updateAction := updateWorkflowAction{}
 
 			if decision.StartedID != common.EmptyEventID {
 				// If decision is started as part of the current request scope then return a positive response
 				if decision.RequestID == requestID {
 					resp, err = handler.createRecordDecisionTaskStartedResponse(domainID, msBuilder, decision, req.PollRequest.GetIdentity())
 					if err != nil {
-						return nil, err
+						return emptyUpdateAction, err
 					}
 					updateAction.noop = true
 					return updateAction, nil
@@ -194,18 +194,18 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 
 				// Looks like DecisionTask already started as a result of another call.
 				// It is OK to drop the task at this point.
-				return nil, &h.EventAlreadyStartedError{Message: "Decision task already started."}
+				return emptyUpdateAction, &h.EventAlreadyStartedError{Message: "Decision task already started."}
 			}
 
 			_, decision, err = msBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, req.PollRequest)
 			if err != nil {
 				// Unable to add DecisionTaskStarted event to history
-				return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskStarted event to history."}
+				return emptyUpdateAction, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskStarted event to history."}
 			}
 
 			resp, err = handler.createRecordDecisionTaskStartedResponse(domainID, msBuilder, decision, req.PollRequest.GetIdentity())
 			if err != nil {
-				return nil, err
+				return emptyUpdateAction, err
 			}
 			return updateAction, nil
 		})

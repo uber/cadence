@@ -25,21 +25,71 @@ import (
 	"github.com/uber/cadence/common"
 )
 
-type workflowLockedContext struct {
-	context workflowExecutionContext
-	release releaseWorkflowExecutionFunc
-	err     error
+type workflowContext interface {
+	getContext() workflowExecutionContext
+	getMutableState() mutableState
+	loadMutableState() (mutableState, error)
+	getReleaseFn() releaseWorkflowExecutionFunc
+	getRunID() string
 }
 
-func newWorkflowLockedContext(
-	context workflowExecutionContext,
-	release releaseWorkflowExecutionFunc,
-	err error) *workflowLockedContext {
+type workflowContextImpl struct {
+	context      workflowExecutionContext
+	mutableState mutableState
+	releaseFn    releaseWorkflowExecutionFunc
+}
 
-	return &workflowLockedContext{
-		context: context,
-		release: release,
-		err:     err,
+type updateWorkflowAction struct {
+	noop           bool
+	createDecision bool
+}
+
+var (
+	emptyUpdateAction             = updateWorkflowAction{}
+	updateWorkflowWithNewDecision = updateWorkflowAction{
+		createDecision: true,
+	}
+	updateWorkflowWithoutDecision = updateWorkflowAction{
+		createDecision: false,
+	}
+)
+
+type updateWorkflowActionFunc func(mutableState mutableState) (updateWorkflowAction, error)
+
+func (w *workflowContextImpl) getContext() workflowExecutionContext {
+	return w.context
+}
+
+func (w *workflowContextImpl) getMutableState() mutableState {
+	return w.mutableState
+}
+
+func (w *workflowContextImpl) loadMutableState() (mutableState, error) {
+	mutableState, err := w.getContext().loadWorkflowExecution()
+	if err != nil {
+		return nil, err
+	}
+	w.mutableState = mutableState
+	return mutableState, nil
+}
+
+func (w *workflowContextImpl) getReleaseFn() releaseWorkflowExecutionFunc {
+	return w.releaseFn
+}
+
+func (w *workflowContextImpl) getRunID() string {
+	return w.getContext().getExecution().GetRunId()
+}
+
+func newWorkflowContext(
+	context workflowExecutionContext,
+	releaseFn releaseWorkflowExecutionFunc,
+	mutableState mutableState) workflowContext {
+
+	return &workflowContextImpl{
+		context:      context,
+		releaseFn:    releaseFn,
+		mutableState: mutableState,
 	}
 }
 
