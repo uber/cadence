@@ -803,39 +803,27 @@ func (e *historyEngineImpl) QueryWorkflow(
 		sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 		defer sw.Stop()
 		req.Execution.RunId = msResp.Execution.RunId
-		mresp, err := e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
-		return mresp, err
+		return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
 	}
 
-	// If we get here it means query could not be dispatched through matching directly, so it must be buffered to be dispatched on the next decision task.
-	// There is a hard guarantee in the system that at this point a new decision task will get generated.
+	// If we get here it means query could not be dispatched through matching directly, so it must block
+	// until either an result has been obtained on a decision task response or until it is safe to dispatch directly through matching.
+	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
 	queryReg := mutableState.GetQueryRegistry()
 	queryID, termCh := queryReg.bufferQuery(req.GetQuery())
-	ttl := e.shard.GetConfig().LongPollExpirationInterval(de.GetInfo().Name)
-	timer := time.NewTimer(ttl)
 	defer func() {
-		timer.Stop()
 		queryReg.removeQuery(queryID)
+		sw.Stop()
 	}()
 	release(nil)
-	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
-	defer sw.Stop()
 	select {
 	case <-termCh:
-		state, err := queryReg.getQueryInternalState(queryID)
+		state, err := queryReg.getTerminationState(queryID)
 		if err != nil {
 			return nil, err
 		}
-		switch state.state {
-		case queryStateUnblocked:
-			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
-			if err != nil {
-				return nil, err
-			}
-			req.Execution.RunId = msResp.Execution.RunId
-			mresp, err := e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
-			return mresp, err
-		case queryStateCompleted:
+		switch state.queryTerminationType {
+		case queryTerminationTypeCompleted:
 			result := state.queryResult
 			switch result.GetResultType() {
 			case workflow.QueryResultTypeAnswered:
@@ -849,12 +837,18 @@ func (e *historyEngineImpl) QueryWorkflow(
 			default:
 				return nil, ErrQueryEnteredInvalidState
 			}
+		case queryTerminationTypeUnblocked:
+			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+			if err != nil {
+				return nil, err
+			}
+			req.Execution.RunId = msResp.Execution.RunId
+			return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
+		case queryTerminationTypeFailed:
+			return nil, state.failure
 		default:
 			return nil, ErrQueryEnteredInvalidState
 		}
-	case <-timer.C:
-		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
-		return nil, ErrQueryTimeout
 	case <-ctx.Done():
 		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
 		return nil, ctx.Err()

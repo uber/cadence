@@ -546,6 +546,14 @@ Update_History_Loop:
 			return nil, updateErr
 		}
 
+
+
+
+		// if client does not support consistent query than fail all queries
+		// otherwise complete queries which we can complete
+
+
+
 		// at this point the update is successful, so answer all the queries which we have answers for
 		qr := msBuilder.GetQueryRegistry()
 		for id, result := range req.GetCompleteRequest().GetQueryResults() {
@@ -637,11 +645,11 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	buffered := qr.getBufferedIDs()
 	queries := make(map[string]*workflow.WorkflowQuery)
 	for _, id := range buffered {
-		state, err := qr.getQueryInternalState(id)
+		input, err := qr.getQueryInput(id)
 		if err != nil {
 			continue
 		}
-		queries[state.id] = state.queryInput
+		queries[id] = input
 	}
 	response.Queries = queries
 	return response, nil
