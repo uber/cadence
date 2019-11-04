@@ -4213,7 +4213,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 		id1: result1,
 		id2: result2,
 	}
-	_, err = s.mockHistoryEngine.RespondDecisionTaskCompleted(s.constructCallContext("1.5.0"), &history.RespondDecisionTaskCompletedRequest{
+	_, err = s.mockHistoryEngine.RespondDecisionTaskCompleted(s.constructCallContext(cc.GoWorkerConsistentQueryVersion), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
 			TaskToken:        taskToken,

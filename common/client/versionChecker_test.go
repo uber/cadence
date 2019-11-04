@@ -144,12 +144,12 @@ func (s *VersionCheckerSuite) TestSupportsStickyQuery() {
 		},
 		{
 			clientImpl:           GoSDK,
-			clientFeatureVersion: "1.0.0",
+			clientFeatureVersion: GoWorkerStickyQueryVersion,
 			expectErr:            false,
 		},
 		{
 			clientImpl:           JavaSDK,
-			clientFeatureVersion: "1.0.0",
+			clientFeatureVersion: JavaWorkerStickyQueryVersion,
 			expectErr:            false,
 		},
 		{
@@ -217,7 +217,7 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 		},
 		{
 			clientImpl:           GoSDK,
-			clientFeatureVersion: "1.5.0",
+			clientFeatureVersion: GoWorkerConsistentQueryVersion,
 			expectErr:            false,
 		},
 		{

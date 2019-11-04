@@ -22,10 +22,10 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-version"
 	"go.uber.org/yarpc"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -39,18 +39,18 @@ const (
 	CLI = "cli"
 
 	// SupportedGoSDKVersion indicates the highest go sdk version server will accept requests from
-	SupportedGoSDKVersion = "<1.5.0"
+	SupportedGoSDKVersion = "1.5.0"
 	// SupportedJavaSDKVersion indicates the highest java sdk version server will accept requests from
-	SupportedJavaSDKVersion = "<1.5.0"
+	SupportedJavaSDKVersion = "1.5.0"
 	// SupportedCLIVersion indicates the highest cli version server will accept requests from
-	SupportedCLIVersion = "<1.5.0"
+	SupportedCLIVersion = "1.5.0"
 
 	// GoWorkerStickyQueryVersion indicates the minimum client version of go worker which supports StickyQuery
-	GoWorkerStickyQueryVersion = ">=1.0.0"
+	GoWorkerStickyQueryVersion = "1.0.0"
 	// JavaWorkerStickyQueryVersion indicates the minimum client version of the java worker which supports StickyQuery
-	JavaWorkerStickyQueryVersion = ">=1.0.0"
+	JavaWorkerStickyQueryVersion = "1.0.0"
 	// GoWorkerConsistentQueryVersion indicates the minimum client version of the go worker which supports ConsistentQuery
-	GoWorkerConsistentQueryVersion = ">=1.5.0"
+	GoWorkerConsistentQueryVersion = "1.5.0"
 
 	stickyQuery     = "sticky-query"
 	consistentQuery = "consistent-query"
@@ -75,17 +75,17 @@ type (
 func NewVersionChecker() VersionChecker {
 	supportedFeatures := map[string]map[string]version.Constraints{
 		GoSDK: {
-			stickyQuery:     mustNewConstraint(GoWorkerStickyQueryVersion),
-			consistentQuery: mustNewConstraint(GoWorkerConsistentQueryVersion),
+			stickyQuery:     mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerStickyQueryVersion)),
+			consistentQuery: mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerConsistentQueryVersion)),
 		},
 		JavaSDK: {
-			stickyQuery: mustNewConstraint(JavaWorkerStickyQueryVersion),
+			stickyQuery: mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerStickyQueryVersion)),
 		},
 	}
 	supportedClients := map[string]version.Constraints{
-		GoSDK:   mustNewConstraint(SupportedGoSDKVersion),
-		JavaSDK: mustNewConstraint(SupportedJavaSDKVersion),
-		CLI:     mustNewConstraint(SupportedCLIVersion),
+		GoSDK:   mustNewConstraint(fmt.Sprintf("<%v", SupportedGoSDKVersion)),
+		JavaSDK: mustNewConstraint(fmt.Sprintf("<%v", SupportedJavaSDKVersion)),
+		CLI:     mustNewConstraint(fmt.Sprintf("<%v", SupportedCLIVersion)),
 	}
 	return &versionChecker{
 		supportedFeatures: supportedFeatures,
