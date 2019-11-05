@@ -51,7 +51,7 @@ func (s *VersionCheckerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
 
-func (s *VersionCheckerSuite) TestClientVersionSupported() {
+func (s *VersionCheckerSuite) TestClientSupported() {
 	testCases := []struct {
 		callContext              context.Context
 		enableClientVersionCheck bool
