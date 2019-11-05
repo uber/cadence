@@ -1422,16 +1422,16 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	}
 
 	return e.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
-		func(mutableState mutableState) (updateWorkflowAction, error) {
+		func(mutableState mutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return emptyUpdateAction, ErrWorkflowCompleted
+				return nil, ErrWorkflowCompleted
 			}
 
 			scheduleID := token.ScheduleID
 			if scheduleID == common.EmptyEventID { // client call CompleteActivityById, so get scheduleID by activityID
 				scheduleID, err0 = getScheduleID(token.ActivityID, mutableState)
 				if err0 != nil {
-					return emptyUpdateAction, err0
+					return nil, err0
 				}
 			}
 			ai, isRunning := mutableState.GetActivityInfo(scheduleID)
@@ -1440,24 +1440,24 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
-				return emptyUpdateAction, ErrStaleState
+				return nil, ErrStaleState
 			}
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return emptyUpdateAction, ErrActivityTaskNotFound
+				return nil, ErrActivityTaskNotFound
 			}
 
-			postActions := updateWorkflowAction{}
+			postActions := &updateWorkflowAction{}
 			ok, err := mutableState.RetryActivity(ai, req.FailedRequest.GetReason(), req.FailedRequest.GetDetails())
 			if err != nil {
-				return emptyUpdateAction, err
+				return nil, err
 			}
 			if !ok {
 				// no more retry, and we want to record the failure event
 				if _, err := mutableState.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request); err != nil {
 					// Unable to add ActivityTaskFailed event to history
-					return emptyUpdateAction, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
+					return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 				}
 				postActions.createDecision = true
 			}
@@ -1625,9 +1625,9 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	}
 
 	return e.updateWorkflow(ctx, domainID, execution,
-		func(mutableState mutableState) (updateWorkflowAction, error) {
+		func(mutableState mutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return emptyUpdateAction, ErrWorkflowCompleted
+				return nil, ErrWorkflowCompleted
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -1636,7 +1636,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				parentRunID := executionInfo.ParentRunID
 				if parentExecution.GetWorkflowId() != parentWorkflowID ||
 					parentExecution.GetRunId() != parentRunID {
-					return emptyUpdateAction, ErrWorkflowParent
+					return nil, ErrWorkflowParent
 				}
 			}
 
@@ -1651,11 +1651,11 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				}
 				// if we consider workflow cancellation idempotent, then this error is redundant
 				// this error maybe useful if this API is invoked by external, not decision from transfer queue
-				return emptyUpdateAction, ErrCancellationAlreadyRequested
+				return nil, ErrCancellationAlreadyRequested
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
-				return emptyUpdateAction, &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+				return nil, &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 
 			return updateWorkflowWithNewDecision, nil
@@ -1681,19 +1681,19 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflow(ctx, domainID, execution, func(mutableState mutableState) (updateWorkflowAction, error) {
+	return e.updateWorkflow(ctx, domainID, execution, func(mutableState mutableState) (*updateWorkflowAction, error) {
 		executionInfo := mutableState.GetExecutionInfo()
 		createDecisionTask := true
 		// Do not create decision task when the workflow is cron and the cron has not been started yet
 		if mutableState.GetExecutionInfo().CronSchedule != "" && !mutableState.HasProcessedOrPendingDecision() {
 			createDecisionTask = false
 		}
-		postActions := updateWorkflowAction{
+		postActions := &updateWorkflowAction{
 			createDecision: createDecisionTask,
 		}
 
 		if !mutableState.IsWorkflowExecutionRunning() {
-			return emptyUpdateAction, ErrWorkflowCompleted
+			return nil, ErrWorkflowCompleted
 		}
 
 		maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
@@ -1702,7 +1702,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				tag.WorkflowID(execution.GetWorkflowId()),
 				tag.WorkflowRunID(execution.GetRunId()),
 				tag.WorkflowDomainID(domainID))
-			return emptyUpdateAction, ErrSignalsLimitExceeded
+			return nil, ErrSignalsLimitExceeded
 		}
 
 		if childWorkflowOnly {
@@ -1710,7 +1710,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			parentRunID := executionInfo.ParentRunID
 			if parentExecution.GetWorkflowId() != parentWorkflowID ||
 				parentExecution.GetRunId() != parentRunID {
-				return emptyUpdateAction, ErrWorkflowParent
+				return nil, ErrWorkflowParent
 			}
 		}
 
@@ -1726,7 +1726,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			request.GetSignalName(),
 			request.GetInput(),
 			request.GetIdentity()); err != nil {
-			return emptyUpdateAction, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+			return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
 		}
 
 		return postActions, nil
@@ -1995,9 +1995,9 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	}
 
 	return e.updateWorkflow(ctx, domainID, execution,
-		func(mutableState mutableState) (updateWorkflowAction, error) {
+		func(mutableState mutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return emptyUpdateAction, ErrWorkflowCompleted
+				return nil, ErrWorkflowCompleted
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()
@@ -2372,12 +2372,12 @@ func getUpdateWorkflowActionFunc(
 	action func(builder mutableState) error,
 ) updateWorkflowActionFunc {
 
-	return func(builder mutableState) (updateWorkflowAction, error) {
+	return func(builder mutableState) (*updateWorkflowAction, error) {
 		err := action(builder)
 		if err != nil {
-			return emptyUpdateAction, err
+			return nil, err
 		}
-		postActions := updateWorkflowAction{
+		postActions := &updateWorkflowAction{
 			createDecision: createDecisionTask,
 		}
 		return postActions, nil
@@ -2722,9 +2722,9 @@ func (e *historyEngineImpl) ReapplyEvents(
 		ctx,
 		domainID,
 		execution,
-		func(mutableState mutableState) (updateWorkflowAction, error) {
+		func(mutableState mutableState) (*updateWorkflowAction, error) {
 
-			postActions := updateWorkflowAction{
+			postActions := &updateWorkflowAction{
 				createDecision: true,
 			}
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
@@ -2740,7 +2740,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 					tag.WorkflowID(workflowID),
 				)
 				e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
-				return updateWorkflowAction{
+				return &updateWorkflowAction{
 					noop: true,
 				}, nil
 			}
@@ -2750,7 +2750,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 				reapplyEvents,
 			); err != nil {
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
-				return emptyUpdateAction, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
+				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
 			}
 
 			return postActions, nil

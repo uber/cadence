@@ -46,16 +46,15 @@ type updateWorkflowAction struct {
 }
 
 var (
-	emptyUpdateAction             = updateWorkflowAction{}
-	updateWorkflowWithNewDecision = updateWorkflowAction{
+	updateWorkflowWithNewDecision = &updateWorkflowAction{
 		createDecision: true,
 	}
-	updateWorkflowWithoutDecision = updateWorkflowAction{
+	updateWorkflowWithoutDecision = &updateWorkflowAction{
 		createDecision: false,
 	}
 )
 
-type updateWorkflowActionFunc func(mutableState mutableState) (updateWorkflowAction, error)
+type updateWorkflowActionFunc func(mutableState mutableState) (*updateWorkflowAction, error)
 
 func (w *workflowContextImpl) getContext() workflowExecutionContext {
 	return w.context
