@@ -66,6 +66,26 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagKeyspace,
 					Usage: "cassandra keyspace",
 				},
+				cli.BoolFlag{
+					Name:  FlagEnableTLS,
+					Usage: "enable TLS over cassandra connection",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Usage: "cassandra tls client cert path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Usage: "cassandra tls client key path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Usage: "cassandra tls client ca path (tls must be enabled)",
+				},
+				cli.BoolFlag{
+					Name:  FlagTLSEnableHostVerification,
+					Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
+				},
 
 				// support mysql query
 				cli.IntFlag{
@@ -135,6 +155,26 @@ func newAdminWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagKeyspace,
 					Usage: "cassandra keyspace",
+				},
+				cli.BoolFlag{
+					Name:  FlagEnableTLS,
+					Usage: "use TLS over cassandra connection",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Usage: "cassandra tls client cert path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Usage: "cassandra tls client key path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Usage: "cassandra tls client ca path (tls must be enabled)",
+				},
+				cli.BoolFlag{
+					Name:  FlagTLSEnableHostVerification,
+					Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -299,6 +339,26 @@ func newAdminDomainCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagKeyspace,
 					Usage: "cassandra keyspace",
+				},
+				cli.BoolFlag{
+					Name:  FlagEnableTLS,
+					Usage: "use TLS over cassandra connection",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Usage: "cassandra tls client cert path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Usage: "cassandra tls client key path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Usage: "cassandra tls client ca path (tls must be enabled)",
+				},
+				cli.BoolFlag{
+					Name:  FlagTLSEnableHostVerification,
+					Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -502,6 +562,26 @@ clusters:
 				cli.StringFlag{
 					Name:  FlagKeyspace,
 					Usage: "cassandra keyspace",
+				},
+				cli.BoolFlag{
+					Name:  FlagEnableTLS,
+					Usage: "use TLS over cassandra connection",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Usage: "cassandra tls client cert path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Usage: "cassandra tls client key path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Usage: "cassandra tls client ca path (tls must be enabled)",
+				},
+				cli.BoolFlag{
+					Name:  FlagTLSEnableHostVerification,
+					Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
 				},
 
 				// kafka

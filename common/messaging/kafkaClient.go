@@ -27,6 +27,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/uber/cadence/common/auth"
+
 	"github.com/Shopify/sarama"
 	uberKafkaClient "github.com/uber-go/kafka-client"
 	uberKafka "github.com/uber-go/kafka-client/kafka"
@@ -173,7 +175,7 @@ func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
 }
 
 // CreateTLSConfig return tls config
-func CreateTLSConfig(tlsConfig TLS) (*tls.Config, error) {
+func CreateTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
 	if !tlsConfig.Enabled {
 		return nil, nil
 	}
