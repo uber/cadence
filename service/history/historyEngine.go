@@ -2272,7 +2272,7 @@ func (e *historyEngineImpl) updateWorkflow(
 	action updateWorkflowActionFunc,
 ) (retError error) {
 
-	workflowContext, err := e.loadCurrentWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
+	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
 	if err != nil {
 		return err
 	}
@@ -2288,7 +2288,7 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
 	action updateWorkflowActionFunc,
 ) (retError error) {
 
-	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
+	workflowContext, err := e.loadWorkflowHelper(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
 	if err != nil {
 		return err
 	}
@@ -2757,7 +2757,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		})
 }
 
-func (e *historyEngineImpl) loadWorkflow(
+func (e *historyEngineImpl) loadWorkflowHelper(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,
@@ -2785,34 +2785,45 @@ func (e *historyEngineImpl) loadWorkflow(
 	return newWorkflowContext(context, release, mutableState), nil
 }
 
-func (e *historyEngineImpl) loadCurrentWorkflow(
+func (e *historyEngineImpl) loadWorkflow(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,
 	runID string,
 ) (workflowContext, error) {
 
-	workflowContext, err := e.loadWorkflow(ctx, domainID, workflowID, runID)
-	if err != nil {
-		return nil, err
+	if runID != "" {
+		return e.loadWorkflowHelper(ctx, domainID, workflowID, runID)
 	}
 
-	if runID == "" {
-		for attempt := 0; attempt < conditionalRetryCount && !workflowContext.getMutableState().IsWorkflowExecutionRunning(); attempt++ {
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 
-			prevRunID := workflowContext.getRunID()
-			workflowContext.getReleaseFn()(nil)
-
-			workflowContext, err = e.loadWorkflow(ctx, domainID, workflowID, runID)
-			if err != nil {
-				return nil, err
-			}
-
-			if workflowContext.getRunID() == prevRunID {
-				workflowContext.getReleaseFn()(ErrWorkflowCompleted)
-				return nil, ErrWorkflowCompleted
-			}
+		workflowContext, err := e.loadWorkflowHelper(ctx, domainID, workflowID, "")
+		if err != nil {
+			return nil, err
 		}
+
+		if workflowContext.getMutableState().IsWorkflowExecutionRunning() {
+			return workflowContext, nil
+		}
+
+		// workflow not running, need to check current record
+		resp, err := e.shard.GetExecutionManager().GetCurrentExecution(
+			&persistence.GetCurrentExecutionRequest{
+				DomainID:   domainID,
+				WorkflowID: workflowID,
+			},
+		)
+		if err != nil {
+			workflowContext.getReleaseFn()(err)
+			return nil, err
+		}
+
+		if resp.RunID == workflowContext.getRunID() {
+			return workflowContext, nil
+		}
+		workflowContext.getReleaseFn()(nil)
 	}
-	return workflowContext, err
+
+	return nil, &workflow.InternalServiceError{Message: "unable to locate current workflow execution"}
 }

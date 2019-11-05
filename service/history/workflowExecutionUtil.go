@@ -30,6 +30,7 @@ type workflowContext interface {
 	getMutableState() mutableState
 	reloadMutableState() (mutableState, error)
 	getReleaseFn() releaseWorkflowExecutionFunc
+	getWorkflowID() string
 	getRunID() string
 }
 
@@ -75,6 +76,10 @@ func (w *workflowContextImpl) reloadMutableState() (mutableState, error) {
 
 func (w *workflowContextImpl) getReleaseFn() releaseWorkflowExecutionFunc {
 	return w.releaseFn
+}
+
+func (w *workflowContextImpl) getWorkflowID() string {
+	return w.getContext().getExecution().GetWorkflowId()
 }
 
 func (w *workflowContextImpl) getRunID() string {
