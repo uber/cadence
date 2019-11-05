@@ -2278,6 +2278,30 @@ func (e *historyEngineImpl) updateWorkflow(
 	}
 	defer func() { workflowContext.getReleaseFn()(retError) }()
 
+	return e.updateWorkflowHelper(workflowContext, action)
+}
+
+func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
+	ctx ctx.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+	action updateWorkflowActionFunc,
+) (retError error) {
+
+	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
+	if err != nil {
+		return err
+	}
+	defer func() { workflowContext.getReleaseFn()(retError) }()
+
+	return e.updateWorkflowHelper(workflowContext, action)
+}
+
+func (e *historyEngineImpl) updateWorkflowHelper(
+	workflowContext workflowContext,
+	action updateWorkflowActionFunc,
+) (retError error) {
+
 UpdateHistoryLoop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		mutableState := workflowContext.getMutableState()
@@ -2289,9 +2313,11 @@ UpdateHistoryLoop:
 				// Handler detected that cached workflow mutable could potentially be stale
 				// Reload workflow execution history
 				workflowContext.getContext().clear()
-				_, err = workflowContext.reloadMutableState()
-				if err != nil {
-					return err
+				if attempt != conditionalRetryCount-1 {
+					_, err = workflowContext.reloadMutableState()
+					if err != nil {
+						return err
+					}
 				}
 				continue UpdateHistoryLoop
 			}
@@ -2315,72 +2341,11 @@ UpdateHistoryLoop:
 
 		err = workflowContext.getContext().updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
 		if err == ErrConflict {
-			_, err = workflowContext.reloadMutableState()
-			if err != nil {
-				return err
-			}
-			continue UpdateHistoryLoop
-		}
-		return err
-	}
-	return ErrMaxAttemptsExceeded
-}
-
-// TODO: remove and use updateWorkflow
-func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
-	ctx ctx.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	action updateWorkflowActionFunc,
-) (retError error) {
-
-	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
-	if err != nil {
-		return err
-	}
-	defer func() { workflowContext.getReleaseFn()(retError) }()
-	context := workflowContext.getContext()
-
-UpdateHistoryLoop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		mutableState := workflowContext.getMutableState()
-
-		// conduct caller action
-		postActions, err := action(mutableState)
-		if err != nil {
-			if err == ErrStaleState {
-				// Handler detected that cached workflow mutable could potentially be stale
-				// Reload workflow execution history
-				context.clear()
+			if attempt != conditionalRetryCount-1 {
 				_, err = workflowContext.reloadMutableState()
 				if err != nil {
 					return err
 				}
-				continue UpdateHistoryLoop
-			}
-
-			// Returned error back to the caller
-			return err
-		}
-		if postActions.noop {
-			return nil
-		}
-
-		if postActions.createDecision {
-			// Create a transfer task to schedule a decision task
-			if !mutableState.HasPendingDecision() {
-				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
-				if err != nil {
-					return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-				}
-			}
-		}
-
-		err = context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
-		if err == ErrConflict {
-			_, err = workflowContext.reloadMutableState()
-			if err != nil {
-				return err
 			}
 			continue UpdateHistoryLoop
 		}
@@ -2389,7 +2354,7 @@ UpdateHistoryLoop:
 	return ErrMaxAttemptsExceeded
 }
 
-// TODO: remove and use updateWorkflow
+// TODO: remove and use updateWorkflowExecutionWithAction
 func (e *historyEngineImpl) updateWorkflowExecution(
 	ctx ctx.Context,
 	domainID string,
