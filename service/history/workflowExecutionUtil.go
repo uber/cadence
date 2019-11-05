@@ -88,7 +88,8 @@ func (w *workflowContextImpl) getRunID() string {
 func newWorkflowContext(
 	context workflowExecutionContext,
 	releaseFn releaseWorkflowExecutionFunc,
-	mutableState mutableState) workflowContext {
+	mutableState mutableState,
+) *workflowContextImpl {
 
 	return &workflowContextImpl{
 		context:      context,
