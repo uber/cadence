@@ -2288,7 +2288,7 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
 	action updateWorkflowActionFunc,
 ) (retError error) {
 
-	workflowContext, err := e.loadWorkflowHelper(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
+	workflowContext, err := e.loadWorkflowOnce(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
 	if err != nil {
 		return err
 	}
@@ -2757,7 +2757,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		})
 }
 
-func (e *historyEngineImpl) loadWorkflowHelper(
+func (e *historyEngineImpl) loadWorkflowOnce(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,
@@ -2793,12 +2793,12 @@ func (e *historyEngineImpl) loadWorkflow(
 ) (workflowContext, error) {
 
 	if runID != "" {
-		return e.loadWorkflowHelper(ctx, domainID, workflowID, runID)
+		return e.loadWorkflowOnce(ctx, domainID, workflowID, runID)
 	}
 
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 
-		workflowContext, err := e.loadWorkflowHelper(ctx, domainID, workflowID, "")
+		workflowContext, err := e.loadWorkflowOnce(ctx, domainID, workflowID, "")
 		if err != nil {
 			return nil, err
 		}
