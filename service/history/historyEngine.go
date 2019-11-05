@@ -2379,7 +2379,7 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
 
 	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
 	if err != nil {
-		return
+		return err
 	}
 	defer func() { workflowContext.getReleaseFn()(retError) }()
 	return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
