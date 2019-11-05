@@ -24,8 +24,9 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common"
 	"testing"
+
+	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/.gen/go/shared"
 
@@ -61,9 +62,9 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	for i := 0; i < 25; i++ {
 		err := qr.setTerminationState(ids[i], &queryTerminationState{
 			queryTerminationType: queryTerminationTypeCompleted,
-			queryResult:          &shared.WorkflowQueryResult{
+			queryResult: &shared.WorkflowQueryResult{
 				ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
-				Answer: []byte{1, 2, 3},
+				Answer:     []byte{1, 2, 3},
 			},
 		})
 		s.NoError(err)
