@@ -44,7 +44,10 @@ type SetupSchemaConfig struct {
 // In most cases, the versions should match. However if after a schema upgrade there is a code
 // rollback, the code version (expected version) would fall lower than the actual version in
 // cassandra.
-func VerifyCompatibleVersion(cfg config.Persistence) error {
+func VerifyCompatibleVersion(
+	cfg config.Persistence,
+) error {
+
 	ds, ok := cfg.DataStores[cfg.DefaultStore]
 	if ok && ds.Cassandra != nil {
 		err := checkCompatibleVersion(*ds.Cassandra, cassandra.Version)
@@ -63,7 +66,11 @@ func VerifyCompatibleVersion(cfg config.Persistence) error {
 }
 
 // checkCompatibleVersion check the version compatibility
-func checkCompatibleVersion(cfg config.Cassandra, expectedVersion string) error {
+func checkCompatibleVersion(
+	cfg config.Cassandra,
+	expectedVersion string,
+) error {
+
 	client, err := newCQLClient(&CQLClientConfig{
 		Hosts:    cfg.Hosts,
 		Port:     cfg.Port,
