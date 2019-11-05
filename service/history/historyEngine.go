@@ -2280,10 +2280,7 @@ func (e *historyEngineImpl) updateWorkflow(
 
 UpdateHistoryLoop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		mutableState, err := workflowContext.loadMutableState()
-		if err != nil {
-			return err
-		}
+		mutableState := workflowContext.getMutableState()
 
 		// conduct caller action
 		postActions, err := action(mutableState)
@@ -2292,6 +2289,10 @@ UpdateHistoryLoop:
 				// Handler detected that cached workflow mutable could potentially be stale
 				// Reload workflow execution history
 				workflowContext.getContext().clear()
+				_, err = workflowContext.reloadMutableState()
+				if err != nil {
+					return err
+				}
 				continue UpdateHistoryLoop
 			}
 
@@ -2314,6 +2315,10 @@ UpdateHistoryLoop:
 
 		err = workflowContext.getContext().updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
 		if err == ErrConflict {
+			_, err = workflowContext.reloadMutableState()
+			if err != nil {
+				return err
+			}
 			continue UpdateHistoryLoop
 		}
 		return err
@@ -2321,18 +2326,24 @@ UpdateHistoryLoop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) updateWorkflowExecutionWithContextAndAction(
-	workflowContext workflowContext,
+// TODO: remove and use updateWorkflow
+func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
+	ctx ctx.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
 	action updateWorkflowActionFunc,
 ) (retError error) {
 
+	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
+	if err != nil {
+		return err
+	}
+	defer func() { workflowContext.getReleaseFn()(retError) }()
 	context := workflowContext.getContext()
+
 UpdateHistoryLoop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		mutableState, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
+		mutableState := workflowContext.getMutableState()
 
 		// conduct caller action
 		postActions, err := action(mutableState)
@@ -2341,6 +2352,10 @@ UpdateHistoryLoop:
 				// Handler detected that cached workflow mutable could potentially be stale
 				// Reload workflow execution history
 				context.clear()
+				_, err = workflowContext.reloadMutableState()
+				if err != nil {
+					return err
+				}
 				continue UpdateHistoryLoop
 			}
 
@@ -2363,26 +2378,15 @@ UpdateHistoryLoop:
 
 		err = context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
 		if err == ErrConflict {
+			_, err = workflowContext.reloadMutableState()
+			if err != nil {
+				return err
+			}
 			continue UpdateHistoryLoop
 		}
 		return err
 	}
 	return ErrMaxAttemptsExceeded
-}
-
-func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
-	ctx ctx.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	action updateWorkflowActionFunc,
-) (retError error) {
-
-	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
-	if err != nil {
-		return err
-	}
-	defer func() { workflowContext.getReleaseFn()(retError) }()
-	return e.updateWorkflowExecutionWithContextAndAction(workflowContext, action)
 }
 
 // TODO: remove and use updateWorkflow
