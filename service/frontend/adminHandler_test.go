@@ -106,10 +106,11 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.mockClientBean.On("GetHistoryClient").Return(s.mockHistoryClient)
 	s.service = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
+	params := &service.BootstrapParams{}
 	config := &Config{
 		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(false),
 	}
-	s.handler = NewAdminHandler(s.service, 1, s.mockDomainCache, s.mockHistoryV2Mgr, nil, config)
+	s.handler = NewAdminHandler(s.service, 1, s.mockDomainCache, s.mockHistoryV2Mgr, params, config)
 	s.handler.Start()
 }
 
@@ -563,10 +564,8 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 }
 
 func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
-	handler := s.handler
-	handler.params = &service.BootstrapParams{}
 	ctx := context.Background()
-
+	handler := s.handler
 	handler.config = &Config{
 		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(true),
 		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(common.DefaultAdminOperationToken),
@@ -577,7 +576,6 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 		Request  *admin.AddSearchAttributeRequest
 		Expected error
 	}
-	// request validation tests
 	testCases := []test{
 		{
 			Name: "unknown token",
