@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package sql
 
 import (
 	"fmt"
@@ -27,10 +27,10 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strconv"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/tools/sql/mysql"
 )
 
 type (
@@ -56,38 +57,62 @@ func (s *VersionTestSuite) SetupTest() {
 }
 
 func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
-	keyspace := "cadence_test"
-	visKeyspace := "cadence_visibility_test"
+	database := "cadence_test"
+	visDatabase := "cadence_visibility_test"
 	_, filename, _, ok := runtime.Caller(0)
 	s.True(ok)
 	root := path.Dir(path.Dir(path.Dir(filename)))
-	cqlFile := path.Join(root, "schema/cassandra/cadence/schema.cql")
-	visCqlFile := path.Join(root, "schema/cassandra/visibility/schema.cql")
+	sqlFile := path.Join(root, "schema/mysql/v57/cadence/schema.sql")
+	visSqlFile := path.Join(root, "schema/mysql/v57/visibility/schema.sql")
 
-	defer s.createKeyspace(keyspace)()
-	defer s.createKeyspace(visKeyspace)()
-	RunTool([]string{
-		"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", "10.0", "-o",
+	defer s.createDatabase(database)()
+	defer s.createDatabase(visDatabase)()
+	err := RunTool([]string{
+		"./tool",
+		"-ep", environment.GetMySQLAddress(),
+		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-u", testUser,
+		"-pw", testPassword,
+		"-db", database,
+		"-dr", mysql.DriverName,
+		"-q",
+		"setup-schema",
+		"-f", sqlFile,
+		"-version", "10.0",
+		"-o",
 	})
-	RunTool([]string{
-		"./tool", "-k", visKeyspace, "-q", "setup-schema", "-f", visCqlFile, "-version", "10.0", "-o",
+	s.NoError(err)
+	err = RunTool([]string{
+		"./tool",
+		"-ep", environment.GetMySQLAddress(),
+		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-u", testUser,
+		"-pw", testPassword,
+		"-db", visDatabase,
+		"-dr", mysql.DriverName,
+		"-q",
+		"setup-schema",
+		"-f", visSqlFile,
+		"-version", "10.0",
+		"-o",
 	})
+	s.NoError(err)
 
-	defaultCfg := config.Cassandra{
-		Hosts:    environment.GetCassandraAddress(),
-		Port:     defaultCassandraPort,
-		User:     "",
-		Password: "",
-		Keyspace: keyspace,
+	defaultCfg := config.SQL{
+		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		User:         testUser,
+		Password:     testPassword,
+		DriverName:   mysql.DriverName,
+		DatabaseName: database,
 	}
 	visibilityCfg := defaultCfg
-	visibilityCfg.Keyspace = visKeyspace
+	visibilityCfg.DatabaseName = visDatabase
 	cfg := config.Persistence{
 		DefaultStore:    "default",
 		VisibilityStore: "visibility",
 		DataStores: map[string]config.DataStore{
-			"default":    {Cassandra: &defaultCfg},
-			"visibility": {Cassandra: &visibilityCfg},
+			"default":    {SQL: &defaultCfg},
+			"visibility": {SQL: &visibilityCfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 	}
@@ -111,24 +136,14 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 	}
 }
 
-func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
-	cfg := &CQLClientConfig{
-		Hosts:       environment.GetCassandraAddress(),
-		Port:        defaultCassandraPort,
-		Keyspace:    "system",
-		Timeout:     defaultTimeout,
-		numReplicas: 1,
-	}
-	client, err := newCQLClient(cfg)
+func (s *VersionTestSuite) createDatabase(database string) func() {
+	connection, err := newTestConn("")
 	s.NoError(err)
-
-	err = client.createKeyspace(keyspace)
-	if err != nil {
-		log.Fatalf("error creating Keyspace, err=%v", err)
-	}
+	err = connection.CreateDatabase(database)
+	s.NoError(err)
 	return func() {
-		s.NoError(client.dropKeyspace(keyspace))
-		client.Close()
+		s.NoError(connection.DropDatabase(database))
+		connection.Close()
 	}
 }
 
@@ -136,15 +151,15 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	expected string, actual string, errStr string, expectedFail bool,
 ) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	keyspace := fmt.Sprintf("version_test_%v", r.Int63())
-	defer s.createKeyspace(keyspace)()
+	database := fmt.Sprintf("version_test_%v", r.Int63())
+	defer s.createDatabase(database)()
 
 	dir := "check_version"
 	tmpDir, err := ioutil.TempDir("", dir)
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
-	subdir := tmpDir + "/" + keyspace
+	subdir := tmpDir + "/" + database
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
 
 	s.createSchemaForVersion(subdir, actual)
@@ -152,20 +167,31 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		s.createSchemaForVersion(subdir, expected)
 	}
 
-	cqlFile := subdir + "/v" + actual + "/tmp.cql"
+	sqlFile := subdir + "/v" + actual + "/tmp.sql"
 	RunTool([]string{
-		"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", actual, "-o",
+		"./tool",
+		"-ep", environment.GetMySQLAddress(),
+		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-u", testUser,
+		"-pw", testPassword,
+		"-db", database,
+		"-dr", mysql.DriverName,
+		"-q",
+		"setup-schema",
+		"-f", sqlFile,
+		"-version", actual,
+		"-o",
 	})
 	if expectedFail {
 		os.RemoveAll(subdir + "/v" + actual)
 	}
 
-	cfg := config.Cassandra{
-		Hosts:    environment.GetCassandraAddress(),
-		Port:     defaultCassandraPort,
-		User:     "",
-		Password: "",
-		Keyspace: keyspace,
+	cfg := config.SQL{
+		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		User:         testUser,
+		Password:     testPassword,
+		DriverName:   mysql.DriverName,
+		DatabaseName: database,
 	}
 	err = checkCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {
@@ -179,6 +205,6 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 func (s *VersionTestSuite) createSchemaForVersion(subdir string, v string) {
 	vDir := subdir + "/v" + v
 	s.NoError(os.Mkdir(vDir, os.FileMode(0744)))
-	cqlFile := vDir + "/tmp.cql"
+	cqlFile := vDir + "/tmp.sql"
 	s.NoError(ioutil.WriteFile(cqlFile, []byte{}, os.FileMode(0644)))
 }
