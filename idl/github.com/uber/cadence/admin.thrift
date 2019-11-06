@@ -150,5 +150,5 @@ struct GetWorkflowExecutionRawHistoryV2Response {
 
 struct AddSearchAttributeRequest {
   10: optional map<string, shared.IndexedValueType> searchAttribute
-  20: optional string SecurityToken
+  20: optional string securityToken
 }
