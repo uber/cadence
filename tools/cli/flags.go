@@ -24,7 +24,6 @@ import "github.com/urfave/cli"
 
 // Flags used to specify cli command line arguments
 const (
-	FlagPort                              = "port"
 	FlagUsername                          = "username"
 	FlagPassword                          = "password"
 	FlagKeyspace                          = "keyspace"
@@ -32,6 +31,7 @@ const (
 	FlagAddressWithAlias                  = FlagAddress + ", ad"
 	FlagHistoryAddress                    = "history_address"
 	FlagCassandraAddress                  = "cassandra_address"
+	FlagCassandraPort                     = "cassandra_port"
 	FlagHistoryAddressWithAlias           = FlagHistoryAddress + ", had"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"

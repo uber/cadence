@@ -49,8 +49,9 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
-					Name:  FlagPort,
-					Usage: "cassandra port for the host (default is 9042)",
+					Name:  FlagCassandraPort,
+					Value: 9042,
+					Usage: "cassandra port for the host",
 				},
 				cli.StringFlag{
 					Name:  FlagUsername,
@@ -117,7 +118,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
-					Name:  FlagPort,
+					Name:  FlagCassandraPort,
 					Value: 9042,
 					Usage: "cassandra port for the host",
 				},
@@ -280,8 +281,9 @@ func newAdminDomainCommands() []cli.Command {
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
-					Name:  FlagPort,
-					Usage: "cassandra port for the host (default is 9042)",
+					Name:  FlagCassandraPort,
+					Value: 9042,
+					Usage: "cassandra port for the host",
 				},
 				cli.StringFlag{
 					Name:  FlagUsername,
@@ -481,8 +483,9 @@ clusters:
 					Usage: "cassandra host address",
 				},
 				cli.IntFlag{
-					Name:  FlagPort,
-					Usage: "cassandra port for the host (default is 9042)",
+					Name:  FlagCassandraPort,
+					Value: 9042,
+					Usage: "cassandra port for the host",
 				},
 				cli.StringFlag{
 					Name:  FlagUsername,
