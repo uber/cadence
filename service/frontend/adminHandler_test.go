@@ -106,7 +106,10 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.mockClientBean.On("GetHistoryClient").Return(s.mockHistoryClient)
 	s.service = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, nil, nil, nil)
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.handler = NewAdminHandler(s.service, 1, s.mockDomainCache, s.mockHistoryV2Mgr, nil)
+	config := &Config{
+		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(false),
+	}
+	s.handler = NewAdminHandler(s.service, 1, s.mockDomainCache, s.mockHistoryV2Mgr, nil, config)
 	s.handler.Start()
 }
 
@@ -557,4 +560,41 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		Expected: &shared.InternalServiceError{Message: "Failed to update ES mapping, err: error"},
 	}
 	s.Equal(esErrorTest.Expected, handler.AddSearchAttribute(ctx, esErrorTest.Request))
+}
+
+func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
+	handler := s.handler
+	handler.params = &service.BootstrapParams{}
+	ctx := context.Background()
+
+	handler.config = &Config{
+		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(true),
+		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(common.DefaultAdminOperationToken),
+	}
+
+	type test struct {
+		Name     string
+		Request  *admin.AddSearchAttributeRequest
+		Expected error
+	}
+	// request validation tests
+	testCases := []test{
+		{
+			Name: "unknown token",
+			Request: &admin.AddSearchAttributeRequest{
+				SecurityToken: common.StringPtr("unknown"),
+			},
+			Expected: errNoPermission,
+		},
+		{
+			Name: "correct token",
+			Request: &admin.AddSearchAttributeRequest{
+				SecurityToken: common.StringPtr(common.DefaultAdminOperationToken),
+			},
+			Expected: &shared.BadRequestError{Message: "SearchAttributes are not provided"},
+		},
+	}
+	for _, testCase := range testCases {
+		s.Equal(testCase.Expected, handler.AddSearchAttribute(ctx, testCase.Request))
+	}
 }
