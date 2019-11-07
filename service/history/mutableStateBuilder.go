@@ -463,14 +463,6 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 			e.currentVersion = versionHistoryItem.GetVersion()
 		}
 
-		// TODO: https://github.com/uber/cadence/issues/2792
-		// this for loop deals with the fact that activity heartbeat does not generate history events
-		for _, activityInfo := range e.GetPendingActivityInfos() {
-			if activityInfo.Version > e.currentVersion {
-				e.currentVersion = activityInfo.Version
-			}
-		}
-
 		if version > e.currentVersion || forceUpdate {
 			e.currentVersion = version
 		}
