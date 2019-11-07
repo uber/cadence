@@ -191,7 +191,7 @@ type (
 		// MaxConns is the max number of connections to this datastore for a single keyspace
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
-		TLS *auth.TLS `yaml.tls`
+		TLS *auth.TLS `yaml:"tls"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore

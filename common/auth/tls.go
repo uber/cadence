@@ -31,10 +31,10 @@ type (
 		CertFile string `yaml:"certFile"`
 		KeyFile  string `yaml:"keyFile"`
 
-		CaFile string `yaml:caFile` //optional depending on server config
+		CaFile string `yaml:"caFile"` //optional depending on server config
 		// If you want to verify the hostname and server cert (like a wildcard for cass cluster) then you should turn this on
 		// This option is basically the inverse of InSecureSkipVerify
 		// See InSecureSkipVerify in http://golang.org/pkg/crypto/tls/ for more info
-		EnableHostVerification bool `yaml:enableHostVerification`
+		EnableHostVerification bool `yaml:"enableHostVerification"`
 	}
 )

@@ -80,6 +80,7 @@ func checkCompatibleVersion(
 		Password: cfg.Password,
 		Keyspace: cfg.Keyspace,
 		Timeout:  defaultTimeout,
+		TLS:      cfg.TLS,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
