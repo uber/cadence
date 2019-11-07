@@ -1124,6 +1124,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			AutoResetPoints:  executionInfo.AutoResetPoints,
 			Memo:             &workflow.Memo{Fields: executionInfo.Memo},
 			SearchAttributes: &workflow.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
+			IsWorkflowOpen:   common.BoolPtr(true),
 		},
 	}
 
@@ -1153,13 +1154,6 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			return nil, err
 		}
 		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(completionEvent.GetTimestamp())
-	}
-
-	switch executionInfo.State {
-	case persistence.WorkflowStateRunning,
-		persistence.WorkflowStateCreated:
-		result.WorkflowExecutionInfo.IsWorkflowOpen = common.BoolPtr(true)
-	default:
 		result.WorkflowExecutionInfo.IsWorkflowOpen = common.BoolPtr(false)
 	}
 
