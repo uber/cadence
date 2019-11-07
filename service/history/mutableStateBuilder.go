@@ -105,7 +105,9 @@ type (
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
 		replicationState *persistence.ReplicationState
-		hBuilder         *historyBuilder
+		// TODO: persistent this data to db
+		appliedReappliedEvents map[persistence.ReappliedEventRecord]struct{} // record if a event has been reapplied
+		hBuilder               *historyBuilder
 
 		// in memory only attributes
 		// indicate the current version
@@ -166,9 +168,10 @@ func newMutableStateBuilder(
 		pendingRequestCancelInfoIDs: make(map[int64]*persistence.RequestCancelInfo),
 		deleteRequestCancelInfo:     nil,
 
-		updateSignalInfos:    make(map[*persistence.SignalInfo]struct{}),
-		pendingSignalInfoIDs: make(map[int64]*persistence.SignalInfo),
-		deleteSignalInfo:     nil,
+		updateSignalInfos:      make(map[*persistence.SignalInfo]struct{}),
+		pendingSignalInfoIDs:   make(map[int64]*persistence.SignalInfo),
+		deleteSignalInfo:       nil,
+		appliedReappliedEvents: make(map[persistence.ReappliedEventRecord]struct{}),
 
 		updateSignalRequestedIDs:  make(map[string]struct{}),
 		pendingSignalRequestedIDs: make(map[string]struct{}),
@@ -3932,6 +3935,34 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		return nil, nil, err
 	}
 	return workflowSnapshot, workflowEventsSeq, nil
+}
+
+func (e *mutableStateBuilder) IsEventReapplied(
+	runID string,
+	eventID int64,
+	version int64,
+) bool {
+	reappliedRecord := persistence.ReappliedEventRecord{
+		RunID:   runID,
+		EventID: eventID,
+		Version: version,
+	}
+
+	_, isReapplied := e.appliedReappliedEvents[reappliedRecord]
+	return isReapplied
+}
+
+func (e *mutableStateBuilder) UpdateReappliedEvent(
+	runID string,
+	eventID int64,
+	version int64,
+) {
+	reappliedRecord := persistence.ReappliedEventRecord{
+		RunID:   runID,
+		EventID: eventID,
+		Version: version,
+	}
+	e.appliedReappliedEvents[reappliedRecord] = struct{}{}
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(

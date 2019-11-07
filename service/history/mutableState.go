@@ -211,6 +211,8 @@ type (
 		UpdateUserTimer(*persistence.TimerInfo) error
 		UpdateCurrentVersion(version int64, forceUpdate bool) error
 		UpdateWorkflowStateCloseStatus(state int, closeStatus int) error
+		IsEventReapplied(runID string, eventID int64, version int64) bool
+		UpdateReappliedEvent(runID string, eventID int64, version int64)
 
 		AddTransferTasks(transferTasks ...persistence.Task)
 		AddTimerTasks(timerTasks ...persistence.Task)

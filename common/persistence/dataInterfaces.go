@@ -1421,6 +1421,16 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
+	// ReapplyEventRecord is a event reapplied record
+	ReappliedEventRecord struct {
+		// applied run id
+		RunID string
+		// applied event id
+		EventID int64
+		// applied event version
+		Version int64
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()

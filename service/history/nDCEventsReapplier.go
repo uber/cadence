@@ -36,7 +36,8 @@ type (
 			ctx ctx.Context,
 			msBuilder mutableState,
 			historyEvents []*workflow.HistoryEvent,
-		) error
+			runID string,
+		) ([]*workflow.HistoryEvent, error)
 	}
 
 	nDCEventsReapplierImpl struct {
@@ -60,38 +61,44 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 	ctx ctx.Context,
 	msBuilder mutableState,
 	historyEvents []*workflow.HistoryEvent,
-) error {
+	runID string,
+) ([]*workflow.HistoryEvent, error) {
 
-	var reapplyEvents []*workflow.HistoryEvent
-	// TODO: need to implement Reapply policy
+	var toReapplyEvents []*workflow.HistoryEvent
+	var reappliedEvents []*workflow.HistoryEvent
 	for _, event := range historyEvents {
 		switch event.GetEventType() {
 		case workflow.EventTypeWorkflowExecutionSignaled:
-			reapplyEvents = append(reapplyEvents, event)
+			if msBuilder.IsEventReapplied(runID, event.GetEventId(), event.GetVersion()) {
+				// skip already applied event
+				continue
+			}
+			toReapplyEvents = append(toReapplyEvents, event)
 		}
 	}
 
-	if len(reapplyEvents) == 0 {
-		return nil
+	if len(toReapplyEvents) == 0 {
+		return reappliedEvents, nil
 	}
 
 	if !msBuilder.IsWorkflowExecutionRunning() {
 		// TODO when https://github.com/uber/cadence/issues/2420 is finished
 		//  reset to workflow finish event
 		//  ignore this case for now
-		return nil
+		return reappliedEvents, nil
 	}
 
-	// TODO: need to have signal deduplicate logic
-	for _, event := range reapplyEvents {
+	for _, event := range toReapplyEvents {
 		signal := event.GetWorkflowExecutionSignaledEventAttributes()
 		if _, err := msBuilder.AddWorkflowExecutionSignaled(
 			signal.GetSignalName(),
 			signal.GetInput(),
 			signal.GetIdentity(),
 		); err != nil {
-			return err
+			return reappliedEvents, err
 		}
+		reappliedEvents = append(reappliedEvents, event)
+		msBuilder.UpdateReappliedEvent(runID, event.GetEventId(), event.GetVersion())
 	}
-	return nil
+	return reappliedEvents, nil
 }

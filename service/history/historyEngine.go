@@ -98,7 +98,7 @@ type (
 		SyncActivity(ctx ctx.Context, request *h.SyncActivityRequest) error
 		GetReplicationMessages(ctx ctx.Context, taskID int64) (*r.ReplicationMessages, error)
 		QueryWorkflow(ctx ctx.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
-		ReapplyEvents(ctx ctx.Context, domainUUID string, workflowID string, events []*workflow.HistoryEvent) error
+		ReapplyEvents(ctx ctx.Context, domainUUID string, execution *workflow.WorkflowExecution, events []*workflow.HistoryEvent) error
 
 		NotifyNewHistoryEvent(event *historyEventNotification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
@@ -2667,7 +2667,7 @@ func (e *historyEngineImpl) GetReplicationMessages(ctx ctx.Context, taskID int64
 func (e *historyEngineImpl) ReapplyEvents(
 	ctx ctx.Context,
 	domainUUID string,
-	workflowID string,
+	execution *workflow.WorkflowExecution,
 	reapplyEvents []*workflow.HistoryEvent,
 ) error {
 
@@ -2677,14 +2677,14 @@ func (e *historyEngineImpl) ReapplyEvents(
 	}
 	domainID := domainEntry.GetInfo().ID
 	// remove run id from the execution so that reapply events to the current run
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
+	currentExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(execution.GetWorkflowId()),
 	}
 
 	return e.updateWorkflowExecutionWithAction(
 		ctx,
 		domainID,
-		execution,
+		currentExecution,
 		func(mutableState mutableState) (*updateWorkflowAction, error) {
 
 			postActions := &updateWorkflowAction{
@@ -2700,20 +2700,27 @@ func (e *historyEngineImpl) ReapplyEvents(
 			if !mutableState.IsWorkflowExecutionRunning() {
 				e.logger.Warn("cannot reapply event to a finished workflow",
 					tag.WorkflowDomainID(domainID),
-					tag.WorkflowID(workflowID),
+					tag.WorkflowID(currentExecution.GetWorkflowId()),
 				)
 				e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
 				return &updateWorkflowAction{
 					noop: true,
 				}, nil
 			}
-			if err := e.eventsReapplier.reapplyEvents(
+			appliedEvent, err := e.eventsReapplier.reapplyEvents(
 				ctx,
 				mutableState,
 				reapplyEvents,
-			); err != nil {
+				execution.GetRunId(),
+			)
+			if err != nil {
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
 				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
+			}
+			if len(appliedEvent) == 0 {
+				return &updateWorkflowAction{
+					noop: true,
+				}, nil
 			}
 
 			return postActions, nil

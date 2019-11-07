@@ -398,6 +398,18 @@ func (s *mutableStateSuite) TestMergeMapOfByteArray() {
 	s.Equal(2, len(resultMap))
 }
 
+func (s *mutableStateSuite) TestEventReapplied() {
+	runID := uuid.New()
+	eventID := int64(1)
+	version := int64(1)
+
+	isReapplied := s.msBuilder.IsEventReapplied(runID, eventID, version)
+	s.False(isReapplied)
+	s.msBuilder.UpdateReappliedEvent(runID, eventID, version)
+	isReapplied = s.msBuilder.IsEventReapplied(runID, eventID, version)
+	s.True(isReapplied)
+}
+
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*shared.HistoryEvent, *shared.HistoryEvent) {
 	domainID := testDomainID
 	execution := shared.WorkflowExecution{

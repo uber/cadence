@@ -2318,6 +2318,32 @@ func (mr *MockmutableStateMockRecorder) UpdateWorkflowStateCloseStatus(state, cl
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowStateCloseStatus", reflect.TypeOf((*MockmutableState)(nil).UpdateWorkflowStateCloseStatus), state, closeStatus)
 }
 
+// IsEventReapplied mocks base method
+func (m *MockmutableState) IsEventReapplied(runID string, eventID, version int64) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsEventReapplied", runID, eventID, version)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsEventReapplied indicates an expected call of IsEventReapplied
+func (mr *MockmutableStateMockRecorder) IsEventReapplied(runID, eventID, version interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEventReapplied", reflect.TypeOf((*MockmutableState)(nil).IsEventReapplied), runID, eventID, version)
+}
+
+// UpdateReappliedEvent mocks base method
+func (m *MockmutableState) UpdateReappliedEvent(runID string, eventID, version int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateReappliedEvent", runID, eventID, version)
+}
+
+// UpdateReappliedEvent indicates an expected call of UpdateReappliedEvent
+func (mr *MockmutableStateMockRecorder) UpdateReappliedEvent(runID, eventID, version interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateReappliedEvent", reflect.TypeOf((*MockmutableState)(nil).UpdateReappliedEvent), runID, eventID, version)
+}
+
 // AddTransferTasks mocks base method
 func (m *MockmutableState) AddTransferTasks(transferTasks ...persistence.Task) {
 	m.ctrl.T.Helper()
