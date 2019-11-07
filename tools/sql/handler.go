@@ -26,8 +26,54 @@ import (
 
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/schema/mysql"
 	"github.com/uber/cadence/tools/common/schema"
 )
+
+// VerifyCompatibleVersion ensures that the installed version of cadence and visibility
+// is greater than or equal to the expected version.
+func VerifyCompatibleVersion(
+	cfg config.Persistence,
+) error {
+
+	ds, ok := cfg.DataStores[cfg.DefaultStore]
+	if ok && ds.SQL != nil {
+		err := checkCompatibleVersion(*ds.SQL, mysql.Version)
+		if err != nil {
+			return err
+		}
+	}
+	ds, ok = cfg.DataStores[cfg.VisibilityStore]
+	if ok && ds.SQL != nil {
+		err := checkCompatibleVersion(*ds.SQL, mysql.VisibilityVersion)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkCompatibleVersion check the version compatibility
+func checkCompatibleVersion(
+	cfg config.SQL,
+	expectedVersion string,
+) error {
+
+	connection, err := newConn(&sqlConnectParams{
+		host:       cfg.ConnectAddr,
+		user:       cfg.User,
+		password:   cfg.Password,
+		driverName: cfg.DriverName,
+		database:   cfg.DatabaseName,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create SQL connection: %v", err.Error())
+	}
+	defer connection.Close()
+
+	return schema.VerifyCompatibleVersion(connection, cfg.DatabaseName, expectedVersion)
+}
 
 // setupSchema executes the setupSchemaTask
 // using the given command line arguments

@@ -31,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 )
 
 // AdminAddSearchAttribute to whitelist search attribute
@@ -58,6 +59,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		SearchAttribute: map[string]shared.IndexedValueType{
 			key: shared.IndexedValueType(valType),
 		},
+		SecurityToken: common.StringPtr(c.String(FlagSecurityToken)),
 	}
 
 	err := adminClient.AddSearchAttribute(ctx, request)
