@@ -433,7 +433,7 @@ tls:
     enabled: false
     certFile: ""
     keyFile: ""
-    bundleFile: ""
+    caFile: ""
 clusters:
 	localKafka:
 		brokers:
@@ -485,7 +485,7 @@ tls:
     enabled: false
     certFile: ""
     keyFile: ""
-    bundleFile: ""
+    caFile: ""
 clusters:
 	localKafka:
 		brokers:
@@ -600,7 +600,7 @@ tls:
     enabled: false
     certFile: ""
     keyFile: ""
-    bundleFile: ""
+    caFile: ""
 clusters:
 	localKafka:
 		brokers:

@@ -185,7 +185,7 @@ func CreateTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
 		return nil, err
 	}
 	caCertPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile(tlsConfig.BundleFile)
+	pemData, err := ioutil.ReadFile(tlsConfig.CaFile)
 	if err != nil {
 		return nil, err
 	}
