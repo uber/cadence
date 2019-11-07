@@ -1421,7 +1421,7 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
-	// ReapplyEventRecord is a event reapplied record
+	// ReappliedEventRecord is a event reapplied record
 	ReappliedEventRecord struct {
 		// applied run id
 		RunID string
