@@ -127,6 +127,7 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
+	errQueryDisallowedForDomain                   = &gen.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 
 	// err for archival
 	errHistoryNotFound = &gen.BadRequestError{Message: "Requested workflow history not found, may have passed retention period."}
@@ -2841,6 +2842,10 @@ func (wh *WorkflowHandler) QueryWorkflow(
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendQueryWorkflowScope, queryRequest)
 	defer sw.Stop()
+
+	if wh.config.DisallowQuery(queryRequest.GetDomain()) {
+		return nil, wh.error(errQueryDisallowedForDomain, scope)
+	}
 
 	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
 		return nil, wh.error(err, scope)
