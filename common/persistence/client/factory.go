@@ -44,7 +44,7 @@ type (
 		NewTaskManager() (p.TaskManager, error)
 		// NewShardManager returns a new shard manager
 		NewShardManager() (p.ShardManager, error)
-		// NewHistoryManager returns a new historyV2 manager
+		// NewHistoryManager returns a new history manager
 		NewHistoryManager() (p.HistoryManager, error)
 		// NewMetadataManager returns a new metadata manager
 		NewMetadataManager() (p.MetadataManager, error)
