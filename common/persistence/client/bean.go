@@ -70,8 +70,8 @@ type (
 	}
 )
 
-// NewBeanByFactory crate a new store bean using factory
-func NewBeanByFactory(
+// NewBeanFromFactory crate a new store bean using factory
+func NewBeanFromFactory(
 	factory Factory,
 ) (*BeanImpl, error) {
 
