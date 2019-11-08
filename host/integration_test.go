@@ -1448,6 +1448,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	s.Equal(1, len(dweResponse.PendingActivities))
 	s.Equal("test-activity-type", dweResponse.PendingActivities[0].ActivityType.GetName())
 	s.Equal(int64(0), dweResponse.PendingActivities[0].GetLastHeartbeatTimestamp())
+	s.True(*dweResponse.WorkflowExecutionInfo.IsWorkflowOpen)
 
 	// process activity task
 	err = poller.PollAndProcessActivityTask(false)
@@ -1457,6 +1458,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseStatus)
 	s.Equal(int64(8), *dweResponse.WorkflowExecutionInfo.HistoryLength) // ActivityTaskStarted, ActivityTaskCompleted, DecisionTaskScheduled
 	s.Equal(0, len(dweResponse.PendingActivities))
+	s.True(*dweResponse.WorkflowExecutionInfo.IsWorkflowOpen)
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTask(true, false)
@@ -1467,6 +1469,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	s.Nil(err)
 	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *dweResponse.WorkflowExecutionInfo.CloseStatus)
 	s.Equal(int64(11), *dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, WorkflowCompleted
+	s.False(*dweResponse.WorkflowExecutionInfo.IsWorkflowOpen)
 }
 
 func (s *integrationSuite) TestVisibility() {
