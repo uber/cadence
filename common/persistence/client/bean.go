@@ -141,6 +141,10 @@ func NewBean(
 
 // GetMetadataManager get MetadataManager
 func (s *BeanImpl) GetMetadataManager() persistence.MetadataManager {
+
+	s.RLock()
+	defer s.RUnlock()
+
 	return s.metadataManager
 }
 
@@ -157,6 +161,10 @@ func (s *BeanImpl) SetMetadataManager(
 
 // GetTaskManager get TaskManager
 func (s *BeanImpl) GetTaskManager() persistence.TaskManager {
+
+	s.RLock()
+	defer s.RUnlock()
+
 	return s.taskManager
 }
 
@@ -173,6 +181,10 @@ func (s *BeanImpl) SetTaskManager(
 
 // GetVisibilityManager get VisibilityManager
 func (s *BeanImpl) GetVisibilityManager() persistence.VisibilityManager {
+
+	s.RLock()
+	defer s.RUnlock()
+
 	return s.visibilityManager
 }
 
@@ -189,6 +201,10 @@ func (s *BeanImpl) SetVisibilityManager(
 
 // GetDomainReplicationQueue get DomainReplicationQueue
 func (s *BeanImpl) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
+
+	s.RLock()
+	defer s.RUnlock()
+
 	return s.domainReplicationQueue
 }
 
@@ -205,6 +221,10 @@ func (s *BeanImpl) SetDomainReplicationQueue(
 
 // GetShardManager get ShardManager
 func (s *BeanImpl) GetShardManager() persistence.ShardManager {
+
+	s.RLock()
+	defer s.RUnlock()
+
 	return s.shardManager
 }
 
@@ -221,6 +241,10 @@ func (s *BeanImpl) SetShardManager(
 
 // GetHistoryManager get HistoryManager
 func (s *BeanImpl) GetHistoryManager() persistence.HistoryManager {
+
+	s.RLock()
+	defer s.RUnlock()
+
 	return s.historyManager
 }
 
