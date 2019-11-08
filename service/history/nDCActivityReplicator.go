@@ -76,7 +76,6 @@ func (r *nDCActivityReplicatorImpl) SyncActivity(
 	// 2. activity heart beat
 	// no sync activity task will be sent when active side fail / timeout activity,
 	// since standby side does not have activity retry timer
-
 	domainID := request.GetDomainId()
 	execution := workflow.WorkflowExecution{
 		WorkflowId: request.WorkflowId,
