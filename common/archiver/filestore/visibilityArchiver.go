@@ -340,5 +340,6 @@ func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionI
 		SearchAttributes: &shared.SearchAttributes{
 			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
 		},
+		IsWorkflowOpen: common.BoolPtr(record.CloseStatus.Ptr() == nil),
 	}
 }
