@@ -342,7 +342,7 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 			retryV2Err.EndEventId,
 			retryV2Err.EndEventVersion,
 		); resendErr != nil {
-			t.logger.Error("error resend history", tag.Error(err))
+			t.logger.Error("error resend history", tag.Error(resendErr))
 			// should return the replication error, not the resending error
 			return err
 		}
