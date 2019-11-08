@@ -39,7 +39,6 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -124,14 +123,14 @@ var (
 	errNoPermission                               = &gen.BadRequestError{Message: "No permission to do this operation."}
 	errRequestIDNotSet                            = &gen.BadRequestError{Message: "RequestId is not set on request."}
 	errWorkflowTypeNotSet                         = &gen.BadRequestError{Message: "WorkflowType is not set on request."}
+	errInvalidRetention                           = &gen.BadRequestError{Message: "RetentionDays is invalid."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
 
 	// err for archival
-	errHistoryHasPassedRetentionPeriod = &gen.BadRequestError{Message: "Requested workflow history has passed retention period."}
-	// the following errors represents bad user input
-	errURIUpdate = &shared.BadRequestError{Message: "Cannot update existing archival URI"}
+	errHistoryNotFound = &gen.BadRequestError{Message: "Requested workflow history not found, may have passed retention period."}
+	errURIUpdate       = &gen.BadRequestError{Message: "Cannot update existing archival URI"}
 
 	// err for string too long
 	errDomainTooLong       = &gen.BadRequestError{Message: "Domain length exceeds limit."}
@@ -255,6 +254,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	if registerRequest == nil {
 		return errRequestNotSet
+	}
+
+	if registerRequest.GetWorkflowExecutionRetentionPeriodInDays() > common.MaxWorkflowRetentionPeriodInDays {
+		return errInvalidRetention
 	}
 
 	if err := checkPermission(wh.config, registerRequest.SecurityToken); err != nil {
@@ -2425,7 +2428,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	if entry.GetConfig().VisibilityArchivalStatus != shared.ArchivalStatusEnabled {
+	if entry.GetConfig().VisibilityArchivalStatus != gen.ArchivalStatusEnabled {
 		return nil, wh.error(&gen.BadRequestError{Message: "Domain is not configured for visibility archival"}, scope)
 	}
 
@@ -3284,7 +3287,7 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.Get
 		return false
 	}
 	switch err.(type) {
-	case *shared.EntityNotExistsError:
+	case *gen.EntityNotExistsError:
 		// the only case in which history is assumed to be archived is if getting mutable state returns entity not found error
 		return true
 	}
@@ -3304,7 +3307,10 @@ func (wh *WorkflowHandler) getArchivedHistory(
 
 	URIString := entry.GetConfig().HistoryArchivalURI
 	if URIString == "" {
-		return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
+		// if URI is empty, it means the domain has never enabled for archival.
+		// the error is not "workflow has passed retention period", because
+		// we have no way to tell if the requested workflow exists or not.
+		return nil, wh.error(errHistoryNotFound, scope)
 	}
 
 	URI, err := archiver.NewURI(URIString)
@@ -3328,7 +3334,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		return nil, wh.error(err, scope)
 	}
 
-	history := &shared.History{}
+	history := &gen.History{}
 	for _, batch := range resp.HistoryBatches {
 		history.Events = append(history.Events, batch.Events...)
 	}
@@ -3452,7 +3458,7 @@ func (wh *WorkflowHandler) GetDomainReplicationMessages(
 // ReapplyEvents applies stale events to the current workflow and the current run
 func (wh *WorkflowHandler) ReapplyEvents(
 	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
+	request *gen.ReapplyEventsRequest,
 ) (err error) {
 	defer log.CapturePanic(wh.GetLogger(), &err)
 
