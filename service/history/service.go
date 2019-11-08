@@ -348,7 +348,7 @@ func (s *Service) Start() {
 		EnableSampling:                  s.config.EnableVisibilitySampling,
 		EnableReadFromClosedExecutionV2: s.config.EnableReadFromClosedExecutionV2,
 	}
-	pFactory := client.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
+	pFactory := client.NewFactory(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
 
 	shardMgr, err := pFactory.NewShardManager()
 	if err != nil {

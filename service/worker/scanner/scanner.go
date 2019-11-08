@@ -174,7 +174,7 @@ func (s *Scanner) startWorkflow(client cclient.Client, options cclient.StartWork
 
 func (s *Scanner) buildContext() error {
 	cfg := &s.context.cfg
-	pFactory := client2.New(cfg.Persistence, cfg.ClusterMetadata.GetCurrentClusterName(), s.context.metricsClient, s.context.logger)
+	pFactory := client2.NewFactory(cfg.Persistence, cfg.ClusterMetadata.GetCurrentClusterName(), s.context.metricsClient, s.context.logger)
 	domainDB, err := pFactory.NewMetadataManager()
 	if err != nil {
 		return err

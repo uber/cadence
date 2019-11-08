@@ -158,7 +158,7 @@ func (s *Service) Start() {
 		EnableSampling:                  s.config.EnableVisibilitySampling,
 		EnableReadFromClosedExecutionV2: s.config.EnableReadFromClosedExecutionV2,
 	}
-	pFactory := client.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), base.GetMetricsClient(), log)
+	pFactory := client.NewFactory(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), base.GetMetricsClient(), log)
 
 	metadata, err := pFactory.NewMetadataManager()
 	if err != nil {

@@ -148,7 +148,7 @@ func (s *Service) Start() {
 
 	pConfig := s.params.PersistenceConfig
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
-	pFactory := client.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
+	pFactory := client.NewFactory(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
 	s.ensureSystemDomainExists(pFactory, base.GetClusterMetadata().GetCurrentClusterName())
 	s.metricsClient = base.GetMetricsClient()
 

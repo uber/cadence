@@ -111,14 +111,14 @@ var storeTypes = []storeType{
 	storeTypeQueue,
 }
 
-// New returns an implementation of factory that vends persistence objects based on
+// NewFactory returns an implementation of factory that vends persistence objects based on
 // specified configuration. This factory takes as input a config.Persistence object
 // which specifies the datastore to be used for a given type of object. This config
 // also contains config for individual datastores themselves.
 //
 // The objects returned by this factory enforce ratelimit and maxconns according to
 // given configuration. In addition, all objects will emit metrics automatically
-func New(
+func NewFactory(
 	cfg *config.Persistence,
 	clusterName string,
 	metricsClient metrics.Client,

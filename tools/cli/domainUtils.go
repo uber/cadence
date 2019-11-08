@@ -296,7 +296,7 @@ func initializeMetadataMgr(
 		EnableSampling:                  dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
 		EnableReadFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
 	}
-	pFactory := client.New(
+	pFactory := client.NewFactory(
 		&pConfig,
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
