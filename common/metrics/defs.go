@@ -1585,6 +1585,7 @@ const (
 	ConsistentQueryTimeoutCount
 
 	NumHistoryMetrics
+	DecisionTaskCompletedWithEmptyDecisionsCount
 )
 
 // Matching metrics enum
