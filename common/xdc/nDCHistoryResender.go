@@ -134,28 +134,28 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 			runID,
 			historyBatch.rawEventBatch,
 			historyBatch.versionHistory.GetItems())
-		//lastEvent, err := n.getLastEvent(historyBatch.rawEventBatch)
-		//if err != nil {
-		//	return err
-		//}
-		//continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
-		//if continueAsNewAttribute != nil {
-		//	newRunID := continueAsNewAttribute.GetNewExecutionRunId()
-		//	resp, err := n.getHistory(
-		//		domainID,
-		//		workflowID,
-		//		newRunID,
-		//		common.Int64Ptr(common.FirstEventID-1),
-		//		common.Int64Ptr(lastEvent.GetVersion()),
-		//		nil,
-		//		nil,
-		//		nil,
-		//		defaultPageSize)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	replicationRequest.NewRunEvents = resp.HistoryBatches[0]
-		//}
+		lastEvent, err := n.getLastEvent(historyBatch.rawEventBatch)
+		if err != nil {
+			return err
+		}
+		continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
+		if continueAsNewAttribute != nil {
+			newRunID := continueAsNewAttribute.GetNewExecutionRunId()
+			resp, err := n.getHistory(
+				domainID,
+				workflowID,
+				newRunID,
+				common.Int64Ptr(common.FirstEventID-1),
+				common.Int64Ptr(lastEvent.GetVersion()),
+				nil,
+				nil,
+				nil,
+				defaultPageSize)
+			if err != nil {
+				return err
+			}
+			replicationRequest.NewRunEvents = resp.HistoryBatches[0]
+		}
 
 		err = n.sendReplicationRawRequest(replicationRequest)
 		if err != nil {
