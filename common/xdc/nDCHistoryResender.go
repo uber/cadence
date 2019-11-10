@@ -128,13 +128,35 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 
 		// we don't need to handle continue as new here
 		// because we only care about the current run
-		// TODO: revisit to evaluate if we need to handle continue as new
 		replicationRequest := n.createReplicationRawRequest(
 			domainID,
 			workflowID,
 			runID,
 			historyBatch.rawEventBatch,
 			historyBatch.versionHistory.GetItems())
+		//lastEvent, err := n.getLastEvent(historyBatch.rawEventBatch)
+		//if err != nil {
+		//	return err
+		//}
+		//continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
+		//if continueAsNewAttribute != nil {
+		//	newRunID := continueAsNewAttribute.GetNewExecutionRunId()
+		//	resp, err := n.getHistory(
+		//		domainID,
+		//		workflowID,
+		//		newRunID,
+		//		common.Int64Ptr(common.FirstEventID-1),
+		//		common.Int64Ptr(lastEvent.GetVersion()),
+		//		nil,
+		//		nil,
+		//		nil,
+		//		defaultPageSize)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	replicationRequest.NewRunEvents = resp.HistoryBatches[0]
+		//}
+
 		err = n.sendReplicationRawRequest(replicationRequest)
 		if err != nil {
 			n.logger.Error("failed to replicate events",
@@ -205,7 +227,6 @@ func (n *NDCHistoryResenderImpl) createReplicationRawRequest(
 		Events:              historyBlob,
 		VersionHistoryItems: versionHistoryItems,
 	}
-
 	return request
 }
 
@@ -260,4 +281,35 @@ func (n *NDCHistoryResenderImpl) getHistory(
 	}
 
 	return response, nil
+}
+
+func (n *NDCHistoryResenderImpl) getLastEvent(blob *shared.DataBlob) (*shared.HistoryEvent, error) {
+
+	historyEvents, err := n.deserializeBlob(blob)
+	if err != nil {
+		return nil, err
+	}
+
+	return historyEvents[len(historyEvents)-1], nil
+}
+
+func (n *NDCHistoryResenderImpl) deserializeBlob(blob *shared.DataBlob) ([]*shared.HistoryEvent, error) {
+
+	var err error
+	var historyEvents []*shared.HistoryEvent
+
+	switch blob.GetEncodingType() {
+	case shared.EncodingTypeThriftRW:
+		historyEvents, err = n.serializer.DeserializeBatchEvents(&persistence.DataBlob{
+			Encoding: common.EncodingTypeThriftRW,
+			Data:     blob.Data,
+		})
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, ErrUnknownEncodingType
+	}
+
+	return historyEvents, nil
 }
