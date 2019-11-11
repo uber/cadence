@@ -133,30 +133,17 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 			runID,
 			historyBatch.rawEventBatch,
 			historyBatch.versionHistory.GetItems())
-		// This is the last batch
+		// This is the last batch and handle continue as new case
 		if !historyIterator.HasNext() {
-			lastEvent, err := n.getLastEvent(historyBatch.rawEventBatch)
+			newRunHistory, err := n.handleContinueAsNew(
+				domainID,
+				workflowID,
+				historyBatch.rawEventBatch,
+			)
 			if err != nil {
 				return err
 			}
-			continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
-			if continueAsNewAttribute != nil {
-				newRunID := continueAsNewAttribute.GetNewExecutionRunId()
-				resp, err := n.getHistory(
-					domainID,
-					workflowID,
-					newRunID,
-					common.Int64Ptr(common.FirstEventID-1),
-					common.Int64Ptr(lastEvent.GetVersion()),
-					nil,
-					nil,
-					nil,
-					continueAsNewPageSize)
-				if err != nil {
-					return err
-				}
-				replicationRequest.NewRunEvents = resp.HistoryBatches[0]
-			}
+			replicationRequest.NewRunEvents = newRunHistory
 		}
 
 		err = n.sendReplicationRawRequest(replicationRequest)
@@ -306,4 +293,37 @@ func (n *NDCHistoryResenderImpl) deserializeBlob(blob *shared.DataBlob) ([]*shar
 	default:
 		return nil, ErrUnknownEncodingType
 	}
+}
+
+func (n *NDCHistoryResenderImpl) handleContinueAsNew(
+	domainID string,
+	workflowID string,
+	eventBatch *shared.DataBlob,
+) (*shared.DataBlob, error) {
+	lastEvent, err := n.getLastEvent(eventBatch)
+	if err != nil {
+		return nil, err
+	}
+	continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
+	if continueAsNewAttribute != nil {
+		newRunID := continueAsNewAttribute.GetNewExecutionRunId()
+		resp, err := n.getHistory(
+			domainID,
+			workflowID,
+			newRunID,
+			common.Int64Ptr(common.FirstEventID-1),
+			common.Int64Ptr(lastEvent.GetVersion()),
+			nil,
+			nil,
+			nil,
+			continueAsNewPageSize)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.HistoryBatches) == 0 {
+			return nil, &shared.InternalServiceError{Message: "new run history size cannot be zero."}
+		}
+		return resp.HistoryBatches[0], nil
+	}
+	return nil, nil
 }
