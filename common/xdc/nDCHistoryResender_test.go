@@ -293,7 +293,7 @@ func (s *nDCHistoryResenderSuite) TestSendSingleWorkflowHistory_WithContinueAsNe
 			},
 			StartEventId:      common.Int64Ptr(common.FirstEventID - 1),
 			StartEventVersion: common.Int64Ptr(version),
-			MaximumPageSize:   common.Int32Ptr(pageSize),
+			MaximumPageSize:   common.Int32Ptr(1),
 			NextPageToken:     nil,
 		}).Return(&admin.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: []*shared.DataBlob{blob},

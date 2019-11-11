@@ -39,7 +39,8 @@ import (
 )
 
 const (
-	resendContextTimeout = 30 * time.Second
+	resendContextTimeout  = 30 * time.Second
+	continueAsNewPageSize = 1
 )
 
 type (
@@ -126,35 +127,36 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 		}
 		historyBatch := result.(*historyBatch)
 
-		// we don't need to handle continue as new here
-		// because we only care about the current run
 		replicationRequest := n.createReplicationRawRequest(
 			domainID,
 			workflowID,
 			runID,
 			historyBatch.rawEventBatch,
 			historyBatch.versionHistory.GetItems())
-		lastEvent, err := n.getLastEvent(historyBatch.rawEventBatch)
-		if err != nil {
-			return err
-		}
-		continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
-		if continueAsNewAttribute != nil {
-			newRunID := continueAsNewAttribute.GetNewExecutionRunId()
-			resp, err := n.getHistory(
-				domainID,
-				workflowID,
-				newRunID,
-				common.Int64Ptr(common.FirstEventID-1),
-				common.Int64Ptr(lastEvent.GetVersion()),
-				nil,
-				nil,
-				nil,
-				defaultPageSize)
+		// This is the last batch
+		if !historyIterator.HasNext() {
+			lastEvent, err := n.getLastEvent(historyBatch.rawEventBatch)
 			if err != nil {
 				return err
 			}
-			replicationRequest.NewRunEvents = resp.HistoryBatches[0]
+			continueAsNewAttribute := lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
+			if continueAsNewAttribute != nil {
+				newRunID := continueAsNewAttribute.GetNewExecutionRunId()
+				resp, err := n.getHistory(
+					domainID,
+					workflowID,
+					newRunID,
+					common.Int64Ptr(common.FirstEventID-1),
+					common.Int64Ptr(lastEvent.GetVersion()),
+					nil,
+					nil,
+					nil,
+					continueAsNewPageSize)
+				if err != nil {
+					return err
+				}
+				replicationRequest.NewRunEvents = resp.HistoryBatches[0]
+			}
 		}
 
 		err = n.sendReplicationRawRequest(replicationRequest)
@@ -295,21 +297,13 @@ func (n *NDCHistoryResenderImpl) getLastEvent(blob *shared.DataBlob) (*shared.Hi
 
 func (n *NDCHistoryResenderImpl) deserializeBlob(blob *shared.DataBlob) ([]*shared.HistoryEvent, error) {
 
-	var err error
-	var historyEvents []*shared.HistoryEvent
-
 	switch blob.GetEncodingType() {
 	case shared.EncodingTypeThriftRW:
-		historyEvents, err = n.serializer.DeserializeBatchEvents(&persistence.DataBlob{
+		return n.serializer.DeserializeBatchEvents(&persistence.DataBlob{
 			Encoding: common.EncodingTypeThriftRW,
 			Data:     blob.Data,
 		})
-		if err != nil {
-			return nil, err
-		}
 	default:
 		return nil, ErrUnknownEncodingType
 	}
-
-	return historyEvents, nil
 }
