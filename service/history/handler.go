@@ -533,7 +533,7 @@ func (h *Handler) RespondDecisionTaskCompleted(
 
 	completeRequest := wrappedRequest.CompleteRequest
 	if len(completeRequest.Decisions) == 0 {
-		h.metricsClient.IncCounter(scope, metrics.DecisionTaskCompletedWithEmptyDecisionsCount)
+		h.metricsClient.IncCounter(scope, metrics.EmptyCompletionDecisionsCounter)
 	}
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.TaskToken)
 	if err0 != nil {
