@@ -602,47 +602,46 @@ func (b *stateBuilderImpl) applyEvents(
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 
-			if len(newRunHistory) == 0 {
+			if len(newRunHistory) != 0 {
 				// This is allowed for resend case
 				// Resend only sends events within one run
-				return nil, nil
-			}
 
-			if newRunNDC {
-				newRunMutableStateBuilder = newMutableStateBuilderWithVersionHistories(
-					b.shard,
-					b.shard.GetEventsCache(),
-					b.logger,
-					b.mutableState.GetDomainEntry(),
+				if newRunNDC {
+					newRunMutableStateBuilder = newMutableStateBuilderWithVersionHistories(
+						b.shard,
+						b.shard.GetEventsCache(),
+						b.logger,
+						b.mutableState.GetDomainEntry(),
+					)
+				} else {
+					newRunMutableStateBuilder = newMutableStateBuilderWithReplicationState(
+						b.shard,
+						b.shard.GetEventsCache(),
+						b.logger,
+						b.mutableState.GetDomainEntry(),
+					)
+				}
+				newRunStateBuilder := newStateBuilder(b.shard, b.logger, newRunMutableStateBuilder, b.taskGeneratorProvider)
+
+				newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
+				newExecution := shared.WorkflowExecution{
+					WorkflowId: execution.WorkflowId,
+					RunId:      common.StringPtr(newRunID),
+				}
+				_, err := newRunStateBuilder.applyEvents(
+					domainID,
+					uuid.New(),
+					newExecution,
+					newRunHistory,
+					nil,
+					false,
 				)
-			} else {
-				newRunMutableStateBuilder = newMutableStateBuilderWithReplicationState(
-					b.shard,
-					b.shard.GetEventsCache(),
-					b.logger,
-					b.mutableState.GetDomainEntry(),
-				)
-			}
-			newRunStateBuilder := newStateBuilder(b.shard, b.logger, newRunMutableStateBuilder, b.taskGeneratorProvider)
-
-			newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-			newExecution := shared.WorkflowExecution{
-				WorkflowId: execution.WorkflowId,
-				RunId:      common.StringPtr(newRunID),
-			}
-			_, err := newRunStateBuilder.applyEvents(
-				domainID,
-				uuid.New(),
-				newExecution,
-				newRunHistory,
-				nil,
-				false,
-			)
-			if err != nil {
-				return nil, err
+				if err != nil {
+					return nil, err
+				}
 			}
 
-			err = b.mutableState.ReplicateWorkflowExecutionContinuedAsNewEvent(
+			err := b.mutableState.ReplicateWorkflowExecutionContinuedAsNewEvent(
 				firstEvent.GetEventId(),
 				domainID,
 				event,
