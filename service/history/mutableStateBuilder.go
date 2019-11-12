@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -44,6 +45,7 @@ const (
 
 	mutableStateInvalidHistoryActionMsg         = "invalid history builder state for action"
 	mutableStateInvalidHistoryActionMsgTemplate = mutableStateInvalidHistoryActionMsg + ": %v"
+	mutableStateEventAppliedCacheKeyTemplate    = "%v::%v"
 )
 
 var (
@@ -105,9 +107,7 @@ type (
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
 		replicationState *persistence.ReplicationState
-		// TODO: persistent this data to db
-		appliedReappliedEvents map[persistence.ReappliedEventRecord]struct{} // record if a event has been reapplied
-		hBuilder               *historyBuilder
+		hBuilder         *historyBuilder
 
 		// in memory only attributes
 		// indicate the current version
@@ -122,6 +122,9 @@ type (
 		// domain entry contains a snapshot of domain
 		// NOTE: do not use the failover version inside, use currentVersion above
 		domainEntry *cache.DomainCacheEntry
+		// record if a event has been applied to mutable state
+		// TODO: persist this to db
+		appliedEvents map[string]struct{}
 
 		insertTransferTasks    []persistence.Task
 		insertReplicationTasks []persistence.Task
@@ -168,10 +171,9 @@ func newMutableStateBuilder(
 		pendingRequestCancelInfoIDs: make(map[int64]*persistence.RequestCancelInfo),
 		deleteRequestCancelInfo:     nil,
 
-		updateSignalInfos:      make(map[*persistence.SignalInfo]struct{}),
-		pendingSignalInfoIDs:   make(map[int64]*persistence.SignalInfo),
-		deleteSignalInfo:       nil,
-		appliedReappliedEvents: make(map[persistence.ReappliedEventRecord]struct{}),
+		updateSignalInfos:    make(map[*persistence.SignalInfo]struct{}),
+		pendingSignalInfoIDs: make(map[int64]*persistence.SignalInfo),
+		deleteSignalInfo:     nil,
 
 		updateSignalRequestedIDs:  make(map[string]struct{}),
 		pendingSignalRequestedIDs: make(map[string]struct{}),
@@ -182,6 +184,7 @@ func newMutableStateBuilder(
 		stateInDB:             persistence.WorkflowStateVoid,
 		nextEventIDInDB:       0,
 		domainEntry:           domainEntry,
+		appliedEvents:         make(map[string]struct{}),
 
 		queryRegistry: newQueryRegistry(),
 
@@ -3937,32 +3940,17 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	return workflowSnapshot, workflowEventsSeq, nil
 }
 
-func (e *mutableStateBuilder) IsEventReapplied(
-	runID string,
-	eventID int64,
-	version int64,
+func (e *mutableStateBuilder) IsEventApplied(
+	cacheKey definition.CacheKey,
 ) bool {
-	reappliedRecord := persistence.ReappliedEventRecord{
-		RunID:   runID,
-		EventID: eventID,
-		Version: version,
-	}
-
-	_, isReapplied := e.appliedReappliedEvents[reappliedRecord]
+	_, isReapplied := e.appliedEvents[cacheKey.Generate()]
 	return isReapplied
 }
 
-func (e *mutableStateBuilder) UpdateReappliedEvent(
-	runID string,
-	eventID int64,
-	version int64,
+func (e *mutableStateBuilder) UpdateEventApplied(
+	cacheKey definition.CacheKey,
 ) {
-	reappliedRecord := persistence.ReappliedEventRecord{
-		RunID:   runID,
-		EventID: eventID,
-		Version: version,
-	}
-	e.appliedReappliedEvents[reappliedRecord] = struct{}{}
+	e.appliedEvents[cacheKey.Generate()] = struct{}{}
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(
