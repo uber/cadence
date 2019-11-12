@@ -55,7 +55,9 @@ func (s *DecisionHandlerSuite) TearDownTest() {
 }
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_ClientNotSupports() {
-	decisionHandler := &decisionHandlerImpl{}
+	decisionHandler := &decisionHandlerImpl{
+		versionChecker: client.NewVersionChecker(),
+	}
 	queryRegistry := s.constructQueryRegistry(10)
 	mutableStateMock := NewMockmutableState(s.controller)
 	mutableStateMock.EXPECT().GetQueryRegistry().Return(queryRegistry)
@@ -66,7 +68,9 @@ func (s *DecisionHandlerSuite) TestHandleBufferedQueries_ClientNotSupports() {
 }
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_NewDecisionTask() {
-	decisionHandler := &decisionHandlerImpl{}
+	decisionHandler := &decisionHandlerImpl{
+		versionChecker: client.NewVersionChecker(),
+	}
 	queryRegistry := s.constructQueryRegistry(10)
 	mutableStateMock := NewMockmutableState(s.controller)
 	mutableStateMock.EXPECT().GetQueryRegistry().Return(queryRegistry)
@@ -78,7 +82,9 @@ func (s *DecisionHandlerSuite) TestHandleBufferedQueries_NewDecisionTask() {
 }
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_NoNewDecisionTask() {
-	decisionHandler := &decisionHandlerImpl{}
+	decisionHandler := &decisionHandlerImpl{
+		versionChecker: client.NewVersionChecker(),
+	}
 	queryRegistry := s.constructQueryRegistry(10)
 	mutableStateMock := NewMockmutableState(s.controller)
 	mutableStateMock.EXPECT().GetQueryRegistry().Return(queryRegistry)
