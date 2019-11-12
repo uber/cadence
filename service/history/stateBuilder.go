@@ -602,10 +602,8 @@ func (b *stateBuilderImpl) applyEvents(
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 
+			// The length of newRunHistory can be zero in resend case
 			if len(newRunHistory) != 0 {
-				// This is allowed for resend case
-				// Resend only sends events within one run
-
 				if newRunNDC {
 					newRunMutableStateBuilder = newMutableStateBuilderWithVersionHistories(
 						b.shard,
