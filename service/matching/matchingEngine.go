@@ -489,32 +489,49 @@ query_loop:
 				expectedNextEventID := result.waitNextEventID
 			wait_loop:
 				for j := 0; j < maxQueryWaitCount; j++ {
-					ms, err := e.historyService.PollMutableState(ctx, &h.PollMutableStateRequest{
-						DomainUUID:          queryRequest.DomainUUID,
-						Execution:           queryRequest.QueryRequest.Execution,
-						ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
-					})
-					if err == nil {
-						if ms.GetPreviousStartedEventId() > 0 {
-							// now we have at least one decision task completed, so retry query
-							continue query_loop
+					var previousStartedEventID int64
+					var nextEventID int64
+					var workflowCloseStatus int32
+					if e.config.EnablePollForMutableState() {
+						response, err := e.historyService.PollMutableState(ctx, &h.PollMutableStateRequest{
+							DomainUUID:          queryRequest.DomainUUID,
+							Execution:           queryRequest.QueryRequest.Execution,
+							ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
+						})
+						if err != nil {
+							return nil, &workflow.QueryFailedError{Message: err.Error()}
 						}
-
-						if ms.GetWorkflowCloseState() != persistence.WorkflowCloseStatusNone {
-							return nil, &workflow.QueryFailedError{Message: "workflow closed without making any progress"}
+						previousStartedEventID = response.GetPreviousStartedEventId()
+						workflowCloseStatus = response.GetWorkflowCloseState()
+						nextEventID = response.GetNextEventId()
+					} else {
+						response, err := e.historyService.GetMutableState(ctx, &h.GetMutableStateRequest{
+							DomainUUID:          queryRequest.DomainUUID,
+							Execution:           queryRequest.QueryRequest.Execution,
+							ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
+						})
+						if err != nil {
+							return nil, &workflow.QueryFailedError{Message: err.Error()}
 						}
-
-						if expectedNextEventID >= ms.GetNextEventId() {
-							// this should not happen, check to prevent busy loop
-							return nil, &workflow.QueryFailedError{Message: "workflow not making any progress"}
-						}
-
-						// keep waiting
-						expectedNextEventID = ms.GetNextEventId()
-						continue wait_loop
+						previousStartedEventID = response.GetPreviousStartedEventId()
+						workflowCloseStatus = response.GetWorkflowCloseState()
+						nextEventID = response.GetNextEventId()
 					}
 
-					return nil, &workflow.QueryFailedError{Message: err.Error()}
+					if previousStartedEventID > 0 {
+						// now we have at least one decision task completed, so retry query
+						continue query_loop
+					}
+					if workflowCloseStatus != persistence.WorkflowCloseStatusNone {
+						return nil, &workflow.QueryFailedError{Message: "workflow closed without making any progress"}
+					}
+					if expectedNextEventID >= nextEventID {
+						// this should not happen, check to prevent busy loop
+						return nil, &workflow.QueryFailedError{Message: "workflow not making any progress"}
+					}
+					// keep waiting
+					expectedNextEventID = nextEventID
+					continue wait_loop
 				}
 			}
 

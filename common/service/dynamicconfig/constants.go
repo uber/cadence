@@ -67,6 +67,7 @@ var keys = map[Key]string{
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
+	EnablePollForMutableState:           "system.enablePollForMutableState",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -278,6 +279,8 @@ const (
 	MinRetentionDays
 	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds
 	MaxDecisionStartToCloseSeconds
+	// EnablePollForMutableState is the key for enable API poll mutable state
+	EnablePollForMutableState
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
