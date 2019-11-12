@@ -491,7 +491,7 @@ query_loop:
 				for j := 0; j < maxQueryWaitCount; j++ {
 					var previousStartedEventID int64
 					var nextEventID int64
-					var workflowCloseStatus int32
+					var isWorkflowRunning bool
 					if e.config.EnablePollForMutableState() {
 						response, err := e.historyService.PollMutableState(ctx, &h.PollMutableStateRequest{
 							DomainUUID:          queryRequest.DomainUUID,
@@ -502,8 +502,8 @@ query_loop:
 							return nil, &workflow.QueryFailedError{Message: err.Error()}
 						}
 						previousStartedEventID = response.GetPreviousStartedEventId()
-						workflowCloseStatus = response.GetWorkflowCloseState()
 						nextEventID = response.GetNextEventId()
+						isWorkflowRunning = response.GetWorkflowCloseState() == persistence.WorkflowCloseStatusNone
 					} else {
 						response, err := e.historyService.GetMutableState(ctx, &h.GetMutableStateRequest{
 							DomainUUID:          queryRequest.DomainUUID,
@@ -514,15 +514,15 @@ query_loop:
 							return nil, &workflow.QueryFailedError{Message: err.Error()}
 						}
 						previousStartedEventID = response.GetPreviousStartedEventId()
-						workflowCloseStatus = response.GetWorkflowCloseState()
 						nextEventID = response.GetNextEventId()
+						isWorkflowRunning = response.GetIsWorkflowRunning()
 					}
 
 					if previousStartedEventID > 0 {
 						// now we have at least one decision task completed, so retry query
 						continue query_loop
 					}
-					if workflowCloseStatus != persistence.WorkflowCloseStatusNone {
+					if !isWorkflowRunning {
 						return nil, &workflow.QueryFailedError{Message: "workflow closed without making any progress"}
 					}
 					if expectedNextEventID >= nextEventID {
