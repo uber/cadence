@@ -64,8 +64,6 @@ type (
 const (
 	// ErrMessageHistorySizeZero indicate that history is empty
 	ErrMessageHistorySizeZero = "encounter history size being zero"
-	// ErrMessageNewRunHistorySizeZero indicate that new run history is empty
-	ErrMessageNewRunHistorySizeZero = "encounter new run history size being zero"
 )
 
 var _ stateBuilder = (*stateBuilderImpl)(nil)
@@ -605,7 +603,9 @@ func (b *stateBuilderImpl) applyEvents(
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 
 			if len(newRunHistory) == 0 {
-				return nil, errors.NewInternalFailureError(ErrMessageNewRunHistorySizeZero)
+				// This is allowed for resend case
+				// Resend only sends events within one run
+				return nil, nil
 			}
 
 			if newRunNDC {
