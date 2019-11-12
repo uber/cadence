@@ -60,7 +60,7 @@ const (
 type (
 	// VersionChecker is used to check client/server compatibility and client's capabilities
 	VersionChecker interface {
-		ClientSupported(context.Context, bool) error
+		ClientSupported(ctx context.Context, enableClientVersionCheck bool) error
 
 		SupportsStickyQuery(clientImpl string, clientFeatureVersion string) error
 		SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error

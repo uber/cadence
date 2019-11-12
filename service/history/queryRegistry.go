@@ -122,7 +122,7 @@ func (r *queryRegistryImpl) getFailedIDs() []string {
 func (r *queryRegistryImpl) getQueryTermCh(id string) (<-chan struct{}, error) {
 	r.RLock()
 	defer r.RUnlock()
-	q, err := r.getQuery(id)
+	q, err := r.getQueryNoLock(id)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (r *queryRegistryImpl) getQueryTermCh(id string) (<-chan struct{}, error) {
 func (r *queryRegistryImpl) getQueryInput(id string) (*shared.WorkflowQuery, error) {
 	r.RLock()
 	defer r.RUnlock()
-	q, err := r.getQuery(id)
+	q, err := r.getQueryNoLock(id)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (r *queryRegistryImpl) getQueryInput(id string) (*shared.WorkflowQuery, err
 func (r *queryRegistryImpl) getTerminationState(id string) (*queryTerminationState, error) {
 	r.RLock()
 	defer r.RUnlock()
-	q, err := r.getQuery(id)
+	q, err := r.getQueryNoLock(id)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,7 @@ func (r *queryRegistryImpl) removeQuery(id string) {
 	delete(r.failed, id)
 }
 
-func (r *queryRegistryImpl) getQuery(id string) (query, error) {
+func (r *queryRegistryImpl) getQueryNoLock(id string) (query, error) {
 	if q, ok := r.buffered[id]; ok {
 		return q, nil
 	}

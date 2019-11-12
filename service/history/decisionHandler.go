@@ -68,6 +68,7 @@ type (
 		logger                log.Logger
 		throttledLogger       log.Logger
 		decisionAttrValidator *decisionAttrValidator
+		versionChecker        client.VersionChecker
 	}
 )
 
@@ -91,6 +92,7 @@ func newDecisionHandler(historyEngine *historyEngineImpl) *decisionHandlerImpl {
 			historyEngine.config,
 			historyEngine.logger,
 		),
+		versionChecker: client.NewVersionChecker(),
 	}
 }
 
@@ -641,7 +643,10 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 	if !queryRegistry.hasBufferedQuery() {
 		return
 	}
-	if versionErr := client.NewVersionChecker().SupportsConsistentQuery(clientImpl, clientFeatureVersion); versionErr != nil {
+
+	// Consistent query requires both server and client worker support. If a consistent query was requested (meaning there are
+	// buffered queries) but worker does not support consistent query then query should terminate with an error.
+	if versionErr := handler.versionChecker.SupportsConsistentQuery(clientImpl, clientFeatureVersion); versionErr != nil {
 		failedTerminationState := &queryTerminationState{
 			queryTerminationType: queryTerminationTypeFailed,
 			failure:              versionErr,
