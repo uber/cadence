@@ -45,6 +45,17 @@ type HistoryArchiver interface {
 
 ```go
 type VisibilityArchiver interface {
+    // Archive is used to archive one workflow visibility record. The parameters have the same meaning as those in the HistoryArchiver interface. 
+    // The only difference is that the ArchiveOption parameter won't include an option for recording process. 
+    // Please make sure your implementation is lossless. If any in-memory batching mechanism is used, then those batched records will be lost during server restarts. 
+    Archive(context.Context, URI, *ArchiveVisibilityRequest, ...ArchiveOption) error
+    
+    // Query is used to retrieve archived visibility records. The parameters have the same meaning as those in the HistoryArchiver interface.
+    // The request includes a string field called query, which describes what kind of visibility records should be returned. For example, it can be some SQL-like syntax query string. 
+    // Your implementation is responsible for parsing and validating the query, and also returning all visibility records that match the query. 
+    // Currently the maximum context timeout passed into the method is 3 minutes, so it's ok if this method takes a long time to run.
+    Query(context.Context, URI, *QueryVisibilityRequest) (*QueryVisibilityResponse, error)
+
     // ValidateURI is used to define what a valid URI for an implementation is.
     ValidateURI(URI) error
 }
