@@ -21,22 +21,21 @@
 package membership
 
 import (
-	"sync"
+	"sync/atomic"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
 type ringpopMonitor struct {
+	status int32
+
 	serviceName string
 	services    []string
 	rp          *RingPop
 	rings       map[string]*ringpopServiceResolver
 	logger      log.Logger
-
-	mutex   sync.Mutex
-	started bool
-	stopped bool
 }
 
 var _ Monitor = (*ringpopMonitor)(nil)
@@ -50,6 +49,7 @@ func NewRingpopMonitor(
 ) Monitor {
 
 	rpo := &ringpopMonitor{
+		status:      common.DaemonStatusInitialized,
 		serviceName: serviceName,
 		services:    services,
 		rp:          rp,
@@ -63,10 +63,11 @@ func NewRingpopMonitor(
 }
 
 func (rpo *ringpopMonitor) Start() {
-	rpo.mutex.Lock()
-	defer rpo.mutex.Unlock()
-
-	if rpo.started {
+	if !atomic.CompareAndSwapInt32(
+		&rpo.status,
+		common.DaemonStatusInitialized,
+		common.DaemonStatusStarted,
+	) {
 		return
 	}
 
@@ -87,15 +88,14 @@ func (rpo *ringpopMonitor) Start() {
 			rpo.logger.Fatal("unable to start ring pop monitor", tag.Service(service), tag.Error(err))
 		}
 	}
-
-	rpo.started = true
 }
 
 func (rpo *ringpopMonitor) Stop() {
-	rpo.mutex.Lock()
-	defer rpo.mutex.Unlock()
-
-	if rpo.stopped {
+	if !atomic.CompareAndSwapInt32(
+		&rpo.status,
+		common.DaemonStatusStarted,
+		common.DaemonStatusStopped,
+	) {
 		return
 	}
 
@@ -110,8 +110,6 @@ func (rpo *ringpopMonitor) Stop() {
 	if rpo.rp != nil {
 		rpo.rp.Destroy()
 	}
-
-	rpo.stopped = true
 }
 
 func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {
