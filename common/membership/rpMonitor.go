@@ -99,17 +99,13 @@ func (rpo *ringpopMonitor) Stop() {
 		return
 	}
 
-	rpo.rp.Stop()
-
 	for service, ring := range rpo.rings {
 		if err := ring.Stop(); err != nil {
 			rpo.logger.Error("unable to stop ring pop monitor", tag.Service(service), tag.Error(err))
 		}
 	}
 
-	if rpo.rp != nil {
-		rpo.rp.Destroy()
-	}
+	rpo.rp.Destroy()
 }
 
 func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {

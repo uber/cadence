@@ -60,5 +60,5 @@ func (r *RingPop) Start() {
 
 // Stop stop ring pop
 func (r *RingPop) Stop() {
-	// noop
+	r.Destroy()
 }
