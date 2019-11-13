@@ -1206,6 +1206,17 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
 					executionInfo.WorkflowID, executionInfo.RunID, strings.Join(columns, ","))
 				return nil, &p.CurrentWorkflowConditionFailedError{Msg: msg}
+			} else if rowType == rowTypeExecution && runID == executionInfo.RunID {
+				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
+					executionInfo.WorkflowID, executionInfo.RunID, request.RangeID)
+				return nil, &p.WorkflowExecutionAlreadyStartedError{
+					Msg:              msg,
+					StartRequestID:   executionInfo.CreateRequestID,
+					RunID:            executionInfo.RunID,
+					State:            executionInfo.State,
+					CloseStatus:      executionInfo.CloseStatus,
+					LastWriteVersion: lastWriteVersion,
+				}
 			}
 
 			previous = make(map[string]interface{})
