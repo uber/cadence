@@ -413,31 +413,26 @@ func (h *Impl) GetArchiverProvider() provider.ArchiverProvider {
 
 // GetMembershipMonitor return the membership monitor
 func (h *Impl) GetMembershipMonitor() membership.Monitor {
-
 	return h.membershipMonitor
 }
 
 // GetFrontendServiceResolver return frontend service resolver
 func (h *Impl) GetFrontendServiceResolver() membership.ServiceResolver {
-
 	return h.historyServiceResolver
 }
 
 // GetMatchingServiceResolver return matching service resolver
 func (h *Impl) GetMatchingServiceResolver() membership.ServiceResolver {
-
 	return h.matchingServiceResolver
 }
 
 // GetHistoryServiceResolver return history service resolver
 func (h *Impl) GetHistoryServiceResolver() membership.ServiceResolver {
-
 	return h.historyServiceResolver
 }
 
 // GetWorkerServiceResolver return worker service resolver
 func (h *Impl) GetWorkerServiceResolver() membership.ServiceResolver {
-
 	return h.workerServiceResolver
 }
 
@@ -445,43 +440,36 @@ func (h *Impl) GetWorkerServiceResolver() membership.ServiceResolver {
 
 // GetSDKClient return sdk client
 func (h *Impl) GetSDKClient() workflowserviceclient.Interface {
-
 	return h.sdkClient
 }
 
 // GetFrontendRawClient return frontend client without retry policy
 func (h *Impl) GetFrontendRawClient() frontend.Client {
-
 	return h.frontendRawClient
 }
 
 // GetFrontendClient return frontend client with retry policy
 func (h *Impl) GetFrontendClient() frontend.Client {
-
 	return h.frontendClient
 }
 
 // GetMatchingRawClient return matching client without retry policy
 func (h *Impl) GetMatchingRawClient() matching.Client {
-
 	return h.matchingRawClient
 }
 
 // GetMatchingClient return matching client with retry policy
 func (h *Impl) GetMatchingClient() matching.Client {
-
 	return h.matchingClient
 }
 
 // GetHistoryRawClient return history client without retry policy
 func (h *Impl) GetHistoryRawClient() history.Client {
-
 	return h.historyRawClient
 }
 
 // GetHistoryClient return history client with retry policy
 func (h *Impl) GetHistoryClient() history.Client {
-
 	return h.historyClient
 }
 
@@ -503,7 +491,6 @@ func (h *Impl) GetRemoteFrontendClient(
 
 // GetClientBean return RPC client bean
 func (h *Impl) GetClientBean() client.Bean {
-
 	return h.clientBean
 }
 
@@ -543,6 +530,7 @@ func (h *Impl) GetHistoryManager() persistence.HistoryManager {
 func (h *Impl) GetExecutionManager(
 	shardID int,
 ) (persistence.ExecutionManager, error) {
+
 	return h.persistenceBean.GetExecutionManager(shardID)
 }
 
@@ -565,6 +553,5 @@ func (h *Impl) GetThrottledLogger() log.Logger {
 
 // GetDispatcher return YARPC dispatcher, used for registering handlers
 func (h *Impl) GetDispatcher() *yarpc.Dispatcher {
-
 	return h.dispatcher
 }
