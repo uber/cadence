@@ -47,18 +47,18 @@ func (s *RpoSuite) TestRingpopMonitor() {
 	testService := NewTestRingpopCluster("rpm-test", 3, "127.0.0.1", "", "rpm-test")
 	s.NotNil(testService, "Failed to create test service")
 
+	serviceName := "local-service"
 	services := []string{"rpm-test"}
 
 	logger := loggerimpl.NewNopLogger()
-	rpm := NewRingpopMonitor(services, testService.rings[0], logger)
-	err := rpm.Start()
-	s.Nil(err, "Failed to start ringpop monitor")
+	rpm := NewRingpopMonitor(serviceName, services, NewRingPop(testService.rings[0], nil, logger), logger)
+	rpm.Start()
 
 	// Sleep to give time for the ring to stabilize
 	time.Sleep(time.Second)
 
 	listenCh := make(chan *ChangedEvent, 5)
-	err = rpm.AddListener("rpm-test", "test-listener", listenCh)
+	err := rpm.AddListener("rpm-test", "test-listener", listenCh)
 	s.Nil(err, "AddListener failed")
 
 	host, err := rpm.Lookup("rpm-test", "key")
