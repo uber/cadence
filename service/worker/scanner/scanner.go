@@ -112,13 +112,16 @@ func (s *Scanner) Start() error {
 		BackgroundActivityContext:              context.WithValue(context.Background(), scannerContextKey, s.context),
 	}
 
+	var workerTaskListName string
 	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL {
 		go s.startWorkflowWithRetry(tlScannerWFStartOptions, tlScannerWFTypeName)
+		workerTaskListName = tlScannerTaskListName
 	} else if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeCassandra {
 		go s.startWorkflowWithRetry(historyScannerWFStartOptions, historyScannerWFTypeName)
+		workerTaskListName = historyScannerTaskListName
 	}
 
-	return worker.New(s.context.GetSDKClient(), common.SystemLocalDomainName, tlScannerTaskListName, workerOpts).Start()
+	return worker.New(s.context.GetSDKClient(), common.SystemLocalDomainName, workerTaskListName, workerOpts).Start()
 }
 
 func (s *Scanner) startWorkflowWithRetry(
