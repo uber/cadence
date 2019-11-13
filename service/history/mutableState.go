@@ -158,8 +158,8 @@ type (
 		IsSignalRequested(requestID string) bool
 		IsStickyTaskListEnabled() bool
 		IsWorkflowExecutionRunning() bool
-		IsEventApplied(cacheKey definition.CacheKey) bool
-		UpdateEventApplied(cacheKey definition.CacheKey)
+		IsEventDuplicated(event definition.DeduplicationKey) bool
+		UpdateDuplicateEvent(event definition.DeduplicationKey)
 		Load(*persistence.WorkflowMutableState)
 		ReplicateActivityInfo(*h.SyncActivityRequest, bool) error
 		ReplicateActivityTaskCancelRequestedEvent(*workflow.HistoryEvent) error

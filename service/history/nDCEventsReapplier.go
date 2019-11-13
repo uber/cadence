@@ -26,6 +26,7 @@ import (
 	ctx "context"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -69,7 +70,8 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 	for _, event := range historyEvents {
 		switch event.GetEventType() {
 		case workflow.EventTypeWorkflowExecutionSignaled:
-			if msBuilder.IsEventReapplied(runID, event.GetEventId(), event.GetVersion()) {
+			deDupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
+			if msBuilder.IsEventDuplicated(deDupEvent) {
 				// skip already applied event
 				continue
 			}
@@ -98,7 +100,8 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 			return reappliedEvents, err
 		}
 		reappliedEvents = append(reappliedEvents, event)
-		msBuilder.UpdateReappliedEvent(runID, event.GetEventId(), event.GetVersion())
+		deDupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
+		msBuilder.UpdateDuplicateEvent(deDupEvent)
 	}
 	return reappliedEvents, nil
 }

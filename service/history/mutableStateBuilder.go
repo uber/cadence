@@ -3940,17 +3940,19 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	return workflowSnapshot, workflowEventsSeq, nil
 }
 
-func (e *mutableStateBuilder) IsEventApplied(
-	cacheKey definition.CacheKey,
+func (e *mutableStateBuilder) IsEventDuplicated(
+	event definition.DeduplicationKey,
 ) bool {
-	_, isReapplied := e.appliedEvents[cacheKey.Generate()]
-	return isReapplied
+	dedupKey := definition.GenerateDeduplicationKey(event)
+	_, duplicated := e.appliedEvents[dedupKey]
+	return duplicated
 }
 
-func (e *mutableStateBuilder) UpdateEventApplied(
-	cacheKey definition.CacheKey,
+func (e *mutableStateBuilder) UpdateDuplicateEvent(
+	event definition.DeduplicationKey,
 ) {
-	e.appliedEvents[cacheKey.Generate()] = struct{}{}
+	dedupKey := definition.GenerateDeduplicationKey(event)
+	e.appliedEvents[dedupKey] = struct{}{}
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(

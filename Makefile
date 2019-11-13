@@ -159,7 +159,7 @@ fmt:
 	@echo "running goimports"
 	@goimports -local "github.com/uber/cadence" -w $(ALL_SRC)
 
-bins_nothrift: go-generate fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
+bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 

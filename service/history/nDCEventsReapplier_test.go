@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -96,16 +97,9 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		attr.GetInput(),
 		attr.GetIdentity(),
 	).Return(event, nil).Times(1)
-	msBuilderCurrent.EXPECT().IsEventReapplied(
-		runID,
-		event.GetEventId(),
-		event.GetVersion(),
-	).Return(false).Times(1)
-	msBuilderCurrent.EXPECT().UpdateReappliedEvent(
-		runID,
-		event.GetEventId(),
-		event.GetVersion(),
-	).Times(1)
+	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
+	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(false).Times(1)
+	msBuilderCurrent.EXPECT().UpdateDuplicateEvent(dedupEvent).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
@@ -128,11 +122,8 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Noop() {
 	}
 
 	msBuilderCurrent := NewMockmutableState(s.controller)
-	msBuilderCurrent.EXPECT().IsEventReapplied(
-		runID,
-		event.GetEventId(),
-		event.GetVersion(),
-	).Return(true).Times(1)
+	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
+	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(false).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
@@ -176,21 +167,11 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		attr1.GetInput(),
 		attr1.GetIdentity(),
 	).Return(event1, nil).Times(1)
-	msBuilderCurrent.EXPECT().IsEventReapplied(
-		runID,
-		event1.GetEventId(),
-		event1.GetVersion(),
-	).Return(false).Times(1)
-	msBuilderCurrent.EXPECT().IsEventReapplied(
-		runID,
-		event2.GetEventId(),
-		event2.GetVersion(),
-	).Return(true).Times(1)
-	msBuilderCurrent.EXPECT().UpdateReappliedEvent(
-		runID,
-		event1.GetEventId(),
-		event1.GetVersion(),
-	).Times(1)
+	dedupEvent1 := definition.NewReapplyEventKey(runID, event1.GetEventId(), event1.GetVersion())
+	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent1).Return(false).Times(1)
+	dedupEvent2 := definition.NewReapplyEventKey(runID, event2.GetEventId(), event2.GetVersion())
+	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent2).Return(true).Times(1)
+	msBuilderCurrent.EXPECT().UpdateDuplicateEvent(dedupEvent1).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event1,
@@ -226,11 +207,8 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Error() {
 		attr.GetInput(),
 		attr.GetIdentity(),
 	).Return(nil, fmt.Errorf("test")).Times(1)
-	msBuilderCurrent.EXPECT().IsEventReapplied(
-		runID,
-		event.GetEventId(),
-		event.GetVersion(),
-	).Return(false).Times(1)
+	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
+	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(false).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,

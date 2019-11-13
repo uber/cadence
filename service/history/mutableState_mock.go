@@ -36,6 +36,7 @@ import (
 	history "github.com/uber/cadence/.gen/go/history"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	cache "github.com/uber/cadence/common/cache"
+	definition "github.com/uber/cadence/common/definition"
 	persistence "github.com/uber/cadence/common/persistence"
 )
 
@@ -1568,6 +1569,32 @@ func (mr *MockmutableStateMockRecorder) IsWorkflowExecutionRunning() *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWorkflowExecutionRunning", reflect.TypeOf((*MockmutableState)(nil).IsWorkflowExecutionRunning))
 }
 
+// IsEventDuplicated mocks base method
+func (m *MockmutableState) IsEventDuplicated(event definition.DeduplicationKey) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsEventDuplicated", event)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsEventDuplicated indicates an expected call of IsEventDuplicated
+func (mr *MockmutableStateMockRecorder) IsEventDuplicated(event interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEventDuplicated", reflect.TypeOf((*MockmutableState)(nil).IsEventDuplicated), event)
+}
+
+// UpdateDuplicateEvent mocks base method
+func (m *MockmutableState) UpdateDuplicateEvent(event definition.DeduplicationKey) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateDuplicateEvent", event)
+}
+
+// UpdateDuplicateEvent indicates an expected call of UpdateDuplicateEvent
+func (mr *MockmutableStateMockRecorder) UpdateDuplicateEvent(event interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDuplicateEvent", reflect.TypeOf((*MockmutableState)(nil).UpdateDuplicateEvent), event)
+}
+
 // Load mocks base method
 func (m *MockmutableState) Load(arg0 *persistence.WorkflowMutableState) {
 	m.ctrl.T.Helper()
@@ -2316,32 +2343,6 @@ func (m *MockmutableState) UpdateWorkflowStateCloseStatus(state, closeStatus int
 func (mr *MockmutableStateMockRecorder) UpdateWorkflowStateCloseStatus(state, closeStatus interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowStateCloseStatus", reflect.TypeOf((*MockmutableState)(nil).UpdateWorkflowStateCloseStatus), state, closeStatus)
-}
-
-// IsEventReapplied mocks base method
-func (m *MockmutableState) IsEventReapplied(runID string, eventID, version int64) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsEventReapplied", runID, eventID, version)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsEventReapplied indicates an expected call of IsEventReapplied
-func (mr *MockmutableStateMockRecorder) IsEventReapplied(runID, eventID, version interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEventReapplied", reflect.TypeOf((*MockmutableState)(nil).IsEventReapplied), runID, eventID, version)
-}
-
-// UpdateReappliedEvent mocks base method
-func (m *MockmutableState) UpdateReappliedEvent(runID string, eventID, version int64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateReappliedEvent", runID, eventID, version)
-}
-
-// UpdateReappliedEvent indicates an expected call of UpdateReappliedEvent
-func (mr *MockmutableStateMockRecorder) UpdateReappliedEvent(runID, eventID, version interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateReappliedEvent", reflect.TypeOf((*MockmutableState)(nil).UpdateReappliedEvent), runID, eventID, version)
 }
 
 // AddTransferTasks mocks base method

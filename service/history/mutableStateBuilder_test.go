@@ -33,6 +33,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
@@ -401,12 +402,12 @@ func (s *mutableStateSuite) TestMergeMapOfByteArray() {
 func (s *mutableStateSuite) TestEventReapplied() {
 	runID := uuid.New()
 	eventID := int64(1)
-	version := int64(1)
-
-	isReapplied := s.msBuilder.IsEventReapplied(runID, eventID, version)
+	version := int64(2)
+	dedupEvent := definition.NewReapplyEventKey(runID, eventID, version)
+	isReapplied := s.msBuilder.IsEventDuplicated(dedupEvent)
 	s.False(isReapplied)
-	s.msBuilder.UpdateReappliedEvent(runID, eventID, version)
-	isReapplied = s.msBuilder.IsEventReapplied(runID, eventID, version)
+	s.msBuilder.UpdateDuplicateEvent(dedupEvent)
+	isReapplied = s.msBuilder.IsEventDuplicated(dedupEvent)
 	s.True(isReapplied)
 }
 
