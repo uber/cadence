@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/definition"
@@ -222,10 +221,7 @@ func (s *Service) startScanner() {
 		Config:     *s.config.ScannerCfg,
 		TallyScope: s.params.MetricScope,
 	}
-	if err := scanner.New(
-		s.Resource,
-		params,
-	).Start(); err != nil {
+	if err := scanner.New(s.Resource, params).Start(); err != nil {
 		s.GetLogger().Fatal("error starting scanner", tag.Error(err))
 	}
 }
@@ -309,7 +305,7 @@ func (s *Service) startArchiver() {
 	}
 }
 
-func (s *Service) ensureSystemDomainExists(pFactory client.Factory, clusterName string) {
+func (s *Service) ensureSystemDomainExists() {
 	_, err := s.GetMetadataManager().GetDomain(&persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
 	switch err.(type) {
 	case nil:
