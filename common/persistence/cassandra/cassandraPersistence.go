@@ -1209,6 +1209,11 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 			} else if rowType == rowTypeExecution && runID == executionInfo.RunID {
 				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
 					executionInfo.WorkflowID, executionInfo.RunID, request.RangeID)
+				replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
+				lastWriteVersion = common.EmptyVersion
+				if replicationState != nil {
+					lastWriteVersion = replicationState.LastWriteVersion
+				}
 				return nil, &p.WorkflowExecutionAlreadyStartedError{
 					Msg:              msg,
 					StartRequestID:   executionInfo.CreateRequestID,
