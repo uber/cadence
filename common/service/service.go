@@ -86,8 +86,6 @@ type (
 	MembershipMonitorFactory interface {
 		// GetMembershipMonitor return a membership monitor
 		GetMembershipMonitor() (membership.Monitor, error)
-		// GetRingPop return a ring pop
-		GetRingPop() (*membership.RingPop, error)
 	}
 
 	// Service contains the objects specific to this service

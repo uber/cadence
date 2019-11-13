@@ -210,14 +210,6 @@ func (factory *RingpopFactory) createMembership() (membership.Monitor, error) {
 	return membershipMonitor, nil
 }
 
-// GetRingPop return a ring pop
-func (factory *RingpopFactory) GetRingPop() (*membership.RingPop, error) {
-	factory.Lock()
-	defer factory.Unlock()
-
-	return factory.getRingpop()
-}
-
 func (factory *RingpopFactory) getRingpop() (*membership.RingPop, error) {
 	if factory.ringPop != nil {
 		return factory.ringPop, nil
