@@ -23,31 +23,37 @@ package membership
 import (
 	"sync"
 
-	ringpop "github.com/uber/ringpop-go"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
 type ringpopMonitor struct {
-	started  bool
-	stopped  bool
-	services []string
-	rp       *ringpop.Ringpop
-	rings    map[string]*ringpopServiceResolver
-	logger   log.Logger
-	mutex    sync.Mutex
+	started     bool
+	stopped     bool
+	serviceName string
+	services    []string
+	rp          *RingPop
+	rings       map[string]*ringpopServiceResolver
+	logger      log.Logger
+	mutex       sync.Mutex
 }
 
 var _ Monitor = (*ringpopMonitor)(nil)
 
 // NewRingpopMonitor returns a ringpop-based membership monitor
-func NewRingpopMonitor(services []string, rp *ringpop.Ringpop, logger log.Logger) Monitor {
+func NewRingpopMonitor(
+	serviceName string,
+	services []string,
+	rp *RingPop,
+	logger log.Logger,
+) Monitor {
+
 	rpo := &ringpopMonitor{
-		services: services,
-		rp:       rp,
-		logger:   logger,
-		rings:    make(map[string]*ringpopServiceResolver),
+		serviceName: serviceName,
+		services:    services,
+		rp:          rp,
+		logger:      logger,
+		rings:       make(map[string]*ringpopServiceResolver),
 	}
 	for _, service := range services {
 		rpo.rings[service] = newRingpopServiceResolver(service, rp, logger)
@@ -55,24 +61,33 @@ func NewRingpopMonitor(services []string, rp *ringpop.Ringpop, logger log.Logger
 	return rpo
 }
 
-func (rpo *ringpopMonitor) Start() error {
+func (rpo *ringpopMonitor) Start() {
 	rpo.mutex.Lock()
 	defer rpo.mutex.Unlock()
 
 	if rpo.started {
-		return nil
+		return
+	}
+
+	rpo.rp.Start()
+
+	labels, err := rpo.rp.Labels()
+	if err != nil {
+		rpo.logger.Fatal("unable to get ring pop labels", tag.Error(err))
+	}
+
+	if err = labels.Set(RoleKey, rpo.serviceName); err != nil {
+		rpo.logger.Fatal("unable to set ring pop labels", tag.Error(err))
 	}
 
 	for service, ring := range rpo.rings {
 		err := ring.Start()
 		if err != nil {
-			rpo.logger.Error("Failed to initialize ring.", tag.Service(service))
-			return err
+			rpo.logger.Fatal("unable to initialize ring pop monitor", tag.Service(service), tag.Error(err))
 		}
 	}
 
 	rpo.started = true
-	return nil
 }
 
 func (rpo *ringpopMonitor) Stop() {
@@ -82,6 +97,8 @@ func (rpo *ringpopMonitor) Stop() {
 	if rpo.stopped {
 		return
 	}
+
+	rpo.rp.Stop()
 
 	for _, ring := range rpo.rings {
 		ring.Stop()

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
-	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/events"
 	"github.com/uber/ringpop-go/hashring"
 	"github.com/uber/ringpop-go/swim"
@@ -47,7 +46,7 @@ type ringpopServiceResolver struct {
 	service    string
 	isStarted  bool
 	isStopped  bool
-	rp         *ringpop.Ringpop
+	rp         *RingPop
 	shutdownCh chan struct{}
 	shutdownWG sync.WaitGroup
 	logger     log.Logger
@@ -61,7 +60,12 @@ type ringpopServiceResolver struct {
 
 var _ ServiceResolver = (*ringpopServiceResolver)(nil)
 
-func newRingpopServiceResolver(service string, rp *ringpop.Ringpop, logger log.Logger) *ringpopServiceResolver {
+func newRingpopServiceResolver(
+	service string,
+	rp *RingPop,
+	logger log.Logger,
+) *ringpopServiceResolver {
+
 	return &ringpopServiceResolver{
 		service:    service,
 		rp:         rp,
@@ -126,7 +130,10 @@ func (r *ringpopServiceResolver) Stop() error {
 }
 
 // Lookup finds the host in the ring responsible for serving the given key
-func (r *ringpopServiceResolver) Lookup(key string) (*HostInfo, error) {
+func (r *ringpopServiceResolver) Lookup(
+	key string,
+) (*HostInfo, error) {
+
 	r.ringLock.RLock()
 	defer r.ringLock.RUnlock()
 	addr, found := r.ring.Lookup(key)
@@ -136,7 +143,11 @@ func (r *ringpopServiceResolver) Lookup(key string) (*HostInfo, error) {
 	return NewHostInfo(addr, r.getLabelsMap()), nil
 }
 
-func (r *ringpopServiceResolver) AddListener(name string, notifyChannel chan<- *ChangedEvent) error {
+func (r *ringpopServiceResolver) AddListener(
+	name string,
+	notifyChannel chan<- *ChangedEvent,
+) error {
+
 	r.listenerLock.Lock()
 	defer r.listenerLock.Unlock()
 	_, ok := r.listeners[name]
@@ -147,7 +158,10 @@ func (r *ringpopServiceResolver) AddListener(name string, notifyChannel chan<- *
 	return nil
 }
 
-func (r *ringpopServiceResolver) RemoveListener(name string) error {
+func (r *ringpopServiceResolver) RemoveListener(
+	name string,
+) error {
+
 	r.listenerLock.Lock()
 	defer r.listenerLock.Unlock()
 	_, ok := r.listeners[name]
@@ -159,7 +173,10 @@ func (r *ringpopServiceResolver) RemoveListener(name string) error {
 }
 
 // HandleEvent handles updates from ringpop
-func (r *ringpopServiceResolver) HandleEvent(event events.Event) {
+func (r *ringpopServiceResolver) HandleEvent(
+	event events.Event,
+) {
+
 	// We only care about RingChangedEvent
 	e, ok := event.(events.RingChangedEvent)
 	if ok {
@@ -193,7 +210,10 @@ func (r *ringpopServiceResolver) refresh() {
 	r.logger.Debug("Current reachable members", tag.Addresses(addrs))
 }
 
-func (r *ringpopServiceResolver) emitEvent(rpEvent events.RingChangedEvent) {
+func (r *ringpopServiceResolver) emitEvent(
+	rpEvent events.RingChangedEvent,
+) {
+
 	// Marshall the event object into the required type
 	event := &ChangedEvent{}
 	for _, addr := range rpEvent.ServersAdded {

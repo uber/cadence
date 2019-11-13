@@ -23,6 +23,7 @@ package resource
 import (
 	"math/rand"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -64,7 +65,9 @@ type (
 
 	// Impl contains all common resources shared across frontend / matching / history / worker
 	Impl struct {
-		status int32
+		status          int32
+		bootstrapParams *service.BootstrapParams
+		waitGroup       sync.WaitGroup
 
 		// static infos
 
@@ -94,7 +97,7 @@ type (
 
 		// internal services clients
 
-		publicClient      workflowserviceclient.Interface
+		sdkClient         workflowserviceclient.Interface
 		frontendRawClient frontend.Client
 		frontendClient    frontend.Client
 		matchingRawClient matching.Client
@@ -133,7 +136,7 @@ func New(
 	serviceName string,
 	throttledLoggerMaxRPS dynamicconfig.IntPropertyFn,
 	visibilityManagerInitializer VisibilityManagerInitializer,
-) (*Impl, error) {
+) (impl *Impl, retError error) {
 
 	logger := params.Logger.WithTags(tag.Service(serviceName))
 	throttledLogger := loggerimpl.NewThrottledLogger(logger, throttledLoggerMaxRPS)
@@ -144,14 +147,14 @@ func New(
 		return nil, err
 	}
 
-	dynamicCollection := dynamicconfig.NewCollection(params.DynamicConfig, logger)
+	dispatcher := params.RPCFactory.GetDispatcher()
 
-	dispatcher := params.RPCFactory.CreateDispatcher()
-	membershipMonitor, err := params.MembershipFactory.Create(dispatcher)
+	membershipMonitor, err := params.MembershipFactory.GetMembershipMonitor()
 	if err != nil {
 		return nil, err
 	}
 
+	dynamicCollection := dynamicconfig.NewCollection(params.DynamicConfig, logger)
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(
 			params.RPCFactory,
@@ -163,23 +166,6 @@ func New(
 		),
 		params.DispatcherProvider,
 		params.ClusterMetadata,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
-		&params.PersistenceConfig,
-		params.ClusterMetadata.GetCurrentClusterName(),
-		params.MetricsClient,
-		logger,
-	))
-	if err != nil {
-		return nil, err
-	}
-	visibilityMgr, err := visibilityManagerInitializer(
-		persistenceBean,
-		logger,
 	)
 	if err != nil {
 		return nil, err
@@ -201,6 +187,23 @@ func New(
 	}
 
 	workerServiceResolver, err := membershipMonitor.GetResolver(common.WorkerServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
+		&params.PersistenceConfig,
+		params.ClusterMetadata.GetCurrentClusterName(),
+		params.MetricsClient,
+		logger,
+	))
+	if err != nil {
+		return nil, err
+	}
+	visibilityMgr, err := visibilityManagerInitializer(
+		persistenceBean,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -236,8 +239,10 @@ func New(
 		common.IsWhitelistServiceTransientError,
 	)
 
-	return &Impl{
+	impl = &Impl{
 		status: common.DaemonStatusInitialized,
+
+		bootstrapParams: params,
 
 		// static infos
 
@@ -267,7 +272,7 @@ func New(
 
 		// internal services clients
 
-		publicClient:      params.PublicClient,
+		sdkClient:         params.PublicClient,
 		frontendRawClient: frontendRawClient,
 		frontendClient:    frontendClient,
 		matchingRawClient: matchingRawClient,
@@ -299,7 +304,9 @@ func New(
 		),
 		membershipFactory: params.MembershipFactory,
 		rpcFactory:        params.RPCFactory,
-	}, nil
+	}
+	impl.waitGroup.Add(1)
+	return impl, nil
 }
 
 // Start start all resources
@@ -319,21 +326,23 @@ func (h *Impl) Start() {
 	if err := h.pprofInitializer.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start PProf")
 	}
-
 	if err := h.dispatcher.Start(); err != nil {
-		h.logger.WithTags(tag.Error(err)).Fatal("fail to start yarpc dispatcher")
+		h.logger.WithTags(tag.Error(err)).Fatal("fail to start dispatcher")
 	}
-
+	// if err := h.initializeClients(); err != nil {
+	// 	h.logger.WithTags(tag.Error(err)).Fatal("fail to initialize clients")
+	// }
 	if err := h.membershipMonitor.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start membership monitor")
 	}
-
 	h.domainCache.Start()
 
 	// The service is now started up
 	h.logger.Info("service started")
 	// seed the random generator once for this service
 	rand.Seed(time.Now().UTC().UnixNano())
+
+	h.waitGroup.Done()
 }
 
 // Stop stops all resources
@@ -417,63 +426,75 @@ func (h *Impl) GetArchiverProvider() provider.ArchiverProvider {
 
 // GetMembershipMonitor return the membership monitor
 func (h *Impl) GetMembershipMonitor() membership.Monitor {
+
 	return h.membershipMonitor
 }
 
 // GetFrontendServiceResolver return frontend service resolver
 func (h *Impl) GetFrontendServiceResolver() membership.ServiceResolver {
+
 	return h.historyServiceResolver
 }
 
 // GetMatchingServiceResolver return matching service resolver
 func (h *Impl) GetMatchingServiceResolver() membership.ServiceResolver {
+
 	return h.matchingServiceResolver
 }
 
 // GetHistoryServiceResolver return history service resolver
 func (h *Impl) GetHistoryServiceResolver() membership.ServiceResolver {
+
 	return h.historyServiceResolver
 }
 
 // GetWorkerServiceResolver return worker service resolver
 func (h *Impl) GetWorkerServiceResolver() membership.ServiceResolver {
+
 	return h.workerServiceResolver
 }
 
 // internal services clients
 
-// GetPublicClient return public lib client
-func (h *Impl) GetPublicClient() workflowserviceclient.Interface {
-	return h.publicClient
+// GetSDKClient return sdk client
+func (h *Impl) GetSDKClient() workflowserviceclient.Interface {
+
+	return h.sdkClient
 }
 
 // GetFrontendRawClient return frontend client without retry policy
 func (h *Impl) GetFrontendRawClient() frontend.Client {
+
 	return h.frontendRawClient
 }
 
 // GetFrontendClient return frontend client with retry policy
 func (h *Impl) GetFrontendClient() frontend.Client {
+
 	return h.frontendClient
 }
 
 // GetMatchingRawClient return matching client without retry policy
 func (h *Impl) GetMatchingRawClient() matching.Client {
+
 	return h.matchingRawClient
 }
 
 // GetMatchingClient return matching client with retry policy
 func (h *Impl) GetMatchingClient() matching.Client {
+
 	return h.matchingClient
 }
 
 // GetHistoryRawClient return history client without retry policy
 func (h *Impl) GetHistoryRawClient() history.Client {
+
 	return h.historyRawClient
 }
 
 // GetHistoryClient return history client with retry policy
 func (h *Impl) GetHistoryClient() history.Client {
+
 	return h.historyClient
 }
 
@@ -495,6 +516,7 @@ func (h *Impl) GetRemoteFrontendClient(
 
 // GetClientBean return RPC client bean
 func (h *Impl) GetClientBean() client.Bean {
+
 	return h.clientBean
 }
 
@@ -534,7 +556,6 @@ func (h *Impl) GetHistoryManager() persistence.HistoryManager {
 func (h *Impl) GetExecutionManager(
 	shardID int,
 ) (persistence.ExecutionManager, error) {
-
 	return h.persistenceBean.GetExecutionManager(shardID)
 }
 
@@ -557,5 +578,93 @@ func (h *Impl) GetThrottledLogger() log.Logger {
 
 // GetDispatcher return YARPC dispatcher, used for registering handlers
 func (h *Impl) GetDispatcher() *yarpc.Dispatcher {
+
 	return h.dispatcher
 }
+
+// func (h *Impl) initializeClients() error {
+// 	membershipMonitor, err := h.bootstrapParams.MembershipFactory.GetMembershipMonitor()
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	dynamicCollection := dynamicconfig.NewCollection(h.bootstrapParams.DynamicConfig, h.logger)
+// 	clientBean, err := client.NewClientBean(
+// 		client.NewRPCClientFactory(
+// 			h.bootstrapParams.RPCFactory,
+// 			membershipMonitor,
+// 			h.metricsClient,
+// 			dynamicCollection,
+// 			h.numShards,
+// 			h.logger,
+// 		),
+// 		h.bootstrapParams.DispatcherProvider,
+// 		h.clusterMetadata,
+// 	)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	frontendServiceResolver, err := membershipMonitor.GetResolver(common.FrontendServiceName)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	matchingServiceResolver, err := membershipMonitor.GetResolver(common.MatchingServiceName)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	historyServiceResolver, err := membershipMonitor.GetResolver(common.HistoryServiceName)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	workerServiceResolver, err := membershipMonitor.GetResolver(common.WorkerServiceName)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	frontendRawClient := clientBean.GetFrontendClient()
+// 	frontendClient := frontend.NewRetryableClient(
+// 		frontendRawClient,
+// 		common.CreateFrontendServiceRetryPolicy(),
+// 		common.IsWhitelistServiceTransientError,
+// 	)
+//
+// 	matchingRawClient, err := clientBean.GetMatchingClient(h.domainCache.GetDomainName)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	matchingClient := matching.NewRetryableClient(
+// 		matchingRawClient,
+// 		common.CreateMatchingServiceRetryPolicy(),
+// 		common.IsWhitelistServiceTransientError,
+// 	)
+//
+// 	historyRawClient := clientBean.GetHistoryClient()
+// 	historyClient := history.NewRetryableClient(
+// 		historyRawClient,
+// 		common.CreateHistoryServiceRetryPolicy(),
+// 		common.IsWhitelistServiceTransientError,
+// 	)
+//
+// 	h.membershipMonitor = membershipMonitor
+// 	h.frontendServiceResolver = frontendServiceResolver
+// 	h.matchingServiceResolver = matchingServiceResolver
+// 	h.historyServiceResolver = historyServiceResolver
+// 	h.workerServiceResolver = workerServiceResolver
+//
+// 	h.frontendRawClient = frontendRawClient
+// 	h.frontendClient = frontendClient
+// 	h.matchingRawClient = matchingRawClient
+// 	h.matchingClient = matchingClient
+// 	h.historyRawClient = historyRawClient
+// 	h.historyClient = historyClient
+// 	h.clientBean = clientBean
+// 	return nil
+// }
+
+// func (h *Impl) checkStatus() {
+// 	h.waitGroup.Wait()
+// }
