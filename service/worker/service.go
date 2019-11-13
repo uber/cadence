@@ -21,13 +21,7 @@
 package worker
 
 import (
-	"context"
-	"fmt"
-	"strings"
 	"time"
-
-	cshared "go.uber.org/cadence/.gen/go/shared"
-	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -329,34 +323,6 @@ func (s *Service) ensureSystemDomainExists() {
 	}
 }
 
-func (s *Service) ensureDomainAvailable() {
-	client := cclient.NewClient(s.params.PublicClient, common.SystemLocalDomainName, &cclient.Options{})
-	// Use TerminateWorkflow to check whether domain is refreshed in cache or not
-	err := client.TerminateWorkflow(context.Background(), "wid-not-exist", "", "test reason", nil)
-	retryCount := 0
-	for err != nil && retryCount <= 10 {
-		nonExistErr, ok := err.(*cshared.EntityNotExistsError)
-		if ok && isErrSystemDomainNotExist(nonExistErr) {
-			s.GetLogger().Info(
-				fmt.Sprintf(
-					"cadence-system domain is not ready, waiting %v for domain refresh",
-					domainRefreshInterval,
-				),
-				tag.Attempt(int32(retryCount)),
-			)
-			time.Sleep(domainRefreshInterval)
-			err = client.TerminateWorkflow(context.Background(), "wid-not-exist", "", "test reason", nil)
-			retryCount++
-		} else {
-			break
-		}
-	}
-}
-
-func isErrSystemDomainNotExist(err *cshared.EntityNotExistsError) bool {
-	return strings.Contains(err.Message, common.SystemLocalDomainName)
-}
-
 func (s *Service) registerSystemDomain() {
 
 	currentClusterName := s.GetClusterMetadata().GetCurrentClusterName()
@@ -383,8 +349,4 @@ func (s *Service) registerSystemDomain() {
 		}
 		s.GetLogger().Fatal("failed to register system domain", tag.Error(err))
 	}
-	// this is needed because frontend domainCache will take about 10s to load the
-	// domain after its created first time. Archiver/Scanner cannot start their cadence
-	// workers until this refresh happens
-	time.Sleep(domainRefreshInterval)
 }
