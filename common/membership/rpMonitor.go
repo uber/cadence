@@ -105,7 +105,7 @@ func (rpo *ringpopMonitor) Stop() {
 		}
 	}
 
-	rpo.rp.Destroy()
+	rpo.rp.Stop()
 }
 
 func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {

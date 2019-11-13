@@ -23,7 +23,6 @@ package resource
 import (
 	"math/rand"
 	"os"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -65,9 +64,7 @@ type (
 
 	// Impl contains all common resources shared across frontend / matching / history / worker
 	Impl struct {
-		status          int32
-		bootstrapParams *service.BootstrapParams
-		waitGroup       sync.WaitGroup
+		status int32
 
 		// static infos
 
@@ -242,8 +239,6 @@ func New(
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
 
-		bootstrapParams: params,
-
 		// static infos
 
 		numShards:       numShards,
@@ -305,7 +300,6 @@ func New(
 		membershipFactory: params.MembershipFactory,
 		rpcFactory:        params.RPCFactory,
 	}
-	impl.waitGroup.Add(1)
 	return impl, nil
 }
 
@@ -336,8 +330,6 @@ func (h *Impl) Start() {
 	h.logger.Info("service started")
 	// seed the random generator once for this service
 	rand.Seed(time.Now().UTC().UnixNano())
-
-	h.waitGroup.Done()
 }
 
 // Stop stops all resources
