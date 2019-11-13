@@ -26,6 +26,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/ringpop-go/discovery/statichosts"
+	"github.com/uber/ringpop-go/swim"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
 )
@@ -51,7 +53,12 @@ func (s *RpoSuite) TestRingpopMonitor() {
 	services := []string{"rpm-test"}
 
 	logger := loggerimpl.NewNopLogger()
-	rpm := NewRingpopMonitor(serviceName, services, NewRingPop(testService.rings[0], nil, logger), logger)
+
+	rpm := NewRingpopMonitor(serviceName, services, NewRingPop(testService.rings[0], &swim.BootstrapOptions{
+		DiscoverProvider: statichosts.New(testService.channels[0].PeerInfo().HostPort),
+		MaxJoinDuration:  time.Second * 10,
+		JoinSize:         1,
+	}, logger), logger)
 	rpm.Start()
 
 	// Sleep to give time for the ring to stabilize
