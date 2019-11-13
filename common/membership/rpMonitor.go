@@ -28,14 +28,15 @@ import (
 )
 
 type ringpopMonitor struct {
-	started     bool
-	stopped     bool
 	serviceName string
 	services    []string
 	rp          *RingPop
 	rings       map[string]*ringpopServiceResolver
 	logger      log.Logger
-	mutex       sync.Mutex
+
+	mutex   sync.Mutex
+	started bool
+	stopped bool
 }
 
 var _ Monitor = (*ringpopMonitor)(nil)
@@ -83,7 +84,7 @@ func (rpo *ringpopMonitor) Start() {
 	for service, ring := range rpo.rings {
 		err := ring.Start()
 		if err != nil {
-			rpo.logger.Fatal("unable to initialize ring pop monitor", tag.Service(service), tag.Error(err))
+			rpo.logger.Fatal("unable to start ring pop monitor", tag.Service(service), tag.Error(err))
 		}
 	}
 
@@ -100,14 +101,17 @@ func (rpo *ringpopMonitor) Stop() {
 
 	rpo.rp.Stop()
 
-	for _, ring := range rpo.rings {
-		ring.Stop()
+	for service, ring := range rpo.rings {
+		if err := ring.Stop(); err != nil {
+			rpo.logger.Error("unable to stop ring pop monitor", tag.Service(service), tag.Error(err))
+		}
 	}
-	rpo.stopped = true
 
 	if rpo.rp != nil {
 		rpo.rp.Destroy()
 	}
+
+	rpo.stopped = true
 }
 
 func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {
