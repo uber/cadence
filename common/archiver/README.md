@@ -45,12 +45,12 @@ type HistoryArchiver interface {
 
 ```go
 type VisibilityArchiver interface {
-    // Archive is used to archive one workflow visibility record. The parameters have the same meaning as those in the HistoryArchiver interface. 
+    // Archive is used to archive one workflow visibility record. Check the Archive() method of the HistoryArchiver interface for parameters' meaning and requirements for this method. 
     // The only difference is that the ArchiveOption parameter won't include an option for recording process. 
     // Please make sure your implementation is lossless. If any in-memory batching mechanism is used, then those batched records will be lost during server restarts. 
     Archive(context.Context, URI, *ArchiveVisibilityRequest, ...ArchiveOption) error
     
-    // Query is used to retrieve archived visibility records. The parameters have the same meaning as those in the HistoryArchiver interface.
+    // Query is used to retrieve archived visibility records. Check the Get() method of the HistoryArchiver interface for parameters' meaning and requirements for this method.
     // The request includes a string field called query, which describes what kind of visibility records should be returned. For example, it can be some SQL-like syntax query string. 
     // Your implementation is responsible for parsing and validating the query, and also returning all visibility records that match the query. 
     // Currently the maximum context timeout passed into the method is 3 minutes, so it's ok if this method takes a long time to run.
@@ -60,9 +60,6 @@ type VisibilityArchiver interface {
     ValidateURI(URI) error
 }
 ```
-VisibilityArchiver is plumbed throughout the codebase but the full visibility feature is not yet implemented.
-This means even once the VisibilityArchiver is implemented archival of visibility events will not occur. 
-Despite this implementors are still expected to implement this one method interface.
 
 **Step 4: Update provider to provide access to your implementation**
 
@@ -124,7 +121,7 @@ func (a *Archiver) Archive(
 }
 ```
 
-**How does my archiver implementation read history?**
+**How does my history archiver implementation read history?**
 
 The `archiver` package provides a utility class called `HistoryIterator` which is a wrapper of `HistoryManager`. 
 Its usage is simpler than the `HistoryManager` given in the `BootstrapContainer`, 
@@ -136,3 +133,7 @@ Sample usage can be found in the filestore historyArchiver implementation.
 
 Each archiver is free to define and return any errors it wants. However many common errors which
 exist between archivers are already defined in `constants.go`.
+
+**Is there a generic query syntax for visibility archiver?**
+
+Currently no. But this is something we plan to do in the future. As for now, try to make your syntax similar to the one used by our advanced list workflow API.
