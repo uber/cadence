@@ -1938,7 +1938,7 @@ func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStarted
 		RunId:      common.StringPtr(task.RunID),
 	}
 	executionInfo := mutableState.GetExecutionInfo()
-	executionTimestamp := executionInfo.StartTimestamp.Add(time.Duration(backoffSeconds) * time.Second)
+	executionTimestamp := time.Unix(0, startEvent.GetTimestamp()).Add(time.Duration(backoffSeconds) * time.Second)
 
 	return &persistence.RecordWorkflowExecutionStartedRequest{
 		Domain:             domainName,
