@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/definition"
@@ -308,17 +309,15 @@ func (s *Service) startArchiver() {
 	}
 }
 
-func (s *Service) ensureSystemDomainExists() {
-	_, err := s.GetMetadataManager().GetDomain(
-		&persistence.GetDomainRequest{Name: common.SystemLocalDomainName},
-	)
-	if err == nil {
-		s.ensureDomainAvailable()
-	} else {
-		if _, ok := err.(*shared.EntityNotExistsError); ok {
-			s.GetLogger().Info("cadence-system domain does not exist, attempting to register domain")
-			s.registerSystemDomain()
-		}
+func (s *Service) ensureSystemDomainExists(pFactory client.Factory, clusterName string) {
+	_, err := s.GetMetadataManager().GetDomain(&persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
+	switch err.(type) {
+	case nil:
+		// noop
+	case *shared.EntityNotExistsError:
+		s.GetLogger().Info("cadence-system domain does not exist, attempting to register domain")
+		s.registerSystemDomain()
+	default:
 		s.GetLogger().Fatal("failed to verify if cadence system domain exists", tag.Error(err))
 	}
 }
