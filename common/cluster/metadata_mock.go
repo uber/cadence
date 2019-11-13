@@ -28,9 +28,11 @@
 package cluster
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	config "github.com/uber/cadence/common/service/config"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	config "github.com/uber/cadence/common/service/config"
 )
 
 // MockMetadata is a mock of Metadata interface

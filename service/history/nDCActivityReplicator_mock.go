@@ -29,9 +29,11 @@ package history
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	history "github.com/uber/cadence/.gen/go/history"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	history "github.com/uber/cadence/.gen/go/history"
 )
 
 // MocknDCActivityReplicator is a mock of nDCActivityReplicator interface

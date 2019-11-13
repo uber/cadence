@@ -29,9 +29,11 @@ package domain
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	shared "github.com/uber/cadence/.gen/go/shared"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // MockHandler is a mock of Handler interface
