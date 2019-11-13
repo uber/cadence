@@ -123,7 +123,7 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Noop() {
 
 	msBuilderCurrent := NewMockmutableState(s.controller)
 	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
-	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(false).Times(1)
+	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(true).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
