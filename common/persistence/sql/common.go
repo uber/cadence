@@ -25,7 +25,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-	
+
 	"github.com/go-sql-driver/mysql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
