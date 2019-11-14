@@ -26,8 +26,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/ringpop-go/discovery/statichosts"
-	"github.com/uber/ringpop-go/swim"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
 )
@@ -49,19 +47,10 @@ func (s *RpoSuite) TestRingpopMonitor() {
 	testService := NewTestRingpopCluster("rpm-test", 3, "127.0.0.1", "", "rpm-test")
 	s.NotNil(testService, "Failed to create test service")
 
-	serviceName := "local-service"
-	services := []string{"rpm-test"}
-
 	logger := loggerimpl.NewNopLogger()
 
-	rpm := NewRingpopMonitor(serviceName, services, NewRingPop(testService.rings[0], &swim.BootstrapOptions{
-		DiscoverProvider: statichosts.New(testService.channels[0].PeerInfo().HostPort),
-		MaxJoinDuration:  time.Second * 10,
-		JoinSize:         1,
-	}, logger), logger)
-	rpm.Start()
+	rpm := testService.rings[0]
 
-	// Sleep to give time for the ring to stabilize
 	time.Sleep(time.Second)
 
 	listenCh := make(chan *ChangedEvent, 5)

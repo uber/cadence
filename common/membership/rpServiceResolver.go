@@ -86,14 +86,8 @@ func (r *ringpopServiceResolver) Start() error {
 	}
 
 	r.rp.AddListener(r)
-	addrs, err := r.rp.GetReachableMembers(swim.MemberWithLabelAndValue(RoleKey, r.service))
-	if err != nil {
+	if err := r.doRefresh(); err != nil {
 		return err
-	}
-
-	for _, addr := range addrs {
-		labels := r.getLabelsMap()
-		r.ring.AddMembers(NewHostInfo(addr, labels))
 	}
 
 	r.shutdownWG.Add(1)
@@ -184,22 +178,26 @@ func (r *ringpopServiceResolver) HandleEvent(
 		// Note that we receive events asynchronously, possibly out of order.
 		// We cannot rely on the content of the event, rather we load everything
 		// from ringpop when we get a notification that something changed.
-		r.refresh()
+		if err := r.refresh(); err != nil {
+			r.logger.Error("error refreshing ring when receiving a ring changed event", tag.Error(err))
+		}
 		r.emitEvent(e)
 	}
 }
 
-func (r *ringpopServiceResolver) refresh() {
+func (r *ringpopServiceResolver) refresh() error {
 	r.ringLock.Lock()
 	defer r.ringLock.Unlock()
 
+	return r.doRefresh()
+}
+
+func (r *ringpopServiceResolver) doRefresh() error {
 	r.ring = hashring.New(farm.Fingerprint32, replicaPoints)
 
 	addrs, err := r.rp.GetReachableMembers(swim.MemberWithLabelAndValue(RoleKey, r.service))
 	if err != nil {
-		// This will happen when service stop and destroy ringpop while there are go-routines pending to call this.
-		r.logger.Warn("Error during ringpop refresh.", tag.Error(err))
-		return
+		return err
 	}
 
 	for _, addr := range addrs {
@@ -208,6 +206,7 @@ func (r *ringpopServiceResolver) refresh() {
 	}
 
 	r.logger.Debug("Current reachable members", tag.Addresses(addrs))
+	return nil
 }
 
 func (r *ringpopServiceResolver) emitEvent(
@@ -250,7 +249,9 @@ func (r *ringpopServiceResolver) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case <-refreshTicker.C:
-			r.refresh()
+			if err := r.refresh(); err != nil {
+				r.logger.Error("error periodically refreshing ring", tag.Error(err))
+			}
 		}
 	}
 }

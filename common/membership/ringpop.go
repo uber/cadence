@@ -21,9 +21,12 @@
 package membership
 
 import (
+	"sync/atomic"
+
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/swim"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
@@ -31,6 +34,7 @@ import (
 type (
 	// RingPop is a simple wrapper
 	RingPop struct {
+		status int32
 		*ringpop.Ringpop
 		bootParams *swim.BootstrapOptions
 		logger     log.Logger
@@ -44,6 +48,7 @@ func NewRingPop(
 	logger log.Logger,
 ) *RingPop {
 	return &RingPop{
+		status:     common.DaemonStatusInitialized,
 		Ringpop:    ringPop,
 		bootParams: bootParams,
 		logger:     logger,
@@ -52,6 +57,14 @@ func NewRingPop(
 
 // Start start ring pop
 func (r *RingPop) Start() {
+	if !atomic.CompareAndSwapInt32(
+		&r.status,
+		common.DaemonStatusInitialized,
+		common.DaemonStatusStarted,
+	) {
+		return
+	}
+
 	_, err := r.Ringpop.Bootstrap(r.bootParams)
 	if err != nil {
 		r.logger.Fatal("unable to bootstrap ringpop", tag.Error(err))
@@ -60,5 +73,13 @@ func (r *RingPop) Start() {
 
 // Stop stop ring pop
 func (r *RingPop) Stop() {
+	if !atomic.CompareAndSwapInt32(
+		&r.status,
+		common.DaemonStatusStarted,
+		common.DaemonStatusStopped,
+	) {
+		return
+	}
+
 	r.Destroy()
 }
