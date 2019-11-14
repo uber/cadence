@@ -15,16 +15,16 @@ const(
 
     dataSourceNamePostgres = "user=%v password=%v host=%v port=%v dbname=%v sslmode=disable "
 
-    readSchemaVersionPostgres     = `SELECT curr_version from schema_version where db_name=?`
+    readSchemaVersionPostgres     = `SELECT curr_version from schema_version where db_name=$1`
 
-    writeSchemaVersionPostgres       = `INSERT into schema_version(db_name, creation_time, curr_version, min_compatible_version) VALUES (?,?,?,?)
+    writeSchemaVersionPostgres       = `INSERT into schema_version(db_name, creation_time, curr_version, min_compatible_version) VALUES ($1,$2,$3,$4)
 										ON CONFLICT (db_name) DO UPDATE 
 										  SET creation_time = excluded.creation_time,
 										   	  curr_version = excluded.curr_version,
 										      min_compatible_version = excluded.min_compatible_version;`
 
 
-    writeSchemaUpdateHistoryPostgres = `INSERT into schema_update_history(year, month, update_time, old_version, new_version, manifest_md5, description) VALUES(?,?,?,?,?,?,?)`
+    writeSchemaUpdateHistoryPostgres = `INSERT into schema_update_history(year, month, update_time, old_version, new_version, manifest_md5, description) VALUES($1,$2,$3,$4,$5,$6,$7)`
 
     createSchemaVersionTablePostgres = `CREATE TABLE schema_version(db_name VARCHAR(255) not null PRIMARY KEY, ` +
         `creation_time TIMESTAMP, ` +

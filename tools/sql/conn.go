@@ -175,7 +175,8 @@ func (c *sqlConn) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (c *sqlConn) ReadSchemaVersion() (string, error) {
 	var version string
-	err := c.db.Get(&version, ReadSchemaVersionSQL[c.driverName], c.database)
+	sql := switcher(ReadSchemaVersionSQL,c.driverName)
+	err := c.db.Get(&version, sql, c.database)
 	return version, err
 }
 
