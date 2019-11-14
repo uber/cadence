@@ -29,6 +29,8 @@ import (
 	"github.com/uber/cadence/tools/common/schema"
 )
 
+const defaultSQLPort              = 3306
+
 // RunTool runs the cadence-cassandra-tool command line tool
 func RunTool(args []string) error {
 	app := buildCLIOptions()
