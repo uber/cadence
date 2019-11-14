@@ -1,30 +1,18 @@
 persistence:
-  defaultStore: postgres-default
-  visibilityStore: postgres-visibility
+  defaultStore: cass-default
+  visibilityStore: cass-visibility
   numHistoryShards: 4
   datastores:
-    postgres-default:
-      sql:
-        driverName: "postgres"
-        databaseName: "postgres"
-        connectAddr: "127.0.0.1:5432"
-        connectProtocol: "tcp"
-        user: "postgres"
-        password: "cadence"
-        maxConns: 20
-        maxIdleConns: 20
-        maxConnLifetime: "1h"
-    postgres-visibility:
-      sql:
-        driverName: "postgres"
-        databaseName: "postgres"
-        connectAddr: "127.0.0.1:5432"
-        connectProtocol: "tcp"
-        user: "postgres"
-        password: "cadence"
-        maxConns: 2
-        maxIdleConns: 2
-        maxConnLifetime: "1h"
+    cass-default:
+      cassandra:
+        hosts: "127.0.0.1"
+        keyspace: "cadence"
+        consistency: "One"
+    cass-visibility:
+      cassandra:
+        hosts: "127.0.0.1"
+        keyspace: "cadence_visibility"
+        consistency: "One"
 
 ringpop:
   name: cadence
@@ -114,6 +102,8 @@ domainDefaults:
       status: "disabled"
 
 kafka:
+  tls:
+    enabled: false
   clusters:
     test:
       brokers:
@@ -126,3 +116,8 @@ kafka:
 
 publicClient:
   hostPort: "localhost:7933"
+
+dynamicConfigClient:
+  filepath: "config/dynamicconfig/development.yaml"
+  pollInterval: "10s"
+
