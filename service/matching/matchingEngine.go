@@ -449,15 +449,11 @@ func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.
 		return nil, err
 	}
 	taskID := uuid.New()
-	result, err := tlMgr.DispatchQueryTask(ctx, taskID, queryRequest)
-	if err != nil {
-		return nil, err
+	resp, err := tlMgr.DispatchQueryTask(ctx, taskID, queryRequest)
+	if resp != nil || err != nil {
+		return resp, err
 	}
 
-	if result != nil {
-		// task was remotely matched on another host, directly send the response
-		return &workflow.QueryWorkflowResponse{QueryResult: result}, nil
-	}
 
 	queryResultCh := make(chan *queryResult, 1)
 	e.lockableQueryTaskMap.put(taskID, queryResultCh)

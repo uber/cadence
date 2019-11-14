@@ -127,9 +127,9 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 	}
 }
 
-// OfferQuery offers a query task to a potential consumer (poller). If the task
-// is successfully matched, this method will return the query response. Otherwise
-// it returns error
+// OfferQuery will either match task to local poller or will forward query task.
+// Local match is always attempted before forwarding is attempted. If local match occurs
+// response and error are both nil, if forwarding occurs then response or error is returned.
 func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) ([]byte, error) {
 	select {
 	case tm.queryTaskC <- task:
