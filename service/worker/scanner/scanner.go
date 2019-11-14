@@ -41,7 +41,7 @@ import (
 
 const (
 	// scannerStartUpDelay is to let services warm up
-	scannerStartUpDelay = time.Second * 4
+	scannerStartUpDelay = time.Second * 10
 )
 
 type (
@@ -132,7 +132,7 @@ func (s *Scanner) Start() error {
 func (s *Scanner) startWorkflowWithRetry(
 	options cclient.StartWorkflowOptions,
 	workflowType string,
-) error {
+) {
 
 	// let history / matching service warm up
 	time.Sleep(scannerStartUpDelay)
@@ -141,11 +141,14 @@ func (s *Scanner) startWorkflowWithRetry(
 	policy := backoff.NewExponentialRetryPolicy(time.Second)
 	policy.SetMaximumInterval(time.Minute)
 	policy.SetExpirationInterval(backoff.NoInterval)
-	return backoff.Retry(func() error {
+	err := backoff.Retry(func() error {
 		return s.startWorkflow(sdkClient, options, workflowType)
 	}, policy, func(err error) bool {
 		return true
 	})
+	if err != nil {
+		s.context.GetLogger().Fatal("unable to start scanner", tag.Error(err))
+	}
 }
 
 func (s *Scanner) startWorkflow(
