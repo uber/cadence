@@ -137,6 +137,7 @@ type (
 		eventsReapplier           nDCEventsReapplier
 		matchingClient            matching.Client
 		rawMatchingClient         matching.Client
+		versionChecker            client.VersionChecker
 	}
 )
 
@@ -173,6 +174,8 @@ var (
 	ErrEventsAterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
 	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
 	ErrQueryEnteredInvalidState = &workflow.InternalServiceError{Message: "query entered invalid state, this should be impossible"}
+	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
+	ErrQueryWorkflowBeforeFirstDecision = &workflow.BadRequestError{Message: "workflow must handle at least one decision task before it can be queried"}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
@@ -229,6 +232,7 @@ func NewEngineWithShardContext(
 		publicClient:      publicClient,
 		matchingClient:    matching,
 		rawMatchingClient: rawMatchingClient,
+		versionChecker:    client.NewVersionChecker(),
 	}
 
 	historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -768,6 +772,11 @@ func (e *historyEngineImpl) QueryWorkflow(
 				},
 			}, nil
 		}
+	}
+
+	// if workflow has not started and completed at least one decision task then it cannot be queried
+	if mutableState.GetPreviousStartedEventID() <= 0 {
+		return nil, ErrQueryWorkflowBeforeFirstDecision
 	}
 
 	de, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
