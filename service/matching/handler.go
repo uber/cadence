@@ -32,10 +32,8 @@ import (
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
 )
@@ -46,13 +44,10 @@ var _ matchingserviceserver.Interface = (*Handler)(nil)
 type Handler struct {
 	resource.Resource
 
-	taskMgr       persistence.TaskManager
-	metadataMgr   persistence.MetadataManager
 	engine        Engine
 	config        *Config
 	metricsClient metrics.Client
 	startWG       sync.WaitGroup
-	domainCache   cache.DomainCache
 	rateLimiter   quotas.Limiter
 }
 
@@ -68,10 +63,7 @@ func NewHandler(
 	handler := &Handler{
 		Resource:      resource,
 		config:        config,
-		domainCache:   resource.GetDomainCache(),
 		metricsClient: resource.GetMetricsClient(),
-		taskMgr:       resource.GetTaskManager(),
-		metadataMgr:   resource.GetMetadataManager(),
 		rateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
 			return float64(config.RPS())
 		}),
