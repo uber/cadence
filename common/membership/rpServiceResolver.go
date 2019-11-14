@@ -53,9 +53,9 @@ type ringpopServiceResolver struct {
 	shutdownWG  sync.WaitGroup
 	logger      log.Logger
 
-	ringLock        sync.RWMutex
-	lastRefreshTime time.Time
-	ring            *hashring.HashRing
+	ringLock            sync.RWMutex
+	ringLastRefreshTime time.Time
+	ring                *hashring.HashRing
 
 	listenerLock sync.RWMutex
 	listeners    map[string]chan<- *ChangedEvent
@@ -196,7 +196,7 @@ func (r *ringpopServiceResolver) refresh() error {
 	r.ringLock.Lock()
 	defer r.ringLock.Unlock()
 
-	if r.lastRefreshTime.After(time.Now().Add(-minRefreshInternal)) {
+	if r.ringLastRefreshTime.After(time.Now().Add(-minRefreshInternal)) {
 		// refresh too frequently
 		return nil
 	}
@@ -213,7 +213,7 @@ func (r *ringpopServiceResolver) refresh() error {
 		r.ring.AddMembers(host)
 	}
 
-	r.lastRefreshTime = time.Now()
+	r.ringLastRefreshTime = time.Now()
 	r.logger.Debug("Current reachable members", tag.Addresses(addrs))
 	return nil
 }
