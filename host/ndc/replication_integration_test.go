@@ -21,6 +21,8 @@
 package ndc
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
 	"time"
 
@@ -133,7 +135,17 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 		request := persistence.NewGetReplicationTasksFromDLQRequest(
 			"standby", -1, math.MaxInt64, math.MaxInt64, nil)
 		response, err := executionManager.GetReplicationTasksFromDLQ(request)
-		if err == nil && len(response.Tasks) == len(historyBatch) {
+		if err == nil && len(response.Tasks) >= len(historyBatch) {
+			print := func(value interface{}) string {
+				bytes, _ := json.MarshalIndent(value, "", "  ")
+				return string(bytes)
+			}
+			fmt.Printf("++++++++++\n")
+			fmt.Printf("## WHAT:\n%v\n.", print(response.Tasks))
+			fmt.Printf("## WHAT:\n%v\n.", print(historyBatch))
+			fmt.Printf("## WHAT:\n%v - %v\n.", len(response.Tasks), len(historyBatch))
+			fmt.Printf("++++++++++\n")
+
 			return
 		}
 	}
