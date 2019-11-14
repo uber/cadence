@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/yarpc"
 	"sync"
 	"time"
 
@@ -1568,6 +1569,12 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	)
 	defer sw.Stop()
 
+	call := yarpc.CallFromContext(ctx)
+
+	completeRequest.WorkerVersionInfo = &gen.WorkerVersionInfo{
+		Impl: common.StringPtr(call.Header(common.ClientImplHeaderName)),
+		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
+	}
 	matchingRequest := &m.RespondQueryTaskCompletedRequest{
 		DomainUUID:       common.StringPtr(queryTaskToken.DomainID),
 		TaskList:         &gen.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
