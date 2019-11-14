@@ -652,8 +652,8 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:            &execution,
-			Query:                &workflow.WorkflowQuery{},
+			Execution: &execution,
+			Query:     &workflow.WorkflowQuery{},
 		},
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)

@@ -25,6 +25,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/shared"
+
 	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/metrics"
@@ -130,7 +132,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 // OfferQuery will either match task to local poller or will forward query task.
 // Local match is always attempted before forwarding is attempted. If local match occurs
 // response and error are both nil, if forwarding occurs then response or error is returned.
-func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) ([]byte, error) {
+func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) (*shared.QueryWorkflowResponse, error) {
 	select {
 	case tm.queryTaskC <- task:
 		<-task.responseC
@@ -149,7 +151,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) ([]by
 			resp, err := tm.fwdr.ForwardQueryTask(ctx, task)
 			token.release()
 			if err == nil {
-				return resp.QueryResult, nil
+				return resp, nil
 			}
 			if err == errForwarderSlowDown {
 				// if we are rate limited, try only local match for the

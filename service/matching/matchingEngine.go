@@ -63,18 +63,19 @@ type (
 	}
 
 	matchingEngineImpl struct {
-		taskManager     persistence.TaskManager
-		historyService  history.Client
-		matchingClient  matching.Client
-		tokenSerializer common.TaskTokenSerializer
-		logger          log.Logger
-		metricsClient   metrics.Client
-		taskListsLock   sync.RWMutex                   // locks mutation of taskLists
-		taskLists       map[taskListID]taskListManager // Convert to LRU cache
-		config          *Config
-		queryMapLock    sync.Mutex
+		taskManager          persistence.TaskManager
+		historyService       history.Client
+		matchingClient       matching.Client
+		tokenSerializer      common.TaskTokenSerializer
+		logger               log.Logger
+		metricsClient        metrics.Client
+		taskListsLock        sync.RWMutex                   // locks mutation of taskLists
+		taskLists            map[taskListID]taskListManager // Convert to LRU cache
+		config               *Config
+		queryMapLock         sync.Mutex
 		lockableQueryTaskMap lockableQueryTaskMap
-		domainCache  cache.DomainCache
+		domainCache          cache.DomainCache
+		versionChecker       client.VersionChecker
 	}
 )
 
@@ -107,16 +108,17 @@ func NewEngine(taskManager persistence.TaskManager,
 ) Engine {
 
 	return &matchingEngineImpl{
-		taskManager:     taskManager,
-		historyService:  historyService,
-		tokenSerializer: common.NewJSONTaskTokenSerializer(),
-		taskLists:       make(map[taskListID]taskListManager),
-		logger:          logger.WithTags(tag.ComponentMatchingEngine),
-		metricsClient:   metricsClient,
-		matchingClient:  matchingClient,
-		config:          config,
-		lockableQueryTaskMap:    lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
-		domainCache:     domainCache,
+		taskManager:          taskManager,
+		historyService:       historyService,
+		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
+		taskLists:            make(map[taskListID]taskListManager),
+		logger:               logger.WithTags(tag.ComponentMatchingEngine),
+		metricsClient:        metricsClient,
+		matchingClient:       matchingClient,
+		config:               config,
+		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
+		domainCache:          domainCache,
+		versionChecker:       client.NewVersionChecker(),
 	}
 }
 
@@ -330,7 +332,7 @@ pollLoop:
 			})
 			if err != nil {
 				// will notify query client that the query task failed
-				e.deliverQueryResult(task.query.taskID, &queryResult{err: err})
+				e.deliverQueryResult(task.query.taskID, &queryResult{internalError: err})
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
@@ -433,6 +435,11 @@ pollLoop:
 	}
 }
 
+type queryResult struct {
+	workerResponse *m.RespondQueryTaskCompletedRequest
+	internalError  error
+}
+
 // QueryWorkflow creates a DecisionTask with query data, send it through sync match channel, wait for that DecisionTask
 // to be processed by worker, and then return the query result.
 func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWorkflowRequest) (*workflow.QueryWorkflowResponse, error) {
@@ -450,29 +457,54 @@ func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.
 	}
 	taskID := uuid.New()
 	resp, err := tlMgr.DispatchQueryTask(ctx, taskID, queryRequest)
+
+	// if get response or error it means that query task was handled by forwarding to another matching host
+	// this remote host's result can be returned directly
 	if resp != nil || err != nil {
 		return resp, err
 	}
 
-
+	// if get here it means that dispatch of query task has occurred locally
+	// must wait on result channel to get query result
 	queryResultCh := make(chan *queryResult, 1)
 	e.lockableQueryTaskMap.put(taskID, queryResultCh)
 	defer e.lockableQueryTaskMap.delete(taskID)
 
 	select {
 	case result := <-queryResultCh:
-		if result.err == nil {
-			return &workflow.QueryWorkflowResponse{QueryResult: result.result}, nil
+		if result.internalError != nil {
+			return nil, result.internalError
 		}
-		return nil, &workflow.QueryFailedError{Message: result.err.Error()}
+
+		workerResponse := result.workerResponse
+		// if query was intended as consistent query check to see if worker supports consistent query
+		if queryRequest.GetQueryRequest().GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelStrong {
+			if err := e.versionChecker.SupportsConsistentQuery(
+				workerResponse.GetCompletedRequest().GetWorkerVersionInfo().GetImpl(),
+				workerResponse.GetCompletedRequest().GetWorkerVersionInfo().GetFeatureVersion()); err != nil {
+				return nil, err
+			}
+		}
+
+		switch workerResponse.GetCompletedRequest().GetCompletedType() {
+		case workflow.QueryTaskCompletedTypeCompleted:
+			return &workflow.QueryWorkflowResponse{QueryResult: workerResponse.GetCompletedRequest().GetQueryResult()}, nil
+		case workflow.QueryTaskCompletedTypeFailed:
+			return nil, &workflow.QueryFailedError{Message: workerResponse.GetCompletedRequest().GetErrorMessage()}
+		default:
+			return nil, &workflow.InternalServiceError{Message: "unknown query completed type"}
+		}
 	case <-ctx.Done():
-		return nil, &workflow.QueryFailedError{Message: "workflow worker is not responding"}
+		return nil, ctx.Err()
 	}
 }
 
-type queryResult struct {
-	result          []byte
-	err             error
+func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
+	if err := e.deliverQueryResult(request.GetTaskID(), &queryResult{workerResponse: request}); err != nil {
+		e.metricsClient.IncCounter(metrics.MatchingRespondQueryTaskCompletedScope, metrics.RespondQueryTaskFailedCounter)
+		return err
+	}
+	return nil
 }
 
 func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *queryResult) error {
@@ -482,22 +514,6 @@ func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *quer
 	}
 	queryResultCh <- queryResult
 	return nil
-}
-
-func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) (err error) {
-	defer func() {
-		if err != nil {
-			e.metricsClient.IncCounter(metrics.MatchingRespondQueryTaskCompletedScope, metrics.RespondQueryTaskFailedCounter)
-		}
-	}()
-	switch request.GetCompletedRequest().GetCompletedType() {
-	case workflow.QueryTaskCompletedTypeCompleted:
-		return e.deliverQueryResult(request.GetTaskID(), &queryResult{result: request.CompletedRequest.QueryResult})
-	case workflow.QueryTaskCompletedTypeFailed:
-		return e.deliverQueryResult(request.GetTaskID(), &queryResult{err: errors.New(request.CompletedRequest.GetErrorMessage())})
-	default:
-		return &workflow.BadRequestError{Message: "complete response type is unknown"}
-	}
 }
 
 func (e *matchingEngineImpl) CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) error {
@@ -740,4 +756,3 @@ func (m *lockableQueryTaskMap) delete(key string) {
 	defer m.Unlock()
 	delete(m.queryTaskMap, key)
 }
-

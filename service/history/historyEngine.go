@@ -62,6 +62,8 @@ const (
 	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
 	timerCancellationMsgTimerIDUnknown        = "TIMER_ID_UNKNOWN"
+	queryFirstDecisionTaskWaitTime            = time.Second
+	queryFirstDecisionTaskCheckInterval       = 200 * time.Millisecond
 )
 
 type (
@@ -747,37 +749,53 @@ func (e *historyEngineImpl) QueryWorkflow(
 	ctx ctx.Context,
 	request *h.QueryWorkflowRequest,
 ) (retResp *h.QueryWorkflowResponse, retErr error) {
-	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
-	if err != nil {
-		return nil, err
-	}
-	defer func() { release(retErr) }()
-	mutableState, err := context.loadWorkflowExecution()
+
+	mutableStateResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
 	if err != nil {
 		return nil, err
 	}
 	req := request.GetRequest()
-	if !mutableState.IsWorkflowExecutionRunning() && req.QueryRejectCondition != nil {
+	if !mutableStateResp.GetIsWorkflowRunning() && req.QueryRejectCondition != nil {
 		notOpenReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotOpen
-		_, closeStatus := mutableState.GetWorkflowStateCloseStatus()
+		closeStatus := mutableStateResp.GetWorkflowCloseState()
 		notCompletedCleanlyReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotCompletedCleanly && closeStatus != persistence.WorkflowCloseStatusCompleted
 		if notOpenReject || notCompletedCleanlyReject {
 			return &h.QueryWorkflowResponse{
 				Response: &workflow.QueryWorkflowResponse{
 					QueryRejected: &workflow.QueryRejected{
-						CloseStatus: persistence.ToThriftWorkflowExecutionCloseStatus(closeStatus).Ptr(),
+						CloseStatus: persistence.ToThriftWorkflowExecutionCloseStatus(int(closeStatus)).Ptr(),
 					},
 				},
 			}, nil
 		}
 	}
 
-	// if workflow has not started and completed at least one decision task then it cannot be queried
-	if mutableState.GetPreviousStartedEventID() <= 0 {
+	// query cannot be processed unless at least one decision task has finished
+	// if first decision task has not finished wait for up to a second for it to complete
+	deadline := time.Now().Add(queryFirstDecisionTaskWaitTime)
+	for mutableStateResp.GetPreviousStartedEventId() <= 0 && time.Now().Before(deadline) {
+		<-time.After(queryFirstDecisionTaskCheckInterval)
+		mutableStateResp, err = e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if mutableStateResp.GetPreviousStartedEventId() <= 0 {
 		return nil, ErrQueryWorkflowBeforeFirstDecision
 	}
 
 	de, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
+	if err != nil {
+		return nil, err
+	}
+
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+	if err != nil {
+		return nil, err
+	}
+	defer func() { release(retErr) }()
+	mutableState, err := context.loadWorkflowExecution()
 	if err != nil {
 		return nil, err
 	}
