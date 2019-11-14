@@ -25,12 +25,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-
-	// These two are required here to make sure the drivers are imported and registered in the binary
-	// See https://github.com/golang/go/wiki/SQLDrivers
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-
+	
 	"github.com/go-sql-driver/mysql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
