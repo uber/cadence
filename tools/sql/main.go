@@ -23,7 +23,6 @@ package sql
 import (
 	"os"
 
-	_ "github.com/go-sql-driver/mysql" // needed to load the mysql driver
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/tools/common/schema"

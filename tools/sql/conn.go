@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -39,176 +38,99 @@ type (
 		driverName string
 	}
 	sqlConn struct {
-		driverName string
+		driver Driver
 		database string
 		db       *sqlx.DB
 	}
+
+	// This is the driver interface that each SQL database needs to implement
+	Driver interface {
+		GetDriverName()string
+		CreateDBConnection (driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error)
+		GetReadSchemaVersionSQL()string
+		GetWriteSchemaVersionSQL()string
+		GetWriteSchemaUpdateHistorySQL()string
+		GetCreateSchemaVersionTableSQL()string
+		GetCreateSchemaUpdateHistoryTableSQL()string
+		GetCreateDatabaseSQL()string
+		GetDropDatabaseSQL()string
+		GetListTablesSQL()string
+		GetDropTableSQL()string
+	}
 )
 
-// DriverName refers to the name of the mysql driver
-const MySQLDriverName = "mysql"
-
-var SupportedSQLDrivers = map[string]bool{
-	MySQLDriverName : true,
-}
-
-var NewConnectionFuncs = map[string] func (driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error){
-	MySQLDriverName : newMySQLConn,
-}
-
-var ReadSchemaVersionSQL = map[string]string{
-	MySQLDriverName:readSchemaVersionMySQL,
-}
-
-var WriteSchemaVersionSQL = map[string]string{
-	MySQLDriverName:writeSchemaVersionMySQL,
-}
-
-var WriteSchemaUpdateHistorySQL = map[string]string{
-	MySQLDriverName:writeSchemaUpdateHistoryMySQL,
-}
-
-var CreateSchemaVersionTableSQL = map[string]string{
-	MySQLDriverName:createSchemaVersionTableMySQL,
-}
-
-var CreateSchemaUpdateHistoryTableSQL = map[string]string{
-	MySQLDriverName:createSchemaUpdateHistoryTableMySQL,
-}
-
-var CreateDatabaseSQL = map[string]string{
-	MySQLDriverName:createDatabaseMySQL,
-}
-
-var DropDatabaseSQL = map[string]string{
-	MySQLDriverName:dropDatabaseMySQL,
-}
-
-var ListTablesSQL = map[string]string{
-	MySQLDriverName:listTablesMySQL,
-}
-
-var DropTableSQL = map[string]string{
-	MySQLDriverName:dropTableMySQL,
-}
-
-const (
-	dataSourceNameMySQL = "%s:%s@%v(%v:%v)/%s?multiStatements=true&parseTime=true&clientFoundRows=true"
-
-	readSchemaVersionMySQL        = `SELECT curr_version from schema_version where db_name=?`
-
-	writeSchemaVersionMySQL       = `REPLACE into schema_version(db_name, creation_time, curr_version, min_compatible_version) VALUES (?,?,?,?)`
-
-	writeSchemaUpdateHistoryMySQL = `INSERT into schema_update_history(year, month, update_time, old_version, new_version, manifest_md5, description) VALUES(?,?,?,?,?,?,?)`
-
-	createSchemaVersionTableMySQL = `CREATE TABLE schema_version(db_name VARCHAR(255) not null PRIMARY KEY, ` +
-		`creation_time DATETIME(6), ` +
-		`curr_version VARCHAR(64), ` +
-		`min_compatible_version VARCHAR(64));`
-
-	createSchemaUpdateHistoryTableMySQL = `CREATE TABLE schema_update_history(` +
-		`year int not null, ` +
-		`month int not null, ` +
-		`update_time DATETIME(6) not null, ` +
-		`description VARCHAR(255), ` +
-		`manifest_md5 VARCHAR(64), ` +
-		`new_version VARCHAR(64), ` +
-		`old_version VARCHAR(64), ` +
-		`PRIMARY KEY (year, month, update_time));`
-
-
-	createDatabaseMySQL = "CREATE database %v CHARACTER SET UTF8"
-
-	dropDatabaseMySQL = "Drop database %v"
-
-	listTablesMySQL = "SHOW TABLES FROM %v"
-	
-	dropTableMySQL = "DROP TABLE %v"
-)
+var supportedSQLDrivers = map[string]Driver{}
 
 var _ schema.DB = (*sqlConn)(nil)
 
-func switcher(templates map[string]string, driver string) string{
-	s, ok := templates[driver]
-	if !ok{
-		panic(fmt.Sprintf("Template for %v is not defined", driver))
+// RegisterDriver will register a SQL driver for SQL client CLI
+func RegisterDriver(driverName string, driver Driver){
+	if _, ok := supportedSQLDrivers[driverName]; ok {
+		panic("driver "+driverName+" already registered")
 	}
-	return s
-}
-
-// newSQLConn returns a new connection to mysql database
-func newMySQLConn(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error) {
-	db, err := sqlx.Connect(driverName, fmt.Sprintf(dataSourceNameMySQL, user, passwd, "tcp", host, port, database))
-
-	if err != nil {
-		return nil, err
-	}
-	// Maps struct names in CamelCase to snake without need for db struct tags.
-	db.MapperFunc(strcase.ToSnake)
-	return db, nil
+	supportedSQLDrivers[driverName] = driver
 }
 
 func NewConnection(params *sqlConnectParams) (*sqlConn, error) {
-	if !SupportedSQLDrivers[params.driverName]{
-		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.driverName, SupportedSQLDrivers)
+	driver, ok := supportedSQLDrivers[params.driverName]
+
+	if !ok{
+		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.driverName, supportedSQLDrivers)
 	}
 
-	db, err := NewConnectionFuncs[params.driverName](params.driverName, params.host, params.port, params.user, params.password, params.database)
+	db, err := driver.CreateDBConnection(params.driverName, params.host, params.port, params.user, params.password, params.database)
 	if err != nil {
 		return nil, err
 	}
 	return &sqlConn{
 		db: db,
 		database: params.database,
-	 	driverName:params.driverName,
+	 	driver:   driver,
 	}, nil
 }
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (c *sqlConn) CreateSchemaVersionTables() error {
-	if err := c.Exec(switcher(CreateSchemaVersionTableSQL,c.driverName)); err != nil {
+	if err := c.Exec(c.driver.GetCreateSchemaVersionTableSQL()); err != nil {
 		return err
 	}
-	return c.Exec(switcher(CreateSchemaUpdateHistoryTableSQL,c.driverName))
+	return c.Exec(c.driver.GetCreateSchemaUpdateHistoryTableSQL())
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (c *sqlConn) ReadSchemaVersion() (string, error) {
 	var version string
-	sql := switcher(ReadSchemaVersionSQL,c.driverName)
-	err := c.db.Get(&version, sql, c.database)
+	err := c.db.Get(&version, c.driver.GetReadSchemaVersionSQL(), c.database)
 	return version, err
 }
 
 // UpdateShemaVersion updates the schema version for the keyspace
 func (c *sqlConn) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
-	_, err := c.db.Exec(switcher(WriteSchemaVersionSQL,c.driverName), c.database, time.Now(), newVersion, minCompatibleVersion)
-	return err
+	return c.Exec(c.driver.GetWriteSchemaVersionSQL(), c.database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (c *sqlConn) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
-	_, err := c.db.Exec(switcher(WriteSchemaUpdateHistorySQL,c.driverName), now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
-	return err
+	return c.Exec(c.driver.GetWriteSchemaUpdateHistorySQL(), now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
-// Exec executes a sql statement
-func (c *sqlConn) Exec(stmt string) error {
-	_, err := c.db.Exec(stmt)
+//// Exec executes a sql statement
+func (c *sqlConn) Exec(stmt string, args... interface{}) error {
+	_, err := c.db.Exec(stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (c *sqlConn) ListTables() ([]string, error) {
 	var tables []string
-	err := c.db.Select(&tables, fmt.Sprintf(switcher(ListTablesSQL,c.driverName), c.database))
+	err := c.db.Select(&tables, c.driver.GetListTablesSQL(), c.database)
 	return tables, err
 }
 
 // DropTable drops a given table from the database
 func (c *sqlConn) DropTable(name string) error {
-	return c.Exec(fmt.Sprintf(switcher(DropTableSQL,c.driverName), name))
+	return c.Exec(c.driver.GetDropTableSQL(), name)
 }
 
 // DropAllTables drops all tables from this database
@@ -227,12 +149,12 @@ func (c *sqlConn) DropAllTables() error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (c *sqlConn) CreateDatabase(name string) error {
-	return c.Exec(fmt.Sprintf(switcher(CreateDatabaseSQL,c.driverName), name))
+	return c.Exec(c.driver.GetCreateDatabaseSQL(), name)
 }
 
 // DropDatabase drops a database
 func (c *sqlConn) DropDatabase(name string) error {
-	return c.Exec(fmt.Sprintf(switcher(DropDatabaseSQL,c.driverName), name))
+	return c.Exec(c.driver.GetDropDatabaseSQL(), name)
 }
 
 // Close closes the sql client

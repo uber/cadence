@@ -41,31 +41,29 @@ const(
         `old_version VARCHAR(64), ` +
         `PRIMARY KEY (year, month, update_time));`
 
+    createDatabasePostgres = "CREATE database $1"
 
-    createDatabasePostgres = "CREATE database %v"
-
-    dropDatabasePostgres = "Drop database %v"
+    dropDatabasePostgres = "Drop database $1"
 
     listTablesPostgres = "select table_name from information_schema.tables where table_schema='public'"
 
-    dropTablePostgres = "DROP TABLE %v"
+    dropTablePostgres = "DROP TABLE $1"
 )
 
+
+type driver struct{}
+
+var _ sql.Driver = (*driver)(nil)
+
 func init(){
-    sql.SupportedSQLDrivers[driverName] = true
-    sql.NewConnectionFuncs[driverName] = newPostgresConn
-    sql.ReadSchemaVersionSQL[driverName] = readSchemaVersionPostgres
-    sql.WriteSchemaVersionSQL[driverName] = writeSchemaVersionPostgres
-    sql.WriteSchemaUpdateHistorySQL[driverName] = writeSchemaUpdateHistoryPostgres
-    sql.CreateSchemaVersionTableSQL[driverName] = createSchemaVersionTablePostgres
-    sql.CreateSchemaUpdateHistoryTableSQL[driverName] = createSchemaUpdateHistoryTablePostgres
-    sql.CreateDatabaseSQL[driverName] = createDatabasePostgres
-    sql.DropDatabaseSQL[driverName] = dropDatabasePostgres
-    sql.ListTablesSQL[driverName] = listTablesPostgres
-    sql.DropTableSQL[driverName] = dropTablePostgres
+    sql.RegisterDriver(driverName, &driver{})
 }
 
-func newPostgresConn(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error) {
+func (d *driver)GetDriverName()string{
+    return driverName
+}
+
+func (d *driver)CreateDBConnection (driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error){
     if database == ""{
         database = "postgres"
     }
@@ -77,4 +75,40 @@ func newPostgresConn(driverName, host string, port int, user string, passwd stri
     // Maps struct names in CamelCase to snake without need for db struct tags.
     db.MapperFunc(strcase.ToSnake)
     return db, nil
+}
+
+func (d *driver)GetReadSchemaVersionSQL()string{
+    return readSchemaVersionPostgres
+}
+
+func (d *driver)GetWriteSchemaVersionSQL()string{
+    return writeSchemaVersionPostgres
+}
+
+func (d *driver)GetWriteSchemaUpdateHistorySQL()string{
+    return writeSchemaUpdateHistoryPostgres
+}
+
+func (d *driver)GetCreateSchemaVersionTableSQL()string{
+    return createSchemaVersionTablePostgres
+}
+
+func (d *driver)GetCreateSchemaUpdateHistoryTableSQL()string{
+    return createSchemaUpdateHistoryTablePostgres
+}
+
+func (d *driver)GetCreateDatabaseSQL()string{
+    return createDatabasePostgres
+}
+
+func (d *driver)GetDropDatabaseSQL()string{
+    return dropDatabasePostgres
+}
+
+func (d *driver)GetListTablesSQL()string{
+    return listTablesPostgres
+}
+
+func (d *driver)GetDropTableSQL()string{
+    return dropTablePostgres
 }
