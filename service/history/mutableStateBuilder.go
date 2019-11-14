@@ -443,10 +443,12 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 	forceUpdate bool,
 ) error {
 
-	if !e.IsWorkflowExecutionRunning() {
+	if state, _ := e.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCompleted {
+		// do not update current version only when workflow is completed
 		return nil
 	}
 
+	// TODO when 2DC is deprecated, remove this block
 	if e.replicationState != nil {
 		e.UpdateReplicationStateVersion(version, forceUpdate)
 		return nil
@@ -466,6 +468,7 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 			}
 			e.currentVersion = versionHistoryItem.GetVersion()
 		}
+
 		if version > e.currentVersion || forceUpdate {
 			e.currentVersion = version
 		}
@@ -473,6 +476,8 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 		return nil
 	}
 
+	// TODO when NDC is fully rolled out remove this block
+	//  since event local domain workflow will have version history
 	if version != common.EmptyVersion {
 		err := &workflow.InternalServiceError{
 			Message: "cannot update current version of local domain workflow to version other than empty version",
@@ -2285,9 +2290,9 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(
 		return nil, err
 	}
 
-	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok ||
-		ai.StartedID != startedEventID ||
-		((timeoutType == workflow.TimeoutTypeStartToClose || timeoutType == workflow.TimeoutTypeHeartbeat) && ai.StartedID == common.EmptyEventID) {
+	ai, ok := e.GetActivityInfo(scheduleEventID)
+	if !ok || ai.StartedID != startedEventID || ((timeoutType == workflow.TimeoutTypeStartToClose ||
+		timeoutType == workflow.TimeoutTypeHeartbeat) && ai.StartedID == common.EmptyEventID) {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
@@ -2301,7 +2306,7 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(
 	if err := e.addTransientActivityStartedEvent(scheduleEventID); err != nil {
 		return nil, err
 	}
-	event := e.hBuilder.AddActivityTaskTimedOutEvent(scheduleEventID, startedEventID, timeoutType, lastHeartBeatDetails)
+	event := e.hBuilder.AddActivityTaskTimedOutEvent(scheduleEventID, startedEventID, timeoutType, lastHeartBeatDetails, ai.LastFailureReason, ai.LastFailureDetails)
 	if err := e.ReplicateActivityTaskTimedOutEvent(event); err != nil {
 		return nil, err
 	}

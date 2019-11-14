@@ -634,6 +634,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	}
 
 	if err := c.mergeContinueAsNewReplicationTasks(
+		updateMode,
 		currentWorkflow,
 		newWorkflow,
 	); err != nil {
@@ -730,11 +731,16 @@ func (c *workflowExecutionContextImpl) notifyTasks(
 }
 
 func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
+	updateMode persistence.UpdateWorkflowMode,
 	currentWorkflowMutation *persistence.WorkflowMutation,
 	newWorkflowSnapshot *persistence.WorkflowSnapshot,
 ) error {
 
 	if currentWorkflowMutation.ExecutionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew {
+		return nil
+	} else if updateMode == persistence.UpdateWorkflowModeBypassCurrent && newWorkflowSnapshot == nil {
+		// update current workflow as zombie & continue as new without new zombie workflow
+		// this case can be valid if new workflow is already created by resend
 		return nil
 	}
 
@@ -1238,7 +1244,13 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 	// The active cluster of the domain is differ from the current cluster
 	// Use frontend client to route this request to the active cluster
 	// Reapplication only happens in active cluster
-	return clientBean.GetRemoteFrontendClient(activeCluster).ReapplyEvents(
+	sourceCluster := clientBean.GetRemoteFrontendClient(activeCluster)
+	if sourceCluster == nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("cannot find cluster config %v to do reapply", activeCluster),
+		}
+	}
+	return sourceCluster.ReapplyEvents(
 		ctx,
 		&workflow.ReapplyEventsRequest{
 			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),

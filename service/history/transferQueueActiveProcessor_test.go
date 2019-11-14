@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -52,6 +51,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
 
@@ -78,9 +79,9 @@ type (
 		mockProducer                *mocks.KafkaProducer
 		mockMessagingClient         messaging.Client
 		mockQueueAckMgr             *MockQueueAckMgr
-		mockClientBean              *client.MockClientBean
 		mockService                 service.Service
 		logger                      log.Logger
+		mockArchivalClient          *warchiver.ClientMock
 		mockArchivalMetadata        *archiver.MockArchivalMetadata
 		mockArchiverProvider        *provider.MockArchiverProvider
 		mockParentClosePolicyClient *parentclosepolicy.ClientMock
@@ -159,14 +160,14 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockProducer = &mocks.KafkaProducer{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockClientBean = &client.MockClientBean{}
+	s.mockArchivalClient = &warchiver.ClientMock{}
 	s.mockArchivalMetadata = &archiver.MockArchivalMetadata{}
 	s.mockArchiverProvider = &provider.MockArchiverProvider{}
 	s.mockService = service.NewTestService(
 		s.mockClusterMetadata,
 		s.mockMessagingClient,
 		metricsClient,
-		s.mockClientBean,
+		nil,
 		s.mockArchivalMetadata,
 		s.mockArchiverProvider,
 		nil,
@@ -211,6 +212,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
+		archivalClient:       s.mockArchivalClient,
 	}
 	s.mockShard.SetEngine(h)
 	s.mockHistoryEngine = h
@@ -238,7 +240,7 @@ func (s *transferQueueActiveProcessorSuite) TearDownTest() {
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockQueueAckMgr.AssertExpectations(s.T())
-	s.mockClientBean.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 	s.mockArchivalMetadata.AssertExpectations(s.T())
 	s.mockArchiverProvider.AssertExpectations(s.T())
 	s.controller.Finish()
@@ -684,6 +686,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		CompletionEvent:    event,
 	}).Return(nil).Times(1)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 
 	_, err = s.transferQueueActiveProcessor.process(newTaskInfo(nil, transferTask, s.logger))
 	s.Nil(err)
@@ -735,6 +738,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
+	s.mockArchivalClient.On("Archive", mock.Anything, mock.Anything).Return(nil, nil).Once()
 
 	_, err = s.transferQueueActiveProcessor.process(newTaskInfo(nil, transferTask, s.logger))
 	s.Nil(err)
@@ -866,6 +871,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
@@ -957,6 +963,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything).Return(nil).Times(1)
 
 	_, err = s.transferQueueActiveProcessor.process(newTaskInfo(nil, transferTask, s.logger))
@@ -1047,6 +1054,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent_H
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 
 	_, err = s.transferQueueActiveProcessor.process(newTaskInfo(nil, transferTask, s.logger))
 	s.Nil(err)
@@ -1803,7 +1811,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessRecordWorkflowStartedTask
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, di.ScheduleID, di.Version)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", s.createRecordWorkflowExecutionStartedRequest(s.domainName, transferTask, mutableState, backoffSeconds)).Once().Return(nil)
+	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", s.createRecordWorkflowExecutionStartedRequest(s.domainName, event, transferTask, mutableState, backoffSeconds)).Once().Return(nil)
 
 	_, err = s.transferQueueActiveProcessor.process(newTaskInfo(nil, transferTask, s.logger))
 	s.Nil(err)
@@ -1850,7 +1858,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessUpsertWorkflowSearchAttri
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, di.ScheduleID, di.Version)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockVisibilityMgr.On("UpsertWorkflowExecution", s.createUpsertWorkflowSearchAttributesRequest(s.domainName, transferTask, mutableState)).Once().Return(nil)
+	s.mockVisibilityMgr.On("UpsertWorkflowExecution", s.createUpsertWorkflowSearchAttributesRequest(s.domainName, event, transferTask, mutableState)).Once().Return(nil)
 
 	_, err = s.transferQueueActiveProcessor.process(newTaskInfo(nil, transferTask, s.logger))
 	s.Nil(err)
@@ -1920,6 +1928,7 @@ func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(
 
 func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStartedRequest(
 	domainName string,
+	startEvent *workflow.HistoryEvent,
 	task *persistence.TransferTaskInfo,
 	mutableState mutableState,
 	backoffSeconds int32,
@@ -1929,14 +1938,14 @@ func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStarted
 		RunId:      common.StringPtr(task.RunID),
 	}
 	executionInfo := mutableState.GetExecutionInfo()
-	executionTimestamp := executionInfo.StartTimestamp.Add(time.Duration(backoffSeconds) * time.Second)
+	executionTimestamp := time.Unix(0, startEvent.GetTimestamp()).Add(time.Duration(backoffSeconds) * time.Second)
 
 	return &persistence.RecordWorkflowExecutionStartedRequest{
 		Domain:             domainName,
 		DomainUUID:         task.DomainID,
 		Execution:          execution,
 		WorkflowTypeName:   executionInfo.WorkflowTypeName,
-		StartTimestamp:     executionInfo.StartTimestamp.UnixNano(),
+		StartTimestamp:     startEvent.GetTimestamp(),
 		ExecutionTimestamp: executionTimestamp.UnixNano(),
 		WorkflowTimeout:    int64(executionInfo.WorkflowTimeout),
 		TaskID:             task.TaskID,
@@ -2048,6 +2057,7 @@ func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(
 
 func (s *transferQueueActiveProcessorSuite) createUpsertWorkflowSearchAttributesRequest(
 	domainName string,
+	startEvent *workflow.HistoryEvent,
 	task *persistence.TransferTaskInfo,
 	mutableState mutableState,
 ) *persistence.UpsertWorkflowExecutionRequest {
@@ -2063,7 +2073,7 @@ func (s *transferQueueActiveProcessorSuite) createUpsertWorkflowSearchAttributes
 		DomainUUID:       task.DomainID,
 		Execution:        execution,
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
-		StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
+		StartTimestamp:   startEvent.GetTimestamp(),
 		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
 		TaskID:           task.TaskID,
 	}
