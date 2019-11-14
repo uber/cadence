@@ -173,7 +173,7 @@ struct RecordDecisionTaskStartedResponse {
   70: optional bool stickyExecutionEnabled
   80: optional shared.TransientDecisionInfo decisionInfo
   90: optional shared.TaskList WorkflowExecutionTaskList
-  100: optional i32 eventStoreVersion
+  100: optional i32 eventStoreVersion = 2
   110: optional binary branchToken
   120:  optional i64 (js.type = "Long") scheduledTimestamp
   130:  optional i64 (js.type = "Long") startedTimestamp
@@ -252,8 +252,8 @@ struct ReplicateEventsRequest {
   80: optional shared.History history
   90: optional shared.History newRunHistory
   100: optional bool forceBufferEvents // this attribute is deprecated
-  110: optional i32 eventStoreVersion
-  120: optional i32 newRunEventStoreVersion
+  110: optional i32 eventStoreVersion = 2
+  120: optional i32 newRunEventStoreVersion = 2
   130: optional bool resetWorkflow
 }
 
@@ -263,8 +263,8 @@ struct ReplicateRawEventsRequest {
   30: optional map<string, shared.ReplicationInfo> replicationInfo
   40: optional shared.DataBlob history
   50: optional shared.DataBlob newRunHistory
-  60: optional i32 eventStoreVersion
-  70: optional i32 newRunEventStoreVersion
+  60: optional i32 eventStoreVersion = 2
+  70: optional i32 newRunEventStoreVersion = 2
 }
 
 struct SyncShardStatusRequest {
