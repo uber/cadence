@@ -28,9 +28,11 @@
 package client
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	persistence "github.com/uber/cadence/common/persistence"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	persistence "github.com/uber/cadence/common/persistence"
 )
 
 // MockBean is a mock of Bean interface

@@ -23,6 +23,8 @@ package sql
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/urfave/cli"
 
@@ -59,9 +61,27 @@ func checkCompatibleVersion(
 	cfg config.SQL,
 	expectedVersion string,
 ) error {
+	var host string
+	var port int
+	if strings.Contains(cfg.ConnectAddr, ":") {
+		ss := strings.Split(cfg.ConnectAddr, ":")
+		if len(ss) != 2 {
+			panic("invalid connect address, it must be in host:port format")
+		}
+		var err error
+		host = ss[0]
+		port, err = strconv.Atoi(ss[1])
+		if err != nil {
+			panic("invalid port number:" + ss[1])
+		}
+	} else {
+		host = cfg.ConnectAddr
+		port = defaultSQLPort
+	}
 
 	connection, err := newConnection(&sqlConnectParams{
-		host:       cfg.ConnectAddr,
+		host:       host,
+		port:       port,
 		user:       cfg.User,
 		password:   cfg.Password,
 		driverName: cfg.DriverName,
