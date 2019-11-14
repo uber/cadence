@@ -27,13 +27,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/yarpc"
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/client"
-
 	"github.com/pborman/uuid"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
@@ -49,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
@@ -1572,7 +1571,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	call := yarpc.CallFromContext(ctx)
 
 	completeRequest.WorkerVersionInfo = &gen.WorkerVersionInfo{
-		Impl: common.StringPtr(call.Header(common.ClientImplHeaderName)),
+		Impl:           common.StringPtr(call.Header(common.ClientImplHeaderName)),
 		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
 	}
 	matchingRequest := &m.RespondQueryTaskCompletedRequest{
