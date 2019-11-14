@@ -70,7 +70,7 @@ func (s *SQLConnTestSuite) TestParseCQLFile() {
 }
 
 func (s *SQLConnTestSuite) TestSQLConn() {
-	conn, err := NewConnection(&sqlConnectParams{
+	conn, err := newConnection(&sqlConnectParams{
 		host:       environment.GetMySQLAddress(),
 		port:       environment.GetMySQLPort(),
 		user:       testUser,
@@ -86,7 +86,7 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 }
 
 func newTestConn(database string) (*sqlConn, error) {
-	return NewConnection(&sqlConnectParams{
+	return newConnection(&sqlConnectParams{
 		host:       environment.GetMySQLAddress(),
 		port:       environment.GetMySQLPort(),
 		user:       testUser,

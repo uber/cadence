@@ -201,7 +201,7 @@ func (client *cqlClient) WriteSchemaUpdateLog(oldVersion string, newVersion stri
 }
 
 // Exec executes a cql statement
-func (client *cqlClient) Exec(stmt string, args... interface{}) error {
+func (client *cqlClient) Exec(stmt string, args ...interface{}) error {
 	return client.session.Query(stmt, args...).Exec()
 }
 

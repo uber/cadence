@@ -60,7 +60,7 @@ func checkCompatibleVersion(
 	expectedVersion string,
 ) error {
 
-	connection, err := NewConnection(&sqlConnectParams{
+	connection, err := newConnection(&sqlConnectParams{
 		host:       cfg.ConnectAddr,
 		user:       cfg.User,
 		password:   cfg.Password,
@@ -83,7 +83,7 @@ func setupSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	conn, err := NewConnection(params)
+	conn, err := newConnection(params)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -108,7 +108,7 @@ func updateSchema(cli *cli.Context) error {
 		}
 		defer doDropDatabase(p, p.database)
 	}
-	conn, err := NewConnection(params)
+	conn, err := newConnection(params)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -138,7 +138,7 @@ func createDatabase(cli *cli.Context) error {
 
 func doCreateDatabase(p sqlConnectParams, name string) error {
 	p.database = ""
-	conn, err := NewConnection(&p)
+	conn, err := newConnection(&p)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func doCreateDatabase(p sqlConnectParams, name string) error {
 
 func doDropDatabase(p sqlConnectParams, name string) {
 	p.database = ""
-	conn, err := NewConnection(&p)
+	conn, err := newConnection(&p)
 	if err != nil {
 		handleErr(err)
 		return

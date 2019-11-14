@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -38,24 +39,24 @@ type (
 		driverName string
 	}
 	sqlConn struct {
-		driver Driver
+		driver   Driver
 		database string
 		db       *sqlx.DB
 	}
 
-	// This is the driver interface that each SQL database needs to implement
+	// Driver is the driver interface that each SQL database needs to implement
 	Driver interface {
-		GetDriverName()string
-		CreateDBConnection (driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error)
-		GetReadSchemaVersionSQL()string
-		GetWriteSchemaVersionSQL()string
-		GetWriteSchemaUpdateHistorySQL()string
-		GetCreateSchemaVersionTableSQL()string
-		GetCreateSchemaUpdateHistoryTableSQL()string
-		GetCreateDatabaseSQL()string
-		GetDropDatabaseSQL()string
-		GetListTablesSQL()string
-		GetDropTableSQL()string
+		GetDriverName() string
+		CreateDBConnection(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error)
+		GetReadSchemaVersionSQL() string
+		GetWriteSchemaVersionSQL() string
+		GetWriteSchemaUpdateHistorySQL() string
+		GetCreateSchemaVersionTableSQL() string
+		GetCreateSchemaUpdateHistoryTableSQL() string
+		GetCreateDatabaseSQL() string
+		GetDropDatabaseSQL() string
+		GetListTablesSQL() string
+		GetDropTableSQL() string
 	}
 )
 
@@ -64,17 +65,17 @@ var supportedSQLDrivers = map[string]Driver{}
 var _ schema.DB = (*sqlConn)(nil)
 
 // RegisterDriver will register a SQL driver for SQL client CLI
-func RegisterDriver(driverName string, driver Driver){
+func RegisterDriver(driverName string, driver Driver) {
 	if _, ok := supportedSQLDrivers[driverName]; ok {
-		panic("driver "+driverName+" already registered")
+		panic("driver " + driverName + " already registered")
 	}
 	supportedSQLDrivers[driverName] = driver
 }
 
-func NewConnection(params *sqlConnectParams) (*sqlConn, error) {
+func newConnection(params *sqlConnectParams) (*sqlConn, error) {
 	driver, ok := supportedSQLDrivers[params.driverName]
 
-	if !ok{
+	if !ok {
 		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.driverName, supportedSQLDrivers)
 	}
 
@@ -83,9 +84,9 @@ func NewConnection(params *sqlConnectParams) (*sqlConn, error) {
 		return nil, err
 	}
 	return &sqlConn{
-		db: db,
+		db:       db,
 		database: params.database,
-	 	driver:   driver,
+		driver:   driver,
 	}, nil
 }
 
@@ -116,7 +117,7 @@ func (c *sqlConn) WriteSchemaUpdateLog(oldVersion string, newVersion string, man
 }
 
 //// Exec executes a sql statement
-func (c *sqlConn) Exec(stmt string, args... interface{}) error {
+func (c *sqlConn) Exec(stmt string, args ...interface{}) error {
 	_, err := c.db.Exec(stmt, args...)
 	return err
 }
