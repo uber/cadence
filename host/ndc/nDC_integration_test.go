@@ -1491,6 +1491,8 @@ func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
 		}
 
 		s.standByReplicationTasksChan <- replicationTask
+		// this is to test whether dedup works
+		s.standByReplicationTasksChan <- replicationTask
 	}
 }
 
