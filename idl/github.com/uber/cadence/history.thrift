@@ -81,7 +81,7 @@ struct GetMutableStateResponse {
   90: optional string clientImpl
   100: optional bool isWorkflowRunning
   110: optional i32 stickyTaskListScheduleToStartTimeout
-  120: optional i32 eventStoreVersion
+  120: optional i32 eventStoreVersion = 2
   130: optional binary branchToken
   140: optional map<string, shared.ReplicationInfo> replicationInfo
   // TODO: when migrating to gRPC, make this a enum
@@ -391,7 +391,7 @@ service HistoryService {
 
   /**
   * RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of
-  * 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and
+  * 'PollForDecisionTask' API call. Completing a DecisionTask will result in new events for the workflow execution and
   * potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted
   * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
   * for completing the DecisionTask.
