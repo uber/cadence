@@ -29,7 +29,7 @@ type HistoryArchiver interface {
 	// The Archive method may or may not be automatically retried by the caller. The ArchiveOptions are used
 	// to interact with these retries including giving the implementor the ability to cancel retries and record progress
   // between retry attempts. 
-  // This method will be invoked after the workflow retention period.
+  // This method will be invoked after a workflow passes its retention period.
     Archive(context.Context, URI, *ArchiveHistoryRequest, ...ArchiveOption) error
     
     // Get is used to access an archived history. When context expires method should stop trying to fetch history.
@@ -46,13 +46,15 @@ type HistoryArchiver interface {
 
 ```go
 type VisibilityArchiver interface {
-    // Archive is used to archive one workflow visibility record. Check the Archive() method of the HistoryArchiver interface for parameters' meaning and requirements for this method. 
+    // Archive is used to archive one workflow visibility record. 
+    // Check the Archive() method of the HistoryArchiver interface in Step 2 for parameters' meaning and requirements. 
     // The only difference is that the ArchiveOption parameter won't include an option for recording process. 
     // Please make sure your implementation is lossless. If any in-memory batching mechanism is used, then those batched records will be lost during server restarts. 
-    // This method will be invoked when workflow closes. This means if conflict resolution happens after a workflow closes, this method will be called more than once for the same workflow execution.
+    // This method will be invoked when workflow closes. Note that because of conflict resolution, it is possible for a workflow to through the closing process multiple times, which means that this method can be invoked more than once after a workflow closes.
     Archive(context.Context, URI, *ArchiveVisibilityRequest, ...ArchiveOption) error
     
-    // Query is used to retrieve archived visibility records. Check the Get() method of the HistoryArchiver interface for parameters' meaning and requirements for this method.
+    // Query is used to retrieve archived visibility records. 
+    // Check the Get() method of the HistoryArchiver interface in Step 2 for parameters' meaning and requirements.
     // The request includes a string field called query, which describes what kind of visibility records should be returned. For example, it can be some SQL-like syntax query string. 
     // Your implementation is responsible for parsing and validating the query, and also returning all visibility records that match the query. 
     // Currently the maximum context timeout passed into the method is 3 minutes, so it's ok if this method takes a long time to run.
