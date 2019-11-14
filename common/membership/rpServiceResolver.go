@@ -39,7 +39,7 @@ const (
 	// RoleKey label is set by every single service as soon as it bootstraps its
 	// ringpop instance. The data for this key is the service name
 	RoleKey                = "serviceName"
-	minRefreshInternal     = time.Second * 2
+	minRefreshInternal     = time.Second * 4
 	defaultRefreshInterval = time.Second * 10
 	replicaPoints          = 100
 )
