@@ -41,7 +41,7 @@ import (
 
 const (
 	// scannerStartUpDelay is to let services warm up
-	scannerStartUpDelay = time.Second * 10
+	scannerStartUpDelay = time.Second * 4
 )
 
 type (
