@@ -129,13 +129,13 @@ func (c *Connection) Exec(stmt string, args ...interface{}) error {
 // ListTables returns a list of tables in this database
 func (c *Connection) ListTables() ([]string, error) {
 	var tables []string
-	err := c.db.Select(&tables, c.driver.GetListTablesSQL(), c.database)
+	err := c.db.Select(&tables, fmt.Sprintf(c.driver.GetListTablesSQL(), c.database))
 	return tables, err
 }
 
 // DropTable drops a given table from the database
 func (c *Connection) DropTable(name string) error {
-	return c.Exec(c.driver.GetDropTableSQL(), name)
+	return c.Exec(fmt.Sprintf(c.driver.GetDropTableSQL(), name))
 }
 
 // DropAllTables drops all tables from this database
@@ -154,12 +154,12 @@ func (c *Connection) DropAllTables() error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (c *Connection) CreateDatabase(name string) error {
-	return c.Exec(c.driver.GetCreateDatabaseSQL(), name)
+	return c.Exec(fmt.Sprintf(c.driver.GetCreateDatabaseSQL(), name))
 }
 
 // DropDatabase drops a database
 func (c *Connection) DropDatabase(name string) error {
-	return c.Exec(c.driver.GetDropDatabaseSQL(), name)
+	return c.Exec(fmt.Sprintf(c.driver.GetDropDatabaseSQL(), name))
 }
 
 // Close closes the sql client

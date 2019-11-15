@@ -58,13 +58,14 @@ const (
 		`old_version VARCHAR(64), ` +
 		`PRIMARY KEY (year, month, update_time));`
 
-	createDatabaseMySQL = "CREATE database ? CHARACTER SET UTF8"
+	//NOTE we have to use %v because somehow mysql doesn't work with ? here
+	createDatabaseMySQL = "CREATE database %v CHARACTER SET UTF8"
 
-	dropDatabaseMySQL = "Drop database ?"
+	dropDatabaseMySQL = "Drop database %v"
 
-	listTablesMySQL = "SHOW TABLES FROM ?"
+	listTablesMySQL = "SHOW TABLES FROM %v"
 
-	dropTableMySQL = "DROP TABLE ?"
+	dropTableMySQL = "DROP TABLE %v"
 )
 
 type driver struct{}

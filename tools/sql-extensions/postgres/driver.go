@@ -61,13 +61,14 @@ const (
 		`old_version VARCHAR(64), ` +
 		`PRIMARY KEY (year, month, update_time));`
 
-	createDatabasePostgres = "CREATE database $1"
+	//NOTE we have to use %v because somehow mysql doesn't work with ? here
+	createDatabasePostgres = "CREATE database %v"
 
-	dropDatabasePostgres = "Drop database $1"
+	dropDatabasePostgres = "Drop database %v"
 
 	listTablesPostgres = "select table_name from information_schema.tables where table_schema='public'"
 
-	dropTablePostgres = "DROP TABLE $1"
+	dropTablePostgres = "DROP TABLE %v"
 )
 
 type driver struct{}
