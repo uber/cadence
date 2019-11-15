@@ -1569,30 +1569,30 @@ func (mr *MockmutableStateMockRecorder) IsWorkflowExecutionRunning() *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWorkflowExecutionRunning", reflect.TypeOf((*MockmutableState)(nil).IsWorkflowExecutionRunning))
 }
 
-// IsEventDuplicated mocks base method
-func (m *MockmutableState) IsEventDuplicated(event definition.DeduplicationKey) bool {
+// IsResourceDuplicated mocks base method
+func (m *MockmutableState) IsResourceDuplicated(resourceDedupKey definition.DeduplicationID) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsEventDuplicated", event)
+	ret := m.ctrl.Call(m, "IsResourceDuplicated", resourceDedupKey)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsEventDuplicated indicates an expected call of IsEventDuplicated
-func (mr *MockmutableStateMockRecorder) IsEventDuplicated(event interface{}) *gomock.Call {
+// IsResourceDuplicated indicates an expected call of IsResourceDuplicated
+func (mr *MockmutableStateMockRecorder) IsResourceDuplicated(resourceDedupKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEventDuplicated", reflect.TypeOf((*MockmutableState)(nil).IsEventDuplicated), event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsResourceDuplicated", reflect.TypeOf((*MockmutableState)(nil).IsResourceDuplicated), resourceDedupKey)
 }
 
-// UpdateDuplicateEvent mocks base method
-func (m *MockmutableState) UpdateDuplicateEvent(event definition.DeduplicationKey) {
+// UpdateDuplicatedResource mocks base method
+func (m *MockmutableState) UpdateDuplicatedResource(resourceDedupKey definition.DeduplicationID) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateDuplicateEvent", event)
+	m.ctrl.Call(m, "UpdateDuplicatedResource", resourceDedupKey)
 }
 
-// UpdateDuplicateEvent indicates an expected call of UpdateDuplicateEvent
-func (mr *MockmutableStateMockRecorder) UpdateDuplicateEvent(event interface{}) *gomock.Call {
+// UpdateDuplicatedResource indicates an expected call of UpdateDuplicatedResource
+func (mr *MockmutableStateMockRecorder) UpdateDuplicatedResource(resourceDedupKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDuplicateEvent", reflect.TypeOf((*MockmutableState)(nil).UpdateDuplicateEvent), event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDuplicatedResource", reflect.TypeOf((*MockmutableState)(nil).UpdateDuplicatedResource), resourceDedupKey)
 }
 
 // Load mocks base method

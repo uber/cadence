@@ -98,7 +98,7 @@ type (
 		SyncActivity(ctx ctx.Context, request *h.SyncActivityRequest) error
 		GetReplicationMessages(ctx ctx.Context, taskID int64) (*r.ReplicationMessages, error)
 		QueryWorkflow(ctx ctx.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
-		ReapplyEvents(ctx ctx.Context, domainUUID string, execution *workflow.WorkflowExecution, events []*workflow.HistoryEvent) error
+		ReapplyEvents(ctx ctx.Context, domainUUID string, workflowID string, runID string, events []*workflow.HistoryEvent) error
 
 		NotifyNewHistoryEvent(event *historyEventNotification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
@@ -2704,7 +2704,8 @@ func (e *historyEngineImpl) GetReplicationMessages(ctx ctx.Context, taskID int64
 func (e *historyEngineImpl) ReapplyEvents(
 	ctx ctx.Context,
 	domainUUID string,
-	execution *workflow.WorkflowExecution,
+	workflowID string,
+	runID string,
 	reapplyEvents []*workflow.HistoryEvent,
 ) error {
 
@@ -2715,7 +2716,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	domainID := domainEntry.GetInfo().ID
 	// remove run id from the execution so that reapply events to the current run
 	currentExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(execution.GetWorkflowId()),
+		WorkflowId: common.StringPtr(workflowID),
 	}
 
 	return e.updateWorkflowExecutionWithAction(
@@ -2744,20 +2745,15 @@ func (e *historyEngineImpl) ReapplyEvents(
 					noop: true,
 				}, nil
 			}
-			appliedEvent, err := e.eventsReapplier.reapplyEvents(
+			err := e.eventsReapplier.reapplyEvents(
 				ctx,
 				mutableState,
 				reapplyEvents,
-				execution.GetRunId(),
+				runID,
 			)
 			if err != nil {
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
 				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
-			}
-			if len(appliedEvent) == 0 {
-				return &updateWorkflowAction{
-					noop: true,
-				}, nil
 			}
 
 			return postActions, nil

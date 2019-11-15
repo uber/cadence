@@ -403,11 +403,11 @@ func (s *mutableStateSuite) TestEventReapplied() {
 	runID := uuid.New()
 	eventID := int64(1)
 	version := int64(2)
-	dedupEvent := definition.NewReapplyEventKey(runID, eventID, version)
-	isReapplied := s.msBuilder.IsEventDuplicated(dedupEvent)
+	dedupResource := definition.NewEventReappliedID(runID, eventID, version)
+	isReapplied := s.msBuilder.IsResourceDuplicated(dedupResource)
 	s.False(isReapplied)
-	s.msBuilder.UpdateDuplicateEvent(dedupEvent)
-	isReapplied = s.msBuilder.IsEventDuplicated(dedupEvent)
+	s.msBuilder.UpdateDuplicatedResource(dedupResource)
+	isReapplied = s.msBuilder.IsResourceDuplicated(dedupResource)
 	s.True(isReapplied)
 }
 

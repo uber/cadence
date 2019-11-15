@@ -1221,7 +1221,8 @@ func (c *workflowExecutionContextImpl) reapplyEvents(
 		return c.shard.GetEngine().ReapplyEvents(
 			ctx,
 			domainID,
-			execution,
+			workflowID,
+			runID,
 			reapplyEvents,
 		)
 	}

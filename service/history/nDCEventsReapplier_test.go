@@ -97,16 +97,15 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		attr.GetInput(),
 		attr.GetIdentity(),
 	).Return(event, nil).Times(1)
-	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
-	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(false).Times(1)
-	msBuilderCurrent.EXPECT().UpdateDuplicateEvent(dedupEvent).Times(1)
+	dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(false).Times(1)
+	msBuilderCurrent.EXPECT().UpdateDuplicatedResource(dedupResource).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	reappliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.NoError(err)
-	s.Equal(1, len(reappliedEvent))
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEvents_Noop() {
@@ -122,15 +121,14 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Noop() {
 	}
 
 	msBuilderCurrent := NewMockmutableState(s.controller)
-	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
-	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(true).Times(1)
+	dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(true).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	reappliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.NoError(err)
-	s.Equal(0, len(reappliedEvent))
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
@@ -167,19 +165,18 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		attr1.GetInput(),
 		attr1.GetIdentity(),
 	).Return(event1, nil).Times(1)
-	dedupEvent1 := definition.NewReapplyEventKey(runID, event1.GetEventId(), event1.GetVersion())
-	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent1).Return(false).Times(1)
-	dedupEvent2 := definition.NewReapplyEventKey(runID, event2.GetEventId(), event2.GetVersion())
-	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent2).Return(true).Times(1)
-	msBuilderCurrent.EXPECT().UpdateDuplicateEvent(dedupEvent1).Times(1)
+	dedupResource1 := definition.NewEventReappliedID(runID, event1.GetEventId(), event1.GetVersion())
+	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource1).Return(false).Times(1)
+	dedupResource2 := definition.NewEventReappliedID(runID, event2.GetEventId(), event2.GetVersion())
+	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource2).Return(true).Times(1)
+	msBuilderCurrent.EXPECT().UpdateDuplicatedResource(dedupResource1).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event1,
 		event2,
 	}
-	reappliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.NoError(err)
-	s.Equal(1, len(reappliedEvent))
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEvents_Error() {
@@ -207,13 +204,12 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Error() {
 		attr.GetInput(),
 		attr.GetIdentity(),
 	).Return(nil, fmt.Errorf("test")).Times(1)
-	dedupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
-	msBuilderCurrent.EXPECT().IsEventDuplicated(dedupEvent).Return(false).Times(1)
+	dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(false).Times(1)
 	events := []*shared.HistoryEvent{
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	reappliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.Error(err)
-	s.Equal(0, len(reappliedEvent))
 }

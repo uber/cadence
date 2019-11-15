@@ -38,7 +38,7 @@ type (
 			msBuilder mutableState,
 			historyEvents []*workflow.HistoryEvent,
 			runID string,
-		) ([]*workflow.HistoryEvent, error)
+		) error
 	}
 
 	nDCEventsReapplierImpl struct {
@@ -63,15 +63,14 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 	msBuilder mutableState,
 	historyEvents []*workflow.HistoryEvent,
 	runID string,
-) ([]*workflow.HistoryEvent, error) {
+) error {
 
 	var toReapplyEvents []*workflow.HistoryEvent
-	var reappliedEvents []*workflow.HistoryEvent
 	for _, event := range historyEvents {
 		switch event.GetEventType() {
 		case workflow.EventTypeWorkflowExecutionSignaled:
-			deDupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
-			if msBuilder.IsEventDuplicated(deDupEvent) {
+			dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+			if msBuilder.IsResourceDuplicated(dedupResource) {
 				// skip already applied event
 				continue
 			}
@@ -80,14 +79,14 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 	}
 
 	if len(toReapplyEvents) == 0 {
-		return reappliedEvents, nil
+		return nil
 	}
 
 	if !msBuilder.IsWorkflowExecutionRunning() {
 		// TODO when https://github.com/uber/cadence/issues/2420 is finished
 		//  reset to workflow finish event
 		//  ignore this case for now
-		return reappliedEvents, nil
+		return nil
 	}
 
 	for _, event := range toReapplyEvents {
@@ -97,11 +96,10 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 			signal.GetInput(),
 			signal.GetIdentity(),
 		); err != nil {
-			return reappliedEvents, err
+			return err
 		}
-		reappliedEvents = append(reappliedEvents, event)
-		deDupEvent := definition.NewReapplyEventKey(runID, event.GetEventId(), event.GetVersion())
-		msBuilder.UpdateDuplicateEvent(deDupEvent)
+		deDupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+		msBuilder.UpdateDuplicatedResource(deDupResource)
 	}
-	return reappliedEvents, nil
+	return nil
 }

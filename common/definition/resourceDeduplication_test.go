@@ -22,63 +22,44 @@ package definition
 
 import (
 	"fmt"
-)
+	"testing"
 
-const (
-	keySeparator     = "::"
-	keyValue         = "%v"
-	cacheKeyTemplate = keyValue + keySeparator + keyValue
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/suite"
 )
 
 type (
-	DeduplicationKey interface {
-		String() string
+	resourceDeduplicationSuite struct {
+		suite.Suite
+		controller *gomock.Controller
 	}
 )
 
-// Deduplication key type
-const (
-	reapplyEventCacheKey = iota
-)
-
-// Deduplication key struct
-type (
-	ReapplyEventKey struct {
-		runID   string
-		eventID int64
-		version int64
-	}
-)
-
-func NewReapplyEventKey(
-	runID string,
-	eventID int64,
-	version int64,
-) ReapplyEventKey {
-
-	return ReapplyEventKey{
-		runID:   runID,
-		eventID: eventID,
-		version: version,
-	}
+func TestResourceDeduplicationSuite(t *testing.T) {
+	s := new(resourceDeduplicationSuite)
+	suite.Run(t, s)
 }
 
-func (e ReapplyEventKey) String() string {
-	return fmt.Sprintf(keyValue+keySeparator+keyValue+keySeparator+keyValue, e.runID, e.eventID, e.version)
+func (s *resourceDeduplicationSuite) TestGenerateKey() {
+	resourceType := int32(1)
+	id := "id"
+	key := generateKey(resourceType, id)
+	s.Equal(fmt.Sprintf("%v::%v", resourceType, id), key)
 }
 
-func GenerateDeduplicationKey(
-	event DeduplicationKey,
-) string {
-
-	switch event.(type) {
-	case ReapplyEventKey:
-		return generateCacheKey(reapplyEventCacheKey, event.String())
-	default:
-		panic("unsupported deduplication key")
-	}
+func (s *resourceDeduplicationSuite) TestGenerateDeduplicationKey() {
+	runID := "runID"
+	eventID := int64(1)
+	version := int64(2)
+	resource := NewEventReappliedID(runID, eventID, version)
+	key := GenerateDeduplicationKey(resource)
+	s.Equal(fmt.Sprintf("%v::%v::%v::%v", eventReappliedID, runID, eventID, version), key)
 }
 
-func generateCacheKey(eventType int32, key string) string {
-	return fmt.Sprintf(cacheKeyTemplate, reapplyEventCacheKey, key)
+func (s *resourceDeduplicationSuite) TestEventReappliedID() {
+	runID := "runID"
+	eventID := int64(1)
+	version := int64(2)
+	resource := NewEventReappliedID(runID, eventID, version)
+	s.Equal(fmt.Sprintf("%v::%v::%v", runID, eventID, version), resource.GetID())
 }

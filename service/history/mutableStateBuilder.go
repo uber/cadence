@@ -45,7 +45,6 @@ const (
 
 	mutableStateInvalidHistoryActionMsg         = "invalid history builder state for action"
 	mutableStateInvalidHistoryActionMsgTemplate = mutableStateInvalidHistoryActionMsg + ": %v"
-	mutableStateEventAppliedCacheKeyTemplate    = "%v::%v"
 )
 
 var (
@@ -3940,19 +3939,19 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	return workflowSnapshot, workflowEventsSeq, nil
 }
 
-func (e *mutableStateBuilder) IsEventDuplicated(
-	event definition.DeduplicationKey,
+func (e *mutableStateBuilder) IsResourceDuplicated(
+	resourceDedupKey definition.DeduplicationID,
 ) bool {
-	dedupKey := definition.GenerateDeduplicationKey(event)
-	_, duplicated := e.appliedEvents[dedupKey]
+	id := definition.GenerateDeduplicationKey(resourceDedupKey)
+	_, duplicated := e.appliedEvents[id]
 	return duplicated
 }
 
-func (e *mutableStateBuilder) UpdateDuplicateEvent(
-	event definition.DeduplicationKey,
+func (e *mutableStateBuilder) UpdateDuplicatedResource(
+	resourceDedupKey definition.DeduplicationID,
 ) {
-	dedupKey := definition.GenerateDeduplicationKey(event)
-	e.appliedEvents[dedupKey] = struct{}{}
+	id := definition.GenerateDeduplicationKey(resourceDedupKey)
+	e.appliedEvents[id] = struct{}{}
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(
