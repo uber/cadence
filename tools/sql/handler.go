@@ -41,14 +41,14 @@ func VerifyCompatibleVersion(
 
 	ds, ok := cfg.DataStores[cfg.DefaultStore]
 	if ok && ds.SQL != nil {
-		err := checkCompatibleVersion(*ds.SQL, mysql.Version)
+		err := CheckCompatibleVersion(*ds.SQL, mysql.Version)
 		if err != nil {
 			return err
 		}
 	}
 	ds, ok = cfg.DataStores[cfg.VisibilityStore]
 	if ok && ds.SQL != nil {
-		err := checkCompatibleVersion(*ds.SQL, mysql.VisibilityVersion)
+		err := CheckCompatibleVersion(*ds.SQL, mysql.VisibilityVersion)
 		if err != nil {
 			return err
 		}
@@ -56,8 +56,8 @@ func VerifyCompatibleVersion(
 	return nil
 }
 
-// checkCompatibleVersion check the version compatibility
-func checkCompatibleVersion(
+// CheckCompatibleVersion check the version compatibility
+func CheckCompatibleVersion(
 	cfg config.SQL,
 	expectedVersion string,
 ) error {
@@ -79,13 +79,13 @@ func checkCompatibleVersion(
 		port = defaultSQLPort
 	}
 
-	connection, err := newConnection(&sqlConnectParams{
-		host:       host,
-		port:       port,
-		user:       cfg.User,
-		password:   cfg.Password,
-		driverName: cfg.DriverName,
-		database:   cfg.DatabaseName,
+	connection, err := NewConnection(&ConnectParams{
+		Host:       host,
+		Port:       port,
+		User:       cfg.User,
+		Password:   cfg.Password,
+		DriverName: cfg.DriverName,
+		Database:   cfg.DatabaseName,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create SQL connection: %v", err.Error())
@@ -103,7 +103,7 @@ func setupSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	conn, err := newConnection(params)
+	conn, err := NewConnection(params)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -121,14 +121,14 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	if params.database == schema.DryrunDBName {
+	if params.Database == schema.DryrunDBName {
 		p := *params
-		if err := doCreateDatabase(p, p.database); err != nil {
+		if err := doCreateDatabase(p, p.Database); err != nil {
 			return handleErr(fmt.Errorf("error creating dryrun database: %v", err))
 		}
-		defer doDropDatabase(p, p.database)
+		defer doDropDatabase(p, p.Database)
 	}
-	conn, err := newConnection(params)
+	conn, err := NewConnection(params)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -156,9 +156,9 @@ func createDatabase(cli *cli.Context) error {
 	return nil
 }
 
-func doCreateDatabase(p sqlConnectParams, name string) error {
-	p.database = ""
-	conn, err := newConnection(&p)
+func doCreateDatabase(p ConnectParams, name string) error {
+	p.Database = ""
+	conn, err := NewConnection(&p)
 	if err != nil {
 		return err
 	}
@@ -166,9 +166,9 @@ func doCreateDatabase(p sqlConnectParams, name string) error {
 	return conn.CreateDatabase(name)
 }
 
-func doDropDatabase(p sqlConnectParams, name string) {
-	p.database = ""
-	conn, err := newConnection(&p)
+func doDropDatabase(p ConnectParams, name string) {
+	p.Database = ""
+	conn, err := NewConnection(&p)
 	if err != nil {
 		handleErr(err)
 		return
@@ -177,30 +177,31 @@ func doDropDatabase(p sqlConnectParams, name string) {
 	conn.Close()
 }
 
-func parseConnectParams(cli *cli.Context) (*sqlConnectParams, error) {
-	params := new(sqlConnectParams)
-	params.host = cli.GlobalString(schema.CLIOptEndpoint)
-	params.port = cli.GlobalInt(schema.CLIOptPort)
-	params.user = cli.GlobalString(schema.CLIOptUser)
-	params.password = cli.GlobalString(schema.CLIOptPassword)
-	params.database = cli.GlobalString(schema.CLIOptDatabase)
-	params.driverName = cli.GlobalString(schema.CLIOptDriverName)
+func parseConnectParams(cli *cli.Context) (*ConnectParams, error) {
+	params := new(ConnectParams)
+	params.Host = cli.GlobalString(schema.CLIOptEndpoint)
+	params.Port = cli.GlobalInt(schema.CLIOptPort)
+	params.User = cli.GlobalString(schema.CLIOptUser)
+	params.Password = cli.GlobalString(schema.CLIOptPassword)
+	params.Database = cli.GlobalString(schema.CLIOptDatabase)
+	params.DriverName = cli.GlobalString(schema.CLIOptDriverName)
 	isDryRun := cli.Bool(schema.CLIOptDryrun)
-	if err := validateConnectParams(params, isDryRun); err != nil {
+	if err := ValidateConnectParams(params, isDryRun); err != nil {
 		return nil, err
 	}
 	return params, nil
 }
 
-func validateConnectParams(params *sqlConnectParams, isDryRun bool) error {
-	if len(params.host) == 0 {
+// ValidateConnectParams validates params
+func ValidateConnectParams(params *ConnectParams, isDryRun bool) error {
+	if len(params.Host) == 0 {
 		return schema.NewConfigError("missing sql endpoint argument " + flag(schema.CLIOptEndpoint))
 	}
-	if params.database == "" {
+	if params.Database == "" {
 		if !isDryRun {
 			return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument ")
 		}
-		params.database = schema.DryrunDBName
+		params.Database = schema.DryrunDBName
 	}
 	return nil
 }

@@ -30,15 +30,18 @@ import (
 )
 
 type (
-	sqlConnectParams struct {
-		host       string
-		port       int
-		user       string
-		password   string
-		database   string
-		driverName string
+	// ConnectParams is the connection param
+	ConnectParams struct {
+		Host       string
+		Port       int
+		User       string
+		Password   string
+		Database   string
+		DriverName string
 	}
-	sqlConn struct {
+
+	// Connection is the connection to database
+	Connection struct {
 		driver   Driver
 		database string
 		db       *sqlx.DB
@@ -62,7 +65,7 @@ type (
 
 var supportedSQLDrivers = map[string]Driver{}
 
-var _ schema.DB = (*sqlConn)(nil)
+var _ schema.DB = (*Connection)(nil)
 
 // RegisterDriver will register a SQL driver for SQL client CLI
 func RegisterDriver(driverName string, driver Driver) {
@@ -72,26 +75,27 @@ func RegisterDriver(driverName string, driver Driver) {
 	supportedSQLDrivers[driverName] = driver
 }
 
-func newConnection(params *sqlConnectParams) (*sqlConn, error) {
-	driver, ok := supportedSQLDrivers[params.driverName]
+// NewConnection creates a new connection to database
+func NewConnection(params *ConnectParams) (*Connection, error) {
+	driver, ok := supportedSQLDrivers[params.DriverName]
 
 	if !ok {
-		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.driverName, supportedSQLDrivers)
+		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.DriverName, supportedSQLDrivers)
 	}
 
-	db, err := driver.CreateDBConnection(params.driverName, params.host, params.port, params.user, params.password, params.database)
+	db, err := driver.CreateDBConnection(params.DriverName, params.Host, params.Port, params.User, params.Password, params.Database)
 	if err != nil {
 		return nil, err
 	}
-	return &sqlConn{
+	return &Connection{
 		db:       db,
-		database: params.database,
+		database: params.Database,
 		driver:   driver,
 	}, nil
 }
 
 // CreateSchemaVersionTables sets up the schema version tables
-func (c *sqlConn) CreateSchemaVersionTables() error {
+func (c *Connection) CreateSchemaVersionTables() error {
 	if err := c.Exec(c.driver.GetCreateSchemaVersionTableSQL()); err != nil {
 		return err
 	}
@@ -99,43 +103,43 @@ func (c *sqlConn) CreateSchemaVersionTables() error {
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
-func (c *sqlConn) ReadSchemaVersion() (string, error) {
+func (c *Connection) ReadSchemaVersion() (string, error) {
 	var version string
 	err := c.db.Get(&version, c.driver.GetReadSchemaVersionSQL(), c.database)
 	return version, err
 }
 
-// UpdateShemaVersion updates the schema version for the keyspace
-func (c *sqlConn) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
+// UpdateSchemaVersion updates the schema version for the keyspace
+func (c *Connection) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
 	return c.Exec(c.driver.GetWriteSchemaVersionSQL(), c.database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
-func (c *sqlConn) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
+func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
 	return c.Exec(c.driver.GetWriteSchemaUpdateHistorySQL(), now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
-//// Exec executes a sql statement
-func (c *sqlConn) Exec(stmt string, args ...interface{}) error {
+// Exec executes a sql statement
+func (c *Connection) Exec(stmt string, args ...interface{}) error {
 	_, err := c.db.Exec(stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
-func (c *sqlConn) ListTables() ([]string, error) {
+func (c *Connection) ListTables() ([]string, error) {
 	var tables []string
 	err := c.db.Select(&tables, c.driver.GetListTablesSQL(), c.database)
 	return tables, err
 }
 
 // DropTable drops a given table from the database
-func (c *sqlConn) DropTable(name string) error {
+func (c *Connection) DropTable(name string) error {
 	return c.Exec(c.driver.GetDropTableSQL(), name)
 }
 
 // DropAllTables drops all tables from this database
-func (c *sqlConn) DropAllTables() error {
+func (c *Connection) DropAllTables() error {
 	tables, err := c.ListTables()
 	if err != nil {
 		return err
@@ -149,17 +153,17 @@ func (c *sqlConn) DropAllTables() error {
 }
 
 // CreateDatabase creates a database if it doesn't exist
-func (c *sqlConn) CreateDatabase(name string) error {
+func (c *Connection) CreateDatabase(name string) error {
 	return c.Exec(c.driver.GetCreateDatabaseSQL(), name)
 }
 
 // DropDatabase drops a database
-func (c *sqlConn) DropDatabase(name string) error {
+func (c *Connection) DropDatabase(name string) error {
 	return c.Exec(c.driver.GetDropDatabaseSQL(), name)
 }
 
 // Close closes the sql client
-func (c *sqlConn) Close() {
+func (c *Connection) Close() {
 	if c.db != nil {
 		c.db.Close()
 	}
