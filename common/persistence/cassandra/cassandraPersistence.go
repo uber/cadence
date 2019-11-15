@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/cassandra"
+
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -863,8 +865,7 @@ var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
 // newShardPersistence is used to create an instance of ShardManager implementation
 func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
-	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
-	cluster.Keyspace = cfg.Keyspace
+	cluster := cassandra.NewCassandraCluster(cfg)
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
@@ -893,8 +894,7 @@ func NewWorkflowExecutionPersistence(
 
 // newTaskPersistence is used to create an instance of TaskManager implementation
 func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, error) {
-	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
-	cluster.Keyspace = cfg.Keyspace
+	cluster := cassandra.NewCassandraCluster(cfg)
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
@@ -1206,6 +1206,22 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
 					executionInfo.WorkflowID, executionInfo.RunID, strings.Join(columns, ","))
 				return nil, &p.CurrentWorkflowConditionFailedError{Msg: msg}
+			} else if rowType == rowTypeExecution && runID == executionInfo.RunID {
+				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
+					executionInfo.WorkflowID, executionInfo.RunID, request.RangeID)
+				replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
+				lastWriteVersion = common.EmptyVersion
+				if replicationState != nil {
+					lastWriteVersion = replicationState.LastWriteVersion
+				}
+				return nil, &p.WorkflowExecutionAlreadyStartedError{
+					Msg:              msg,
+					StartRequestID:   executionInfo.CreateRequestID,
+					RunID:            executionInfo.RunID,
+					State:            executionInfo.State,
+					CloseStatus:      executionInfo.CloseStatus,
+					LastWriteVersion: lastWriteVersion,
+				}
 			}
 
 			previous = make(map[string]interface{})

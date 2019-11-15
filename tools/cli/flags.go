@@ -198,6 +198,11 @@ const (
 	FlagServiceEnvWithAlias               = FlagServiceEnv + ", se"
 	FlagServiceZone                       = "service_zone"
 	FlagServiceZoneWithAlias              = FlagServiceZone + ", sz"
+	FlagEnableTLS                         = "tls"
+	FlagTLSCertPath                       = "tls_cert_path"
+	FlagTLSKeyPath                        = "tls_key_path"
+	FlagTLSCaPath                         = "tls_ca_path"
+	FlagTLSEnableHostVerification         = "tls_enable_host_verification"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -397,11 +402,11 @@ func getFlagsForListAll() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  FlagEarliestTimeWithAlias,
-			Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
+			Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05+07:00' and raw UnixNano",
 		},
 		cli.StringFlag{
 			Name:  FlagLatestTimeWithAlias,
-			Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
+			Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05+07:00' and raw UnixNano",
 		},
 		cli.StringFlag{
 			Name:  FlagWorkflowIDWithAlias,

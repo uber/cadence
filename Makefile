@@ -29,7 +29,7 @@ THRIFTRW_SRCS = \
   idl/github.com/uber/cadence/sqlblobs.thrift \
 
 PROGS = cadence
-TEST_TIMEOUT = 15m
+TEST_TIMEOUT = 20m
 TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
@@ -163,7 +163,7 @@ bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadenc
 
 bins: thriftc bins_nothrift
 
-test: bins
+test: go-generate bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \

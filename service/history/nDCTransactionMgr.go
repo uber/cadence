@@ -117,6 +117,12 @@ type (
 			targetWorkflowEvents *persistence.WorkflowEvents,
 		) error
 
+		checkWorkflowExists(
+			ctx ctx.Context,
+			domainID string,
+			workflowID string,
+			runID string,
+		) (bool, error)
 		getCurrentWorkflowRunID(
 			ctx ctx.Context,
 			domainID string,
@@ -303,6 +309,33 @@ func (r *nDCTransactionMgrImpl) backfillWorkflow(
 		transactionPolicy,
 		nil,
 	)
+}
+
+func (r *nDCTransactionMgrImpl) checkWorkflowExists(
+	ctx ctx.Context,
+	domainID string,
+	workflowID string,
+	runID string,
+) (bool, error) {
+
+	_, err := r.shard.GetExecutionManager().GetWorkflowExecution(
+		&persistence.GetWorkflowExecutionRequest{
+			DomainID: domainID,
+			Execution: shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
+		},
+	)
+
+	switch err.(type) {
+	case nil:
+		return true, nil
+	case *shared.EntityNotExistsError:
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 func (r *nDCTransactionMgrImpl) getCurrentWorkflowRunID(
