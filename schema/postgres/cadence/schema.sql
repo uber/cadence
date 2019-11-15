@@ -3,9 +3,9 @@ CREATE TABLE domains(
   id BYTEA NOT NULL,
   name VARCHAR(255) UNIQUE NOT NULL,
   --
-	data BYTEA NOT NULL,
-	data_encoding VARCHAR(16) NOT NULL,
-	is_global SMALLINT NOT NULL,
+  data BYTEA NOT NULL,
+  data_encoding VARCHAR(16) NOT NULL,
+  is_global SMALLINT NOT NULL,
   PRIMARY KEY(shard_id, id)
 );
 
