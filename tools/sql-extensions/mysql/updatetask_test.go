@@ -67,7 +67,7 @@ func (s *UpdateSchemaTestSuite) TestDryrun() {
 	conn, err := newTestConn(s.DBName)
 	s.Nil(err)
 	defer conn.Close()
-	dir := "../../schema/mysql/v57/cadence/versioned"
+	dir := "../../../schema/mysql/v57/cadence/versioned"
 	s.RunDryrunTest(sql.BuildCLIOptions(), conn, "--db", dir, mysql.Version)
 }
 
@@ -75,6 +75,6 @@ func (s *UpdateSchemaTestSuite) TestVisibilityDryrun() {
 	conn, err := newTestConn(s.DBName)
 	s.Nil(err)
 	defer conn.Close()
-	dir := "../../schema/mysql/v57/visibility/versioned"
+	dir := "../../../schema/mysql/v57/visibility/versioned"
 	s.RunDryrunTest(sql.BuildCLIOptions(), conn, "--db", dir, mysql.VisibilityVersion)
 }
