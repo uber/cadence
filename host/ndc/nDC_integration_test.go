@@ -861,6 +861,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				},
 			},
 		}},
+		// need to keep the workflow open for testing
 	}
 
 	eventsBatch3 := []*shared.History{
