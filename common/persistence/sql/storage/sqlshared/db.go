@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mysql
+package sqlshared
 
 import (
 	"github.com/jmoiron/sqlx"
@@ -32,6 +32,7 @@ type DB struct {
 	tx        *sqlx.Tx
 	conn      sqldb.Conn
 	converter DataConverter
+	driver    Driver
 }
 
 var _ sqldb.Tx = (*DB)(nil)
@@ -39,8 +40,8 @@ var _ sqldb.Interface = (*DB)(nil)
 
 // NewDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
-func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *DB {
-	mdb := &DB{db: xdb, tx: tx}
+func NewDB(xdb *sqlx.DB, tx *sqlx.Tx, driver Driver) *DB {
+	mdb := &DB{db: xdb, tx: tx, driver:driver}
 	mdb.conn = xdb
 	if tx != nil {
 		mdb.conn = tx
@@ -55,7 +56,7 @@ func (mdb *DB) BeginTx() (sqldb.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewDB(mdb.db, xtx), nil
+	return NewDB(mdb.db, xtx, mdb.driver), nil
 }
 
 // Commit commits a previously started transaction

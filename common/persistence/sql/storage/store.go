@@ -21,30 +21,21 @@
 package storage
 
 import (
-	"bytes"
 	"fmt"
-	"net/url"
-	"strings"
 
-	"github.com/iancoleman/strcase"
-	"github.com/jmoiron/sqlx"
-
-	"github.com/uber/cadence/common/persistence/sql/storage/mysql"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/common/service/config"
 )
 
-const (
-	dsnFmt                       = "%s:%s@%v(%v)/%s"
-	isolationLevelAttrName       = "transaction_isolation"
-	isolationLevelAttrNameLegacy = "tx_isolation"
-	defaultIsolationLevel        = "'READ-COMMITTED'"
-)
+var supportedDrivers = map[string]sqlshared.Driver{}
 
-var dsnAttrOverrides = map[string]string{
-	"parseTime":       "true",
-	"clientFoundRows": "true",
-	"multiStatements": "true",
+// RegisterDriver will register a SQL driver
+func RegisterDriver(driverName string, driver sqlshared.Driver) {
+	if _, ok := supportedDrivers[driverName]; ok {
+		panic("driver " + driverName + " already registered")
+	}
+	supportedDrivers[driverName] = driver
 }
 
 // NewSQLDB creates a returns a reference to a logical connection to the
@@ -52,80 +43,11 @@ var dsnAttrOverrides = map[string]string{
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
-	db, err := sqlx.Connect(cfg.DriverName, buildDSN(cfg))
-	if err != nil {
-		return nil, err
-	}
-	if cfg.MaxConns > 0 {
-		db.SetMaxOpenConns(cfg.MaxConns)
-	}
-	if cfg.MaxIdleConns > 0 {
-		db.SetMaxIdleConns(cfg.MaxIdleConns)
-	}
-	if cfg.MaxConnLifetime > 0 {
-		db.SetConnMaxLifetime(cfg.MaxConnLifetime)
-	}
-	// Maps struct names in CamelCase to snake without need for db struct tags.
-	db.MapperFunc(strcase.ToSnake)
-	return mysql.NewDB(db, nil), nil
-}
+	driver, ok := supportedDrivers[cfg.DriverName]
 
-func buildDSN(cfg *config.SQL) string {
-	attrs := buildDSNAttrs(cfg)
-	dsn := fmt.Sprintf(dsnFmt, cfg.User, cfg.Password, cfg.ConnectProtocol, cfg.ConnectAddr, cfg.DatabaseName)
-	if attrs != "" {
-		dsn = dsn + "?" + attrs
-	}
-	return dsn
-}
-
-func buildDSNAttrs(cfg *config.SQL) string {
-	attrs := make(map[string]string, len(dsnAttrOverrides)+len(cfg.ConnectAttributes)+1)
-	for k, v := range cfg.ConnectAttributes {
-		k1, v1 := sanitizeAttr(k, v)
-		attrs[k1] = v1
+	if !ok {
+		return nil, fmt.Errorf("not supported driver %v, only supported: %v", cfg.DriverName, supportedDrivers)
 	}
 
-	// only override isolation level if not specified
-	if !hasAttr(attrs, isolationLevelAttrName) &&
-		!hasAttr(attrs, isolationLevelAttrNameLegacy) {
-		attrs[isolationLevelAttrName] = defaultIsolationLevel
-	}
-
-	// these attrs are always overriden
-	for k, v := range dsnAttrOverrides {
-		attrs[k] = v
-	}
-
-	first := true
-	var buf bytes.Buffer
-	for k, v := range attrs {
-		if !first {
-			buf.WriteString("&")
-		}
-		first = false
-		buf.WriteString(k)
-		buf.WriteString("=")
-		buf.WriteString(v)
-	}
-	return url.PathEscape(buf.String())
-}
-
-func hasAttr(attrs map[string]string, key string) bool {
-	_, ok := attrs[key]
-	return ok
-}
-
-func sanitizeAttr(inkey string, invalue string) (string, string) {
-	key := strings.ToLower(strings.TrimSpace(inkey))
-	value := strings.ToLower(strings.TrimSpace(invalue))
-	switch key {
-	case isolationLevelAttrName, isolationLevelAttrNameLegacy:
-		if value[0] != '\'' { // mysql sys variable values must be enclosed in single quotes
-			value = "'" + value + "'"
-		}
-		return key, value
-	default:
-		return inkey, invalue
-	}
+	return driver.CreateDBConnection(cfg)
 }
