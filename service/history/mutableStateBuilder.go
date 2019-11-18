@@ -2199,7 +2199,8 @@ func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(
 		return nil, err
 	}
 
-	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
+	ai, ok := e.GetActivityInfo(scheduleEventID)
+	if !ok || ai.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
@@ -2212,7 +2213,7 @@ func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(
 	if err := e.addTransientActivityStartedEvent(scheduleEventID); err != nil {
 		return nil, err
 	}
-	event := e.hBuilder.AddActivityTaskCompletedEvent(scheduleEventID, startedEventID, request)
+	event := e.hBuilder.AddActivityTaskCompletedEvent(scheduleEventID, startedEventID, ai.Attempt, request)
 	if err := e.ReplicateActivityTaskCompletedEvent(event); err != nil {
 		return nil, err
 	}
