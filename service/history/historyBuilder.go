@@ -141,9 +141,9 @@ func (b *historyBuilder) AddActivityTaskStartedEvent(scheduleEventID int64, atte
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddActivityTaskCompletedEvent(scheduleEventID, startedEventID int64,
+func (b *historyBuilder) AddActivityTaskCompletedEvent(scheduleEventID, startedEventID int64, attempt int32,
 	request *workflow.RespondActivityTaskCompletedRequest) *workflow.HistoryEvent {
-	event := b.newActivityTaskCompletedEvent(scheduleEventID, startedEventID, request)
+	event := b.newActivityTaskCompletedEvent(scheduleEventID, startedEventID, attempt, request)
 
 	return b.addEventToHistory(event)
 }
@@ -601,7 +601,7 @@ func (b *historyBuilder) newActivityTaskStartedEvent(scheduledEventID int64, att
 	return historyEvent
 }
 
-func (b *historyBuilder) newActivityTaskCompletedEvent(scheduleEventID, startedEventID int64,
+func (b *historyBuilder) newActivityTaskCompletedEvent(scheduleEventID, startedEventID int64, attempt int32,
 	request *workflow.RespondActivityTaskCompletedRequest) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeActivityTaskCompleted)
 	attributes := &workflow.ActivityTaskCompletedEventAttributes{}
@@ -609,6 +609,7 @@ func (b *historyBuilder) newActivityTaskCompletedEvent(scheduleEventID, startedE
 	attributes.ScheduledEventId = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventId = common.Int64Ptr(startedEventID)
 	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
+	attributes.Attempt = common.Int32Ptr(attempt)
 	historyEvent.ActivityTaskCompletedEventAttributes = attributes
 
 	return historyEvent

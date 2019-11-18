@@ -651,6 +651,7 @@ struct ActivityTaskCompletedEventAttributes {
   20: optional i64 (js.type = "Long") scheduledEventId
   30: optional i64 (js.type = "Long") startedEventId
   40: optional string identity
+  50: optional i32 attempt
 }
 
 struct ActivityTaskFailedEventAttributes {
