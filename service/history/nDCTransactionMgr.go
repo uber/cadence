@@ -276,7 +276,7 @@ func (r *nDCTransactionMgrImpl) backfillWorkflow(
 		if targetMutableState.IsCurrentWorkflowGuaranteed() {
 			// case 1
 			transactionPolicy = transactionPolicyActive
-			if err := r.eventsReapplier.reapplyEvents(
+			if _, err := r.eventsReapplier.reapplyEvents(
 				ctx,
 				targetWorkflow.getMutableState(),
 				targetWorkflowEvents.Events,

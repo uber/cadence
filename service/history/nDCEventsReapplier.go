@@ -38,7 +38,7 @@ type (
 			msBuilder mutableState,
 			historyEvents []*workflow.HistoryEvent,
 			runID string,
-		) error
+		) ([]*workflow.HistoryEvent, error)
 	}
 
 	nDCEventsReapplierImpl struct {
@@ -63,7 +63,7 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 	msBuilder mutableState,
 	historyEvents []*workflow.HistoryEvent,
 	runID string,
-) error {
+) ([]*workflow.HistoryEvent, error) {
 
 	var toReapplyEvents []*workflow.HistoryEvent
 	for _, event := range historyEvents {
@@ -79,16 +79,17 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 	}
 
 	if len(toReapplyEvents) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	if !msBuilder.IsWorkflowExecutionRunning() {
 		// TODO when https://github.com/uber/cadence/issues/2420 is finished
 		//  reset to workflow finish event
 		//  ignore this case for now
-		return nil
+		return nil, nil
 	}
 
+	var reappliedEvents []*workflow.HistoryEvent
 	for _, event := range toReapplyEvents {
 		signal := event.GetWorkflowExecutionSignaledEventAttributes()
 		if _, err := msBuilder.AddWorkflowExecutionSignaled(
@@ -96,10 +97,11 @@ func (r *nDCEventsReapplierImpl) reapplyEvents(
 			signal.GetInput(),
 			signal.GetIdentity(),
 		); err != nil {
-			return err
+			return nil, err
 		}
 		deDupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
 		msBuilder.UpdateDuplicatedResource(deDupResource)
+		reappliedEvents = append(reappliedEvents, event)
 	}
-	return nil
+	return reappliedEvents, nil
 }

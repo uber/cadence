@@ -2739,7 +2739,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 					noop: true,
 				}, nil
 			}
-			err := e.eventsReapplier.reapplyEvents(
+			reappliedEvents, err := e.eventsReapplier.reapplyEvents(
 				ctx,
 				mutableState,
 				reapplyEvents,
@@ -2749,7 +2749,11 @@ func (e *historyEngineImpl) ReapplyEvents(
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
 				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
 			}
-
+			if len(reappliedEvents) == 0 {
+				return &updateWorkflowAction{
+					noop: true,
+				}, nil
+			}
 			return postActions, nil
 		})
 }

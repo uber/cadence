@@ -104,8 +104,9 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	appliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.NoError(err)
+	s.Equal(1, len(appliedEvent))
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEvents_Noop() {
@@ -127,8 +128,9 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Noop() {
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	appliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.NoError(err)
+	s.Equal(0, len(appliedEvent))
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
@@ -175,8 +177,9 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		event1,
 		event2,
 	}
-	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	appliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.NoError(err)
+	s.Equal(1, len(appliedEvent))
 }
 
 func (s *nDCEventReapplicationSuite) TestReapplyEvents_Error() {
@@ -210,6 +213,7 @@ func (s *nDCEventReapplicationSuite) TestReapplyEvents_Error() {
 		{EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted)},
 		event,
 	}
-	err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
+	appliedEvent, err := s.nDCReapplication.reapplyEvents(context.Background(), msBuilderCurrent, events, runID)
 	s.Error(err)
+	s.Equal(0, len(appliedEvent))
 }
