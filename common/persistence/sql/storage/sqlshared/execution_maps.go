@@ -123,7 +123,7 @@ func (mdb *DB) ReplaceIntoTimerInfoMaps(rows []sqldb.TimerInfoMapsRow) (sql.Resu
 func (mdb *DB) SelectFromTimerInfoMaps(filter *sqldb.TimerInfoMapsFilter) ([]sqldb.TimerInfoMapsRow, error) {
 	var rows []sqldb.TimerInfoMapsRow
 	err := mdb.conn.Select(&rows, makeGetMapQryTemplate(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey),
-							filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+		filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID

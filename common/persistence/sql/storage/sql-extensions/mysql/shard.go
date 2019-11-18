@@ -21,38 +21,37 @@
 package mysql
 
 const (
-    createShardQry = `INSERT INTO
+	createShardQry = `INSERT INTO
  shards (shard_id, range_id, data, data_encoding) VALUES (?, ?, ?, ?)`
 
-    getShardQry = `SELECT
+	getShardQry = `SELECT
  shard_id, range_id, data, data_encoding
  FROM shards WHERE shard_id = ?`
 
-    updateShardQry = `UPDATE shards 
+	updateShardQry = `UPDATE shards 
  SET range_id = ?, data = ?, data_encoding = ? 
  WHERE shard_id = ?`
 
-    lockShardQry     = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
-    readLockShardQry = `SELECT range_id FROM shards WHERE shard_id = ? LOCK IN SHARE MODE`
+	lockShardQry     = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
+	readLockShardQry = `SELECT range_id FROM shards WHERE shard_id = ? LOCK IN SHARE MODE`
 )
 
 func (d *driver) CreateShardQuery() string {
-    return createShardQry
+	return createShardQry
 }
 
 func (d *driver) GetShardQuery() string {
-    return getShardQry
+	return getShardQry
 }
 
 func (d *driver) UpdateShardQuery() string {
-    return updateShardQry
+	return updateShardQry
 }
 
 func (d *driver) LockShardQuery() string {
-    return lockShardQry
+	return lockShardQry
 }
 
 func (d *driver) ReadLockShardQuery() string {
-    return readLockShardQry
+	return readLockShardQry
 }
-

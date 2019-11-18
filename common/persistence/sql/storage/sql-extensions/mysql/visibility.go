@@ -21,81 +21,80 @@
 package mysql
 
 const (
-    templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
-        `domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
-        `VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-    templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
-        `domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
-        `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-    // RunID condition is needed for correct pagination
-    templateConditions = ` AND domain_id = ?
+	// RunID condition is needed for correct pagination
+	templateConditions = ` AND domain_id = ?
 		 AND start_time >= ?
 		 AND start_time <= ?
  		 AND (run_id > ? OR start_time < ?)
          ORDER BY start_time DESC, run_id
          LIMIT ?`
 
-    templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
-    templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
+	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
+	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
-    templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
+	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
 		 FROM executions_visibility WHERE close_status IS NOT NULL `
 
-    templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions
+	templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions
 
-    templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions
+	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions
 
-    templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = ?` + templateConditions
+	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = ?` + templateConditions
 
-    templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = ?` + templateConditions
+	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = ?` + templateConditions
 
-    templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = ?` + templateConditions
+	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = ?` + templateConditions
 
-    templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = ?` + templateConditions
+	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = ?` + templateConditions
 
-    templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = ?` + templateConditions
+	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = ?` + templateConditions
 
-    templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
+	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
 		 FROM executions_visibility
 		 WHERE domain_id = ? AND close_status IS NOT NULL
 		 AND run_id = ?`
 
-    templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=? AND run_id=?"
+	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=? AND run_id=?"
 )
 
-
 func (d *driver) CreateWorkflowExecutionStartedQuery() string {
-    return templateCreateWorkflowExecutionStarted
+	return templateCreateWorkflowExecutionStarted
 }
 func (d *driver) CreateWorkflowExecutionClosedQuery() string {
-    return templateCreateWorkflowExecutionClosed
+	return templateCreateWorkflowExecutionClosed
 }
 func (d *driver) GetOpenWorkflowExecutionsQuery() string {
-    return templateGetOpenWorkflowExecutions
+	return templateGetOpenWorkflowExecutions
 }
 func (d *driver) GetClosedWorkflowExecutionsQuery() string {
-    return templateGetClosedWorkflowExecutions
+	return templateGetClosedWorkflowExecutions
 }
 func (d *driver) GetOpenWorkflowExecutionsByTypeQuery() string {
-    return templateGetOpenWorkflowExecutionsByType
+	return templateGetOpenWorkflowExecutionsByType
 }
 func (d *driver) GetClosedWorkflowExecutionsByTypeQuery() string {
-    return templateGetClosedWorkflowExecutionsByType
+	return templateGetClosedWorkflowExecutionsByType
 }
 func (d *driver) GetOpenWorkflowExecutionsByIDQuery() string {
-    return templateGetOpenWorkflowExecutionsByID
+	return templateGetOpenWorkflowExecutionsByID
 }
 func (d *driver) GetClosedWorkflowExecutionsByIDQuery() string {
-    return templateGetClosedWorkflowExecutionsByID
+	return templateGetClosedWorkflowExecutionsByID
 }
 func (d *driver) GetClosedWorkflowExecutionsByStatusQuery() string {
-    return templateGetClosedWorkflowExecutionsByStatus
+	return templateGetClosedWorkflowExecutionsByStatus
 }
 func (d *driver) GetClosedWorkflowExecutionQuery() string {
-    return templateGetClosedWorkflowExecution
+	return templateGetClosedWorkflowExecution
 }
 func (d *driver) DeleteWorkflowExecutionQuery() string {
-    return templateDeleteWorkflowExecution
+	return templateDeleteWorkflowExecution
 }

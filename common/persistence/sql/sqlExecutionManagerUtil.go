@@ -1305,7 +1305,7 @@ func buildExecutionRow(
 	}, nil
 }
 
-func (m *sqlExecutionManager)createExecution(
+func (m *sqlExecutionManager) createExecution(
 	tx sqldb.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
@@ -1341,7 +1341,7 @@ func (m *sqlExecutionManager)createExecution(
 	}
 	result, err := tx.InsertIntoExecutions(row)
 	if err != nil {
-		if m.db.IsDupEntryError(err){
+		if m.db.IsDupEntryError(err) {
 			return &p.WorkflowExecutionAlreadyStartedError{
 				Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", executionInfo.WorkflowID),
 				StartRequestID:   executionInfo.CreateRequestID,
@@ -1350,10 +1350,9 @@ func (m *sqlExecutionManager)createExecution(
 				CloseStatus:      executionInfo.CloseStatus,
 				LastWriteVersion: row.LastWriteVersion,
 			}
-		}else{
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createExecution failed. Erorr: %v", err),
-			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("createExecution failed. Erorr: %v", err),
 		}
 	}
 	rowsAffected, err := result.RowsAffected()

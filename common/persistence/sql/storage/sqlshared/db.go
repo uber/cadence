@@ -41,7 +41,7 @@ var _ sqldb.Interface = (*DB)(nil)
 // NewDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
 func NewDB(xdb *sqlx.DB, tx *sqlx.Tx, driver Driver) *DB {
-	mdb := &DB{db: xdb, tx: tx, driver:driver}
+	mdb := &DB{db: xdb, tx: tx, driver: driver}
 	mdb.conn = xdb
 	if tx != nil {
 		mdb.conn = tx
@@ -79,6 +79,7 @@ func (mdb *DB) DriverName() string {
 	return mdb.db.DriverName()
 }
 
-func (mdb *DB) IsDupEntryError(err error) bool{
+// IsDupEntryError returns is the error meaning duplicated entry
+func (mdb *DB) IsDupEntryError(err error) bool {
 	return mdb.driver.IsDupEntryError(err)
 }

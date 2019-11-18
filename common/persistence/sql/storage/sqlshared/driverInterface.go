@@ -21,120 +21,120 @@
 package sqlshared
 
 import (
-    "github.com/uber/cadence/common/persistence/sql/storage/sqldb"
-    "github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
-    // Driver is the driver interface that each SQL database needs to implement
-    Driver interface {
-        GetDriverName() string
-        CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error)
-        IsDupEntryError(err error) bool
+	// Driver is the driver interface that each SQL database needs to implement
+	Driver interface {
+		GetDriverName() string
+		CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error)
+		IsDupEntryError(err error) bool
 
-        //domain
-        CreateDomainQuery() string
-        UpdateDomainQuery() string
-        GetDomainByIDQuery() string
-        GetDomainByNameQuery() string
-        ListDomainsQuery() string
-        ListDomainsRangeQuery() string
-        DeleteDomainByIDQuery() string
-        DeleteDomainByNameQuery() string
-        GetDomainMetadataQuery() string
-        LockDomainMetadataQuery() string
-        UpdateDomainMetadataQuery() string
+		//domain
+		CreateDomainQuery() string
+		UpdateDomainQuery() string
+		GetDomainByIDQuery() string
+		GetDomainByNameQuery() string
+		ListDomainsQuery() string
+		ListDomainsRangeQuery() string
+		DeleteDomainByIDQuery() string
+		DeleteDomainByNameQuery() string
+		GetDomainMetadataQuery() string
+		LockDomainMetadataQuery() string
+		UpdateDomainMetadataQuery() string
 
-        //events
-        AddHistoryNodesQuery() string
-        GetHistoryNodesQuery() string
-        DeleteHistoryNodesQuery() string
-        AddHistoryTreeQuery() string
-        GetHistoryTreeQuery() string
-        DeleteHistoryTreeQuery() string
+		//events
+		AddHistoryNodesQuery() string
+		GetHistoryNodesQuery() string
+		DeleteHistoryNodesQuery() string
+		AddHistoryTreeQuery() string
+		GetHistoryTreeQuery() string
+		DeleteHistoryTreeQuery() string
 
-        //execution
-        CreateExecutionQuery() string
-        UpdateExecutionQuery() string
-        GetExecutionQuery() string
-        DeleteExecutionQuery() string
-        WriteLockExecutionQuery() string
-        ReadLockExecutionQuery() string
-        CreateCurrentExecutionQuery() string
-        DeleteCurrentExecutionQuery() string
-        GetCurrentExecutionQuery() string
-        LockCurrentExecutionJoinExecutionsQuery() string
-        LockCurrentExecutionQuery() string
-        UpdateCurrentExecutionsQuery() string
-        GetTransferTasksQuery() string
-        CreateTransferTasksQuery() string
-        DeleteTransferTaskQuery() string
-        RangeDeleteTransferTaskQuery() string
-        CreateTimerTasksQuery() string
-        GetTimerTasksQuery() string
-        DeleteTimerTaskQuery() string
-        RangeDeleteTimerTaskQuery() string
-        CreateReplicationTasksQuery() string
-        GetReplicationTasksQuery() string
-        DeleteReplicationTaskQuery() string
-        GetReplicationTasksDLQQuery() string
-        CreateBufferedEventsQuery() string
-        DeleteBufferedEventsQuery() string
-        GetBufferedEventsQuery() string
-        InsertReplicationTaskDLQQuery() string
+		//execution
+		CreateExecutionQuery() string
+		UpdateExecutionQuery() string
+		GetExecutionQuery() string
+		DeleteExecutionQuery() string
+		WriteLockExecutionQuery() string
+		ReadLockExecutionQuery() string
+		CreateCurrentExecutionQuery() string
+		DeleteCurrentExecutionQuery() string
+		GetCurrentExecutionQuery() string
+		LockCurrentExecutionJoinExecutionsQuery() string
+		LockCurrentExecutionQuery() string
+		UpdateCurrentExecutionsQuery() string
+		GetTransferTasksQuery() string
+		CreateTransferTasksQuery() string
+		DeleteTransferTaskQuery() string
+		RangeDeleteTransferTaskQuery() string
+		CreateTimerTasksQuery() string
+		GetTimerTasksQuery() string
+		DeleteTimerTaskQuery() string
+		RangeDeleteTimerTaskQuery() string
+		CreateReplicationTasksQuery() string
+		GetReplicationTasksQuery() string
+		DeleteReplicationTaskQuery() string
+		GetReplicationTasksDLQQuery() string
+		CreateBufferedEventsQuery() string
+		DeleteBufferedEventsQuery() string
+		GetBufferedEventsQuery() string
+		InsertReplicationTaskDLQQuery() string
 
-        //execution_map
-        DeleteMapQueryTemplate() string
-        SetKeyInMapQueryTemplate() string
-        DeleteKeyInMapQueryTemplate() string
-        GetMapQueryTemplate() string
-        DeleteAllSignalsRequestedSetQuery() string
-        CreateSignalsRequestedSetQuery() string
-        DeleteSignalsRequestedSetQuery() string
-        GetSignalsRequestedSetQuery() string
+		//execution_map
+		DeleteMapQueryTemplate() string
+		SetKeyInMapQueryTemplate() string
+		DeleteKeyInMapQueryTemplate() string
+		GetMapQueryTemplate() string
+		DeleteAllSignalsRequestedSetQuery() string
+		CreateSignalsRequestedSetQuery() string
+		DeleteSignalsRequestedSetQuery() string
+		GetSignalsRequestedSetQuery() string
 
-        //queue
-        EnqueueMessageQuery() string
-        GetLastMessageIDQuery() string
-        GetMessagesQuery() string
-        DeleteMessagesQuery() string
-        GetQueueMetadataQuery() string
-        GetQueueMetadataForUpdateQuery() string
-        InsertQueueMetadataQuery() string
-        UpdateQueueMetadataQuery() string
+		//queue
+		EnqueueMessageQuery() string
+		GetLastMessageIDQuery() string
+		GetMessagesQuery() string
+		DeleteMessagesQuery() string
+		GetQueueMetadataQuery() string
+		GetQueueMetadataForUpdateQuery() string
+		InsertQueueMetadataQuery() string
+		UpdateQueueMetadataQuery() string
 
-        //shard
-        CreateShardQuery() string
-        GetShardQuery() string
-        UpdateShardQuery() string
-        LockShardQuery() string
-        ReadLockShardQuery() string
+		//shard
+		CreateShardQuery() string
+		GetShardQuery() string
+		UpdateShardQuery() string
+		LockShardQuery() string
+		ReadLockShardQuery() string
 
-        //task
-        CreateTaskListQuery() string
-        ReplaceTaskListQuery() string
-        UpdateTaskListQuery() string
-        ListTaskListQuery() string
-        GetTaskListQuery() string
-        DeleteTaskListQuery() string
-        LockTaskListQuery() string
-        GetTaskMinMaxQuery() string
-        GetTaskMinQuery() string
-        CreateTaskQuery() string
-        DeleteTaskQuery() string
-        RangeDeleteTaskQuery() string
+		//task
+		CreateTaskListQuery() string
+		ReplaceTaskListQuery() string
+		UpdateTaskListQuery() string
+		ListTaskListQuery() string
+		GetTaskListQuery() string
+		DeleteTaskListQuery() string
+		LockTaskListQuery() string
+		GetTaskMinMaxQuery() string
+		GetTaskMinQuery() string
+		CreateTaskQuery() string
+		DeleteTaskQuery() string
+		RangeDeleteTaskQuery() string
 
-        //visibility
-        CreateWorkflowExecutionStartedQuery() string
-        CreateWorkflowExecutionClosedQuery() string
-        GetOpenWorkflowExecutionsQuery() string
-        GetClosedWorkflowExecutionsQuery() string
-        GetOpenWorkflowExecutionsByTypeQuery() string
-        GetClosedWorkflowExecutionsByTypeQuery() string
-        GetOpenWorkflowExecutionsByIDQuery() string
-        GetClosedWorkflowExecutionsByIDQuery() string
-        GetClosedWorkflowExecutionsByStatusQuery() string
-        GetClosedWorkflowExecutionQuery() string
-        DeleteWorkflowExecutionQuery() string
-    }
+		//visibility
+		CreateWorkflowExecutionStartedQuery() string
+		CreateWorkflowExecutionClosedQuery() string
+		GetOpenWorkflowExecutionsQuery() string
+		GetClosedWorkflowExecutionsQuery() string
+		GetOpenWorkflowExecutionsByTypeQuery() string
+		GetClosedWorkflowExecutionsByTypeQuery() string
+		GetOpenWorkflowExecutionsByIDQuery() string
+		GetClosedWorkflowExecutionsByIDQuery() string
+		GetClosedWorkflowExecutionsByStatusQuery() string
+		GetClosedWorkflowExecutionQuery() string
+		DeleteWorkflowExecutionQuery() string
+	}
 )

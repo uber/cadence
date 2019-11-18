@@ -21,38 +21,37 @@
 package mysql
 
 const (
-    templateEnqueueMessageQuery            = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
-    templateGetLastMessageIDQuery          = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
-    templateGetMessagesQuery               = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
-    templateDeleteMessagesQuery            = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
-    templateGetQueueMetadataQuery          = `SELECT data from queue_metadata WHERE queue_type = ?`
-    templateGetQueueMetadataForUpdateQuery = templateGetQueueMetadataQuery + ` FOR UPDATE`
-    templateInsertQueueMetadataQuery       = `INSERT INTO queue_metadata (queue_type, data) VALUES(:queue_type, :data)`
-    templateUpdateQueueMetadataQuery       = `UPDATE queue_metadata SET data = ? WHERE queue_type = ?`
+	templateEnqueueMessageQuery            = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
+	templateGetLastMessageIDQuery          = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
+	templateGetMessagesQuery               = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
+	templateDeleteMessagesQuery            = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
+	templateGetQueueMetadataQuery          = `SELECT data from queue_metadata WHERE queue_type = ?`
+	templateGetQueueMetadataForUpdateQuery = templateGetQueueMetadataQuery + ` FOR UPDATE`
+	templateInsertQueueMetadataQuery       = `INSERT INTO queue_metadata (queue_type, data) VALUES(:queue_type, :data)`
+	templateUpdateQueueMetadataQuery       = `UPDATE queue_metadata SET data = ? WHERE queue_type = ?`
 )
 
-
 func (d *driver) EnqueueMessageQuery() string {
-    return templateEnqueueMessageQuery
+	return templateEnqueueMessageQuery
 }
 func (d *driver) GetLastMessageIDQuery() string {
-    return templateGetLastMessageIDQuery
+	return templateGetLastMessageIDQuery
 }
 func (d *driver) GetMessagesQuery() string {
-    return templateGetMessagesQuery
+	return templateGetMessagesQuery
 }
 func (d *driver) DeleteMessagesQuery() string {
-    return templateDeleteMessagesQuery
+	return templateDeleteMessagesQuery
 }
 func (d *driver) GetQueueMetadataQuery() string {
-    return templateGetQueueMetadataQuery
+	return templateGetQueueMetadataQuery
 }
 func (d *driver) GetQueueMetadataForUpdateQuery() string {
-    return templateGetQueueMetadataForUpdateQuery
+	return templateGetQueueMetadataForUpdateQuery
 }
 func (d *driver) InsertQueueMetadataQuery() string {
-    return templateInsertQueueMetadataQuery
+	return templateInsertQueueMetadataQuery
 }
 func (d *driver) UpdateQueueMetadataQuery() string {
-    return templateUpdateQueueMetadataQuery
+	return templateUpdateQueueMetadataQuery
 }

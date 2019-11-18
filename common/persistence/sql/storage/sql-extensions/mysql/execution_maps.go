@@ -21,26 +21,26 @@
 package mysql
 
 const (
-    deleteMapQueryTemplate = `DELETE FROM %v
+	deleteMapQueryTemplate = `DELETE FROM %v
 WHERE
 shard_id = ? AND
 domain_id = ? AND
 workflow_id = ? AND
 run_id = ?`
 
-    // %[2]v is the columns of the value struct (i.e. no primary key columns), comma separated
-    // %[3]v should be %[2]v with colons prepended.
-    // i.e. %[3]v = ",".join(":" + s for s in %[2]v)
-    // So that this query can be used with BindNamed
-    // %[4]v should be the name of the key associated with the map
-    // e.g. for ActivityInfo it is "schedule_id"
-    setKeyInMapQueryTemplate = `REPLACE INTO %[1]v
+	// %[2]v is the columns of the value struct (i.e. no primary key columns), comma separated
+	// %[3]v should be %[2]v with colons prepended.
+	// i.e. %[3]v = ",".join(":" + s for s in %[2]v)
+	// So that this query can be used with BindNamed
+	// %[4]v should be the name of the key associated with the map
+	// e.g. for ActivityInfo it is "schedule_id"
+	setKeyInMapQueryTemplate = `REPLACE INTO %[1]v
 (shard_id, domain_id, workflow_id, run_id, %[4]v, %[2]v)
 VALUES
 (:shard_id, :domain_id, :workflow_id, :run_id, :%[4]v, %[3]v)`
 
-    // %[2]v is the name of the key
-    deleteKeyInMapQueryTemplate = `DELETE FROM %[1]v
+	// %[2]v is the name of the key
+	deleteKeyInMapQueryTemplate = `DELETE FROM %[1]v
 WHERE
 shard_id = ? AND
 domain_id = ? AND
@@ -48,10 +48,10 @@ workflow_id = ? AND
 run_id = ? AND
 %[2]v = ?`
 
-    // %[1]v is the name of the table
-    // %[2]v is the name of the key
-    // %[3]v is the value columns, separated by commas
-    getMapQueryTemplate = `SELECT %[2]v, %[3]v FROM %[1]v
+	// %[1]v is the name of the table
+	// %[2]v is the name of the key
+	// %[3]v is the value columns, separated by commas
+	getMapQueryTemplate = `SELECT %[2]v, %[3]v FROM %[1]v
 WHERE
 shard_id = ? AND
 domain_id = ? AND
@@ -60,24 +60,23 @@ run_id = ?`
 )
 
 func (d *driver) DeleteMapQueryTemplate() string {
-    return deleteMapQueryTemplate
+	return deleteMapQueryTemplate
 }
 
 func (d *driver) SetKeyInMapQueryTemplate() string {
-    return setKeyInMapQueryTemplate
+	return setKeyInMapQueryTemplate
 }
 
 func (d *driver) DeleteKeyInMapQueryTemplate() string {
-    return deleteKeyInMapQueryTemplate
+	return deleteKeyInMapQueryTemplate
 }
 
 func (d *driver) GetMapQueryTemplate() string {
-    return getMapQueryTemplate
+	return getMapQueryTemplate
 }
 
-
 const (
-    deleteAllSignalsRequestedSetQuery = `DELETE FROM signals_requested_sets
+	deleteAllSignalsRequestedSetQuery = `DELETE FROM signals_requested_sets
 WHERE
 shard_id = ? AND
 domain_id = ? AND
@@ -85,11 +84,11 @@ workflow_id = ? AND
 run_id = ?
 `
 
-    createSignalsRequestedSetQuery = `INSERT IGNORE INTO signals_requested_sets
+	createSignalsRequestedSetQuery = `INSERT IGNORE INTO signals_requested_sets
 (shard_id, domain_id, workflow_id, run_id, signal_id) VALUES
 (:shard_id, :domain_id, :workflow_id, :run_id, :signal_id)`
 
-    deleteSignalsRequestedSetQuery = `DELETE FROM signals_requested_sets
+	deleteSignalsRequestedSetQuery = `DELETE FROM signals_requested_sets
 WHERE 
 shard_id = ? AND
 domain_id = ? AND
@@ -97,7 +96,7 @@ workflow_id = ? AND
 run_id = ? AND
 signal_id = ?`
 
-    getSignalsRequestedSetQuery = `SELECT signal_id FROM signals_requested_sets WHERE
+	getSignalsRequestedSetQuery = `SELECT signal_id FROM signals_requested_sets WHERE
 shard_id = ? AND
 domain_id = ? AND
 workflow_id = ? AND
@@ -105,17 +104,17 @@ run_id = ?`
 )
 
 func (d *driver) DeleteAllSignalsRequestedSetQuery() string {
-    return deleteAllSignalsRequestedSetQuery
+	return deleteAllSignalsRequestedSetQuery
 }
 
 func (d *driver) CreateSignalsRequestedSetQuery() string {
-    return createSignalsRequestedSetQuery
+	return createSignalsRequestedSetQuery
 }
 
 func (d *driver) DeleteSignalsRequestedSetQuery() string {
-    return deleteSignalsRequestedSetQuery
+	return deleteSignalsRequestedSetQuery
 }
 
 func (d *driver) GetSignalsRequestedSetQuery() string {
-    return getSignalsRequestedSetQuery
+	return getSignalsRequestedSetQuery
 }

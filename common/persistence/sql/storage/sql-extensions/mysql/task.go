@@ -21,15 +21,15 @@
 package mysql
 
 const (
-    taskListCreatePart = `INTO task_lists(shard_id, domain_id, name, task_type, range_id, data, data_encoding) ` +
-        `VALUES (:shard_id, :domain_id, :name, :task_type, :range_id, :data, :data_encoding)`
+	taskListCreatePart = `INTO task_lists(shard_id, domain_id, name, task_type, range_id, data, data_encoding) ` +
+		`VALUES (:shard_id, :domain_id, :name, :task_type, :range_id, :data, :data_encoding)`
 
-    // (default range ID: initialRangeID == 1)
-    createTaskListQry = `INSERT ` + taskListCreatePart
+	// (default range ID: initialRangeID == 1)
+	createTaskListQry = `INSERT ` + taskListCreatePart
 
-    replaceTaskListQry = `REPLACE ` + taskListCreatePart
+	replaceTaskListQry = `REPLACE ` + taskListCreatePart
 
-    updateTaskListQry = `UPDATE task_lists SET
+	updateTaskListQry = `UPDATE task_lists SET
 range_id = :range_id,
 data = :data,
 data_encoding = :data_encoding
@@ -40,74 +40,73 @@ name = :name AND
 task_type = :task_type
 `
 
-    listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
-        `FROM task_lists ` +
-        `WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? ORDER BY domain_id,name,task_type LIMIT ?`
+	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
+		`FROM task_lists ` +
+		`WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? ORDER BY domain_id,name,task_type LIMIT ?`
 
-    getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
-        `FROM task_lists ` +
-        `WHERE shard_id = ? AND domain_id = ? AND name = ? AND task_type = ?`
+	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
+		`FROM task_lists ` +
+		`WHERE shard_id = ? AND domain_id = ? AND name = ? AND task_type = ?`
 
-    deleteTaskListQry = `DELETE FROM task_lists WHERE shard_id=? AND domain_id=? AND name=? AND task_type=? AND range_id=?`
+	deleteTaskListQry = `DELETE FROM task_lists WHERE shard_id=? AND domain_id=? AND name=? AND task_type=? AND range_id=?`
 
-    lockTaskListQry = `SELECT range_id FROM task_lists ` +
-        `WHERE shard_id = ? AND domain_id = ? AND name = ? AND task_type = ? FOR UPDATE`
+	lockTaskListQry = `SELECT range_id FROM task_lists ` +
+		`WHERE shard_id = ? AND domain_id = ? AND name = ? AND task_type = ? FOR UPDATE`
 
-    getTaskMinMaxQry = `SELECT task_id, data, data_encoding ` +
-        `FROM tasks ` +
-        `WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? AND task_id <= ? ` +
-        ` ORDER BY task_id LIMIT ?`
+	getTaskMinMaxQry = `SELECT task_id, data, data_encoding ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? AND task_id <= ? ` +
+		` ORDER BY task_id LIMIT ?`
 
-    getTaskMinQry = `SELECT task_id, data, data_encoding ` +
-        `FROM tasks ` +
-        `WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? ORDER BY task_id LIMIT ?`
+	getTaskMinQry = `SELECT task_id, data, data_encoding ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? ORDER BY task_id LIMIT ?`
 
-    createTaskQry = `INSERT INTO ` +
-        `tasks(domain_id, task_list_name, task_type, task_id, data, data_encoding) ` +
-        `VALUES(:domain_id, :task_list_name, :task_type, :task_id, :data, :data_encoding)`
+	createTaskQry = `INSERT INTO ` +
+		`tasks(domain_id, task_list_name, task_type, task_id, data, data_encoding) ` +
+		`VALUES(:domain_id, :task_list_name, :task_type, :task_id, :data, :data_encoding)`
 
-    deleteTaskQry = `DELETE FROM tasks ` +
-        `WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id = ?`
+	deleteTaskQry = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id = ?`
 
-    rangeDeleteTaskQry = `DELETE FROM tasks ` +
-        `WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id <= ? ` +
-        `ORDER BY domain_id,task_list_name,task_type,task_id LIMIT ?`
+	rangeDeleteTaskQry = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id <= ? ` +
+		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT ?`
 )
 
-
 func (d *driver) CreateTaskListQuery() string {
-    return createTaskListQry
+	return createTaskListQry
 }
 func (d *driver) ReplaceTaskListQuery() string {
-    return replaceTaskListQry
+	return replaceTaskListQry
 }
 func (d *driver) UpdateTaskListQuery() string {
-    return updateTaskListQry
+	return updateTaskListQry
 }
 func (d *driver) ListTaskListQuery() string {
-    return listTaskListQry
+	return listTaskListQry
 }
 func (d *driver) GetTaskListQuery() string {
-    return getTaskListQry
+	return getTaskListQry
 }
 func (d *driver) DeleteTaskListQuery() string {
-    return deleteTaskListQry
+	return deleteTaskListQry
 }
 func (d *driver) LockTaskListQuery() string {
-    return lockTaskListQry
+	return lockTaskListQry
 }
 func (d *driver) GetTaskMinMaxQuery() string {
-    return getTaskMinMaxQry
+	return getTaskMinMaxQry
 }
 func (d *driver) GetTaskMinQuery() string {
-    return getTaskMinQry
+	return getTaskMinQry
 }
 func (d *driver) CreateTaskQuery() string {
-    return createTaskQry
+	return createTaskQry
 }
 func (d *driver) DeleteTaskQuery() string {
-    return deleteTaskQry
+	return deleteTaskQry
 }
 func (d *driver) RangeDeleteTaskQuery() string {
-    return rangeDeleteTaskQry
+	return rangeDeleteTaskQry
 }

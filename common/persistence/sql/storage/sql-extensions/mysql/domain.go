@@ -21,71 +21,70 @@
 package mysql
 
 const (
-    createDomainQuery = `INSERT INTO 
+	createDomainQuery = `INSERT INTO 
  domains (id, name, is_global, data, data_encoding)
  VALUES(?, ?, ?, ?, ?)`
 
-    updateDomainQuery = `UPDATE domains 
+	updateDomainQuery = `UPDATE domains 
  SET name = ?, data = ?, data_encoding = ?
  WHERE shard_id=54321 AND id = ?`
 
-    getDomainPart = `SELECT id, name, is_global, data, data_encoding FROM domains`
+	getDomainPart = `SELECT id, name, is_global, data, data_encoding FROM domains`
 
-    getDomainByIDQuery   = getDomainPart + ` WHERE shard_id=? AND id = ?`
-    getDomainByNameQuery = getDomainPart + ` WHERE shard_id=? AND name = ?`
+	getDomainByIDQuery   = getDomainPart + ` WHERE shard_id=? AND id = ?`
+	getDomainByNameQuery = getDomainPart + ` WHERE shard_id=? AND name = ?`
 
-    listDomainsQuery      = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
-    listDomainsRangeQuery = getDomainPart + ` WHERE shard_id=? AND id > ? ORDER BY id LIMIT ?`
+	listDomainsQuery      = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
+	listDomainsRangeQuery = getDomainPart + ` WHERE shard_id=? AND id > ? ORDER BY id LIMIT ?`
 
-    deleteDomainByIDQuery   = `DELETE FROM domains WHERE shard_id=? AND id = ?`
-    deleteDomainByNameQuery = `DELETE FROM domains WHERE shard_id=? AND name = ?`
+	deleteDomainByIDQuery   = `DELETE FROM domains WHERE shard_id=? AND id = ?`
+	deleteDomainByNameQuery = `DELETE FROM domains WHERE shard_id=? AND name = ?`
 
-    getDomainMetadataQuery    = `SELECT notification_version FROM domain_metadata`
-    lockDomainMetadataQuery   = `SELECT notification_version FROM domain_metadata FOR UPDATE`
-    updateDomainMetadataQuery = `UPDATE domain_metadata SET notification_version = ? WHERE notification_version = ?`
+	getDomainMetadataQuery    = `SELECT notification_version FROM domain_metadata`
+	lockDomainMetadataQuery   = `SELECT notification_version FROM domain_metadata FOR UPDATE`
+	updateDomainMetadataQuery = `UPDATE domain_metadata SET notification_version = ? WHERE notification_version = ?`
 )
 
 func (d *driver) CreateDomainQuery() string {
-    return createDomainQuery
+	return createDomainQuery
 }
 
 func (d *driver) UpdateDomainQuery() string {
-    return updateDomainQuery
+	return updateDomainQuery
 }
 
 func (d *driver) GetDomainByIDQuery() string {
-    return getDomainByIDQuery
+	return getDomainByIDQuery
 }
 
 func (d *driver) GetDomainByNameQuery() string {
-    return getDomainByNameQuery
+	return getDomainByNameQuery
 }
 
 func (d *driver) ListDomainsQuery() string {
-    return listDomainsQuery
+	return listDomainsQuery
 }
 
 func (d *driver) ListDomainsRangeQuery() string {
-    return listDomainsRangeQuery
+	return listDomainsRangeQuery
 }
 
 func (d *driver) DeleteDomainByIDQuery() string {
-    return deleteDomainByIDQuery
+	return deleteDomainByIDQuery
 }
 
 func (d *driver) DeleteDomainByNameQuery() string {
-    return deleteDomainByNameQuery
+	return deleteDomainByNameQuery
 }
 
 func (d *driver) GetDomainMetadataQuery() string {
-    return getDomainMetadataQuery
+	return getDomainMetadataQuery
 }
 
 func (d *driver) LockDomainMetadataQuery() string {
-    return lockDomainMetadataQuery
+	return lockDomainMetadataQuery
 }
 
 func (d *driver) UpdateDomainMetadataQuery() string {
-    return updateDomainMetadataQuery
+	return updateDomainMetadataQuery
 }
-
