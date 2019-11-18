@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	//Needed to load mysql module(put it here so that it is added for all test files)
-	_ "github.com/uber/cadence/common/persistence/sql/storage/sql-extensions/mysql"
+	_ "github.com/uber/cadence/common/persistence/sql-extensions/mysql"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
