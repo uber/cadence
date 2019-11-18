@@ -25,8 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-sql-driver/mysql"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -155,7 +153,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 
 	_, err := m.db.InsertIntoHistoryNode(nodeRow)
 	if err != nil {
-		if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
+		if m.db.IsDupEntryError(err) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
 		}
 		return &shared.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}

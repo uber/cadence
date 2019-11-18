@@ -26,8 +26,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -402,7 +400,7 @@ func applyWorkflowSnapshotTxAsReset(
 	return nil
 }
 
-func applyWorkflowSnapshotTxAsNew(
+func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 	tx sqldb.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
@@ -424,7 +422,7 @@ func applyWorkflowSnapshotTxAsNew(
 		currentVersion = replicationState.CurrentVersion
 	}
 
-	if err := createExecution(tx,
+	if err := m.createExecution(tx,
 		executionInfo,
 		replicationState,
 		versionHistories,
@@ -1307,7 +1305,7 @@ func buildExecutionRow(
 	}, nil
 }
 
-func createExecution(
+func (m *sqlExecutionManager)createExecution(
 	tx sqldb.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
@@ -1343,25 +1341,16 @@ func createExecution(
 	}
 	result, err := tx.InsertIntoExecutions(row)
 	if err != nil {
-		switch mysqlErr := err.(type) {
-		case *mysql.MySQLError:
-			switch mysqlErr.Number {
-			case uint16(1062):
-				// mysql error `Duplicate entry`
-				return &p.WorkflowExecutionAlreadyStartedError{
-					Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", executionInfo.WorkflowID),
-					StartRequestID:   executionInfo.CreateRequestID,
-					RunID:            executionInfo.RunID,
-					State:            executionInfo.State,
-					CloseStatus:      executionInfo.CloseStatus,
-					LastWriteVersion: row.LastWriteVersion,
-				}
-			default:
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("createExecution failed. Erorr: %v, Code: %v", err, mysqlErr.Number),
-				}
+		if m.db.IsDupEntryError(err){
+			return &p.WorkflowExecutionAlreadyStartedError{
+				Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", executionInfo.WorkflowID),
+				StartRequestID:   executionInfo.CreateRequestID,
+				RunID:            executionInfo.RunID,
+				State:            executionInfo.State,
+				CloseStatus:      executionInfo.CloseStatus,
+				LastWriteVersion: row.LastWriteVersion,
 			}
-		default:
+		}else{
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("createExecution failed. Erorr: %v", err),
 			}

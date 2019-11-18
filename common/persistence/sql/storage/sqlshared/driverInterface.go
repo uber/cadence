@@ -30,6 +30,7 @@ type (
     Driver interface {
         GetDriverName() string
         CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error)
+        IsDupEntryError(err error) bool
 
         //domain
         CreateDomainQuery() string

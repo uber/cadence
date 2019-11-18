@@ -28,7 +28,7 @@ import (
     "net/url"
     "strings"
 
-    _ "github.com/go-sql-driver/mysql" // needed to load MySQL library
+    "github.com/go-sql-driver/mysql"
     "github.com/iancoleman/strcase"
     "github.com/jmoiron/sqlx"
 
@@ -62,6 +62,15 @@ func init() {
 
 func (d *driver) GetDriverName() string {
     return driverName
+}
+
+// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
+// so we don't do the insert and return a ConditionalUpdate error.
+const ErrDupEntry = 1062
+
+func (d *driver) IsDupEntryError(err error) bool {
+    sqlErr, ok := err.(*mysql.MySQLError)
+    return ok && sqlErr.Number == ErrDupEntry
 }
 
 // CreateDBConnection creates a returns a reference to a logical connection to the

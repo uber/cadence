@@ -197,7 +197,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 		return nil, err
 	}
 
-	if err := applyWorkflowSnapshotTxAsNew(tx, shardID, &request.NewWorkflowSnapshot); err != nil {
+	if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, &request.NewWorkflowSnapshot); err != nil {
 		return nil, err
 	}
 
@@ -534,7 +534,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 		return err
 	}
 	if newWorkflow != nil {
-		if err := applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
 			return err
 		}
 	}
@@ -625,7 +625,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 	}
 
 	// 4. create the new reset workflow
-	return applyWorkflowSnapshotTxAsNew(tx, m.shardID, &request.NewWorkflowSnapshot)
+	return m.applyWorkflowSnapshotTxAsNew(tx, m.shardID, &request.NewWorkflowSnapshot)
 }
 
 func (m *sqlExecutionManager) ConflictResolveWorkflowExecution(
@@ -763,7 +763,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 		}
 	}
 	if newWorkflow != nil {
-		if err := applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
 			return err
 		}
 	}
@@ -1184,7 +1184,7 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(request *p.PutReplicationT
 
 	// Tasks are immutable. So it's fine if we already persisted it before.
 	// This can happen when tasks are retried (ack and cleanup can have lag on source side).
-	if err != nil && !isDupEntry(err) {
+	if err != nil && !m.db.IsDupEntryError(err) {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to create replication tasks. Error: %v", err),
 		}

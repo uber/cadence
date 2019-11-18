@@ -693,6 +693,7 @@ type (
 		tableCRUD
 		BeginTx() (Tx, error)
 		DriverName() string
+		IsDupEntryError(err error) bool
 		Close() error
 	}
 

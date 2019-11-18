@@ -24,8 +24,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/go-sql-driver/mysql"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -137,7 +135,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateD
 			DataEncoding: string(blob.Encoding),
 			IsGlobal:     request.IsGlobalDomain,
 		}); err1 != nil {
-			if sqlErr, ok := err1.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
+			if m.db.IsDupEntryError(err) {
 				return &workflow.DomainAlreadyExistsError{
 					Message: fmt.Sprintf("name: %v", request.Info.Name),
 				}

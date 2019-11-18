@@ -26,8 +26,6 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/go-sql-driver/mysql"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -80,15 +78,6 @@ func (m *sqlStore) txExecute(operation string, f func(tx sqldb.Tx) error) error 
 		}
 	}
 	return nil
-}
-
-// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
-// so we don't do the insert and return a ConditionalUpdate error.
-const ErrDupEntry = 1062
-
-func isDupEntry(err error) bool {
-	sqlErr, ok := err.(*mysql.MySQLError)
-	return ok && sqlErr.Number == ErrDupEntry
 }
 
 func gobSerialize(x interface{}) ([]byte, error) {

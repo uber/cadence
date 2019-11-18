@@ -78,3 +78,7 @@ func (mdb *DB) Close() error {
 func (mdb *DB) DriverName() string {
 	return mdb.db.DriverName()
 }
+
+func (mdb *DB) IsDupEntryError(err error) bool{
+	return mdb.driver.IsDupEntryError(err)
+}
