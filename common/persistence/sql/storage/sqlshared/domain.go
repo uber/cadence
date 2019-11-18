@@ -35,12 +35,12 @@ var errMissingArgs = errors.New("missing one or more args for API")
 
 // InsertIntoDomain inserts a single row into domains table
 func (mdb *DB) InsertIntoDomain(row *sqldb.DomainRow) (sql.Result, error) {
-	return mdb.conn.Exec(mdb.driver.CreateDomainQry(), row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
+	return mdb.conn.Exec(mdb.driver.CreateDomainQuery(), row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
 }
 
 // UpdateDomain updates a single row in domains table
 func (mdb *DB) UpdateDomain(row *sqldb.DomainRow) (sql.Result, error) {
-	return mdb.conn.Exec(mdb.driver.UpdateDomainQry(), row.Name, row.Data, row.DataEncoding, row.ID)
+	return mdb.conn.Exec(mdb.driver.UpdateDomainQuery(), row.Name, row.Data, row.DataEncoding, row.ID)
 }
 
 // SelectFromDomain reads one or more rows from domains table
@@ -60,9 +60,9 @@ func (mdb *DB) selectFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRow, 
 	var row sqldb.DomainRow
 	switch {
 	case filter.ID != nil:
-		err = mdb.conn.Get(&row, mdb.driver.GetDomainByIDQry(), shardID, *filter.ID)
+		err = mdb.conn.Get(&row, mdb.driver.GetDomainByIDQuery(), shardID, *filter.ID)
 	case filter.Name != nil:
-		err = mdb.conn.Get(&row, mdb.driver.GetDomainByNameQry(), shardID, *filter.Name)
+		err = mdb.conn.Get(&row, mdb.driver.GetDomainByNameQuery(), shardID, *filter.Name)
 	}
 	if err != nil {
 		return nil, err
@@ -75,9 +75,9 @@ func (mdb *DB) selectAllFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRo
 	var rows []sqldb.DomainRow
 	switch {
 	case filter.GreaterThanID != nil:
-		err = mdb.conn.Select(&rows, mdb.driver.ListDomainsRangeQry(), shardID, *filter.GreaterThanID, *filter.PageSize)
+		err = mdb.conn.Select(&rows, mdb.driver.ListDomainsRangeQuery(), shardID, *filter.GreaterThanID, *filter.PageSize)
 	default:
-		err = mdb.conn.Select(&rows, mdb.driver.ListDomainsQry(), shardID, filter.PageSize)
+		err = mdb.conn.Select(&rows, mdb.driver.ListDomainsQuery(), shardID, filter.PageSize)
 	}
 	return rows, err
 }
@@ -88,9 +88,9 @@ func (mdb *DB) DeleteFromDomain(filter *sqldb.DomainFilter) (sql.Result, error) 
 	var result sql.Result
 	switch {
 	case filter.ID != nil:
-		result, err = mdb.conn.Exec(mdb.driver.DeleteDomainByIDQry(), shardID, filter.ID)
+		result, err = mdb.conn.Exec(mdb.driver.DeleteDomainByIDQuery(), shardID, filter.ID)
 	default:
-		result, err = mdb.conn.Exec(mdb.driver.DeleteDomainByNameQry(), shardID, filter.Name)
+		result, err = mdb.conn.Exec(mdb.driver.DeleteDomainByNameQuery(), shardID, filter.Name)
 	}
 	return result, err
 }
@@ -98,18 +98,18 @@ func (mdb *DB) DeleteFromDomain(filter *sqldb.DomainFilter) (sql.Result, error) 
 // LockDomainMetadata acquires a write lock on a single row in domain_metadata table
 func (mdb *DB) LockDomainMetadata() error {
 	var row sqldb.DomainMetadataRow
-	err := mdb.conn.Get(&row.NotificationVersion, mdb.driver.LockDomainMetadataQry())
+	err := mdb.conn.Get(&row.NotificationVersion, mdb.driver.LockDomainMetadataQuery())
 	return err
 }
 
 // SelectFromDomainMetadata reads a single row in domain_metadata table
 func (mdb *DB) SelectFromDomainMetadata() (*sqldb.DomainMetadataRow, error) {
 	var row sqldb.DomainMetadataRow
-	err := mdb.conn.Get(&row.NotificationVersion, mdb.driver.GetDomainMetadataQry())
+	err := mdb.conn.Get(&row.NotificationVersion, mdb.driver.GetDomainMetadataQuery())
 	return &row, err
 }
 
 // UpdateDomainMetadata updates a single row in domain_metadata table
 func (mdb *DB) UpdateDomainMetadata(row *sqldb.DomainMetadataRow) (sql.Result, error) {
-	return mdb.conn.Exec(mdb.driver.UpdateDomainMetadataQry(), row.NotificationVersion+1, row.NotificationVersion)
+	return mdb.conn.Exec(mdb.driver.UpdateDomainMetadataQuery(), row.NotificationVersion+1, row.NotificationVersion)
 }

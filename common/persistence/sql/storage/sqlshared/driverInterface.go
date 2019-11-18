@@ -32,31 +32,108 @@ type (
         CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error)
 
         //domain
-        CreateDomainQry() string
-        UpdateDomainQry() string
-        GetDomainByIDQry() string
-        GetDomainByNameQry() string
-        ListDomainsQry() string
-        ListDomainsRangeQry() string
-        DeleteDomainByIDQry() string
-        DeleteDomainByNameQry() string
-        GetDomainMetadataQry() string
-        LockDomainMetadataQry() string
-        UpdateDomainMetadataQry() string
+        CreateDomainQuery() string
+        UpdateDomainQuery() string
+        GetDomainByIDQuery() string
+        GetDomainByNameQuery() string
+        ListDomainsQuery() string
+        ListDomainsRangeQuery() string
+        DeleteDomainByIDQuery() string
+        DeleteDomainByNameQuery() string
+        GetDomainMetadataQuery() string
+        LockDomainMetadataQuery() string
+        UpdateDomainMetadataQuery() string
 
         //events
-        AddHistoryNodesQry() string
-        GetHistoryNodesQry() string
-        DeleteHistoryNodesQry() string
-        AddHistoryTreeQry() string
-        GetHistoryTreeQry() string
-        DeleteHistoryTreeQry() string
+        AddHistoryNodesQuery() string
+        GetHistoryNodesQuery() string
+        DeleteHistoryNodesQuery() string
+        AddHistoryTreeQuery() string
+        GetHistoryTreeQuery() string
+        DeleteHistoryTreeQuery() string
 
         //execution
+        CreateExecutionQuery() string
+        UpdateExecutionQuery() string
+        GetExecutionQuery() string
+        DeleteExecutionQuery() string
+        WriteLockExecutionQuery() string
+        ReadLockExecutionQuery() string
+        CreateCurrentExecutionQuery() string
+        DeleteCurrentExecutionQuery() string
+        GetCurrentExecutionQuery() string
+        LockCurrentExecutionJoinExecutionsQuery() string
+        LockCurrentExecutionQuery() string
+        UpdateCurrentExecutionsQuery() string
+        GetTransferTasksQuery() string
+        CreateTransferTasksQuery() string
+        DeleteTransferTaskQuery() string
+        RangeDeleteTransferTaskQuery() string
+        CreateTimerTasksQuery() string
+        GetTimerTasksQuery() string
+        DeleteTimerTaskQuery() string
+        RangeDeleteTimerTaskQuery() string
+        CreateReplicationTasksQuery() string
+        GetReplicationTasksQuery() string
+        DeleteReplicationTaskQuery() string
+        GetReplicationTasksDLQQuery() string
+        CreateBufferedEventsQuery() string
+        DeleteBufferedEventsQuery() string
+        GetBufferedEventsQuery() string
+        InsertReplicationTaskDLQQuery() string
+
         //execution_map
+        DeleteMapQueryTemplate() string
+        SetKeyInMapQueryTemplate() string
+        DeleteKeyInMapQueryTemplate() string
+        GetMapQueryTemplate() string
+        DeleteAllSignalsRequestedSetQuery() string
+        CreateSignalsRequestedSetQuery() string
+        DeleteSignalsRequestedSetQuery() string
+        GetSignalsRequestedSetQuery() string
+
         //queue
+        EnqueueMessageQuery() string
+        GetLastMessageIDQuery() string
+        GetMessagesQuery() string
+        DeleteMessagesQuery() string
+        GetQueueMetadataQuery() string
+        GetQueueMetadataForUpdateQuery() string
+        InsertQueueMetadataQuery() string
+        UpdateQueueMetadataQuery() string
+
         //shard
+        CreateShardQuery() string
+        GetShardQuery() string
+        UpdateShardQuery() string
+        LockShardQuery() string
+        ReadLockShardQuery() string
+
         //task
+        CreateTaskListQuery() string
+        ReplaceTaskListQuery() string
+        UpdateTaskListQuery() string
+        ListTaskListQuery() string
+        GetTaskListQuery() string
+        DeleteTaskListQuery() string
+        LockTaskListQuery() string
+        GetTaskMinMaxQuery() string
+        GetTaskMinQuery() string
+        CreateTaskQuery() string
+        DeleteTaskQuery() string
+        RangeDeleteTaskQuery() string
+
         //visibility
+        CreateWorkflowExecutionStartedQuery() string
+        CreateWorkflowExecutionClosedQuery() string
+        GetOpenWorkflowExecutionsQuery() string
+        GetClosedWorkflowExecutionsQuery() string
+        GetOpenWorkflowExecutionsByTypeQuery() string
+        GetClosedWorkflowExecutionsByTypeQuery() string
+        GetOpenWorkflowExecutionsByIDQuery() string
+        GetClosedWorkflowExecutionsByIDQuery() string
+        GetClosedWorkflowExecutionsByStatusQuery() string
+        GetClosedWorkflowExecutionQuery() string
+        DeleteWorkflowExecutionQuery() string
     }
 )

@@ -28,39 +28,28 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
-const (
-	templateEnqueueMessageQuery            = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
-	templateGetLastMessageIDQuery          = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
-	templateGetMessagesQuery               = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
-	templateDeleteMessagesQuery            = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
-	templateGetQueueMetadataQuery          = `SELECT data from queue_metadata WHERE queue_type = ?`
-	templateGetQueueMetadataForUpdateQuery = templateGetQueueMetadataQuery + ` FOR UPDATE`
-	templateInsertQueueMetadataQuery       = `INSERT INTO queue_metadata (queue_type, data) VALUES(:queue_type, :data)`
-	templateUpdateQueueMetadataQuery       = `UPDATE queue_metadata SET data = ? WHERE queue_type = ?`
-)
-
 // InsertIntoQueue inserts a new row into queue table
 func (mdb *DB) InsertIntoQueue(row *sqldb.QueueRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(templateEnqueueMessageQuery, row)
+	return mdb.conn.NamedExec(mdb.driver.EnqueueMessageQuery(), row)
 }
 
 // GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
 func (mdb *DB) GetLastEnqueuedMessageIDForUpdate(queueType common.QueueType) (int, error) {
 	var lastMessageID int
-	err := mdb.conn.Get(&lastMessageID, templateGetLastMessageIDQuery, queueType)
+	err := mdb.conn.Get(&lastMessageID, mdb.driver.GetLastMessageIDQuery(), queueType)
 	return lastMessageID, err
 }
 
 // GetMessagesFromQueue retrieves messages from the queue
 func (mdb *DB) GetMessagesFromQueue(queueType common.QueueType, lastMessageID, maxRows int) ([]sqldb.QueueRow, error) {
 	var rows []sqldb.QueueRow
-	err := mdb.conn.Select(&rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
+	err := mdb.conn.Select(&rows, mdb.driver.GetMessagesQuery(), queueType, lastMessageID, maxRows)
 	return rows, err
 }
 
 // DeleteMessagesBefore deletes messages before messageID from the queue
 func (mdb *DB) DeleteMessagesBefore(queueType common.QueueType, messageID int) (sql.Result, error) {
-	return mdb.conn.Exec(templateDeleteMessagesQuery, queueType, messageID)
+	return mdb.conn.Exec(mdb.driver.DeleteMessagesQuery(), queueType, messageID)
 }
 
 // InsertAckLevel inserts ack level
@@ -71,7 +60,7 @@ func (mdb *DB) InsertAckLevel(queueType common.QueueType, messageID int, cluster
 		return err
 	}
 
-	_, err = mdb.conn.NamedExec(templateInsertQueueMetadataQuery, sqldb.QueueMetadataRow{QueueType: queueType, Data: data})
+	_, err = mdb.conn.NamedExec(mdb.driver.InsertQueueMetadataQuery(), sqldb.QueueMetadataRow{QueueType: queueType, Data: data})
 	return err
 
 }
@@ -83,15 +72,15 @@ func (mdb *DB) UpdateAckLevels(queueType common.QueueType, clusterAckLevels map[
 		return err
 	}
 
-	_, err = mdb.conn.Exec(templateUpdateQueueMetadataQuery, data, queueType)
+	_, err = mdb.conn.Exec(mdb.driver.UpdateQueueMetadataQuery(), data, queueType)
 	return err
 }
 
 // GetAckLevels returns ack levels for pulling clusters
 func (mdb *DB) GetAckLevels(queueType common.QueueType, forUpdate bool) (map[string]int, error) {
-	queryStr := templateGetQueueMetadataQuery
+	queryStr := mdb.driver.GetQueueMetadataQuery()
 	if forUpdate {
-		queryStr = templateGetQueueMetadataForUpdateQuery
+		queryStr = mdb.driver.GetQueueMetadataForUpdateQuery()
 	}
 
 	var data []byte

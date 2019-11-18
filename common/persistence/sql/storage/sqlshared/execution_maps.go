@@ -28,45 +28,6 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
-const (
-	deleteMapQryTemplate = `DELETE FROM %v
-WHERE
-shard_id = ? AND
-domain_id = ? AND
-workflow_id = ? AND
-run_id = ?`
-
-	// %[2]v is the columns of the value struct (i.e. no primary key columns), comma separated
-	// %[3]v should be %[2]v with colons prepended.
-	// i.e. %[3]v = ",".join(":" + s for s in %[2]v)
-	// So that this query can be used with BindNamed
-	// %[4]v should be the name of the key associated with the map
-	// e.g. for ActivityInfo it is "schedule_id"
-	setKeyInMapQryTemplate = `REPLACE INTO %[1]v
-(shard_id, domain_id, workflow_id, run_id, %[4]v, %[2]v)
-VALUES
-(:shard_id, :domain_id, :workflow_id, :run_id, :%[4]v, %[3]v)`
-
-	// %[2]v is the name of the key
-	deleteKeyInMapQryTemplate = `DELETE FROM %[1]v
-WHERE
-shard_id = ? AND
-domain_id = ? AND
-workflow_id = ? AND
-run_id = ? AND
-%[2]v = ?`
-
-	// %[1]v is the name of the table
-	// %[2]v is the name of the key
-	// %[3]v is the value columns, separated by commas
-	getMapQryTemplate = `SELECT %[2]v, %[3]v FROM %[1]v
-WHERE
-shard_id = ? AND
-domain_id = ? AND
-workflow_id = ? AND
-run_id = ?`
-)
-
 func stringMap(a []string, f func(string) string) []string {
 	b := make([]string, len(a))
 	for i, v := range a {
@@ -75,12 +36,12 @@ func stringMap(a []string, f func(string) string) []string {
 	return b
 }
 
-func makeDeleteMapQry(tableName string) string {
-	return fmt.Sprintf(deleteMapQryTemplate, tableName)
+func makeDeleteMapQry(driver Driver, tableName string) string {
+	return fmt.Sprintf(driver.DeleteMapQueryTemplate(), tableName)
 }
 
-func makeSetKeyInMapQry(tableName string, nonPrimaryKeyColumns []string, mapKeyName string) string {
-	return fmt.Sprintf(setKeyInMapQryTemplate,
+func makeSetKeyInMapQry(driver Driver, tableName string, nonPrimaryKeyColumns []string, mapKeyName string) string {
+	return fmt.Sprintf(driver.SetKeyInMapQueryTemplate(),
 		tableName,
 		strings.Join(nonPrimaryKeyColumns, ","),
 		strings.Join(stringMap(nonPrimaryKeyColumns, func(x string) string {
@@ -89,14 +50,14 @@ func makeSetKeyInMapQry(tableName string, nonPrimaryKeyColumns []string, mapKeyN
 		mapKeyName)
 }
 
-func makeDeleteKeyInMapQry(tableName string, mapKeyName string) string {
-	return fmt.Sprintf(deleteKeyInMapQryTemplate,
+func makeDeleteKeyInMapQry(driver Driver, tableName string, mapKeyName string) string {
+	return fmt.Sprintf(driver.DeleteKeyInMapQueryTemplate(),
 		tableName,
 		mapKeyName)
 }
 
-func makeGetMapQryTemplate(tableName string, nonPrimaryKeyColumns []string, mapKeyName string) string {
-	return fmt.Sprintf(getMapQryTemplate,
+func makeGetMapQryTemplate(driver Driver, tableName string, nonPrimaryKeyColumns []string, mapKeyName string) string {
+	return fmt.Sprintf(driver.GetMapQueryTemplate(),
 		tableName,
 		mapKeyName,
 		strings.Join(nonPrimaryKeyColumns, ","))
@@ -113,10 +74,10 @@ var (
 	activityInfoTableName = "activity_info_maps"
 	activityInfoKey       = "schedule_id"
 
-	deleteActivityInfoMapQry      = makeDeleteMapQry(activityInfoTableName)
-	setKeyInActivityInfoMapQry    = makeSetKeyInMapQry(activityInfoTableName, activityInfoColumns, activityInfoKey)
-	deleteKeyInActivityInfoMapQry = makeDeleteKeyInMapQry(activityInfoTableName, activityInfoKey)
-	getActivityInfoMapQry         = makeGetMapQryTemplate(activityInfoTableName, activityInfoColumns, activityInfoKey)
+	//deleteActivityInfoMapQry      = makeDeleteMapQry(activityInfoTableName)
+	//setKeyInActivityInfoMapQry    = makeSetKeyInMapQry(mdb.driver, activityInfoTableName, activityInfoColumns, activityInfoKey)
+	//deleteKeyInActivityInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, activityInfoTableName, activityInfoKey)
+	//getActivityInfoMapQry         = makeGetMapQryTemplate(mdb.driver, activityInfoTableName, activityInfoColumns, activityInfoKey)
 )
 
 // ReplaceIntoActivityInfoMaps replaces one or more rows in activity_info_maps table
@@ -124,13 +85,13 @@ func (mdb *DB) ReplaceIntoActivityInfoMaps(rows []sqldb.ActivityInfoMapsRow) (sq
 	for i := range rows {
 		rows[i].LastHeartbeatUpdatedTime = mdb.converter.ToMySQLDateTime(rows[i].LastHeartbeatUpdatedTime)
 	}
-	return mdb.conn.NamedExec(setKeyInActivityInfoMapQry, rows)
+	return mdb.conn.NamedExec(makeSetKeyInMapQry(mdb.driver, activityInfoTableName, activityInfoColumns, activityInfoKey), rows)
 }
 
 // SelectFromActivityInfoMaps reads one or more rows from activity_info_maps table
 func (mdb *DB) SelectFromActivityInfoMaps(filter *sqldb.ActivityInfoMapsFilter) ([]sqldb.ActivityInfoMapsRow, error) {
 	var rows []sqldb.ActivityInfoMapsRow
-	err := mdb.conn.Select(&rows, getActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.Select(&rows, makeGetMapQryTemplate(mdb.driver, activityInfoTableName, activityInfoColumns, activityInfoKey), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -144,9 +105,9 @@ func (mdb *DB) SelectFromActivityInfoMaps(filter *sqldb.ActivityInfoMapsFilter) 
 // DeleteFromActivityInfoMaps deletes one or more rows from activity_info_maps table
 func (mdb *DB) DeleteFromActivityInfoMaps(filter *sqldb.ActivityInfoMapsFilter) (sql.Result, error) {
 	if filter.ScheduleID != nil {
-		return mdb.conn.Exec(deleteKeyInActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.ScheduleID)
+		return mdb.conn.Exec(makeDeleteKeyInMapQry(mdb.driver, activityInfoTableName, activityInfoKey), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.ScheduleID)
 	}
-	return mdb.conn.Exec(deleteActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return mdb.conn.Exec(makeDeleteMapQry(mdb.driver, activityInfoTableName), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -157,21 +118,22 @@ var (
 	timerInfoTableName = "timer_info_maps"
 	timerInfoKey       = "timer_id"
 
-	deleteTimerInfoMapSQLQuery      = makeDeleteMapQry(timerInfoTableName)
-	setKeyInTimerInfoMapSQLQuery    = makeSetKeyInMapQry(timerInfoTableName, timerInfoColumns, timerInfoKey)
-	deleteKeyInTimerInfoMapSQLQuery = makeDeleteKeyInMapQry(timerInfoTableName, timerInfoKey)
-	getTimerInfoMapSQLQuery         = makeGetMapQryTemplate(timerInfoTableName, timerInfoColumns, timerInfoKey)
+	//deleteTimerInfoMapSQLQuery      = makeDeleteMapQry(mdb.driver, timerInfoTableName)
+	//setKeyInTimerInfoMapSQLQuery    = makeSetKeyInMapQry(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey)
+	//deleteKeyInTimerInfoMapSQLQuery = makeDeleteKeyInMapQry(mdb.driver, timerInfoTableName, timerInfoKey)
+	//getTimerInfoMapSQLQuery         = makeGetMapQryTemplate(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey)
 )
 
 // ReplaceIntoTimerInfoMaps replaces one or more rows in timer_info_maps table
 func (mdb *DB) ReplaceIntoTimerInfoMaps(rows []sqldb.TimerInfoMapsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(setKeyInTimerInfoMapSQLQuery, rows)
+	return mdb.conn.NamedExec(makeSetKeyInMapQry(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey), rows)
 }
 
 // SelectFromTimerInfoMaps reads one or more rows from timer_info_maps table
 func (mdb *DB) SelectFromTimerInfoMaps(filter *sqldb.TimerInfoMapsFilter) ([]sqldb.TimerInfoMapsRow, error) {
 	var rows []sqldb.TimerInfoMapsRow
-	err := mdb.conn.Select(&rows, getTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.Select(&rows, makeGetMapQryTemplate(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey),
+							filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -184,9 +146,9 @@ func (mdb *DB) SelectFromTimerInfoMaps(filter *sqldb.TimerInfoMapsFilter) ([]sql
 // DeleteFromTimerInfoMaps deletes one or more rows from timer_info_maps table
 func (mdb *DB) DeleteFromTimerInfoMaps(filter *sqldb.TimerInfoMapsFilter) (sql.Result, error) {
 	if filter.TimerID != nil {
-		return mdb.conn.Exec(deleteKeyInTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.TimerID)
+		return mdb.conn.Exec(makeDeleteKeyInMapQry(mdb.driver, timerInfoTableName, timerInfoKey), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.TimerID)
 	}
-	return mdb.conn.Exec(deleteTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return mdb.conn.Exec(makeDeleteMapQry(mdb.driver, timerInfoTableName), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -197,21 +159,21 @@ var (
 	childExecutionInfoTableName = "child_execution_info_maps"
 	childExecutionInfoKey       = "initiated_id"
 
-	deleteChildExecutionInfoMapQry      = makeDeleteMapQry(childExecutionInfoTableName)
-	setKeyInChildExecutionInfoMapQry    = makeSetKeyInMapQry(childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
-	deleteKeyInChildExecutionInfoMapQry = makeDeleteKeyInMapQry(childExecutionInfoTableName, childExecutionInfoKey)
-	getChildExecutionInfoMapQry         = makeGetMapQryTemplate(childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
+	//deleteChildExecutionInfoMapQry      = makeDeleteMapQry(mdb.driver, childExecutionInfoTableName)
+	//setKeyInChildExecutionInfoMapQry    = makeSetKeyInMapQry(mdb.driver, childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
+	//deleteKeyInChildExecutionInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, childExecutionInfoTableName, childExecutionInfoKey)
+	//getChildExecutionInfoMapQry         = makeGetMapQryTemplate(mdb.driver, childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
 )
 
 // ReplaceIntoChildExecutionInfoMaps replaces one or more rows in child_execution_info_maps table
 func (mdb *DB) ReplaceIntoChildExecutionInfoMaps(rows []sqldb.ChildExecutionInfoMapsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(setKeyInChildExecutionInfoMapQry, rows)
+	return mdb.conn.NamedExec(makeSetKeyInMapQry(mdb.driver, childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey), rows)
 }
 
 // SelectFromChildExecutionInfoMaps reads one or more rows from child_execution_info_maps table
 func (mdb *DB) SelectFromChildExecutionInfoMaps(filter *sqldb.ChildExecutionInfoMapsFilter) ([]sqldb.ChildExecutionInfoMapsRow, error) {
 	var rows []sqldb.ChildExecutionInfoMapsRow
-	err := mdb.conn.Select(&rows, getChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.Select(&rows, makeGetMapQryTemplate(mdb.driver, childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -224,9 +186,10 @@ func (mdb *DB) SelectFromChildExecutionInfoMaps(filter *sqldb.ChildExecutionInfo
 // DeleteFromChildExecutionInfoMaps deletes one or more rows from child_execution_info_maps table
 func (mdb *DB) DeleteFromChildExecutionInfoMaps(filter *sqldb.ChildExecutionInfoMapsFilter) (sql.Result, error) {
 	if filter.InitiatedID != nil {
-		return mdb.conn.Exec(deleteKeyInChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+		return mdb.conn.Exec(makeDeleteKeyInMapQry(mdb.driver, childExecutionInfoTableName, childExecutionInfoKey),
+			filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
 	}
-	return mdb.conn.Exec(deleteChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return mdb.conn.Exec(makeDeleteMapQry(mdb.driver, childExecutionInfoTableName), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -237,21 +200,21 @@ var (
 	requestCancelInfoTableName = "request_cancel_info_maps"
 	requestCancelInfoKey       = "initiated_id"
 
-	deleteRequestCancelInfoMapQry      = makeDeleteMapQry(requestCancelInfoTableName)
-	setKeyInRequestCancelInfoMapQry    = makeSetKeyInMapQry(requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
-	deleteKeyInRequestCancelInfoMapQry = makeDeleteKeyInMapQry(requestCancelInfoTableName, requestCancelInfoKey)
-	getRequestCancelInfoMapQry         = makeGetMapQryTemplate(requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
+	//deleteRequestCancelInfoMapQry      = makeDeleteMapQry(mdb.driver, requestCancelInfoTableName)
+	//setKeyInRequestCancelInfoMapQry    = makeSetKeyInMapQry(mdb.driver, requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
+	//deleteKeyInRequestCancelInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, requestCancelInfoTableName, requestCancelInfoKey)
+	//getRequestCancelInfoMapQry         = makeGetMapQryTemplate(mdb.driver, requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
 )
 
 // ReplaceIntoRequestCancelInfoMaps replaces one or more rows in request_cancel_info_maps table
 func (mdb *DB) ReplaceIntoRequestCancelInfoMaps(rows []sqldb.RequestCancelInfoMapsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(setKeyInRequestCancelInfoMapQry, rows)
+	return mdb.conn.NamedExec(makeSetKeyInMapQry(mdb.driver, requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey), rows)
 }
 
 // SelectFromRequestCancelInfoMaps reads one or more rows from request_cancel_info_maps table
 func (mdb *DB) SelectFromRequestCancelInfoMaps(filter *sqldb.RequestCancelInfoMapsFilter) ([]sqldb.RequestCancelInfoMapsRow, error) {
 	var rows []sqldb.RequestCancelInfoMapsRow
-	err := mdb.conn.Select(&rows, getRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.Select(&rows, makeGetMapQryTemplate(mdb.driver, requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -264,9 +227,9 @@ func (mdb *DB) SelectFromRequestCancelInfoMaps(filter *sqldb.RequestCancelInfoMa
 // DeleteFromRequestCancelInfoMaps deletes one or more rows from request_cancel_info_maps table
 func (mdb *DB) DeleteFromRequestCancelInfoMaps(filter *sqldb.RequestCancelInfoMapsFilter) (sql.Result, error) {
 	if filter.InitiatedID != nil {
-		return mdb.conn.Exec(deleteKeyInRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+		return mdb.conn.Exec(makeDeleteKeyInMapQry(mdb.driver, requestCancelInfoTableName, requestCancelInfoKey), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
 	}
-	return mdb.conn.Exec(deleteRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return mdb.conn.Exec(makeDeleteMapQry(mdb.driver, requestCancelInfoTableName), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -277,21 +240,22 @@ var (
 	signalInfoTableName = "signal_info_maps"
 	signalInfoKey       = "initiated_id"
 
-	deleteSignalInfoMapQry      = makeDeleteMapQry(signalInfoTableName)
-	setKeyInSignalInfoMapQry    = makeSetKeyInMapQry(signalInfoTableName, signalInfoColumns, signalInfoKey)
-	deleteKeyInSignalInfoMapQry = makeDeleteKeyInMapQry(signalInfoTableName, signalInfoKey)
-	getSignalInfoMapQry         = makeGetMapQryTemplate(signalInfoTableName, signalInfoColumns, signalInfoKey)
+	//deleteSignalInfoMapQry      = makeDeleteMapQry(mdb.driver, signalInfoTableName)
+	//setKeyInSignalInfoMapQry    = makeSetKeyInMapQry(mdb.driver, signalInfoTableName, signalInfoColumns, signalInfoKey)
+	//deleteKeyInSignalInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, signalInfoTableName, signalInfoKey)
+	//getSignalInfoMapQry         = makeGetMapQryTemplate(mdb.driver, signalInfoTableName, signalInfoColumns, signalInfoKey)
 )
 
 // ReplaceIntoSignalInfoMaps replaces one or more rows in signal_info_maps table
 func (mdb *DB) ReplaceIntoSignalInfoMaps(rows []sqldb.SignalInfoMapsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(setKeyInSignalInfoMapQry, rows)
+	return mdb.conn.NamedExec(makeSetKeyInMapQry(mdb.driver, signalInfoTableName, signalInfoColumns, signalInfoKey), rows)
 }
 
 // SelectFromSignalInfoMaps reads one or more rows from signal_info_maps table
 func (mdb *DB) SelectFromSignalInfoMaps(filter *sqldb.SignalInfoMapsFilter) ([]sqldb.SignalInfoMapsRow, error) {
 	var rows []sqldb.SignalInfoMapsRow
-	err := mdb.conn.Select(&rows, getSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.Select(&rows, makeGetMapQryTemplate(mdb.driver, signalInfoTableName, signalInfoColumns, signalInfoKey),
+		filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -304,48 +268,21 @@ func (mdb *DB) SelectFromSignalInfoMaps(filter *sqldb.SignalInfoMapsFilter) ([]s
 // DeleteFromSignalInfoMaps deletes one or more rows from signal_info_maps table
 func (mdb *DB) DeleteFromSignalInfoMaps(filter *sqldb.SignalInfoMapsFilter) (sql.Result, error) {
 	if filter.InitiatedID != nil {
-		return mdb.conn.Exec(deleteKeyInSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+		return mdb.conn.Exec(makeDeleteKeyInMapQry(mdb.driver, signalInfoTableName, signalInfoKey),
+			filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
 	}
-	return mdb.conn.Exec(deleteSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return mdb.conn.Exec(makeDeleteMapQry(mdb.driver, signalInfoTableName), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
-
-const (
-	deleteAllSignalsRequestedSetQry = `DELETE FROM signals_requested_sets
-WHERE
-shard_id = ? AND
-domain_id = ? AND
-workflow_id = ? AND
-run_id = ?
-`
-
-	createSignalsRequestedSetQry = `INSERT IGNORE INTO signals_requested_sets
-(shard_id, domain_id, workflow_id, run_id, signal_id) VALUES
-(:shard_id, :domain_id, :workflow_id, :run_id, :signal_id)`
-
-	deleteSignalsRequestedSetQry = `DELETE FROM signals_requested_sets
-WHERE 
-shard_id = ? AND
-domain_id = ? AND
-workflow_id = ? AND
-run_id = ? AND
-signal_id = ?`
-
-	getSignalsRequestedSetQry = `SELECT signal_id FROM signals_requested_sets WHERE
-shard_id = ? AND
-domain_id = ? AND
-workflow_id = ? AND
-run_id = ?`
-)
 
 // InsertIntoSignalsRequestedSets inserts one or more rows into signals_requested_sets table
 func (mdb *DB) InsertIntoSignalsRequestedSets(rows []sqldb.SignalsRequestedSetsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(createSignalsRequestedSetQry, rows)
+	return mdb.conn.NamedExec(mdb.driver.CreateSignalsRequestedSetQuery(), rows)
 }
 
 // SelectFromSignalsRequestedSets reads one or more rows from signals_requested_sets table
 func (mdb *DB) SelectFromSignalsRequestedSets(filter *sqldb.SignalsRequestedSetsFilter) ([]sqldb.SignalsRequestedSetsRow, error) {
 	var rows []sqldb.SignalsRequestedSetsRow
-	err := mdb.conn.Select(&rows, getSignalsRequestedSetQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.Select(&rows, mdb.driver.GetSignalsRequestedSetQuery(), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -358,7 +295,7 @@ func (mdb *DB) SelectFromSignalsRequestedSets(filter *sqldb.SignalsRequestedSets
 // DeleteFromSignalsRequestedSets deletes one or more rows from signals_requested_sets table
 func (mdb *DB) DeleteFromSignalsRequestedSets(filter *sqldb.SignalsRequestedSetsFilter) (sql.Result, error) {
 	if filter.SignalID != nil {
-		return mdb.conn.Exec(deleteSignalsRequestedSetQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.SignalID)
+		return mdb.conn.Exec(mdb.driver.DeleteSignalsRequestedSetQuery(), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.SignalID)
 	}
-	return mdb.conn.Exec(deleteAllSignalsRequestedSetQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return mdb.conn.Exec(mdb.driver.DeleteAllSignalsRequestedSetQuery(), filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }

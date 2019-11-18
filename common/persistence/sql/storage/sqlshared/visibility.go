@@ -28,58 +28,13 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
-const (
-	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-
-	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	// RunID condition is needed for correct pagination
-	templateConditions = ` AND domain_id = ?
-		 AND start_time >= ?
-		 AND start_time <= ?
- 		 AND (run_id > ? OR start_time < ?)
-         ORDER BY start_time DESC, run_id
-         LIMIT ?`
-
-	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
-	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
-
-	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
-		 FROM executions_visibility WHERE close_status IS NOT NULL `
-
-	templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions
-
-	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions
-
-	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = ?` + templateConditions
-
-	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = ?` + templateConditions
-
-	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = ?` + templateConditions
-
-	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = ?` + templateConditions
-
-	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = ?` + templateConditions
-
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
-		 FROM executions_visibility
-		 WHERE domain_id = ? AND close_status IS NOT NULL
-		 AND run_id = ?`
-
-	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=? AND run_id=?"
-)
-
 var errCloseParams = errors.New("missing one of {closeStatus, closeTime, historyLength} params")
 
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
 func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
 	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
-	return mdb.conn.Exec(templateCreateWorkflowExecutionStarted,
+	return mdb.conn.Exec(mdb.driver.CreateWorkflowExecutionStartedQuery(),
 		row.DomainID,
 		row.WorkflowID,
 		row.RunID,
@@ -96,7 +51,7 @@ func (mdb *DB) ReplaceIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, erro
 	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:
 		row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
 		closeTime := mdb.converter.ToMySQLDateTime(*row.CloseTime)
-		return mdb.conn.Exec(templateCreateWorkflowExecutionClosed,
+		return mdb.conn.Exec(mdb.driver.CreateWorkflowExecutionClosedQuery(),
 			row.DomainID,
 			row.WorkflowID,
 			row.RunID,
@@ -115,7 +70,7 @@ func (mdb *DB) ReplaceIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, erro
 
 // DeleteFromVisibility deletes a row from visibility table if it exist
 func (mdb *DB) DeleteFromVisibility(filter *sqldb.VisibilityFilter) (sql.Result, error) {
-	return mdb.conn.Exec(templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
+	return mdb.conn.Exec(mdb.driver.DeleteWorkflowExecutionQuery(), filter.DomainID, filter.RunID)
 }
 
 // SelectFromVisibility reads one or more rows from visibility table
@@ -131,14 +86,14 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqldb.VisibilityRow
-		err = mdb.conn.Get(&row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
+		err = mdb.conn.Get(&row, mdb.driver.GetClosedWorkflowExecutionQuery(), filter.DomainID, *filter.RunID)
 		if err == nil {
 			rows = append(rows, row)
 		}
 	case filter.MinStartTime != nil && filter.WorkflowID != nil:
-		qry := templateGetOpenWorkflowExecutionsByID
+		qry := mdb.driver.GetOpenWorkflowExecutionsByIDQuery()
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutionsByID
+			qry = mdb.driver.GetClosedWorkflowExecutionsByIDQuery()
 		}
 		err = mdb.conn.Select(&rows,
 			qry,
@@ -150,9 +105,9 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			*filter.MinStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.WorkflowTypeName != nil:
-		qry := templateGetOpenWorkflowExecutionsByType
+		qry := mdb.driver.GetOpenWorkflowExecutionsByTypeQuery()
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutionsByType
+			qry = mdb.driver.GetClosedWorkflowExecutionsByTypeQuery()
 		}
 		err = mdb.conn.Select(&rows,
 			qry,
@@ -165,7 +120,7 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
 		err = mdb.conn.Select(&rows,
-			templateGetClosedWorkflowExecutionsByStatus,
+			mdb.driver.GetClosedWorkflowExecutionsByStatusQuery(),
 			*filter.CloseStatus,
 			filter.DomainID,
 			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
@@ -174,9 +129,9 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.PageSize)
 	case filter.MinStartTime != nil:
-		qry := templateGetOpenWorkflowExecutions
+		qry := mdb.driver.GetOpenWorkflowExecutionsQuery()
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutions
+			qry = mdb.driver.GetClosedWorkflowExecutionsQuery()
 		}
 		err = mdb.conn.Select(&rows,
 			qry,

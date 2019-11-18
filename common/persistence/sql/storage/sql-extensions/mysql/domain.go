@@ -21,71 +21,71 @@
 package mysql
 
 const (
-    createDomainQry = `INSERT INTO 
+    createDomainQuery = `INSERT INTO 
  domains (id, name, is_global, data, data_encoding)
  VALUES(?, ?, ?, ?, ?)`
 
-    updateDomainQry = `UPDATE domains 
+    updateDomainQuery = `UPDATE domains 
  SET name = ?, data = ?, data_encoding = ?
  WHERE shard_id=54321 AND id = ?`
 
     getDomainPart = `SELECT id, name, is_global, data, data_encoding FROM domains`
 
-    getDomainByIDQry   = getDomainPart + ` WHERE shard_id=? AND id = ?`
-    getDomainByNameQry = getDomainPart + ` WHERE shard_id=? AND name = ?`
+    getDomainByIDQuery   = getDomainPart + ` WHERE shard_id=? AND id = ?`
+    getDomainByNameQuery = getDomainPart + ` WHERE shard_id=? AND name = ?`
 
-    listDomainsQry      = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
-    listDomainsRangeQry = getDomainPart + ` WHERE shard_id=? AND id > ? ORDER BY id LIMIT ?`
+    listDomainsQuery      = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
+    listDomainsRangeQuery = getDomainPart + ` WHERE shard_id=? AND id > ? ORDER BY id LIMIT ?`
 
-    deleteDomainByIDQry   = `DELETE FROM domains WHERE shard_id=? AND id = ?`
-    deleteDomainByNameQry = `DELETE FROM domains WHERE shard_id=? AND name = ?`
+    deleteDomainByIDQuery   = `DELETE FROM domains WHERE shard_id=? AND id = ?`
+    deleteDomainByNameQuery = `DELETE FROM domains WHERE shard_id=? AND name = ?`
 
-    getDomainMetadataQry    = `SELECT notification_version FROM domain_metadata`
-    lockDomainMetadataQry   = `SELECT notification_version FROM domain_metadata FOR UPDATE`
-    updateDomainMetadataQry = `UPDATE domain_metadata SET notification_version = ? WHERE notification_version = ?`
+    getDomainMetadataQuery    = `SELECT notification_version FROM domain_metadata`
+    lockDomainMetadataQuery   = `SELECT notification_version FROM domain_metadata FOR UPDATE`
+    updateDomainMetadataQuery = `UPDATE domain_metadata SET notification_version = ? WHERE notification_version = ?`
 )
 
-func (d *driver) CreateDomainQry() string {
-    return createDomainQry
+func (d *driver) CreateDomainQuery() string {
+    return createDomainQuery
 }
 
-func (d *driver) UpdateDomainQry() string {
-    return updateDomainQry
+func (d *driver) UpdateDomainQuery() string {
+    return updateDomainQuery
 }
 
-func (d *driver) GetDomainByIDQry() string {
-    return getDomainByIDQry
+func (d *driver) GetDomainByIDQuery() string {
+    return getDomainByIDQuery
 }
 
-func (d *driver) GetDomainByNameQry() string {
-    return getDomainByNameQry
+func (d *driver) GetDomainByNameQuery() string {
+    return getDomainByNameQuery
 }
 
-func (d *driver) ListDomainsQry() string {
-    return listDomainsQry
+func (d *driver) ListDomainsQuery() string {
+    return listDomainsQuery
 }
 
-func (d *driver) ListDomainsRangeQry() string {
-    return listDomainsRangeQry
+func (d *driver) ListDomainsRangeQuery() string {
+    return listDomainsRangeQuery
 }
 
-func (d *driver) DeleteDomainByIDQry() string {
-    return deleteDomainByIDQry
+func (d *driver) DeleteDomainByIDQuery() string {
+    return deleteDomainByIDQuery
 }
 
-func (d *driver) DeleteDomainByNameQry() string {
-    return deleteDomainByNameQry
+func (d *driver) DeleteDomainByNameQuery() string {
+    return deleteDomainByNameQuery
 }
 
-func (d *driver) GetDomainMetadataQry() string {
-    return getDomainMetadataQry
+func (d *driver) GetDomainMetadataQuery() string {
+    return getDomainMetadataQuery
 }
 
-func (d *driver) LockDomainMetadataQry() string {
-    return lockDomainMetadataQry
+func (d *driver) LockDomainMetadataQuery() string {
+    return lockDomainMetadataQuery
 }
 
-func (d *driver) UpdateDomainMetadataQry() string {
-    return updateDomainMetadataQry
+func (d *driver) UpdateDomainMetadataQuery() string {
+    return updateDomainMetadataQuery
 }
 

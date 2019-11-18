@@ -22,46 +22,46 @@ package mysql
 
 const (
     // below are templates for history_node table
-    addHistoryNodesQry = `INSERT INTO history_node (` +
+    addHistoryNodesQuery = `INSERT INTO history_node (` +
         `shard_id, tree_id, branch_id, node_id, txn_id, data, data_encoding) ` +
         `VALUES (:shard_id, :tree_id, :branch_id, :node_id, :txn_id, :data, :data_encoding) `
 
-    getHistoryNodesQry = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
+    getHistoryNodesQuery = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
         `WHERE shard_id = ? AND tree_id = ? AND branch_id = ? AND node_id >= ? and node_id < ? ORDER BY shard_id, tree_id, branch_id, node_id, txn_id LIMIT ? `
 
-    deleteHistoryNodesQry = `DELETE FROM history_node WHERE shard_id = ? AND tree_id = ? AND branch_id = ? AND node_id >= ? `
+    deleteHistoryNodesQuery = `DELETE FROM history_node WHERE shard_id = ? AND tree_id = ? AND branch_id = ? AND node_id >= ? `
 
     // below are templates for history_tree table
-    addHistoryTreeQry = `INSERT INTO history_tree (` +
+    addHistoryTreeQuery = `INSERT INTO history_tree (` +
         `shard_id, tree_id, branch_id, data, data_encoding) ` +
         `VALUES (:shard_id, :tree_id, :branch_id, :data, :data_encoding) `
 
-    getHistoryTreeQry = `SELECT branch_id, data, data_encoding FROM history_tree WHERE shard_id = ? AND tree_id = ? `
+    getHistoryTreeQuery = `SELECT branch_id, data, data_encoding FROM history_tree WHERE shard_id = ? AND tree_id = ? `
 
-    deleteHistoryTreeQry = `DELETE FROM history_tree WHERE shard_id = ? AND tree_id = ? AND branch_id = ? `
+    deleteHistoryTreeQuery = `DELETE FROM history_tree WHERE shard_id = ? AND tree_id = ? AND branch_id = ? `
 )
 
-func (d *driver) AddHistoryNodesQry() string {
-    return addHistoryNodesQry
+func (d *driver) AddHistoryNodesQuery() string {
+    return addHistoryNodesQuery
 }
 
-func (d *driver) GetHistoryNodesQry() string {
-    return getHistoryNodesQry
+func (d *driver) GetHistoryNodesQuery() string {
+    return getHistoryNodesQuery
 }
 
-func (d *driver) DeleteHistoryNodesQry() string {
-    return deleteHistoryNodesQry
+func (d *driver) DeleteHistoryNodesQuery() string {
+    return deleteHistoryNodesQuery
 }
 
-func (d *driver) AddHistoryTreeQry() string {
-    return addHistoryTreeQry
+func (d *driver) AddHistoryTreeQuery() string {
+    return addHistoryTreeQuery
 }
 
-func (d *driver) GetHistoryTreeQry() string {
-    return getHistoryTreeQry
+func (d *driver) GetHistoryTreeQuery() string {
+    return getHistoryTreeQuery
 }
 
-func (d *driver) DeleteHistoryTreeQry() string {
-    return deleteHistoryTreeQry
+func (d *driver) DeleteHistoryTreeQuery() string {
+    return deleteHistoryTreeQuery
 }
 
