@@ -73,11 +73,6 @@ var (
 	}
 	activityInfoTableName = "activity_info_maps"
 	activityInfoKey       = "schedule_id"
-
-	//deleteActivityInfoMapQry      = makeDeleteMapQry(activityInfoTableName)
-	//setKeyInActivityInfoMapQry    = makeSetKeyInMapQry(mdb.driver, activityInfoTableName, activityInfoColumns, activityInfoKey)
-	//deleteKeyInActivityInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, activityInfoTableName, activityInfoKey)
-	//getActivityInfoMapQry         = makeGetMapQryTemplate(mdb.driver, activityInfoTableName, activityInfoColumns, activityInfoKey)
 )
 
 // ReplaceIntoActivityInfoMaps replaces one or more rows in activity_info_maps table
@@ -117,11 +112,6 @@ var (
 	}
 	timerInfoTableName = "timer_info_maps"
 	timerInfoKey       = "timer_id"
-
-	//deleteTimerInfoMapSQLQuery      = makeDeleteMapQry(mdb.driver, timerInfoTableName)
-	//setKeyInTimerInfoMapSQLQuery    = makeSetKeyInMapQry(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey)
-	//deleteKeyInTimerInfoMapSQLQuery = makeDeleteKeyInMapQry(mdb.driver, timerInfoTableName, timerInfoKey)
-	//getTimerInfoMapSQLQuery         = makeGetMapQryTemplate(mdb.driver, timerInfoTableName, timerInfoColumns, timerInfoKey)
 )
 
 // ReplaceIntoTimerInfoMaps replaces one or more rows in timer_info_maps table
@@ -158,11 +148,6 @@ var (
 	}
 	childExecutionInfoTableName = "child_execution_info_maps"
 	childExecutionInfoKey       = "initiated_id"
-
-	//deleteChildExecutionInfoMapQry      = makeDeleteMapQry(mdb.driver, childExecutionInfoTableName)
-	//setKeyInChildExecutionInfoMapQry    = makeSetKeyInMapQry(mdb.driver, childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
-	//deleteKeyInChildExecutionInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, childExecutionInfoTableName, childExecutionInfoKey)
-	//getChildExecutionInfoMapQry         = makeGetMapQryTemplate(mdb.driver, childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
 )
 
 // ReplaceIntoChildExecutionInfoMaps replaces one or more rows in child_execution_info_maps table
@@ -199,11 +184,6 @@ var (
 	}
 	requestCancelInfoTableName = "request_cancel_info_maps"
 	requestCancelInfoKey       = "initiated_id"
-
-	//deleteRequestCancelInfoMapQry      = makeDeleteMapQry(mdb.driver, requestCancelInfoTableName)
-	//setKeyInRequestCancelInfoMapQry    = makeSetKeyInMapQry(mdb.driver, requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
-	//deleteKeyInRequestCancelInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, requestCancelInfoTableName, requestCancelInfoKey)
-	//getRequestCancelInfoMapQry         = makeGetMapQryTemplate(mdb.driver, requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
 )
 
 // ReplaceIntoRequestCancelInfoMaps replaces one or more rows in request_cancel_info_maps table
@@ -239,11 +219,6 @@ var (
 	}
 	signalInfoTableName = "signal_info_maps"
 	signalInfoKey       = "initiated_id"
-
-	//deleteSignalInfoMapQry      = makeDeleteMapQry(mdb.driver, signalInfoTableName)
-	//setKeyInSignalInfoMapQry    = makeSetKeyInMapQry(mdb.driver, signalInfoTableName, signalInfoColumns, signalInfoKey)
-	//deleteKeyInSignalInfoMapQry = makeDeleteKeyInMapQry(mdb.driver, signalInfoTableName, signalInfoKey)
-	//getSignalInfoMapQry         = makeGetMapQryTemplate(mdb.driver, signalInfoTableName, signalInfoColumns, signalInfoKey)
 )
 
 // ReplaceIntoSignalInfoMaps replaces one or more rows in signal_info_maps table
