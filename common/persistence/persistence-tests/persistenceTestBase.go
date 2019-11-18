@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/persistence/sql"
+	_ "github.com/uber/cadence/common/persistence/sql/storage/sql-extensions/mysql"
 	"github.com/uber/cadence/common/service/config"
 )
 

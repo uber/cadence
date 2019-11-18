@@ -135,7 +135,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateD
 			DataEncoding: string(blob.Encoding),
 			IsGlobal:     request.IsGlobalDomain,
 		}); err1 != nil {
-			if m.db.IsDupEntryError(err) {
+			if m.db.IsDupEntryError(err1) {
 				return &workflow.DomainAlreadyExistsError{
 					Message: fmt.Sprintf("name: %v", request.Info.Name),
 				}
