@@ -843,7 +843,6 @@ func (e *historyEngineImpl) QueryWorkflow(
 	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
 	queryReg := mutableState.GetQueryRegistry()
 	if len(queryReg.getBufferedIDs()) >= e.config.MaxBufferedQueryCount() {
-		fmt.Println("got here 2")
 		return nil, ErrConsistentQueryBufferExceeded
 	}
 	queryID, termCh := queryReg.bufferQuery(req.GetQuery())

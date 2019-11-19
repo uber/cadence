@@ -704,21 +704,21 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 					tag.Error(err))
 				scope.IncCounter(metrics.FailQueryFailedCount)
 			}
-		}
-
-		completedTerminationState := &queryTerminationState{
-			queryTerminationType: queryTerminationTypeCompleted,
-			queryResult:          result,
-		}
-		if err := queryRegistry.setTerminationState(id, completedTerminationState); err != nil {
-			handler.logger.Error(
-				"failed to set query termination state to completed",
-				tag.WorkflowDomainName(domain),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.QueryID(id),
-				tag.Error(err))
-			scope.IncCounter(metrics.CompleteQueryFailedCount)
+		} else {
+			completedTerminationState := &queryTerminationState{
+				queryTerminationType: queryTerminationTypeCompleted,
+				queryResult:          result,
+			}
+			if err := queryRegistry.setTerminationState(id, completedTerminationState); err != nil {
+				handler.logger.Error(
+					"failed to set query termination state to completed",
+					tag.WorkflowDomainName(domain),
+					tag.WorkflowID(workflowID),
+					tag.WorkflowRunID(runID),
+					tag.QueryID(id),
+					tag.Error(err))
+				scope.IncCounter(metrics.CompleteQueryFailedCount)
+			}
 		}
 	}
 
