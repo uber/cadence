@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/persistence/sql/storage/mysql"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -142,11 +143,11 @@ func (c *dbConn) get() (sqldb.Interface, error) {
 	c.Lock()
 	defer c.Unlock()
 	if c.refCnt == 0 {
-		conn, err := storage.NewSQLDB(c.cfg)
+		db, err := storage.NewSQLDB(c.cfg)
 		if err != nil {
 			return nil, err
 		}
-		c.Interface = conn
+		c.Interface = mysql.NewDB(db, nil)
 	}
 	c.refCnt++
 	return c, nil

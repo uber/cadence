@@ -25,21 +25,12 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-
+	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
 type (
-	// ConnectParams is the connection param
-	ConnectParams struct {
-		Host       string
-		Port       int
-		User       string
-		Password   string
-		Database   string
-		DriverName string
-	}
-
 	// Connection is the connection to database
 	Connection struct {
 		driver   Driver
@@ -50,7 +41,7 @@ type (
 	// Driver is the driver interface that each SQL database needs to implement
 	Driver interface {
 		GetDriverName() string
-		CreateDBConnection(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error)
+		CreateDBConnection(*config.SQL) (*sqlx.DB, error)
 		GetReadSchemaVersionSQL() string
 		GetWriteSchemaVersionSQL() string
 		GetWriteSchemaUpdateHistorySQL() string
@@ -76,20 +67,27 @@ func RegisterDriver(driverName string, driver Driver) {
 }
 
 // NewConnection creates a new connection to database
-func NewConnection(params *ConnectParams) (*Connection, error) {
-	driver, ok := supportedSQLDrivers[params.DriverName]
+func NewConnection(cfg *config.SQL) (*Connection, error) {
+	driver, ok := supportedSQLDrivers[cfg.DriverName]
 
-	if !ok {
-		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.DriverName, supportedSQLDrivers)
+	if cfg.TLS != nil {
+		err := storage.RegisterTLSConfig(cfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	db, err := driver.CreateDBConnection(params.DriverName, params.Host, params.Port, params.User, params.Password, params.Database)
+	if !ok {
+		return nil, fmt.Errorf("not supported driver %v, only supported: %v", cfg.DriverName, supportedSQLDrivers)
+	}
+
+	db, err := driver.CreateDBConnection(cfg)
 	if err != nil {
 		return nil, err
 	}
 	return &Connection{
 		db:       db,
-		database: params.Database,
+		database: cfg.DatabaseName,
 		driver:   driver,
 	}, nil
 }

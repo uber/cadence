@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/persistence/sql/storage/mysql"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -54,7 +55,7 @@ func NewSQLVisibilityStore(cfg config.SQL, logger log.Logger) (p.VisibilityStore
 	}
 	return &sqlVisibilityStore{
 		sqlStore: sqlStore{
-			db:     db,
+			db:     mysql.NewDB(db, nil),
 			logger: logger,
 		},
 	}, nil

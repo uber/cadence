@@ -21,13 +21,11 @@
 package mysql
 
 import (
-	"fmt"
-
 	_ "github.com/go-sql-driver/mysql" // needed to load the mysql driver
-
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
-
+	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/sql"
 )
 
@@ -80,8 +78,8 @@ func (d *driver) GetDriverName() string {
 	return driverName
 }
 
-func (d *driver) CreateDBConnection(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error) {
-	db, err := sqlx.Connect(driverName, fmt.Sprintf(dataSourceNameMySQL, user, passwd, "tcp", host, port, database))
+func (d *driver) CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+	db, err := storage.NewSQLDB(cfg)
 
 	if err != nil {
 		return nil, err

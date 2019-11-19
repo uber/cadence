@@ -23,14 +23,13 @@ package sql
 import (
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
+	"net"
 
-	"github.com/urfave/cli"
-
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/mysql"
 	"github.com/uber/cadence/tools/common/schema"
+	"github.com/urfave/cli"
 )
 
 // VerifyCompatibleVersion ensures that the installed version of cadence and visibility
@@ -61,32 +60,7 @@ func CheckCompatibleVersion(
 	cfg config.SQL,
 	expectedVersion string,
 ) error {
-	var host string
-	var port int
-	if strings.Contains(cfg.ConnectAddr, ":") {
-		ss := strings.Split(cfg.ConnectAddr, ":")
-		if len(ss) != 2 {
-			panic("invalid connect address, it must be in host:port format")
-		}
-		var err error
-		host = ss[0]
-		port, err = strconv.Atoi(ss[1])
-		if err != nil {
-			panic("invalid port number:" + ss[1])
-		}
-	} else {
-		host = cfg.ConnectAddr
-		port = defaultSQLPort
-	}
-
-	connection, err := NewConnection(&ConnectParams{
-		Host:       host,
-		Port:       port,
-		User:       cfg.User,
-		Password:   cfg.Password,
-		DriverName: cfg.DriverName,
-		Database:   cfg.DatabaseName,
-	})
+	connection, err := NewConnection(&cfg)
 	if err != nil {
 		return fmt.Errorf("unable to create SQL connection: %v", err.Error())
 	}
@@ -99,7 +73,7 @@ func CheckCompatibleVersion(
 // using the given command line arguments
 // as input
 func setupSchema(cli *cli.Context) error {
-	params, err := parseConnectParams(cli)
+	params, err := parseConnectConfig(cli)
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
@@ -117,18 +91,17 @@ func setupSchema(cli *cli.Context) error {
 // updateSchema executes the updateSchemaTask
 // using the given command lien args as input
 func updateSchema(cli *cli.Context) error {
-	params, err := parseConnectParams(cli)
+	cfg, err := parseConnectConfig(cli)
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	if params.Database == schema.DryrunDBName {
-		p := *params
-		if err := doCreateDatabase(p, p.Database); err != nil {
+	if cfg.DatabaseName == schema.DryrunDBName {
+		if err := doCreateDatabase(cfg, cfg.DatabaseName); err != nil {
 			return handleErr(fmt.Errorf("error creating dryrun database: %v", err))
 		}
-		defer doDropDatabase(p, p.Database)
+		defer doDropDatabase(cfg, cfg.DatabaseName)
 	}
-	conn, err := NewConnection(params)
+	conn, err := NewConnection(cfg)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -141,7 +114,7 @@ func updateSchema(cli *cli.Context) error {
 
 // createDatabase creates a sql database
 func createDatabase(cli *cli.Context) error {
-	params, err := parseConnectParams(cli)
+	cfg, err := parseConnectConfig(cli)
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
@@ -149,16 +122,16 @@ func createDatabase(cli *cli.Context) error {
 	if database == "" {
 		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument "))
 	}
-	err = doCreateDatabase(*params, database)
+	err = doCreateDatabase(cfg, database)
 	if err != nil {
 		return handleErr(fmt.Errorf("error creating database:%v", err))
 	}
 	return nil
 }
 
-func doCreateDatabase(p ConnectParams, name string) error {
-	p.Database = ""
-	conn, err := NewConnection(&p)
+func doCreateDatabase(cfg *config.SQL, name string) error {
+	cfg.DatabaseName = ""
+	conn, err := NewConnection(cfg)
 	if err != nil {
 		return err
 	}
@@ -166,9 +139,9 @@ func doCreateDatabase(p ConnectParams, name string) error {
 	return conn.CreateDatabase(name)
 }
 
-func doDropDatabase(p ConnectParams, name string) {
-	p.Database = ""
-	conn, err := NewConnection(&p)
+func doDropDatabase(cfg *config.SQL, name string) {
+	cfg.DatabaseName = ""
+	conn, err := NewConnection(cfg)
 	if err != nil {
 		handleErr(err)
 		return
@@ -177,31 +150,57 @@ func doDropDatabase(p ConnectParams, name string) {
 	conn.Close()
 }
 
-func parseConnectParams(cli *cli.Context) (*ConnectParams, error) {
-	params := new(ConnectParams)
-	params.Host = cli.GlobalString(schema.CLIOptEndpoint)
-	params.Port = cli.GlobalInt(schema.CLIOptPort)
-	params.User = cli.GlobalString(schema.CLIOptUser)
-	params.Password = cli.GlobalString(schema.CLIOptPassword)
-	params.Database = cli.GlobalString(schema.CLIOptDatabase)
-	params.DriverName = cli.GlobalString(schema.CLIOptDriverName)
+func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
+	cfg := new(config.SQL)
+
+	host := cli.GlobalString(schema.CLIOptEndpoint)
+	port := cli.GlobalInt(schema.CLIOptPort)
+	cfg.ConnectAddr = fmt.Sprintf("%s:%v", host, port)
+
+	cfg.User = cli.GlobalString(schema.CLIOptUser)
+	cfg.Password = cli.GlobalString(schema.CLIOptPassword)
+	cfg.DatabaseName = cli.GlobalString(schema.CLIOptDatabase)
+	cfg.DriverName = cli.GlobalString(schema.CLIOptDriverName)
 	isDryRun := cli.Bool(schema.CLIOptDryrun)
-	if err := ValidateConnectParams(params, isDryRun); err != nil {
+
+	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
+		cfg.TLS = &auth.TLS{
+			Enabled:                true,
+			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
+			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),
+			CaFile:                 cli.GlobalString(schema.CLIFlagTLSCaFile),
+			EnableHostVerification: cli.GlobalBool(schema.CLIFlagTLSEnableHostVerification),
+		}
+	}
+
+	if cfg.ConnectAttributes == nil {
+		cfg.ConnectAttributes = map[string]string{}
+	}
+
+	if cli.GlobalString(schema.CLIFlagConnectAttributesTxIsolation) != "" {
+		cfg.ConnectAttributes["tx_isolation"] = cli.GlobalString(schema.CLIFlagConnectAttributesTxIsolation)
+	}
+
+	if err := ValidateConnectConfig(cfg, isDryRun); err != nil {
 		return nil, err
 	}
-	return params, nil
+	return cfg, nil
 }
 
-// ValidateConnectParams validates params
-func ValidateConnectParams(params *ConnectParams, isDryRun bool) error {
-	if len(params.Host) == 0 {
+// ValidateConnectConfig validates params
+func ValidateConnectConfig(cfg *config.SQL, isDryRun bool) error {
+	host, _, err := net.SplitHostPort(cfg.ConnectAddr)
+	if err != nil {
+		return schema.NewConfigError("invalid host and port " + cfg.ConnectAddr)
+	}
+	if len(host) == 0 {
 		return schema.NewConfigError("missing sql endpoint argument " + flag(schema.CLIOptEndpoint))
 	}
-	if params.Database == "" {
+	if cfg.DatabaseName == "" {
 		if !isDryRun {
 			return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument ")
 		}
-		params.Database = schema.DryrunDBName
+		cfg.DatabaseName = schema.DryrunDBName
 	}
 	return nil
 }

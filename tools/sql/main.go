@@ -90,9 +90,34 @@ func BuildCLIOptions() *cli.App {
 			Usage:  "name of the sql driver",
 			EnvVar: "SQL_DRIVER",
 		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagConnectAttributesTxIsolation,
+			Usage:  "tx-isolation version",
+			EnvVar: "CONNECT_ATTRIBUTES_TX_ISOLATION",
+		},
 		cli.BoolFlag{
 			Name:  schema.CLIFlagQuiet,
 			Usage: "Don't set exit status to 1 on error",
+		},
+		cli.BoolFlag{
+			Name:  schema.CLIFlagEnableTLS,
+			Usage: "enable TLS over sql connection",
+		},
+		cli.StringFlag{
+			Name:  schema.CLIFlagTLSCertFile,
+			Usage: "sql tls client cert path (tls must be enabled)",
+		},
+		cli.StringFlag{
+			Name:  schema.CLIFlagTLSKeyFile,
+			Usage: "sql tls client key path (tls must be enabled)",
+		},
+		cli.StringFlag{
+			Name:  schema.CLIFlagTLSCaFile,
+			Usage: "sql tls client ca path (tls must be enabled)",
+		},
+		cli.BoolFlag{
+			Name:  schema.CLIFlagTLSEnableHostVerification,
+			Usage: "sql tls verify hostname and server cert (tls must be enabled)",
 		},
 	}
 

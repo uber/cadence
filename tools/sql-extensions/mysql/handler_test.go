@@ -21,11 +21,12 @@
 package mysql
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema"
 	"github.com/uber/cadence/tools/sql"
@@ -46,17 +47,17 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
-func (s *HandlerTestSuite) TestValidateConnectParams() {
-	p := new(sql.ConnectParams)
-	s.NotNil(sql.ValidateConnectParams(p, false))
-	s.NotNil(sql.ValidateConnectParams(p, true))
+func (s *HandlerTestSuite) TestValidateConnectConfig() {
+	cfg := new(config.SQL)
+	s.NotNil(sql.ValidateConnectConfig(cfg, false))
+	s.NotNil(sql.ValidateConnectConfig(cfg, true))
 
-	p.Host = environment.GetMySQLAddress()
-	s.NotNil(sql.ValidateConnectParams(p, false))
-	s.Nil(sql.ValidateConnectParams(p, true))
-	s.Equal(schema.DryrunDBName, p.Database)
+	cfg.ConnectAddr = environment.GetMySQLAddress() + ":" + strconv.Itoa(environment.GetMySQLPort())
+	s.NotNil(sql.ValidateConnectConfig(cfg, false))
+	s.Nil(sql.ValidateConnectConfig(cfg, true))
+	s.Equal(schema.DryrunDBName, cfg.DatabaseName)
 
-	p.Database = "foobar"
-	s.Nil(sql.ValidateConnectParams(p, false))
-	s.Nil(sql.ValidateConnectParams(p, true))
+	cfg.DatabaseName = "foobar"
+	s.Nil(sql.ValidateConnectConfig(cfg, false))
+	s.Nil(sql.ValidateConnectConfig(cfg, true))
 }

@@ -22,15 +22,18 @@ package storage
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/url"
+	"strconv"
 	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/uber/cadence/common/persistence/sql/storage/mysql"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -39,6 +42,8 @@ const (
 	isolationLevelAttrName       = "transaction_isolation"
 	isolationLevelAttrNameLegacy = "tx_isolation"
 	defaultIsolationLevel        = "'READ-COMMITTED'"
+	customTLSName                = "tls-custom"
+	defaultSQLPort               = 3306
 )
 
 var dsnAttrOverrides = map[string]string{
@@ -51,7 +56,14 @@ var dsnAttrOverrides = map[string]string{
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
+func NewSQLDB(cfg *config.SQL) (*sqlx.DB, error) {
+	if cfg.TLS != nil {
+		err := RegisterTLSConfig(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	db, err := sqlx.Connect(cfg.DriverName, buildDSN(cfg))
 	if err != nil {
 		return nil, err
@@ -67,7 +79,83 @@ func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
 	}
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
-	return mysql.NewDB(db, nil), nil
+	return db, nil
+}
+
+func RegisterTLSConfig(cfg *config.SQL) error {
+	host, _, err := getHostPortFromConnectAddr(cfg.ConnectAddr)
+	if err != nil {
+		log.Panicf("error getting host port from ConnectAddr: %v", err)
+	}
+
+	tlsConfig := &tls.Config{
+		ServerName: *host, // hostname
+	}
+
+	if cfg.TLS.CaFile != "" {
+		rootCertPool := x509.NewCertPool()
+		pem, err := ioutil.ReadFile(cfg.TLS.CaFile)
+		if err != nil {
+			return fmt.Errorf("failed to load CA files: %v", err)
+		}
+		if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+			return fmt.Errorf("failed to append CA file")
+		}
+		tlsConfig.RootCAs = rootCertPool
+	}
+
+	if cfg.TLS.CertFile != "" && cfg.TLS.KeyFile != "" {
+		clientCert := make([]tls.Certificate, 0, 1)
+		certs, err := tls.LoadX509KeyPair(
+			cfg.TLS.CertFile,
+			cfg.TLS.KeyFile,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to load key pair: %v", err)
+		}
+		clientCert = append(clientCert, certs)
+		tlsConfig.Certificates = clientCert
+	}
+
+	// Register a customer tls configuration
+	err = mysql.RegisterTLSConfig(customTLSName, tlsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to register tls config: %v", err)
+	}
+
+	if cfg.ConnectAttributes == nil {
+		cfg.ConnectAttributes = map[string]string{}
+	}
+
+	if cfg.ConnectAttributes["tls"] == customTLSName || cfg.ConnectAttributes["tls"] == "" {
+		// Use the new custom tls configuration
+		cfg.ConnectAttributes["tls"] = customTLSName
+	} else {
+		return fmt.Errorf("invalid tls config: %v, must be %v", cfg.ConnectAttributes["tls"], customTLSName)
+	}
+
+	return nil
+}
+
+func getHostPortFromConnectAddr(connectAdd string) (*string, *int, error) {
+	var host string
+	var port int
+	if strings.Contains(connectAdd, ":") {
+		ss := strings.Split(connectAdd, ":")
+		if len(ss) != 2 {
+			panic("invalid connect address, it must be in host:port format")
+		}
+		var err error
+		host = ss[0]
+		port, err = strconv.Atoi(ss[1])
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid port number: %v", ss[1])
+		}
+	} else {
+		host = connectAdd
+		port = defaultSQLPort
+	}
+	return &host, &port, nil
 }
 
 func buildDSN(cfg *config.SQL) string {

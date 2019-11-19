@@ -21,12 +21,13 @@
 package mysql
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"
@@ -70,13 +71,12 @@ func (s *SQLConnTestSuite) TestParseCQLFile() {
 }
 
 func (s *SQLConnTestSuite) TestSQLConn() {
-	conn, err := sql.NewConnection(&sql.ConnectParams{
-		Host:       environment.GetMySQLAddress(),
-		Port:       environment.GetMySQLPort(),
-		User:       testUser,
-		Password:   testPassword,
-		DriverName: driverName,
-		Database:   s.DBName,
+	conn, err := sql.NewConnection(&config.SQL{
+		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		User:         testUser,
+		Password:     testPassword,
+		DriverName:   driverName,
+		DatabaseName: s.DBName,
 	})
 	s.Nil(err)
 	s.RunCreateTest(conn)
@@ -86,13 +86,12 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 }
 
 func newTestConn(database string) (*sql.Connection, error) {
-	return sql.NewConnection(&sql.ConnectParams{
-		Host:       environment.GetMySQLAddress(),
-		Port:       environment.GetMySQLPort(),
-		User:       testUser,
-		Password:   testPassword,
-		DriverName: driverName,
-		Database:   database,
+	return sql.NewConnection(&config.SQL{
+		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		User:         testUser,
+		Password:     testPassword,
+		DriverName:   driverName,
+		DatabaseName: database,
 	})
 }
 

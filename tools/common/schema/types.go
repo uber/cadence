@@ -138,6 +138,9 @@ const (
 	// CLIFlagQuiet is the cli flag for quiet mode
 	CLIFlagQuiet = CLIOptQuiet + ", q"
 
+	// CLIFlagConnectAttributesTxIsolation controls the transaction isolation version for mysql
+	CLIFlagConnectAttributesTxIsolation = "tx-isolation"
+
 	// CLIFlagEnableTLS enables cassandra client TLS
 	CLIFlagEnableTLS = "tls"
 	// CLIFlagTLSCertFile is the optional tls cert file (tls must be enabled)

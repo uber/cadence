@@ -21,13 +21,11 @@
 package postgres
 
 import (
-	"fmt"
-
-	_ "github.com/lib/pq" // needed to load the postgres driver
-
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
-
+	_ "github.com/lib/pq" // needed to load the postgres driver
+	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/sql"
 )
 
@@ -83,11 +81,8 @@ func (d *driver) GetDriverName() string {
 	return driverName
 }
 
-func (d *driver) CreateDBConnection(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error) {
-	if database == "" {
-		database = "postgres"
-	}
-	db, err := sqlx.Connect(driverName, fmt.Sprintf(dataSourceNamePostgres, user, passwd, host, port, database))
+func (d *driver) CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+	db, err := storage.NewSQLDB(cfg)
 
 	if err != nil {
 		return nil, err
