@@ -183,6 +183,12 @@ type Config struct {
 	ReplicationTaskProcessorErrorRetryWait        dynamicconfig.DurationPropertyFn
 	ReplicationTaskProcessorErrorRetryMaxAttempts dynamicconfig.IntPropertyFn
 	ReplicationTaskProcessorNoTaskRetryWait       dynamicconfig.DurationPropertyFn
+
+	// The following are used by consistent query
+	EnableConsistentQuery dynamicconfig.BoolPropertyFn
+	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	MaxBufferedQueryCount dynamicconfig.IntPropertyFn
+
 }
 
 const (
