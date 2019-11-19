@@ -202,7 +202,6 @@ func newMutableStateBuilder(
 		State:              persistence.WorkflowStateCreated,
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
-		SearchAttributes:   make(map[string][]byte),
 	}
 	s.hBuilder = newHistoryBuilder(s, logger)
 	s.taskGenerator = newMutableStateTaskGenerator(shard.GetDomainCache(), s.logger, s)
@@ -1934,6 +1933,9 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	bytes, err := json.Marshal(recentBinaryChecksums)
 	if err != nil {
 		return err
+	}
+	if exeInfo.SearchAttributes == nil {
+		exeInfo.SearchAttributes = make(map[string][]byte)
 	}
 	exeInfo.SearchAttributes[definition.BinaryChecksums] = bytes
 	if e.shard.GetConfig().AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
