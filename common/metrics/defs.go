@@ -1746,6 +1746,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
+		CadenceErrDoubleTimerFiredCounter:                         {metricName: "timer_double_fire_requests", metricType: Counter},
 	},
 	Frontend: {
 		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
@@ -1964,7 +1965,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
-		CadenceErrDoubleTimerFiredCounter:             {metricName: "timer_double_fire_requests", metricType: Counter},
 	},
 }
 
