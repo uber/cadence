@@ -1370,7 +1370,7 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 		// Ignore timer double fired issue on domain cb026e4f-a3af-4a5a-8036-6b53f2f8cab5
 		if e.executionInfo != nil && e.executionInfo.DomainID == "cb026e4f-a3af-4a5a-8036-6b53f2f8cab5" {
 
-			e.logger.Warn("encounter timer double fire issue",
+			e.logger.Warn("passive_timer_double_fire_issue",
 				tag.WorkflowID(e.executionInfo.WorkflowID),
 				tag.WorkflowRunID(e.executionInfo.RunID))
 			return nil
