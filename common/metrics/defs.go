@@ -1429,6 +1429,8 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
+	CadenceErrDoubleTimerFiredCounter
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -1962,6 +1964,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+		CadenceErrDoubleTimerFiredCounter:             {metricName: "timer_double_fire_requests", metricType: Counter},
 	},
 }
 

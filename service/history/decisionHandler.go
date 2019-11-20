@@ -239,10 +239,11 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 	}
 
 	if request.GetCause().Equals(workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure) {
-		handler.logger.Info("Timer double fire issue",
+		handler.logger.Info("timer_double_fire_issue",
 			tag.WorkflowDomainID(domainID),
 			tag.WorkflowID(workflowExecution.GetWorkflowId()),
 			tag.WorkflowRunID(workflowExecution.GetRunId()))
+		handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskFailedScope, metrics.CadenceErrDoubleTimerFiredCounter)
 	}
 
 	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
