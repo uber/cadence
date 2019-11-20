@@ -52,3 +52,36 @@ You can now query `current_state` by using the CLI:
 `cadence-cli --domain samples-domain workflow query -w my_workflow_id -r my_run_id -qt current_state`
 
 You can also issue a query from code using the `QueryWorkflow()` API on a Cadence client object.
+
+## Consistent Query
+
+Query has two consistency levels, eventual and strong. Consider if you were to signal a workflow and then
+immediately query the workflow:
+
+`cadence-cli --domain samples-domain workflow signal -w my_workflow_id -r my_run_id -n signal_name -if ./input.json`
+
+`cadence-cli --domain samples-domain workflow query -w my_workflow_id -r my_run_id -qt current_state`
+
+In this example if signal were to change workflow state, query may or may not see that state update reflected
+in the query result. This is what it means for query to be eventually consistent.
+
+Query has another consistency level called strong consistency. A strongly consistent query is guaranteed
+to be based on workflow state which includes all events that came before the query was issued. An event
+is considered to have come before a query if the call creating the external event returned success before
+the query was issued. External events which are created while the query is outstanding may or may not 
+be reflected in the workflow state the query result is based on.
+
+In order to run consistent query through the cli do the following:
+
+`cadence-cli --domain samples-domain workflow query -w my_workflow_id -r my_run_id -qt current_state --qcl strong`
+
+In order to run a query using the go client do the following:
+
+```go
+resp, err := cadenceClient.QueryWorkflowWithOptions(ctx, &client.QueryWorkflowWithOptionsRequest{
+        WorkflowID:            workflowID,
+        RunID:                 runID,
+        QueryType:             queryType,
+        QueryConsistencyLevel: shared.QueryConsistencyLevelStrong.Ptr(),
+})
+```
