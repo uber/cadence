@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -34,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"go.uber.org/yarpc"
 )
 
 type (
@@ -235,6 +236,13 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(token.WorkflowID),
 		RunId:      common.StringPtr(token.RunID),
+	}
+
+	if request.GetCause().Equals(workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure) {
+		handler.logger.Info("Timer double fire issue",
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(workflowExecution.GetWorkflowId()),
+			tag.WorkflowRunID(workflowExecution.GetRunId()))
 	}
 
 	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
