@@ -85,3 +85,5 @@ resp, err := cadenceClient.QueryWorkflowWithOptions(ctx, &client.QueryWorkflowWi
         QueryConsistencyLevel: shared.QueryConsistencyLevelStrong.Ptr(),
 })
 ```
+
+When using strongly consistent query you should expect higher latency than eventually consistent query.
