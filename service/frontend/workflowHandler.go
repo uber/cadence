@@ -3000,52 +3000,81 @@ func (wh *WorkflowHandler) queryDirectlyThroughMatching(
 	queryRequest *gen.QueryWorkflowRequest,
 	scope metrics.Scope,
 ) (*gen.QueryWorkflowResponse, error) {
+	sw := scope.StartTimer(metrics.QueryDirectLatency)
+	defer sw.Stop()
+
 	matchingRequest := &m.QueryWorkflowRequest{
 		DomainUUID:   common.StringPtr(domainID),
 		QueryRequest: queryRequest,
 	}
+
+	logger := wh.Service.GetLogger().WithTags(
+		tag.WorkflowDomainName(queryRequest.GetDomain()),
+		tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+		tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+		tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+		tag.WorkflowTaskListName(getMutableStateResponse.GetStickyTaskList().GetName()),
+		tag.WorkflowNextEventID(getMutableStateResponse.GetNextEventId()))
+
+	attemptedSticky := false
 	if len(getMutableStateResponse.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() {
+		attemptedSticky = true
 		matchingRequest.TaskList = getMutableStateResponse.StickyTaskList
 		stickyDecisionTimeout := getMutableStateResponse.GetStickyTaskListScheduleToStartTimeout()
+
+		logger = logger.WithTags(tag.WorkflowDecisionTimeoutSeconds(stickyDecisionTimeout))
+
+		logger.Info("query directly through matching on sticky")
+		stickyStopWatch := scope.StartTimer(metrics.QueryDirectStickyLatency)
 		// using a clean new context in case customer provide a context which has
 		// a really short deadline, causing we clear the stickyness
 		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(stickyDecisionTimeout)*time.Second)
 		matchingResp, err := wh.matchingRawClient.QueryWorkflow(stickyContext, matchingRequest)
 		cancel()
 		if err == nil {
+			scope.IncCounter(metrics.QueryDirectStickySuccessCount)
+			logger.Info("query directly through matching on sticky got result")
+			stickyStopWatch.Stop()
 			return matchingResp, nil
 		}
 		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
-			wh.Service.GetLogger().Info("QueryWorkflowFailed.",
-				tag.WorkflowDomainName(queryRequest.GetDomain()),
-				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-				tag.Error(err))
+			scope.IncCounter(metrics.QueryDirectStickyFailureCount)
+			logger.Info("query workflow directly through matching on sticky failed with non-timeout error", tag.Error(err))
+			stickyStopWatch.Stop()
 			return nil, wh.error(err, scope)
 		}
+		scope.IncCounter(metrics.QueryDirectStickyTimeoutCount)
+		stickyStopWatch.Stop()
+
 		// this means sticky timeout, should try using the normal tasklist
 		// we should clear the stickyness of this workflow
-		wh.GetLogger().Info("QueryWorkflowTimeouted with stickyTaskList, will try nonSticky one",
-			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-			tag.WorkflowTaskListName(getMutableStateResponse.GetStickyTaskList().GetName()),
-			tag.WorkflowNextEventID(getMutableStateResponse.GetNextEventId()),
-			tag.Error(err))
+
+		logger.Info("QueryWorkflow timed out on sticky task list now will try on non-sticky task list")
 		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+		logger.Info("calling reset sticky task list")
+		resetStickyStopWatch := scope.StartTimer(metrics.QueryDirectResetStickyTaskListLatency)
 		_, err = wh.history.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
 			Execution:  queryRequest.Execution,
 		})
 		cancel()
 		if err != nil {
+			resetStickyStopWatch.Stop()
+			logger.Info("failed to reset sticky task on direct query through matching", tag.Error(err))
+			scope.IncCounter(metrics.QueryDirectResetStickyTaskListFailureCount)
 			return nil, wh.error(err, scope)
 		}
+		resetStickyStopWatch.Stop()
+		scope.IncCounter(metrics.QueryDirectResetStickyTaskListSuccessCount)
+
+	} else {
+		logger.Info("did not attempt to query on sticky")
 	}
 
 	matchingRequest.TaskList = getMutableStateResponse.TaskList
+	nonStickyStopWatch := scope.StartTimer(metrics.QueryDirectNonStickyLatency)
+	defer nonStickyStopWatch.Stop()
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
 		wh.Service.GetLogger().Info("QueryWorkflowFailed.",
@@ -3053,6 +3082,7 @@ func (wh *WorkflowHandler) queryDirectlyThroughMatching(
 			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
 			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+			tag.Bool(attemptedSticky),
 			tag.Error(err))
 		return nil, wh.error(err, scope)
 	}

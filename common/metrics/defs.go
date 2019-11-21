@@ -1573,6 +1573,16 @@ const (
 	GetReplicationMessagesForShardLatency
 	EventReapplySkippedCount
 
+	QueryDirectLatency
+	QueryDirectStickyLatency
+	QueryDirectStickyFailureCount
+	QueryDirectStickyTimeoutCount
+	QueryDirectStickySuccessCount
+	QueryDirectResetStickyTaskListLatency
+	QueryDirectResetStickyTaskListFailureCount
+	QueryDirectResetStickyTaskListSuccessCount
+	QueryDirectNonStickyLatency
+
 	NumHistoryMetrics
 )
 
@@ -1879,6 +1889,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
+		QueryDirectLatency:                                {metricName: "query_direct", metricType: Timer},
+		QueryDirectStickyLatency:                          {metricName: "query_direct_sticky", metricType: Timer},
+		QueryDirectStickyFailureCount:                     {metricName: "query_direct_sticky_failure", metricType: Counter},
+		QueryDirectStickySuccessCount:                     {metricName: "query_direct_sticky_success", metricType: Counter},
+		QueryDirectStickyTimeoutCount:                     {metricName: "query_direct_sticky_timeout", metricType: Counter},
+		QueryDirectResetStickyTaskListLatency:             {metricName: "query_direct_reset_sticky_task_list", metricType: Timer},
+		QueryDirectResetStickyTaskListFailureCount:        {metricName: "query_direct_reset_sticky_task_list_failure", metricType: Counter},
+		QueryDirectResetStickyTaskListSuccessCount:        {metricName: "query_direct_reset_sticky_task_list_success", metricType: Counter},
+		QueryDirectNonStickyLatency:                       {metricName: "query_direct_non_sticky", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
