@@ -32,8 +32,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -43,7 +41,6 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
@@ -177,6 +174,10 @@ var (
 	ErrQueryEnteredInvalidState = &workflow.InternalServiceError{Message: "query entered invalid state, this should be impossible"}
 	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
 	ErrQueryWorkflowBeforeFirstDecision = &workflow.BadRequestError{Message: "workflow must handle at least one decision task before it can be queried"}
+	// ErrConsistentQueryNotEnabled is error indicating that consistent query was requested but either cluster or domain does not enable consistent query
+	ErrConsistentQueryNotEnabled = &workflow.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
+	// ErrConsistentQueryBufferExceeded is error indicating that too many consistent queries have been buffered and until buffered queries are finished new consistent queries cannot be buffered
+	ErrConsistentQueryBufferExceeded = &workflow.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
@@ -750,6 +751,11 @@ func (e *historyEngineImpl) QueryWorkflow(
 	request *h.QueryWorkflowRequest,
 ) (retResp *h.QueryWorkflowResponse, retErr error) {
 
+	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
+	if request.GetRequest().GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelStrong && !consistentQueryEnabled {
+		return nil, ErrConsistentQueryNotEnabled
+	}
+
 	mutableStateResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
 	if err != nil {
 		return nil, err
@@ -833,6 +839,9 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// until either an result has been obtained on a decision task response or until it is safe to dispatch directly through matching.
 	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
 	queryReg := mutableState.GetQueryRegistry()
+	if len(queryReg.getBufferedIDs()) >= e.config.MaxBufferedQueryCount() {
+		return nil, ErrConsistentQueryBufferExceeded
+	}
 	queryID, termCh := queryReg.bufferQuery(req.GetQuery())
 	defer func() {
 		queryReg.removeQuery(queryID)
@@ -887,60 +896,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	matchingRequest := &m.QueryWorkflowRequest{
 		DomainUUID:   common.StringPtr(domainID),
 		QueryRequest: queryRequest,
+		TaskList:     msResp.TaskList,
 	}
 
-	supportsStickyQuery := client.NewVersionChecker().SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
-	if len(msResp.GetStickyTaskList().GetName()) != 0 && supportsStickyQuery {
-		matchingRequest.TaskList = msResp.StickyTaskList
-		// using a clean new context in case customer provide a context which has
-		// a really short deadline, causing we clear the stickyness
-		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(msResp.GetStickyTaskListScheduleToStartTimeout())*time.Second)
-		matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, matchingRequest)
-		cancel()
-		if err == nil {
-			return &h.QueryWorkflowResponse{Response: matchingResp}, nil
-		}
-		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
-			e.logger.Error("Query directly though matching on sticky failed",
-				tag.WorkflowDomainName(queryRequest.GetDomain()),
-				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-				tag.Error(err))
-			return nil, err
-		}
-		// this means sticky timeout, should try using the normal tasklist
-		// we should clear the stickyness of this workflow
-		e.logger.Info("QueryWorkflow timed-out with stickyTaskList, will try nonSticky one",
-			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-			tag.WorkflowTaskListName(msResp.GetStickyTaskList().GetName()),
-			tag.WorkflowNextEventID(msResp.GetNextEventId()),
-			tag.Error(err))
-
-		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, err = e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  queryRequest.Execution,
-		})
-		cancel()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	matchingRequest.TaskList = msResp.TaskList
-	if err := common.IsValidContext(ctx); err != nil {
-		e.logger.Error("Context expired before query could be attempted on nonSticky",
-			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
-			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
-			tag.Error(err))
-		return nil, err
-	}
 	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
 		e.logger.Error("Query directly though matching on non-sticky failed",
