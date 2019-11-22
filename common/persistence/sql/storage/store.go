@@ -38,6 +38,13 @@ func RegisterDriver(driverName string, driver sqlshared.Driver) {
 	supportedDrivers[driverName] = driver
 }
 
+func GetDriver(driverName string) sqlshared.Driver{
+	if d, ok := supportedDrivers[driverName]; ok {
+		return d
+	}
+	panic("driver " + driverName + " is not registered")
+}
+
 // NewSQLDB creates a returns a reference to a logical connection to the
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on

@@ -22,10 +22,14 @@ package sql
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/service/config"
+
 	"time"
 
 	"github.com/jmoiron/sqlx"
 
+	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -42,53 +46,30 @@ type (
 
 	// Connection is the connection to database
 	Connection struct {
-		driver   Driver
+		driver   sqlshared.Driver
 		database string
 		db       *sqlx.DB
 	}
-
-	// Driver is the driver interface that each SQL database needs to implement
-	Driver interface {
-		GetDriverName() string
-		CreateDBConnection(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error)
-		GetReadSchemaVersionSQL() string
-		GetWriteSchemaVersionSQL() string
-		GetWriteSchemaUpdateHistorySQL() string
-		GetCreateSchemaVersionTableSQL() string
-		GetCreateSchemaUpdateHistoryTableSQL() string
-		GetCreateDatabaseSQL() string
-		GetDropDatabaseSQL() string
-		GetListTablesSQL() string
-		GetDropTableSQL() string
-	}
 )
-
-var supportedSQLDrivers = map[string]Driver{}
 
 var _ schema.DB = (*Connection)(nil)
 
-// RegisterDriver will register a SQL driver for SQL client CLI
-func RegisterDriver(driverName string, driver Driver) {
-	if _, ok := supportedSQLDrivers[driverName]; ok {
-		panic("driver " + driverName + " already registered")
-	}
-	supportedSQLDrivers[driverName] = driver
-}
-
 // NewConnection creates a new connection to database
 func NewConnection(params *ConnectParams) (*Connection, error) {
-	driver, ok := supportedSQLDrivers[params.DriverName]
+	driver := storage.GetDriver(params.DriverName)
 
-	if !ok {
-		return nil, fmt.Errorf("not supported driver %v, only supported: %v", params.DriverName, supportedSQLDrivers)
-	}
-
-	db, err := driver.CreateDBConnection(params.DriverName, params.Host, params.Port, params.User, params.Password, params.Database)
+	db, err := driver.CreateDBConnection(&config.SQL{
+		User:params.User,
+		Password:params.Password,
+		DatabaseName:params.Database,
+		ConnectAddr:fmt.Sprintf("%v:%v", params.Host, params.Port),
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	return &Connection{
-		db:       db,
+		db:       db.GetConnection(),
 		database: params.Database,
 		driver:   driver,
 	}, nil
@@ -96,28 +77,28 @@ func NewConnection(params *ConnectParams) (*Connection, error) {
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (c *Connection) CreateSchemaVersionTables() error {
-	if err := c.Exec(c.driver.GetCreateSchemaVersionTableSQL()); err != nil {
+	if err := c.Exec(c.driver.CreateSchemaVersionTableQuery()); err != nil {
 		return err
 	}
-	return c.Exec(c.driver.GetCreateSchemaUpdateHistoryTableSQL())
+	return c.Exec(c.driver.CreateSchemaUpdateHistoryTableQuery())
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (c *Connection) ReadSchemaVersion() (string, error) {
 	var version string
-	err := c.db.Get(&version, c.driver.GetReadSchemaVersionSQL(), c.database)
+	err := c.db.Get(&version, c.driver.ReadSchemaVersionQuery(), c.database)
 	return version, err
 }
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (c *Connection) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
-	return c.Exec(c.driver.GetWriteSchemaVersionSQL(), c.database, time.Now(), newVersion, minCompatibleVersion)
+	return c.Exec(c.driver.WriteSchemaVersionQuery(), c.database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
-	return c.Exec(c.driver.GetWriteSchemaUpdateHistorySQL(), now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
+	return c.Exec(c.driver.WriteSchemaUpdateHistoryQuery(), now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
 // Exec executes a sql statement
@@ -129,13 +110,13 @@ func (c *Connection) Exec(stmt string, args ...interface{}) error {
 // ListTables returns a list of tables in this database
 func (c *Connection) ListTables() ([]string, error) {
 	var tables []string
-	err := c.db.Select(&tables, fmt.Sprintf(c.driver.GetListTablesSQL(), c.database))
+	err := c.db.Select(&tables, fmt.Sprintf(c.driver.ListTablesQuery(), c.database))
 	return tables, err
 }
 
 // DropTable drops a given table from the database
 func (c *Connection) DropTable(name string) error {
-	return c.Exec(fmt.Sprintf(c.driver.GetDropTableSQL(), name))
+	return c.Exec(fmt.Sprintf(c.driver.DropTableQuery(), name))
 }
 
 // DropAllTables drops all tables from this database
@@ -154,12 +135,12 @@ func (c *Connection) DropAllTables() error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (c *Connection) CreateDatabase(name string) error {
-	return c.Exec(fmt.Sprintf(c.driver.GetCreateDatabaseSQL(), name))
+	return c.Exec(fmt.Sprintf(c.driver.CreateDatabaseQuery(), name))
 }
 
 // DropDatabase drops a database
 func (c *Connection) DropDatabase(name string) error {
-	return c.Exec(fmt.Sprintf(c.driver.GetDropDatabaseSQL(), name))
+	return c.Exec(fmt.Sprintf(c.driver.DropDatabaseQuery(), name))
 }
 
 // Close closes the sql client

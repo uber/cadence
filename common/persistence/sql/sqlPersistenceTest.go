@@ -22,6 +22,8 @@ package sql
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence/sql/storage"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -34,12 +36,6 @@ import (
 	"github.com/uber/cadence/environment"
 )
 
-const (
-	testUser      = "uber"
-	testPassword  = "uber"
-	testSchemaDir = "schema/mysql/v57"
-)
-
 // TestCluster allows executing cassandra operations in testing.
 type TestCluster struct {
 	dbName    string
@@ -48,23 +44,26 @@ type TestCluster struct {
 	cfg       config.SQL
 }
 
+// TODO not allowed by circle deps
+//var _ persistencetests.PersistenceTestCluster = (*TestCluster)(nil)
+
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(dbName string, port int, schemaDir string) *TestCluster {
+func NewTestCluster(driverName, dbName, username, password, host string, port int, schemaDir string) *TestCluster {
 	var result TestCluster
 	result.dbName = dbName
 	if port == 0 {
 		port = environment.GetMySQLPort()
 	}
 	if schemaDir == "" {
-		schemaDir = testSchemaDir
+		panic("must provide schema dir")
 	}
 	result.schemaDir = schemaDir
 	result.cfg = config.SQL{
-		User:            testUser,
-		Password:        testPassword,
-		ConnectAddr:     fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
+		User:            username,
+		Password:        password,
+		ConnectAddr:     fmt.Sprintf("%v:%v",host, port),
 		ConnectProtocol: "tcp",
-		DriverName:      defaultDriverName,
+		DriverName:      driverName,
 		DatabaseName:    dbName,
 		NumShards:       4,
 	}
@@ -114,24 +113,58 @@ func (s *TestCluster) TearDownTestDatabase() {
 
 // CreateSession from PersistenceTestCluster interface
 func (s *TestCluster) CreateSession() {
-	var err error
-	s.db, err = newConnection(s.cfg)
+	driver := storage.GetDriver(s.cfg.DriverName)
+
+	db, err := driver.CreateDBConnection(&config.SQL{
+		User:s.cfg.User,
+		Password:s.cfg.Password,
+		DatabaseName: s.cfg.DatabaseName,
+		ConnectAddr:s.cfg.ConnectAddr,
+	})
 	if err != nil {
-		log.Fatal(`CreateSession`, err)
+		log.Fatal(err)
 	}
+	s.db = db.GetConnection()
 }
 
 // CreateDatabase from PersistenceTestCluster interface
 func (s *TestCluster) CreateDatabase() {
-	err := createDatabase(s.cfg.DriverName, s.cfg.ConnectAddr, testUser, testPassword, s.dbName, true)
+	driver := storage.GetDriver(s.cfg.DriverName)
+
+	db, err := driver.CreateDBConnection(&config.SQL{
+		User:s.cfg.User,
+		Password:s.cfg.Password,
+		//NOTE the db is not existing yet
+		DatabaseName:"",
+		ConnectAddr:s.cfg.ConnectAddr,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
+	conn := db.GetConnection()
+	_, err = conn.Exec(fmt.Sprintf(driver.CreateDatabaseQuery(), s.cfg.DatabaseName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("database is created:", s.cfg.DatabaseName)
 }
 
 // DropDatabase from PersistenceTestCluster interface
 func (s *TestCluster) DropDatabase() {
-	err := dropDatabase(s.db, s.dbName)
+	driver := storage.GetDriver(s.cfg.DriverName)
+
+	db, err := driver.CreateDBConnection(&config.SQL{
+		User:s.cfg.User,
+		Password:s.cfg.Password,
+		//NOTE need to connect with empty db to drop the database
+		DatabaseName:"",
+		ConnectAddr:s.cfg.ConnectAddr,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	conn := db.GetConnection()
+	_, err = conn.Exec(fmt.Sprintf(driver.DropDatabaseQuery(), s.cfg.DatabaseName))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -162,8 +195,23 @@ func getCadencePackageDir() (string, error) {
 	}
 	cadenceIndex := strings.LastIndex(cadencePackageDir, "/cadence/")
 	cadencePackageDir = cadencePackageDir[:cadenceIndex+len("/cadence/")]
-	if err != nil {
-		panic(err)
-	}
 	return cadencePackageDir, err
+}
+
+// loadDatabaseSchema loads the schema from the given .sql files on this database
+func loadDatabaseSchema(dir string, fileNames []string, db *sqlx.DB, override bool) (err error) {
+
+	for _, file := range fileNames {
+		// This is only used in tests. Excluding it from security scanners
+		// #nosec
+		content, err := ioutil.ReadFile(dir + "/" + file)
+		if err != nil {
+			return fmt.Errorf("error reading contents of file %v:%v", file, err.Error())
+		}
+		_, err = db.Exec(string(content))
+		if err != nil {
+			err = fmt.Errorf("error loading schema from %v: %v", file, err.Error())
+		}
+	}
+	return nil
 }

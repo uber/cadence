@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mysql
+package postgres
 
 import (
 	"fmt"
@@ -37,8 +37,8 @@ import (
 )
 
 const (
-	driverName                   = "postgres"
-	dataSourceNamePostgres       = "user=%v password=%v host=%v port=%v dbname=%v sslmode=disable "
+	DriverName             = "postgres"
+	dataSourceNamePostgres = "user=%v password=%v host=%v port=%v dbname=%v sslmode=disable "
 )
 
 type driver struct{}
@@ -46,11 +46,11 @@ type driver struct{}
 var _ sqlshared.Driver = (*driver)(nil)
 
 func init() {
-	storage.RegisterDriver(driverName, &driver{})
+	storage.RegisterDriver(DriverName, &driver{})
 }
 
 func (d *driver) GetDriverName() string {
-	return driverName
+	return DriverName
 }
 
 // ErrDupEntry indicates a duplicate primary key i.e. the row already exists,
@@ -78,7 +78,12 @@ func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
 		return nil, fmt.Errorf("invalid port number: %v, %v", ss[1], cfg.ConnectAddr)
 	}
 
-	db, err := sqlx.Connect(driverName, fmt.Sprintf(dataSourceNamePostgres, cfg.User, cfg.Password, host, port, cfg.DatabaseName))
+	dbName := cfg.DatabaseName
+	//NOTE: postgres doesn't allow to connect with empty dbName, the sys dbName is "postgres"
+	if dbName == ""{
+		dbName = "postgres"
+	}
+	db, err := sqlx.Connect(DriverName, fmt.Sprintf(dataSourceNamePostgres, cfg.User, cfg.Password, host, port, dbName ))
 
 	if err != nil {
 		return nil, err

@@ -24,8 +24,9 @@ import (
 	"os"
 
 	"github.com/uber/cadence/tools/sql"
-	_ "github.com/uber/cadence/tools/sql-extensions/mysql"    // needed to load mysql extensions
-	_ "github.com/uber/cadence/tools/sql-extensions/postgres" // needed to load postgres extensions
+
+	_ "github.com/uber/cadence/common/persistence/sql-extensions/mysql"    // needed to load mysql extensions
+	_ "github.com/uber/cadence/common/persistence/sql-extensions/postgres" // needed to load postgres extensions
 )
 
 func main() {

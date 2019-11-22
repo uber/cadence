@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	driverName                   = "mysql"
+	DriverName                   = "mysql"
 	dsnFmt                       = "%s:%s@%v(%v)/%s"
 	isolationLevelAttrName       = "transaction_isolation"
 	isolationLevelAttrNameLegacy = "tx_isolation"
@@ -56,11 +56,11 @@ type driver struct{}
 var _ sqlshared.Driver = (*driver)(nil)
 
 func init() {
-	storage.RegisterDriver(driverName, &driver{})
+	storage.RegisterDriver(DriverName, &driver{})
 }
 
 func (d *driver) GetDriverName() string {
-	return driverName
+	return DriverName
 }
 
 // ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
@@ -77,7 +77,7 @@ func (d *driver) IsDupEntryError(err error) bool {
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
-	db, err := sqlx.Connect(cfg.DriverName, buildDSN(cfg))
+	db, err := sqlx.Connect(DriverName, buildDSN(cfg))
 	if err != nil {
 		return nil, err
 	}

@@ -20,22 +20,7 @@
 
 package postgres
 
-import (
-	"fmt"
-
-	_ "github.com/lib/pq" // needed to load the postgres driver
-
-	"github.com/iancoleman/strcase"
-	"github.com/jmoiron/sqlx"
-
-	"github.com/uber/cadence/tools/sql"
-)
-
 const (
-	driverName = "postgres"
-
-	dataSourceNamePostgres = "user=%v password=%v host=%v port=%v dbname=%v sslmode=disable "
-
 	readSchemaVersionPostgres = `SELECT curr_version from schema_version where db_name=$1`
 
 	writeSchemaVersionPostgres = `INSERT into schema_version(db_name, creation_time, curr_version, min_compatible_version) VALUES ($1,$2,$3,$4)
@@ -71,64 +56,38 @@ const (
 	dropTablePostgres = "DROP TABLE %v"
 )
 
-type driver struct{}
-
-var _ sql.Driver = (*driver)(nil)
-
-func init() {
-	sql.RegisterDriver(driverName, &driver{})
-}
-
-func (d *driver) GetDriverName() string {
-	return driverName
-}
-
-func (d *driver) CreateDBConnection(driverName, host string, port int, user string, passwd string, database string) (*sqlx.DB, error) {
-	if database == "" {
-		database = "postgres"
-	}
-	db, err := sqlx.Connect(driverName, fmt.Sprintf(dataSourceNamePostgres, user, passwd, host, port, database))
-
-	if err != nil {
-		return nil, err
-	}
-	// Maps struct names in CamelCase to snake without need for db struct tags.
-	db.MapperFunc(strcase.ToSnake)
-	return db, nil
-}
-
-func (d *driver) GetReadSchemaVersionSQL() string {
+func (d *driver) ReadSchemaVersionQuery() string {
 	return readSchemaVersionPostgres
 }
 
-func (d *driver) GetWriteSchemaVersionSQL() string {
+func (d *driver) WriteSchemaVersionQuery() string {
 	return writeSchemaVersionPostgres
 }
 
-func (d *driver) GetWriteSchemaUpdateHistorySQL() string {
+func (d *driver) WriteSchemaUpdateHistoryQuery() string {
 	return writeSchemaUpdateHistoryPostgres
 }
 
-func (d *driver) GetCreateSchemaVersionTableSQL() string {
+func (d *driver) CreateSchemaVersionTableQuery() string {
 	return createSchemaVersionTablePostgres
 }
 
-func (d *driver) GetCreateSchemaUpdateHistoryTableSQL() string {
+func (d *driver) CreateSchemaUpdateHistoryTableQuery() string {
 	return createSchemaUpdateHistoryTablePostgres
 }
 
-func (d *driver) GetCreateDatabaseSQL() string {
+func (d *driver) CreateDatabaseQuery() string {
 	return createDatabasePostgres
 }
 
-func (d *driver) GetDropDatabaseSQL() string {
+func (d *driver) DropDatabaseQuery() string {
 	return dropDatabasePostgres
 }
 
-func (d *driver) GetListTablesSQL() string {
+func (d *driver) ListTablesQuery() string {
 	return listTablesPostgres
 }
 
-func (d *driver) GetDropTableSQL() string {
+func (d *driver) DropTableQuery() string {
 	return dropTablePostgres
 }

@@ -83,3 +83,8 @@ func (mdb *DB) DriverName() string {
 func (mdb *DB) IsDupEntryError(err error) bool {
 	return mdb.driver.IsDupEntryError(err)
 }
+
+// GetConnection returns the connection
+func (mdb *DB) GetConnection() *sqlx.DB{
+	return mdb.db
+}

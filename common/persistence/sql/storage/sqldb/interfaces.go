@@ -22,6 +22,7 @@ package sqldb
 
 import (
 	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -694,6 +695,7 @@ type (
 		BeginTx() (Tx, error)
 		DriverName() string
 		IsDupEntryError(err error) bool
+		GetConnection() *sqlx.DB
 		Close() error
 	}
 

@@ -37,8 +37,6 @@ import (
 )
 
 const (
-	testUser      = ""
-	testPassword  = ""
 	testSchemaDir = "schema/cassandra/"
 )
 
@@ -51,8 +49,11 @@ type TestCluster struct {
 	cfg       config.Cassandra
 }
 
+// TODO not allowed by circle deps
+//var _ persistencetests.PersistenceTestCluster = (*TestCluster)(nil)
+
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(keyspace string, port int, schemaDir string) *TestCluster {
+func NewTestCluster(keyspace, username, password, host string, port int, schemaDir string) *TestCluster {
 	var result TestCluster
 	result.keyspace = keyspace
 	if port == 0 {
@@ -61,11 +62,14 @@ func NewTestCluster(keyspace string, port int, schemaDir string) *TestCluster {
 	if schemaDir == "" {
 		schemaDir = testSchemaDir
 	}
+	if host == ""{
+		host = environment.GetCassandraAddress()
+	}
 	result.schemaDir = schemaDir
 	result.cfg = config.Cassandra{
-		User:     testUser,
-		Password: testPassword,
-		Hosts:    environment.GetCassandraAddress(),
+		User:     username,
+		Password: password,
+		Hosts:    host,
 		Port:     port,
 		MaxConns: 2,
 		Keyspace: keyspace,
@@ -120,8 +124,8 @@ func (s *TestCluster) CreateSession() {
 	s.cluster = cassandra.NewCassandraCluster(config.Cassandra{
 		Hosts:    s.cfg.Hosts,
 		Port:     s.cfg.Port,
-		User:     testUser,
-		Password: testPassword,
+		User:     s.cfg.User,
+		Password: s.cfg.Password,
 	})
 	s.cluster.Consistency = gocql.Consistency(1)
 	s.cluster.Keyspace = "system"

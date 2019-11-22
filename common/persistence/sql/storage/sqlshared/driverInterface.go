@@ -136,5 +136,16 @@ type (
 		GetClosedWorkflowExecutionsByStatusQuery() string
 		GetClosedWorkflowExecutionQuery() string
 		DeleteWorkflowExecutionQuery() string
+
+		//CLI and testing
+		ReadSchemaVersionQuery() string
+		WriteSchemaVersionQuery() string
+		WriteSchemaUpdateHistoryQuery() string
+		CreateSchemaVersionTableQuery() string
+		CreateSchemaUpdateHistoryTableQuery() string
+		CreateDatabaseQuery() string
+		DropDatabaseQuery() string
+		ListTablesQuery() string
+		DropTableQuery() string
 	}
 )
