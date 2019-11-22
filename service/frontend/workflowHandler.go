@@ -3017,7 +3017,7 @@ func (wh *WorkflowHandler) queryDirectlyThroughMatching(
 		tag.WorkflowNextEventID(getMutableStateResponse.GetNextEventId()))
 
 	attemptedSticky := false
-	if len(getMutableStateResponse.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() {
+	if len(getMutableStateResponse.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() && queryRequest.GetDomain() != "luna-core-global" {
 		attemptedSticky = true
 		matchingRequest.TaskList = getMutableStateResponse.StickyTaskList
 		stickyDecisionTimeout := getMutableStateResponse.GetStickyTaskListScheduleToStartTimeout()
