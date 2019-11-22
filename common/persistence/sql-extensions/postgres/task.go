@@ -27,7 +27,11 @@ const (
 	// (default range ID: initialRangeID == 1)
 	createTaskListQry = `INSERT ` + taskListCreatePart
 
-	replaceTaskListQry = `REPLACE ` + taskListCreatePart
+	replaceTaskListQry = `INSERT ` + taskListCreatePart +
+		`ON CONFLICT (shard_id, domain_id, name, task_type) DO UPDATE
+SET range_id = excluded.range_id,
+data = excluded.data,
+data_encoding = excluded.data_encoding`
 
 	updateTaskListQry = `UPDATE task_lists SET
 range_id = :range_id,
@@ -70,8 +74,9 @@ task_type = :task_type
 		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id = $4`
 
 	rangeDeleteTaskQry = `DELETE FROM tasks ` +
-		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id <= $4 ` +
-		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5`
+		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id IN (SELECT task_id FROM
+		 tasks WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id <= $4 ` +
+		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5 )`
 )
 
 func (d *driver) CreateTaskListQuery() string {
