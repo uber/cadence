@@ -1429,6 +1429,16 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
+	QueryDirectLatency
+	QueryDirectStickyLatency
+	QueryDirectStickyFailureCount
+	QueryDirectStickyTimeoutCount
+	QueryDirectStickySuccessCount
+	QueryDirectResetStickyTaskListLatency
+	QueryDirectResetStickyTaskListFailureCount
+	QueryDirectResetStickyTaskListSuccessCount
+	QueryDirectNonStickyLatency
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -1572,16 +1582,6 @@ const (
 	ReplicationTasksReturned
 	GetReplicationMessagesForShardLatency
 	EventReapplySkippedCount
-
-	QueryDirectLatency
-	QueryDirectStickyLatency
-	QueryDirectStickyFailureCount
-	QueryDirectStickyTimeoutCount
-	QueryDirectStickySuccessCount
-	QueryDirectResetStickyTaskListLatency
-	QueryDirectResetStickyTaskListFailureCount
-	QueryDirectResetStickyTaskListSuccessCount
-	QueryDirectNonStickyLatency
 
 	NumHistoryMetrics
 )
@@ -1754,6 +1754,16 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
+
+		QueryDirectLatency:                         {metricName: "query_direct", metricType: Timer},
+		QueryDirectStickyLatency:                   {metricName: "query_direct_sticky", metricType: Timer},
+		QueryDirectStickyFailureCount:              {metricName: "query_direct_sticky_failure", metricType: Counter},
+		QueryDirectStickySuccessCount:              {metricName: "query_direct_sticky_success", metricType: Counter},
+		QueryDirectStickyTimeoutCount:              {metricName: "query_direct_sticky_timeout", metricType: Counter},
+		QueryDirectResetStickyTaskListLatency:      {metricName: "query_direct_reset_sticky_task_list", metricType: Timer},
+		QueryDirectResetStickyTaskListFailureCount: {metricName: "query_direct_reset_sticky_task_list_failure", metricType: Counter},
+		QueryDirectResetStickyTaskListSuccessCount: {metricName: "query_direct_reset_sticky_task_list_success", metricType: Counter},
+		QueryDirectNonStickyLatency:                {metricName: "query_direct_non_sticky", metricType: Timer},
 	},
 	Frontend: {
 		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
@@ -1889,15 +1899,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
-		QueryDirectLatency:                                {metricName: "query_direct", metricType: Timer},
-		QueryDirectStickyLatency:                          {metricName: "query_direct_sticky", metricType: Timer},
-		QueryDirectStickyFailureCount:                     {metricName: "query_direct_sticky_failure", metricType: Counter},
-		QueryDirectStickySuccessCount:                     {metricName: "query_direct_sticky_success", metricType: Counter},
-		QueryDirectStickyTimeoutCount:                     {metricName: "query_direct_sticky_timeout", metricType: Counter},
-		QueryDirectResetStickyTaskListLatency:             {metricName: "query_direct_reset_sticky_task_list", metricType: Timer},
-		QueryDirectResetStickyTaskListFailureCount:        {metricName: "query_direct_reset_sticky_task_list_failure", metricType: Counter},
-		QueryDirectResetStickyTaskListSuccessCount:        {metricName: "query_direct_reset_sticky_task_list_success", metricType: Counter},
-		QueryDirectNonStickyLatency:                       {metricName: "query_direct_non_sticky", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
