@@ -146,35 +146,37 @@ func NewService(
 		EnableReadFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
 	}
 
+	visibilityManagerInitializer := func(
+		persistenceBean persistenceClient.Bean,
+		logger log.Logger,
+	) (persistence.VisibilityManager, error) {
+		visibilityFromDB := persistenceBean.GetVisibilityManager()
+
+		var visibilityFromES persistence.VisibilityManager
+		if params.ESConfig != nil {
+			visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+			visibilityConfigForES := &config.VisibilityConfig{
+				MaxQPS:                 serviceConfig.PersistenceMaxQPS,
+				VisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
+				ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
+				ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
+			}
+			visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
+				nil, params.MetricsClient, logger)
+		}
+		return persistence.NewVisibilityManagerWrapper(
+			visibilityFromDB,
+			visibilityFromES,
+			serviceConfig.EnableReadVisibilityFromES,
+			dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
+		), nil
+	}
+
 	serviceResource, err := resource.New(
 		params,
 		common.FrontendServiceName,
 		serviceConfig.ThrottledLogRPS,
-		func(
-			persistenceBean persistenceClient.Bean,
-			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
-			visibilityFromDB := persistenceBean.GetVisibilityManager()
-
-			var visibilityFromES persistence.VisibilityManager
-			if params.ESConfig != nil {
-				visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-				visibilityConfigForES := &config.VisibilityConfig{
-					MaxQPS:                 serviceConfig.PersistenceMaxQPS,
-					VisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
-					ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
-					ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
-				}
-				visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
-					nil, params.MetricsClient, logger)
-			}
-			return persistence.NewVisibilityManagerWrapper(
-				visibilityFromDB,
-				visibilityFromES,
-				serviceConfig.EnableReadVisibilityFromES,
-				dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
-			), nil
-		},
+		visibilityManagerInitializer,
 	)
 	if err != nil {
 		return nil, err
@@ -195,7 +197,6 @@ func (s *Service) Start() {
 	logger.Info("frontend starting", tag.Service(common.FrontendServiceName))
 
 	var replicationMessageSink messaging.Producer
-	// var domainReplicationQueue persistence.DomainReplicationQueue
 	clusterMetadata := s.GetClusterMetadata()
 	if clusterMetadata.IsGlobalDomainEnabled() {
 		consumerConfig := clusterMetadata.GetReplicationConsumerConfig()
