@@ -31,13 +31,13 @@ const (
  WHERE shard_id = :shard_id AND domain_id = :domain_id AND workflow_id = :workflow_id AND run_id = :run_id`
 
 	getExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
- WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
+ WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	deleteExecutionQuery = `DELETE FROM executions 
- WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
+ WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	lockExecutionQueryBase = `SELECT next_event_id FROM executions 
- WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
+ WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	writeLockExecutionQuery = lockExecutionQueryBase + ` FOR UPDATE`
 	readLockExecutionQuery  = lockExecutionQueryBase + ` LOCK IN SHARE MODE`
@@ -46,17 +46,17 @@ const (
 (shard_id, domain_id, workflow_id, run_id, create_request_id, state, close_status, start_version, last_write_version) VALUES
 (:shard_id, :domain_id, :workflow_id, :run_id, :create_request_id, :state, :close_status, :start_version, :last_write_version)`
 
-	deleteCurrentExecutionQuery = "DELETE FROM current_executions WHERE shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?"
+	deleteCurrentExecutionQuery = "DELETE FROM current_executions WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4"
 
 	getCurrentExecutionQuery = `SELECT
 shard_id, domain_id, workflow_id, run_id, create_request_id, state, close_status, start_version, last_write_version
-FROM current_executions WHERE shard_id = ? AND domain_id = ? AND workflow_id = ?`
+FROM current_executions WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3`
 
 	lockCurrentExecutionJoinExecutionsQuery = `SELECT
 ce.shard_id, ce.domain_id, ce.workflow_id, ce.run_id, ce.create_request_id, ce.state, ce.close_status, ce.start_version, e.last_write_version
 FROM current_executions ce
 INNER JOIN executions e ON e.shard_id = ce.shard_id AND e.domain_id = ce.domain_id AND e.workflow_id = ce.workflow_id AND e.run_id = ce.run_id
-WHERE ce.shard_id = ? AND ce.domain_id = ? AND ce.workflow_id = ? FOR UPDATE`
+WHERE ce.shard_id = $1 AND ce.domain_id = $2 AND ce.workflow_id = $3 FOR UPDATE`
 
 	lockCurrentExecutionQuery = getCurrentExecutionQuery + ` FOR UPDATE`
 
@@ -74,51 +74,50 @@ workflow_id = :workflow_id
 `
 
 	getTransferTasksQuery = `SELECT task_id, data, data_encoding 
- FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
+ FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3`
 
 	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding) 
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
-	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
+	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id = $2`
+	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3`
 
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
 
 	getTimerTasksQuery = `SELECT visibility_timestamp, task_id, data, data_encoding FROM timer_tasks 
-  WHERE shard_id = ? 
-  AND ((visibility_timestamp >= ? AND task_id >= ?) OR visibility_timestamp > ?) 
-  AND visibility_timestamp < ?
-  ORDER BY visibility_timestamp,task_id LIMIT ?`
+  WHERE shard_id = $1 
+  AND ((visibility_timestamp >= $2 AND task_id >= $3) OR visibility_timestamp > $4) 
+  AND visibility_timestamp < $5
+  ORDER BY visibility_timestamp,task_id LIMIT $6`
 
-	deleteTimerTaskQuery      = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
-	rangeDeleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
+	deleteTimerTaskQuery      = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp = $2 AND task_id = $3`
+	rangeDeleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp >= $2 AND visibility_timestamp < $3`
 
 	createReplicationTasksQuery = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding) 
   VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
 	getReplicationTasksQuery = `SELECT task_id, data, data_encoding FROM replication_tasks WHERE 
-shard_id = ? AND
-task_id > ? AND
-task_id <= ? 
-ORDER BY task_id LIMIT ?`
+shard_id = $1 AND
+task_id > $2 AND
+task_id <= $3 
+ORDER BY task_id LIMIT $4`
 
-	deleteReplicationTaskQuery = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
+	deleteReplicationTaskQuery = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id = $2`
 
 	getReplicationTasksDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE 
-source_cluster_name = ? AND
-shard_id = ? AND
-task_id > ? AND
-task_id <= ?
-ORDER BY task_id LIMIT ?`
+source_cluster_name = $1 AND
+shard_id = $2 AND
+task_id > $3 AND
+task_id <= $4
+ORDER BY task_id LIMIT $5`
 
 	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, data, data_encoding`
 	createBufferedEventsQuery = `INSERT INTO buffered_events(` + bufferedEventsColumns + `)
 VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 
-	deleteBufferedEventsQuery = `DELETE FROM buffered_events WHERE shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
-	getBufferedEventsQuery    = `SELECT data, data_encoding FROM buffered_events WHERE
-shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
+	deleteBufferedEventsQuery = `DELETE FROM buffered_events WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
+	getBufferedEventsQuery    = `SELECT data, data_encoding FROM buffered_events WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	insertReplicationTaskDLQQuery = `
 INSERT INTO replication_tasks_dlq 

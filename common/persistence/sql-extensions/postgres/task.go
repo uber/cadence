@@ -42,36 +42,36 @@ task_type = :task_type
 
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? ORDER BY domain_id,name,task_type LIMIT ?`
+		`WHERE shard_id = $1 AND domain_id > $2 AND name > $3 AND task_type > $4 ORDER BY domain_id,name,task_type LIMIT $5`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = ? AND domain_id = ? AND name = ? AND task_type = ?`
+		`WHERE shard_id = $1 AND domain_id = $2 AND name = $3 AND task_type = $4`
 
-	deleteTaskListQry = `DELETE FROM task_lists WHERE shard_id=? AND domain_id=? AND name=? AND task_type=? AND range_id=?`
+	deleteTaskListQry = `DELETE FROM task_lists WHERE shard_id=$1 AND domain_id=$2 AND name=$3 AND task_type=$4 AND range_id=$5`
 
 	lockTaskListQry = `SELECT range_id FROM task_lists ` +
-		`WHERE shard_id = ? AND domain_id = ? AND name = ? AND task_type = ? FOR UPDATE`
+		`WHERE shard_id = $1 AND domain_id = $2 AND name = $3 AND task_type = $4 FOR UPDATE`
 
 	getTaskMinMaxQry = `SELECT task_id, data, data_encoding ` +
 		`FROM tasks ` +
-		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? AND task_id <= ? ` +
-		` ORDER BY task_id LIMIT ?`
+		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id > $4 AND task_id <= $5 ` +
+		` ORDER BY task_id LIMIT $6`
 
 	getTaskMinQry = `SELECT task_id, data, data_encoding ` +
 		`FROM tasks ` +
-		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? ORDER BY task_id LIMIT ?`
+		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id > $4 ORDER BY task_id LIMIT $5`
 
 	createTaskQry = `INSERT INTO ` +
 		`tasks(domain_id, task_list_name, task_type, task_id, data, data_encoding) ` +
 		`VALUES(:domain_id, :task_list_name, :task_type, :task_id, :data, :data_encoding)`
 
 	deleteTaskQry = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id = ?`
+		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id = $4`
 
 	rangeDeleteTaskQry = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id <= ? ` +
-		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT ?`
+		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id <= $4 ` +
+		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5`
 )
 
 func (d *driver) CreateTaskListQuery() string {

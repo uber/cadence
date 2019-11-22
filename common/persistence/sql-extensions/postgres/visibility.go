@@ -23,19 +23,19 @@ package postgres
 const (
 	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
 		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES ($, $, $, $, $, $, $, $)`
 
 	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
 		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES ($, $, $, $, $, $, $, $, $, $, $)`
 
 	// RunID condition is needed for correct pagination
-	templateConditions = ` AND domain_id = ?
-		 AND start_time >= ?
-		 AND start_time <= ?
- 		 AND (run_id > ? OR start_time < ?)
+	templateConditions = ` AND domain_id = $
+		 AND start_time >= $
+		 AND start_time <= $
+ 		 AND (run_id > $ OR start_time < $)
          ORDER BY start_time DESC, run_id
-         LIMIT ?`
+         LIMIT $`
 
 	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
@@ -47,22 +47,22 @@ const (
 
 	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions
 
-	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = ?` + templateConditions
+	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = $` + templateConditions
 
-	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = ?` + templateConditions
+	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = $` + templateConditions
 
-	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = ?` + templateConditions
+	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = $` + templateConditions
 
-	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = ?` + templateConditions
+	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = $` + templateConditions
 
-	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = ?` + templateConditions
+	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = $` + templateConditions
 
 	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
 		 FROM executions_visibility
-		 WHERE domain_id = ? AND close_status IS NOT NULL
-		 AND run_id = ?`
+		 WHERE domain_id = $ AND close_status IS NOT NULL
+		 AND run_id = $`
 
-	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=? AND run_id=?"
+	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=$ AND run_id=$"
 )
 
 func (d *driver) CreateWorkflowExecutionStartedQuery() string {
