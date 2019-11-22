@@ -406,6 +406,8 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
 	params.ArchiverProvider = c.archiverProvider
+	params.ESConfig = c.esConfig
+	params.ESClient = c.esClient
 	if c.esConfig != nil {
 		esDataStoreName := "es-visibility"
 		params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
