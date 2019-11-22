@@ -3246,10 +3246,11 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunId()
 
+	domainName := e.domainEntry.GetInfo().Name
 	domainID := e.domainEntry.GetInfo().ID
 	var newStateBuilder *mutableStateBuilder
 	// If a workflow is ndc enabled, the continue as new should be ndc enabled.
-	if e.GetVersionHistories() != nil {
+	if e.config.EnableNDC(domainName) || e.GetVersionHistories() != nil {
 		newStateBuilder = newMutableStateBuilderWithVersionHistories(
 			e.shard,
 			e.shard.GetEventsCache(),
