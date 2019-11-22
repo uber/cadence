@@ -32,7 +32,6 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/uber/cadence/common/persistence/sql/storage"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -76,7 +75,7 @@ func (d *driver) IsDupEntryError(err error) bool {
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
+func (d *driver) CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	db, err := sqlx.Connect(DriverName, buildDSN(cfg))
 	if err != nil {
 		return nil, err
@@ -92,7 +91,7 @@ func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
 	}
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
-	return sqlshared.NewDB(db, nil, d), nil
+	return db, nil
 }
 
 func buildDSN(cfg *config.SQL) string {

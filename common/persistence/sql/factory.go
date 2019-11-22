@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/uber/cadence/common"
@@ -157,7 +158,11 @@ func (c *dbConn) forceClose() {
 	c.Lock()
 	defer c.Unlock()
 	if c.Interface != nil {
-		c.Interface.Close()
+		err := c.Interface.Close()
+		if err != nil{
+			fmt.Println("failed to close database connection, may leak some connection", err)
+		}
+
 	}
 	c.refCnt = 0
 }

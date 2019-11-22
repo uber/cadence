@@ -118,7 +118,7 @@ func (s *TestCluster) TearDownTestDatabase() {
 func (s *TestCluster) createSession() *sqlx.DB {
 	driver := storage.GetDriver(s.cfg.DriverName)
 
-	db, err := driver.CreateDBConnection(&config.SQL{
+	conn, err := driver.CreateDBConnection(&config.SQL{
 		User:s.cfg.User,
 		Password:s.cfg.Password,
 		DatabaseName: s.cfg.DatabaseName,
@@ -127,14 +127,14 @@ func (s *TestCluster) createSession() *sqlx.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return db.GetConnection()
+	return conn
 }
 
 // CreateDatabase from PersistenceTestCluster interface
 func (s *TestCluster) CreateDatabase() {
 	driver := storage.GetDriver(s.cfg.DriverName)
 
-	db, err := driver.CreateDBConnection(&config.SQL{
+	conn, err := driver.CreateDBConnection(&config.SQL{
 		User:s.cfg.User,
 		Password:s.cfg.Password,
 		//NOTE the db is not existing yet
@@ -144,7 +144,6 @@ func (s *TestCluster) CreateDatabase() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	conn := db.GetConnection()
 	_, err = conn.Exec(fmt.Sprintf(driver.CreateDatabaseQuery(), s.cfg.DatabaseName))
 	if err != nil {
 		log.Fatal(err)
@@ -160,7 +159,7 @@ func (s *TestCluster) CreateDatabase() {
 func (s *TestCluster) DropDatabase() {
 	driver := storage.GetDriver(s.cfg.DriverName)
 
-	db, err := driver.CreateDBConnection(&config.SQL{
+	conn, err := driver.CreateDBConnection(&config.SQL{
 		User:s.cfg.User,
 		Password:s.cfg.Password,
 		//NOTE need to connect with empty db to drop the database
@@ -170,12 +169,9 @@ func (s *TestCluster) DropDatabase() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	conn := db.GetConnection()
 	_, err = conn.Exec(fmt.Sprintf(driver.DropDatabaseQuery(), s.cfg.DatabaseName))
 	if err != nil {
-		//TODO there is always have a leaked connection never get closed,
-		// and Postgres doesn't allow drop the database if a connection is active.
-		//log.Fatal(err)
+		log.Fatal(err)
 	}
 	err = conn.Close()
 	if err != nil{

@@ -21,7 +21,7 @@
 package sqlshared
 
 import (
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/jmoiron/sqlx"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -29,7 +29,7 @@ type (
 	// Driver is the driver interface that each SQL database needs to implement
 	Driver interface {
 		GetDriverName() string
-		CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error)
+		CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error)
 		IsDupEntryError(err error) bool
 
 		//domain

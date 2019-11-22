@@ -22,7 +22,6 @@ package postgres
 
 import (
 	"fmt"
-	"runtime/debug"
 	"strconv"
 
 	"strings"
@@ -32,7 +31,6 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/uber/cadence/common/persistence/sql/storage"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -68,7 +66,7 @@ func (d *driver) IsDupEntryError(err error) bool {
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
+func (d *driver) CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	ss := strings.Split(cfg.ConnectAddr, ":")
 	if len(ss) != 2 {
 		return nil, fmt.Errorf("invalid connect address, it must be in host:port format, %v", cfg.ConnectAddr)
@@ -90,10 +88,9 @@ func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
 		return nil, err
 	}
 
-	fmt.Println("connection created at:", string(debug.Stack()))
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
-	return sqlshared.NewDB(db, nil, d), nil
+	return db, nil
 }
 
 

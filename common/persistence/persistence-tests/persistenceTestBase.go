@@ -68,7 +68,6 @@ type (
 		suite.Suite
 		ShardMgr               p.ShardManager
 		ExecutionMgrFactory    client.Factory
-		VisibilityFactory      client.Factory
 		ExecutionManager       p.ExecutionManager
 		TaskMgr                p.TaskManager
 		HistoryV2Mgr           p.HistoryManager
@@ -197,13 +196,13 @@ func (s *TestBase) Setup() {
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
 	s.fatalOnError("NewExecutionManager", err)
 
-	s.VisibilityFactory = factory
+	visibilityFactory := factory
 	if s.VisibilityTestCluster != s.DefaultTestCluster {
 		vCfg := s.VisibilityTestCluster.Config()
-		s.VisibilityFactory  = client.NewFactory(&vCfg, clusterName, nil, s.logger)
+		visibilityFactory = client.NewFactory(&vCfg, clusterName, nil, s.logger)
 	}
 	// SQL currently doesn't have support for visibility manager
-	s.VisibilityMgr, err = s.VisibilityFactory .NewVisibilityManager()
+	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
 	if err != nil {
 		s.fatalOnError("NewVisibilityManager", err)
 	}
@@ -1266,7 +1265,11 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
 	s.ExecutionMgrFactory.Close()
-	s.VisibilityFactory.Close()
+	// TODO VisibilityMgr/Store is created with a separated code path, this is incorrect and may cause leaking connection
+	// https://github.com/uber/cadence/issues/2854
+	// Remove the below line after the issue is fix
+	s.VisibilityMgr.Close()
+
 	s.DefaultTestCluster.TearDownTestDatabase()
 }
 

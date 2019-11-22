@@ -69,7 +69,7 @@ func NewConnection(params *ConnectParams) (*Connection, error) {
 	}
 
 	return &Connection{
-		db:       db.GetConnection(),
+		db:       db,
 		database: params.Database,
 		driver:   driver,
 	}, nil

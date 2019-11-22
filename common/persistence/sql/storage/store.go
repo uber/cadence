@@ -22,7 +22,6 @@ package storage
 
 import (
 	"fmt"
-
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/common/service/config"
@@ -56,5 +55,6 @@ func NewSQLDB(cfg *config.SQL) (sqldb.Interface, error) {
 		return nil, fmt.Errorf("not supported driver %v, only supported: %v", cfg.DriverName, supportedDrivers)
 	}
 
-	return driver.CreateDBConnection(cfg)
+	conn, err := driver.CreateDBConnection(cfg)
+	return sqlshared.NewDB(conn, nil, driver), err
 }

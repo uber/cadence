@@ -22,7 +22,6 @@ package sqlshared
 
 import (
 	"github.com/jmoiron/sqlx"
-
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
