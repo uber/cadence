@@ -13,7 +13,7 @@ make install-schema
 - You should see an executable `cadence-cassandra-tool`
 
 ### Do one time database creation and schema setup for a new cluster
-This uses Cassandra's SimpleStratagey for replication. For production, we recommend using a replication factor of 3 with NetworkTopologyStrategy.
+This uses Cassandra's SimpleStratagey for replication. For production, we recommend also passing the `--datacenter` option (which uses NetworkTopologyStrategy), and using a replication factor of 3.
 
 ```
 cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $KEYSPACE --rf $RF

@@ -179,6 +179,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	config.Password = cli.GlobalString(schema.CLIOptPassword)
 	config.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
 	config.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
+	config.datacenter = cli.String(schema.CLIOptDatacenter)
 	config.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {

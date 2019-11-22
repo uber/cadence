@@ -189,6 +189,10 @@ func buildCLIOptions() *cli.App {
 					Name:  schema.CLIFlagKeyspace,
 					Usage: "name of the Keyspace",
 				},
+				cli.StringFlag{
+					Name:  schema.CLIFlagDatacenter,
+					Usage: "datacenter for the Keyspace (if provided, uses NetworkTopologyStrategy instead of SimpleStrategy)",
+				},
 				cli.IntFlag{
 					Name:  schema.CLIFlagReplicationFactor,
 					Value: 1,

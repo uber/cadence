@@ -98,6 +98,8 @@ const (
 	CLIOptDryrun = "dryrun"
 	// CLIOptSchemaDir is the cli option for schema directory
 	CLIOptSchemaDir = "schema-dir"
+	// CLIOptDatacenter is the cli option for datacenter
+	CLIOptDatacenter = "datacenter"
 	// CLIOptReplicationFactor is the cli option for replication factor
 	CLIOptReplicationFactor = "replication-factor"
 	// CLIOptQuiet is the cli option for quiet mode
@@ -133,6 +135,8 @@ const (
 	CLIFlagDryrun = CLIOptDryrun + ", y"
 	// CLIFlagSchemaDir is the cli flag for schema directory
 	CLIFlagSchemaDir = CLIOptSchemaDir + ", d"
+	// CLIFlagDatacenter is the cli flag for datacenter
+	CLIFlagDatacenter = CLIOptDatacenter + ", dc"
 	// CLIFlagReplicationFactor is the cli flag for replication factor
 	CLIFlagReplicationFactor = CLIOptReplicationFactor + ", rf"
 	// CLIFlagQuiet is the cli flag for quiet mode

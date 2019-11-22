@@ -38,6 +38,7 @@ import (
 
 type (
 	cqlClient struct {
+		datacenter    string
 		nReplicas     int
 		session       *gocql.Session
 		clusterConfig *gocql.ClusterConfig
@@ -50,6 +51,7 @@ type (
 		Password    string
 		Keyspace    string
 		Timeout     int
+		datacenter  string
 		numReplicas int
 		TLS         *auth.TLS
 	}
@@ -88,8 +90,11 @@ const (
 		`old_version text, ` +
 		`PRIMARY KEY ((year, month), update_time));`
 
-	createKeyspaceCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
+	createKeyspaceSimpleCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
+
+	createKeyspaceNetworkTopologyCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
+		`WITH replication = { 'class' : 'NetworkTopologyStrategy', '%v' : %v};`
 )
 
 var _ schema.DB = (*cqlClient)(nil)
@@ -119,6 +124,7 @@ func newCQLClient(cfg *CQLClientConfig) (*cqlClient, error) {
 		return nil, err
 	}
 	cqlClient := new(cqlClient)
+	cqlClient.datacenter = cfg.datacenter
 	cqlClient.nReplicas = cfg.numReplicas
 	cqlClient.clusterConfig = clusterCfg
 	cqlClient.session, err = clusterCfg.CreateSession()
@@ -151,7 +157,10 @@ func (client *cqlClient) DropDatabase(name string) error {
 
 // createKeyspace creates a cassandra Keyspace if it doesn't exist
 func (client *cqlClient) createKeyspace(name string) error {
-	return client.Exec(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
+	if client.datacenter != "" {
+		return client.Exec(fmt.Sprintf(createKeyspaceNetworkTopologyCQL, name, client.datacenter, client.nReplicas))
+	}
+	return client.Exec(fmt.Sprintf(createKeyspaceSimpleCQL, name, client.nReplicas))
 }
 
 // dropKeyspace drops a Keyspace
