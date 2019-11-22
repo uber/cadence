@@ -22,6 +22,7 @@ package postgres
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strconv"
 
 	"strings"
@@ -79,7 +80,7 @@ func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
 	}
 
 	dbName := cfg.DatabaseName
-	//NOTE: postgres doesn't allow to connect with empty dbName, the sys dbName is "postgres"
+	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
 	if dbName == ""{
 		dbName = "postgres"
 	}
@@ -88,6 +89,8 @@ func (d *driver) CreateDBConnection(cfg *config.SQL) (sqldb.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("connection created at:", string(debug.Stack()))
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
 	return sqlshared.NewDB(db, nil, d), nil

@@ -137,7 +137,7 @@ type (
 		GetClosedWorkflowExecutionQuery() string
 		DeleteWorkflowExecutionQuery() string
 
-		//CLI and testing
+		//admin: for CLI and testing
 		ReadSchemaVersionQuery() string
 		WriteSchemaVersionQuery() string
 		WriteSchemaUpdateHistoryQuery() string

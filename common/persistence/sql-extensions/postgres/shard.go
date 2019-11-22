@@ -22,18 +22,18 @@ package postgres
 
 const (
 	createShardQry = `INSERT INTO
- shards (shard_id, range_id, data, data_encoding) VALUES (?, ?, ?, ?)`
+ shards (shard_id, range_id, data, data_encoding) VALUES ($1, $2, $3, $4)`
 
 	getShardQry = `SELECT
  shard_id, range_id, data, data_encoding
- FROM shards WHERE shard_id = ?`
+ FROM shards WHERE shard_id = $1`
 
 	updateShardQry = `UPDATE shards 
- SET range_id = ?, data = ?, data_encoding = ? 
- WHERE shard_id = ?`
+ SET range_id = $1, data = $2, data_encoding = $3 
+ WHERE shard_id = $4`
 
-	lockShardQry     = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
-	readLockShardQry = `SELECT range_id FROM shards WHERE shard_id = ? LOCK IN SHARE MODE`
+	lockShardQry     = `SELECT range_id FROM shards WHERE shard_id = $1 FOR UPDATE`
+	readLockShardQry = `SELECT range_id FROM shards WHERE shard_id = $1 LOCK IN SHARE MODE`
 )
 
 func (d *driver) CreateShardQuery() string {

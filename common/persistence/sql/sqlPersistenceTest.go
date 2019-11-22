@@ -40,8 +40,8 @@ import (
 type TestCluster struct {
 	dbName    string
 	schemaDir string
-	db        *sqlx.DB
 	cfg       config.SQL
+	conn        *sqlx.DB
 }
 
 // TODO not allowed by circle deps
@@ -78,8 +78,8 @@ func (s *TestCluster) DatabaseName() string {
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *TestCluster) SetupTestDatabase() {
 	s.CreateDatabase()
-	s.CreateSession()
 
+	s.conn = s.createSession()
 	schemaDir := s.schemaDir + "/"
 	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
 		cadencePackageDir, err := getCadencePackageDir()
@@ -90,6 +90,10 @@ func (s *TestCluster) SetupTestDatabase() {
 	}
 	s.LoadSchema([]string{"schema.sql"}, schemaDir)
 	s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
+	err := s.conn.Close()
+	if err != nil{
+		log.Fatal(err)
+	}
 }
 
 // Config returns the persistence config for connecting to this test cluster
@@ -108,11 +112,10 @@ func (s *TestCluster) Config() config.Persistence {
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *TestCluster) TearDownTestDatabase() {
 	s.DropDatabase()
-	s.db.Close()
 }
 
 // CreateSession from PersistenceTestCluster interface
-func (s *TestCluster) CreateSession() {
+func (s *TestCluster) createSession() *sqlx.DB {
 	driver := storage.GetDriver(s.cfg.DriverName)
 
 	db, err := driver.CreateDBConnection(&config.SQL{
@@ -124,7 +127,7 @@ func (s *TestCluster) CreateSession() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.db = db.GetConnection()
+	return db.GetConnection()
 }
 
 // CreateDatabase from PersistenceTestCluster interface
@@ -147,6 +150,10 @@ func (s *TestCluster) CreateDatabase() {
 		log.Fatal(err)
 	}
 	fmt.Println("database is created:", s.cfg.DatabaseName)
+	err = conn.Close()
+	if err != nil{
+		log.Fatal(err)
+	}
 }
 
 // DropDatabase from PersistenceTestCluster interface
@@ -166,6 +173,12 @@ func (s *TestCluster) DropDatabase() {
 	conn := db.GetConnection()
 	_, err = conn.Exec(fmt.Sprintf(driver.DropDatabaseQuery(), s.cfg.DatabaseName))
 	if err != nil {
+		//TODO there is always have a leaked connection never get closed,
+		// and Postgres doesn't allow drop the database if a connection is active.
+		//log.Fatal(err)
+	}
+	err = conn.Close()
+	if err != nil{
 		log.Fatal(err)
 	}
 }
@@ -173,7 +186,7 @@ func (s *TestCluster) DropDatabase() {
 // LoadSchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
-	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.db, true)
+	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.conn, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -182,7 +195,7 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 // LoadVisibilitySchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/visibility"
-	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.db, true)
+	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.conn, true)
 	if err != nil {
 		log.Fatal(err)
 	}

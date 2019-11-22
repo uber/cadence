@@ -68,6 +68,7 @@ type (
 		suite.Suite
 		ShardMgr               p.ShardManager
 		ExecutionMgrFactory    client.Factory
+		VisibilityFactory      client.Factory
 		ExecutionManager       p.ExecutionManager
 		TaskMgr                p.TaskManager
 		HistoryV2Mgr           p.HistoryManager
@@ -89,7 +90,6 @@ type (
 		DatabaseName() string
 		SetupTestDatabase()
 		TearDownTestDatabase()
-		CreateSession()
 		DropDatabase()
 		Config() config.Persistence
 		LoadSchema(fileNames []string, schemaDir string)
@@ -197,13 +197,13 @@ func (s *TestBase) Setup() {
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
 	s.fatalOnError("NewExecutionManager", err)
 
-	visibilityFactory := factory
+	s.VisibilityFactory = factory
 	if s.VisibilityTestCluster != s.DefaultTestCluster {
 		vCfg := s.VisibilityTestCluster.Config()
-		visibilityFactory = client.NewFactory(&vCfg, clusterName, nil, s.logger)
+		s.VisibilityFactory  = client.NewFactory(&vCfg, clusterName, nil, s.logger)
 	}
 	// SQL currently doesn't have support for visibility manager
-	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
+	s.VisibilityMgr, err = s.VisibilityFactory .NewVisibilityManager()
 	if err != nil {
 		s.fatalOnError("NewVisibilityManager", err)
 	}
@@ -1265,6 +1265,8 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
+	s.ExecutionMgrFactory.Close()
+	s.VisibilityFactory.Close()
 	s.DefaultTestCluster.TearDownTestDatabase()
 }
 
