@@ -38,11 +38,9 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/elasticsearch"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -62,14 +60,10 @@ type (
 		mockHistoryClient *historyservicetest.MockClient
 		mockDomainCache   *cache.MockDomainCache
 
-		logger                 log.Logger
-		domainName             string
-		domainID               string
-		currentClusterName     string
-		alternativeClusterName string
-		mockClusterMetadata    *cluster.MockMetadata
-		mockHistoryV2Mgr       *mocks.HistoryV2Manager
-		service                service.Service
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
+
+		domainName string
+		domainID   string
 
 		handler *AdminHandler
 	}
@@ -85,21 +79,12 @@ func (s *adminHandlerSuite) SetupTest() {
 
 	s.domainName = "some random domain name"
 	s.domainID = "some random domain ID"
-	s.currentClusterName = cluster.TestCurrentClusterName
-	s.alternativeClusterName = cluster.TestAlternativeClusterName
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
-	s.logger = s.mockResource.GetLogger()
 	s.mockDomainCache = s.mockResource.DomainCache
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
-	s.mockClusterMetadata = s.mockResource.ClusterMetadata
-
-	s.mockDomainCache.EXPECT().Start().AnyTimes()
-	s.mockDomainCache.EXPECT().Stop().AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.currentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	params := &service.BootstrapParams{
 		PersistenceConfig: config.Persistence{

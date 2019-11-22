@@ -32,6 +32,7 @@ var (
 	// Override value for integer keys for dynamic config
 	intKeys = map[dynamicconfig.Key]int{
 		dynamicconfig.FrontendRPS:                        3000,
+		dynamicconfig.FrontendVisibilityListMaxQPS:       10,
 		dynamicconfig.MatchingNumTasklistWritePartitions: 3,
 		dynamicconfig.MatchingNumTasklistReadPartitions:  3,
 	}

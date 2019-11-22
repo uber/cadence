@@ -34,14 +34,12 @@ import (
 
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -64,19 +62,13 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller        *gomock.Controller
-		mockResource      *resource.Test
-		mockDomainCache   *cache.MockDomainCache
-		mockClientBean    *client.MockBean
-		mockHistoryClient *historyservicetest.MockClient
+		controller          *gomock.Controller
+		mockResource        *resource.Test
+		mockDomainCache     *cache.MockDomainCache
+		mockHistoryClient   *historyservicetest.MockClient
+		mockClusterMetadata *cluster.MockMetadata
 
-		testDomain   string
-		testDomainID string
-		logger       log.Logger
-
-		mockClusterMetadata    *cluster.MockMetadata
 		mockProducer           *mocks.KafkaProducer
-		mockMetricClient       metrics.Client
 		mockMessagingClient    messaging.Client
 		mockMetadataMgr        *mocks.MetadataManager
 		mockHistoryV2Mgr       *mocks.HistoryV2Manager
@@ -85,6 +77,9 @@ type (
 		mockArchiverProvider   *provider.MockArchiverProvider
 		mockHistoryArchiver    *archiver.HistoryArchiverMock
 		mockVisibilityArchiver *archiver.VisibilityArchiverMock
+
+		testDomain   string
+		testDomainID string
 	}
 )
 
@@ -107,12 +102,9 @@ func (s *workflowHandlerSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
-	s.logger = s.mockResource.GetLogger()
 	s.mockDomainCache = s.mockResource.DomainCache
-	s.mockClientBean = s.mockResource.ClientBean
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockClusterMetadata = s.mockResource.ClusterMetadata
-	s.mockMetricClient = s.mockResource.MetricsClient
 	s.mockMetadataMgr = s.mockResource.MetadataMgr
 	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
 	s.mockVisibilityMgr = s.mockResource.VisibilityMgr
@@ -127,15 +119,14 @@ func (s *workflowHandlerSuite) SetupTest() {
 
 func (s *workflowHandlerSuite) TearDownTest() {
 	s.controller.Finish()
+	s.mockResource.Finish(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockHistoryArchiver.AssertExpectations(s.T())
 	s.mockVisibilityArchiver.AssertExpectations(s.T())
 }
 
 func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
-	wh := NewWorkflowHandler(s.mockResource, config, s.mockProducer)
-	wh.startWG.Done()
-	return wh
+	return NewWorkflowHandler(s.mockResource, config, s.mockProducer)
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
@@ -1231,7 +1222,7 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
-	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards, false)
+	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.mockResource.GetLogger()), numHistoryShards, false)
 }
 
 func updateRequest(

@@ -21,6 +21,8 @@
 package frontend
 
 import (
+	mock "github.com/stretchr/testify/mock"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
@@ -212,6 +214,7 @@ func (s *Service) Start() {
 		}
 	} else {
 		replicationMessageSink = &mocks.KafkaProducer{}
+		replicationMessageSink.(*mocks.KafkaProducer).On("Publish", mock.Anything).Return(nil)
 	}
 
 	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink)
