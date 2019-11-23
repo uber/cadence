@@ -20,23 +20,28 @@
 
 package postgres
 
-const (
-	readSchemaVersionPostgres = `SELECT curr_version from schema_version where db_name=$1`
+import (
+	"fmt"
+	"time"
+)
 
-	writeSchemaVersionPostgres = `INSERT into schema_version(db_name, creation_time, curr_version, min_compatible_version) VALUES ($1,$2,$3,$4)
+const (
+	readSchemaVersionQuery = `SELECT curr_version from schema_version where db_name=$1`
+
+	writeSchemaVersionQuery = `INSERT into schema_version(db_name, creation_time, curr_version, min_compatible_version) VALUES ($1,$2,$3,$4)
 										ON CONFLICT (db_name) DO UPDATE 
 										  SET creation_time = excluded.creation_time,
 										   	  curr_version = excluded.curr_version,
 										      min_compatible_version = excluded.min_compatible_version;`
 
-	writeSchemaUpdateHistoryPostgres = `INSERT into schema_update_history(year, month, update_time, old_version, new_version, manifest_md5, description) VALUES($1,$2,$3,$4,$5,$6,$7)`
+	writeSchemaUpdateHistoryQuery = `INSERT into schema_update_history(year, month, update_time, old_version, new_version, manifest_md5, description) VALUES($1,$2,$3,$4,$5,$6,$7)`
 
-	createSchemaVersionTablePostgres = `CREATE TABLE schema_version(db_name VARCHAR(255) not null PRIMARY KEY, ` +
+	createSchemaVersionTableQuery = `CREATE TABLE schema_version(db_name VARCHAR(255) not null PRIMARY KEY, ` +
 		`creation_time TIMESTAMP, ` +
 		`curr_version VARCHAR(64), ` +
 		`min_compatible_version VARCHAR(64));`
 
-	createSchemaUpdateHistoryTablePostgres = `CREATE TABLE schema_update_history(` +
+	createSchemaUpdateHistoryTableQuery = `CREATE TABLE schema_update_history(` +
 		`year int not null, ` +
 		`month int not null, ` +
 		`update_time TIMESTAMP not null, ` +
@@ -47,47 +52,80 @@ const (
 		`PRIMARY KEY (year, month, update_time));`
 
 	//NOTE we have to use %v because somehow mysql doesn't work with ? here
-	createDatabasePostgres = "CREATE database %v"
+	createDatabaseQuery = "CREATE database %v"
 
-	dropDatabasePostgres = "Drop database %v"
+	dropDatabaseQuery = "Drop database %v"
 
-	listTablesPostgres = "select table_name from information_schema.tables where table_schema='public'"
+	listTablesQuery = "select table_name from information_schema.tables where table_schema='public'"
 
-	dropTablePostgres = "DROP TABLE %v"
+	dropTableQuery = "DROP TABLE %v"
 )
 
-func (d *driver) ReadSchemaVersionQuery() string {
-	return readSchemaVersionPostgres
+// CreateSchemaVersionTables sets up the schema version tables
+func (mdb *db) CreateSchemaVersionTables() error {
+	if err := mdb.Exec(createSchemaVersionTableQuery); err != nil {
+		return err
+	}
+	return mdb.Exec(createSchemaUpdateHistoryTableQuery)
 }
 
-func (d *driver) WriteSchemaVersionQuery() string {
-	return writeSchemaVersionPostgres
+// ReadSchemaVersion returns the current schema version for the keyspace
+func (mdb *db)  ReadSchemaVersion(database string) (string, error) {
+	var version string
+	err := mdb.db.Get(&version, readSchemaVersionQuery, database)
+	return version, err
 }
 
-func (d *driver) WriteSchemaUpdateHistoryQuery() string {
-	return writeSchemaUpdateHistoryPostgres
+// UpdateSchemaVersion updates the schema version for the keyspace
+func (mdb *db)  UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
+	return mdb.Exec(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
 }
 
-func (d *driver) CreateSchemaVersionTableQuery() string {
-	return createSchemaVersionTablePostgres
+// WriteSchemaUpdateLog adds an entry to the schema update history table
+func (mdb *db)  WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
+	now := time.Now().UTC()
+	return mdb.Exec(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
-func (d *driver) CreateSchemaUpdateHistoryTableQuery() string {
-	return createSchemaUpdateHistoryTablePostgres
+// Exec executes a sql statement
+func (mdb *db) Exec(stmt string, args ...interface{}) error {
+	_, err := mdb.db.Exec(stmt, args...)
+	return err
 }
 
-func (d *driver) CreateDatabaseQuery() string {
-	return createDatabasePostgres
+// ListTables returns a list of tables in this database
+func (mdb *db)  ListTables(database string) ([]string, error) {
+	var tables []string
+	err := mdb.db.Select(&tables, fmt.Sprintf(listTablesQuery, database))
+	return tables, err
 }
 
-func (d *driver) DropDatabaseQuery() string {
-	return dropDatabasePostgres
+// DropTable drops a given table from the database
+func (mdb *db)  DropTable(name string) error {
+	return mdb.Exec(fmt.Sprintf(dropTableQuery, name))
 }
 
-func (d *driver) ListTablesQuery() string {
-	return listTablesPostgres
+// DropAllTables drops all tables from this database
+func (mdb *db)  DropAllTables(database string) error {
+	tables, err := mdb.ListTables(database)
+	if err != nil {
+		return err
+	}
+	for _, tab := range tables {
+		if err := mdb.DropTable(tab); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (d *driver) DropTableQuery() string {
-	return dropTablePostgres
+// CreateDatabase creates a database if it doesn't exist
+func (mdb *db)  CreateDatabase(name string) error {
+	return mdb.Exec(fmt.Sprintf(createDatabaseQuery, name))
 }
+
+// DropDatabase drops a database
+func (mdb *db)  DropDatabase(name string) error {
+	return mdb.Exec(fmt.Sprintf(dropDatabaseQuery, name))
+}
+

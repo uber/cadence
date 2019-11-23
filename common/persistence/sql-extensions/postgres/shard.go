@@ -20,6 +20,11 @@
 
 package postgres
 
+import (
+	"database/sql"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+)
+
 const (
 	createShardQry = `INSERT INTO
  shards (shard_id, range_id, data, data_encoding) VALUES ($1, $2, $3, $4)`
@@ -33,25 +38,39 @@ const (
  WHERE shard_id = $4`
 
 	lockShardQry     = `SELECT range_id FROM shards WHERE shard_id = $1 FOR UPDATE`
-	readLockShardQry = `SELECT range_id FROM shards WHERE shard_id = $1 LOCK IN SHARE MODE`
+	readLockShardQry = `SELECT range_id FROM shards WHERE shard_id = $1 FOR SHARE`
 )
 
-func (d *driver) CreateShardQuery() string {
-	return createShardQry
+// InsertIntoShards inserts one or more rows into shards table
+func (mdb *db) InsertIntoShards(row *sqldb.ShardsRow) (sql.Result, error) {
+	return mdb.conn.Exec(createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
 }
 
-func (d *driver) GetShardQuery() string {
-	return getShardQry
+// UpdateShards updates one or more rows into shards table
+func (mdb *db) UpdateShards(row *sqldb.ShardsRow) (sql.Result, error) {
+	return mdb.conn.Exec(updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
 }
 
-func (d *driver) UpdateShardQuery() string {
-	return updateShardQry
+// SelectFromShards reads one or more rows from shards table
+func (mdb *db) SelectFromShards(filter *sqldb.ShardsFilter) (*sqldb.ShardsRow, error) {
+	var row sqldb.ShardsRow
+	err := mdb.conn.Get(&row, getShardQry, filter.ShardID)
+	if err != nil {
+		return nil, err
+	}
+	return &row, err
 }
 
-func (d *driver) LockShardQuery() string {
-	return lockShardQry
+// ReadLockShards acquires a read lock on a single row in shards table
+func (mdb *db) ReadLockShards(filter *sqldb.ShardsFilter) (int, error) {
+	var rangeID int
+	err := mdb.conn.Get(&rangeID, readLockShardQry, filter.ShardID)
+	return rangeID, err
 }
 
-func (d *driver) ReadLockShardQuery() string {
-	return readLockShardQry
+// WriteLockShards acquires a write lock on a single row in shards table
+func (mdb *db) WriteLockShards(filter *sqldb.ShardsFilter) (int, error) {
+	var rangeID int
+	err := mdb.conn.Get(&rangeID, lockShardQry, filter.ShardID)
+	return rangeID, err
 }

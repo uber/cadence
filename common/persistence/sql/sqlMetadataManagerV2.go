@@ -38,7 +38,7 @@ type sqlMetadataManagerV2 struct {
 }
 
 // newMetadataPersistenceV2 creates an instance of sqlMetadataManagerV2
-func newMetadataPersistenceV2(db sqldb.Interface, currentClusterName string,
+func newMetadataPersistenceV2(db sqldb.DB, currentClusterName string,
 	logger log.Logger) (persistence.MetadataStore, error) {
 	return &sqlMetadataManagerV2{
 		sqlStore: sqlStore{

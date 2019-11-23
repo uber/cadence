@@ -34,7 +34,7 @@ import (
 
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
-	db     sqldb.Interface
+	db     sqldb.DB
 	logger log.Logger
 }
 

@@ -22,16 +22,14 @@ package postgres
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"strconv"
 
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
-
 	"github.com/uber/cadence/common/persistence/sql/storage"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -42,31 +40,27 @@ const (
 
 type driver struct{}
 
-var _ sqlshared.Driver = (*driver)(nil)
+var _ sqldb.Driver = (*driver)(nil)
 
 func init() {
 	storage.RegisterDriver(DriverName, &driver{})
 }
 
-func (d *driver) GetDriverName() string {
-	return DriverName
-}
-
-// ErrDupEntry indicates a duplicate primary key i.e. the row already exists,
-// check http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
-const ErrDupEntry = "42710"
-
-func (d *driver) IsDupEntryError(err error) bool {
-	sqlErr, ok := err.(*pq.Error)
-	fmt.Println("debug IsDupEntryError", sqlErr.Code, sqlErr.Message)
-	return ok && sqlErr.Code == ErrDupEntry
+// InitDB initialize the db object
+func (d *driver) InitDB(cfg *config.SQL) (sqldb.DB, error){
+	conn, err := d.createDBConnection(cfg)
+	if err != nil {
+		return nil, err
+	}
+	db := NewDB(conn, nil)
+	return db, nil
 }
 
 // CreateDBConnection creates a returns a reference to a logical connection to the
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func (d *driver) CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+func (d *driver) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	ss := strings.Split(cfg.ConnectAddr, ":")
 	if len(ss) != 2 {
 		return nil, fmt.Errorf("invalid connect address, it must be in host:port format, %v", cfg.ConnectAddr)

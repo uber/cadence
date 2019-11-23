@@ -20,6 +20,12 @@
 
 package postgres
 
+import (
+	"database/sql"
+	"fmt"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+)
+
 const (
 	taskListCreatePart = `INTO task_lists(shard_id, domain_id, name, task_type, range_id, data, data_encoding) ` +
 		`VALUES (:shard_id, :domain_id, :name, :task_type, :range_id, :data, :data_encoding)`
@@ -79,39 +85,101 @@ task_type = :task_type
 		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5 )`
 )
 
-func (d *driver) CreateTaskListQuery() string {
-	return createTaskListQry
+
+// InsertIntoTasks inserts one or more rows into tasks table
+func (mdb *db) InsertIntoTasks(rows []sqldb.TasksRow) (sql.Result, error) {
+	return mdb.conn.NamedExec(createTaskQry, rows)
 }
-func (d *driver) ReplaceTaskListQuery() string {
-	return replaceTaskListQry
+
+// SelectFromTasks reads one or more rows from tasks table
+func (mdb *db) SelectFromTasks(filter *sqldb.TasksFilter) ([]sqldb.TasksRow, error) {
+	var err error
+	var rows []sqldb.TasksRow
+	switch {
+	case filter.MaxTaskID != nil:
+		err = mdb.conn.Select(&rows, getTaskMinMaxQry, filter.DomainID,
+			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID, *filter.PageSize)
+	default:
+		err = mdb.conn.Select(&rows, getTaskMinQry, filter.DomainID,
+			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.PageSize)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rows, err
 }
-func (d *driver) UpdateTaskListQuery() string {
-	return updateTaskListQry
+
+// DeleteFromTasks deletes one or more rows from tasks table
+func (mdb *db) DeleteFromTasks(filter *sqldb.TasksFilter) (sql.Result, error) {
+	if filter.TaskIDLessThanEquals != nil {
+		if filter.Limit == nil || *filter.Limit == 0 {
+			return nil, fmt.Errorf("missing limit parameter")
+		}
+		return mdb.conn.Exec(rangeDeleteTaskQry,
+			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
+	}
+	return mdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
 }
-func (d *driver) ListTaskListQuery() string {
-	return listTaskListQry
+
+// InsertIntoTaskLists inserts one or more rows into task_lists table
+func (mdb *db) InsertIntoTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
+	return mdb.conn.NamedExec(createTaskListQry, row)
 }
-func (d *driver) GetTaskListQuery() string {
-	return getTaskListQry
+
+// ReplaceIntoTaskLists replaces one or more rows in task_lists table
+func (mdb *db) ReplaceIntoTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
+	return mdb.conn.NamedExec(replaceTaskListQry, row)
 }
-func (d *driver) DeleteTaskListQuery() string {
-	return deleteTaskListQry
+
+// UpdateTaskLists updates a row in task_lists table
+func (mdb *db) UpdateTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
+	return mdb.conn.NamedExec(updateTaskListQry, row)
 }
-func (d *driver) LockTaskListQuery() string {
-	return lockTaskListQry
+
+// SelectFromTaskLists reads one or more rows from task_lists table
+func (mdb *db) SelectFromTaskLists(filter *sqldb.TaskListsFilter) ([]sqldb.TaskListsRow, error) {
+	switch {
+	case filter.DomainID != nil && filter.Name != nil && filter.TaskType != nil:
+		return mdb.selectFromTaskLists(filter)
+	case filter.DomainIDGreaterThan != nil && filter.NameGreaterThan != nil && filter.TaskTypeGreaterThan != nil && filter.PageSize != nil:
+		return mdb.rangeSelectFromTaskLists(filter)
+	default:
+		return nil, fmt.Errorf("invalid set of query filter params")
+	}
 }
-func (d *driver) GetTaskMinMaxQuery() string {
-	return getTaskMinMaxQry
+
+func (mdb *db) selectFromTaskLists(filter *sqldb.TaskListsFilter) ([]sqldb.TaskListsRow, error) {
+	var err error
+	var row sqldb.TaskListsRow
+	err = mdb.conn.Get(&row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	if err != nil {
+		return nil, err
+	}
+	return []sqldb.TaskListsRow{row}, err
 }
-func (d *driver) GetTaskMinQuery() string {
-	return getTaskMinQry
+
+func (mdb *db) rangeSelectFromTaskLists(filter *sqldb.TaskListsFilter) ([]sqldb.TaskListsRow, error) {
+	var err error
+	var rows []sqldb.TaskListsRow
+	err = mdb.conn.Select(&rows, listTaskListQry,
+		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].ShardID = filter.ShardID
+	}
+	return rows, nil
 }
-func (d *driver) CreateTaskQuery() string {
-	return createTaskQry
+
+// DeleteFromTaskLists deletes a row from task_lists table
+func (mdb *db) DeleteFromTaskLists(filter *sqldb.TaskListsFilter) (sql.Result, error) {
+	return mdb.conn.Exec(deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
 }
-func (d *driver) DeleteTaskQuery() string {
-	return deleteTaskQry
-}
-func (d *driver) RangeDeleteTaskQuery() string {
-	return rangeDeleteTaskQry
+
+// LockTaskLists locks a row in task_lists table
+func (mdb *db) LockTaskLists(filter *sqldb.TaskListsFilter) (int64, error) {
+	var rangeID int64
+	err := mdb.conn.Get(&rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	return rangeID, err
 }

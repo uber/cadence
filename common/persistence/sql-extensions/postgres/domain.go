@@ -20,71 +20,120 @@
 
 package postgres
 
+import (
+	"database/sql"
+	"errors"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+)
+
 const (
 	createDomainQuery = `INSERT INTO 
  domains (id, name, is_global, data, data_encoding)
- VALUES(?, ?, ?, ?, ?)`
+ VALUES($1, $2, $3, $4, $5)`
 
 	updateDomainQuery = `UPDATE domains 
- SET name = ?, data = ?, data_encoding = ?
- WHERE shard_id=54321 AND id = ?`
+ SET name = $1, data = $2, data_encoding = $3
+ WHERE shard_id=54321 AND id = $4`
 
 	getDomainPart = `SELECT id, name, is_global, data, data_encoding FROM domains`
 
-	getDomainByIDQuery   = getDomainPart + ` WHERE shard_id=? AND id = ?`
-	getDomainByNameQuery = getDomainPart + ` WHERE shard_id=? AND name = ?`
+	getDomainByIDQuery   = getDomainPart + ` WHERE shard_id=$1 AND id = $2`
+	getDomainByNameQuery = getDomainPart + ` WHERE shard_id=$1 AND name = $2`
 
-	listDomainsQuery      = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
-	listDomainsRangeQuery = getDomainPart + ` WHERE shard_id=? AND id > ? ORDER BY id LIMIT ?`
+	listDomainsQuery      = getDomainPart + ` WHERE shard_id=$1 ORDER BY id LIMIT $2`
+	listDomainsRangeQuery = getDomainPart + ` WHERE shard_id=$1 AND id > $2 ORDER BY id LIMIT $3`
 
-	deleteDomainByIDQuery   = `DELETE FROM domains WHERE shard_id=? AND id = ?`
-	deleteDomainByNameQuery = `DELETE FROM domains WHERE shard_id=? AND name = ?`
+	deleteDomainByIDQuery   = `DELETE FROM domains WHERE shard_id=$1 AND id = $2`
+	deleteDomainByNameQuery = `DELETE FROM domains WHERE shard_id=$1 AND name = $2`
 
 	getDomainMetadataQuery    = `SELECT notification_version FROM domain_metadata`
 	lockDomainMetadataQuery   = `SELECT notification_version FROM domain_metadata FOR UPDATE`
-	updateDomainMetadataQuery = `UPDATE domain_metadata SET notification_version = ? WHERE notification_version = ?`
+	updateDomainMetadataQuery = `UPDATE domain_metadata SET notification_version = $1 WHERE notification_version = $2`
 )
 
-func (d *driver) CreateDomainQuery() string {
-	return createDomainQuery
+const (
+	shardID = 54321
+)
+
+var errMissingArgs = errors.New("missing one or more args for API")
+
+// InsertIntoDomain inserts a single row into domains table
+func (mdb *db) InsertIntoDomain(row *sqldb.DomainRow) (sql.Result, error) {
+	return mdb.conn.Exec(createDomainQuery, row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
 }
 
-func (d *driver) UpdateDomainQuery() string {
-	return updateDomainQuery
+// UpdateDomain updates a single row in domains table
+func (mdb *db) UpdateDomain(row *sqldb.DomainRow) (sql.Result, error) {
+	return mdb.conn.Exec(updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
 }
 
-func (d *driver) GetDomainByIDQuery() string {
-	return getDomainByIDQuery
+// SelectFromDomain reads one or more rows from domains table
+func (mdb *db) SelectFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRow, error) {
+	switch {
+	case filter.ID != nil || filter.Name != nil:
+		return mdb.selectFromDomain(filter)
+	case filter.PageSize != nil && *filter.PageSize > 0:
+		return mdb.selectAllFromDomain(filter)
+	default:
+		return nil, errMissingArgs
+	}
 }
 
-func (d *driver) GetDomainByNameQuery() string {
-	return getDomainByNameQuery
+func (mdb *db) selectFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRow, error) {
+	var err error
+	var row sqldb.DomainRow
+	switch {
+	case filter.ID != nil:
+		err = mdb.conn.Get(&row, getDomainByIDQuery, shardID, *filter.ID)
+	case filter.Name != nil:
+		err = mdb.conn.Get(&row, getDomainByNameQuery, shardID, *filter.Name)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return []sqldb.DomainRow{row}, err
 }
 
-func (d *driver) ListDomainsQuery() string {
-	return listDomainsQuery
+func (mdb *db) selectAllFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRow, error) {
+	var err error
+	var rows []sqldb.DomainRow
+	switch {
+	case filter.GreaterThanID != nil:
+		err = mdb.conn.Select(&rows, listDomainsRangeQuery, shardID, *filter.GreaterThanID, *filter.PageSize)
+	default:
+		err = mdb.conn.Select(&rows, listDomainsQuery, shardID, filter.PageSize)
+	}
+	return rows, err
 }
 
-func (d *driver) ListDomainsRangeQuery() string {
-	return listDomainsRangeQuery
+// DeleteFromDomain deletes a single row in domains table
+func (mdb *db) DeleteFromDomain(filter *sqldb.DomainFilter) (sql.Result, error) {
+	var err error
+	var result sql.Result
+	switch {
+	case filter.ID != nil:
+		result, err = mdb.conn.Exec(deleteDomainByIDQuery, shardID, filter.ID)
+	default:
+		result, err = mdb.conn.Exec(deleteDomainByNameQuery, shardID, filter.Name)
+	}
+	return result, err
 }
 
-func (d *driver) DeleteDomainByIDQuery() string {
-	return deleteDomainByIDQuery
+// LockDomainMetadata acquires a write lock on a single row in domain_metadata table
+func (mdb *db) LockDomainMetadata() error {
+	var row sqldb.DomainMetadataRow
+	err := mdb.conn.Get(&row.NotificationVersion, lockDomainMetadataQuery)
+	return err
 }
 
-func (d *driver) DeleteDomainByNameQuery() string {
-	return deleteDomainByNameQuery
+// SelectFromDomainMetadata reads a single row in domain_metadata table
+func (mdb *db) SelectFromDomainMetadata() (*sqldb.DomainMetadataRow, error) {
+	var row sqldb.DomainMetadataRow
+	err := mdb.conn.Get(&row.NotificationVersion, getDomainMetadataQuery)
+	return &row, err
 }
 
-func (d *driver) GetDomainMetadataQuery() string {
-	return getDomainMetadataQuery
-}
-
-func (d *driver) LockDomainMetadataQuery() string {
-	return lockDomainMetadataQuery
-}
-
-func (d *driver) UpdateDomainMetadataQuery() string {
-	return updateDomainMetadataQuery
+// UpdateDomainMetadata updates a single row in domain_metadata table
+func (mdb *db) UpdateDomainMetadata(row *sqldb.DomainMetadataRow) (sql.Result, error) {
+	return mdb.conn.Exec(updateDomainMetadataQuery, row.NotificationVersion+1, row.NotificationVersion)
 }

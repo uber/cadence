@@ -18,34 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package storage
+package mysql
 
-import (
-	"fmt"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
-	"github.com/uber/cadence/common/service/config"
+import "time"
+
+var (
+	minMySQLDateTime = getMinMySQLDateTime()
 )
 
-var supportedDrivers = map[string]sqldb.Driver{}
-
-// RegisterDriver will register a SQL driver
-func RegisterDriver(driverName string, driver sqldb.Driver) {
-	if _, ok := supportedDrivers[driverName]; ok {
-		panic("driver " + driverName + " already registered")
+type (
+	// DataConverter defines the API for conversions to/from
+	// go types to mysql datatypes
+	DataConverter interface {
+		ToMySQLDateTime(t time.Time) time.Time
+		FromMySQLDateTime(t time.Time) time.Time
 	}
-	supportedDrivers[driverName] = driver
+	converter struct{}
+)
+
+// ToMySQLDateTime converts to time to MySQL datetime
+func (c *converter) ToMySQLDateTime(t time.Time) time.Time {
+	if t.IsZero() {
+		return minMySQLDateTime
+	}
+	return t
 }
 
-// NewSQLDB creates a returns a reference to a logical connection to the
-// underlying SQL database. The returned object is to tied to a single
-// SQL database and the object can be used to perform CRUD operations on
-// the tables in the database
-func NewSQLDB(cfg *config.SQL) (sqldb.DB, error) {
-	driver, ok := supportedDrivers[cfg.DriverName]
-
-	if !ok {
-		return nil, fmt.Errorf("not supported driver %v, only supported: %v", cfg.DriverName, supportedDrivers)
+// FromMySQLDateTime converts mysql datetime and returns go time
+func (c *converter) FromMySQLDateTime(t time.Time) time.Time {
+	if t.Equal(minMySQLDateTime) {
+		return time.Time{}
 	}
+	return t
+}
 
-	return driver.InitDB(cfg)
+func getMinMySQLDateTime() time.Time {
+	t, err := time.Parse(time.RFC3339, "1000-01-01T00:00:00Z")
+	if err != nil {
+		return time.Unix(0, 0)
+	}
+	return t
 }

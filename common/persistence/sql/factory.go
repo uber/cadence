@@ -46,7 +46,7 @@ type (
 	// additional reference counting
 	dbConn struct {
 		sync.Mutex
-		sqldb.Interface
+		sqldb.DB
 		refCnt int
 		cfg    *config.SQL
 	}
@@ -139,7 +139,7 @@ func newRefCountedDBConn(cfg *config.SQL) dbConn {
 // get returns a mysql db connection and increments a reference count
 // this method will create a new connection, if an existing connection
 // does not exist
-func (c *dbConn) get() (sqldb.Interface, error) {
+func (c *dbConn) get() (sqldb.DB, error) {
 	c.Lock()
 	defer c.Unlock()
 	if c.refCnt == 0 {
@@ -147,7 +147,7 @@ func (c *dbConn) get() (sqldb.Interface, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.Interface = conn
+		c.DB = conn
 	}
 	c.refCnt++
 	return c, nil
@@ -157,8 +157,8 @@ func (c *dbConn) get() (sqldb.Interface, error) {
 func (c *dbConn) forceClose() {
 	c.Lock()
 	defer c.Unlock()
-	if c.Interface != nil {
-		err := c.Interface.Close()
+	if c.DB != nil {
+		err := c.DB.Close()
 		if err != nil{
 			fmt.Println("failed to close database connection, may leak some connection", err)
 		}
@@ -173,8 +173,8 @@ func (c *dbConn) Close() error {
 	defer c.Unlock()
 	c.refCnt--
 	if c.refCnt == 0 {
-		err := c.Interface.Close()
-		c.Interface = nil
+		err := c.DB.Close()
+		c.DB = nil
 		return err
 	}
 	return nil

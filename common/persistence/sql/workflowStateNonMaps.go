@@ -77,7 +77,7 @@ func updateSignalsRequested(
 }
 
 func getSignalsRequested(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,
@@ -153,7 +153,7 @@ func updateBufferedEvents(
 }
 
 func getBufferedEvents(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,

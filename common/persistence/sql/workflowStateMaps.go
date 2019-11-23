@@ -137,7 +137,7 @@ func updateActivityInfos(
 }
 
 func getActivityInfoMap(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,
@@ -298,7 +298,7 @@ func updateTimerInfos(
 }
 
 func getTimerInfoMap(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,
@@ -427,7 +427,7 @@ func updateChildExecutionInfos(
 }
 
 func getChildExecutionInfoMap(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,
@@ -565,7 +565,7 @@ func updateRequestCancelInfos(
 }
 
 func getRequestCancelInfoMap(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,
@@ -693,7 +693,7 @@ func updateSignalInfos(
 }
 
 func getSignalInfoMap(
-	db sqldb.Interface,
+	db sqldb.DB,
 	shardID int,
 	domainID sqldb.UUID,
 	workflowID string,

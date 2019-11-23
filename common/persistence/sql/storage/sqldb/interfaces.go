@@ -22,13 +22,18 @@ package sqldb
 
 import (
 	"database/sql"
-	"github.com/jmoiron/sqlx"
+	"github.com/uber/cadence/common/service/config"
 	"time"
 
 	"github.com/uber/cadence/common"
 )
 
 type (
+	// Driver defines the interface for any SQL database that needs to implement
+	Driver interface {
+		InitDB(cfg *config.SQL) (DB, error)
+	}
+
 	// DomainRow represents a row in domain table
 	DomainRow struct {
 		ID           UUID
@@ -682,6 +687,20 @@ type (
 		GetAckLevels(queueType common.QueueType, forUpdate bool) (map[string]int, error)
 	}
 
+	// AdminCURD defines admin operations for CLI and test suites
+	AdminCURD interface {
+		CreateSchemaVersionTables() error
+		ReadSchemaVersion(database string) (string, error)
+		UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error
+		WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error
+		ListTables(database string) ([]string, error)
+		DropTable(database string) error
+		DropAllTables(database string) error
+		CreateDatabase(database string) error
+		DropDatabase(database string) error
+		Exec(stmt string, args ...interface{}) error
+	}
+
 	// Tx defines the API for a SQL transaction
 	Tx interface {
 		tableCRUD
@@ -689,13 +708,14 @@ type (
 		Rollback() error
 	}
 
-	// Interface defines the API for a SQL database
-	Interface interface {
+	// DB defines the API for SQL operations
+	DB interface{
 		tableCRUD
+		AdminCURD
+
 		BeginTx() (Tx, error)
 		DriverName() string
 		IsDupEntryError(err error) bool
-		GetConnection() *sqlx.DB
 		Close() error
 	}
 

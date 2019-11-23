@@ -23,16 +23,15 @@ package mysql
 import (
 	"bytes"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 
 	"net/url"
 	"strings"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/uber/cadence/common/persistence/sql/storage"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -52,30 +51,27 @@ var dsnAttrOverrides = map[string]string{
 
 type driver struct{}
 
-var _ sqlshared.Driver = (*driver)(nil)
+var _ sqldb.Driver = (*driver)(nil)
 
 func init() {
 	storage.RegisterDriver(DriverName, &driver{})
 }
 
-func (d *driver) GetDriverName() string {
-	return DriverName
-}
-
-// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
-// so we don't do the insert and return a ConditionalUpdate error.
-const ErrDupEntry = 1062
-
-func (d *driver) IsDupEntryError(err error) bool {
-	sqlErr, ok := err.(*mysql.MySQLError)
-	return ok && sqlErr.Number == ErrDupEntry
+// InitDB initialize the db object
+func (d *driver) InitDB(cfg *config.SQL) (sqldb.DB, error){
+	conn, err := d.createDBConnection(cfg)
+	if err != nil {
+		return nil, err
+	}
+	db := NewDB(conn, nil)
+	return db, nil
 }
 
 // CreateDBConnection creates a returns a reference to a logical connection to the
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func (d *driver) CreateDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+func (d *driver) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	db, err := sqlx.Connect(DriverName, buildDSN(cfg))
 	if err != nil {
 		return nil, err

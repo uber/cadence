@@ -23,13 +23,11 @@ package sql
 import (
 	"fmt"
 	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 
 	"time"
 
-	"github.com/jmoiron/sqlx"
-
-	"github.com/uber/cadence/common/persistence/sql/storage/sqlshared"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -46,9 +44,8 @@ type (
 
 	// Connection is the connection to database
 	Connection struct {
-		driver   sqlshared.Driver
-		database string
-		db       *sqlx.DB
+		dbName string
+		db     sqldb.DB
 	}
 )
 
@@ -56,9 +53,9 @@ var _ schema.DB = (*Connection)(nil)
 
 // NewConnection creates a new connection to database
 func NewConnection(params *ConnectParams) (*Connection, error) {
-	driver := storage.GetDriver(params.DriverName)
 
-	db, err := driver.CreateDBConnection(&config.SQL{
+	db, err := storage.NewSQLDB(&config.SQL{
+		DriverName:params.DriverName,
 		User:params.User,
 		Password:params.Password,
 		DatabaseName:params.Database,
@@ -69,30 +66,24 @@ func NewConnection(params *ConnectParams) (*Connection, error) {
 	}
 
 	return &Connection{
-		db:       db,
-		database: params.Database,
-		driver:   driver,
+		db:     db,
+		dbName: params.Database,
 	}, nil
 }
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (c *Connection) CreateSchemaVersionTables() error {
-	if err := c.Exec(c.driver.CreateSchemaVersionTableQuery()); err != nil {
-		return err
-	}
-	return c.Exec(c.driver.CreateSchemaUpdateHistoryTableQuery())
+	return c.db.CreateSchemaVersionTables()
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (c *Connection) ReadSchemaVersion() (string, error) {
-	var version string
-	err := c.db.Get(&version, c.driver.ReadSchemaVersionQuery(), c.database)
-	return version, err
+	return c.db.ReadSchemaVersion(c.dbName)
 }
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (c *Connection) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
-	return c.Exec(c.driver.WriteSchemaVersionQuery(), c.database, time.Now(), newVersion, minCompatibleVersion)
+	return c.Exec(c.driver.WriteSchemaVersionQuery(), c.dbName, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
@@ -110,7 +101,7 @@ func (c *Connection) Exec(stmt string, args ...interface{}) error {
 // ListTables returns a list of tables in this database
 func (c *Connection) ListTables() ([]string, error) {
 	var tables []string
-	err := c.db.Select(&tables, fmt.Sprintf(c.driver.ListTablesQuery(), c.database))
+	err := c.db.Select(&tables, fmt.Sprintf(c.driver.ListTablesQuery(), c.dbName))
 	return tables, err
 }
 
@@ -140,12 +131,15 @@ func (c *Connection) CreateDatabase(name string) error {
 
 // DropDatabase drops a database
 func (c *Connection) DropDatabase(name string) error {
-	return c.Exec(fmt.Sprintf(c.driver.DropDatabaseQuery(), name))
+	return
 }
 
 // Close closes the sql client
 func (c *Connection) Close() {
 	if c.db != nil {
-		c.db.Close()
+		err := c.db.Close()
+		if err != nil{
+			panic("cannot close connection")
+		}
 	}
 }

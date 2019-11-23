@@ -20,6 +20,11 @@
 
 package postgres
 
+import (
+	"database/sql"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+)
+
 const (
 	// below are templates for history_node table
 	addHistoryNodesQuery = `INSERT INTO history_node (` +
@@ -41,26 +46,48 @@ const (
 	deleteHistoryTreeQuery = `DELETE FROM history_tree WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 `
 )
 
-func (d *driver) AddHistoryNodesQuery() string {
-	return addHistoryNodesQuery
+
+// For history_node table:
+
+// InsertIntoHistoryNode inserts a row into history_node table
+func (mdb *db) InsertIntoHistoryNode(row *sqldb.HistoryNodeRow) (sql.Result, error) {
+	// NOTE: Query 5.6 doesn't support clustering order, to workaround, we let txn_id multiple by -1
+	*row.TxnID *= -1
+	return mdb.conn.NamedExec(addHistoryNodesQuery, row)
 }
 
-func (d *driver) GetHistoryNodesQuery() string {
-	return getHistoryNodesQuery
+// SelectFromHistoryNode reads one or more rows from history_node table
+func (mdb *db) SelectFromHistoryNode(filter *sqldb.HistoryNodeFilter) ([]sqldb.HistoryNodeRow, error) {
+	var rows []sqldb.HistoryNodeRow
+	err := mdb.conn.Select(&rows, getHistoryNodesQuery,
+		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, *filter.PageSize)
+	// NOTE: since we let txn_id multiple by -1 when inserting, we have to revert it back here
+	for _, row := range rows {
+		*row.TxnID *= -1
+	}
+	return rows, err
 }
 
-func (d *driver) DeleteHistoryNodesQuery() string {
-	return deleteHistoryNodesQuery
+// DeleteFromHistoryNode deletes one or more rows from history_node table
+func (mdb *db) DeleteFromHistoryNode(filter *sqldb.HistoryNodeFilter) (sql.Result, error) {
+	return mdb.conn.Exec(deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID)
 }
 
-func (d *driver) AddHistoryTreeQuery() string {
-	return addHistoryTreeQuery
+// For history_tree table:
+
+// InsertIntoHistoryTree inserts a row into history_tree table
+func (mdb *db) InsertIntoHistoryTree(row *sqldb.HistoryTreeRow) (sql.Result, error) {
+	return mdb.conn.NamedExec(addHistoryTreeQuery, row)
 }
 
-func (d *driver) GetHistoryTreeQuery() string {
-	return getHistoryTreeQuery
+// SelectFromHistoryTree reads one or more rows from history_tree table
+func (mdb *db) SelectFromHistoryTree(filter *sqldb.HistoryTreeFilter) ([]sqldb.HistoryTreeRow, error) {
+	var rows []sqldb.HistoryTreeRow
+	err := mdb.conn.Select(&rows, getHistoryTreeQuery, filter.ShardID, filter.TreeID)
+	return rows, err
 }
 
-func (d *driver) DeleteHistoryTreeQuery() string {
-	return deleteHistoryTreeQuery
+// DeleteFromHistoryTree deletes one or more rows from history_tree table
+func (mdb *db) DeleteFromHistoryTree(filter *sqldb.HistoryTreeFilter) (sql.Result, error) {
+	return mdb.conn.Exec(deleteHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID)
 }

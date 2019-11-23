@@ -18,29 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sqlshared
+package postgres
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
-// DB represents a logical connection to mysql database
-type DB struct {
+// db represents a logical connection to mysql database
+type db struct {
 	db        *sqlx.DB
 	tx        *sqlx.Tx
 	conn      sqldb.Conn
 	converter DataConverter
-	driver    Driver
 }
 
-var _ sqldb.Tx = (*DB)(nil)
-var _ sqldb.Interface = (*DB)(nil)
+var _ sqldb.Tx = (*db)(nil)
+var _ sqldb.DB = (*db)(nil)
+
+func (mdb *db)  GetDriverName() string {
+	return DriverName
+}
+
+// ErrDupEntry indicates a duplicate primary key i.e. the row already exists,
+// check http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
+const ErrDupEntry = "23505"
+
+func (mdb *db) IsDupEntryError(err error) bool {
+	sqlErr, ok := err.(*pq.Error)
+	return ok && sqlErr.Code == ErrDupEntry
+}
 
 // NewDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
-func NewDB(xdb *sqlx.DB, tx *sqlx.Tx, driver Driver) *DB {
-	mdb := &DB{db: xdb, tx: tx, driver: driver}
+func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
+	mdb := &db{db: xdb, tx: tx}
 	mdb.conn = xdb
 	if tx != nil {
 		mdb.conn = tx
@@ -50,40 +63,30 @@ func NewDB(xdb *sqlx.DB, tx *sqlx.Tx, driver Driver) *DB {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (mdb *DB) BeginTx() (sqldb.Tx, error) {
+func (mdb *db) BeginTx() (sqldb.Tx, error) {
 	xtx, err := mdb.db.Beginx()
 	if err != nil {
 		return nil, err
 	}
-	return NewDB(mdb.db, xtx, mdb.driver), nil
+	return NewDB(mdb.db, xtx), nil
 }
 
 // Commit commits a previously started transaction
-func (mdb *DB) Commit() error {
+func (mdb *db) Commit() error {
 	return mdb.tx.Commit()
 }
 
 // Rollback triggers rollback of a previously started transaction
-func (mdb *DB) Rollback() error {
+func (mdb *db) Rollback() error {
 	return mdb.tx.Rollback()
 }
 
 // Close closes the connection to the mysql db
-func (mdb *DB) Close() error {
+func (mdb *db) Close() error {
 	return mdb.db.Close()
 }
 
 // DriverName returns the name of the mysql driver
-func (mdb *DB) DriverName() string {
-	return mdb.db.DriverName()
-}
-
-// IsDupEntryError returns is the error meaning duplicated entry
-func (mdb *DB) IsDupEntryError(err error) bool {
-	return mdb.driver.IsDupEntryError(err)
-}
-
-// GetConnection returns the connection
-func (mdb *DB) GetConnection() *sqlx.DB{
-	return mdb.db
+func (mdb *db) DriverName() string {
+	return DriverName
 }

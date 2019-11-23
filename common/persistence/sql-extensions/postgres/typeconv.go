@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sqlshared
+package postgres
 
 import "time"
 
@@ -27,6 +27,7 @@ var (
 )
 
 type (
+	// TODO we may not need this for Postgres
 	// DataConverter defines the API for conversions to/from
 	// go types to mysql datatypes
 	DataConverter interface {

@@ -41,7 +41,7 @@ type (
 )
 
 func newQueue(
-	db sqldb.Interface,
+	db sqldb.DB,
 	logger log.Logger,
 	queueType common.QueueType,
 ) (persistence.Queue, error) {

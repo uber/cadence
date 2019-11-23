@@ -46,7 +46,7 @@ var (
 )
 
 // newTaskPersistence creates a new instance of TaskManager
-func newTaskPersistence(db sqldb.Interface, nShards int, log log.Logger) (persistence.TaskManager, error) {
+func newTaskPersistence(db sqldb.DB, nShards int, log log.Logger) (persistence.TaskManager, error) {
 	return &sqlTaskManager{
 		sqlStore: sqlStore{
 			db:     db,

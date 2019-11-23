@@ -46,7 +46,7 @@ var _ p.ExecutionStore = (*sqlExecutionManager)(nil)
 
 // NewSQLExecutionStore creates an instance of ExecutionStore
 func NewSQLExecutionStore(
-	db sqldb.Interface,
+	db sqldb.DB,
 	logger log.Logger,
 	shardID int,
 ) (p.ExecutionStore, error) {

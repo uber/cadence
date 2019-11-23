@@ -40,7 +40,7 @@ type sqlHistoryV2Manager struct {
 
 // newHistoryV2Persistence creates an instance of HistoryManager
 func newHistoryV2Persistence(
-	db sqldb.Interface,
+	db sqldb.DB,
 	logger log.Logger,
 ) (p.HistoryStore, error) {
 
