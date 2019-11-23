@@ -67,7 +67,15 @@ func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.setupSuite("testdata/integration_elasticsearch_cluster.yaml")
 	s.esClient = CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String())
 	PutIndexTemplate(s.Suite, s.esClient, "testdata/es_index_template.json", "test-visibility-template")
-	CreateIndex(s.Suite, s.esClient, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
+
+	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
+	CreateIndex(s.Suite, s.esClient, indexName)
+
+	_, err := s.esClient.IndexPutSettings(indexName).
+		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, defaultTestValueOfESIndexMaxResultWindow)).
+		Do(context.Background())
+	s.Require().NoError(err)
+	s.verifyMaxResultWindowSize(indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
 func (s *elasticsearchIntegrationSuite) TearDownSuite() {
@@ -377,13 +385,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 
 // To test last page search trigger max window size error
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
-	// set es index index settings
-	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
-	_, err := s.esClient.IndexPutSettings(indexName).
-		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, defaultTestValueOfESIndexMaxResultWindow)).
-		Do(context.Background())
-	s.NoError(err)
-
 	id := "es-integration-list-workflow-max-window-size-test"
 	wt := "es-integration-list-workflow-max-window-size-test-type"
 	tl := "es-integration-list-workflow-max-window-size-test-tasklist"
@@ -426,12 +427,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	s.Nil(err)
 	s.True(len(resp.GetExecutions()) == 0)
 	s.True(len(resp.GetNextPageToken()) == 0)
-
-	// revert es index index settings
-	_, err = s.esClient.IndexPutSettings(indexName).
-		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, 10000)).
-		Do(context.Background())
-	s.NoError(err)
 }
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
@@ -1085,4 +1080,15 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	failedDecisionAttr := decisionFailedEvent.DecisionTaskFailedEventAttributes
 	s.Equal(workflow.DecisionTaskFailedCauseBadSearchAttributes, failedDecisionAttr.GetCause())
 	s.True(len(failedDecisionAttr.GetDetails()) > 0)
+}
+
+func (s *elasticsearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
+	for {
+		settings, err := s.esClient.IndexGetSettings(indexName).Do(context.Background())
+		s.Require().NoError(err)
+		if settings[indexName].Settings["index"].(map[string]interface{})["max_result_window"].(string) == strconv.Itoa(targetSize) {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
