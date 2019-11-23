@@ -67,15 +67,9 @@ func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.setupSuite("testdata/integration_elasticsearch_cluster.yaml")
 	s.esClient = CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String())
 	PutIndexTemplate(s.Suite, s.esClient, "testdata/es_index_template.json", "test-visibility-template")
-
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	CreateIndex(s.Suite, s.esClient, indexName)
-
-	_, err := s.esClient.IndexPutSettings(indexName).
-		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, defaultTestValueOfESIndexMaxResultWindow)).
-		Do(context.Background())
-	s.Require().NoError(err)
-	s.verifyMaxResultWindowSize(indexName, defaultTestValueOfESIndexMaxResultWindow)
+	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
 func (s *elasticsearchIntegrationSuite) TearDownSuite() {
@@ -1082,13 +1076,22 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	s.True(len(failedDecisionAttr.GetDetails()) > 0)
 }
 
+func (s *elasticsearchIntegrationSuite) putIndexSettings(indexName string, maxResultWindowSize int) {
+	_, err := s.esClient.IndexPutSettings(indexName).
+		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, defaultTestValueOfESIndexMaxResultWindow)).
+		Do(context.Background())
+	s.Require().NoError(err)
+	s.verifyMaxResultWindowSize(indexName, defaultTestValueOfESIndexMaxResultWindow)
+}
+
 func (s *elasticsearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
-	for {
+	for i := 0; i < numOfRetry; i++ {
 		settings, err := s.esClient.IndexGetSettings(indexName).Do(context.Background())
 		s.Require().NoError(err)
 		if settings[indexName].Settings["index"].(map[string]interface{})["max_result_window"].(string) == strconv.Itoa(targetSize) {
-			break
+			return
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
+	s.FailNow(fmt.Sprintf("ES max result window size hasn't reach target size within %v.", (numOfRetry*waitTimeInMs)*time.Millisecond))
 }
