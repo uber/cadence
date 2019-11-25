@@ -192,7 +192,7 @@ func NewService(
 func (s *Service) Start() {
 
 	logger := s.GetLogger()
-	logger.Info("frontend starting", tag.Service(common.FrontendServiceName))
+	logger.Info("frontend starting")
 
 	var replicationMessageSink messaging.Producer
 	// var domainReplicationQueue persistence.DomainReplicationQueue
@@ -225,9 +225,9 @@ func (s *Service) Start() {
 	dcRedirectionHandler.Start()
 	adminHandler.Start()
 
-	// base (service is not started in frontend or admin handler) in case of race condition in yarpc registration function
+	// resource is not started in frontend or admin handler) in case of race condition in yarpc registration function
 
-	logger.Info("started", tag.Service(common.FrontendServiceName))
+	logger.Info("frontend started")
 
 	<-s.stopC
 
@@ -240,5 +240,5 @@ func (s *Service) Stop() {
 	case s.stopC <- struct{}{}:
 	default:
 	}
-	s.params.Logger.Info("stopped", tag.Service(common.FrontendServiceName))
+	s.GetLogger().Info("frontend stopped")
 }

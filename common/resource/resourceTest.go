@@ -221,8 +221,8 @@ func (s *Test) GetHostName() string {
 }
 
 // GetHostInfo for testing
-func (s *Test) GetHostInfo() (*membership.HostInfo, error) {
-	return testHostInfo, nil
+func (s *Test) GetHostInfo() *membership.HostInfo {
+	return testHostInfo
 }
 
 // GetClusterMetadata for testing
@@ -286,7 +286,8 @@ func (s *Test) GetMatchingServiceResolver() membership.ServiceResolver {
 
 // GetHistoryServiceResolver for testing
 func (s *Test) GetHistoryServiceResolver() membership.ServiceResolver {
-	panic("user should implement this method for test")
+	//panic("user should implement this method for test")
+	return s.HistoryServiceResolver
 }
 
 // GetWorkerServiceResolver for testing

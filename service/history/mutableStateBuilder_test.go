@@ -32,10 +32,10 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource"
 )
 
 type (
@@ -44,6 +44,7 @@ type (
 		*require.Assertions
 
 		controller      *gomock.Controller
+		mockResource    *resource.Test
 		mockEventsCache *MockeventsCache
 
 		msBuilder *mutableStateBuilder
@@ -69,17 +70,18 @@ func (s *mutableStateSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
+	s.mockResource = resource.NewTest(s.controller, metrics.History)
 	s.mockEventsCache = NewMockeventsCache(s.controller)
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = s.mockResource.Logger
 	s.mockShard = &shardContextImpl{
+		Resource:                  s.mockResource,
 		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
-		timeSource:                clock.NewRealTimeSource(),
 	}
 
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
@@ -87,6 +89,7 @@ func (s *mutableStateSuite) SetupTest() {
 
 func (s *mutableStateSuite) TearDownTest() {
 	s.controller.Finish()
+	s.mockResource.Finish(s.T())
 }
 
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_ReplicateDecisionCompleted() {

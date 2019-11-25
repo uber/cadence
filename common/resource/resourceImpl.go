@@ -71,6 +71,7 @@ type (
 		numShards       int
 		serviceName     string
 		hostName        string
+		hostInfo        *membership.HostInfo
 		metricsScope    tally.Scope
 		clusterMetadata cluster.Metadata
 
@@ -147,6 +148,11 @@ func New(
 	dispatcher := params.RPCFactory.GetDispatcher()
 
 	membershipMonitor, err := params.MembershipFactory.GetMembershipMonitor()
+	if err != nil {
+		return nil, err
+	}
+
+	hostInfo, err := membershipMonitor.WhoAmI()
 	if err != nil {
 		return nil, err
 	}
@@ -265,6 +271,7 @@ func New(
 		numShards:       numShards,
 		serviceName:     params.Name,
 		hostName:        hostName,
+		hostInfo:        hostInfo,
 		metricsScope:    params.MetricScope,
 		clusterMetadata: params.ClusterMetadata,
 
@@ -385,8 +392,8 @@ func (h *Impl) GetHostName() string {
 }
 
 // GetHostInfo return host info
-func (h *Impl) GetHostInfo() (*membership.HostInfo, error) {
-	return h.membershipMonitor.WhoAmI()
+func (h *Impl) GetHostInfo() *membership.HostInfo {
+	return h.hostInfo
 }
 
 // GetClusterMetadata return cluster metadata
@@ -440,7 +447,7 @@ func (h *Impl) GetMembershipMonitor() membership.Monitor {
 
 // GetFrontendServiceResolver return frontend service resolver
 func (h *Impl) GetFrontendServiceResolver() membership.ServiceResolver {
-	return h.historyServiceResolver
+	return h.frontendServiceResolver
 }
 
 // GetMatchingServiceResolver return matching service resolver
