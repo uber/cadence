@@ -22,15 +22,14 @@ package sql
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/persistence/sql/storage"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/environment"
@@ -41,7 +40,6 @@ type TestCluster struct {
 	dbName    string
 	schemaDir string
 	cfg       config.SQL
-	conn        *sqlx.DB
 }
 
 // TODO not allowed by circle deps
@@ -79,7 +77,6 @@ func (s *TestCluster) DatabaseName() string {
 func (s *TestCluster) SetupTestDatabase() {
 	s.CreateDatabase()
 
-	s.conn = s.createSession()
 	schemaDir := s.schemaDir + "/"
 	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
 		cadencePackageDir, err := getCadencePackageDir()
@@ -90,10 +87,6 @@ func (s *TestCluster) SetupTestDatabase() {
 	}
 	s.LoadSchema([]string{"schema.sql"}, schemaDir)
 	s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
-	err := s.conn.Close()
-	if err != nil{
-		log.Fatal(err)
-	}
 }
 
 // Config returns the persistence config for connecting to this test cluster
@@ -114,75 +107,52 @@ func (s *TestCluster) TearDownTestDatabase() {
 	s.DropDatabase()
 }
 
-// CreateSession from PersistenceTestCluster interface
-func (s *TestCluster) createSession() *sqlx.DB {
-	driver := storage.GetDriver(s.cfg.DriverName)
-
-	conn, err := driver.CreateDBConnection(&config.SQL{
-		User:s.cfg.User,
-		Password:s.cfg.Password,
-		DatabaseName: s.cfg.DatabaseName,
-		ConnectAddr:s.cfg.ConnectAddr,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return conn
-}
-
 // CreateDatabase from PersistenceTestCluster interface
 func (s *TestCluster) CreateDatabase() {
-	driver := storage.GetDriver(s.cfg.DriverName)
-
-	conn, err := driver.CreateDBConnection(&config.SQL{
-		User:s.cfg.User,
-		Password:s.cfg.Password,
-		//NOTE the db is not existing yet
-		DatabaseName:"",
-		ConnectAddr:s.cfg.ConnectAddr,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = conn.Exec(fmt.Sprintf(driver.CreateDatabaseQuery(), s.cfg.DatabaseName))
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("database is created:", s.cfg.DatabaseName)
-	err = conn.Close()
+	cfg2 := s.cfg
+	// NOTE need to connect with empty name to create new database
+	cfg2.DatabaseName = ""
+	db, err := storage.NewSQLDB(&cfg2)
 	if err != nil{
-		log.Fatal(err)
+		panic(err)
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil{
+			panic(err)
+		}
+	}()
+	err = db.CreateDatabase(s.cfg.DatabaseName)
+	if err != nil{
+		panic(err)
 	}
 }
 
 // DropDatabase from PersistenceTestCluster interface
 func (s *TestCluster) DropDatabase() {
-	driver := storage.GetDriver(s.cfg.DriverName)
-
-	conn, err := driver.CreateDBConnection(&config.SQL{
-		User:s.cfg.User,
-		Password:s.cfg.Password,
-		//NOTE need to connect with empty db to drop the database
-		DatabaseName:"",
-		ConnectAddr:s.cfg.ConnectAddr,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = conn.Exec(fmt.Sprintf(driver.DropDatabaseQuery(), s.cfg.DatabaseName))
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = conn.Close()
+	cfg2 := s.cfg
+	// NOTE need to connect with empty name to drop the database
+	cfg2.DatabaseName = ""
+	db, err := storage.NewSQLDB(&cfg2)
 	if err != nil{
-		log.Fatal(err)
+		panic(err)
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil{
+			panic(err)
+		}
+	}()
+	err = db.DropDatabase(s.cfg.DatabaseName)
+	if err != nil{
+		panic(err)
 	}
 }
 
 // LoadSchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
-	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.conn, true)
+	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -191,7 +161,7 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 // LoadVisibilitySchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/visibility"
-	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.conn, true)
+	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -208,7 +178,17 @@ func getCadencePackageDir() (string, error) {
 }
 
 // loadDatabaseSchema loads the schema from the given .sql files on this database
-func loadDatabaseSchema(dir string, fileNames []string, db *sqlx.DB, override bool) (err error) {
+func (s *TestCluster)  loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
+	db, err := storage.NewSQLDB(&s.cfg)
+	if err != nil{
+		panic(err)
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil{
+			panic(err)
+		}
+	}()
 
 	for _, file := range fileNames {
 		// This is only used in tests. Excluding it from security scanners
@@ -217,7 +197,7 @@ func loadDatabaseSchema(dir string, fileNames []string, db *sqlx.DB, override bo
 		if err != nil {
 			return fmt.Errorf("error reading contents of file %v:%v", file, err.Error())
 		}
-		_, err = db.Exec(string(content))
+		err = db.Exec(string(content))
 		if err != nil {
 			err = fmt.Errorf("error loading schema from %v: %v", file, err.Error())
 		}

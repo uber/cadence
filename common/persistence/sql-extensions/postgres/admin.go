@@ -96,7 +96,7 @@ func (mdb *db) Exec(stmt string, args ...interface{}) error {
 // ListTables returns a list of tables in this database
 func (mdb *db)  ListTables(database string) ([]string, error) {
 	var tables []string
-	err := mdb.db.Select(&tables, fmt.Sprintf(listTablesQuery, database))
+	err := mdb.db.Select(&tables, fmt.Sprintf(listTablesQuery))
 	return tables, err
 }
 

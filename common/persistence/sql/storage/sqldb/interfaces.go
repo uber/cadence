@@ -694,7 +694,7 @@ type (
 		UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error
 		WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error
 		ListTables(database string) ([]string, error)
-		DropTable(database string) error
+		DropTable(table string) error
 		DropAllTables(database string) error
 		CreateDatabase(database string) error
 		DropDatabase(database string) error

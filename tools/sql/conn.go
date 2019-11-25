@@ -22,12 +22,10 @@ package sql
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
-
-	"time"
-
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -83,31 +81,28 @@ func (c *Connection) ReadSchemaVersion() (string, error) {
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (c *Connection) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
-	return c.Exec(c.driver.WriteSchemaVersionQuery(), c.dbName, time.Now(), newVersion, minCompatibleVersion)
+	return c.db.UpdateSchemaVersion(c.dbName, newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
-	now := time.Now().UTC()
-	return c.Exec(c.driver.WriteSchemaUpdateHistoryQuery(), now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
+	return c.db.WriteSchemaUpdateLog(oldVersion,newVersion, manifestMD5, desc)
 }
 
 // Exec executes a sql statement
 func (c *Connection) Exec(stmt string, args ...interface{}) error {
-	_, err := c.db.Exec(stmt, args...)
+	err := c.db.Exec(stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (c *Connection) ListTables() ([]string, error) {
-	var tables []string
-	err := c.db.Select(&tables, fmt.Sprintf(c.driver.ListTablesQuery(), c.dbName))
-	return tables, err
+	return c.db.ListTables(c.dbName)
 }
 
 // DropTable drops a given table from the database
 func (c *Connection) DropTable(name string) error {
-	return c.Exec(fmt.Sprintf(c.driver.DropTableQuery(), name))
+	return c.db.DropTable(name)
 }
 
 // DropAllTables drops all tables from this database
@@ -126,12 +121,12 @@ func (c *Connection) DropAllTables() error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (c *Connection) CreateDatabase(name string) error {
-	return c.Exec(fmt.Sprintf(c.driver.CreateDatabaseQuery(), name))
+	return c.db.CreateDatabase(name)
 }
 
 // DropDatabase drops a database
 func (c *Connection) DropDatabase(name string) error {
-	return
+	return c.db.DropDatabase(name)
 }
 
 // Close closes the sql client
