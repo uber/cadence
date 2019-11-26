@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -399,6 +400,18 @@ func (s *mutableStateSuite) TestMergeMapOfByteArray() {
 	currentMap = map[string][]byte{"number": []byte("1")}
 	resultMap = mergeMapOfByteArray(currentMap, newMap)
 	s.Equal(2, len(resultMap))
+}
+
+func (s *mutableStateSuite) TestEventReapplied() {
+	runID := uuid.New()
+	eventID := int64(1)
+	version := int64(2)
+	dedupResource := definition.NewEventReappliedID(runID, eventID, version)
+	isReapplied := s.msBuilder.IsResourceDuplicated(dedupResource)
+	s.False(isReapplied)
+	s.msBuilder.UpdateDuplicatedResource(dedupResource)
+	isReapplied = s.msBuilder.IsResourceDuplicated(dedupResource)
+	s.True(isReapplied)
 }
 
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*shared.HistoryEvent, *shared.HistoryEvent) {

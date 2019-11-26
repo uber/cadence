@@ -32,12 +32,9 @@ import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -49,20 +46,17 @@ type (
 
 		controller               *gomock.Controller
 		mockResource             *resource.Test
-		mockDomainCache          *cache.MockDomainCache
-		mockRemoteFrontendClient *workflowservicetest.MockClient
 		mockFrontendHandler      *MockWorkflowHandler
+		mockRemoteFrontendClient *workflowservicetest.MockClient
+		mockClusterMetadata      *cluster.MockMetadata
 
-		logger                 log.Logger
+		mockDCRedirectionPolicy *MockDCRedirectionPolicy
+
 		domainName             string
 		domainID               string
 		currentClusterName     string
 		alternativeClusterName string
 		config                 *Config
-		service                service.Service
-
-		mockDCRedirectionPolicy *MockDCRedirectionPolicy
-		mockClusterMetadata     *cluster.MockMetadata
 
 		frontendHandler *WorkflowHandler
 		handler         *DCRedirectionHandlerImpl
@@ -83,26 +77,23 @@ func (s *dcRedirectionHandlerSuite) TearDownSuite() {
 func (s *dcRedirectionHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.currentClusterName = cluster.TestCurrentClusterName
-	s.alternativeClusterName = cluster.TestAlternativeClusterName
 	s.domainName = "some random domain name"
 	s.domainID = "some random domain ID"
+	s.currentClusterName = cluster.TestCurrentClusterName
+	s.alternativeClusterName = cluster.TestAlternativeClusterName
 
 	s.mockDCRedirectionPolicy = &MockDCRedirectionPolicy{}
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
-	s.logger = s.mockResource.GetLogger()
-	s.mockDomainCache = s.mockResource.DomainCache
 	s.mockClusterMetadata = s.mockResource.ClusterMetadata
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
 
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.currentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
-	s.config = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), s.logger), 0, false)
+	s.config = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), s.mockResource.GetLogger()), 0, false)
 	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, nil)
-	frontendHandler.startWG.Done()
 
 	s.mockFrontendHandler = NewMockWorkflowHandler(s.controller)
 	s.handler = NewDCRedirectionHandler(frontendHandler, config.DCRedirectionPolicy{})
@@ -111,8 +102,9 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 }
 
 func (s *dcRedirectionHandlerSuite) TearDownTest() {
-	s.mockDCRedirectionPolicy.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockResource.Finish(s.T())
+	s.mockDCRedirectionPolicy.AssertExpectations(s.T())
 }
 
 func (s *dcRedirectionHandlerSuite) TestDescribeTaskList() {

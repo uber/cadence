@@ -30,27 +30,10 @@ import (
 
 var (
 	// Override value for integer keys for dynamic config
-	// intKeys = map[dynamicconfig.Key]int{
-	// 	dynamicconfig.FrontendRPS:                                   3000,
-	// 	dynamicconfig.MatchingNumTasklistWritePartitions:            3,
-	// 	dynamicconfig.MatchingNumTasklistReadPartitions:             3,
-	// 	dynamicconfig.TimerProcessorHistoryArchivalSizeLimit:        5 * 1024,
-	// 	dynamicconfig.ReplicationTaskProcessorErrorRetryMaxAttempts: 1,
-	// }
-	// stringKeys = map[dynamicconfig.Key]string{
-	// 	dynamicconfig.AdvancedVisibilityWritingMode: common.AdvancedVisibilityWritingModeOff,
-	// }
-	// durationKeys = map[dynamicconfig.Key]time.Duration{
-	// 	dynamicconfig.DecisionHeartbeatTimeout:                  5 * time.Second,
-	// 	dynamicconfig.ReplicationTaskFetcherAggregationInterval: 200 * time.Millisecond,
-	// 	dynamicconfig.ReplicationTaskFetcherErrorRetryWait:      50 * time.Millisecond,
-	// 	dynamicconfig.ReplicationTaskProcessorErrorRetryWait:    time.Millisecond,
-	// }
-	// boolKeys = map[dynamicconfig.Key]bool{
-	// 	dynamicconfig.EnableConsistentQueryByDomain: true,
-	// }
 	staticOverrides = map[dynamicconfig.Key]interface{}{
 		dynamicconfig.FrontendRPS:                                   3000,
+		dynamicconfig.FrontendVisibilityListMaxQPS:                  100,
+		dynamicconfig.FrontendESIndexMaxResultWindow:                defaultTestValueOfESIndexMaxResultWindow,
 		dynamicconfig.MatchingNumTasklistWritePartitions:            3,
 		dynamicconfig.MatchingNumTasklistReadPartitions:             3,
 		dynamicconfig.TimerProcessorHistoryArchivalSizeLimit:        5 * 1024,

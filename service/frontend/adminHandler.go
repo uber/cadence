@@ -26,8 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/olivere/elastic"
@@ -59,9 +57,7 @@ type (
 	AdminHandler struct {
 		resource.Resource
 
-		status                int32
 		numberOfHistoryShards int
-		startWG               sync.WaitGroup
 		params                *service.BootstrapParams
 		config                *Config
 	}
@@ -85,16 +81,12 @@ func NewAdminHandler(
 	params *service.BootstrapParams,
 	config *Config,
 ) *AdminHandler {
-	handler := &AdminHandler{
+	return &AdminHandler{
 		Resource:              resource,
-		status:                common.DaemonStatusInitialized,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
 		config:                config,
 	}
-	// prevent us from trying to serve requests before handler's Start() is complete
-	handler.startWG.Add(1)
-	return handler
 }
 
 // RegisterHandler register this handler, must be called before Start()
@@ -104,16 +96,10 @@ func (adh *AdminHandler) RegisterHandler() {
 
 // Start starts the handler
 func (adh *AdminHandler) Start() {
-	if !atomic.CompareAndSwapInt32(&adh.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
-		return
-	}
-
-	adh.startWG.Done()
 }
 
 // Stop stops the handler
 func (adh *AdminHandler) Stop() {
-	atomic.CompareAndSwapInt32(&adh.status, common.DaemonStatusStarted, common.DaemonStatusStopped)
 }
 
 // AddSearchAttribute add search attribute to whitelist
@@ -206,7 +192,7 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	domainID, err := adh.GetDomainCache().GetDomainID(request.GetDomain())
 
 	historyAddr := historyHost.GetAddress()
-	resp2, err := adh.GetHistoryRawClient().DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
+	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
 		DomainUUID: &domainID,
 		Execution:  request.Execution,
 	})
@@ -228,7 +214,7 @@ func (adh *AdminHandler) RemoveTask(ctx context.Context, request *gen.RemoveTask
 	if request == nil || request.ShardID == nil || request.Type == nil || request.TaskID == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryRawClient().RemoveTask(ctx, request)
+	err := adh.GetHistoryClient().RemoveTask(ctx, request)
 	return err
 }
 
@@ -239,7 +225,7 @@ func (adh *AdminHandler) CloseShard(ctx context.Context, request *gen.CloseShard
 	if request == nil || request.ShardID == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryRawClient().CloseShard(ctx, request)
+	err := adh.GetHistoryClient().CloseShard(ctx, request)
 	return err
 }
 
@@ -257,7 +243,7 @@ func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.D
 		}
 	}
 
-	resp, err := adh.GetHistoryRawClient().DescribeHistoryHost(ctx, request)
+	resp, err := adh.GetHistoryClient().DescribeHistoryHost(ctx, request)
 	return resp, err
 }
 
@@ -330,7 +316,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 		}
 
-		response, err := adh.GetHistoryRawClient().GetMutableState(ctx, &h.GetMutableStateRequest{
+		response, err := adh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID: common.StringPtr(domainID),
 			Execution:  execution,
 		})
@@ -445,7 +431,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 	var pageToken *getWorkflowRawHistoryV2Token
 	var targetVersionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
-		response, err := adh.GetHistoryRawClient().GetMutableState(ctx, &h.GetMutableStateRequest{
+		response, err := adh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID: common.StringPtr(domainID),
 			Execution:  execution,
 		})
@@ -714,7 +700,6 @@ func (adh *AdminHandler) validatePaginationToken(
 
 // startRequestProfile initiates recording of request metrics
 func (adh *AdminHandler) startRequestProfile(scope int) tally.Stopwatch {
-	adh.startWG.Wait()
 	sw := adh.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	adh.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	return sw

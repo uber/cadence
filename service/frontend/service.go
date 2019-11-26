@@ -21,6 +21,8 @@
 package frontend
 
 import (
+	mock "github.com/stretchr/testify/mock"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
@@ -146,35 +148,37 @@ func NewService(
 		EnableReadFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
 	}
 
+	visibilityManagerInitializer := func(
+		persistenceBean persistenceClient.Bean,
+		logger log.Logger,
+	) (persistence.VisibilityManager, error) {
+		visibilityFromDB := persistenceBean.GetVisibilityManager()
+
+		var visibilityFromES persistence.VisibilityManager
+		if params.ESConfig != nil {
+			visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+			visibilityConfigForES := &config.VisibilityConfig{
+				MaxQPS:                 serviceConfig.PersistenceMaxQPS,
+				VisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
+				ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
+				ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
+			}
+			visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
+				nil, params.MetricsClient, logger)
+		}
+		return persistence.NewVisibilityManagerWrapper(
+			visibilityFromDB,
+			visibilityFromES,
+			serviceConfig.EnableReadVisibilityFromES,
+			dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
+		), nil
+	}
+
 	serviceResource, err := resource.New(
 		params,
 		common.FrontendServiceName,
 		serviceConfig.ThrottledLogRPS,
-		func(
-			persistenceBean persistenceClient.Bean,
-			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
-			visibilityFromDB := persistenceBean.GetVisibilityManager()
-
-			var visibilityFromES persistence.VisibilityManager
-			if params.ESConfig != nil {
-				visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-				visibilityConfigForES := &config.VisibilityConfig{
-					MaxQPS:                 serviceConfig.PersistenceMaxQPS,
-					VisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
-					ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
-					ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
-				}
-				visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
-					nil, params.MetricsClient, logger)
-			}
-			return persistence.NewVisibilityManagerWrapper(
-				visibilityFromDB,
-				visibilityFromES,
-				serviceConfig.EnableReadVisibilityFromES,
-				dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
-			), nil
-		},
+		visibilityManagerInitializer,
 	)
 	if err != nil {
 		return nil, err
@@ -192,10 +196,9 @@ func NewService(
 func (s *Service) Start() {
 
 	logger := s.GetLogger()
-	logger.Info("frontend starting")
+	logger.Info("frontend starting", tag.Service(common.FrontendServiceName))
 
 	var replicationMessageSink messaging.Producer
-	// var domainReplicationQueue persistence.DomainReplicationQueue
 	clusterMetadata := s.GetClusterMetadata()
 	if clusterMetadata.IsGlobalDomainEnabled() {
 		consumerConfig := clusterMetadata.GetReplicationConsumerConfig()
@@ -211,6 +214,7 @@ func (s *Service) Start() {
 		}
 	} else {
 		replicationMessageSink = &mocks.KafkaProducer{}
+		replicationMessageSink.(*mocks.KafkaProducer).On("Publish", mock.Anything).Return(nil)
 	}
 
 	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink)
@@ -225,9 +229,9 @@ func (s *Service) Start() {
 	dcRedirectionHandler.Start()
 	adminHandler.Start()
 
-	// resource is not started in frontend or admin handler) in case of race condition in yarpc registration function
+	// base (service is not started in frontend or admin handler) in case of race condition in yarpc registration function
 
-	logger.Info("frontend started")
+	logger.Info("started", tag.Service(common.FrontendServiceName))
 
 	<-s.stopC
 
@@ -240,5 +244,5 @@ func (s *Service) Stop() {
 	case s.stopC <- struct{}{}:
 	default:
 	}
-	s.GetLogger().Info("frontend stopped")
+	s.params.Logger.Info("stopped", tag.Service(common.FrontendServiceName))
 }
