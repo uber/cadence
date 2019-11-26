@@ -231,11 +231,6 @@ func (s *Service) startScanner() {
 }
 
 func (s *Service) startReplicator() {
-	hostInfo, err := s.GetHostInfo()
-	if err != nil {
-		s.GetLogger().Fatal("failed to get service resolver", tag.Error(err))
-	}
-
 	msgReplicator := replicator.NewReplicator(
 		s.GetClusterMetadata(),
 		s.GetMetadataManager(),
@@ -245,7 +240,7 @@ func (s *Service) startReplicator() {
 		s.GetMessagingClient(),
 		s.GetLogger(),
 		s.GetMetricsClient(),
-		hostInfo,
+		s.GetHostInfo(),
 		s.GetWorkerServiceResolver(),
 	)
 	if err := msgReplicator.Start(); err != nil {

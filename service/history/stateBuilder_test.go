@@ -534,7 +534,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		},
 	}
 
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(continueAsNewEvent.GetVersion()).Return(s.sourceCluster).AnyTimes()
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionContinuedAsNewEvent(
 		continueAsNewEvent.GetEventId(),
 		testDomainID,
