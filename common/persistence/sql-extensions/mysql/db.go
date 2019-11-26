@@ -53,7 +53,7 @@ func (mdb *db) IsDupEntryError(err error) bool {
 
 // NewDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
-func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) sqldb.DB {
+func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 	mdb := &db{db: xdb, tx: tx}
 	mdb.conn = xdb
 	if tx != nil {
