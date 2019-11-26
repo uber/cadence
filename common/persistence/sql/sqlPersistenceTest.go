@@ -59,7 +59,7 @@ func NewTestCluster(driverName, dbName, username, password, host string, port in
 	result.cfg = config.SQL{
 		User:            username,
 		Password:        password,
-		ConnectAddr:     fmt.Sprintf("%v:%v",host, port),
+		ConnectAddr:     fmt.Sprintf("%v:%v", host, port),
 		ConnectProtocol: "tcp",
 		DriverName:      driverName,
 		DatabaseName:    dbName,
@@ -113,17 +113,17 @@ func (s *TestCluster) CreateDatabase() {
 	// NOTE need to connect with empty name to create new database
 	cfg2.DatabaseName = ""
 	db, err := storage.NewSQLDB(&cfg2)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	defer func() {
 		err := db.Close()
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 	}()
 	err = db.CreateDatabase(s.cfg.DatabaseName)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 }
@@ -134,17 +134,17 @@ func (s *TestCluster) DropDatabase() {
 	// NOTE need to connect with empty name to drop the database
 	cfg2.DatabaseName = ""
 	db, err := storage.NewSQLDB(&cfg2)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	defer func() {
 		err := db.Close()
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 	}()
 	err = db.DropDatabase(s.cfg.DatabaseName)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 }
@@ -178,14 +178,14 @@ func getCadencePackageDir() (string, error) {
 }
 
 // loadDatabaseSchema loads the schema from the given .sql files on this database
-func (s *TestCluster)  loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
+func (s *TestCluster) loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
 	db, err := storage.NewSQLDB(&s.cfg)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	defer func() {
 		err := db.Close()
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 	}()

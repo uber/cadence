@@ -62,7 +62,7 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 	if schemaDir == "" {
 		schemaDir = testSchemaDir
 	}
-	if host == ""{
+	if host == "" {
 		host = environment.GetCassandraAddress()
 	}
 	result.schemaDir = schemaDir

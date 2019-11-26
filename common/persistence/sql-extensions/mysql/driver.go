@@ -23,8 +23,6 @@ package mysql
 import (
 	"bytes"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
-
 	"net/url"
 	"strings"
 
@@ -32,10 +30,12 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 )
 
 const (
+	// DriverName is the name of the driver
 	DriverName                   = "mysql"
 	dsnFmt                       = "%s:%s@%v(%v)/%s"
 	isolationLevelAttrName       = "transaction_isolation"
@@ -58,7 +58,7 @@ func init() {
 }
 
 // InitDB initialize the db object
-func (d *driver) InitDB(cfg *config.SQL) (sqldb.DB, error){
+func (d *driver) InitDB(cfg *config.SQL) (sqldb.DB, error) {
 	conn, err := d.createDBConnection(cfg)
 	if err != nil {
 		return nil, err

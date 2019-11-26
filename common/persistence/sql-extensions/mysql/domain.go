@@ -23,6 +23,7 @@ package mysql
 import (
 	"database/sql"
 	"errors"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -37,20 +38,19 @@ const (
 
 	getDomainPart = `SELECT id, name, is_global, data, data_encoding FROM domains`
 
-	getDomainByIDQuery = getDomainPart + ` WHERE shard_id=? AND id = ?`
+	getDomainByIDQuery   = getDomainPart + ` WHERE shard_id=? AND id = ?`
 	getDomainByNameQuery = getDomainPart + ` WHERE shard_id=? AND name = ?`
 
-	listDomainsQuery = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
+	listDomainsQuery      = getDomainPart + ` WHERE shard_id=? ORDER BY id LIMIT ?`
 	listDomainsRangeQuery = getDomainPart + ` WHERE shard_id=? AND id > ? ORDER BY id LIMIT ?`
 
-	deleteDomainByIDQuery = `DELETE FROM domains WHERE shard_id=? AND id = ?`
+	deleteDomainByIDQuery   = `DELETE FROM domains WHERE shard_id=? AND id = ?`
 	deleteDomainByNameQuery = `DELETE FROM domains WHERE shard_id=? AND name = ?`
 
-	getDomainMetadataQuery = `SELECT notification_version FROM domain_metadata`
-	lockDomainMetadataQuery = `SELECT notification_version FROM domain_metadata FOR UPDATE`
+	getDomainMetadataQuery    = `SELECT notification_version FROM domain_metadata`
+	lockDomainMetadataQuery   = `SELECT notification_version FROM domain_metadata FOR UPDATE`
 	updateDomainMetadataQuery = `UPDATE domain_metadata SET notification_version = ? WHERE notification_version = ?`
 )
-
 
 const (
 	shardID = 54321

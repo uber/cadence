@@ -23,6 +23,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -84,7 +85,6 @@ task_type = :task_type
 		 tasks WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id <= $4 ` +
 		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5 )`
 )
-
 
 // InsertIntoTasks inserts one or more rows into tasks table
 func (mdb *db) InsertIntoTasks(rows []sqldb.TasksRow) (sql.Result, error) {

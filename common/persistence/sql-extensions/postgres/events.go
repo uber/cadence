@@ -22,6 +22,7 @@ package postgres
 
 import (
 	"database/sql"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -45,7 +46,6 @@ const (
 
 	deleteHistoryTreeQuery = `DELETE FROM history_tree WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 `
 )
-
 
 // For history_node table:
 

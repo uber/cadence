@@ -53,11 +53,11 @@ var _ schema.DB = (*Connection)(nil)
 func NewConnection(params *ConnectParams) (*Connection, error) {
 
 	db, err := storage.NewSQLDB(&config.SQL{
-		DriverName:params.DriverName,
-		User:params.User,
-		Password:params.Password,
-		DatabaseName:params.Database,
-		ConnectAddr:fmt.Sprintf("%v:%v", params.Host, params.Port),
+		DriverName:   params.DriverName,
+		User:         params.User,
+		Password:     params.Password,
+		DatabaseName: params.Database,
+		ConnectAddr:  fmt.Sprintf("%v:%v", params.Host, params.Port),
 	})
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (c *Connection) UpdateSchemaVersion(newVersion string, minCompatibleVersion
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
-	return c.db.WriteSchemaUpdateLog(oldVersion,newVersion, manifestMD5, desc)
+	return c.db.WriteSchemaUpdateLog(oldVersion, newVersion, manifestMD5, desc)
 }
 
 // Exec executes a sql statement
@@ -133,7 +133,7 @@ func (c *Connection) DropDatabase(name string) error {
 func (c *Connection) Close() {
 	if c.db != nil {
 		err := c.db.Close()
-		if err != nil{
+		if err != nil {
 			panic("cannot close connection")
 		}
 	}

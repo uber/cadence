@@ -22,6 +22,7 @@ package mysql
 
 import (
 	"database/sql"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -45,7 +46,7 @@ const (
  WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
 
 	writeLockExecutionQuery = lockExecutionQueryBase + ` FOR UPDATE`
-	readLockExecutionQuery = lockExecutionQueryBase + ` LOCK IN SHARE MODE`
+	readLockExecutionQuery  = lockExecutionQueryBase + ` LOCK IN SHARE MODE`
 
 	createCurrentExecutionQuery = `INSERT INTO current_executions
 (shard_id, domain_id, workflow_id, run_id, create_request_id, state, close_status, start_version, last_write_version) VALUES
@@ -84,7 +85,7 @@ workflow_id = :workflow_id
 	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding) 
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	deleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
+	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
 	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
 
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
@@ -96,7 +97,7 @@ workflow_id = :workflow_id
   AND visibility_timestamp < ?
   ORDER BY visibility_timestamp,task_id LIMIT ?`
 
-	deleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
+	deleteTimerTaskQuery      = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
 	rangeDeleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
 
 	createReplicationTasksQuery = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding) 
@@ -122,7 +123,7 @@ ORDER BY task_id LIMIT ?`
 VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 
 	deleteBufferedEventsQuery = `DELETE FROM buffered_events WHERE shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
-	getBufferedEventsQuery = `SELECT data, data_encoding FROM buffered_events WHERE
+	getBufferedEventsQuery    = `SELECT data, data_encoding FROM buffered_events WHERE
 shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 
 	insertReplicationTaskDLQQuery = `
@@ -139,7 +140,6 @@ VALUES     (:source_cluster_name,
             :data_encoding)
 `
 )
-
 
 // InsertIntoExecutions inserts a row into executions table
 func (mdb *db) InsertIntoExecutions(row *sqldb.ExecutionsRow) (sql.Result, error) {

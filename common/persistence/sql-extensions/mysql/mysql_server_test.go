@@ -35,7 +35,7 @@ const (
 	testSchemaDir = "schema/mysql/v57"
 )
 
-func getTestClusterOption() *pt.TestBaseOptions{
+func getTestClusterOption() *pt.TestBaseOptions {
 	return &pt.TestBaseOptions{
 		SQLDBDriverName: DriverName,
 		DBUsername:      testUser,

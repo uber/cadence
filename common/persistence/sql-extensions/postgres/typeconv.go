@@ -38,7 +38,7 @@ type (
 // ToMySQLDateTime converts to time to MySQL datetime
 func (c *converter) ToPostgresDateTime(t time.Time) time.Time {
 	zn, _ := t.Zone()
-	if zn != localZone{
+	if zn != localZone {
 		nano := t.UnixNano()
 		t := time.Unix(0, nano)
 		return t
@@ -51,7 +51,7 @@ func (c *converter) FromPostgresDateTime(t time.Time) time.Time {
 	return t.Add(-localOffset)
 }
 
-func getLocalOffset() time.Duration{
+func getLocalOffset() time.Duration {
 	_, offsetSecs := time.Now().Zone()
 	return time.Duration(offsetSecs) * time.Second
 }

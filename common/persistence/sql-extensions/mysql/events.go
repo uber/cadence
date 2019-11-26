@@ -22,6 +22,7 @@ package mysql
 
 import (
 	"database/sql"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -45,7 +46,6 @@ const (
 
 	deleteHistoryTreeQuery = `DELETE FROM history_tree WHERE shard_id = ? AND tree_id = ? AND branch_id = ? `
 )
-
 
 // For history_node table:
 

@@ -24,8 +24,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"strings"
+
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
 const (

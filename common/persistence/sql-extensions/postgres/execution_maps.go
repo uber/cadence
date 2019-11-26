@@ -23,8 +23,9 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"strings"
+
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
 const (
@@ -100,8 +101,6 @@ domain_id = $2 AND
 workflow_id = $3 AND
 run_id = $4`
 )
-
-
 
 func stringMap(a []string, f func(string) string) []string {
 	b := make([]string, len(a))

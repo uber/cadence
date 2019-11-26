@@ -22,8 +22,9 @@ package sqldb
 
 import (
 	"database/sql"
-	"github.com/uber/cadence/common/service/config"
 	"time"
+
+	"github.com/uber/cadence/common/service/config"
 
 	"github.com/uber/cadence/common"
 )
@@ -709,7 +710,7 @@ type (
 	}
 
 	// DB defines the API for SQL operations
-	DB interface{
+	DB interface {
 		tableCRUD
 		AdminCURD
 

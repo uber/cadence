@@ -22,6 +22,7 @@ package postgres
 
 import (
 	"database/sql"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -138,7 +139,6 @@ VALUES     (:source_cluster_name,
             :data_encoding)
 `
 )
-
 
 // InsertIntoExecutions inserts a row into executions table
 func (mdb *db) InsertIntoExecutions(row *sqldb.ExecutionsRow) (sql.Result, error) {

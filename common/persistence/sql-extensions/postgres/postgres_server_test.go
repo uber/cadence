@@ -30,12 +30,12 @@ import (
 )
 
 const (
-	testUser       = "postgres"
-	testPassword   = "cadence"
+	testUser      = "postgres"
+	testPassword  = "cadence"
 	testSchemaDir = "schema/postgres"
 )
 
-func getTestClusterOption() *pt.TestBaseOptions{
+func getTestClusterOption() *pt.TestBaseOptions {
 	return &pt.TestBaseOptions{
 		SQLDBDriverName: DriverName,
 		DBUsername:      testUser,

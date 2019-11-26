@@ -52,10 +52,10 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		SQLDBDriverName   string
+		SQLDBDriverName string
 		DBName          string
-		DBUsername        string
-		DBPassword        string
+		DBUsername      string
+		DBPassword      string
 		DBHost          string
 		DBPort          int              `yaml:"-"`
 		StoreType       string           `yaml:"-"`

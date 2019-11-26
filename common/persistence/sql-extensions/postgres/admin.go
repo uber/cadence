@@ -70,19 +70,19 @@ func (mdb *db) CreateSchemaVersionTables() error {
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
-func (mdb *db)  ReadSchemaVersion(database string) (string, error) {
+func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
 	err := mdb.db.Get(&version, readSchemaVersionQuery, database)
 	return version, err
 }
 
 // UpdateSchemaVersion updates the schema version for the keyspace
-func (mdb *db)  UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
+func (mdb *db) UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
 	return mdb.Exec(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
-func (mdb *db)  WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
+func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
 	return mdb.Exec(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
@@ -94,19 +94,19 @@ func (mdb *db) Exec(stmt string, args ...interface{}) error {
 }
 
 // ListTables returns a list of tables in this database
-func (mdb *db)  ListTables(database string) ([]string, error) {
+func (mdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
 	err := mdb.db.Select(&tables, fmt.Sprintf(listTablesQuery))
 	return tables, err
 }
 
 // DropTable drops a given table from the database
-func (mdb *db)  DropTable(name string) error {
+func (mdb *db) DropTable(name string) error {
 	return mdb.Exec(fmt.Sprintf(dropTableQuery, name))
 }
 
 // DropAllTables drops all tables from this database
-func (mdb *db)  DropAllTables(database string) error {
+func (mdb *db) DropAllTables(database string) error {
 	tables, err := mdb.ListTables(database)
 	if err != nil {
 		return err
@@ -120,12 +120,11 @@ func (mdb *db)  DropAllTables(database string) error {
 }
 
 // CreateDatabase creates a database if it doesn't exist
-func (mdb *db)  CreateDatabase(name string) error {
+func (mdb *db) CreateDatabase(name string) error {
 	return mdb.Exec(fmt.Sprintf(createDatabaseQuery, name))
 }
 
 // DropDatabase drops a database
-func (mdb *db)  DropDatabase(name string) error {
+func (mdb *db) DropDatabase(name string) error {
 	return mdb.Exec(fmt.Sprintf(dropDatabaseQuery, name))
 }
-

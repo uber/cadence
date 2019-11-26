@@ -22,18 +22,19 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"strconv"
-
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
+
 	"github.com/uber/cadence/common/persistence/sql/storage"
+	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
 )
 
 const (
+	// DriverName is the name of the driver
 	DriverName             = "postgres"
 	dataSourceNamePostgres = "user=%v password=%v host=%v port=%v dbname=%v sslmode=disable "
 )
@@ -47,7 +48,7 @@ func init() {
 }
 
 // InitDB initialize the db object
-func (d *driver) InitDB(cfg *config.SQL) (sqldb.DB, error){
+func (d *driver) InitDB(cfg *config.SQL) (sqldb.DB, error) {
 	conn, err := d.createDBConnection(cfg)
 	if err != nil {
 		return nil, err
@@ -73,10 +74,10 @@ func (d *driver) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 
 	dbName := cfg.DatabaseName
 	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
-	if dbName == ""{
+	if dbName == "" {
 		dbName = "postgres"
 	}
-	db, err := sqlx.Connect(DriverName, fmt.Sprintf(dataSourceNamePostgres, cfg.User, cfg.Password, host, port, dbName ))
+	db, err := sqlx.Connect(DriverName, fmt.Sprintf(dataSourceNamePostgres, cfg.User, cfg.Password, host, port, dbName))
 
 	if err != nil {
 		return nil, err
@@ -86,5 +87,3 @@ func (d *driver) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	db.MapperFunc(strcase.ToSnake)
 	return db, nil
 }
-
-

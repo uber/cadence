@@ -23,6 +23,7 @@ package postgres
 import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
@@ -37,7 +38,7 @@ type db struct {
 var _ sqldb.Tx = (*db)(nil)
 var _ sqldb.DB = (*db)(nil)
 
-func (mdb *db)  GetDriverName() string {
+func (mdb *db) GetDriverName() string {
 	return DriverName
 }
 
@@ -52,7 +53,7 @@ func (mdb *db) IsDupEntryError(err error) bool {
 
 // NewDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
-func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
+func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) sqldb.DB {
 	mdb := &db{db: xdb, tx: tx}
 	mdb.conn = xdb
 	if tx != nil {

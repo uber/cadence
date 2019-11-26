@@ -22,7 +22,6 @@ package mysql
 
 import (
 	"database/sql"
-
 	"fmt"
 
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"

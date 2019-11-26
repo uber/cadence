@@ -159,7 +159,7 @@ func (c *dbConn) forceClose() {
 	defer c.Unlock()
 	if c.DB != nil {
 		err := c.DB.Close()
-		if err != nil{
+		if err != nil {
 			fmt.Println("failed to close database connection, may leak some connection", err)
 		}
 

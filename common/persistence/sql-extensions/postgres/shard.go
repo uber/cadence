@@ -22,6 +22,7 @@ package postgres
 
 import (
 	"database/sql"
+
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
