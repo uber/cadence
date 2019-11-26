@@ -22,6 +22,7 @@ package host
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -172,7 +173,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		esConfig:            params.ESConfig,
 		esClient:            params.ESClient,
 		archiverMetadata:    params.ArchiverMetadata,
-		archiverProvider:    params.ArchiverProvider,
 		historyConfig:       params.HistoryConfig,
 		workerConfig:        params.WorkerConfig,
 		mockFrontendClient:  params.MockFrontendClient,
@@ -405,7 +405,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = c.archiverProvider
+	params.ArchiverProvider = newTestArchiverProvider()
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
 	if c.esConfig != nil {
@@ -468,7 +468,7 @@ func (c *cadenceImpl) startHistory(
 		}
 		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 		params.ArchivalMetadata = c.archiverMetadata
-		params.ArchiverProvider = c.archiverProvider
+		params.ArchiverProvider = newTestArchiverProvider()
 
 		service := service.New(params)
 		c.historyService = service
@@ -561,7 +561,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = c.archiverProvider
+	params.ArchiverProvider = newTestArchiverProvider()
 
 	matchingService, err := matching.NewService(params)
 	if err != nil {
@@ -598,7 +598,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = c.archiverProvider
+	params.ArchiverProvider = newTestArchiverProvider()
 
 	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 	if err != nil {
@@ -740,6 +740,39 @@ func (c *cadenceImpl) createSystemDomain() error {
 
 func (c *cadenceImpl) GetExecutionManagerFactory() persistence.ExecutionManagerFactory {
 	return c.executionMgrFactory
+}
+
+func newTestArchiverProvider() provider.ArchiverProvider {
+	cfg := &config.FilestoreArchiver{
+		FileMode: "0666",
+		DirMode:  "0766",
+	}
+	return provider.NewArchiverProvider(
+		&config.HistoryArchiverProvider{
+			Filestore: cfg,
+		},
+		&config.VisibilityArchiverProvider{
+			Filestore: cfg,
+		},
+	)
+}
+
+func copyPersistenceConfig(pConfig config.Persistence) (config.Persistence, error) {
+	copiedDataStores := make(map[string]config.DataStore)
+	for name, value := range pConfig.DataStores {
+		copiedDataStore := config.DataStore{}
+		encodedDataStore, err := json.Marshal(value)
+		if err != nil {
+			return pConfig, err
+		}
+
+		if err = json.Unmarshal(encodedDataStore, &copiedDataStore); err != nil {
+			return pConfig, err
+		}
+		copiedDataStores[name] = copiedDataStore
+	}
+	pConfig.DataStores = copiedDataStores
+	return pConfig, nil
 }
 
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {
