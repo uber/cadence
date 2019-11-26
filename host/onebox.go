@@ -106,7 +106,6 @@ type (
 		indexer             *indexer.Indexer
 		enbaleNDC           bool
 		archiverMetadata    carchiver.ArchivalMetadata
-		archiverProvider    provider.ArchiverProvider
 		historyConfig       *HistoryConfig
 		esConfig            *elasticsearch.Config
 		esClient            elasticsearch.Client
@@ -524,7 +523,7 @@ func (c *cadenceImpl) startHistory(
 			ClusterMetadata: c.clusterMetadata,
 			DomainCache:     domainCache,
 		}
-		err = c.archiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
+		err = params.ArchiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
 		if err != nil {
 			c.logger.Fatal("Failed to register archiver bootstrap container for history service", tag.Error(err))
 		}
@@ -695,7 +694,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		ClusterMetadata:  c.clusterMetadata,
 		DomainCache:      domainCache,
 	}
-	err := c.archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+	err := params.ArchiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
 	if err != nil {
 		c.logger.Fatal("Failed to register archiver bootstrap container for worker service", tag.Error(err))
 	}
@@ -707,7 +706,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,
 		Config:           workerConfig.ArchiverConfig,
-		ArchiverProvider: c.archiverProvider,
+		ArchiverProvider: params.ArchiverProvider,
 	}
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {
