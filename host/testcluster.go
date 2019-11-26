@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
+	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -57,6 +58,7 @@ type (
 	// ArchiverBase is a base struct for archiver provider being used in integration tests
 	ArchiverBase struct {
 		metadata                 archiver.ArchivalMetadata
+		provider                 provider.ArchiverProvider
 		historyStoreDirectory    string
 		visibilityStoreDirectory string
 		historyURI               string
@@ -167,6 +169,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		ESConfig:            options.ESConfig,
 		ESClient:            esClient,
 		ArchiverMetadata:    archiverBase.metadata,
+		ArchiverProvider:    archiverBase.provider,
 		HistoryConfig:       options.HistoryConfig,
 		WorkerConfig:        options.WorkerConfig,
 		MockFrontendClient:  options.MockFrontendClient,
@@ -194,6 +197,7 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 	if !enabled {
 		return &ArchiverBase{
 			metadata: archiver.NewArchivalMetadata(dcCollection, "", false, "", false, &config.ArchivalDomainDefaults{}),
+			provider: provider.NewArchiverProvider(nil, nil),
 		}
 	}
 
@@ -205,6 +209,18 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 	if err != nil {
 		logger.Fatal("Failed to create temp dir for visibility archival", tag.Error(err))
 	}
+	cfg := &config.FilestoreArchiver{
+		FileMode: "0666",
+		DirMode:  "0766",
+	}
+	provider := provider.NewArchiverProvider(
+		&config.HistoryArchiverProvider{
+			Filestore: cfg,
+		},
+		&config.VisibilityArchiverProvider{
+			Filestore: cfg,
+		},
+	)
 	return &ArchiverBase{
 		metadata: archiver.NewArchivalMetadata(dcCollection, "enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
 			History: config.HistoryArchivalDomainDefaults{
@@ -216,6 +232,7 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 				URI:    "testScheme://test/visibility/archive/path",
 			},
 		}),
+		provider:                 provider,
 		historyStoreDirectory:    historyStoreDirectory,
 		visibilityStoreDirectory: visibilityStoreDirectory,
 		historyURI:               filestore.URIScheme + "://" + historyStoreDirectory,

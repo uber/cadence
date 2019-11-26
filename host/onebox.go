@@ -106,6 +106,7 @@ type (
 		indexer             *indexer.Indexer
 		enbaleNDC           bool
 		archiverMetadata    carchiver.ArchivalMetadata
+		archiverProvider    provider.ArchiverProvider
 		historyConfig       *HistoryConfig
 		esConfig            *elasticsearch.Config
 		esClient            elasticsearch.Client
@@ -172,6 +173,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		esConfig:            params.ESConfig,
 		esClient:            params.ESClient,
 		archiverMetadata:    params.ArchiverMetadata,
+		archiverProvider:    params.ArchiverProvider,
 		historyConfig:       params.HistoryConfig,
 		workerConfig:        params.WorkerConfig,
 		mockFrontendClient:  params.MockFrontendClient,
@@ -403,7 +405,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = newTestArchiverProvider()
+	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
 
@@ -472,7 +474,7 @@ func (c *cadenceImpl) startHistory(
 		}
 		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 		params.ArchivalMetadata = c.archiverMetadata
-		params.ArchiverProvider = newTestArchiverProvider()
+		params.ArchiverProvider = c.archiverProvider
 
 		params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
 		if err != nil {
@@ -523,7 +525,7 @@ func (c *cadenceImpl) startHistory(
 			ClusterMetadata: c.clusterMetadata,
 			DomainCache:     domainCache,
 		}
-		err = params.ArchiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
+		err = c.archiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, visibilityArchiverBootstrapContainer)
 		if err != nil {
 			c.logger.Fatal("Failed to register archiver bootstrap container for history service", tag.Error(err))
 		}
@@ -569,7 +571,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = newTestArchiverProvider()
+	params.ArchiverProvider = c.archiverProvider
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -611,7 +613,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = newTestArchiverProvider()
+	params.ArchiverProvider = c.archiverProvider
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -694,7 +696,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		ClusterMetadata:  c.clusterMetadata,
 		DomainCache:      domainCache,
 	}
-	err := params.ArchiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+	err := c.archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
 	if err != nil {
 		c.logger.Fatal("Failed to register archiver bootstrap container for worker service", tag.Error(err))
 	}
@@ -706,7 +708,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,
 		Config:           workerConfig.ArchiverConfig,
-		ArchiverProvider: params.ArchiverProvider,
+		ArchiverProvider: c.archiverProvider,
 	}
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {
@@ -759,21 +761,6 @@ func (c *cadenceImpl) createSystemDomain() error {
 
 func (c *cadenceImpl) GetExecutionManagerFactory() persistence.ExecutionManagerFactory {
 	return c.executionMgrFactory
-}
-
-func newTestArchiverProvider() provider.ArchiverProvider {
-	cfg := &config.FilestoreArchiver{
-		FileMode: "0666",
-		DirMode:  "0766",
-	}
-	return provider.NewArchiverProvider(
-		&config.HistoryArchiverProvider{
-			Filestore: cfg,
-		},
-		&config.VisibilityArchiverProvider{
-			Filestore: cfg,
-		},
-	)
 }
 
 // copyPersistenceConfig makes a deepcopy of persistence config.
