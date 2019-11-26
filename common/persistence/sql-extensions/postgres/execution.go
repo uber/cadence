@@ -242,7 +242,7 @@ func (mdb *db) DeleteFromTransferTasks(filter *sqldb.TransferTasksFilter) (sql.R
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table
 func (mdb *db) InsertIntoTimerTasks(rows []sqldb.TimerTasksRow) (sql.Result, error) {
 	for i := range rows {
-		rows[i].VisibilityTimestamp = mdb.converter.ToMySQLDateTime(rows[i].VisibilityTimestamp)
+		rows[i].VisibilityTimestamp = mdb.converter.ToPostgresDateTime(rows[i].VisibilityTimestamp)
 	}
 	return mdb.conn.NamedExec(createTimerTasksQuery, rows)
 }
@@ -250,15 +250,15 @@ func (mdb *db) InsertIntoTimerTasks(rows []sqldb.TimerTasksRow) (sql.Result, err
 // SelectFromTimerTasks reads one or more rows from timer_tasks table
 func (mdb *db) SelectFromTimerTasks(filter *sqldb.TimerTasksFilter) ([]sqldb.TimerTasksRow, error) {
 	var rows []sqldb.TimerTasksRow
-	*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
-	*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
+	*filter.MinVisibilityTimestamp = mdb.converter.ToPostgresDateTime(*filter.MinVisibilityTimestamp)
+	*filter.MaxVisibilityTimestamp = mdb.converter.ToPostgresDateTime(*filter.MaxVisibilityTimestamp)
 	err := mdb.conn.Select(&rows, getTimerTasksQuery, filter.ShardID, *filter.MinVisibilityTimestamp,
 		filter.TaskID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp, *filter.PageSize)
 	if err != nil {
 		return nil, err
 	}
 	for i := range rows {
-		rows[i].VisibilityTimestamp = mdb.converter.FromMySQLDateTime(rows[i].VisibilityTimestamp)
+		rows[i].VisibilityTimestamp = mdb.converter.FromPostgresDateTime(rows[i].VisibilityTimestamp)
 	}
 	return rows, err
 }
@@ -266,11 +266,11 @@ func (mdb *db) SelectFromTimerTasks(filter *sqldb.TimerTasksFilter) ([]sqldb.Tim
 // DeleteFromTimerTasks deletes one or more rows from timer_tasks table
 func (mdb *db) DeleteFromTimerTasks(filter *sqldb.TimerTasksFilter) (sql.Result, error) {
 	if filter.MinVisibilityTimestamp != nil {
-		*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
-		*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
+		*filter.MinVisibilityTimestamp = mdb.converter.ToPostgresDateTime(*filter.MinVisibilityTimestamp)
+		*filter.MaxVisibilityTimestamp = mdb.converter.ToPostgresDateTime(*filter.MaxVisibilityTimestamp)
 		return mdb.conn.Exec(rangeDeleteTimerTaskQuery, filter.ShardID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp)
 	}
-	*filter.VisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.VisibilityTimestamp)
+	*filter.VisibilityTimestamp = mdb.converter.ToPostgresDateTime(*filter.VisibilityTimestamp)
 	return mdb.conn.Exec(deleteTimerTaskQuery, filter.ShardID, *filter.VisibilityTimestamp, filter.TaskID)
 }
 

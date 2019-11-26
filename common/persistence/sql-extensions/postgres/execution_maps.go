@@ -158,7 +158,7 @@ var (
 // ReplaceIntoActivityInfoMaps replaces one or more rows in activity_info_maps table
 func (mdb *db) ReplaceIntoActivityInfoMaps(rows []sqldb.ActivityInfoMapsRow) (sql.Result, error) {
 	for i := range rows {
-		rows[i].LastHeartbeatUpdatedTime = mdb.converter.ToMySQLDateTime(rows[i].LastHeartbeatUpdatedTime)
+		rows[i].LastHeartbeatUpdatedTime = mdb.converter.ToPostgresDateTime(rows[i].LastHeartbeatUpdatedTime)
 	}
 	return mdb.conn.NamedExec(setKeyInActivityInfoMapQry, rows)
 }
@@ -172,7 +172,7 @@ func (mdb *db) SelectFromActivityInfoMaps(filter *sqldb.ActivityInfoMapsFilter) 
 		rows[i].DomainID = filter.DomainID
 		rows[i].WorkflowID = filter.WorkflowID
 		rows[i].RunID = filter.RunID
-		rows[i].LastHeartbeatUpdatedTime = mdb.converter.FromMySQLDateTime(rows[i].LastHeartbeatUpdatedTime)
+		rows[i].LastHeartbeatUpdatedTime = mdb.converter.FromPostgresDateTime(rows[i].LastHeartbeatUpdatedTime)
 	}
 	return rows, err
 }

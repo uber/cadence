@@ -22,41 +22,36 @@ package postgres
 
 import "time"
 
-var (
-	minMySQLDateTime = getMinMySQLDateTime()
-)
+var localZone, _ = time.Now().Zone()
+var localOffset = getLocalOffset()
 
 type (
-	// TODO we may not need this for Postgres
 	// DataConverter defines the API for conversions to/from
-	// go types to mysql datatypes
+	// go types to postgres datatypes
 	DataConverter interface {
-		ToMySQLDateTime(t time.Time) time.Time
-		FromMySQLDateTime(t time.Time) time.Time
+		ToPostgresDateTime(t time.Time) time.Time
+		FromPostgresDateTime(t time.Time) time.Time
 	}
 	converter struct{}
 )
 
 // ToMySQLDateTime converts to time to MySQL datetime
-func (c *converter) ToMySQLDateTime(t time.Time) time.Time {
-	if t.IsZero() {
-		return minMySQLDateTime
+func (c *converter) ToPostgresDateTime(t time.Time) time.Time {
+	zn, _ := t.Zone()
+	if zn != localZone{
+		nano := t.UnixNano()
+		t := time.Unix(0, nano)
+		return t
 	}
 	return t
 }
 
 // FromMySQLDateTime converts mysql datetime and returns go time
-func (c *converter) FromMySQLDateTime(t time.Time) time.Time {
-	if t.Equal(minMySQLDateTime) {
-		return time.Time{}
-	}
-	return t
+func (c *converter) FromPostgresDateTime(t time.Time) time.Time {
+	return t.Add(-localOffset)
 }
 
-func getMinMySQLDateTime() time.Time {
-	t, err := time.Parse(time.RFC3339, "1000-01-01T00:00:00Z")
-	if err != nil {
-		return time.Unix(0, 0)
-	}
-	return t
+func getLocalOffset() time.Duration{
+	_, offsetSecs := time.Now().Zone()
+	return time.Duration(offsetSecs) * time.Second
 }

@@ -96,7 +96,7 @@ var errCloseParams = errors.New("missing one of {closeStatus, closeTime, history
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
 func (mdb *db) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
-	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
+	row.StartTime = mdb.converter.ToPostgresDateTime(row.StartTime)
 	return mdb.conn.Exec(templateCreateWorkflowExecutionStarted,
 		row.DomainID,
 		row.WorkflowID,
@@ -112,8 +112,8 @@ func (mdb *db) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error
 func (mdb *db) ReplaceIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
 	switch {
 	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:
-		row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
-		closeTime := mdb.converter.ToMySQLDateTime(*row.CloseTime)
+		row.StartTime = mdb.converter.ToPostgresDateTime(row.StartTime)
+		closeTime := mdb.converter.ToPostgresDateTime(*row.CloseTime)
 		return mdb.conn.Exec(templateCreateWorkflowExecutionClosed,
 			row.DomainID,
 			row.WorkflowID,
@@ -141,10 +141,10 @@ func (mdb *db) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 	var err error
 	var rows []sqldb.VisibilityRow
 	if filter.MinStartTime != nil {
-		*filter.MinStartTime = mdb.converter.ToMySQLDateTime(*filter.MinStartTime)
+		*filter.MinStartTime = mdb.converter.ToPostgresDateTime(*filter.MinStartTime)
 	}
 	if filter.MaxStartTime != nil {
-		*filter.MaxStartTime = mdb.converter.ToMySQLDateTime(*filter.MaxStartTime)
+		*filter.MaxStartTime = mdb.converter.ToPostgresDateTime(*filter.MaxStartTime)
 	}
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
@@ -162,8 +162,8 @@ func (mdb *db) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			qry,
 			*filter.WorkflowID,
 			filter.DomainID,
-			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
-			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MinStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MaxStartTime),
 			*filter.RunID,
 			*filter.MinStartTime,
 			*filter.PageSize)
@@ -176,8 +176,8 @@ func (mdb *db) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
-			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
-			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MinStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MaxStartTime),
 			*filter.RunID,
 			*filter.MaxStartTime,
 			*filter.PageSize)
@@ -186,23 +186,25 @@ func (mdb *db) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			templateGetClosedWorkflowExecutionsByStatus,
 			*filter.CloseStatus,
 			filter.DomainID,
-			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
-			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MinStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MaxStartTime),
 			*filter.RunID,
-			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
+			mdb.converter.ToPostgresDateTime(*filter.MaxStartTime),
 			*filter.PageSize)
 	case filter.MinStartTime != nil:
 		qry := templateGetOpenWorkflowExecutions
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutions
 		}
+		minSt := mdb.converter.ToPostgresDateTime(*filter.MinStartTime)
+		maxSt := mdb.converter.ToPostgresDateTime(*filter.MaxStartTime)
 		err = mdb.conn.Select(&rows,
 			qry,
 			filter.DomainID,
-			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
-			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
+			minSt,
+			maxSt,
 			*filter.RunID,
-			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
+			maxSt,
 			*filter.PageSize)
 	default:
 		return nil, fmt.Errorf("invalid query filter")
@@ -211,10 +213,10 @@ func (mdb *db) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 		return nil, err
 	}
 	for i := range rows {
-		rows[i].StartTime = mdb.converter.FromMySQLDateTime(rows[i].StartTime)
-		rows[i].ExecutionTime = mdb.converter.FromMySQLDateTime(rows[i].ExecutionTime)
+		rows[i].StartTime = mdb.converter.FromPostgresDateTime(rows[i].StartTime)
+		rows[i].ExecutionTime = mdb.converter.FromPostgresDateTime(rows[i].ExecutionTime)
 		if rows[i].CloseTime != nil {
-			closeTime := mdb.converter.FromMySQLDateTime(*rows[i].CloseTime)
+			closeTime := mdb.converter.FromPostgresDateTime(*rows[i].CloseTime)
 			rows[i].CloseTime = &closeTime
 		}
 		rows[i].RunID = strings.TrimSpace(rows[i].RunID)
