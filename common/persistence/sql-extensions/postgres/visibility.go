@@ -25,24 +25,43 @@ import (
 	"errors"
 	"fmt"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"strings"
 )
 
 const (
-	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
+	templateCreateWorkflowExecutionStarted = `INSERT INTO executions_visibility (` +
 		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
-		`VALUES ($, $, $, $, $, $, $, $)`
+		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (domain_id, run_id) DO NOTHING`
 
-	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
+	templateCreateWorkflowExecutionClosed = `INSERT INTO executions_visibility (` +
 		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
-		`VALUES ($, $, $, $, $, $, $, $, $, $, $)`
+		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (domain_id, run_id) DO UPDATE 
+		  SET workflow_id = excluded.workflow_id,
+		      start_time = excluded.start_time,
+		      execution_time = excluded.execution_time,
+              workflow_type_name = excluded.workflow_type_name,
+			  close_time = excluded.close_time,
+			  close_status = excluded.close_status,
+			  history_length = excluded.history_length,
+			  memo = excluded.memo,
+			  encoding = excluded.encoding`
 
 	// RunID condition is needed for correct pagination
-	templateConditions = ` AND domain_id = $
-		 AND start_time >= $
-		 AND start_time <= $
- 		 AND (run_id > $ OR start_time < $)
+	templateConditions1 = ` AND domain_id = $1
+		 AND start_time >= $2
+		 AND start_time <= $3
+ 		 AND (run_id > $4 OR start_time < $5)
          ORDER BY start_time DESC, run_id
-         LIMIT $`
+         LIMIT $6`
+
+	templateConditions2 = ` AND domain_id = $2
+		 AND start_time >= $3
+		 AND start_time <= $4
+ 		 AND (run_id > $5 OR start_time < $6)
+         ORDER BY start_time DESC, run_id
+         LIMIT $7`
 
 	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
@@ -50,26 +69,26 @@ const (
 	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
 		 FROM executions_visibility WHERE close_status IS NOT NULL `
 
-	templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions
+	templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions1
 
-	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions
+	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions1
 
-	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = $` + templateConditions
+	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = $1` + templateConditions2
 
-	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = $` + templateConditions
+	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = $1` + templateConditions2
 
-	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = $` + templateConditions
+	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = $1` + templateConditions2
 
-	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = $` + templateConditions
+	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = $1` + templateConditions2
 
-	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = $` + templateConditions
+	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = $1` + templateConditions2
 
 	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
 		 FROM executions_visibility
-		 WHERE domain_id = $ AND close_status IS NOT NULL
-		 AND run_id = $`
+		 WHERE domain_id = $1 AND close_status IS NOT NULL
+		 AND run_id = $2`
 
-	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=$ AND run_id=$"
+	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=$1 AND run_id=$2"
 )
 
 var errCloseParams = errors.New("missing one of {closeStatus, closeTime, historyLength} params")
@@ -198,6 +217,8 @@ func (mdb *db) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			closeTime := mdb.converter.FromMySQLDateTime(*rows[i].CloseTime)
 			rows[i].CloseTime = &closeTime
 		}
+		rows[i].RunID = strings.TrimSpace(rows[i].RunID)
+		rows[i].WorkflowID = strings.TrimSpace(rows[i].WorkflowID)
 	}
 	return rows, err
 }

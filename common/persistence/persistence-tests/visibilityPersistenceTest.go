@@ -684,7 +684,7 @@ func (s *VisibilityPersistenceSuite) assertClosedExecutionEquals(
 
 func (s *VisibilityPersistenceSuite) assertOpenExecutionEquals(
 	req *p.RecordWorkflowExecutionStartedRequest, resp *gen.WorkflowExecutionInfo) {
-	s.Equal(req.Execution.RunId, resp.Execution.RunId)
+	s.Equal(req.Execution.GetRunId(), resp.Execution.GetRunId())
 	s.Equal(req.Execution.WorkflowId, resp.Execution.WorkflowId)
 	s.Equal(req.WorkflowTypeName, resp.GetType().GetName())
 	s.Equal(s.nanosToMillis(req.StartTimestamp), s.nanosToMillis(resp.GetStartTime()))
