@@ -21,9 +21,10 @@
 package host
 
 import (
-	"github.com/uber/cadence/common/persistence/sql-extensions/mysql"
 	"io/ioutil"
 	"os"
+
+	"github.com/uber/cadence/common/persistence/sql-extensions/mysql"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
@@ -118,12 +119,12 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	}
 
 	options.Persistence.StoreType = TestFlags.PersistenceType
-	if TestFlags.PersistenceType == config.StoreTypeSQL{
+	if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
-		if TestFlags.SQLDriverName == mysql.DriverName{
+		if TestFlags.SQLDriverName == mysql.DriverName {
 			ops = mysql.GetTestClusterOption()
-		}else{
-			panic("not supported driver "+TestFlags.SQLDriverName)
+		} else {
+			panic("not supported driver " + TestFlags.SQLDriverName)
 		}
 		options.Persistence.SQLDBDriverName = TestFlags.SQLDriverName
 		options.Persistence.DBUsername = ops.DBUsername

@@ -28,8 +28,6 @@ import (
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
-
-
 func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
 	s := new(pt.HistoryV2PersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
