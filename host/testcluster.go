@@ -117,6 +117,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		)
 	}
 
+	options.Persistence.StoreType = config.StoreTypeSQL
 	if TestFlags.PersistenceType == config.StoreTypeSQL{
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLDriverName == mysql.DriverName{
@@ -124,7 +125,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		}else{
 			panic("not supported driver "+TestFlags.SQLDriverName)
 		}
-		options.Persistence.StoreType = config.StoreTypeSQL
+		options.Persistence.SQLDBDriverName = TestFlags.SQLDriverName
 		options.Persistence.DBUsername = ops.DBUsername
 		options.Persistence.DBPassword = ops.DBPassword
 		options.Persistence.DBHost = ops.DBHost
