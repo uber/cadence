@@ -29,9 +29,11 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/environment"
 )
 
 const (
@@ -147,5 +149,23 @@ func sanitizeAttr(inkey string, invalue string) (string, string) {
 		return key, value
 	default:
 		return inkey, invalue
+	}
+}
+
+const (
+	testUser      = "uber"
+	testPassword  = "uber"
+	testSchemaDir = "schema/mysql/v57"
+)
+
+func GetTestClusterOption() *pt.TestBaseOptions {
+	return &pt.TestBaseOptions{
+		SQLDBDriverName: DriverName,
+		DBUsername:      testUser,
+		DBPassword:      testPassword,
+		DBHost:          environment.GetMySQLAddress(),
+		DBPort:          environment.GetMySQLPort(),
+		SchemaDir:       testSchemaDir,
+		StoreType:       config.StoreTypeSQL,
 	}
 }

@@ -21,6 +21,7 @@
 package host
 
 import (
+	"github.com/uber/cadence/common/persistence/sql-extensions/mysql"
 	"io/ioutil"
 	"os"
 
@@ -116,7 +117,20 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		)
 	}
 
-	options.Persistence.StoreType = TestFlags.PersistenceType
+	if TestFlags.PersistenceType == config.StoreTypeSQL{
+		var ops *persistencetests.TestBaseOptions
+		if TestFlags.SQLDriverName == mysql.DriverName{
+			ops = mysql.GetTestClusterOption()
+		}else{
+			panic("not supported driver "+TestFlags.SQLDriverName)
+		}
+		options.Persistence.StoreType = config.StoreTypeSQL
+		options.Persistence.DBUsername = ops.DBUsername
+		options.Persistence.DBPassword = ops.DBPassword
+		options.Persistence.DBHost = ops.DBHost
+		options.Persistence.DBPort = ops.DBPort
+		options.Persistence.SchemaDir = ops.SchemaDir
+	}
 	options.Persistence.ClusterMetadata = clusterMetadata
 	testBase := persistencetests.NewTestBase(&options.Persistence)
 	testBase.Setup()
