@@ -105,6 +105,7 @@ type (
 		indexer             *indexer.Indexer
 		enableNDC           bool
 		archiverMetadata    carchiver.ArchivalMetadata
+		archiverProvider    provider.ArchiverProvider
 		historyConfig       *HistoryConfig
 		esConfig            *elasticsearch.Config
 		esClient            elasticsearch.Client
@@ -171,6 +172,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		esConfig:            params.ESConfig,
 		esClient:            params.ESClient,
 		archiverMetadata:    params.ArchiverMetadata,
+		archiverProvider:    params.ArchiverProvider,
 		historyConfig:       params.HistoryConfig,
 		workerConfig:        params.WorkerConfig,
 		mockFrontendClient:  params.MockFrontendClient,
@@ -402,7 +404,9 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = newTestArchiverProvider()
+	params.ArchiverProvider = c.archiverProvider
+	params.ESConfig = c.esConfig
+	params.ESClient = c.esClient
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -410,8 +414,6 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 		c.logger.Fatal("Failed to copy persistence config for frontend", tag.Error(err))
 	}
 
-	params.ESConfig = c.esConfig
-	params.ESClient = c.esClient
 	if c.esConfig != nil {
 		esDataStoreName := "es-visibility"
 		params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
@@ -467,11 +469,11 @@ func (c *cadenceImpl) startHistory(
 		params.DynamicConfig = integrationClient
 		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 		if err != nil {
-			c.logger.Fatal("Failed to get dispatcher for frontend", tag.Error(err))
+			c.logger.Fatal("Failed to get dispatcher for history", tag.Error(err))
 		}
 		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 		params.ArchivalMetadata = c.archiverMetadata
-		params.ArchiverProvider = newTestArchiverProvider()
+		params.ArchiverProvider = c.archiverProvider
 		params.ESConfig = c.esConfig
 		params.ESClient = c.esClient
 
@@ -527,7 +529,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = newTestArchiverProvider()
+	params.ArchiverProvider = c.archiverProvider
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -569,7 +571,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = newTestArchiverProvider()
+	params.ArchiverProvider = c.archiverProvider
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -735,21 +737,10 @@ func (c *cadenceImpl) overrideHistoryDynamicConfig(client *dynamicClient) {
 	}
 }
 
-func newTestArchiverProvider() provider.ArchiverProvider {
-	cfg := &config.FilestoreArchiver{
-		FileMode: "0666",
-		DirMode:  "0766",
-	}
-	return provider.NewArchiverProvider(
-		&config.HistoryArchiverProvider{
-			Filestore: cfg,
-		},
-		&config.VisibilityArchiverProvider{
-			Filestore: cfg,
-		},
-	)
-}
-
+// copyPersistenceConfig makes a deepcopy of persistence config.
+// This is just a temp fix for the race condition of persistence config.
+// The race condition happens because all the services are using the same datastore map in the config.
+// Also all services will retry to modify the maxQPS field in the datastore during start up and use the modified maxQPS value to create a persistence factory.
 func copyPersistenceConfig(pConfig config.Persistence) (config.Persistence, error) {
 	copiedDataStores := make(map[string]config.DataStore)
 	for name, value := range pConfig.DataStores {
