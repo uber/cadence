@@ -482,17 +482,17 @@ func (c *cadenceImpl) startHistory(
 			c.logger.Fatal("Failed to copy persistence config for history", tag.Error(err))
 		}
 
-		historyService, err := history.NewService(params)
-		if err != nil {
-			params.Logger.Fatal("unable to start history service", tag.Error(err))
-		}
-
 		if c.esConfig != nil {
 			esDataStoreName := "es-visibility"
 			params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
 			params.PersistenceConfig.DataStores[esDataStoreName] = config.DataStore{
 				ElasticSearch: c.esConfig,
 			}
+		}
+
+		historyService, err := history.NewService(params)
+		if err != nil {
+			params.Logger.Fatal("unable to start history service", tag.Error(err))
 		}
 
 		if c.mockFrontendClient != nil {
@@ -504,8 +504,13 @@ func (c *cadenceImpl) startHistory(
 			}
 		}
 
+		// TODO: this is not correct when there are multiple history hosts as later client will overwrite previous ones.
+		// However current interface for getting history client doesn't specify which client it needs and the tests that use this API
+		// depends on the fact that there's only one history host.
+		// Need to change those tests and modify the interface for getting history client.
+		c.historyClient = NewHistoryClient(historyService.GetDispatcher())
 		c.historyServices = append(c.historyServices, historyService)
-		c.historyClient = NewHistoryClient(historyService.GetDispatcher()) // TODO: ??? why only one
+
 		go historyService.Start()
 	}
 
@@ -654,7 +659,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		ClusterMetadata:  c.clusterMetadata,
 		DomainCache:      domainCache,
 	}
-	err := params.ArchiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+	err := c.archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
 	if err != nil {
 		c.logger.Fatal("Failed to register archiver bootstrap container for worker service", tag.Error(err))
 	}
@@ -666,7 +671,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,
 		Config:           workerConfig.ArchiverConfig,
-		ArchiverProvider: params.ArchiverProvider,
+		ArchiverProvider: c.archiverProvider,
 	}
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {

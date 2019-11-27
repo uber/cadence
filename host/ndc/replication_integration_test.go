@@ -67,7 +67,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 		tasklist,
 		versionHistory,
 		historyBatch,
-		historyClient,
 		standbyClient,
 	)
 
@@ -119,7 +118,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 		tasklist,
 		versionHistory,
 		historyBatch,
-		historyClient,
 		standbyClient,
 	)
 

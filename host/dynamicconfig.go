@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	// Override value for integer keys for dynamic config
+	// Override values for dynamic configs
 	staticOverrides = map[dynamicconfig.Key]interface{}{
 		dynamicconfig.FrontendRPS:                                   3000,
 		dynamicconfig.FrontendVisibilityListMaxQPS:                  100,
