@@ -31,6 +31,7 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -90,9 +91,9 @@ func NewReplicationTaskProcessor(
 	shard ShardContext,
 	historyEngine Engine,
 	config *Config,
+	historyClient hc.Client,
 	metricsClient metrics.Client,
 	replicationTaskFetcher *ReplicationTaskFetcher,
-	nDCHistoryResender xdc.NDCHistoryResender,
 ) *ReplicationTaskProcessor {
 	taskRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorRetryWait())
 	taskRetryPolicy.SetBackoffCoefficient(taskErrorRetryBackoffCoefficient)
@@ -106,6 +107,15 @@ func NewReplicationTaskProcessor(
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
 	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
 
+	nDCHistoryResender := xdc.NewNDCHistoryResender(
+		shard.GetDomainCache(),
+		shard.GetService().GetClientBean().GetRemoteAdminClient(replicationTaskFetcher.GetSourceCluster()),
+		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+			return historyClient.ReplicateEventsV2(ctx, request)
+		},
+		shard.GetService().GetPayloadSerializer(),
+		shard.GetLogger(),
+	)
 	return &ReplicationTaskProcessor{
 		currentCluster:     shard.GetClusterMetadata().GetCurrentClusterName(),
 		sourceCluster:      replicationTaskFetcher.GetSourceCluster(),
@@ -464,20 +474,25 @@ func (p *ReplicationTaskProcessor) handleActivityTask(
 	err = p.historyEngine.SyncActivity(ctx, request)
 	// Handle resend error
 	retryErr, ok := p.convertRetryTaskV2Error(err)
-	if ok {
-		if resendErr := p.nDCHistoryResender.SendSingleWorkflowHistory(
-			retryErr.GetDomainId(),
-			retryErr.GetWorkflowId(),
-			retryErr.GetRunId(),
-			retryErr.StartEventId,
-			retryErr.StartEventVersion,
-			retryErr.EndEventId,
-			retryErr.EndEventVersion,
-		); resendErr != nil {
-			p.logger.Error("error resend history during sync activity", tag.Error(resendErr))
-			// should return the replication error, not the resending error
-			return err
-		}
+	if !ok {
+		return err
+	}
+	p.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
+	stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
+	defer stopwatch.Stop()
+
+	if resendErr := p.nDCHistoryResender.SendSingleWorkflowHistory(
+		retryErr.GetDomainId(),
+		retryErr.GetWorkflowId(),
+		retryErr.GetRunId(),
+		retryErr.StartEventId,
+		retryErr.StartEventVersion,
+		retryErr.EndEventId,
+		retryErr.EndEventVersion,
+	); resendErr != nil {
+		p.logger.Error("error resend history during sync activity", tag.Error(resendErr))
+		// should return the replication error, not the resending error
+		return err
 	}
 
 	// should try again after back fill the history
@@ -545,7 +560,6 @@ func (p *ReplicationTaskProcessor) handleHistoryReplicationTaskV2(
 	if !ok {
 		return err
 	}
-
 	p.metricsClient.IncCounter(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientRequests)
 	stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()

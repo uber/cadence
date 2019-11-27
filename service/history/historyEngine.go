@@ -32,7 +32,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"golang.org/x/net/context"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -52,7 +51,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/xdc"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -288,23 +286,13 @@ func NewEngineWithShardContext(
 
 	var replicationTaskProcessors []*ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
-		nDCHistoryReplicator := xdc.NewNDCHistoryResender(
-			shard.GetDomainCache(),
-			shard.GetService().GetClientBean().GetRemoteAdminClient(replicationTaskFetcher.GetSourceCluster()),
-			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-				return historyClient.ReplicateEventsV2(ctx, request)
-			},
-			shard.GetService().GetPayloadSerializer(),
-			logger,
-		)
-
 		replicationTaskProcessor := NewReplicationTaskProcessor(
 			shard,
 			historyEngImpl,
 			config,
+			historyClient,
 			shard.GetMetricsClient(),
 			replicationTaskFetcher,
-			nDCHistoryReplicator,
 		)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
