@@ -49,9 +49,6 @@ type TestCluster struct {
 	cfg       config.Cassandra
 }
 
-// TODO not allowed by circle deps
-//var _ persistencetests.PersistenceTestCluster = (*TestCluster)(nil)
-
 // NewTestCluster returns a new cassandra test cluster
 func NewTestCluster(keyspace, username, password, host string, port int, schemaDir string) *TestCluster {
 	var result TestCluster

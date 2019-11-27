@@ -42,9 +42,6 @@ type TestCluster struct {
 	cfg       config.SQL
 }
 
-// TODO not allowed by circle deps
-//var _ persistencetests.PersistenceTestCluster = (*TestCluster)(nil)
-
 // NewTestCluster returns a new SQL test cluster
 func NewTestCluster(driverName, dbName, username, password, host string, port int, schemaDir string) *TestCluster {
 	var result TestCluster
