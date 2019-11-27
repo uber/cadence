@@ -228,7 +228,6 @@ func (p *ReplicationTaskProcessor) processSingleTask(replicationTask *r.Replicat
 		return p.processTaskOnce(replicationTask)
 	}, p.taskRetryPolicy, isTransientRetryableError)
 
-	//TODO: should handle retry error
 	if err != nil {
 		p.logger.Error(
 			"Failed to apply replication task after retry. Putting task into DLQ.",
