@@ -117,7 +117,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		)
 	}
 
-	options.Persistence.StoreType = config.StoreTypeSQL
+	options.Persistence.StoreType = TestFlags.PersistenceType
 	if TestFlags.PersistenceType == config.StoreTypeSQL{
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLDriverName == mysql.DriverName{
