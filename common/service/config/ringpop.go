@@ -40,8 +40,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -123,15 +121,15 @@ func (m *BootstrapMode) UnmarshalYAML(
 func (m BootstrapMode) MarshalYAML() (interface{}, error) {
 	switch m {
 	case BootstrapModeHosts:
-		return yaml.Marshal("hosts")
+		return "hosts", nil
 	case BootstrapModeFile:
-		return yaml.Marshal("file")
+		return "file", nil
 	case BootstrapModeCustom:
-		return yaml.Marshal("custom")
+		return "custom", nil
 	case BootstrapModeDNS:
-		return yaml.Marshal("dns")
+		return "dns", nil
 	}
-	return yaml.Marshal("invalid")
+	return "invalid", nil
 }
 
 // MarshalJSON implements the json.Marshaler interface.

@@ -21,7 +21,6 @@
 package config
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/uber/cadence/common/auth"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -403,6 +403,6 @@ func (c *Config) Validate() error {
 
 // String converts the config object into a string
 func (c *Config) String() string {
-	out, _ := json.MarshalIndent(c, "", "    ")
+	out, _ := yaml.Marshal(c)
 	return string(out)
 }

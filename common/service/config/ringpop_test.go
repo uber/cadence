@@ -60,6 +60,9 @@ func (s *RingpopSuite) TestHostsMode() {
 	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
 	s.Nil(err)
 	s.NotNil(f)
+	str, err := yaml.Marshal(cfg)
+	s.Nil(err)
+	s.NotNil(str)
 }
 
 func (s *RingpopSuite) TestFileMode() {
@@ -75,6 +78,9 @@ func (s *RingpopSuite) TestFileMode() {
 	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
 	s.Nil(err)
 	s.NotNil(f)
+	str, err := yaml.Marshal(cfg)
+	s.Nil(err)
+	s.NotNil(str)
 }
 
 func (s *RingpopSuite) TestCustomMode() {
@@ -89,6 +95,9 @@ func (s *RingpopSuite) TestCustomMode() {
 	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
 	s.Nil(err)
 	s.NotNil(f)
+	str, err := yaml.Marshal(cfg)
+	s.Nil(err)
+	s.NotNil(str)
 }
 
 type mockResolver struct {
@@ -174,6 +183,9 @@ func (s *RingpopSuite) TestInvalidConfig() {
 	s.NotNil(cfg.validate())
 	_, err := parseBootstrapMode("unknown")
 	s.NotNil(err)
+	str, err := yaml.Marshal(cfg)
+	s.Nil(err)
+	s.NotNil(str)
 }
 
 func getJSONConfig() string {
