@@ -56,7 +56,6 @@ type (
 
 		sync.RWMutex
 		historyShards map[int]*historyShardsItem
-		// isStopping    bool
 	}
 
 	historyShardsItemStatus int
