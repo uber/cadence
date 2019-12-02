@@ -63,44 +63,184 @@ func (c *Collection) logValue(key Key, value, defaultValue interface{}) {
 // PropertyFn is a wrapper to get property from dynamic config
 type PropertyFn func() interface{}
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f PropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f PropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // IntPropertyFn is a wrapper to get int property from dynamic config
 type IntPropertyFn func(opts ...FilterOption) int
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f IntPropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f IntPropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // IntPropertyFnWithDomainFilter is a wrapper to get int property from dynamic config with domain as filter
 type IntPropertyFnWithDomainFilter func(domain string) int
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f IntPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f IntPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // IntPropertyFnWithTaskListInfoFilters is a wrapper to get int property from dynamic config with three filters: domain, taskList, taskType
 type IntPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) int
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f IntPropertyFnWithTaskListInfoFilters) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f IntPropertyFnWithTaskListInfoFilters) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // FloatPropertyFn is a wrapper to get float property from dynamic config
 type FloatPropertyFn func(opts ...FilterOption) float64
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f FloatPropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f FloatPropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // DurationPropertyFn is a wrapper to get duration property from dynamic config
 type DurationPropertyFn func(opts ...FilterOption) time.Duration
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f DurationPropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f DurationPropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // DurationPropertyFnWithDomainFilter is a wrapper to get duration property from dynamic config with domain as filter
 type DurationPropertyFnWithDomainFilter func(domain string) time.Duration
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f DurationPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f DurationPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // DurationPropertyFnWithTaskListInfoFilters is a wrapper to get duration property from dynamic config  with three filters: domain, taskList, taskType
 type DurationPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) time.Duration
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f DurationPropertyFnWithTaskListInfoFilters) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f DurationPropertyFnWithTaskListInfoFilters) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // BoolPropertyFn is a wrapper to get bool property from dynamic config
 type BoolPropertyFn func(opts ...FilterOption) bool
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f BoolPropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f BoolPropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // StringPropertyFn is a wrapper to get string property from dynamic config
 type StringPropertyFn func(opts ...FilterOption) string
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f StringPropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f StringPropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // MapPropertyFn is a wrapper to get map property from dynamic config
 type MapPropertyFn func(opts ...FilterOption) map[string]interface{}
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f MapPropertyFn) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f MapPropertyFn) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // StringPropertyFnWithDomainFilter is a wrapper to get string property from dynamic config
 type StringPropertyFnWithDomainFilter func(domain string) string
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f StringPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f StringPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // BoolPropertyFnWithDomainFilter is a wrapper to get string property from dynamic config
 type BoolPropertyFnWithDomainFilter func(domain string) bool
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f BoolPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f BoolPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 // BoolPropertyFnWithTaskListInfoFilters is a wrapper to get bool property from dynamic config with three filters: domain, taskList, taskType
 type BoolPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) bool
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (f BoolPropertyFnWithTaskListInfoFilters) MarshalYAML() (interface{}, error) {
+	return []byte("null"), nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (f BoolPropertyFnWithTaskListInfoFilters) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
 
 // GetProperty gets a interface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
