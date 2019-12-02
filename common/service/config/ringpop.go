@@ -22,7 +22,6 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -130,21 +129,6 @@ func (m BootstrapMode) MarshalYAML() (interface{}, error) {
 		return "dns", nil
 	}
 	return "invalid", nil
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-func (m BootstrapMode) MarshalJSON() ([]byte, error) {
-	switch m {
-	case BootstrapModeHosts:
-		return json.Marshal("hosts")
-	case BootstrapModeFile:
-		return json.Marshal("file")
-	case BootstrapModeCustom:
-		return json.Marshal("custom")
-	case BootstrapModeDNS:
-		return json.Marshal("dns")
-	}
-	return json.Marshal("invalid")
 }
 
 // parseBootstrapMode reads a string value and returns a bootstrap mode.
