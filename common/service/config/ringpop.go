@@ -116,6 +116,36 @@ func (m *BootstrapMode) UnmarshalYAML(
 	return err
 }
 
+// MarshalYAML implements the yaml.Marshaler interface.
+func (m *BootstrapMode) MarshalYAML() (interface{}, error) {
+	switch *m {
+	case BootstrapModeHosts:
+		return "hosts", nil
+	case BootstrapModeFile:
+		return "file", nil
+	case BootstrapModeCustom:
+		return "custom", nil
+	case BootstrapModeDNS:
+		return "dns", nil
+	}
+	return "invalid", nil
+}
+
+// Marshal implements the json.Marshaler interface.
+func (m *BootstrapMode) MarshalJSON() ([]byte, error) {
+	switch *m {
+	case BootstrapModeHosts:
+		return []byte("hosts"), nil
+	case BootstrapModeFile:
+		return []byte("file"), nil
+	case BootstrapModeCustom:
+		return []byte("custom"), nil
+	case BootstrapModeDNS:
+		return []byte("dns"), nil
+	}
+	return []byte("invalid"), nil
+}
+
 // parseBootstrapMode reads a string value and returns a bootstrap mode.
 func parseBootstrapMode(
 	mode string,
