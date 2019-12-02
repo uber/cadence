@@ -68,7 +68,7 @@ func (f PropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f PropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -81,7 +81,7 @@ func (f IntPropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f IntPropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -94,7 +94,7 @@ func (f IntPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f IntPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -107,7 +107,7 @@ func (f IntPropertyFnWithTaskListInfoFilters) MarshalYAML() (interface{}, error)
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f IntPropertyFnWithTaskListInfoFilters) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -120,7 +120,7 @@ func (f FloatPropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f FloatPropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -133,7 +133,7 @@ func (f DurationPropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f DurationPropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -146,7 +146,7 @@ func (f DurationPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f DurationPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -159,7 +159,7 @@ func (f DurationPropertyFnWithTaskListInfoFilters) MarshalYAML() (interface{}, e
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f DurationPropertyFnWithTaskListInfoFilters) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -172,7 +172,7 @@ func (f BoolPropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f BoolPropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -185,7 +185,7 @@ func (f StringPropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f StringPropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -198,7 +198,7 @@ func (f MapPropertyFn) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f MapPropertyFn) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -211,7 +211,7 @@ func (f StringPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f StringPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -224,7 +224,7 @@ func (f BoolPropertyFnWithDomainFilter) MarshalYAML() (interface{}, error) {
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f BoolPropertyFnWithDomainFilter) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
@@ -237,7 +237,7 @@ func (f BoolPropertyFnWithTaskListInfoFilters) MarshalYAML() (interface{}, error
 	return []byte("null"), nil
 }
 
-// Marshal implements the json.Marshaler interface.
+// MarshalJSON implements the json.Marshaler interface.
 func (f BoolPropertyFnWithTaskListInfoFilters) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }

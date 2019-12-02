@@ -22,6 +22,7 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -38,6 +39,8 @@ import (
 	tcg "github.com/uber/tchannel-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -117,33 +120,33 @@ func (m *BootstrapMode) UnmarshalYAML(
 }
 
 // MarshalYAML implements the yaml.Marshaler interface.
-func (m *BootstrapMode) MarshalYAML() (interface{}, error) {
-	switch *m {
+func (m BootstrapMode) MarshalYAML() (interface{}, error) {
+	switch m {
 	case BootstrapModeHosts:
-		return "hosts", nil
+		return yaml.Marshal("hosts")
 	case BootstrapModeFile:
-		return "file", nil
+		return yaml.Marshal("file")
 	case BootstrapModeCustom:
-		return "custom", nil
+		return yaml.Marshal("custom")
 	case BootstrapModeDNS:
-		return "dns", nil
+		return yaml.Marshal("dns")
 	}
-	return "invalid", nil
+	return yaml.Marshal("invalid")
 }
 
-// Marshal implements the json.Marshaler interface.
-func (m *BootstrapMode) MarshalJSON() ([]byte, error) {
-	switch *m {
+// MarshalJSON implements the json.Marshaler interface.
+func (m BootstrapMode) MarshalJSON() ([]byte, error) {
+	switch m {
 	case BootstrapModeHosts:
-		return []byte("hosts"), nil
+		return json.Marshal("hosts")
 	case BootstrapModeFile:
-		return []byte("file"), nil
+		return json.Marshal("file")
 	case BootstrapModeCustom:
-		return []byte("custom"), nil
+		return json.Marshal("custom")
 	case BootstrapModeDNS:
-		return []byte("dns"), nil
+		return json.Marshal("dns")
 	}
-	return []byte("invalid"), nil
+	return json.Marshal("invalid")
 }
 
 // parseBootstrapMode reads a string value and returns a bootstrap mode.
