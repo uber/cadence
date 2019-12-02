@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -614,20 +615,13 @@ func (h *Handler) DescribeHistoryHost(
 
 	numOfItemsInCacheByID, numOfItemsInCacheByName := h.GetDomainCache().GetCacheSize()
 	status := ""
-	if h.controller.isStarted > 0 {
-		status += "started,"
-	} else {
-		status += "not started,"
-	}
-	if h.controller.isStopped > 0 {
-		status += "stopped,"
-	} else {
-		status += "not stopped,"
-	}
-	if h.controller.isStopping {
-		status += "stopping"
-	} else {
-		status += "not stopping"
+	switch atomic.LoadInt32(&h.controller.status) {
+	case common.DaemonStatusInitialized:
+		status = "initialized"
+	case common.DaemonStatusStarted:
+		status = "started"
+	case common.DaemonStatusStopped:
+		status = "stopped"
 	}
 
 	resp = &gen.DescribeHistoryHostResponse{

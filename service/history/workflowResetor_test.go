@@ -62,7 +62,6 @@ type (
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
 
-		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
@@ -70,7 +69,8 @@ type (
 		logger  log.Logger
 		shardID int
 
-		resetor workflowResetor
+		historyEngine *historyEngineImpl
+		resetor       workflowResetor
 	}
 )
 

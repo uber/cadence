@@ -46,8 +46,7 @@ type (
 		membershipUpdateCh chan *membership.ChangedEvent
 		engineFactory      EngineFactory
 		shardClosedCh      chan int
-		isStarted          int32
-		isStopped          int32
+		status             int32
 		shutdownWG         sync.WaitGroup
 		shutdownCh         chan struct{}
 		logger             log.Logger
@@ -57,7 +56,7 @@ type (
 
 		sync.RWMutex
 		historyShards map[int]*historyShardsItem
-		isStopping    bool
+		// isStopping    bool
 	}
 
 	historyShardsItemStatus int
@@ -91,6 +90,7 @@ func newShardController(
 	hostIdentity := resource.GetHostInfo().Identity()
 	return &shardController{
 		Resource:           resource,
+		status:             common.DaemonStatusInitialized,
 		membershipUpdateCh: make(chan *membership.ChangedEvent, 10),
 		engineFactory:      factory,
 		historyShards:      make(map[int]*historyShardsItem),
@@ -123,7 +123,7 @@ func newHistoryShardsItem(
 }
 
 func (c *shardController) Start() {
-	if !atomic.CompareAndSwapInt32(&c.isStarted, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&c.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
 
@@ -137,20 +137,14 @@ func (c *shardController) Start() {
 }
 
 func (c *shardController) Stop() {
-	if !atomic.CompareAndSwapInt32(&c.isStopped, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&c.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
 
-	c.Lock()
-	c.isStopping = true
-	c.Unlock()
-
-	if atomic.LoadInt32(&c.isStarted) == 1 {
-		if err := c.GetHistoryServiceResolver().RemoveListener(shardControllerMembershipUpdateListenerName); err != nil {
-			c.logger.Error("Error removing membership update listener", tag.Error(err), tag.OperationFailed)
-		}
-		close(c.shutdownCh)
+	if err := c.GetHistoryServiceResolver().RemoveListener(shardControllerMembershipUpdateListenerName); err != nil {
+		c.logger.Error("Error removing membership update listener", tag.Error(err), tag.OperationFailed)
 	}
+	close(c.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&c.shutdownWG, time.Minute); !success {
 		c.logger.Warn("", tag.LifeCycleStopTimedout)
@@ -204,7 +198,7 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 		// if item not valid then process to create a new one
 	}
 
-	if c.isStopping {
+	if atomic.LoadInt32(&c.status) == common.DaemonStatusStopped {
 		return nil, fmt.Errorf("shardController for host '%v' shutting down", c.GetHostInfo().Identity())
 	}
 	info, err := c.GetHistoryServiceResolver().Lookup(string(shardID))

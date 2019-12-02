@@ -59,8 +59,8 @@ type (
 		mockClusterMetadata      *cluster.MockMetadata
 		mockNDCHistoryResender   *xdc.MockNDCHistoryResender
 
-		mockExecutionMgr        *mocks.ExecutionManager
 		mockShard               ShardContext
+		mockExecutionMgr        *mocks.ExecutionManager
 		mockHistoryRereplicator *xdc.MockHistoryRereplicator
 
 		logger               log.Logger

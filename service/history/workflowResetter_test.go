@@ -49,10 +49,10 @@ type (
 		controller         *gomock.Controller
 		mockResource       *resource.Test
 		mockTransactionMgr *MocknDCTransactionMgr
-
-		mockShard          *shardContextImpl
-		mockHistoryV2Mgr   *mocks.HistoryV2Manager
 		mockStateRebuilder *MocknDCStateRebuilder
+
+		mockShard        *shardContextImpl
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
 		logger       log.Logger
 		domainID     string
