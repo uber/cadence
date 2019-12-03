@@ -21,6 +21,7 @@
 package main
 
 import (
+	"github.com/uber/cadence/common"
 	"log"
 	"os"
 	"os/signal"
@@ -74,6 +75,7 @@ func startHandler(c *cli.Context) {
 		log.Fatal("Incompatible sql versions: ", err)
 	}
 
+	var daemons []common.Daemon
 	services := getServices(c)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM)
@@ -82,20 +84,26 @@ func startHandler(c *cli.Context) {
 			log.Fatalf("`%v` service missing config", svc)
 		}
 		server := newServer(svc, &cfg)
+		daemons = append(daemons, server)
 		server.Start()
-		go func() {
-			sig := <-sigc
-			switch sig {
-			case syscall.SIGTERM:
-				log.Println("Received SIGTERM signal, initiating shutdown.")
-				server.Stop()
-				os.Exit(0)
-			default:
-			}
-		}()
 	}
 
+	go shutdownDaemonsOnSignal(sigc, daemons)
+
 	select {}
+}
+
+func shutdownDaemonsOnSignal(sigc chan os.Signal, daemons []common.Daemon) {
+	sig := <-sigc
+	switch sig {
+	case syscall.SIGTERM:
+		log.Println("Received SIGTERM signal, initiating shutdown.")
+		for _, daemon := range daemons {
+			daemon.Stop()
+		}
+		os.Exit(0)
+	default:
+	}
 }
 
 func getEnvironment(c *cli.Context) string {
