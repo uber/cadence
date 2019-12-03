@@ -21,7 +21,6 @@
 package main
 
 import (
-	"github.com/urfave/cli"
 	"log"
 	"os"
 	"os/signal"
@@ -33,6 +32,8 @@ import (
 	"github.com/uber/cadence/tools/sql"
 	_ "github.com/uber/cadence/tools/sql-extensions/mysql"    // needed to load mysql extensions
 	_ "github.com/uber/cadence/tools/sql-extensions/postgres" // needed to load postgres extensions
+
+	"github.com/urfave/cli"
 )
 
 // validServices is the list of all valid cadence services
