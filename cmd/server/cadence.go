@@ -88,21 +88,15 @@ func startHandler(c *cli.Context) {
 		server.Start()
 	}
 
-	go shutdownDaemonsOnSignal(sigc, daemons)
-
-	select {}
-}
-
-func shutdownDaemonsOnSignal(sigc chan os.Signal, daemons []common.Daemon) {
-	sig := <-sigc
-	switch sig {
-	case syscall.SIGTERM:
-		log.Println("Received SIGTERM signal, initiating shutdown.")
-		for _, daemon := range daemons {
-			daemon.Stop()
+	select {
+	case <-sigc:
+		{
+			log.Println("Received SIGTERM signal, initiating shutdown.")
+			for _, daemon := range daemons {
+				daemon.Stop()
+			}
+			os.Exit(0)
 		}
-		os.Exit(0)
-	default:
 	}
 }
 
