@@ -21,11 +21,12 @@
 package main
 
 import (
+	"github.com/urfave/cli"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
-
-	"github.com/urfave/cli"
+	"syscall"
 
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/cassandra"
@@ -73,12 +74,24 @@ func startHandler(c *cli.Context) {
 	}
 
 	services := getServices(c)
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGTERM)
 	for _, svc := range services {
 		if _, ok := cfg.Services[svc]; !ok {
 			log.Fatalf("`%v` service missing config", svc)
 		}
 		server := newServer(svc, &cfg)
 		server.Start()
+		go func() {
+			sig := <-sigc
+			switch sig {
+			case syscall.SIGTERM:
+				log.Println("Received SIGTERM signal, initiating shutdown.")
+				server.Stop()
+				os.Exit(0)
+			default:
+			}
+		}()
 	}
 
 	select {}
