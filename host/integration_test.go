@@ -279,9 +279,9 @@ StartNewExecutionLoop:
 }
 
 func (s *integrationSuite) TestSequentialWorkflow() {
-	id := "interation-sequential-workflow-test"
-	wt := "interation-sequential-workflow-test-type"
-	tl := "interation-sequential-workflow-test-tasklist"
+	id := "integration-sequential-workflow-test"
+	wt := "integration-sequential-workflow-test-type"
+	tl := "integration-sequential-workflow-test-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
@@ -389,9 +389,9 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 }
 
 func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
-	id := "interation-complete-decision-create-new-test"
-	wt := "interation-complete-decision-create-new-test-type"
-	tl := "interation-complete-decision-create-new-test-tasklist"
+	id := "integration-complete-decision-create-new-test"
+	wt := "integration-complete-decision-create-new-test-type"
+	tl := "integration-complete-decision-create-new-test-tasklist"
 	identity := "worker1"
 
 	workflowType := &workflow.WorkflowType{}
