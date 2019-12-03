@@ -720,19 +720,6 @@ type (
 		Close() error
 	}
 
-	// DBAndTx is mainly for fixing the Lint warning and also simplify the type assertion
-	DBAndTx interface {
-		tableCRUD
-		AdminCURD
-
-		BeginTx() (Tx, error)
-		DriverName() string
-		IsDupEntryError(err error) bool
-		Close() error
-		Commit() error
-		Rollback() error
-	}
-
 	// Conn defines the API for a single database connection
 	Conn interface {
 		Exec(query string, args ...interface{}) (sql.Result, error)

@@ -25,11 +25,10 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/uber/cadence/common/persistence/sql-extensions/mysql"    // needed to load mysql extensions
-	_ "github.com/uber/cadence/common/persistence/sql-extensions/postgres" // needed to load postgres extensions
-
 	"github.com/urfave/cli"
 
+	_ "github.com/uber/cadence/common/persistence/sql-extensions/mysql"    // needed to load mysql extensions
+	_ "github.com/uber/cadence/common/persistence/sql-extensions/postgres" // needed to load postgres extensions
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/sql"

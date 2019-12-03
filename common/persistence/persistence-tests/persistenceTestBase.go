@@ -1266,6 +1266,7 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 func (s *TestBase) TearDownWorkflowStore() {
 	s.ExecutionMgrFactory.Close()
 	// TODO VisibilityMgr/Store is created with a separated code path, this is incorrect and may cause leaking connection
+	// And Postgres requires all connection to be closed before dropping a database
 	// https://github.com/uber/cadence/issues/2854
 	// Remove the below line after the issue is fix
 	s.VisibilityMgr.Close()
