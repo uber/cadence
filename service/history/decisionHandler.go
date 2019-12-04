@@ -655,12 +655,20 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 	// Consistent query requires both server and client worker support. If a consistent query was requested (meaning there are
 	// buffered queries) but worker does not support consistent query then all buffered queries should be failed.
 	if versionErr := handler.versionChecker.SupportsConsistentQuery(clientImpl, clientFeatureVersion); versionErr != nil {
+		scope.IncCounter(metrics.WorkerNotSupportsConsistentQueryCount)
 		failedTerminationState := &queryTerminationState{
 			queryTerminationType: queryTerminationTypeFailed,
 			failure:              versionErr,
 		}
 		buffered := queryRegistry.getBufferedIDs()
 		for _, id := range buffered {
+			handler.logger.Info(
+				"failing query because worker does not support consistent query",
+				tag.WorkflowDomainName(domain),
+				tag.WorkflowID(workflowID),
+				tag.WorkflowRunID(runID),
+				tag.QueryID(id),
+				tag.Error(versionErr))
 			if err := queryRegistry.setTerminationState(id, failedTerminationState); err != nil {
 				handler.logger.Error(
 					"failed to set query termination state to failed",
@@ -669,7 +677,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 					tag.WorkflowRunID(runID),
 					tag.QueryID(id),
 					tag.Error(err))
-				scope.IncCounter(metrics.FailQueryFailedCount)
+				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			}
 		}
 		return
@@ -690,6 +698,12 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 			scope,
 			handler.throttledLogger,
 		); err != nil {
+			handler.logger.Info("failing query because query result size is too large",
+				tag.WorkflowDomainName(domain),
+				tag.WorkflowID(workflowID),
+				tag.WorkflowRunID(runID),
+				tag.QueryID(id),
+				tag.Error(err))
 			failedTerminationState := &queryTerminationState{
 				queryTerminationType: queryTerminationTypeFailed,
 				failure:              err,
@@ -702,7 +716,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 					tag.WorkflowRunID(runID),
 					tag.QueryID(id),
 					tag.Error(err))
-				scope.IncCounter(metrics.FailQueryFailedCount)
+				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			}
 		} else {
 			completedTerminationState := &queryTerminationState{
@@ -717,7 +731,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 					tag.WorkflowRunID(runID),
 					tag.QueryID(id),
 					tag.Error(err))
-				scope.IncCounter(metrics.CompleteQueryFailedCount)
+				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			}
 		}
 	}
@@ -738,7 +752,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 					tag.WorkflowRunID(runID),
 					tag.QueryID(id),
 					tag.Error(err))
-				scope.IncCounter(metrics.UnblockQueryFailedCount)
+				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			}
 		}
 	}
