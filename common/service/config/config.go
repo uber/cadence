@@ -328,6 +328,7 @@ type (
 	// HistoryArchiverProvider contains the config for all history archivers
 	HistoryArchiverProvider struct {
 		Filestore *FilestoreArchiver `yaml:"filestore"`
+		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
 	}
 
 	// VisibilityArchival contains the config for visibility archival
@@ -349,6 +350,11 @@ type (
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
+	}
+
+	// GstorageArchiver contain the config for google storage archiver
+	GstorageArchiver struct {
+		CredentialsPath string `yaml:"credentialsPath"`
 	}
 
 	// PublicClient is config for connecting to cadence frontend
