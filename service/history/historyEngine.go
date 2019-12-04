@@ -2382,7 +2382,7 @@ func (e *historyEngineImpl) failDecision(
 	}
 
 	if _, err = mutableState.AddDecisionTaskFailedEvent(
-		scheduleID, startedID, cause, details, request.GetIdentity(), "", "", "", 0,
+		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
 	); err != nil {
 		return nil, err
 	}
