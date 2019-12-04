@@ -57,17 +57,18 @@ var (
 type (
 	// ReplicationTaskProcessor is responsible for processing replication tasks for a shard.
 	ReplicationTaskProcessor struct {
-		currentCluster     string
-		sourceCluster      string
-		status             int32
-		shard              ShardContext
-		historyEngine      Engine
-		historySerializer  persistence.PayloadSerializer
-		config             *Config
-		domainCache        cache.DomainCache
-		metricsClient      metrics.Client
-		logger             log.Logger
-		nDCHistoryResender xdc.NDCHistoryResender
+		currentCluster      string
+		sourceCluster       string
+		status              int32
+		shard               ShardContext
+		historyEngine       Engine
+		historySerializer   persistence.PayloadSerializer
+		config              *Config
+		domainCache         cache.DomainCache
+		metricsClient       metrics.Client
+		logger              log.Logger
+		nDCHistoryResender  xdc.NDCHistoryResender
+		historyRereplicator xdc.HistoryRereplicator
 
 		taskRetryPolicy backoff.RetryPolicy
 		dlqRetryPolicy  backoff.RetryPolicy
@@ -116,21 +117,33 @@ func NewReplicationTaskProcessor(
 		shard.GetService().GetPayloadSerializer(),
 		shard.GetLogger(),
 	)
+	historyRereplicator := xdc.NewHistoryRereplicator(
+		replicationTaskFetcher.GetSourceCluster(),
+		shard.GetDomainCache(),
+		shard.GetService().GetClientBean().GetRemoteAdminClient(replicationTaskFetcher.GetSourceCluster()),
+		func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
+			return historyClient.ReplicateRawEvents(ctx, request)
+		},
+		shard.GetService().GetPayloadSerializer(),
+		replicationTimeout,
+		shard.GetLogger(),
+	)
 	return &ReplicationTaskProcessor{
-		currentCluster:     shard.GetClusterMetadata().GetCurrentClusterName(),
-		sourceCluster:      replicationTaskFetcher.GetSourceCluster(),
-		status:             common.DaemonStatusInitialized,
-		shard:              shard,
-		historyEngine:      historyEngine,
-		historySerializer:  persistence.NewPayloadSerializer(),
-		domainCache:        shard.GetDomainCache(),
-		metricsClient:      metricsClient,
-		logger:             shard.GetLogger(),
-		nDCHistoryResender: nDCHistoryResender,
-		taskRetryPolicy:    taskRetryPolicy,
-		noTaskRetrier:      noTaskRetrier,
-		requestChan:        replicationTaskFetcher.GetRequestChan(),
-		done:               make(chan struct{}),
+		currentCluster:      shard.GetClusterMetadata().GetCurrentClusterName(),
+		sourceCluster:       replicationTaskFetcher.GetSourceCluster(),
+		status:              common.DaemonStatusInitialized,
+		shard:               shard,
+		historyEngine:       historyEngine,
+		historySerializer:   persistence.NewPayloadSerializer(),
+		domainCache:         shard.GetDomainCache(),
+		metricsClient:       metricsClient,
+		logger:              shard.GetLogger(),
+		nDCHistoryResender:  nDCHistoryResender,
+		historyRereplicator: historyRereplicator,
+		taskRetryPolicy:     taskRetryPolicy,
+		noTaskRetrier:       noTaskRetrier,
+		requestChan:         replicationTaskFetcher.GetRequestChan(),
+		done:                make(chan struct{}),
 	}
 }
 
@@ -473,32 +486,57 @@ func (p *ReplicationTaskProcessor) handleActivityTask(
 	defer cancel()
 	err = p.historyEngine.SyncActivity(ctx, request)
 	// Handle resend error
-	retryErr, ok := p.convertRetryTaskV2Error(err)
-	if !ok {
-		return err
-	}
-	p.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
-	stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
-	defer stopwatch.Stop()
+	retryV2Err, okV2 := p.convertRetryTaskV2Error(err)
+	//TODO: remove handling retry error v1 after 2DC deprecation
+	retryV1Err, okV1 := p.convertRetryTaskError(err)
 
-	if resendErr := p.nDCHistoryResender.SendSingleWorkflowHistory(
-		retryErr.GetDomainId(),
-		retryErr.GetWorkflowId(),
-		retryErr.GetRunId(),
-		retryErr.StartEventId,
-		retryErr.StartEventVersion,
-		retryErr.EndEventId,
-		retryErr.EndEventVersion,
-	); resendErr != nil {
-		p.logger.Error("error resend history during sync activity", tag.Error(resendErr))
-		// should return the replication error, not the resending error
+	if !okV1 && !okV2 {
 		return err
-	}
+	} else if okV1 {
+		if retryV1Err.GetRunId() == "" {
+			return err
+		}
+		p.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
+		stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
+		defer stopwatch.Stop()
 
+		// this is the retry error
+		if resendErr := p.historyRereplicator.SendMultiWorkflowHistory(
+			attr.GetDomainId(),
+			attr.GetWorkflowId(),
+			retryV1Err.GetRunId(),
+			retryV1Err.GetNextEventId(),
+			attr.GetRunId(),
+			attr.GetScheduledId()+1, // the next event ID should be at activity schedule ID + 1
+		); resendErr != nil {
+			p.logger.Error("error resend history for sync activity", tag.Error(resendErr))
+			// should return the replication error, not the resending error
+			return err
+		}
+	} else if okV2 {
+		p.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
+		stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
+		defer stopwatch.Stop()
+
+		if resendErr := p.nDCHistoryResender.SendSingleWorkflowHistory(
+			retryV2Err.GetDomainId(),
+			retryV2Err.GetWorkflowId(),
+			retryV2Err.GetRunId(),
+			retryV2Err.StartEventId,
+			retryV2Err.StartEventVersion,
+			retryV2Err.EndEventId,
+			retryV2Err.EndEventVersion,
+		); resendErr != nil {
+			p.logger.Error("error resend history for sync activity", tag.Error(resendErr))
+			// should return the replication error, not the resending error
+			return err
+		}
+	}
 	// should try again after back fill the history
 	return p.historyEngine.SyncActivity(ctx, request)
 }
 
+//TODO: remove this part after 2DC deprecation
 func (p *ReplicationTaskProcessor) handleHistoryReplicationTask(
 	task *r.ReplicationTask,
 ) error {
@@ -528,6 +566,31 @@ func (p *ReplicationTaskProcessor) handleHistoryReplicationTask(
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
+
+	err = p.historyEngine.ReplicateEvents(ctx, request)
+	retryErr, ok := p.convertRetryTaskError(err)
+	if !ok || retryErr.GetRunId() == "" {
+		return err
+	}
+
+	p.metricsClient.IncCounter(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientRequests)
+	stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
+	defer stopwatch.Stop()
+
+	resendErr := p.historyRereplicator.SendMultiWorkflowHistory(
+		attr.GetDomainId(),
+		attr.GetWorkflowId(),
+		retryErr.GetRunId(),
+		retryErr.GetNextEventId(),
+		attr.GetRunId(),
+		attr.GetFirstEventId(),
+	)
+	if resendErr != nil {
+		p.logger.Error("error resend history for history event", tag.Error(resendErr))
+		// should return the replication error, not the resending error
+		return err
+	}
+
 	return p.historyEngine.ReplicateEvents(ctx, request)
 }
 
@@ -573,7 +636,7 @@ func (p *ReplicationTaskProcessor) handleHistoryReplicationTaskV2(
 		retryErr.EndEventId,
 		retryErr.EndEventVersion,
 	); resendErr != nil {
-		p.logger.Error("error resend history", tag.Error(resendErr))
+		p.logger.Error("error resend history for history event v2", tag.Error(resendErr))
 		// should return the replication error, not the resending error
 		return err
 	}
@@ -618,6 +681,15 @@ FilterLoop:
 		}
 	}
 	return shouldProcessTask, nil
+}
+
+//TODO: remove this code after 2DC deprecation
+func (p *ReplicationTaskProcessor) convertRetryTaskError(
+	err error,
+) (*shared.RetryTaskError, bool) {
+
+	retError, ok := err.(*shared.RetryTaskError)
+	return retError, ok
 }
 
 func (p *ReplicationTaskProcessor) convertRetryTaskV2Error(
