@@ -168,6 +168,7 @@ const (
 	testSchemaDir = "schema/mysql/v57"
 )
 
+// GetTestClusterOption return test options
 func GetTestClusterOption() *pt.TestBaseOptions {
 	return &pt.TestBaseOptions{
 		SQLDBPluginName: PluginName,

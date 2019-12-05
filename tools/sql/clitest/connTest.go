@@ -30,6 +30,7 @@ import (
 )
 
 type (
+	// SQLConnTestSuite defines a test suite
 	SQLConnTestSuite struct {
 		test.DBTestBase
 		pluginName string
@@ -43,16 +44,19 @@ const (
 	testPassword = "uber"
 )
 
-func NewSQLConnTestSuite(pluginName string) *SQLConnTestSuite{
+// NewSQLConnTestSuite returns the test suite
+func NewSQLConnTestSuite(pluginName string) *SQLConnTestSuite {
 	return &SQLConnTestSuite{
-		pluginName:pluginName,
+		pluginName: pluginName,
 	}
 }
 
+// SetupTest setups test
 func (s *SQLConnTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
+// SetupSuite setupt test suite
 func (s *SQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {

@@ -50,7 +50,7 @@ func (mdb *db) IsDupEntryError(err error) bool {
 
 // NewDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
-// Fixme ignore this Lint warning
+// Fixme we need to ignore this Lint warning
 func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 	mdb := &db{db: xdb, tx: tx}
 	mdb.conn = xdb
@@ -62,6 +62,7 @@ func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
+// Fixme we need to ignore this Lint warning
 func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
 	xtx, err := mdb.db.Beginx()
 	if err != nil {

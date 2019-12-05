@@ -23,23 +23,26 @@ package clitest
 import (
 	log "github.com/sirupsen/logrus"
 
+	"os"
+
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"
-	"os"
 )
 
 type (
+	// SetupSchemaTestSuite defines a test suite
 	SetupSchemaTestSuite struct {
 		test.SetupSchemaTestBase
-		conn *sql.Connection
+		conn       *sql.Connection
 		pluginName string
 	}
 )
 
-func NewSetupSchemaTestSuite(pluginName string) *SetupSchemaTestSuite{
+// NewSetupSchemaTestSuite returns a test suite
+func NewSetupSchemaTestSuite(pluginName string) *SetupSchemaTestSuite {
 	return &SetupSchemaTestSuite{
-		pluginName:pluginName,
+		pluginName: pluginName,
 	}
 }
 

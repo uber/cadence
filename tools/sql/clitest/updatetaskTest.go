@@ -30,14 +30,16 @@ import (
 	"github.com/uber/cadence/tools/sql"
 )
 
+// UpdateSchemaTestSuite defines a test suite
 type UpdateSchemaTestSuite struct {
 	test.UpdateSchemaTestBase
 	pluginName string
 }
 
-func NewUpdateSchemaTestSuite(pluginName string) *UpdateSchemaTestSuite{
+// NewUpdateSchemaTestSuite returns a test suite
+func NewUpdateSchemaTestSuite(pluginName string) *UpdateSchemaTestSuite {
 	return &UpdateSchemaTestSuite{
-		pluginName:pluginName,
+		pluginName: pluginName,
 	}
 }
 

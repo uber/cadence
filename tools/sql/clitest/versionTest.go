@@ -41,6 +41,7 @@ import (
 )
 
 type (
+	// VersionTestSuite defines a test suite
 	VersionTestSuite struct {
 		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
 		suite.Suite
@@ -48,9 +49,10 @@ type (
 	}
 )
 
-func NewVersionTestSuite(pluginName string) *VersionTestSuite{
+// NewVersionTestSuite returns a test suite
+func NewVersionTestSuite(pluginName string) *VersionTestSuite {
 	return &VersionTestSuite{
-		pluginName:pluginName,
+		pluginName: pluginName,
 	}
 }
 

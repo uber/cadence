@@ -719,7 +719,7 @@ type (
 		Close() error
 	}
 
-	// DB defines the API for admin SQL operations for CLI and testing suites
+	// AdminDB defines the API for admin SQL operations for CLI and testing suites
 	AdminDB interface {
 		adminCRUD
 		PluginName() string

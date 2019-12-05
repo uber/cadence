@@ -30,6 +30,7 @@ import (
 )
 
 type (
+	// HandlerTestSuite defines a test suite
 	HandlerTestSuite struct {
 		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
 		suite.Suite
@@ -37,9 +38,10 @@ type (
 	}
 )
 
-func NewHandlerTestSuite(pluginName string) *HandlerTestSuite{
+// NewHandlerTestSuite returns a test suite
+func NewHandlerTestSuite(pluginName string) *HandlerTestSuite {
 	return &HandlerTestSuite{
-		pluginName:pluginName,
+		pluginName: pluginName,
 	}
 }
 
