@@ -152,11 +152,6 @@ func New(
 		return nil, err
 	}
 
-	hostInfo, err := membershipMonitor.WhoAmI()
-	if err != nil {
-		return nil, err
-	}
-
 	dynamicCollection := dynamicconfig.NewCollection(params.DynamicConfig, logger)
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(
@@ -271,7 +266,6 @@ func New(
 		numShards:       numShards,
 		serviceName:     params.Name,
 		hostName:        hostName,
-		hostInfo:        hostInfo,
 		metricsScope:    params.MetricScope,
 		clusterMetadata: params.ClusterMetadata,
 
@@ -353,6 +347,12 @@ func (h *Impl) Start() {
 	}
 	h.membershipMonitor.Start()
 	h.domainCache.Start()
+
+	hostInfo, err := h.membershipMonitor.WhoAmI()
+	if err != nil {
+		h.logger.WithTags(tag.Error(err)).Fatal("fail to get host info from membership monitor")
+	}
+	h.hostInfo = hostInfo
 
 	// The service is now started up
 	h.logger.Info("service started")
