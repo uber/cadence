@@ -176,7 +176,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		"-u", testUser,
 		"-pw", testPassword,
 		"-db", database,
-		"-dr", mysql.PluginName,
+		"-pl", mysql.PluginName,
 		"-q",
 		"setup-schema",
 		"-f", sqlFile,
