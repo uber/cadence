@@ -243,7 +243,6 @@ func (s *Service) Start() {
 	logger.Info("frontend started")
 
 	<-s.stopC
-
 }
 
 // Stop stops the service

@@ -94,7 +94,6 @@ func (s *Service) Start() {
 	logger.Info("matching started")
 
 	<-s.stopC
-
 }
 
 // Stop stops the service
