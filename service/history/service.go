@@ -395,6 +395,7 @@ func (s *Service) Start() {
 	logger.Info("history started")
 
 	<-s.stopC
+	handler.Stop()
 	s.Resource.Stop()
 }
 
