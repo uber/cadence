@@ -43,7 +43,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	pes "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql" // needed to load mysql plugin
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )

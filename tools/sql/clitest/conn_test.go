@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package test
+package clitest
 
 import (
 	"testing"
@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql" 
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"

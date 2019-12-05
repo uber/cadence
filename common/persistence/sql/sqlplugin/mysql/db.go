@@ -23,6 +23,7 @@ package mysql
 import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
