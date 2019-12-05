@@ -21,7 +21,6 @@
 package host
 
 import (
-	"github.com/uber/cadence/common/persistence/sql/plugins/mysql"
 	"io/ioutil"
 	"os"
 
@@ -44,7 +43,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	pes "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	_ "github.com/uber/cadence/common/persistence/sql/plugins/mysql" // needed to load mysql extensions
+	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql" // needed to load mysql plugin
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
