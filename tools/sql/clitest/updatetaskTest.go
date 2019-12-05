@@ -43,6 +43,7 @@ func NewUpdateSchemaTestSuite(pluginName string) *UpdateSchemaTestSuite {
 	}
 }
 
+// SetupSuite setups test suite
 func (s *UpdateSchemaTestSuite) SetupSuite() {
 	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
 	os.Setenv("SQL_USER", testUser)
@@ -54,10 +55,12 @@ func (s *UpdateSchemaTestSuite) SetupSuite() {
 	s.SetupSuiteBase(conn)
 }
 
+// TearDownSuite tear down test suite
 func (s *UpdateSchemaTestSuite) TearDownSuite() {
 	s.TearDownSuiteBase()
 }
 
+// TestUpdateSchema test
 func (s *UpdateSchemaTestSuite) TestUpdateSchema() {
 	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)
@@ -65,6 +68,7 @@ func (s *UpdateSchemaTestSuite) TestUpdateSchema() {
 	s.RunUpdateSchemaTest(sql.BuildCLIOptions(), conn, "--db", createTestSQLFileContent(), []string{"task_maps", "tasks"})
 }
 
+// TestDryrun test
 func (s *UpdateSchemaTestSuite) TestDryrun() {
 	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)
@@ -73,6 +77,7 @@ func (s *UpdateSchemaTestSuite) TestDryrun() {
 	s.RunDryrunTest(sql.BuildCLIOptions(), conn, "--db", dir, mysql.Version)
 }
 
+// TestVisibilityDryrun test
 func (s *UpdateSchemaTestSuite) TestVisibilityDryrun() {
 	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)

@@ -56,7 +56,7 @@ func (s *SQLConnTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
-// SetupSuite setupt test suite
+// SetupSuite setups test suite
 func (s *SQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
@@ -65,14 +65,17 @@ func (s *SQLConnTestSuite) SetupSuite() {
 	s.SetupSuiteBase(conn)
 }
 
+// TearDownSuite tear down test suite
 func (s *SQLConnTestSuite) TearDownSuite() {
 	s.TearDownSuiteBase()
 }
 
+// TestParseCQLFile test
 func (s *SQLConnTestSuite) TestParseCQLFile() {
 	s.RunParseFileTest(createTestSQLFileContent())
 }
 
+// TestSQLConn test
 // TODO refactor the whole package to support testing against Postgres
 // https://github.com/uber/cadence/issues/2856
 func (s *SQLConnTestSuite) TestSQLConn() {

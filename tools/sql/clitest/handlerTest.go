@@ -45,10 +45,12 @@ func NewHandlerTestSuite(pluginName string) *HandlerTestSuite {
 	}
 }
 
+// SetupTest setups test
 func (s *HandlerTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
+// TestValidateConnectParams test
 func (s *HandlerTestSuite) TestValidateConnectParams() {
 	p := new(sql.ConnectParams)
 	s.NotNil(sql.ValidateConnectParams(p, false))

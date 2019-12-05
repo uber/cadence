@@ -56,10 +56,12 @@ func NewVersionTestSuite(pluginName string) *VersionTestSuite {
 	}
 }
 
+// SetupTest setups test suite
 func (s *VersionTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
+// TestVerifyCompatibleVersion test
 func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	database := "cadence_test"
 	visDatabase := "cadence_visibility_test"
@@ -123,6 +125,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	s.NoError(sql.VerifyCompatibleVersion(cfg))
 }
 
+// TestCheckCompatibleVersion test
 func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 	flags := []struct {
 		expectedVersion string

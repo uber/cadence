@@ -46,6 +46,7 @@ func NewSetupSchemaTestSuite(pluginName string) *SetupSchemaTestSuite {
 	}
 }
 
+// SetupSuite setup test suite
 func (s *SetupSchemaTestSuite) SetupSuite() {
 	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
 	os.Setenv("SQL_USER", testUser)
@@ -58,16 +59,19 @@ func (s *SetupSchemaTestSuite) SetupSuite() {
 	s.SetupSuiteBase(conn)
 }
 
+// TearDownSuite tear down test suite
 func (s *SetupSchemaTestSuite) TearDownSuite() {
 	s.TearDownSuiteBase()
 }
 
+// TestCreateDatabase test
 func (s *SetupSchemaTestSuite) TestCreateDatabase() {
 	sql.RunTool([]string{"./tool", "-u", testUser, "--pw", testPassword, "create", "--db", "foobar123"})
 	err := s.conn.DropDatabase("foobar123")
 	s.Nil(err)
 }
 
+// TestSetupSchema test
 func (s *SetupSchemaTestSuite) TestSetupSchema() {
 	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)

@@ -62,7 +62,6 @@ func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-// Fixme we need to ignore this Lint warning
 func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
 	xtx, err := mdb.db.Beginx()
 	if err != nil {
