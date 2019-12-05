@@ -322,24 +322,31 @@ func (c *shardController) acquireShards() {
 	sw := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.AcquireShardsLatency)
 	defer sw.Stop()
 
-AcquireLoop:
-	for shardID := 0; shardID < c.config.NumberOfShards; shardID++ {
-		info, err := c.hServiceResolver.Lookup(string(shardID))
-		if err != nil {
-			c.logger.Error("Error looking up host for shardID", tag.Error(err), tag.OperationFailed, tag.ShardID(shardID))
-			continue AcquireLoop
-		}
+	concurrency := c.config.AcquireShardConcurrency()
+	sem := make(chan bool, concurrency)
 
-		if info.Identity() == c.host.Identity() {
-			_, err1 := c.getEngineForShard(shardID)
-			if err1 != nil {
-				c.metricsClient.IncCounter(metrics.HistoryShardControllerScope, metrics.GetEngineForShardErrorCounter)
-				c.logger.Error("Unable to create history shard engine", tag.Error(err1), tag.OperationFailed, tag.ShardID(shardID))
-				continue AcquireLoop
+	for shardID := 0; shardID < c.config.NumberOfShards; shardID++ {
+		sem <- true
+		go func(shardID int) {
+			defer func() { <-sem }()
+			info, err := c.hServiceResolver.Lookup(string(shardID))
+			if err != nil {
+				c.logger.Error("Error looking up host for shardID", tag.Error(err), tag.OperationFailed, tag.ShardID(shardID))
+				return
 			}
-		} else {
-			c.removeEngineForShard(shardID)
-		}
+			if info.Identity() == c.host.Identity() {
+				_, err1 := c.getEngineForShard(shardID)
+				if err1 != nil {
+					c.metricsClient.IncCounter(metrics.HistoryShardControllerScope, metrics.GetEngineForShardErrorCounter)
+					c.logger.Error("Unable to create history shard engine", tag.Error(err1), tag.OperationFailed, tag.ShardID(shardID))
+				}
+			} else {
+				c.removeEngineForShard(shardID)
+			}
+		}(shardID)
+	}
+	for i := 0; i < concurrency; i++ {
+		sem <- true
 	}
 
 	c.metricsClient.UpdateGauge(metrics.HistoryShardControllerScope, metrics.NumShardsGauge, float64(c.numShards()))
