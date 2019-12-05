@@ -21,8 +21,6 @@
 package clitest
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -35,11 +33,14 @@ type (
 	HandlerTestSuite struct {
 		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
 		suite.Suite
+		pluginName string
 	}
 )
 
-func TestHandlerTestSuite(t *testing.T) {
-	suite.Run(t, new(HandlerTestSuite))
+func NewHandlerTestSuite(pluginName string) *HandlerTestSuite{
+	return &HandlerTestSuite{
+		pluginName:pluginName,
+	}
 }
 
 func (s *HandlerTestSuite) SetupTest() {

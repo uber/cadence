@@ -21,33 +21,33 @@
 package clitest
 
 import (
-	"os"
-	"testing"
-
 	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"
+	"os"
 )
 
 type (
 	SetupSchemaTestSuite struct {
 		test.SetupSchemaTestBase
 		conn *sql.Connection
+		pluginName string
 	}
 )
 
-func TestSetupSchemaTestSuite(t *testing.T) {
-	suite.Run(t, new(SetupSchemaTestSuite))
+func NewSetupSchemaTestSuite(pluginName string) *SetupSchemaTestSuite{
+	return &SetupSchemaTestSuite{
+		pluginName:pluginName,
+	}
 }
 
 func (s *SetupSchemaTestSuite) SetupSuite() {
 	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
 	os.Setenv("SQL_USER", testUser)
 	os.Setenv("SQL_PASSWORD", testPassword)
-	conn, err := newTestConn("")
+	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
 		log.Fatalf("error creating sql connection:%v", err)
 	}
@@ -66,7 +66,7 @@ func (s *SetupSchemaTestSuite) TestCreateDatabase() {
 }
 
 func (s *SetupSchemaTestSuite) TestSetupSchema() {
-	conn, err := newTestConn(s.DBName)
+	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)
 	s.RunSetupTest(sql.BuildCLIOptions(), conn, "--db", createTestSQLFileContent(), []string{"task_maps", "tasks"})
 }

@@ -23,9 +23,6 @@ package clitest
 import (
 	"log"
 	"os"
-	"testing"
-
-	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/schema/mysql"
@@ -35,17 +32,20 @@ import (
 
 type UpdateSchemaTestSuite struct {
 	test.UpdateSchemaTestBase
+	pluginName string
 }
 
-func TestUpdateSchemaTestSuite(t *testing.T) {
-	suite.Run(t, new(UpdateSchemaTestSuite))
+func NewUpdateSchemaTestSuite(pluginName string) *UpdateSchemaTestSuite{
+	return &UpdateSchemaTestSuite{
+		pluginName:pluginName,
+	}
 }
 
 func (s *UpdateSchemaTestSuite) SetupSuite() {
 	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
 	os.Setenv("SQL_USER", testUser)
 	os.Setenv("SQL_PASSWORD", testPassword)
-	conn, err := newTestConn("")
+	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
 		log.Fatal("Error creating CQLClient")
 	}
@@ -57,14 +57,14 @@ func (s *UpdateSchemaTestSuite) TearDownSuite() {
 }
 
 func (s *UpdateSchemaTestSuite) TestUpdateSchema() {
-	conn, err := newTestConn(s.DBName)
+	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)
 	defer conn.Close()
 	s.RunUpdateSchemaTest(sql.BuildCLIOptions(), conn, "--db", createTestSQLFileContent(), []string{"task_maps", "tasks"})
 }
 
 func (s *UpdateSchemaTestSuite) TestDryrun() {
-	conn, err := newTestConn(s.DBName)
+	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)
 	defer conn.Close()
 	dir := "../../../schema/mysql/v57/cadence/versioned"
@@ -72,7 +72,7 @@ func (s *UpdateSchemaTestSuite) TestDryrun() {
 }
 
 func (s *UpdateSchemaTestSuite) TestVisibilityDryrun() {
-	conn, err := newTestConn(s.DBName)
+	conn, err := newTestConn(s.DBName, s.pluginName)
 	s.Nil(err)
 	defer conn.Close()
 	dir := "../../../schema/mysql/v57/visibility/versioned"

@@ -28,14 +28,12 @@ import (
 	"path"
 	"runtime"
 	"strconv"
-	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/environment"
@@ -46,11 +44,14 @@ type (
 	VersionTestSuite struct {
 		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
 		suite.Suite
+		pluginName string
 	}
 )
 
-func TestVersionTestSuite(t *testing.T) {
-	suite.Run(t, new(VersionTestSuite))
+func NewVersionTestSuite(pluginName string) *VersionTestSuite{
+	return &VersionTestSuite{
+		pluginName:pluginName,
+	}
 }
 
 func (s *VersionTestSuite) SetupTest() {
@@ -75,7 +76,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		"-u", testUser,
 		"-pw", testPassword,
 		"-db", database,
-		"-pl", mysql.PluginName,
+		"-pl", s.pluginName,
 		"-q",
 		"setup-schema",
 		"-f", sqlFile,
@@ -90,7 +91,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		"-u", testUser,
 		"-pw", testPassword,
 		"-db", visDatabase,
-		"-pl", mysql.PluginName,
+		"-pl", s.pluginName,
 		"-q",
 		"setup-schema",
 		"-f", visSQLFile,
@@ -103,7 +104,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
 		User:         testUser,
 		Password:     testPassword,
-		PluginName:   mysql.PluginName,
+		PluginName:   s.pluginName,
 		DatabaseName: database,
 	}
 	visibilityCfg := defaultCfg
@@ -138,7 +139,7 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 }
 
 func (s *VersionTestSuite) createDatabase(database string) func() {
-	connection, err := newTestConn("")
+	connection, err := newTestConn("", s.pluginName)
 	s.NoError(err)
 	err = connection.CreateDatabase(database)
 	s.NoError(err)
@@ -176,7 +177,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		"-u", testUser,
 		"-pw", testPassword,
 		"-db", database,
-		"-pl", mysql.PluginName,
+		"-pl", s.pluginName,
 		"-q",
 		"setup-schema",
 		"-f", sqlFile,
@@ -191,7 +192,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
 		User:         testUser,
 		Password:     testPassword,
-		PluginName:   mysql.PluginName,
+		PluginName:   s.pluginName,
 		DatabaseName: database,
 	}
 	err = sql.CheckCompatibleVersion(cfg, expected)

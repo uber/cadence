@@ -21,13 +21,9 @@
 package clitest
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"
@@ -36,6 +32,7 @@ import (
 type (
 	SQLConnTestSuite struct {
 		test.DBTestBase
+		pluginName string
 	}
 )
 
@@ -46,8 +43,10 @@ const (
 	testPassword = "uber"
 )
 
-func TestSQLConnTestSuite(t *testing.T) {
-	suite.Run(t, new(SQLConnTestSuite))
+func NewSQLConnTestSuite(pluginName string) *SQLConnTestSuite{
+	return &SQLConnTestSuite{
+		pluginName:pluginName,
+	}
 }
 
 func (s *SQLConnTestSuite) SetupTest() {
@@ -55,7 +54,7 @@ func (s *SQLConnTestSuite) SetupTest() {
 }
 
 func (s *SQLConnTestSuite) SetupSuite() {
-	conn, err := newTestConn("")
+	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
 		s.Log.Fatal("error creating sql conn, ", tag.Error(err))
 	}
@@ -78,7 +77,7 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 		Port:       environment.GetMySQLPort(),
 		User:       testUser,
 		Password:   testPassword,
-		PluginName: mysql.PluginName,
+		PluginName: s.pluginName,
 		Database:   s.DBName,
 	})
 	s.Nil(err)
@@ -88,13 +87,13 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 	conn.Close()
 }
 
-func newTestConn(database string) (*sql.Connection, error) {
+func newTestConn(database, pluginName string) (*sql.Connection, error) {
 	return sql.NewConnection(&sql.ConnectParams{
 		Host:       environment.GetMySQLAddress(),
 		Port:       environment.GetMySQLPort(),
 		User:       testUser,
 		Password:   testPassword,
-		PluginName: mysql.PluginName,
+		PluginName: pluginName,
 		Database:   database,
 	})
 }
