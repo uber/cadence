@@ -23,7 +23,7 @@ package main
 import (
 	"os"
 
-	_ "github.com/uber/cadence/common/persistence/sql/plugins/mysql" // needed to load mysql extensions
+	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql" // needed to load mysql plugin
 	"github.com/uber/cadence/tools/sql"
 )
 
