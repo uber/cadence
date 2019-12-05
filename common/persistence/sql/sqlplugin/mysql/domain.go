@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 const (
@@ -59,17 +59,17 @@ const (
 var errMissingArgs = errors.New("missing one or more args for API")
 
 // InsertIntoDomain inserts a single row into domains table
-func (mdb *db) InsertIntoDomain(row *plugins.DomainRow) (sql.Result, error) {
+func (mdb *db) InsertIntoDomain(row *sqlplugin.DomainRow) (sql.Result, error) {
 	return mdb.conn.Exec(createDomainQuery, row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
 }
 
 // UpdateDomain updates a single row in domains table
-func (mdb *db) UpdateDomain(row *plugins.DomainRow) (sql.Result, error) {
+func (mdb *db) UpdateDomain(row *sqlplugin.DomainRow) (sql.Result, error) {
 	return mdb.conn.Exec(updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
 }
 
 // SelectFromDomain reads one or more rows from domains table
-func (mdb *db) SelectFromDomain(filter *plugins.DomainFilter) ([]plugins.DomainRow, error) {
+func (mdb *db) SelectFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
 	switch {
 	case filter.ID != nil || filter.Name != nil:
 		return mdb.selectFromDomain(filter)
@@ -80,9 +80,9 @@ func (mdb *db) SelectFromDomain(filter *plugins.DomainFilter) ([]plugins.DomainR
 	}
 }
 
-func (mdb *db) selectFromDomain(filter *plugins.DomainFilter) ([]plugins.DomainRow, error) {
+func (mdb *db) selectFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
 	var err error
-	var row plugins.DomainRow
+	var row sqlplugin.DomainRow
 	switch {
 	case filter.ID != nil:
 		err = mdb.conn.Get(&row, getDomainByIDQuery, shardID, *filter.ID)
@@ -92,12 +92,12 @@ func (mdb *db) selectFromDomain(filter *plugins.DomainFilter) ([]plugins.DomainR
 	if err != nil {
 		return nil, err
 	}
-	return []plugins.DomainRow{row}, err
+	return []sqlplugin.DomainRow{row}, err
 }
 
-func (mdb *db) selectAllFromDomain(filter *plugins.DomainFilter) ([]plugins.DomainRow, error) {
+func (mdb *db) selectAllFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
 	var err error
-	var rows []plugins.DomainRow
+	var rows []sqlplugin.DomainRow
 	switch {
 	case filter.GreaterThanID != nil:
 		err = mdb.conn.Select(&rows, listDomainsRangeQuery, shardID, *filter.GreaterThanID, *filter.PageSize)
@@ -108,7 +108,7 @@ func (mdb *db) selectAllFromDomain(filter *plugins.DomainFilter) ([]plugins.Doma
 }
 
 // DeleteFromDomain deletes a single row in domains table
-func (mdb *db) DeleteFromDomain(filter *plugins.DomainFilter) (sql.Result, error) {
+func (mdb *db) DeleteFromDomain(filter *sqlplugin.DomainFilter) (sql.Result, error) {
 	var err error
 	var result sql.Result
 	switch {
@@ -122,19 +122,19 @@ func (mdb *db) DeleteFromDomain(filter *plugins.DomainFilter) (sql.Result, error
 
 // LockDomainMetadata acquires a write lock on a single row in domain_metadata table
 func (mdb *db) LockDomainMetadata() error {
-	var row plugins.DomainMetadataRow
+	var row sqlplugin.DomainMetadataRow
 	err := mdb.conn.Get(&row.NotificationVersion, lockDomainMetadataQuery)
 	return err
 }
 
 // SelectFromDomainMetadata reads a single row in domain_metadata table
-func (mdb *db) SelectFromDomainMetadata() (*plugins.DomainMetadataRow, error) {
-	var row plugins.DomainMetadataRow
+func (mdb *db) SelectFromDomainMetadata() (*sqlplugin.DomainMetadataRow, error) {
+	var row sqlplugin.DomainMetadataRow
 	err := mdb.conn.Get(&row.NotificationVersion, getDomainMetadataQuery)
 	return &row, err
 }
 
 // UpdateDomainMetadata updates a single row in domain_metadata table
-func (mdb *db) UpdateDomainMetadata(row *plugins.DomainMetadataRow) (sql.Result, error) {
+func (mdb *db) UpdateDomainMetadata(row *sqlplugin.DomainMetadataRow) (sql.Result, error) {
 	return mdb.conn.Exec(updateDomainMetadataQuery, row.NotificationVersion+1, row.NotificationVersion)
 }

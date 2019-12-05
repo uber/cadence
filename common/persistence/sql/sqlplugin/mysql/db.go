@@ -23,21 +23,20 @@ package mysql
 import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 // db represents a logical connection to mysql database
 type db struct {
 	db        *sqlx.DB
 	tx        *sqlx.Tx
-	conn      plugins.Conn
+	conn      sqlplugin.Conn
 	converter DataConverter
 }
 
-var _ plugins.AdminDB = (*db)(nil)
-var _ plugins.DB = (*db)(nil)
-var _ plugins.Tx = (*db)(nil)
+var _ sqlplugin.AdminDB = (*db)(nil)
+var _ sqlplugin.DB = (*db)(nil)
+var _ sqlplugin.Tx = (*db)(nil)
 
 // ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
 // so we don't do the insert and return a ConditionalUpdate error.
@@ -62,7 +61,7 @@ func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (mdb *db) BeginTx() (plugins.Tx, error) {
+func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
 	xtx, err := mdb.db.Beginx()
 	if err != nil {
 		return nil, err

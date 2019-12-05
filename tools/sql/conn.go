@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/persistence/sql"
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -43,7 +43,7 @@ type (
 	// Connection is the connection to database
 	Connection struct {
 		dbName  string
-		adminDb plugins.AdminDB
+		adminDb sqlplugin.AdminDB
 	}
 )
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package mysql
 import (
 	"database/sql"
 
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 const (
@@ -50,15 +50,15 @@ const (
 // For history_node table:
 
 // InsertIntoHistoryNode inserts a row into history_node table
-func (mdb *db) InsertIntoHistoryNode(row *plugins.HistoryNodeRow) (sql.Result, error) {
+func (mdb *db) InsertIntoHistoryNode(row *sqlplugin.HistoryNodeRow) (sql.Result, error) {
 	// NOTE: Query 5.6 doesn't support clustering order, to workaround, we let txn_id multiple by -1
 	*row.TxnID *= -1
 	return mdb.conn.NamedExec(addHistoryNodesQuery, row)
 }
 
 // SelectFromHistoryNode reads one or more rows from history_node table
-func (mdb *db) SelectFromHistoryNode(filter *plugins.HistoryNodeFilter) ([]plugins.HistoryNodeRow, error) {
-	var rows []plugins.HistoryNodeRow
+func (mdb *db) SelectFromHistoryNode(filter *sqlplugin.HistoryNodeFilter) ([]sqlplugin.HistoryNodeRow, error) {
+	var rows []sqlplugin.HistoryNodeRow
 	err := mdb.conn.Select(&rows, getHistoryNodesQuery,
 		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, *filter.PageSize)
 	// NOTE: since we let txn_id multiple by -1 when inserting, we have to revert it back here
@@ -69,25 +69,25 @@ func (mdb *db) SelectFromHistoryNode(filter *plugins.HistoryNodeFilter) ([]plugi
 }
 
 // DeleteFromHistoryNode deletes one or more rows from history_node table
-func (mdb *db) DeleteFromHistoryNode(filter *plugins.HistoryNodeFilter) (sql.Result, error) {
+func (mdb *db) DeleteFromHistoryNode(filter *sqlplugin.HistoryNodeFilter) (sql.Result, error) {
 	return mdb.conn.Exec(deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID)
 }
 
 // For history_tree table:
 
 // InsertIntoHistoryTree inserts a row into history_tree table
-func (mdb *db) InsertIntoHistoryTree(row *plugins.HistoryTreeRow) (sql.Result, error) {
+func (mdb *db) InsertIntoHistoryTree(row *sqlplugin.HistoryTreeRow) (sql.Result, error) {
 	return mdb.conn.NamedExec(addHistoryTreeQuery, row)
 }
 
 // SelectFromHistoryTree reads one or more rows from history_tree table
-func (mdb *db) SelectFromHistoryTree(filter *plugins.HistoryTreeFilter) ([]plugins.HistoryTreeRow, error) {
-	var rows []plugins.HistoryTreeRow
+func (mdb *db) SelectFromHistoryTree(filter *sqlplugin.HistoryTreeFilter) ([]sqlplugin.HistoryTreeRow, error) {
+	var rows []sqlplugin.HistoryTreeRow
 	err := mdb.conn.Select(&rows, getHistoryTreeQuery, filter.ShardID, filter.TreeID)
 	return rows, err
 }
 
 // DeleteFromHistoryTree deletes one or more rows from history_tree table
-func (mdb *db) DeleteFromHistoryTree(filter *plugins.HistoryTreeFilter) (sql.Result, error) {
+func (mdb *db) DeleteFromHistoryTree(filter *sqlplugin.HistoryTreeFilter) (sql.Result, error) {
 	return mdb.conn.Exec(deleteHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID)
 }

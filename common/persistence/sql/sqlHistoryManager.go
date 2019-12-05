@@ -30,7 +30,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 type sqlHistoryV2Manager struct {
@@ -40,7 +40,7 @@ type sqlHistoryV2Manager struct {
 
 // newHistoryV2Persistence creates an instance of HistoryManager
 func newHistoryV2Persistence(
-	db plugins.DB,
+	db sqlplugin.DB,
 	logger log.Logger,
 ) (p.HistoryStore, error) {
 
@@ -89,9 +89,9 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 		}
 	}
 
-	nodeRow := &plugins.HistoryNodeRow{
-		TreeID:       plugins.MustParseUUID(branchInfo.GetTreeID()),
-		BranchID:     plugins.MustParseUUID(branchInfo.GetBranchID()),
+	nodeRow := &sqlplugin.HistoryNodeRow{
+		TreeID:       sqlplugin.MustParseUUID(branchInfo.GetTreeID()),
+		BranchID:     sqlplugin.MustParseUUID(branchInfo.GetBranchID()),
 		NodeID:       request.NodeID,
 		TxnID:        &request.TransactionID,
 		Data:         request.Events.Data,
@@ -116,15 +116,15 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			return err
 		}
 
-		treeRow := &plugins.HistoryTreeRow{
+		treeRow := &sqlplugin.HistoryTreeRow{
 			ShardID:      request.ShardID,
-			TreeID:       plugins.MustParseUUID(branchInfo.GetTreeID()),
-			BranchID:     plugins.MustParseUUID(branchInfo.GetBranchID()),
+			TreeID:       sqlplugin.MustParseUUID(branchInfo.GetTreeID()),
+			BranchID:     sqlplugin.MustParseUUID(branchInfo.GetBranchID()),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		}
 
-		return m.txExecute("AppendHistoryNodes", func(tx plugins.Tx) error {
+		return m.txExecute("AppendHistoryNodes", func(tx sqlplugin.Tx) error {
 			result, err := tx.InsertIntoHistoryNode(nodeRow)
 			if err != nil {
 				return err
@@ -184,9 +184,9 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 		minNodeID = lastNodeID + 1
 	}
 
-	filter := &plugins.HistoryNodeFilter{
-		TreeID:    plugins.MustParseUUID(request.TreeID),
-		BranchID:  plugins.MustParseUUID(request.BranchID),
+	filter := &sqlplugin.HistoryNodeFilter{
+		TreeID:    sqlplugin.MustParseUUID(request.TreeID),
+		BranchID:  sqlplugin.MustParseUUID(request.BranchID),
 		MinNodeID: &minNodeID,
 		MaxNodeID: &maxNodeID,
 		PageSize:  &request.PageSize,
@@ -355,10 +355,10 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		return nil, err
 	}
 
-	row := &plugins.HistoryTreeRow{
+	row := &sqlplugin.HistoryTreeRow{
 		ShardID:      request.ShardID,
-		TreeID:       plugins.MustParseUUID(treeID),
-		BranchID:     plugins.MustParseUUID(request.NewBranchID),
+		TreeID:       sqlplugin.MustParseUUID(treeID),
+		BranchID:     sqlplugin.MustParseUUID(request.NewBranchID),
 		Data:         blob.Data,
 		DataEncoding: string(blob.Encoding),
 	}
@@ -409,10 +409,10 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		}
 	}
 
-	return m.txExecute("DeleteHistoryBranch", func(tx plugins.Tx) error {
-		branchID := plugins.MustParseUUID(*branch.BranchID)
-		treeFilter := &plugins.HistoryTreeFilter{
-			TreeID:   plugins.MustParseUUID(treeID),
+	return m.txExecute("DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
+		branchID := sqlplugin.MustParseUUID(*branch.BranchID)
+		treeFilter := &sqlplugin.HistoryTreeFilter{
+			TreeID:   sqlplugin.MustParseUUID(treeID),
 			BranchID: &branchID,
 			ShardID:  request.ShardID,
 		}
@@ -426,9 +426,9 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		for i := len(brsToDelete) - 1; i >= 0; i-- {
 			br := brsToDelete[i]
 			maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
-			nodeFilter := &plugins.HistoryNodeFilter{
-				TreeID:   plugins.MustParseUUID(treeID),
-				BranchID: plugins.MustParseUUID(*br.BranchID),
+			nodeFilter := &sqlplugin.HistoryNodeFilter{
+				TreeID:   sqlplugin.MustParseUUID(treeID),
+				BranchID: sqlplugin.MustParseUUID(*br.BranchID),
 				ShardID:  request.ShardID,
 			}
 
@@ -466,10 +466,10 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 	request *p.GetHistoryTreeRequest,
 ) (*p.GetHistoryTreeResponse, error) {
 
-	treeID := plugins.MustParseUUID(request.TreeID)
+	treeID := sqlplugin.MustParseUUID(request.TreeID)
 	branches := make([]*shared.HistoryBranch, 0)
 
-	treeFilter := &plugins.HistoryTreeFilter{
+	treeFilter := &sqlplugin.HistoryTreeFilter{
 		TreeID:  treeID,
 		ShardID: *request.ShardID,
 	}

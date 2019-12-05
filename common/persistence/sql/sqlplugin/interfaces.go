@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package plugins
+package sqlplugin
 
 import (
 	"database/sql"
@@ -31,8 +31,8 @@ import (
 type (
 	// Plugin defines the interface for any SQL database that needs to implement
 	Plugin interface {
-		InitDB(cfg *config.SQL) (DB, error)
-		InitAdminDB(cfg *config.SQL) (AdminDB, error)
+		CreateDB(cfg *config.SQL) (DB, error)
+		CreateAdminDB(cfg *config.SQL) (AdminDB, error)
 	}
 
 	// DomainRow represents a row in domain table
@@ -688,8 +688,8 @@ type (
 		GetAckLevels(queueType common.QueueType, forUpdate bool) (map[string]int, error)
 	}
 
-	// adminCURD defines admin operations for CLI and test suites
-	adminCURD interface {
+	// adminCRUD defines admin operations for CLI and test suites
+	adminCRUD interface {
 		CreateSchemaVersionTables() error
 		ReadSchemaVersion(database string) (string, error)
 		UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error
@@ -721,7 +721,7 @@ type (
 
 	// DB defines the API for admin SQL operations for CLI and testing suites
 	AdminDB interface {
-		adminCURD
+		adminCRUD
 		PluginName() string
 		Close() error
 	}

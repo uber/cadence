@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 const (
@@ -40,7 +40,7 @@ const (
 )
 
 // InsertIntoQueue inserts a new row into queue table
-func (mdb *db) InsertIntoQueue(row *plugins.QueueRow) (sql.Result, error) {
+func (mdb *db) InsertIntoQueue(row *sqlplugin.QueueRow) (sql.Result, error) {
 	return mdb.conn.NamedExec(templateEnqueueMessageQuery, row)
 }
 
@@ -52,8 +52,8 @@ func (mdb *db) GetLastEnqueuedMessageIDForUpdate(queueType common.QueueType) (in
 }
 
 // GetMessagesFromQueue retrieves messages from the queue
-func (mdb *db) GetMessagesFromQueue(queueType common.QueueType, lastMessageID, maxRows int) ([]plugins.QueueRow, error) {
-	var rows []plugins.QueueRow
+func (mdb *db) GetMessagesFromQueue(queueType common.QueueType, lastMessageID, maxRows int) ([]sqlplugin.QueueRow, error) {
+	var rows []sqlplugin.QueueRow
 	err := mdb.conn.Select(&rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
 	return rows, err
 }
@@ -71,7 +71,7 @@ func (mdb *db) InsertAckLevel(queueType common.QueueType, messageID int, cluster
 		return err
 	}
 
-	_, err = mdb.conn.NamedExec(templateInsertQueueMetadataQuery, plugins.QueueMetadataRow{QueueType: queueType, Data: data})
+	_, err = mdb.conn.NamedExec(templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
 	return err
 
 }

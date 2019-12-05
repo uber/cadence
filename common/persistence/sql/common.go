@@ -29,12 +29,12 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
-	db     plugins.DB
+	db     sqlplugin.DB
 	logger log.Logger
 }
 
@@ -48,7 +48,7 @@ func (m *sqlStore) Close() {
 	}
 }
 
-func (m *sqlStore) txExecute(operation string, f func(tx plugins.Tx) error) error {
+func (m *sqlStore) txExecute(operation string, f func(tx sqlplugin.Tx) error) error {
 	tx, err := m.db.BeginTx()
 	if err != nil {
 		return &workflow.InternalServiceError{

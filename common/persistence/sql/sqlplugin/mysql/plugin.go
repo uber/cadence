@@ -31,7 +31,7 @@ import (
 
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
-	"github.com/uber/cadence/common/persistence/sql/plugins"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 )
@@ -53,14 +53,14 @@ var dsnAttrOverrides = map[string]string{
 
 type plugin struct{}
 
-var _ plugins.Plugin = (*plugin)(nil)
+var _ sqlplugin.Plugin = (*plugin)(nil)
 
 func init() {
 	sql.RegisterPlugin(PluginName, &plugin{})
 }
 
-// InitDB initialize the db object
-func (p *plugin) InitDB(cfg *config.SQL) (plugins.DB, error) {
+// CreateDB initialize the db object
+func (p *plugin) CreateDB(cfg *config.SQL) (sqlplugin.DB, error) {
 	conn, err := p.createDBConnection(cfg)
 	if err != nil {
 		return nil, err
@@ -69,8 +69,8 @@ func (p *plugin) InitDB(cfg *config.SQL) (plugins.DB, error) {
 	return db, nil
 }
 
-// InitAdminDB initialize the db object
-func (p *plugin) InitAdminDB(cfg *config.SQL) (plugins.AdminDB, error) {
+// CreateAdminDB initialize the db object
+func (p *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
 	conn, err := p.createDBConnection(cfg)
 	if err != nil {
 		return nil, err
