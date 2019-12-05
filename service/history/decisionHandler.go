@@ -661,14 +661,13 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 			failure:              versionErr,
 		}
 		buffered := queryRegistry.getBufferedIDs()
+		handler.logger.Info(
+			"failing query because worker does not support consistent query",
+			tag.WorkflowDomainName(domain),
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.Error(versionErr))
 		for _, id := range buffered {
-			handler.logger.Info(
-				"failing query because worker does not support consistent query",
-				tag.WorkflowDomainName(domain),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.QueryID(id),
-				tag.Error(versionErr))
 			if err := queryRegistry.setTerminationState(id, failedTerminationState); err != nil {
 				handler.logger.Error(
 					"failed to set query termination state to failed",
