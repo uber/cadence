@@ -21,6 +21,7 @@
 package worker
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -48,11 +49,11 @@ type (
 	// 3. Archiver: Handles archival of workflow histories.
 	Service struct {
 		resource.Resource
-		config *Config
 
+		status int32
+		stopC  chan struct{}
 		params *service.BootstrapParams
-
-		stopC chan struct{}
+		config *Config
 	}
 
 	// Config contains all the service config for worker
@@ -99,6 +100,7 @@ func NewService(
 
 	return &Service{
 		Resource: serviceResource,
+		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		params:   params,
 		stopC:    make(chan struct{}),
@@ -156,9 +158,12 @@ func NewConfig(params *service.BootstrapParams) *Config {
 
 // Start is called to start the service
 func (s *Service) Start() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 
 	logger := s.GetLogger()
-	logger.Info("worker starting", tag.Service(common.WorkerServiceName))
+	logger.Info("worker starting", tag.ComponentWorker)
 
 	s.Resource.Start()
 
@@ -181,14 +186,20 @@ func (s *Service) Start() {
 		s.startParentClosePolicyProcessor()
 	}
 
-	logger.Info("service started", tag.ComponentWorker)
+	logger.Info("worker started", tag.ComponentWorker)
 	<-s.stopC
-	s.Resource.Stop()
 }
 
 // Stop is called to stop the service
 func (s *Service) Stop() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
 	close(s.stopC)
+
+	s.Resource.Stop()
+
 	s.params.Logger.Info("worker stopped", tag.ComponentWorker)
 }
 

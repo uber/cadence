@@ -21,6 +21,7 @@
 package history
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -314,9 +315,11 @@ func (config *Config) GetShardID(workflowID string) int {
 type Service struct {
 	resource.Resource
 
-	stopC  chan struct{}
-	params *service.BootstrapParams
-	config *Config
+	status  int32
+	handler *Handler
+	stopC   chan struct{}
+	params  *service.BootstrapParams
+	config  *Config
 }
 
 // NewService builds a new cadence-history service
@@ -372,6 +375,7 @@ func NewService(
 
 	return &Service{
 		Resource: serviceResource,
+		status:   common.DaemonStatusInitialized,
 		stopC:    make(chan struct{}),
 		params:   params,
 		config:   serviceConfig,
@@ -380,30 +384,36 @@ func NewService(
 
 // Start starts the service
 func (s *Service) Start() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 
 	logger := s.GetLogger()
 	logger.Info("elastic search config", tag.ESConfig(s.params.ESConfig))
 	logger.Info("history starting")
 
-	handler := NewHandler(s.Resource, s.config)
-	handler.RegisterHandler()
+	s.handler = NewHandler(s.Resource, s.config)
+	s.handler.RegisterHandler()
 
 	// must start resource first
 	s.Resource.Start()
-	handler.Start()
+	s.handler.Start()
 
 	logger.Info("history started")
 
 	<-s.stopC
-	handler.Stop()
-	s.Resource.Stop()
 }
 
 // Stop stops the service
 func (s *Service) Stop() {
-	select {
-	case s.stopC <- struct{}{}:
-	default:
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
 	}
+
+	close(s.stopC)
+
+	s.handler.Stop()
+	s.Resource.Stop()
+
 	s.GetLogger().Info("history stopped")
 }
