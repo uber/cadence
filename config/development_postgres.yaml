@@ -5,7 +5,7 @@ persistence:
   datastores:
     postgres-default:
       sql:
-        driverName: "postgres"
+        pluginName: "postgres"
         databaseName: "cadence"
         connectAddr: "127.0.0.1:5432"
         connectProtocol: "tcp"
@@ -16,7 +16,7 @@ persistence:
         maxConnLifetime: "1h"
     postgres-visibility:
       sql:
-        driverName: "postgres"
+        pluginName: "postgres"
         databaseName: "cadence_visibility"
         connectAddr: "127.0.0.1:5432"
         connectProtocol: "tcp"
