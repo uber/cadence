@@ -22,9 +22,10 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/persistence/sql"
 	"strconv"
 	"strings"
+
+	"github.com/uber/cadence/common/persistence/sql"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"

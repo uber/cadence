@@ -95,7 +95,8 @@ func TestSQLVisibilityPersistenceSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-//TODO flaky test, seems like a test issue
+// TODO flaky test in buildkite
+// https://github.com/uber/cadence/issues/2877
 /*
 FAIL: TestSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
         queuePersistenceTest.go:102:
@@ -104,7 +105,7 @@ FAIL: TestSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
             	            	expected: 99
             	            	actual  : 98
             	Test:       	TestSQLQueuePersistence/TestDomainReplicationQueue
- */
+*/
 //func TestSQLQueuePersistence(t *testing.T) {
 //	s := new(pt.QueuePersistenceSuite)
 //	s.TestBase = pt.NewTestBaseWithSQL(getTestClusterOption())
