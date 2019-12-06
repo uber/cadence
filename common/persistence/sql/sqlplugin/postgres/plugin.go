@@ -23,8 +23,6 @@ package postgres
 import (
 	"fmt"
 	"net"
-	"strconv"
-	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
