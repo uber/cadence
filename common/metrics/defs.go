@@ -1437,6 +1437,7 @@ const (
 
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
+	CadenceErrIncompleteHistoryCounter
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1763,6 +1764,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
+		CadenceErrIncompleteHistoryCounter:                        {metricName: "cadence_errors_incomplete_history", metricType: Counter},
 	},
 	Frontend: {
 		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
