@@ -3219,7 +3219,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 			return nil, err
 		}
 
-		if err := verifyHistoryIsComplete(history, firstEventID, nextEventID); err != nil {
+		if err := verifyHistoryIsComplete(history, firstEventID, nextEventID-1); err != nil {
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 			return nil, err
 		}
@@ -3262,7 +3262,8 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 func verifyHistoryIsComplete(
 	history *gen.History,
 	expectedFirstEventID int64,
-	expectedLastEventID int64) error {
+	expectedLastEventID int64,
+) error {
 
 	firstEventID := int64(-1)
 	lastEventID := int64(-1)

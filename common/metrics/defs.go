@@ -1368,6 +1368,7 @@ const (
 	CadenceErrRetryTaskCounter
 	CadenceErrBadBinaryCounter
 	CadenceErrClientVersionNotSupportedCounter
+	CadenceErrIncompleteHistoryCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -1437,7 +1438,6 @@ const (
 
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
-	CadenceErrIncompleteHistoryCounter
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1707,6 +1707,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrRetryTaskCounter:                          {metricName: "cadence_errors_retry_task", metricType: Counter},
 		CadenceErrBadBinaryCounter:                          {metricName: "cadence_errors_bad_binary", metricType: Counter},
 		CadenceErrClientVersionNotSupportedCounter:          {metricName: "cadence_errors_client_version_not_supported", metricType: Counter},
+		CadenceErrIncompleteHistoryCounter:                  {metricName: "cadence_errors_incomplete_history", metricType: Counter},
 		PersistenceRequests:                                 {metricName: "persistence_requests", metricType: Counter},
 		PersistenceFailures:                                 {metricName: "persistence_errors", metricType: Counter},
 		PersistenceLatency:                                  {metricName: "persistence_latency", metricType: Timer},
@@ -1764,7 +1765,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
-		CadenceErrIncompleteHistoryCounter:                        {metricName: "cadence_errors_incomplete_history", metricType: Counter},
 	},
 	Frontend: {
 		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
