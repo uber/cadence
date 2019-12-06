@@ -38,10 +38,6 @@ type db struct {
 var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
 
-func (pdb *db) GetDriverName() string {
-	return PluginName
-}
-
 // ErrDupEntry indicates a duplicate primary key i.e. the row already exists,
 // check http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
 const ErrDupEntry = "23505"
