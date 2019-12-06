@@ -22,14 +22,14 @@ package postgres
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
-
-	"github.com/uber/cadence/common/persistence/sql"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -73,14 +73,9 @@ func (d *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
-	ss := strings.Split(cfg.ConnectAddr, ":")
-	if len(ss) != 2 {
-		return nil, fmt.Errorf("invalid connect address, it must be in host:port format, %v", cfg.ConnectAddr)
-	}
-	host := ss[0]
-	port, err := strconv.Atoi(ss[1])
-	if err != nil {
-		return nil, fmt.Errorf("invalid port number: %v, %v", ss[1], cfg.ConnectAddr)
+	host, port, err := net.SplitHostPort(cfg.ConnectAddr)
+	if err != nil{
+		return nil, fmt.Errorf("invalid connect address, it must be in host:port format, %v, err: %v", cfg.ConnectAddr, err)
 	}
 
 	dbName := cfg.DatabaseName
