@@ -3221,6 +3221,12 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 
 		if err := verifyHistoryIsComplete(history, firstEventID, nextEventID-1); err != nil {
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
+			wh.GetLogger().Error("PollForDecisionTask: incomplete history",
+				tag.WorkflowDomainID(domainID),
+				tag.WorkflowDomainName(domain.GetInfo().Name),
+				tag.WorkflowID(matchingResp.WorkflowExecution.GetWorkflowId()),
+				tag.WorkflowRunID(matchingResp.WorkflowExecution.GetRunId()),
+				tag.Error(err))
 			return nil, err
 		}
 
@@ -3283,11 +3289,12 @@ func verifyHistoryIsComplete(
 	}
 
 	return fmt.Errorf(
-		"incomplete history: expected events [%v-%v] but got events [%v-%v]",
+		"incomplete history: expected events [%v-%v] but got events [%v-%v] of length %v",
 		expectedFirstEventID,
 		expectedLastEventID,
 		firstEventID,
-		lastEventID)
+		lastEventID,
+		nEvents)
 }
 
 func deserializeHistoryToken(bytes []byte) (*getHistoryContinuationToken, error) {
