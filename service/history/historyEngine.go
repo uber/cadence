@@ -30,10 +30,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pborman/uuid"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
+
+	"github.com/pborman/uuid"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -937,14 +938,19 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			tag.WorkflowNextEventID(msResp.GetNextEventId()),
 			tag.Error(err))
 
-		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, err = e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  queryRequest.Execution,
-		})
-		cancel()
-		if err != nil {
-			return nil, err
+		if msResp.GetIsWorkflowRunning() {
+			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_, err = e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
+				DomainUUID: common.StringPtr(domainID),
+				Execution:  queryRequest.Execution,
+			})
+			cancel()
+
+			// a workflow which is closed can still be queried therefore if the error is
+			// ErrWorkflowCompleted simply continue to querying on non-sticky tasklist
+			if err != nil && err != ErrWorkflowCompleted {
+				return nil, err
+			}
 		}
 	}
 
