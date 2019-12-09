@@ -1310,7 +1310,10 @@ func (e *mutableStateBuilder) DeleteActivity(
 			fmt.Sprintf("unable to find activity event id: %v in mutable state", scheduleEventID),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
-		return ErrMissingActivityInfo
+		// temporarily disable sanity check due to cassandra data inconsistency
+		// return ErrMissingActivityInfo
+		e.logDataInconsistency()
+		return nil
 	}
 	delete(e.pendingActivityInfoIDs, scheduleEventID)
 
@@ -1320,7 +1323,10 @@ func (e *mutableStateBuilder) DeleteActivity(
 			fmt.Sprintf("unable to find activity ID: %v in mutable state", ai.ActivityID),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
-		return ErrMissingActivityInfo
+		// temporarily disable sanity check due to cassandra data inconsistency
+		// return ErrMissingActivityInfo
+		e.logDataInconsistency()
+		return nil
 	}
 	delete(e.pendingActivityInfoByActivityID, ai.ActivityID)
 
@@ -1366,7 +1372,10 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 			fmt.Sprintf("unable to find timer ID: %v in mutable state", timerID),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
-		return ErrMissingTimerInfo
+		// temporarily disable sanity check due to cassandra data inconsistency
+		// return ErrMissingTimerInfo
+		e.logDataInconsistency()
+		return nil
 	}
 
 	delete(e.pendingTimerInfoIDs, timerID)
@@ -4482,9 +4491,22 @@ func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
 	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
 	e.logger.Warn(msg, tags...)
 }
+
 func (e *mutableStateBuilder) logError(msg string, tags ...tag.Tag) {
 	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
 	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
 	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
 	e.logger.Error(msg, tags...)
+}
+
+func (e *mutableStateBuilder) logDataInconsistency() {
+	domainID := e.executionInfo.DomainID
+	workflowID := e.executionInfo.WorkflowID
+	runID := e.executionInfo.RunID
+
+	e.logger.Error("encounter cassandra data inconsistency",
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID),
+	)
 }
