@@ -21,36 +21,54 @@
 package history
 
 import (
+	"time"
+
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 )
 
-type MockShardContext struct {
+type shardContextTest struct {
 	*shardContextImpl
 
-	resource *resource.Test
+	resource        *resource.Test
+	mockEventsCache *MockeventsCache
 }
 
-var _ ShardContext = (*MockShardContext)(nil)
+var _ ShardContext = (*shardContextTest)(nil)
 
-func NewMockShardContext(ctrl *gomock.Controller, shardInfo *persistence.ShardInfo) *MockShardContext {
-	mockResource := resource.NewTest(ctrl, metrics.History)
-	mockShard := &shardContextImpl{
-		Resource:                  mockResource,
+func NewTestShardContext(ctrl *gomock.Controller, shardInfo *persistence.ShardInfo) *shardContextTest {
+	resource := resource.NewTest(ctrl, metrics.History)
+	eventsCache := NewMockeventsCache(ctrl)
+	shard := &shardContextImpl{
+		Resource:                  resource,
+		shardID:                   shardInfo.ShardID,
+		rangeID:                   shardInfo.RangeID,
 		shardInfo:                 shardInfo,
-		transferSequenceNumber:    1,
-		maxTransferSequenceNumber: 100000,
-		executionManager:          mockResource.ExecutionMgr,
+		executionManager:          resource.ExecutionMgr,
+		isClosed:                  false,
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
-		logger:                    mockResource.GetLogger(),
-		throttledLogger:           mockResource.GetThrottledLogger(),
+		logger:                    resource.GetLogger(),
+		throttledLogger:           resource.GetThrottledLogger(),
+		transferSequenceNumber:    1,
+		transferMaxReadLevel:      0,
+		maxTransferSequenceNumber: 100000,
+		timerMaxReadLevelMap:      make(map[string]time.Time),
+		standbyClusterCurrentTime: make(map[string]time.Time),
+		eventsCache:               eventsCache,
 	}
-	mockShard.eventsCache = newEventsCache(mockShard)
-	return &MockShardContext{
-		resource:         mockResource,
-		shardContextImpl: mockShard,
+	return &shardContextTest{
+		shardContextImpl: shard,
+		resource:         resource,
+		mockEventsCache:  eventsCache,
 	}
+}
+
+func (s *shardContextTest) Finish(
+	t mock.TestingT,
+) {
+	s.resource.Finish(t)
 }
