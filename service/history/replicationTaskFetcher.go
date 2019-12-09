@@ -44,13 +44,14 @@ const (
 type (
 	// ReplicationTaskFetcher is responsible for fetching replication messages from remote DC.
 	ReplicationTaskFetcher struct {
-		status        int32
-		sourceCluster string
-		config        *Config
-		logger        log.Logger
-		remotePeer    workflowserviceclient.Interface
-		requestChan   chan *request
-		done          chan struct{}
+		status         int32
+		currentCluster string
+		sourceCluster  string
+		config         *Config
+		logger         log.Logger
+		remotePeer     workflowserviceclient.Interface
+		requestChan    chan *request
+		done           chan struct{}
 	}
 
 	// ReplicationTaskFetchers is a group of fetchers, one per source DC.
@@ -77,9 +78,16 @@ func NewReplicationTaskFetchers(
 				continue
 			}
 
-			if clusterName != clusterMetadata.GetCurrentClusterName() {
+			currentCluster := clusterMetadata.GetCurrentClusterName()
+			if clusterName != currentCluster {
 				remoteFrontendClient := clientBean.GetRemoteFrontendClient(clusterName)
-				fetcher := newReplicationTaskFetcher(logger, clusterName, config, remoteFrontendClient)
+				fetcher := newReplicationTaskFetcher(
+					logger,
+					clusterName,
+					currentCluster,
+					config,
+					remoteFrontendClient,
+				)
 				fetchers = append(fetchers, fetcher)
 			}
 		}
@@ -125,18 +133,20 @@ func (f *ReplicationTaskFetchers) GetFetchers() []*ReplicationTaskFetcher {
 func newReplicationTaskFetcher(
 	logger log.Logger,
 	sourceCluster string,
+	currentCluster string,
 	config *Config,
 	sourceFrontend workflowserviceclient.Interface,
 ) *ReplicationTaskFetcher {
 
 	return &ReplicationTaskFetcher{
-		status:        common.DaemonStatusInitialized,
-		config:        config,
-		logger:        logger.WithTags(tag.ClusterName(sourceCluster)),
-		remotePeer:    sourceFrontend,
-		sourceCluster: sourceCluster,
-		requestChan:   make(chan *request, requestChanBufferSize),
-		done:          make(chan struct{}),
+		status:         common.DaemonStatusInitialized,
+		config:         config,
+		logger:         logger.WithTags(tag.ClusterName(sourceCluster)),
+		remotePeer:     sourceFrontend,
+		currentCluster: currentCluster,
+		sourceCluster:  sourceCluster,
+		requestChan:    make(chan *request, requestChanBufferSize),
+		done:           make(chan struct{}),
 	}
 }
 
@@ -242,7 +252,10 @@ func (f *ReplicationTaskFetcher) getMessages(
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
 	defer cancel()
 
-	request := &r.GetReplicationMessagesRequest{Tokens: tokens}
+	request := &r.GetReplicationMessagesRequest{
+		Tokens:      tokens,
+		ClusterName: common.StringPtr(f.currentCluster),
+	}
 	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 	if err != nil {
 		return nil, err

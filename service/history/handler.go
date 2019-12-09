@@ -1523,8 +1523,11 @@ func (h *Handler) GetReplicationMessages(
 				h.GetLogger().Warn("History engine not found for shard", tag.Error(err))
 				return
 			}
-
-			tasks, err := engine.GetReplicationMessages(ctx, token.GetLastRetrievedMessageId())
+			tasks, err := engine.GetReplicationMessages(
+				ctx,
+				request.GetClusterName(),
+				token.GetLastRetrievedMessageId(),
+			)
 			if err != nil {
 				h.GetLogger().Warn("Failed to get replication tasks for shard", tag.Error(err))
 				return

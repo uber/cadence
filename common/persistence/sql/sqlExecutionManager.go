@@ -916,9 +916,9 @@ func (m *sqlExecutionManager) GetReplicationTasks(
 	rows, err := m.db.SelectFromReplicationTasks(
 		&sqldb.ReplicationTasksFilter{
 			ShardID:   m.shardID,
-			MinTaskID: readLevel,
-			MaxTaskID: maxReadLevelInclusive,
-			PageSize:  request.BatchSize,
+			MinTaskID: &readLevel,
+			MaxTaskID: &maxReadLevelInclusive,
+			PageSize:  &request.BatchSize,
 		})
 
 	switch err {
@@ -1000,9 +1000,27 @@ func (m *sqlExecutionManager) CompleteReplicationTask(
 	request *p.CompleteReplicationTaskRequest,
 ) error {
 
-	if _, err := m.db.DeleteFromReplicationTasks(m.shardID, int(request.TaskID)); err != nil {
+	if _, err := m.db.DeleteFromReplicationTasks(&sqldb.ReplicationTasksFilter{
+		ShardID: m.shardID,
+		TaskID:  &request.TaskID,
+	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
+		}
+	}
+	return nil
+}
+
+func (m *sqlExecutionManager) RangeCompleteReplicationTask(
+	request *p.RangeCompleteReplicationTaskRequest,
+) error {
+
+	if _, err := m.db.DeleteFromReplicationTasks(&sqldb.ReplicationTasksFilter{
+		ShardID: m.shardID,
+		TaskID:  &request.InclusiveEndTaskID,
+	}); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("RangeCompleteReplicationTask operation failed. Error: %v", err),
 		}
 	}
 	return nil
@@ -1019,9 +1037,9 @@ func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 
 	filter := sqldb.ReplicationTasksFilter{
 		ShardID:   m.shardID,
-		MinTaskID: readLevel,
-		MaxTaskID: maxReadLevelInclusive,
-		PageSize:  request.BatchSize,
+		MinTaskID: &readLevel,
+		MaxTaskID: &maxReadLevelInclusive,
+		PageSize:  &request.BatchSize,
 	}
 	rows, err := m.db.SelectFromReplicationTasksDLQ(&sqldb.ReplicationTasksDLQFilter{
 		ReplicationTasksFilter: filter,

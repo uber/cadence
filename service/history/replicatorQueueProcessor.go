@@ -423,14 +423,21 @@ func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) ma
 
 func (p *replicatorQueueProcessorImpl) getTasks(
 	ctx ctx.Context,
-	readLevel int64,
+	sourceCluster string,
+	lastReadTaskID int64,
 ) (*replicator.ReplicationMessages, error) {
-	taskInfoList, hasMore, err := p.readTasksWithBatchSize(readLevel, p.fetchTasksBatchSize)
+
+	if lastReadTaskID == emptyMessageID {
+		lastReadTaskID = p.shard.GetClusterReplicationLevel(sourceCluster)
+	}
+
+	taskInfoList, hasMore, err := p.readTasksWithBatchSize(lastReadTaskID, p.fetchTasksBatchSize)
 	if err != nil {
 		return nil, err
 	}
 
 	var replicationTasks []*replicator.ReplicationTask
+	readLevel := lastReadTaskID
 	for _, taskInfo := range taskInfoList {
 		var replicationTask *replicator.ReplicationTask
 		op := func() error {
@@ -445,7 +452,6 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 			hasMore = true
 			break
 		}
-
 		readLevel = taskInfo.GetTaskID()
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
@@ -456,7 +462,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	p.metricsClient.RecordTimer(
 		metrics.ReplicatorQueueProcessorScope,
 		metrics.ReplicationTasksLag,
-		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
+		time.Duration(p.shard.GetReplicatorAckLevel()-readLevel),
 	)
 
 	p.metricsClient.RecordTimer(
@@ -470,6 +476,13 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		metrics.ReplicationTasksReturned,
 		time.Duration(len(replicationTasks)),
 	)
+
+	if err := p.shard.UpdateClusterReplicationLevel(
+		sourceCluster,
+		lastReadTaskID,
+	); err != nil {
+		p.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
+	}
 
 	return &replicator.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,

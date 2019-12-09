@@ -109,7 +109,8 @@ task_id > ? AND
 task_id <= ? 
 ORDER BY task_id LIMIT ?`
 
-	deleteReplicationTaskQry = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
+	deleteReplicationTaskQry      = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
+	rangeDeleteReplicationTaskQry = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id <= ?`
 
 	getReplicationTasksDLQQry = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE 
 source_cluster_name = ? AND
@@ -306,13 +307,16 @@ func (mdb *DB) InsertIntoReplicationTasks(rows []sqldb.ReplicationTasksRow) (sql
 // SelectFromReplicationTasks reads one or more rows from replication_tasks table
 func (mdb *DB) SelectFromReplicationTasks(filter *sqldb.ReplicationTasksFilter) ([]sqldb.ReplicationTasksRow, error) {
 	var rows []sqldb.ReplicationTasksRow
-	err := mdb.conn.Select(&rows, getReplicationTasksQry, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
+	err := mdb.conn.Select(&rows, getReplicationTasksQry, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID, *filter.PageSize)
 	return rows, err
 }
 
 // DeleteFromReplicationTasks deletes one or more rows from replication_tasks table
-func (mdb *DB) DeleteFromReplicationTasks(shardID, taskID int) (sql.Result, error) {
-	return mdb.conn.Exec(deleteReplicationTaskQry, shardID, taskID)
+func (mdb *DB) DeleteFromReplicationTasks(filter *sqldb.ReplicationTasksFilter) (sql.Result, error) {
+	if filter.InclusiveEndTaskID != nil {
+		return mdb.conn.Exec(rangeDeleteReplicationTaskQry, filter.ShardID, *filter.InclusiveEndTaskID)
+	}
+	return mdb.conn.Exec(deleteReplicationTaskQry, filter.ShardID, *filter.TaskID)
 }
 
 // InsertIntoReplicationTasksDLQ inserts one or more rows into replication_tasks_dlq table
@@ -327,8 +331,8 @@ func (mdb *DB) SelectFromReplicationTasksDLQ(filter *sqldb.ReplicationTasksDLQFi
 		&rows, getReplicationTasksDLQQry,
 		filter.SourceClusterName,
 		filter.ShardID,
-		filter.MinTaskID,
-		filter.MaxTaskID,
-		filter.PageSize)
+		*filter.MinTaskID,
+		*filter.MaxTaskID,
+		*filter.PageSize)
 	return rows, err
 }
