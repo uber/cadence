@@ -80,8 +80,9 @@ type (
 		lastProcessedMessageID int64
 		lastRetrievedMessageID int64
 
-		requestChan chan<- *request
-		done        chan struct{}
+		requestChan   chan<- *request
+		syncShardChan chan *r.SyncShardStatus
+		done          chan struct{}
 	}
 
 	request struct {
@@ -138,6 +139,7 @@ func NewReplicationTaskProcessor(
 		shard:                  shard,
 		historyEngine:          historyEngine,
 		historySerializer:      persistence.NewPayloadSerializer(),
+		config:                 config,
 		domainCache:            shard.GetDomainCache(),
 		metricsClient:          metricsClient,
 		logger:                 shard.GetLogger(),
@@ -146,6 +148,7 @@ func NewReplicationTaskProcessor(
 		taskRetryPolicy:        taskRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,
 		requestChan:            replicationTaskFetcher.GetRequestChan(),
+		syncShardChan:          make(chan *r.SyncShardStatus),
 		done:                   make(chan struct{}),
 		lastProcessedMessageID: emptyMessageID,
 		lastRetrievedMessageID: emptyMessageID,
@@ -159,6 +162,7 @@ func (p *ReplicationTaskProcessor) Start() {
 	}
 
 	go p.processorLoop()
+	go p.syncShardStatus()
 	go p.cleanupReplicationTaskLoop()
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
@@ -169,6 +173,7 @@ func (p *ReplicationTaskProcessor) Stop() {
 		return
 	}
 
+	p.logger.Info("ReplicationTaskProcessor shutting down.")
 	close(p.done)
 }
 
@@ -206,7 +211,6 @@ Loop:
 
 			p.processResponse(response)
 		case <-p.done:
-			p.logger.Info("ReplicationTaskProcessor shutting down.")
 			return
 		}
 	}
@@ -219,7 +223,6 @@ func (p *ReplicationTaskProcessor) cleanupReplicationTaskLoop() {
 	for {
 		select {
 		case <-p.done:
-			p.logger.Debug("ReplicationTaskProcessor shutting down.")
 			return
 		case <-ticker.C:
 			err := p.cleanupAckedReplicationTasks()
@@ -267,7 +270,7 @@ func (p *ReplicationTaskProcessor) sendFetchMessageRequest() <-chan *r.Replicati
 
 func (p *ReplicationTaskProcessor) processResponse(response *r.ReplicationMessages) {
 
-	p.handleSyncShardStatus(response.GetSyncShardStatus())
+	p.syncShardChan <- response.GetSyncShardStatus()
 	// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
 	// we will receive replication tasks but hasMore is false (meaning that we are always catching up).
 	// So hasMore might not be a good indicator for additional wait.
@@ -292,7 +295,32 @@ func (p *ReplicationTaskProcessor) processResponse(response *r.ReplicationMessag
 	p.noTaskRetrier.Reset()
 }
 
-func (p *ReplicationTaskProcessor) handleSyncShardStatus(status *r.SyncShardStatus) {
+func (p *ReplicationTaskProcessor) syncShardStatus() {
+
+	ticker := time.NewTicker(p.config.ShardSyncMinInterval())
+	defer ticker.Stop()
+
+	var syncShardTask *r.SyncShardStatus
+	for {
+		select {
+		case syncShardRequest := <-p.syncShardChan:
+			syncShardTask = syncShardRequest
+		case <-ticker.C:
+			p.handleSyncShardStatus(syncShardTask)
+		case <-p.done:
+			return
+		}
+	}
+}
+
+func (p *ReplicationTaskProcessor) handleSyncShardStatus(
+	status *r.SyncShardStatus,
+) {
+
+	if status == nil ||
+		p.shard.GetTimeSource().Now().Sub(time.Unix(0, status.GetTimestamp())) > dropSyncShardTaskTimeThreshold {
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
