@@ -3219,7 +3219,15 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 			return nil, err
 		}
 
-		if err := verifyHistoryIsComplete(history, firstEventID, matchingResp.GetStartedEventId()); err != nil {
+		// we expect history to contain all events up to the current DecisionStartedEvent
+		lastEventID := matchingResp.GetStartedEventId()
+		if matchingResp.Query != nil {
+			// for query tasks, startedEventID is irrelevant, we expect history to
+			// contain all events upto nextEventID-1
+			lastEventID = nextEventID - 1
+		}
+
+		if err := verifyHistoryIsComplete(history, firstEventID, lastEventID); err != nil {
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 			wh.GetLogger().Error("PollForDecisionTask: incomplete history",
 				tag.WorkflowDomainID(domainID),
