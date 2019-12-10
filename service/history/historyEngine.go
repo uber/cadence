@@ -139,6 +139,7 @@ type (
 		eventsReapplier           nDCEventsReapplier
 		matchingClient            matching.Client
 		rawMatchingClient         matching.Client
+		clientChecker             client.VersionChecker
 	}
 )
 
@@ -237,6 +238,7 @@ func NewEngineWithShardContext(
 		publicClient:      publicClient,
 		matchingClient:    matching,
 		rawMatchingClient: rawMatchingClient,
+		clientChecker:     client.NewVersionChecker(),
 	}
 
 	historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -835,10 +837,8 @@ func (e *historyEngineImpl) QueryWorkflow(
 		if err != nil {
 			return nil, err
 		}
-		sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
-		defer sw.Stop()
 		req.Execution.RunId = msResp.Execution.RunId
-		return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
+		return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req, scope)
 	}
 
 	// If we get here it means query could not be dispatched through matching directly, so it must block
@@ -882,7 +882,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 				return nil, err
 			}
 			req.Execution.RunId = msResp.Execution.RunId
-			return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req)
+			return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req, scope)
 		case queryTerminationTypeFailed:
 			return nil, state.failure
 		default:
@@ -895,26 +895,18 @@ func (e *historyEngineImpl) QueryWorkflow(
 	}
 }
 
-type queryResult struct {
-	response *h.QueryWorkflowResponse
-	err      error
-}
-
-type stickyQueryResult struct {
-	response           *h.QueryWorkflowResponse
-	shouldTryNonSticky bool
-	err                error
-}
-
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	ctx ctx.Context,
 	msResp *h.GetMutableStateResponse,
 	domainID string,
 	queryRequest *workflow.QueryWorkflowRequest,
+	scope metrics.Scope,
 ) (*h.QueryWorkflowResponse, error) {
 
-	stickyResultCh := make(chan *stickyQueryResult)
-	supportsStickyQuery := client.NewVersionChecker().SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
+	sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
+	defer sw.Stop()
+
+	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
@@ -925,123 +917,86 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			QueryRequest: queryRequest,
 			TaskList:     msResp.GetStickyTaskList(),
 		}
-		go func() {
-			stickyResponse, shouldTryNonSticky, err := e.queryDirectlyThroughMatchingOnSticky(stickyMatchingRequest, msResp, domainID)
-			stickyResultCh <- &stickyQueryResult{
-				response:           stickyResponse,
-				shouldTryNonSticky: shouldTryNonSticky,
-				err:                err,
-			}
-		}()
-	}
 
-	// first attempt to only query on sticky for up to one second
-	select {
-	case <-time.After(time.Second):
-	case result := <-stickyResultCh:
-		if result.err == nil {
-			return result.response, nil
+		// using a clean new context in case customer provide a context which has
+		// a really short deadline, causing we clear the stickiness
+		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(msResp.GetStickyTaskListScheduleToStartTimeout())*time.Second)
+		stickyStopWatch := scope.StartTimer(metrics.DirectQueryDispatchStickyLatency)
+		matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, stickyMatchingRequest)
+		stickyStopWatch.Stop()
+		cancel()
+		if err == nil {
+			scope.IncCounter(metrics.DirectQueryDispatchStickySuccessCount)
+			return &h.QueryWorkflowResponse{Response: matchingResp}, nil
 		}
-		if !result.shouldTryNonSticky {
-			return nil, result.err
-		}
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-
-	// if no result was received for query on sticky within one second then also try on non-sticky concurrently
-	nonStickyResponseCh := make(chan *queryResult)
-	go func() {
-		nonStickyMatchingRequest := &m.QueryWorkflowRequest{
-			DomainUUID:   common.StringPtr(domainID),
-			QueryRequest: queryRequest,
-			TaskList:     msResp.TaskList,
-		}
-
-		matchingResp, err := e.matchingClient.QueryWorkflow(ctx, nonStickyMatchingRequest)
-		nonStickyResponseCh <- &queryResult{
-			response: &h.QueryWorkflowResponse{Response: matchingResp},
-			err:      err,
-		}
-		if err != nil {
-			e.logger.Error("Query directly though matching on non-sticky failed",
+		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
+			e.logger.Error("query directly though matching on sticky failed, will not attempt query on non-sticky",
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
 				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
 				tag.Error(err))
+			return nil, err
 		}
-	}()
-
-	select {
-	case nonStickyResult := <-nonStickyResponseCh:
-		return nonStickyResult.response, nonStickyResult.err
-	case stickyResult := <-stickyResultCh:
-		if stickyResult.err == nil {
-			return stickyResult.response, nil
+		if msResp.GetIsWorkflowRunning() {
+			e.logger.Info("query direct through matching failed on sticky, clearing sticky before attempting on non-sticky",
+				tag.WorkflowDomainName(queryRequest.GetDomain()),
+				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			clearStickinessStopWatch := scope.StartTimer(metrics.DirectQueryDispatchClearStickinessLatency)
+			_, err := e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
+				DomainUUID: common.StringPtr(domainID),
+				Execution:  queryRequest.GetExecution(),
+			})
+			clearStickinessStopWatch.Stop()
+			cancel()
+			if err != nil && err != ErrWorkflowCompleted {
+				return nil, err
+			}
+			scope.IncCounter(metrics.DirectQueryDispatchClearStickinessSuccessCount)
 		}
-		if !stickyResult.shouldTryNonSticky {
-			return nil, stickyResult.err
-		}
-		break
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
 
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case nonStickyResult := <-nonStickyResponseCh:
-		return nonStickyResult.response, nonStickyResult.err
-	}
-}
-
-func (e *historyEngineImpl) queryDirectlyThroughMatchingOnSticky(
-	matchingRequest *m.QueryWorkflowRequest,
-	msResp *h.GetMutableStateResponse,
-	domainID string,
-) (*h.QueryWorkflowResponse, bool, error) {
-
-	// using a clean new context in case customer provide a context which has
-	// a really short deadline, causing we clear the stickiness
-	stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(msResp.GetStickyTaskListScheduleToStartTimeout())*time.Second)
-	matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, matchingRequest)
-	cancel()
-	if err == nil {
-		return &h.QueryWorkflowResponse{Response: matchingResp}, false, nil
-	}
-	if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
-		e.logger.Error("query directly though matching on sticky failed",
-			tag.WorkflowDomainName(matchingRequest.GetQueryRequest().GetDomain()),
-			tag.WorkflowID(matchingRequest.GetQueryRequest().Execution.GetWorkflowId()),
-			tag.WorkflowRunID(matchingRequest.GetQueryRequest().Execution.GetRunId()),
-			tag.WorkflowQueryType(matchingRequest.GetQueryRequest().Query.GetQueryType()),
-			tag.Error(err))
-		return nil, false, err
+	if err := common.IsValidContext(ctx); err != nil {
+		e.logger.Info("query context timed out before query on non-sticky task list could be attempted",
+			tag.WorkflowDomainName(queryRequest.GetDomain()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+		scope.IncCounter(metrics.DirectQueryDispatchTimeoutBeforeNonStickyCount)
+		return nil, err
 	}
 
-	// this means sticky timeout, should clear stickiness and try on normal task list
-	e.logger.Info("query directly through matching on sticky timed out",
-		tag.WorkflowDomainName(matchingRequest.GetQueryRequest().GetDomain()),
-		tag.WorkflowID(matchingRequest.GetQueryRequest().Execution.GetWorkflowId()),
-		tag.WorkflowRunID(matchingRequest.GetQueryRequest().Execution.GetRunId()),
-		tag.WorkflowQueryType(matchingRequest.GetQueryRequest().Query.GetQueryType()),
+	e.logger.Info("query directly through matching on sticky timed out, attempting to query on non-sticky",
+		tag.WorkflowDomainName(queryRequest.GetDomain()),
+		tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+		tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+		tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
 		tag.WorkflowTaskListName(msResp.GetStickyTaskList().GetName()),
-		tag.WorkflowNextEventID(msResp.GetNextEventId()),
-		tag.Error(err))
+		tag.WorkflowNextEventID(msResp.GetNextEventId()))
 
-	if msResp.GetIsWorkflowRunning() {
-		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, err := e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  matchingRequest.GetQueryRequest().Execution,
-		})
-		cancel()
-		if err != nil {
-			return nil, false, err
-		}
+	nonStickyMatchingRequest := &m.QueryWorkflowRequest{
+		DomainUUID:   common.StringPtr(domainID),
+		QueryRequest: queryRequest,
+		TaskList:     msResp.TaskList,
 	}
-	return nil, true, err
+
+	nonStickyStopWatch := scope.StartTimer(metrics.DirectQueryDispatchNonStickyLatency)
+	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, nonStickyMatchingRequest)
+	nonStickyStopWatch.Stop()
+	if err != nil {
+		e.logger.Error("query directly though matching on non-sticky failed",
+			tag.WorkflowDomainName(queryRequest.GetDomain()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+			tag.Error(err))
+		return nil, err
+	}
+	scope.IncCounter(metrics.DirectQueryDispatchNonStickySuccessCount)
+	return &h.QueryWorkflowResponse{Response: matchingResp}, err
 }
 
 func (e *historyEngineImpl) getMutableState(
