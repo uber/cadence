@@ -42,7 +42,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
-	github.com/olivere/elastic v6.2.21+incompatible
+	github.com/olivere/elastic v6.2.26+incompatible
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/pierrec/lz4 v0.0.0-20190701081048-057d66e894a4 // indirect

@@ -45,7 +45,7 @@ func PutIndexTemplate(s suite.Suite, esClient *elastic.Client, templateConfigFil
 	// #nosec
 	template, err := ioutil.ReadFile(templateConfigFile)
 	s.Require().NoError(err)
-	putTemplate, err := esClient.IndexPutTemplate(templateName).BodyString(string(template)).Do(createContext())
+	putTemplate, err := esClient.IndexPutTemplate(templateName).IncludeTypeName(true).BodyString(string(template)).Do(createContext())
 	s.Require().NoError(err)
 	s.Require().True(putTemplate.Acknowledged)
 }

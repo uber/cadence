@@ -102,7 +102,8 @@ func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elas
 	searchService := c.client.Search(p.Index).
 		Query(p.Query).
 		From(p.From).
-		SortBy(p.Sorter...)
+		SortBy(p.Sorter...).
+		RestTotalHitsAsInt(true)
 
 	if p.PageSize != 0 {
 		searchService.Size(p.PageSize)
@@ -116,7 +117,7 @@ func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elas
 }
 
 func (c *elasticWrapper) SearchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
-	return c.client.Search(index).Source(query).Do(ctx)
+	return c.client.Search(index).RestTotalHitsAsInt(true).Source(query).Do(ctx)
 }
 
 func (c *elasticWrapper) Scroll(ctx context.Context, scrollID string) (
