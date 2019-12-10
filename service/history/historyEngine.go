@@ -900,6 +900,12 @@ type queryResult struct {
 	err      error
 }
 
+type stickyQueryResult struct {
+	response *h.QueryWorkflowResponse
+	shouldTryNonSticky bool
+	err      error
+}
+
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	ctx ctx.Context,
 	msResp *h.GetMutableStateResponse,
@@ -907,7 +913,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	queryRequest *workflow.QueryWorkflowRequest,
 ) (*h.QueryWorkflowResponse, error) {
 
-	stickyResultCh := make(chan *queryResult)
+	stickyResultCh := make(chan *stickyQueryResult)
 	supportsStickyQuery := client.NewVersionChecker().SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
@@ -920,9 +926,10 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			TaskList:     msResp.GetStickyTaskList(),
 		}
 		go func() {
-			stickyResponse, err := e.queryDirectlyThroughMatchingOnSticky(stickyMatchingRequest, msResp, domainID)
-			stickyResultCh <- &queryResult{
+			stickyResponse, shouldTryNonSticky, err := e.queryDirectlyThroughMatchingOnSticky(stickyMatchingRequest, msResp, domainID)
+			stickyResultCh <- &stickyQueryResult{
 				response: stickyResponse,
+				shouldTryNonSticky: shouldTryNonSticky,
 				err:      err,
 			}
 		}()
@@ -934,6 +941,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	case result := <-stickyResultCh:
 		if result.err == nil {
 			return result.response, nil
+		}
+		if !result.shouldTryNonSticky {
+			return nil, result.err
 		}
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -970,6 +980,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		if stickyResult.err == nil {
 			return stickyResult.response, nil
 		}
+		if !stickyResult.shouldTryNonSticky {
+			return nil, stickyResult.err
+		}
 		break
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -987,7 +1000,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatchingOnSticky(
 	matchingRequest *m.QueryWorkflowRequest,
 	msResp *h.GetMutableStateResponse,
 	domainID string,
-) (*h.QueryWorkflowResponse, error) {
+) (*h.QueryWorkflowResponse, bool, error) {
 
 	// using a clean new context in case customer provide a context which has
 	// a really short deadline, causing we clear the stickiness
@@ -995,7 +1008,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatchingOnSticky(
 	matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, matchingRequest)
 	cancel()
 	if err == nil {
-		return &h.QueryWorkflowResponse{Response: matchingResp}, nil
+		return &h.QueryWorkflowResponse{Response: matchingResp}, false, nil
 	}
 	if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
 		e.logger.Error("query directly though matching on sticky failed",
@@ -1004,7 +1017,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatchingOnSticky(
 			tag.WorkflowRunID(matchingRequest.GetQueryRequest().Execution.GetRunId()),
 			tag.WorkflowQueryType(matchingRequest.GetQueryRequest().Query.GetQueryType()),
 			tag.Error(err))
-		return nil, err
+		return nil, false, err
 	}
 
 	// this means sticky timeout, should clear stickiness and try on normal task list
@@ -1025,10 +1038,10 @@ func (e *historyEngineImpl) queryDirectlyThroughMatchingOnSticky(
 		})
 		cancel()
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
-	return nil, err
+	return nil, true, err
 }
 
 func (e *historyEngineImpl) getMutableState(
