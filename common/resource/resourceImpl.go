@@ -71,6 +71,7 @@ type (
 		numShards       int
 		serviceName     string
 		hostName        string
+		hostInfo        *membership.HostInfo
 		metricsScope    tally.Scope
 		clusterMetadata cluster.Metadata
 
@@ -236,6 +237,27 @@ func New(
 		common.IsWhitelistServiceTransientError,
 	)
 
+	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
+		HistoryV2Manager: persistenceBean.GetHistoryManager(),
+		Logger:           logger,
+		MetricsClient:    params.MetricsClient,
+		ClusterMetadata:  params.ClusterMetadata,
+		DomainCache:      domainCache,
+	}
+	visibilityArchiverBootstrapContainer := &archiver.VisibilityBootstrapContainer{
+		Logger:          logger,
+		MetricsClient:   params.MetricsClient,
+		ClusterMetadata: params.ClusterMetadata,
+		DomainCache:     domainCache,
+	}
+	if err := params.ArchiverProvider.RegisterBootstrapContainer(
+		serviceName,
+		historyArchiverBootstrapContainer,
+		visibilityArchiverBootstrapContainer,
+	); err != nil {
+		return nil, err
+	}
+
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
 
@@ -326,6 +348,12 @@ func (h *Impl) Start() {
 	h.membershipMonitor.Start()
 	h.domainCache.Start()
 
+	hostInfo, err := h.membershipMonitor.WhoAmI()
+	if err != nil {
+		h.logger.WithTags(tag.Error(err)).Fatal("fail to get host info from membership monitor")
+	}
+	h.hostInfo = hostInfo
+
 	// The service is now started up
 	h.logger.Info("service started")
 	// seed the random generator once for this service
@@ -350,6 +378,7 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
+	h.visibilityMgr.Close()
 }
 
 // GetServiceName return service name
@@ -363,8 +392,8 @@ func (h *Impl) GetHostName() string {
 }
 
 // GetHostInfo return host info
-func (h *Impl) GetHostInfo() (*membership.HostInfo, error) {
-	return h.membershipMonitor.WhoAmI()
+func (h *Impl) GetHostInfo() *membership.HostInfo {
+	return h.hostInfo
 }
 
 // GetClusterMetadata return cluster metadata
@@ -418,7 +447,7 @@ func (h *Impl) GetMembershipMonitor() membership.Monitor {
 
 // GetFrontendServiceResolver return frontend service resolver
 func (h *Impl) GetFrontendServiceResolver() membership.ServiceResolver {
-	return h.historyServiceResolver
+	return h.frontendServiceResolver
 }
 
 // GetMatchingServiceResolver return matching service resolver
