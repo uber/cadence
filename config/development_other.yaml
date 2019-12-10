@@ -68,7 +68,7 @@ services:
 clusterMetadata:
   enableGlobalDomain: true
   replicationConsumer:
-    type: rpc
+    type: kafka
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "other"

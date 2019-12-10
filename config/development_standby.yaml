@@ -68,7 +68,7 @@ services:
 clusterMetadata:
   enableGlobalDomain: true
   replicationConsumer:
-    type: rpc
+    type: kafka
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "standby"
@@ -83,11 +83,11 @@ clusterMetadata:
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:8933"
-#    other:
-#      enabled: true
-#      initialFailoverVersion: 2
-#      rpcName: "cadence-frontend"
-#      rpcAddress: "localhost:9933"
+    other:
+      enabled: true
+      initialFailoverVersion: 2
+      rpcName: "cadence-frontend"
+      rpcAddress: "localhost:9933"
 
 dcRedirectionPolicy:
   policy: "selected-apis-forwarding"
