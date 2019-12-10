@@ -39,7 +39,7 @@ setup_mysql_schema() {
 setup_es_template() {
     SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/visibility/index_template.json
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
-    URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
+    URL="http://$server:$ES_PORT/_template/cadence-visibility-template?include_type_name=true"
     curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
     URL="http://$server:$ES_PORT/cadence-visibility-dev"
     curl -X PUT $URL
