@@ -39,7 +39,7 @@ import (
 
 type (
 	replicatorQueueProcessorImpl struct {
-		currentClusterNamer   string
+		currentClusterName    string
 		shard                 ShardContext
 		historyCache          *historyCache
 		replicationTaskFilter taskFilter
@@ -100,7 +100,7 @@ func newReplicatorQueueProcessor(
 	retryPolicy.SetBackoffCoefficient(1)
 
 	processor := &replicatorQueueProcessorImpl{
-		currentClusterNamer:   currentClusterName,
+		currentClusterName:    currentClusterName,
 		shard:                 shard,
 		historyCache:          historyCache,
 		replicationTaskFilter: replicationTaskFilter,
@@ -462,7 +462,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	p.metricsClient.RecordTimer(
 		metrics.ReplicatorQueueProcessorScope,
 		metrics.ReplicationTasksLag,
-		time.Duration(p.shard.GetReplicatorAckLevel()-readLevel),
+		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
 	)
 
 	p.metricsClient.RecordTimer(

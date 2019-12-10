@@ -162,7 +162,7 @@ func (p *ReplicationTaskProcessor) Start() {
 	}
 
 	go p.processorLoop()
-	go p.syncShardStatus()
+	go p.syncShardStatusLoop()
 	go p.cleanupReplicationTaskLoop()
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
@@ -295,7 +295,7 @@ func (p *ReplicationTaskProcessor) processResponse(response *r.ReplicationMessag
 	p.noTaskRetrier.Reset()
 }
 
-func (p *ReplicationTaskProcessor) syncShardStatus() {
+func (p *ReplicationTaskProcessor) syncShardStatusLoop() {
 
 	ticker := time.NewTicker(p.config.ShardSyncMinInterval())
 	defer ticker.Stop()
