@@ -901,9 +901,9 @@ type queryResult struct {
 }
 
 type stickyQueryResult struct {
-	response *h.QueryWorkflowResponse
+	response           *h.QueryWorkflowResponse
 	shouldTryNonSticky bool
-	err      error
+	err                error
 }
 
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
@@ -928,9 +928,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		go func() {
 			stickyResponse, shouldTryNonSticky, err := e.queryDirectlyThroughMatchingOnSticky(stickyMatchingRequest, msResp, domainID)
 			stickyResultCh <- &stickyQueryResult{
-				response: stickyResponse,
+				response:           stickyResponse,
 				shouldTryNonSticky: shouldTryNonSticky,
-				err:      err,
+				err:                err,
 			}
 		}()
 	}
