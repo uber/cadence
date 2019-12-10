@@ -64,13 +64,14 @@ func (s *historyCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 
 	s.mockShard.resource.ClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false).AnyTimes()

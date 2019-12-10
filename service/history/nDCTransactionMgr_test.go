@@ -71,13 +71,14 @@ func (s *nDCTransactionMgrSuite) SetupTest() {
 	s.mockUpdateMgr = NewMocknDCTransactionMgrForExistingWorkflow(s.controller)
 	s.mockEventsReapplier = NewMocknDCEventsReapplier(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 
 	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata

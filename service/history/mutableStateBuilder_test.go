@@ -70,13 +70,14 @@ func (s *mutableStateSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockEventsCache = NewMockeventsCache(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 	s.mockShard.eventsCache = s.mockEventsCache
 

@@ -94,8 +94,11 @@ func (s *timerQueueAckMgrSuite) TearDownSuite() {
 func (s *timerQueueAckMgrSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
+	config := NewDynamicConfigForTest()
+	config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
+
 	s.controller = gomock.NewController(s.T())
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID: 0,
@@ -105,8 +108,8 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 				cluster.TestAlternativeClusterName: time.Now().Add(-10 * time.Second),
 			},
 		},
+		config,
 	)
-	s.mockShard.config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
 
 	s.mockShardMgr = s.mockShard.resource.ShardMgr
 	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
@@ -524,8 +527,11 @@ func (s *timerQueueFailoverAckMgrSuite) TearDownSuite() {
 func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
+	config := NewDynamicConfigForTest()
+	config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
+
 	s.controller = gomock.NewController(s.T())
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID: 0,
@@ -536,8 +542,8 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 			},
 			TimerFailoverLevels: make(map[string]persistence.TimerFailoverLevel),
 		},
+		config,
 	)
-	s.mockShard.config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
 
 	s.mockShardMgr = s.mockShard.resource.ShardMgr
 	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr

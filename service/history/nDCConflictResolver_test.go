@@ -69,13 +69,14 @@ func (s *nDCConflictResolverSuite) SetupTest() {
 	s.mockMutableState = NewMockmutableState(s.controller)
 	s.mockStateBuilder = NewMocknDCStateRebuilder(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 
 	s.logger = s.mockShard.GetLogger()

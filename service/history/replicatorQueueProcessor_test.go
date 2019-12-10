@@ -80,13 +80,14 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockMutableState = NewMockmutableState(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 
 	s.mockProducer = &mocks.KafkaProducer{}

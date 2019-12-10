@@ -81,13 +81,14 @@ func (s *workflowResetterSuite) SetupTest() {
 	s.mockTransactionMgr = NewMocknDCTransactionMgr(s.controller)
 	s.mockStateRebuilder = NewMocknDCStateRebuilder(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
 

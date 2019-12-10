@@ -25,6 +25,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
+
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
@@ -39,7 +40,11 @@ type shardContextTest struct {
 
 var _ ShardContext = (*shardContextTest)(nil)
 
-func NewTestShardContext(ctrl *gomock.Controller, shardInfo *persistence.ShardInfo) *shardContextTest {
+func newTestShardContext(
+	ctrl *gomock.Controller,
+	shardInfo *persistence.ShardInfo,
+	config *Config,
+) *shardContextTest {
 	resource := resource.NewTest(ctrl, metrics.History)
 	eventsCache := NewMockeventsCache(ctrl)
 	shard := &shardContextImpl{
@@ -50,7 +55,7 @@ func NewTestShardContext(ctrl *gomock.Controller, shardInfo *persistence.ShardIn
 		executionManager:          resource.ExecutionMgr,
 		isClosed:                  false,
 		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(),
+		config:                    config,
 		logger:                    resource.GetLogger(),
 		throttledLogger:           resource.GetThrottledLogger(),
 		transferSequenceNumber:    1,

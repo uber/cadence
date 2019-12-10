@@ -98,13 +98,14 @@ func (s *resetorSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&p.ShardInfo{
 			ShardID:          shardID,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		s.config,
 	)
 
 	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr

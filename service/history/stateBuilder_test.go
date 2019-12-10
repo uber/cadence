@@ -81,13 +81,14 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.mockMutableState = NewMockmutableState(s.controller)
 	s.mockTaskGeneratorForNew = NewMockmutableStateTaskGenerator(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 
 	s.mockDomainCache = s.mockShard.resource.DomainCache

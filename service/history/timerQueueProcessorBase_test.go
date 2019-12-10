@@ -92,13 +92,14 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	s.mockWorkflowExecutionContext = NewMockworkflowExecutionContext(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          shardID,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		NewDynamicConfigForTest(),
 	)
 
 	s.mockExecutionManager = s.mockShard.resource.ExecutionMgr

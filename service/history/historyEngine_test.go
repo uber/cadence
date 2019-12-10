@@ -212,12 +212,13 @@ func (s *engineSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		s.config,
 	)
 	s.eventsCache = newEventsCache(s.mockShard)
 	s.mockShard.eventsCache = s.eventsCache

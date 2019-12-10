@@ -109,12 +109,13 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 
 	s.mockHistoryRereplicator = &xdc.MockHistoryRereplicator{}
 
-	s.mockShard = NewTestShardContext(
+	s.mockShard = newTestShardContext(
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
+		config,
 	)
 	s.mockShard.eventsCache = newEventsCache(s.mockShard)
 	s.mockShard.resource.TimeSource = s.timeSource
