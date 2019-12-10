@@ -292,7 +292,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 		syncStatusTask := &replicator.ReplicationTask{
 			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),
 			SyncShardStatusTaskAttributes: &replicator.SyncShardStatusTaskAttributes{
-				SourceCluster: common.StringPtr(p.currentClusterNamer),
+				SourceCluster: common.StringPtr(p.currentClusterName),
 				ShardId:       common.Int64Ptr(int64(p.shard.GetShardID())),
 				Timestamp:     common.Int64Ptr(now.UnixNano()),
 			},
