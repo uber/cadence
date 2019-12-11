@@ -95,7 +95,7 @@ func NewReplicationTaskFetchers(
 			}
 
 			currentCluster := clusterMetadata.GetCurrentClusterName()
-			if clusterName != currentCluster {
+			if clusterName != currentCluster && info.Enabled {
 				remoteFrontendClient := clientBean.GetRemoteFrontendClient(clusterName)
 				fetcher := newReplicationTaskFetcher(
 					logger,
