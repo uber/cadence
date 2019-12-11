@@ -57,7 +57,7 @@ type (
 		historyEventNotifier    historyEventNotifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
-		replicationTaskFetchers *ReplicationTaskFetchers
+		replicationTaskFetchers ReplicationTaskFetchers
 	}
 )
 

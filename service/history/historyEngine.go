@@ -131,7 +131,7 @@ type (
 		archivalClient            warchiver.Client
 		resetor                   workflowResetor
 		workflowResetter          workflowResetter
-		replicationTaskProcessors []*ReplicationTaskProcessor
+		replicationTaskProcessors []ReplicationTaskProcessor
 		publicClient              workflowserviceclient.Interface
 		eventsReapplier           nDCEventsReapplier
 		matchingClient            matching.Client
@@ -199,7 +199,7 @@ func NewEngineWithShardContext(
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
-	replicationTaskFetchers *ReplicationTaskFetchers,
+	replicationTaskFetchers ReplicationTaskFetchers,
 	rawMatchingClient matching.Client,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -285,7 +285,7 @@ func NewEngineWithShardContext(
 	)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
-	var replicationTaskProcessors []*ReplicationTaskProcessor
+	var replicationTaskProcessors []ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		replicationTaskProcessor := NewReplicationTaskProcessor(
 			shard,
