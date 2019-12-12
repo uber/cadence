@@ -42,6 +42,7 @@ import (
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
