@@ -3024,12 +3024,13 @@ func (wh *WorkflowHandler) getHistory(
 
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
+	isLastPage := len(nextPageToken) == 0
 	if err := verifyHistoryIsComplete(
 		historyEvents,
 		firstEventID,
 		nextEventID-1,
 		isFirstPage,
-		len(nextPageToken) == 0,
+		isLastPage,
 		int(pageSize)); err != nil {
 		scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 		wh.GetLogger().Error("getHistory: incomplete history",
@@ -3323,8 +3324,10 @@ func verifyHistoryIsComplete(
 	if !isFirstPage { // atleast one page of history has been read previously
 		if firstEventID <= expectedFirstEventID {
 			// not first page and no events have been read in the previous pages - not possible
-			return fmt.Errorf(
-				"invalid history: expected first eventID to be > %v but got %v", expectedFirstEventID, firstEventID)
+			return &gen.InternalServiceError{
+				Message: fmt.Sprintf(
+					"invalid history: expected first eventID to be > %v but got %v", expectedFirstEventID, firstEventID),
+			}
 		}
 		expectedFirstEventID = firstEventID
 	}
@@ -3343,18 +3346,20 @@ func verifyHistoryIsComplete(
 		return nil
 	}
 
-	return fmt.Errorf(
-		"incomplete history: "+
-			"expected events [%v-%v] but got events [%v-%v] of length %v:"+
-			"isFirstPage=%v,isLastPage=%v,pageSize=%v",
-		expectedFirstEventID,
-		expectedLastEventID,
-		firstEventID,
-		lastEventID,
-		nEvents,
-		isFirstPage,
-		isLastPage,
-		pageSize)
+	return &gen.InternalServiceError{
+		Message: fmt.Sprintf(
+			"incomplete history: "+
+				"expected events [%v-%v] but got events [%v-%v] of length %v:"+
+				"isFirstPage=%v,isLastPage=%v,pageSize=%v",
+			expectedFirstEventID,
+			expectedLastEventID,
+			firstEventID,
+			lastEventID,
+			nEvents,
+			isFirstPage,
+			isLastPage,
+			pageSize),
+	}
 }
 
 func deserializeHistoryToken(bytes []byte) (*getHistoryContinuationToken, error) {
