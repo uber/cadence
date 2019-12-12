@@ -1166,7 +1166,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", req).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*workflow.HistoryEvent{
 			{
-				EventId: common.Int64Ptr(int64(1)),
+				EventId: common.Int64Ptr(int64(100)),
 			},
 		},
 		NextPageToken:    []byte{},
@@ -1179,9 +1179,9 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	scope := wh.metricsClient.Scope(0)
 	history, token, err := wh.getHistory(scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
+	s.NoError(err)
 	s.NotNil(history)
 	s.Equal([]byte{}, token)
-	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidRequest() {
@@ -1442,25 +1442,42 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 		events       []*shared.HistoryEvent
 		firstEventID int64
 		lastEventID  int64
+		isFirstPage  bool
+		isLastPage   bool
+		pageSize     int
 		isResultErr  bool
 	}{
-		{events[:1], 1, 1, false},
-		{events[:5], 1, 5, false},
-		{events[9:31], 10, 31, false},
-		{eventsWithHoles, 10, 31, true},
-		{events[9:31], 9, 31, true},
-		{events[9:31], 11, 31, true},
-		{events[9:31], 10, 30, true},
-		{events[9:31], 10, 32, true},
+		{events[:1], 1, 1, true, true, 1000, false},
+		{events[:5], 1, 5, true, true, 1000, false},
+		{events[9:31], 10, 31, true, true, 1000, false},
+		{events[9:29], 10, 50, true, false, 20, false},
+		{events[9:30], 10, 50, true, false, 20, false},
+
+		{events[9:29], 1, 50, false, false, 20, false},
+		{events[9:29], 1, 29, false, true, 20, false},
+
+		{eventsWithHoles, 1, 50, false, false, 22, true},
+		{eventsWithHoles, 10, 50, true, false, 22, true},
+		{eventsWithHoles, 1, 31, false, true, 22, true},
+		{eventsWithHoles, 10, 31, true, true, 1000, true},
+
+		{events[9:31], 9, 31, true, true, 1000, true},
+		{events[9:31], 9, 50, true, false, 22, true},
+		{events[9:31], 11, 31, true, true, 1000, true},
+		{events[9:31], 11, 50, true, false, 22, true},
+
+		{events[9:31], 10, 30, true, true, 1000, true},
+		{events[9:31], 1, 30, false, true, 22, true},
+		{events[9:31], 10, 32, true, true, 1000, true},
+		{events[9:31], 1, 32, false, true, 22, true},
 	}
 
-	for _, tc := range testCases {
-		history := &shared.History{tc.events}
-		err := verifyHistoryIsComplete(history, tc.firstEventID, tc.lastEventID)
+	for i, tc := range testCases {
+		err := verifyHistoryIsComplete(tc.events, tc.firstEventID, tc.lastEventID, tc.isFirstPage, tc.isLastPage, tc.pageSize)
 		if tc.isResultErr {
-			s.Error(err)
+			s.Error(err, "testcase %v failed", i)
 		} else {
-			s.NoError(err)
+			s.NoError(err, "testcase %v failed", i)
 		}
 	}
 }
