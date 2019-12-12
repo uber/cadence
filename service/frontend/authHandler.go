@@ -39,7 +39,7 @@ const (
 	// ActionCommon is for authority implementation to handle auth for common operations
 	ActionCommon = "common"
 	// ActionAdmin is for authority implementation to handle auth for admin only operations
-	ActionAdmin  = "admin"
+	ActionAdmin = "admin"
 )
 
 // AuthHandlerImpl frontend handler wrapper for authentication and authorization
@@ -57,6 +57,10 @@ var _ workflowserviceserver.Interface = (*AuthHandlerImpl)(nil)
 
 // NewAuthHandlerImpl creates frontend handler with authentication support
 func NewAuthHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authority auth.Authority) *AuthHandlerImpl {
+	if authority == nil {
+		authority = auth.NewNopAuthority()
+	}
+
 	return &AuthHandlerImpl{
 		Resource:        wfHandler.Resource,
 		frontendHandler: wfHandler,
