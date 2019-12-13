@@ -59,6 +59,11 @@ const (
 	consistentQuery = "consistent-query"
 )
 
+var (
+	// ErrUnknownFeature indicates that requested feature is not known by version checker
+	ErrUnknownFeature = &shared.BadRequestError{Message: "Unknown feature"}
+)
+
 type (
 	// VersionChecker is used to check client/server compatibility and client's capabilities
 	VersionChecker interface {
@@ -156,7 +161,7 @@ func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersi
 			}
 			return nil
 		default:
-			panic(fmt.Sprintf("unknown feature: %v", feature))
+			return ErrUnknownFeature
 		}
 	}
 	if clientFeatureVersion == "" {
