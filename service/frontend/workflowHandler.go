@@ -3116,7 +3116,7 @@ func (wh *WorkflowHandler) getDefaultScope(scope int) metrics.Scope {
 	return wh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag())
 }
 
-func frontendInternalServiceError(fmtStr string, args... interface{}) error{
+func frontendInternalServiceError(fmtStr string, args ...interface{}) error {
 	// NOTE: For internal error, we can't return thrift error from cadence-frontend.
 	// Because in uber internal metrics, thrift errors are counted as user errors.
 	return fmt.Errorf(fmtStr, args...)
@@ -3614,6 +3614,25 @@ func (wh *WorkflowHandler) ReapplyEvents(
 		return wh.error(err, scope)
 	}
 	return nil
+}
+
+// GetClusterInfo return information about cadence deployment
+func (wh *WorkflowHandler) GetClusterInfo(
+	ctx context.Context,
+) (resp *gen.ClusterInfo, err error) {
+	defer log.CapturePanic(wh.GetLogger(), &err)
+
+	scope := wh.getDefaultScope(metrics.FrontendClientGetClusterInfoScope)
+	if ok := wh.allow(nil); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
+	return &gen.ClusterInfo{
+		SupportedClientVersions: &gen.SupportedClientVersions{
+			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
+			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
+		},
+	}, nil
 }
 
 func checkPermission(
