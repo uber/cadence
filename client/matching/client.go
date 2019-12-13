@@ -227,8 +227,6 @@ func (c *clientImpl) getTaskListPartitionInfo(request *m.GetTaskListPartitionInf
 	if err != nil {
 		return nil, err
 	}
-
-	partitionInfo.IsScalableTaskList = common.BoolPtr(len(partitions) > 1)
 	partitionHostInfo := make(map[workflow.PartitionKey]workflow.HostInfo, len(partitions))
 	for _, partition := range partitions {
 		if host, err := c.getHostInfo(partition); err != nil {

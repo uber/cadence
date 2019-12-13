@@ -57,8 +57,8 @@ type (
 			forwardedFrom string,
 		) string
 
-		// GetAllPartitions returns the list of all the partitions for a given tasklist
-		// If the taskList is not scalable it will return a empty tasklist
+		// GetAllPartitions returns the list of all the partitions for a given taskList
+		// A taskList can have 1..n partition
 		GetAllPartitions(
 			domainID string,
 			taskList shared.TaskList,
@@ -148,19 +148,18 @@ func (lb *defaultLoadBalancer) GetAllPartitions(
 	taskList shared.TaskList,
 	taskListType int,
 ) ([]string, error) {
-	domainName, err := lb.domainIDToName(domainID)
 	var partitionKeys []string
-	if err != nil {
-		return partitionKeys, err
-	}
-
 	taskListName := taskList.GetName()
 	if strings.HasPrefix(taskListName, taskListPartitionPrefix) {
 		// get the original task list name if the name contains partition prefix
 		taskListName = strings.Split(taskListName, "/")[1]
 	}
-
 	partitionKeys = append(partitionKeys, taskListName)
+
+	domainName, err := lb.domainIDToName(domainID)
+	if err != nil {
+		return partitionKeys, err
+	}
 
 	n := lb.nWritePartitions(domainName, taskListName, taskListType)
 	if n <= 0 {

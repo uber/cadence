@@ -1474,7 +1474,6 @@ struct GetTaskListPartitionInfoResponse {
 }
 
 struct PartitionInfo {
-  10: optional bool isScalableTaskList
   20: optional map<PartitionKey, HostInfo> partitionHostInfo
 }
 
