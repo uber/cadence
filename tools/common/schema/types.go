@@ -68,75 +68,40 @@ type (
 )
 
 const (
-	// CLIOptEndpoint is the cli option for endpoint
-	CLIOptEndpoint = "endpoint"
-	// CLIOptPort is the cli option for port
-	CLIOptPort = "port"
-	// CLIOptUser is the cli option for user
-	CLIOptUser = "user"
-	// CLIOptPassword is the cli option for password
-	CLIOptPassword = "password"
-	// CLIOptTimeout is the cli option for timeout
-	CLIOptTimeout = "timeout"
-	// CLIOptKeyspace is the cli option for keyspace
-	CLIOptKeyspace = "keyspace"
-	// CLIOptDatabase is the cli option for database
-	CLIOptDatabase = "database"
-	// CLIOptPluginName is the cli option for plugin name
-	CLIOptPluginName = "plugin"
-	// CLIOptVersion is the cli option for version
-	CLIOptVersion = "version"
-	// CLIOptSchemaFile is the cli option for schema file
-	CLIOptSchemaFile = "schema-file"
-	// CLIOptOverwrite is the cli option for overwrite
-	CLIOptOverwrite = "overwrite"
-	// CLIOptDisableVersioning is the cli option to disabling versioning
-	CLIOptDisableVersioning = "disable-versioning"
-	// CLIOptTargetVersion is the cli option for target version
-	CLIOptTargetVersion = "version"
-	// CLIOptDryrun is the cli option for enabling dryrun
-	CLIOptDryrun = "dryrun"
-	// CLIOptSchemaDir is the cli option for schema directory
-	CLIOptSchemaDir = "schema-dir"
-	// CLIOptReplicationFactor is the cli option for replication factor
-	CLIOptReplicationFactor = "replication-factor"
-	// CLIOptQuiet is the cli option for quiet mode
-	CLIOptQuiet = "quiet"
-
-	// CLIFlagEndpoint is the cli flag for endpoint
-	CLIFlagEndpoint = CLIOptEndpoint + ", ep"
-	// CLIFlagPort is the cli flag for port
-	CLIFlagPort = CLIOptPort + ", p"
-	// CLIFlagUser is the cli flag for user
-	CLIFlagUser = CLIOptUser + ", u"
-	// CLIFlagPassword is the cli flag for password
-	CLIFlagPassword = CLIOptPassword + ", pw"
-	// CLIFlagTimeout is the cli flag for timeout
-	CLIFlagTimeout = CLIOptTimeout + ", t"
-	// CLIFlagKeyspace is the cli flag for keyspace
-	CLIFlagKeyspace = CLIOptKeyspace + ", k"
-	// CLIFlagDatabase is the cli flag for database
-	CLIFlagDatabase = CLIOptDatabase + ", db"
-	// CLIFlagPluginName is the cli flag for plugin name
-	CLIFlagPluginName = CLIOptPluginName + ", pl"
-	// CLIFlagVersion is the cli flag for version
-	CLIFlagVersion = CLIOptVersion + ", v"
-	// CLIFlagSchemaFile is the cli flag for schema file
-	CLIFlagSchemaFile = CLIOptSchemaFile + ", f"
-	// CLIFlagOverwrite is the cli flag for overwrite
-	CLIFlagOverwrite = CLIOptOverwrite + ", o"
-	// CLIFlagDisableVersioning is the cli flag for disabling versioning
-	CLIFlagDisableVersioning = CLIOptDisableVersioning + ", d"
-	// CLIFlagTargetVersion is the cli flag for target version
-	CLIFlagTargetVersion = CLIOptTargetVersion + ", v"
-	// CLIFlagDryrun is the cli flag for dryrun
-	CLIFlagDryrun = CLIOptDryrun + ", y"
-	// CLIFlagSchemaDir is the cli flag for schema directory
-	CLIFlagSchemaDir = CLIOptSchemaDir + ", d"
-	// CLIFlagReplicationFactor is the cli flag for replication factor
-	CLIFlagReplicationFactor = CLIOptReplicationFactor + ", rf"
-	// CLIFlagQuiet is the cli flag for quiet mode
-	CLIFlagQuiet = CLIOptQuiet + ", q"
+	// CLIFlagEndpoint is the cli option for endpoint
+	CLIFlagEndpoint = "endpoint"
+	// CLIFlagPort is the cli option for port
+	CLIFlagPort = "port"
+	// CLIFlagUser is the cli option for user
+	CLIFlagUser = "user"
+	// CLIFlagPassword is the cli option for password
+	CLIFlagPassword = "password"
+	// CLIFlagTimeout is the cli option for timeout
+	CLIFlagTimeout = "timeout"
+	// CLIFlagKeyspace is the cli option for keyspace
+	CLIFlagKeyspace = "keyspace"
+	// CLIFlagDatabase is the cli option for database
+	CLIFlagDatabase = "database"
+	// CLIFlagPluginName is the cli option for plugin name
+	CLIFlagPluginName = "plugin"
+	// CLIFlagVersion is the cli option for version
+	CLIFlagVersion = "version"
+	// CLIFlagSchemaFile is the cli option for schema file
+	CLIFlagSchemaFile = "schema-file"
+	// CLIFlagOverwrite is the cli option for overwrite
+	CLIFlagOverwrite = "overwrite"
+	// CLIFlagDisableVersioning is the cli option to disabling versioning
+	CLIFlagDisableVersioning = "disable-versioning"
+	// CLIFlagTargetVersion is the cli option for target version
+	CLIFlagTargetVersion = "version"
+	// CLIFlagDryrun is the cli option for enabling dryrun
+	CLIFlagDryrun = "dryrun"
+	// CLIFlagSchemaDir is the cli option for schema directory
+	CLIFlagSchemaDir = "schema-dir"
+	// CLIFlagReplicationFactor is the cli option for replication factor
+	CLIFlagReplicationFactor = "replication-factor"
+	// CLIFlagQuiet is the cli option for quiet mode
+	CLIFlagQuiet = "quiet"
 
 	// CLIFlagEnableTLS enables cassandra client TLS
 	CLIFlagEnableTLS = "tls"
@@ -148,6 +113,44 @@ const (
 	CLIFlagTLSCaFile = "tls-ca-file"
 	// CLIFlagTLSEnableHostVerification enables tls host verification (tls must be enabled)
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
+)
+
+var (
+
+	// CLIFlagEndpointAlias is the cli flag for endpoint
+	CLIFlagEndpointAlias = []string{"ep"}
+	// CLIFlagPortAlias is the cli flag for port
+	CLIFlagPortAlias = []string{"p"}
+	// CLIFlagUserAlias is the cli flag for user
+	CLIFlagUserAlias = []string{"u"}
+	// CLIFlagPasswordAlias is the cli flag for password
+	CLIFlagPasswordAlias = []string{"pw"}
+	// CLIFlagTimeoutAlias is the cli flag for timeout
+	CLIFlagTimeoutAlias = []string{"t"}
+	// CLIFlagKeyspaceAlias is the cli flag for keyspace
+	CLIFlagKeyspaceAlias = []string{"k"}
+	// CLIFlagDatabaseAlias is the cli flag for database
+	CLIFlagDatabaseAlias = []string{"db"}
+	// CLIFlagPluginNameAlias is the cli flag for plugin name
+	CLIFlagPluginNameAlias = []string{"pl"}
+	// CLIFlagVersionAlias is the cli flag for version
+	CLIFlagVersionAlias = []string{"v"}
+	// CLIFlagSchemaFileAlias is the cli flag for schema file
+	CLIFlagSchemaFileAlias = []string{"f"}
+	// CLIFlagOverwriteAlias is the cli flag for overwrite
+	CLIFlagOverwriteAlias = []string{"o"}
+	// CLIFlagDisableVersioningAlias is the cli flag for disabling versioning
+	CLIFlagDisableVersioningAlias = []string{"d"}
+	// CLIFlagTargetVersionAlias is the cli flag for target version
+	CLIFlagTargetVersionAlias = []string{"v"}
+	// CLIFlagDryrunAlias is the cli flag for dryrun
+	CLIFlagDryrunAlias = []string{"y"}
+	// CLIFlagSchemaDirAlias is the cli flag for schema directory
+	CLIFlagSchemaDirAlias = []string{"d"}
+	// CLIFlagReplicationFactorAlias is the cli flag for replication factor
+	CLIFlagReplicationFactorAlias = []string{"rf"}
+	// CLIFlagQuietAlias is the cli flag for quiet mode
+	CLIFlagQuietAlias = []string{"q"}
 )
 
 // DryrunDBName is the db name used for dryrun

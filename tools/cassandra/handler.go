@@ -26,7 +26,7 @@ import (
 
 	"github.com/uber/cadence/common/auth"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/cassandra"
@@ -140,9 +140,9 @@ func createKeyspace(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	keyspace := cli.String(schema.CLIOptKeyspace)
+	keyspace := cli.String(schema.CLIFlagKeyspace)
 	if keyspace == "" {
-		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument "))
+		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIFlagKeyspace) + " argument "))
 	}
 	err = doCreateKeyspace(*config, keyspace)
 	if err != nil {
@@ -173,25 +173,25 @@ func doDropKeyspace(cfg CQLClientConfig, name string) {
 
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	config := new(CQLClientConfig)
-	config.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
-	config.Port = cli.GlobalInt(schema.CLIOptPort)
-	config.User = cli.GlobalString(schema.CLIOptUser)
-	config.Password = cli.GlobalString(schema.CLIOptPassword)
-	config.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
-	config.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
-	config.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	config.Hosts = cli.String(schema.CLIFlagEndpoint)
+	config.Port = cli.Int(schema.CLIFlagPort)
+	config.User = cli.String(schema.CLIFlagUser)
+	config.Password = cli.String(schema.CLIFlagPassword)
+	config.Timeout = cli.Int(schema.CLIFlagTimeout)
+	config.Keyspace = cli.String(schema.CLIFlagKeyspace)
+	config.numReplicas = cli.Int(schema.CLIFlagReplicationFactor)
 
-	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
+	if cli.Bool(schema.CLIFlagEnableTLS) {
 		config.TLS = &auth.TLS{
 			Enabled:                true,
-			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
-			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),
-			CaFile:                 cli.GlobalString(schema.CLIFlagTLSCaFile),
-			EnableHostVerification: cli.GlobalBool(schema.CLIFlagTLSEnableHostVerification),
+			CertFile:               cli.String(schema.CLIFlagTLSCertFile),
+			KeyFile:                cli.String(schema.CLIFlagTLSKeyFile),
+			CaFile:                 cli.String(schema.CLIFlagTLSCaFile),
+			EnableHostVerification: cli.Bool(schema.CLIFlagTLSEnableHostVerification),
 		}
 	}
 
-	isDryRun := cli.Bool(schema.CLIOptDryrun)
+	isDryRun := cli.Bool(schema.CLIFlagDryrun)
 	if err := validateCQLClientConfig(config, isDryRun); err != nil {
 		return nil, err
 	}
@@ -200,11 +200,11 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 
 func validateCQLClientConfig(config *CQLClientConfig, isDryRun bool) error {
 	if len(config.Hosts) == 0 {
-		return schema.NewConfigError("missing cassandra endpoint argument " + flag(schema.CLIOptEndpoint))
+		return schema.NewConfigError("missing cassandra endpoint argument " + flag(schema.CLIFlagEndpoint))
 	}
 	if config.Keyspace == "" {
 		if !isDryRun {
-			return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
+			return schema.NewConfigError("missing " + flag(schema.CLIFlagKeyspace) + " argument ")
 		}
 		config.Keyspace = schema.DryrunDBName
 	}

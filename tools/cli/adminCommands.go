@@ -32,7 +32,7 @@ import (
 	"github.com/uber/cadence/common/service/config"
 
 	"github.com/gocql/gocql"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"

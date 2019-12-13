@@ -24,7 +24,7 @@ import (
 	"os"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	s "go.uber.org/cadence/.gen/go/shared"
 )
 

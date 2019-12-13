@@ -21,7 +21,7 @@
 package cli
 
 import (
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -42,25 +42,28 @@ func NewCliApp() *cli.App {
 	app.Usage = "A command-line tool for cadence users"
 	app.Version = Version
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   FlagAddressWithAlias,
-			Value:  "",
-			Usage:  "host:port for cadence frontend service",
-			EnvVar: "CADENCE_CLI_ADDRESS",
+		&cli.StringFlag{
+			Name:    FlagAddress,
+			Aliases: FlagAddressAlias,
+			Value:   "",
+			Usage:   "host:port for cadence frontend service",
+			EnvVars: []string{"CADENCE_CLI_ADDRESS"},
 		},
-		cli.StringFlag{
-			Name:   FlagDomainWithAlias,
-			Usage:  "cadence workflow domain",
-			EnvVar: "CADENCE_CLI_DOMAIN",
+		&cli.StringFlag{
+			Name:    FlagDomain,
+			Aliases: FlagDomainAlias,
+			Usage:   "cadence workflow domain",
+			EnvVars: []string{"CADENCE_CLI_DOMAIN"},
 		},
-		cli.IntFlag{
-			Name:   FlagContextTimeoutWithAlias,
-			Value:  defaultContextTimeoutInSeconds,
-			Usage:  "optional timeout for context of RPC call in seconds",
-			EnvVar: "CADENCE_CONTEXT_TIMEOUT",
+		&cli.IntFlag{
+			Name:    FlagContextTimeout,
+			Aliases: FlagContextTimeoutAlias,
+			Value:   defaultContextTimeoutInSeconds,
+			Usage:   "optional timeout for context of RPC call in seconds",
+			EnvVars: []string{"CADENCE_CONTEXT_TIMEOUT"},
 		},
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:        "domain",
 			Aliases:     []string{"d"},
@@ -83,7 +86,7 @@ func NewCliApp() *cli.App {
 			Name:    "admin",
 			Aliases: []string{"adm"},
 			Usage:   "Run admin operation",
-			Subcommands: []cli.Command{
+			Subcommands: []*cli.Command{
 				{
 					Name:        "workflow",
 					Aliases:     []string{"wf"},

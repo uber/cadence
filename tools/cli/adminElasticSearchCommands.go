@@ -37,7 +37,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	es "github.com/uber/cadence/common/elasticsearch"

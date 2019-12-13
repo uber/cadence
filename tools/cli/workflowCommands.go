@@ -38,7 +38,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"github.com/valyala/fastjson"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
@@ -697,8 +697,8 @@ func ListArchivedWorkflow(c *cli.Context) {
 	}
 
 	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
-	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	if c.IsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 
 	var result *s.ListArchivedWorkflowExecutionsResponse

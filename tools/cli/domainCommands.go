@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	s "go.uber.org/cadence/.gen/go/shared"
 
 	serviceFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
@@ -118,11 +118,8 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 
 	var clusters []*shared.ClusterReplicationConfiguration
 	if c.IsSet(FlagClusters) {
-		clusterStr := c.String(FlagClusters)
-		clusters = append(clusters, &shared.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStr),
-		})
-		for _, clusterStr := range c.Args() {
+		clustersStr := c.StringSlice(FlagClusters)
+		for _, clusterStr := range clustersStr {
 			clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 				ClusterName: common.StringPtr(clusterStr),
 			})
@@ -221,11 +218,8 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			}
 		}
 		if c.IsSet(FlagClusters) {
-			clusterStr := c.String(FlagClusters)
-			clusters = append(clusters, &shared.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(clusterStr),
-			})
-			for _, clusterStr := range c.Args() {
+			clustersStr := c.StringSlice(FlagClusters)
+			for _, clusterStr := range clustersStr {
 				clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 					ClusterName: common.StringPtr(clusterStr),
 				})
@@ -297,7 +291,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 
 // DescribeDomain updates a domain
 func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
-	domainName := c.GlobalString(FlagDomain)
+	domainName := c.String(FlagDomain)
 	domainID := c.String(FlagDomainID)
 
 	if domainID == "" && domainName == "" {

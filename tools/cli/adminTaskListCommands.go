@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"

@@ -23,7 +23,7 @@ package sql
 import (
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -38,7 +38,7 @@ func RunTool(args []string) error {
 
 // root handler for all cli commands
 func cliHandler(c *cli.Context, handler func(c *cli.Context) error) {
-	quiet := c.GlobalBool(schema.CLIOptQuiet)
+	quiet := c.Bool(schema.CLIFlagQuiet)
 	err := handler(c)
 	if err != nil && !quiet {
 		os.Exit(1)
@@ -54,73 +54,85 @@ func BuildCLIOptions() *cli.App {
 	app.Version = "0.0.1"
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   schema.CLIFlagEndpoint,
-			Value:  "127.0.0.1",
-			Usage:  "hostname or ip address of sql host to connect to",
-			EnvVar: "SQL_HOST",
+		&cli.StringFlag{
+			Name:    schema.CLIFlagEndpoint,
+			Aliases: schema.CLIFlagEndpointAlias,
+			Value:   "127.0.0.1",
+			Usage:   "hostname or ip address of sql host to connect to",
+			EnvVars: []string{"SQL_HOST"},
 		},
-		cli.IntFlag{
-			Name:   schema.CLIFlagPort,
-			Value:  defaultSQLPort,
-			Usage:  "port of sql host to connect to",
-			EnvVar: "SQL_PORT",
+		&cli.IntFlag{
+			Name:    schema.CLIFlagPort,
+			Aliases: schema.CLIFlagPortAlias,
+			Value:   defaultSQLPort,
+			Usage:   "port of sql host to connect to",
+			EnvVars: []string{"SQL_PORT"},
 		},
-		cli.StringFlag{
-			Name:   schema.CLIFlagUser,
-			Value:  "",
-			Usage:  "user name used for authentication when connecting to sql host",
-			EnvVar: "SQL_USER",
+		&cli.StringFlag{
+			Name:    schema.CLIFlagUser,
+			Aliases: schema.CLIFlagUserAlias,
+			Value:   "",
+			Usage:   "user name used for authentication when connecting to sql host",
+			EnvVars: []string{"SQL_USER"},
 		},
-		cli.StringFlag{
-			Name:   schema.CLIFlagPassword,
-			Value:  "",
-			Usage:  "password used for authentication when connecting to sql host",
-			EnvVar: "SQL_PASSWORD",
+		&cli.StringFlag{
+			Name:    schema.CLIFlagPassword,
+			Aliases: schema.CLIFlagPasswordAlias,
+			Value:   "",
+			Usage:   "password used for authentication when connecting to sql host",
+			EnvVars: []string{"SQL_PASSWORD"},
 		},
-		cli.StringFlag{
-			Name:   schema.CLIFlagDatabase,
-			Value:  "cadence",
-			Usage:  "name of the sql database",
-			EnvVar: "SQL_DATABASE",
+		&cli.StringFlag{
+			Name:    schema.CLIFlagDatabase,
+			Aliases: schema.CLIFlagDatabaseAlias,
+			Value:   "cadence",
+			Usage:   "name of the sql database",
+			EnvVars: []string{"SQL_DATABASE"},
 		},
-		cli.StringFlag{
-			Name:   schema.CLIFlagPluginName,
-			Value:  "mysql",
-			Usage:  "name of the sql plugin",
-			EnvVar: "SQL_PLUGIN",
+		&cli.StringFlag{
+			Name:    schema.CLIFlagPluginName,
+			Aliases: schema.CLIFlagPluginNameAlias,
+			Value:   "mysql",
+			Usage:   "name of the sql plugin",
+			EnvVars: []string{"SQL_PLUGIN"},
 		},
-		cli.BoolFlag{
-			Name:  schema.CLIFlagQuiet,
-			Usage: "Don't set exit status to 1 on error",
+		&cli.BoolFlag{
+			Name:    schema.CLIFlagQuiet,
+			Aliases: schema.CLIFlagQuietAlias,
+			Usage:   "Don't set exit status to 1 on error",
 		},
 	}
 
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:    "setup-schema",
 			Aliases: []string{"setup"},
 			Usage:   "setup initial version of sql schema",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  schema.CLIFlagVersion,
-					Usage: "initial version of the schema, cannot be used with disable-versioning",
+				&cli.StringFlag{
+					Name:    schema.CLIFlagVersion,
+					Aliases: schema.CLIFlagVersionAlias,
+					Usage:   "initial version of the schema, cannot be used with disable-versioning",
 				},
-				cli.StringFlag{
-					Name:  schema.CLIFlagSchemaFile,
-					Usage: "path to the .sql schema file; if un-specified, will just setup versioning tables",
+				&cli.StringFlag{
+					Name:    schema.CLIFlagSchemaFile,
+					Aliases: schema.CLIFlagSchemaFileAlias,
+					Usage:   "path to the .sql schema file; if un-specified, will just setup versioning tables",
 				},
-				cli.BoolFlag{
-					Name:  schema.CLIFlagDisableVersioning,
-					Usage: "disable setup of schema versioning",
+				&cli.BoolFlag{
+					Name:    schema.CLIFlagDisableVersioning,
+					Aliases: schema.CLIFlagDisableVersioningAlias,
+					Usage:   "disable setup of schema versioning",
 				},
-				cli.BoolFlag{
-					Name:  schema.CLIFlagOverwrite,
-					Usage: "drop all existing tables before setting up new schema",
+				&cli.BoolFlag{
+					Name:    schema.CLIFlagOverwrite,
+					Aliases: schema.CLIFlagOverwriteAlias,
+					Usage:   "drop all existing tables before setting up new schema",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				cliHandler(c, setupSchema)
+				return nil
 			},
 		},
 		{
@@ -128,21 +140,25 @@ func BuildCLIOptions() *cli.App {
 			Aliases: []string{"update"},
 			Usage:   "update sql schema to a specific version",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  schema.CLIFlagTargetVersion,
-					Usage: "target version for the schema update, defaults to latest",
+				&cli.StringFlag{
+					Name:    schema.CLIFlagTargetVersion,
+					Aliases: schema.CLIFlagTargetVersionAlias,
+					Usage:   "target version for the schema update, defaults to latest",
 				},
-				cli.StringFlag{
-					Name:  schema.CLIFlagSchemaDir,
-					Usage: "path to directory containing versioned schema",
+				&cli.StringFlag{
+					Name:    schema.CLIFlagSchemaDir,
+					Aliases: schema.CLIFlagSchemaDirAlias,
+					Usage:   "path to directory containing versioned schema",
 				},
-				cli.BoolFlag{
-					Name:  schema.CLIFlagDryrun,
-					Usage: "do a dryrun",
+				&cli.BoolFlag{
+					Name:    schema.CLIFlagDryrun,
+					Aliases: schema.CLIFlagDryrunAlias,
+					Usage:   "do a dryrun",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				cliHandler(c, updateSchema)
+				return nil
 			},
 		},
 		{
@@ -150,13 +166,15 @@ func BuildCLIOptions() *cli.App {
 			Aliases: []string{"create"},
 			Usage:   "creates a database",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  schema.CLIFlagDatabase,
-					Usage: "name of the database",
+				&cli.StringFlag{
+					Name:    schema.CLIFlagDatabase,
+					Aliases: schema.CLIFlagDatabaseAlias,
+					Usage:   "name of the database",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				cliHandler(c, createDatabase)
+				return nil
 			},
 		},
 	}

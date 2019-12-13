@@ -56,7 +56,7 @@ require (
 	github.com/uber-go/tally v3.3.12+incompatible
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.16.0
-	github.com/urfave/cli v1.20.0
+	github.com/urfave/cli/v2 v2.0.0
 	github.com/valyala/fastjson v1.4.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.uber.org/atomic v1.5.0

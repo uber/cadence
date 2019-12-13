@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/mysql"
@@ -145,9 +145,9 @@ func createDatabase(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	database := cli.String(schema.CLIOptDatabase)
+	database := cli.String(schema.CLIFlagDatabase)
 	if database == "" {
-		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument "))
+		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIFlagDatabase) + " argument "))
 	}
 	err = doCreateDatabase(*params, database)
 	if err != nil {
@@ -179,13 +179,13 @@ func doDropDatabase(p ConnectParams, name string) {
 
 func parseConnectParams(cli *cli.Context) (*ConnectParams, error) {
 	params := new(ConnectParams)
-	params.Host = cli.GlobalString(schema.CLIOptEndpoint)
-	params.Port = cli.GlobalInt(schema.CLIOptPort)
-	params.User = cli.GlobalString(schema.CLIOptUser)
-	params.Password = cli.GlobalString(schema.CLIOptPassword)
-	params.Database = cli.GlobalString(schema.CLIOptDatabase)
-	params.PluginName = cli.GlobalString(schema.CLIOptPluginName)
-	isDryRun := cli.Bool(schema.CLIOptDryrun)
+	params.Host = cli.String(schema.CLIFlagEndpoint)
+	params.Port = cli.Int(schema.CLIFlagPort)
+	params.User = cli.String(schema.CLIFlagUser)
+	params.Password = cli.String(schema.CLIFlagPassword)
+	params.Database = cli.String(schema.CLIFlagDatabase)
+	params.PluginName = cli.String(schema.CLIFlagPluginName)
+	isDryRun := cli.Bool(schema.CLIFlagDryrun)
 	if err := ValidateConnectParams(params, isDryRun); err != nil {
 		return nil, err
 	}
@@ -195,11 +195,11 @@ func parseConnectParams(cli *cli.Context) (*ConnectParams, error) {
 // ValidateConnectParams validates params
 func ValidateConnectParams(params *ConnectParams, isDryRun bool) error {
 	if len(params.Host) == 0 {
-		return schema.NewConfigError("missing sql endpoint argument " + flag(schema.CLIOptEndpoint))
+		return schema.NewConfigError("missing sql endpoint argument " + flag(schema.CLIFlagEndpoint))
 	}
 	if params.Database == "" {
 		if !isDryRun {
-			return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument ")
+			return schema.NewConfigError("missing " + flag(schema.CLIFlagDatabase) + " argument ")
 		}
 		params.Database = schema.DryrunDBName
 	}

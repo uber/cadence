@@ -20,27 +20,30 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import "github.com/urfave/cli/v2"
 
-func newTaskListCommands() []cli.Command {
-	return []cli.Command{
+func newTaskListCommands() []*cli.Command {
+	return []*cli.Command{
 		{
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "Describe pollers info of tasklist",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagTaskListWithAlias,
-					Usage: "TaskList description",
+				&cli.StringFlag{
+					Name:    FlagTaskList,
+					Aliases: FlagTaskListAlias,
+					Usage:   "TaskList description",
 				},
-				cli.StringFlag{
-					Name:  FlagTaskListTypeWithAlias,
-					Value: "decision",
-					Usage: "Optional TaskList type [decision|activity]",
+				&cli.StringFlag{
+					Name:    FlagTaskListType,
+					Aliases: FlagTaskListTypeAlias,
+					Value:   "decision",
+					Usage:   "Optional TaskList type [decision|activity]",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				DescribeTaskList(c)
+				return nil
 			},
 		},
 	}

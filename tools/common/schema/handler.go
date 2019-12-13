@@ -23,7 +23,7 @@ package schema
 import (
 	"fmt"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // VerifyCompatibleVersion ensures that the installed version is greater than or equal to the expected version.
@@ -78,9 +78,9 @@ func Update(cli *cli.Context, db DB) error {
 
 func newUpdateConfig(cli *cli.Context) (*UpdateConfig, error) {
 	config := new(UpdateConfig)
-	config.SchemaDir = cli.String(CLIOptSchemaDir)
-	config.IsDryRun = cli.Bool(CLIOptDryrun)
-	config.TargetVersion = cli.String(CLIOptTargetVersion)
+	config.SchemaDir = cli.String(CLIFlagSchemaDir)
+	config.IsDryRun = cli.Bool(CLIFlagDryrun)
+	config.TargetVersion = cli.String(CLIFlagTargetVersion)
 
 	if err := validateUpdateConfig(config); err != nil {
 		return nil, err
@@ -90,10 +90,10 @@ func newUpdateConfig(cli *cli.Context) (*UpdateConfig, error) {
 
 func newSetupConfig(cli *cli.Context) (*SetupConfig, error) {
 	config := new(SetupConfig)
-	config.SchemaFilePath = cli.String(CLIOptSchemaFile)
-	config.InitialVersion = cli.String(CLIOptVersion)
-	config.DisableVersioning = cli.Bool(CLIOptDisableVersioning)
-	config.Overwrite = cli.Bool(CLIOptOverwrite)
+	config.SchemaFilePath = cli.String(CLIFlagSchemaFile)
+	config.InitialVersion = cli.String(CLIFlagVersion)
+	config.DisableVersioning = cli.Bool(CLIFlagDisableVersioning)
+	config.Overwrite = cli.Bool(CLIFlagOverwrite)
 
 	if err := validateSetupConfig(config); err != nil {
 		return nil, err
@@ -103,17 +103,17 @@ func newSetupConfig(cli *cli.Context) (*SetupConfig, error) {
 
 func validateSetupConfig(config *SetupConfig) error {
 	if len(config.SchemaFilePath) == 0 && config.DisableVersioning {
-		return NewConfigError("missing schemaFilePath " + flag(CLIOptSchemaFile))
+		return NewConfigError("missing schemaFilePath " + flag(CLIFlagSchemaFile))
 	}
 	if (config.DisableVersioning && len(config.InitialVersion) > 0) ||
 		(!config.DisableVersioning && len(config.InitialVersion) == 0) {
-		return NewConfigError("either " + flag(CLIOptDisableVersioning) + " or " +
-			flag(CLIOptVersion) + " but not both must be specified")
+		return NewConfigError("either " + flag(CLIFlagDisableVersioning) + " or " +
+			flag(CLIFlagVersion) + " but not both must be specified")
 	}
 	if !config.DisableVersioning {
 		ver, err := parseValidateVersion(config.InitialVersion)
 		if err != nil {
-			return NewConfigError("invalid " + flag(CLIOptVersion) + " argument:" + err.Error())
+			return NewConfigError("invalid " + flag(CLIFlagVersion) + " argument:" + err.Error())
 		}
 		config.InitialVersion = ver
 	}
@@ -122,12 +122,12 @@ func validateSetupConfig(config *SetupConfig) error {
 
 func validateUpdateConfig(config *UpdateConfig) error {
 	if len(config.SchemaDir) == 0 {
-		return NewConfigError("missing " + flag(CLIOptSchemaDir) + " argument ")
+		return NewConfigError("missing " + flag(CLIFlagSchemaDir) + " argument ")
 	}
 	if len(config.TargetVersion) > 0 {
 		ver, err := parseValidateVersion(config.TargetVersion)
 		if err != nil {
-			return NewConfigError("invalid " + flag(CLIOptTargetVersion) + " argument:" + err.Error())
+			return NewConfigError("invalid " + flag(CLIFlagTargetVersion) + " argument:" + err.Error())
 		}
 		config.TargetVersion = ver
 	}

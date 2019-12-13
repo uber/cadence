@@ -27,7 +27,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
 

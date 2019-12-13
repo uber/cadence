@@ -43,7 +43,7 @@ import (
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/gocql/gocql"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 	yaml "gopkg.in/yaml.v2"

@@ -29,7 +29,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	clientFrontendTest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/cadence/.gen/go/shared"

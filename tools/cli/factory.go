@@ -23,7 +23,7 @@ package cli
 import (
 	"context"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -89,7 +89,7 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	}
 
 	b.hostPort = localHostPort
-	if addr := c.GlobalString(FlagAddress); addr != "" {
+	if addr := c.String(FlagAddress); addr != "" {
 		b.hostPort = addr
 	}
 

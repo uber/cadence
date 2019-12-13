@@ -36,7 +36,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"github.com/valyala/fastjson"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
@@ -530,8 +530,8 @@ func getWorkflowClient(c *cli.Context) client.Client {
 }
 
 func getWorkflowClientWithOptionalDomain(c *cli.Context) client.Client {
-	if !c.GlobalIsSet(FlagDomain) {
-		c.GlobalSet(FlagDomain, "system-domain")
+	if !c.IsSet(FlagDomain) {
+		c.Set(FlagDomain, "system-domain")
 	}
 	return getWorkflowClient(c)
 }
@@ -559,7 +559,7 @@ func getRequiredIntOption(c *cli.Context, optionName string) int {
 }
 
 func getRequiredGlobalOption(c *cli.Context, optionName string) string {
-	value := c.GlobalString(optionName)
+	value := c.String(optionName)
 	if len(value) == 0 {
 		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
 	}
@@ -628,16 +628,16 @@ func getCliIdentity() string {
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	contextTimeout := defaultContextTimeout
-	if c.GlobalInt(FlagContextTimeout) > 0 {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	if c.Int(FlagContextTimeout) > 0 {
+		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 	return context.WithTimeout(context.Background(), contextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
 	contextTimeout := defaultContextTimeoutForLongPoll
-	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	if c.IsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 	return context.WithTimeout(context.Background(), contextTimeout)
 }

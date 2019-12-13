@@ -27,7 +27,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/config"
@@ -93,11 +93,11 @@ func startHandler(c *cli.Context) {
 }
 
 func getEnvironment(c *cli.Context) string {
-	return strings.TrimSpace(c.GlobalString("env"))
+	return strings.TrimSpace(c.String("env"))
 }
 
 func getZone(c *cli.Context) string {
-	return strings.TrimSpace(c.GlobalString("zone"))
+	return strings.TrimSpace(c.String("zone"))
 }
 
 // getServices parses the services arg from cli
@@ -130,11 +130,11 @@ func isValidService(in string) bool {
 }
 
 func getConfigDir(c *cli.Context) string {
-	return constructPath(getRootDir(c), c.GlobalString("config"))
+	return constructPath(getRootDir(c), c.String("config"))
 }
 
 func getRootDir(c *cli.Context) string {
-	dirpath := c.GlobalString("root")
+	dirpath := c.String("root")
 	if len(dirpath) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -158,46 +158,47 @@ func BuildCLI() *cli.App {
 	app.Version = "0.0.1"
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "root, r",
-			Value:  ".",
-			Usage:  "root directory of execution environment",
-			EnvVar: config.EnvKeyRoot,
+		&cli.StringFlag{
+			Name:    "root, r",
+			Value:   ".",
+			Usage:   "root directory of execution environment",
+			EnvVars: []string{config.EnvKeyRoot},
 		},
-		cli.StringFlag{
-			Name:   "config, c",
-			Value:  "config",
-			Usage:  "config dir path relative to root",
-			EnvVar: config.EnvKeyConfigDir,
+		&cli.StringFlag{
+			Name:    "config, c",
+			Value:   "config",
+			Usage:   "config dir path relative to root",
+			EnvVars: []string{config.EnvKeyConfigDir},
 		},
-		cli.StringFlag{
-			Name:   "env, e",
-			Value:  "development",
-			Usage:  "runtime environment",
-			EnvVar: config.EnvKeyEnvironment,
+		&cli.StringFlag{
+			Name:    "env, e",
+			Value:   "development",
+			Usage:   "runtime environment",
+			EnvVars: []string{config.EnvKeyEnvironment},
 		},
-		cli.StringFlag{
-			Name:   "zone, az",
-			Value:  "",
-			Usage:  "availability zone",
-			EnvVar: config.EnvKeyAvailabilityZone,
+		&cli.StringFlag{
+			Name:    "zone, az",
+			Value:   "",
+			Usage:   "availability zone",
+			EnvVars: []string{config.EnvKeyAvailabilityZone},
 		},
 	}
 
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:    "start",
 			Aliases: []string{""},
 			Usage:   "start cadence server",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:  "services, s",
 					Value: strings.Join(validServices, ","),
 					Usage: "list of services to start",
 				},
 			},
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				startHandler(c)
+				return nil
 			},
 		},
 	}
