@@ -118,7 +118,6 @@ var (
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
 	errQueryDisallowedForDomain                   = &gen.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
-	errUnauthorized                               = &gen.BadRequestError{Message: "Request unauthorized."}
 
 	// err for archival
 	errHistoryNotFound = &gen.BadRequestError{Message: "Requested workflow history not found, may have passed retention period."}

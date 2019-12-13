@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -229,7 +229,7 @@ func (s *Service) Start() {
 	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, s.params.DCRedirectionPolicy)
 
-	s.handler = NewAuthHandlerImpl(dcRedirectionHandler, s.params.Authority)
+	s.handler = NewAuthHandlerImpl(dcRedirectionHandler, s.params.Authorizer)
 	s.handler.RegisterHandler()
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)

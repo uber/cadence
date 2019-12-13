@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/authorization"
+
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -34,7 +36,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -81,7 +82,7 @@ type (
 		PublicClient        workflowserviceclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
 		ArchiverProvider    provider.ArchiverProvider
-		Authority           auth.Authority
+		Authorizer          authorization.Authorizer
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor

@@ -409,7 +409,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
-	params.Authority = auth.NewNopAuthority()
+	params.Authorizer = auth.NewNopAuthority()
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)

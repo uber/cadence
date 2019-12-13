@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,20 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package auth
+package authorization
 
 import "context"
 
 type nopAuthority struct{}
 
 // NewNopAuthority creates a noop authority
-func NewNopAuthority() Authority {
+func NewNopAuthority() Authorizer {
 	return &nopAuthority{}
 }
 
-func (a *nopAuthority) IsAuthorized(
+func (a *nopAuthority) Authorize(
 	ctx context.Context,
-	params *AuthorizationParams,
-) (AuthorizationResult, error) {
-	return AuthorizationResult{AuthorizationDecision: DecisionAllow}, nil
+	attributes *Attributes,
+) (Result, error) {
+	return Result{AuthorizationDecision: DecisionAllow}, nil
 }

@@ -20,13 +20,13 @@
 
 //go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination authority_mock.go
 
-package auth
+package authorization
 
 import "context"
 
 const (
 	// DecisionDeny means auth decision is deny
-	DecisionDeny AuthorizationDecision = iota
+	DecisionDeny Decision = iota + 1
 	// DecisionAllow means auth decision is allow
 	DecisionAllow
 	//DecisionNoOpinion means auth decision is unknown
@@ -34,24 +34,24 @@ const (
 )
 
 type (
-	// AuthorizationParams is input for authority to make decision.
+	// Attributes is input for authority to make decision.
 	// It can be extended in future if required auth on resources like WorkflowType and TaskList
-	AuthorizationParams struct {
+	Attributes struct {
 		Actor      string
 		Action     string
 		DomainName string
 	}
 
-	// AuthorizationResult is result from authority.
-	AuthorizationResult struct {
-		AuthorizationDecision AuthorizationDecision
+	// Result is result from authority.
+	Result struct {
+		AuthorizationDecision Decision
 	}
 
-	// AuthorizationDecision is enum type for auth decision
-	AuthorizationDecision int
+	// Decision is enum type for auth decision
+	Decision int
 )
 
-// Authority is an interface for authorization
-type Authority interface {
-	IsAuthorized(ctx context.Context, params *AuthorizationParams) (AuthorizationResult, error)
+// Authorizer is an interface for authorization
+type Authorizer interface {
+	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
 }

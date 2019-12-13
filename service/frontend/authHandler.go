@@ -23,31 +23,34 @@ package frontend
 import (
 	"context"
 
+	"github.com/uber/cadence/common/authorization"
+
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/resource"
 )
 
 // TODO(vancexu): add metrics
 
 const (
-	// ActionCommon is for authority implementation to handle auth for common operations
+	// ActionCommon is for authorizer implementation to handle auth for common operations
 	ActionCommon = "common"
-	// ActionAdmin is for authority implementation to handle auth for admin only operations
+	// ActionAdmin is for authorizer implementation to handle auth for admin only operations
 	ActionAdmin = "admin"
 )
+
+var errUnauthorized = &shared.BadRequestError{Message: "Request unauthorized."}
 
 // AuthHandlerImpl frontend handler wrapper for authentication and authorization
 type AuthHandlerImpl struct {
 	resource.Resource
 
 	frontendHandler workflowserviceserver.Interface
-	authority       auth.Authority
+	authorizer      authorization.Authorizer
 
 	startFn func()
 	stopFn  func()
@@ -56,15 +59,15 @@ type AuthHandlerImpl struct {
 var _ workflowserviceserver.Interface = (*AuthHandlerImpl)(nil)
 
 // NewAuthHandlerImpl creates frontend handler with authentication support
-func NewAuthHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authority auth.Authority) *AuthHandlerImpl {
-	if authority == nil {
-		authority = auth.NewNopAuthority()
+func NewAuthHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authorizer authorization.Authorizer) *AuthHandlerImpl {
+	if authorizer == nil {
+		authorizer = authorization.NewNopAuthority()
 	}
 
 	return &AuthHandlerImpl{
 		Resource:        wfHandler.Resource,
 		frontendHandler: wfHandler,
-		authority:       authority,
+		authorizer:      authorizer,
 		startFn:         func() { wfHandler.Start() },
 		stopFn:          func() { wfHandler.Stop() },
 	}
@@ -625,24 +628,24 @@ func (a *AuthHandlerImpl) isAllowedForDomain(
 	ctx context.Context,
 	domain string,
 ) (bool, error) {
-	authParams := &auth.AuthorizationParams{
+	authParams := &authorization.Attributes{
 		Action:     ActionCommon,
 		DomainName: domain,
 	}
-	result, err := a.authority.IsAuthorized(ctx, authParams)
+	result, err := a.authorizer.Authorize(ctx, authParams)
 	if err != nil {
 		return false, err
 	}
-	return result.AuthorizationDecision == auth.DecisionAllow, nil
+	return result.AuthorizationDecision == authorization.DecisionAllow, nil
 }
 
 func (a *AuthHandlerImpl) isAdmin(ctx context.Context) (bool, error) {
-	authParams := &auth.AuthorizationParams{
+	authParams := &authorization.Attributes{
 		Action: ActionAdmin,
 	}
-	result, err := a.authority.IsAuthorized(ctx, authParams)
+	result, err := a.authorizer.Authorize(ctx, authParams)
 	if err != nil {
 		return false, err
 	}
-	return result.AuthorizationDecision == auth.DecisionAllow, nil
+	return result.AuthorizationDecision == authorization.DecisionAllow, nil
 }

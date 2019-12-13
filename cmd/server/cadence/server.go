@@ -205,7 +205,7 @@ func (s *server) startService() common.Daemon {
 
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
 
-	params.Authority = auth.NewNopAuthority()
+	params.Authorizer = auth.NewNopAuthority()
 
 	params.Logger.Info("Starting service " + s.name)
 
