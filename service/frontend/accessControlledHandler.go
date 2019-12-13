@@ -54,7 +54,7 @@ var _ workflowserviceserver.Interface = (*AccessControlledWorkflowHandler)(nil)
 // NewAccessControlledHandlerImpl creates frontend handler with authentication support
 func NewAccessControlledHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authorizer authorization.Authorizer) *AccessControlledWorkflowHandler {
 	if authorizer == nil {
-		authorizer = authorization.NewNopAuthority()
+		authorizer = authorization.NewNopAuthorizer()
 	}
 
 	return &AccessControlledWorkflowHandler{

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,8 +29,6 @@ const (
 	DecisionDeny Decision = iota + 1
 	// DecisionAllow means auth decision is allow
 	DecisionAllow
-	//DecisionNoOpinion means auth decision is unknown
-	DecisionNoOpinion
 )
 
 type (
