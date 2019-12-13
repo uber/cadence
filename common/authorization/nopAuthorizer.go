@@ -18,18 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package authorization
 
-import (
-	"os"
+import "context"
 
-	"github.com/uber/cadence/cmd/server/cadence"
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"    // needed to load mysql plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
-)
+type nopAuthority struct{}
 
-// main entry point for the cadence server
-func main() {
-	app := cadence.BuildCLI()
-	app.Run(os.Args)
+// NewNopAuthorizer creates a no-op authority
+func NewNopAuthorizer() Authorizer {
+	return &nopAuthority{}
+}
+
+func (a *nopAuthority) Authorize(
+	ctx context.Context,
+	attributes *Attributes,
+) (Result, error) {
+	return Result{Decision: DecisionAllow}, nil
 }
