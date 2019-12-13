@@ -101,6 +101,11 @@ struct DescribeTaskListRequest {
   20: optional shared.DescribeTaskListRequest descRequest
 }
 
+struct GetTaskListPartitionInfoRequest {
+  10: optional string domainUUID
+  20: optional shared.TaskList taskList
+}
+
 /**
 * MatchingService API is exposed to provide support for polling from long running applications.
 * Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each

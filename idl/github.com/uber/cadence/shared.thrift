@@ -1468,6 +1468,24 @@ struct DescribeTaskListResponse {
   20: optional TaskListStatus taskListStatus
 }
 
+struct GetTaskListPartitionInfoResponse {
+  10: optional PartitionInfo activityTaskPartition
+  20: optional PartitionInfo decisionTaskPartition
+}
+
+struct PartitionInfo {
+  10: optional bool isScalableTaskList
+  20: optional map<PartitionKey, HostInfo> partitionHostInfo
+}
+
+struct PartitionKey {
+  10: optional string partitionKey
+}
+
+struct HostInfo {
+  10: optional string hostAddress
+}
+
 struct TaskListStatus {
   10: optional i64 (js.type = "Long") backlogCountHint
   20: optional i64 (js.type = "Long") readLevel

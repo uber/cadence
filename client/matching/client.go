@@ -199,6 +199,55 @@ func (c *clientImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTa
 	return client.DescribeTaskList(ctx, request, opts...)
 }
 
+func (c *clientImpl) GetTaskListPartitionInfo(ctx context.Context, request *m.GetTaskListPartitionInfoRequest, opts ...yarpc.CallOption) (*workflow.GetTaskListPartitionInfoResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+
+	aTPartitionInfo, err := c.getTaskListPartitionInfo(request, persistence.TaskListTypeActivity)
+	if err != nil {
+		return nil, err
+	}
+	dTPartitionInfo, err := c.getTaskListPartitionInfo(request, persistence.TaskListTypeDecision)
+	if err != nil {
+		return nil, err
+	}
+	resp := workflow.GetTaskListPartitionInfoResponse{
+		ActivityTaskPartition: aTPartitionInfo,
+		DecisionTaskPartition: dTPartitionInfo,
+	}
+	return &resp, nil
+}
+
+func (c *clientImpl) getTaskListPartitionInfo(request *m.GetTaskListPartitionInfoRequest, taskListType int) (*workflow.PartitionInfo, error) {
+	partitionInfo := workflow.PartitionInfo{}
+	partitions, err := c.loadBalancer.GetAllPartitions(
+		request.GetDomainUUID(),
+		*request.TaskList,
+		taskListType,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	partitionInfo.IsScalableTaskList = common.BoolPtr(len(partitions) > 1)
+	partitionHostInfo := make(map[workflow.PartitionKey]workflow.HostInfo, len(partitions))
+	for _, partition := range partitions {
+		if host, err := c.getHostInfo(partition); err != nil {
+			partitionInfo := workflow.PartitionKey{PartitionKey: common.StringPtr(partition)}
+			partitionHostInfo[partitionInfo] = host
+		}
+	}
+
+	return &partitionInfo, nil
+}
+
+func (c *clientImpl) getHostInfo(partitionKey string) (workflow.HostInfo, error) {
+	hostAddr, err := c.clients.GetHostInfoForClient(partitionKey)
+	if err != nil {
+		return workflow.HostInfo{}, err
+	}
+	return workflow.HostInfo{HostAddress: common.StringPtr(hostAddr)}, nil
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)
