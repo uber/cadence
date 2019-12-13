@@ -38,7 +38,7 @@ type (
 	// It can be extended in future if required auth on resources like WorkflowType and TaskList
 	Attributes struct {
 		Actor      string
-		Action     string
+		APIName    string
 		DomainName string
 	}
 

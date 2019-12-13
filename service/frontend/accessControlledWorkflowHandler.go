@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,17 +36,10 @@ import (
 
 // TODO(vancexu): add metrics
 
-const (
-	// ActionCommon is for authorizer implementation to handle auth for common operations
-	ActionCommon = "common"
-	// ActionAdmin is for authorizer implementation to handle auth for admin only operations
-	ActionAdmin = "admin"
-)
-
 var errUnauthorized = &shared.BadRequestError{Message: "Request unauthorized."}
 
-// AuthHandlerImpl frontend handler wrapper for authentication and authorization
-type AuthHandlerImpl struct {
+// AccessControlledWorkflowHandler frontend handler wrapper for authentication and authorization
+type AccessControlledWorkflowHandler struct {
 	resource.Resource
 
 	frontendHandler workflowserviceserver.Interface
@@ -56,15 +49,15 @@ type AuthHandlerImpl struct {
 	stopFn  func()
 }
 
-var _ workflowserviceserver.Interface = (*AuthHandlerImpl)(nil)
+var _ workflowserviceserver.Interface = (*AccessControlledWorkflowHandler)(nil)
 
-// NewAuthHandlerImpl creates frontend handler with authentication support
-func NewAuthHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authorizer authorization.Authorizer) *AuthHandlerImpl {
+// NewAccessControlledHandlerImpl creates frontend handler with authentication support
+func NewAccessControlledHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authorizer authorization.Authorizer) *AccessControlledWorkflowHandler {
 	if authorizer == nil {
 		authorizer = authorization.NewNopAuthority()
 	}
 
-	return &AuthHandlerImpl{
+	return &AccessControlledWorkflowHandler{
 		Resource:        wfHandler.Resource,
 		frontendHandler: wfHandler,
 		authorizer:      authorizer,
@@ -76,54 +69,63 @@ func NewAuthHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authorizer authoriz
 // TODO(vancexu): refactor frontend handler
 
 // RegisterHandler register this handler, must be called before Start()
-func (a *AuthHandlerImpl) RegisterHandler() {
+func (a *AccessControlledWorkflowHandler) RegisterHandler() {
 	a.GetDispatcher().Register(workflowserviceserver.New(a))
 	a.GetDispatcher().Register(metaserver.New(a))
 }
 
 // Health callback for for health check
-func (a *AuthHandlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("auth is good")}
 	return hs, nil
 }
 
 // Start starts the handler
-func (a *AuthHandlerImpl) Start() {
+func (a *AccessControlledWorkflowHandler) Start() {
 	a.startFn()
 }
 
 // Stop stops the handler
-func (a *AuthHandlerImpl) Stop() {
+func (a *AccessControlledWorkflowHandler) Stop() {
 	a.stopFn()
 }
 
 // CountWorkflowExecutions API call
-func (a *AuthHandlerImpl) CountWorkflowExecutions(
+func (a *AccessControlledWorkflowHandler) CountWorkflowExecutions(
 	ctx context.Context,
 	request *shared.CountWorkflowExecutionsRequest,
 ) (*shared.CountWorkflowExecutionsResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "CountWorkflowExecutions",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
+
 	return a.frontendHandler.CountWorkflowExecutions(ctx, request)
 }
 
 // DeprecateDomain API call
-func (a *AuthHandlerImpl) DeprecateDomain(
+func (a *AccessControlledWorkflowHandler) DeprecateDomain(
 	ctx context.Context,
 	request *shared.DeprecateDomainRequest,
 ) error {
 
-	isAllowed, err := a.isAdmin(ctx)
+	attr := &authorization.Attributes{
+		APIName:    "DeprecateDomain",
+		DomainName: request.GetName(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return errUnauthorized
 	}
 
@@ -131,16 +133,20 @@ func (a *AuthHandlerImpl) DeprecateDomain(
 }
 
 // DescribeDomain API call
-func (a *AuthHandlerImpl) DescribeDomain(
+func (a *AccessControlledWorkflowHandler) DescribeDomain(
 	ctx context.Context,
 	request *shared.DescribeDomainRequest,
 ) (*shared.DescribeDomainResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetName())
+	attr := &authorization.Attributes{
+		APIName:    "DescribeDomain",
+		DomainName: request.GetName(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -148,16 +154,20 @@ func (a *AuthHandlerImpl) DescribeDomain(
 }
 
 // DescribeTaskList API call
-func (a *AuthHandlerImpl) DescribeTaskList(
+func (a *AccessControlledWorkflowHandler) DescribeTaskList(
 	ctx context.Context,
 	request *shared.DescribeTaskListRequest,
 ) (*shared.DescribeTaskListResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "DescribeTaskList",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -165,16 +175,20 @@ func (a *AuthHandlerImpl) DescribeTaskList(
 }
 
 // DescribeWorkflowExecution API call
-func (a *AuthHandlerImpl) DescribeWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *shared.DescribeWorkflowExecutionRequest,
 ) (*shared.DescribeWorkflowExecutionResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "DescribeWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -182,7 +196,7 @@ func (a *AuthHandlerImpl) DescribeWorkflowExecution(
 }
 
 // GetDomainReplicationMessages API call
-func (a *AuthHandlerImpl) GetDomainReplicationMessages(
+func (a *AccessControlledWorkflowHandler) GetDomainReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetDomainReplicationMessagesRequest,
 ) (*replicator.GetDomainReplicationMessagesResponse, error) {
@@ -190,7 +204,7 @@ func (a *AuthHandlerImpl) GetDomainReplicationMessages(
 }
 
 // GetReplicationMessages API call
-func (a *AuthHandlerImpl) GetReplicationMessages(
+func (a *AccessControlledWorkflowHandler) GetReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetReplicationMessagesRequest,
 ) (*replicator.GetReplicationMessagesResponse, error) {
@@ -198,23 +212,27 @@ func (a *AuthHandlerImpl) GetReplicationMessages(
 }
 
 // GetSearchAttributes API call
-func (a *AuthHandlerImpl) GetSearchAttributes(
+func (a *AccessControlledWorkflowHandler) GetSearchAttributes(
 	ctx context.Context,
 ) (*shared.GetSearchAttributesResponse, error) {
 	return a.frontendHandler.GetSearchAttributes(ctx)
 }
 
 // GetWorkflowExecutionHistory API call
-func (a *AuthHandlerImpl) GetWorkflowExecutionHistory(
+func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	request *shared.GetWorkflowExecutionHistoryRequest,
 ) (*shared.GetWorkflowExecutionHistoryResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "GetWorkflowExecutionHistory",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -222,16 +240,20 @@ func (a *AuthHandlerImpl) GetWorkflowExecutionHistory(
 }
 
 // ListArchivedWorkflowExecutions API call
-func (a *AuthHandlerImpl) ListArchivedWorkflowExecutions(
+func (a *AccessControlledWorkflowHandler) ListArchivedWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListArchivedWorkflowExecutionsRequest,
 ) (*shared.ListArchivedWorkflowExecutionsResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ListArchivedWorkflowExecutions",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -239,16 +261,20 @@ func (a *AuthHandlerImpl) ListArchivedWorkflowExecutions(
 }
 
 // ListClosedWorkflowExecutions API call
-func (a *AuthHandlerImpl) ListClosedWorkflowExecutions(
+func (a *AccessControlledWorkflowHandler) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListClosedWorkflowExecutionsRequest,
 ) (*shared.ListClosedWorkflowExecutionsResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ListClosedWorkflowExecutions",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -256,16 +282,19 @@ func (a *AuthHandlerImpl) ListClosedWorkflowExecutions(
 }
 
 // ListDomains API call
-func (a *AuthHandlerImpl) ListDomains(
+func (a *AccessControlledWorkflowHandler) ListDomains(
 	ctx context.Context,
 	request *shared.ListDomainsRequest,
 ) (*shared.ListDomainsResponse, error) {
 
-	isAllowed, err := a.isAdmin(ctx)
+	attr := &authorization.Attributes{
+		APIName: "ListDomains",
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -273,16 +302,20 @@ func (a *AuthHandlerImpl) ListDomains(
 }
 
 // ListOpenWorkflowExecutions API call
-func (a *AuthHandlerImpl) ListOpenWorkflowExecutions(
+func (a *AccessControlledWorkflowHandler) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListOpenWorkflowExecutionsRequest,
 ) (*shared.ListOpenWorkflowExecutionsResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ListOpenWorkflowExecutions",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -290,16 +323,20 @@ func (a *AuthHandlerImpl) ListOpenWorkflowExecutions(
 }
 
 // ListWorkflowExecutions API call
-func (a *AuthHandlerImpl) ListWorkflowExecutions(
+func (a *AccessControlledWorkflowHandler) ListWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListWorkflowExecutionsRequest,
 ) (*shared.ListWorkflowExecutionsResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ListWorkflowExecutions",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -307,16 +344,20 @@ func (a *AuthHandlerImpl) ListWorkflowExecutions(
 }
 
 // PollForActivityTask API call
-func (a *AuthHandlerImpl) PollForActivityTask(
+func (a *AccessControlledWorkflowHandler) PollForActivityTask(
 	ctx context.Context,
 	request *shared.PollForActivityTaskRequest,
 ) (*shared.PollForActivityTaskResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "PollForActivityTask",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -324,16 +365,20 @@ func (a *AuthHandlerImpl) PollForActivityTask(
 }
 
 // PollForDecisionTask API call
-func (a *AuthHandlerImpl) PollForDecisionTask(
+func (a *AccessControlledWorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
 	request *shared.PollForDecisionTaskRequest,
 ) (*shared.PollForDecisionTaskResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "PollForDecisionTask",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -341,16 +386,20 @@ func (a *AuthHandlerImpl) PollForDecisionTask(
 }
 
 // QueryWorkflow API call
-func (a *AuthHandlerImpl) QueryWorkflow(
+func (a *AccessControlledWorkflowHandler) QueryWorkflow(
 	ctx context.Context,
 	request *shared.QueryWorkflowRequest,
 ) (*shared.QueryWorkflowResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "QueryWorkflow",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -358,7 +407,7 @@ func (a *AuthHandlerImpl) QueryWorkflow(
 }
 
 // ReapplyEvents API call
-func (a *AuthHandlerImpl) ReapplyEvents(
+func (a *AccessControlledWorkflowHandler) ReapplyEvents(
 	ctx context.Context,
 	request *shared.ReapplyEventsRequest,
 ) error {
@@ -366,7 +415,7 @@ func (a *AuthHandlerImpl) ReapplyEvents(
 }
 
 // RecordActivityTaskHeartbeat API call
-func (a *AuthHandlerImpl) RecordActivityTaskHeartbeat(
+func (a *AccessControlledWorkflowHandler) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	request *shared.RecordActivityTaskHeartbeatRequest,
 ) (*shared.RecordActivityTaskHeartbeatResponse, error) {
@@ -375,7 +424,7 @@ func (a *AuthHandlerImpl) RecordActivityTaskHeartbeat(
 }
 
 // RecordActivityTaskHeartbeatByID API call
-func (a *AuthHandlerImpl) RecordActivityTaskHeartbeatByID(
+func (a *AccessControlledWorkflowHandler) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	request *shared.RecordActivityTaskHeartbeatByIDRequest,
 ) (*shared.RecordActivityTaskHeartbeatResponse, error) {
@@ -383,16 +432,20 @@ func (a *AuthHandlerImpl) RecordActivityTaskHeartbeatByID(
 }
 
 // RegisterDomain API call
-func (a *AuthHandlerImpl) RegisterDomain(
+func (a *AccessControlledWorkflowHandler) RegisterDomain(
 	ctx context.Context,
 	request *shared.RegisterDomainRequest,
 ) error {
 
-	isAllowed, err := a.isAdmin(ctx)
+	attr := &authorization.Attributes{
+		APIName:    "RegisterDomain",
+		DomainName: request.GetName(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return errUnauthorized
 	}
 
@@ -400,16 +453,20 @@ func (a *AuthHandlerImpl) RegisterDomain(
 }
 
 // RequestCancelWorkflowExecution API call
-func (a *AuthHandlerImpl) RequestCancelWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	request *shared.RequestCancelWorkflowExecutionRequest,
 ) error {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "RequestCancelWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return errUnauthorized
 	}
 
@@ -417,16 +474,20 @@ func (a *AuthHandlerImpl) RequestCancelWorkflowExecution(
 }
 
 // ResetStickyTaskList API call
-func (a *AuthHandlerImpl) ResetStickyTaskList(
+func (a *AccessControlledWorkflowHandler) ResetStickyTaskList(
 	ctx context.Context,
 	request *shared.ResetStickyTaskListRequest,
 ) (*shared.ResetStickyTaskListResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ResetStickyTaskList",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -434,16 +495,20 @@ func (a *AuthHandlerImpl) ResetStickyTaskList(
 }
 
 // ResetWorkflowExecution API call
-func (a *AuthHandlerImpl) ResetWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) ResetWorkflowExecution(
 	ctx context.Context,
 	request *shared.ResetWorkflowExecutionRequest,
 ) (*shared.ResetWorkflowExecutionResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ResetWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -451,7 +516,7 @@ func (a *AuthHandlerImpl) ResetWorkflowExecution(
 }
 
 // RespondActivityTaskCanceled API call
-func (a *AuthHandlerImpl) RespondActivityTaskCanceled(
+func (a *AccessControlledWorkflowHandler) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCanceledRequest,
 ) error {
@@ -459,7 +524,7 @@ func (a *AuthHandlerImpl) RespondActivityTaskCanceled(
 }
 
 // RespondActivityTaskCanceledByID API call
-func (a *AuthHandlerImpl) RespondActivityTaskCanceledByID(
+func (a *AccessControlledWorkflowHandler) RespondActivityTaskCanceledByID(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCanceledByIDRequest,
 ) error {
@@ -467,7 +532,7 @@ func (a *AuthHandlerImpl) RespondActivityTaskCanceledByID(
 }
 
 // RespondActivityTaskCompleted API call
-func (a *AuthHandlerImpl) RespondActivityTaskCompleted(
+func (a *AccessControlledWorkflowHandler) RespondActivityTaskCompleted(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCompletedRequest,
 ) error {
@@ -475,7 +540,7 @@ func (a *AuthHandlerImpl) RespondActivityTaskCompleted(
 }
 
 // RespondActivityTaskCompletedByID API call
-func (a *AuthHandlerImpl) RespondActivityTaskCompletedByID(
+func (a *AccessControlledWorkflowHandler) RespondActivityTaskCompletedByID(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCompletedByIDRequest,
 ) error {
@@ -483,7 +548,7 @@ func (a *AuthHandlerImpl) RespondActivityTaskCompletedByID(
 }
 
 // RespondActivityTaskFailed API call
-func (a *AuthHandlerImpl) RespondActivityTaskFailed(
+func (a *AccessControlledWorkflowHandler) RespondActivityTaskFailed(
 	ctx context.Context,
 	request *shared.RespondActivityTaskFailedRequest,
 ) error {
@@ -491,7 +556,7 @@ func (a *AuthHandlerImpl) RespondActivityTaskFailed(
 }
 
 // RespondActivityTaskFailedByID API call
-func (a *AuthHandlerImpl) RespondActivityTaskFailedByID(
+func (a *AccessControlledWorkflowHandler) RespondActivityTaskFailedByID(
 	ctx context.Context,
 	request *shared.RespondActivityTaskFailedByIDRequest,
 ) error {
@@ -499,7 +564,7 @@ func (a *AuthHandlerImpl) RespondActivityTaskFailedByID(
 }
 
 // RespondDecisionTaskCompleted API call
-func (a *AuthHandlerImpl) RespondDecisionTaskCompleted(
+func (a *AccessControlledWorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	request *shared.RespondDecisionTaskCompletedRequest,
 ) (*shared.RespondDecisionTaskCompletedResponse, error) {
@@ -507,7 +572,7 @@ func (a *AuthHandlerImpl) RespondDecisionTaskCompleted(
 }
 
 // RespondDecisionTaskFailed API call
-func (a *AuthHandlerImpl) RespondDecisionTaskFailed(
+func (a *AccessControlledWorkflowHandler) RespondDecisionTaskFailed(
 	ctx context.Context,
 	request *shared.RespondDecisionTaskFailedRequest,
 ) error {
@@ -515,7 +580,7 @@ func (a *AuthHandlerImpl) RespondDecisionTaskFailed(
 }
 
 // RespondQueryTaskCompleted API call
-func (a *AuthHandlerImpl) RespondQueryTaskCompleted(
+func (a *AccessControlledWorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,
 	request *shared.RespondQueryTaskCompletedRequest,
 ) error {
@@ -523,16 +588,20 @@ func (a *AuthHandlerImpl) RespondQueryTaskCompleted(
 }
 
 // ScanWorkflowExecutions API call
-func (a *AuthHandlerImpl) ScanWorkflowExecutions(
+func (a *AccessControlledWorkflowHandler) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListWorkflowExecutionsRequest,
 ) (*shared.ListWorkflowExecutionsResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "ScanWorkflowExecutions",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -540,16 +609,20 @@ func (a *AuthHandlerImpl) ScanWorkflowExecutions(
 }
 
 // SignalWithStartWorkflowExecution API call
-func (a *AuthHandlerImpl) SignalWithStartWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *shared.SignalWithStartWorkflowExecutionRequest,
 ) (*shared.StartWorkflowExecutionResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "SignalWithStartWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -557,16 +630,20 @@ func (a *AuthHandlerImpl) SignalWithStartWorkflowExecution(
 }
 
 // SignalWorkflowExecution API call
-func (a *AuthHandlerImpl) SignalWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) SignalWorkflowExecution(
 	ctx context.Context,
 	request *shared.SignalWorkflowExecutionRequest,
 ) error {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "SignalWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return errUnauthorized
 	}
 
@@ -574,16 +651,20 @@ func (a *AuthHandlerImpl) SignalWorkflowExecution(
 }
 
 // StartWorkflowExecution API call
-func (a *AuthHandlerImpl) StartWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
 	request *shared.StartWorkflowExecutionRequest,
 ) (*shared.StartWorkflowExecutionResponse, error) {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "StartWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
@@ -591,16 +672,20 @@ func (a *AuthHandlerImpl) StartWorkflowExecution(
 }
 
 // TerminateWorkflowExecution API call
-func (a *AuthHandlerImpl) TerminateWorkflowExecution(
+func (a *AccessControlledWorkflowHandler) TerminateWorkflowExecution(
 	ctx context.Context,
 	request *shared.TerminateWorkflowExecutionRequest,
 ) error {
 
-	isAllowed, err := a.isAllowedForDomain(ctx, request.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:    "TerminateWorkflowExecution",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return errUnauthorized
 	}
 
@@ -608,42 +693,31 @@ func (a *AuthHandlerImpl) TerminateWorkflowExecution(
 }
 
 // UpdateDomain API call
-func (a *AuthHandlerImpl) UpdateDomain(
+func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	ctx context.Context,
 	request *shared.UpdateDomainRequest,
 ) (*shared.UpdateDomainResponse, error) {
 
-	isAllowed, err := a.isAdmin(ctx)
+	attr := &authorization.Attributes{
+		APIName:    "UpdateDomain",
+		DomainName: request.GetName(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowed {
+	if !isAuthorized {
 		return nil, errUnauthorized
 	}
 
 	return a.frontendHandler.UpdateDomain(ctx, request)
 }
 
-func (a *AuthHandlerImpl) isAllowedForDomain(
+func (a *AccessControlledWorkflowHandler) isAuthorized(
 	ctx context.Context,
-	domain string,
+	attr *authorization.Attributes,
 ) (bool, error) {
-	authParams := &authorization.Attributes{
-		Action:     ActionCommon,
-		DomainName: domain,
-	}
-	result, err := a.authorizer.Authorize(ctx, authParams)
-	if err != nil {
-		return false, err
-	}
-	return result.Decision == authorization.DecisionAllow, nil
-}
-
-func (a *AuthHandlerImpl) isAdmin(ctx context.Context) (bool, error) {
-	authParams := &authorization.Attributes{
-		Action: ActionAdmin,
-	}
-	result, err := a.authorizer.Authorize(ctx, authParams)
+	result, err := a.authorizer.Authorize(ctx, attr)
 	if err != nil {
 		return false, err
 	}

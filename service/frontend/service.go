@@ -130,7 +130,7 @@ type Service struct {
 	resource.Resource
 
 	status       int32
-	handler      *AuthHandlerImpl
+	handler      *AccessControlledWorkflowHandler
 	adminHandler *AdminHandler
 	stopC        chan struct{}
 	config       *Config
@@ -229,7 +229,7 @@ func (s *Service) Start() {
 	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, s.params.DCRedirectionPolicy)
 
-	s.handler = NewAuthHandlerImpl(dcRedirectionHandler, s.params.Authorizer)
+	s.handler = NewAccessControlledHandlerImpl(dcRedirectionHandler, s.params.Authorizer)
 	s.handler.RegisterHandler()
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
