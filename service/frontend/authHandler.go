@@ -636,7 +636,7 @@ func (a *AuthHandlerImpl) isAllowedForDomain(
 	if err != nil {
 		return false, err
 	}
-	return result.AuthorizationDecision == authorization.DecisionAllow, nil
+	return result.Decision == authorization.DecisionAllow, nil
 }
 
 func (a *AuthHandlerImpl) isAdmin(ctx context.Context) (bool, error) {
@@ -647,5 +647,5 @@ func (a *AuthHandlerImpl) isAdmin(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return result.AuthorizationDecision == authorization.DecisionAllow, nil
+	return result.Decision == authorization.DecisionAllow, nil
 }

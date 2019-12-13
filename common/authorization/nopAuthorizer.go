@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,40 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination authority_mock.go
-
 package authorization
 
 import "context"
 
-const (
-	// DecisionDeny means auth decision is deny
-	DecisionDeny Decision = iota + 1
-	// DecisionAllow means auth decision is allow
-	DecisionAllow
-	//DecisionNoOpinion means auth decision is unknown
-	DecisionNoOpinion
-)
+type nopAuthority struct{}
 
-type (
-	// Attributes is input for authority to make decision.
-	// It can be extended in future if required auth on resources like WorkflowType and TaskList
-	Attributes struct {
-		Actor      string
-		Action     string
-		DomainName string
-	}
+// NewNopAuthority creates a noop authority
+func NewNopAuthority() Authorizer {
+	return &nopAuthority{}
+}
 
-	// Result is result from authority.
-	Result struct {
-		AuthorizationDecision Decision
-	}
-
-	// Decision is enum type for auth decision
-	Decision int
-)
-
-// Authorizer is an interface for authorization
-type Authorizer interface {
-	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
+func (a *nopAuthority) Authorize(
+	ctx context.Context,
+	attributes *Attributes,
+) (Result, error) {
+	return Result{Decision: DecisionAllow}, nil
 }
