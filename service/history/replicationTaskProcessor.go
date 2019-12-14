@@ -317,7 +317,7 @@ func (p *ReplicationTaskProcessorImpl) syncShardStatusLoop() {
 				syncShardTask,
 			); err != nil {
 				p.logger.Error("failed to sync shard status", tag.Error(err))
-				p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicatorFailures)
+				p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicationTasksFailed)
 			}
 		case <-p.done:
 			return
@@ -333,7 +333,7 @@ func (p *ReplicationTaskProcessorImpl) handleSyncShardStatus(
 		p.shard.GetTimeSource().Now().Sub(time.Unix(0, status.GetTimestamp())) > dropSyncShardTaskTimeThreshold {
 		return nil
 	}
-
+	p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicationTasksFetched)
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 	return p.historyEngine.SyncShardStatus(ctx, &h.SyncShardStatusRequest{
@@ -573,6 +573,7 @@ func (p *ReplicationTaskProcessorImpl) handleActivityTask(
 		Attempt:            attr.Attempt,
 		LastFailureReason:  attr.LastFailureReason,
 		LastWorkerIdentity: attr.LastWorkerIdentity,
+		VersionHistory:     attr.GetVersionHistory(),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
