@@ -90,7 +90,6 @@ persistence:
         User: "user-name"
         Password: "password"
         keyspace: "cadence"           -- Name of the cassandra keyspace
-        consistency: "QUORUM"         -- Default consistence, MUST be QUORUM for production (optional)
         datacenter: "us-east-1a"      -- Cassandra datacenter filter to limit queries to a single dc (optional)
         maxQPS: 1000                  -- MaxQPS to cassandra from a single cadence sub-system on one host (optional)
         maxConns: 2                   -- Number of tcp conns to cassandra server (single sub-system on one host) (optional)
@@ -106,7 +105,7 @@ persistence:
   datastores:
     datastore1:
       sql:
-        driverName: "mysql"            -- name of the go sql driver, mysql is the only supported driver today
+        pluginName: "mysql"            -- name of the go sql driver, mysql is the only supported driver today
         databaseName: "cadence"        -- name of the database to connect to
         connectAddr: "127.0.0.1:3306"  -- connection address, could be ip address or domain socket
         connectProtocol: "tcp"         -- connection protocol, tcp or anything that SQL Data Source Name accepts

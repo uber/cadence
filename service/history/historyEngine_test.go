@@ -261,6 +261,7 @@ func (s *engineSuite) SetupTest() {
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
+		clientChecker:        cc.NewVersionChecker(),
 	}
 	s.mockShard.SetEngine(h)
 	h.decisionHandler = newDecisionHandler(h)
