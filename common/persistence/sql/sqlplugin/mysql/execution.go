@@ -307,16 +307,18 @@ func (mdb *db) InsertIntoReplicationTasks(rows []sqlplugin.ReplicationTasksRow) 
 // SelectFromReplicationTasks reads one or more rows from replication_tasks table
 func (mdb *db) SelectFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) ([]sqlplugin.ReplicationTasksRow, error) {
 	var rows []sqlplugin.ReplicationTasksRow
-	err := mdb.conn.Select(&rows, getReplicationTasksQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID, *filter.PageSize)
+	err := mdb.conn.Select(&rows, getReplicationTasksQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	return rows, err
 }
 
-// DeleteFromReplicationTasks deletes one or more rows from replication_tasks table
+// DeleteFromReplicationTasks deletes one row from replication_tasks table
 func (mdb *db) DeleteFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
-	if filter.InclusiveEndTaskID != nil {
-		return mdb.conn.Exec(rangeDeleteReplicationTaskQuery, filter.ShardID, *filter.InclusiveEndTaskID)
-	}
-	return mdb.conn.Exec(deleteReplicationTaskQuery, filter.ShardID, *filter.TaskID)
+	return mdb.conn.Exec(deleteReplicationTaskQuery, filter.ShardID, filter.TaskID)
+}
+
+// DeleteFromReplicationTasks deletes multi rows from replication_tasks table
+func (mdb *db) RangeDeleteFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
+	return mdb.conn.Exec(rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
 }
 
 // InsertIntoReplicationTasksDLQ inserts one or more rows into replication_tasks_dlq table
@@ -331,8 +333,8 @@ func (mdb *db) SelectFromReplicationTasksDLQ(filter *sqlplugin.ReplicationTasksD
 		&rows, getReplicationTasksDLQQuery,
 		filter.SourceClusterName,
 		filter.ShardID,
-		*filter.MinTaskID,
-		*filter.MaxTaskID,
-		*filter.PageSize)
+		filter.MinTaskID,
+		filter.MaxTaskID,
+		filter.PageSize)
 	return rows, err
 }

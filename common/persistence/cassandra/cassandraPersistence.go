@@ -734,7 +734,7 @@ workflow_state = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
-	templateEndRangeCompleteTransferTaskQuery = `DELETE FROM executions ` +
+	templateRangeCompleteReplicationTaskQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -2238,7 +2238,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
-	query := d.session.Query(templateEndRangeCompleteTransferTaskQuery,
+	query := d.session.Query(templateRangeCompleteReplicationTaskQuery,
 		d.shardID,
 		rowTypeReplicationTask,
 		rowTypeReplicationDomainID,

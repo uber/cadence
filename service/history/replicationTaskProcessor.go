@@ -51,7 +51,6 @@ const (
 	taskErrorRetryBackoffCoefficient = 1.2
 	dlqErrorRetryWait                = time.Second
 	emptyMessageID                   = -1
-	cleanupInterval                  = 5 * time.Minute
 )
 
 var (
@@ -224,18 +223,25 @@ Loop:
 }
 
 func (p *ReplicationTaskProcessorImpl) cleanupReplicationTaskLoop() {
-	ticker := time.NewTicker(cleanupInterval)
-	defer ticker.Stop()
 
+	timer := time.NewTimer(backoff.JitDuration(
+		p.config.ShardSyncMinInterval(),
+		p.config.ShardSyncTimerJitterCoefficient(),
+	))
 	for {
 		select {
 		case <-p.done:
+			timer.Stop()
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			err := p.cleanupAckedReplicationTasks()
 			if err != nil {
 				p.logger.Warn("Failed to clean up replication messages.", tag.Error(err))
 			}
+			timer.Reset(backoff.JitDuration(
+				p.config.ShardSyncMinInterval(),
+				p.config.ShardSyncTimerJitterCoefficient(),
+			))
 		}
 	}
 }
@@ -245,7 +251,11 @@ func (p *ReplicationTaskProcessorImpl) cleanupAckedReplicationTasks() error {
 	clusterMetadata := p.shard.GetClusterMetadata()
 	currentCluster := clusterMetadata.GetCurrentClusterName()
 	minAckLevel := int64(math.MaxInt64)
-	for clusterName := range clusterMetadata.GetAllClusterInfo() {
+	for clusterName, clusterInfo := range clusterMetadata.GetAllClusterInfo() {
+		if !clusterInfo.Enabled {
+			continue
+		}
+
 		if clusterName != currentCluster {
 			ackLevel := p.shard.GetClusterReplicationLevel(clusterName)
 			if ackLevel < minAckLevel {
@@ -254,6 +264,7 @@ func (p *ReplicationTaskProcessorImpl) cleanupAckedReplicationTasks() error {
 		}
 	}
 
+	p.logger.Info("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
@@ -304,22 +315,28 @@ func (p *ReplicationTaskProcessorImpl) processResponse(response *r.ReplicationMe
 
 func (p *ReplicationTaskProcessorImpl) syncShardStatusLoop() {
 
-	ticker := time.NewTicker(p.config.ShardSyncMinInterval())
-	defer ticker.Stop()
-
+	timer := time.NewTimer(backoff.JitDuration(
+		p.config.ShardSyncMinInterval(),
+		p.config.ShardSyncTimerJitterCoefficient(),
+	))
 	var syncShardTask *r.SyncShardStatus
 	for {
 		select {
 		case syncShardRequest := <-p.syncShardChan:
 			syncShardTask = syncShardRequest
-		case <-ticker.C:
+		case <-timer.C:
 			if err := p.handleSyncShardStatus(
 				syncShardTask,
 			); err != nil {
 				p.logger.Error("failed to sync shard status", tag.Error(err))
 				p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicationTasksFailed)
 			}
+			timer.Reset(backoff.JitDuration(
+				p.config.ShardSyncMinInterval(),
+				p.config.ShardSyncTimerJitterCoefficient(),
+			))
 		case <-p.done:
+			timer.Stop()
 			return
 		}
 	}
@@ -330,7 +347,8 @@ func (p *ReplicationTaskProcessorImpl) handleSyncShardStatus(
 ) error {
 
 	if status == nil ||
-		p.shard.GetTimeSource().Now().Sub(time.Unix(0, status.GetTimestamp())) > dropSyncShardTaskTimeThreshold {
+		p.shard.GetTimeSource().Now().Sub(
+			time.Unix(0, status.GetTimestamp())) > dropSyncShardTaskTimeThreshold {
 		return nil
 	}
 	p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicationTasksFetched)

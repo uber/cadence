@@ -46,7 +46,7 @@ type (
 		queueProcessor
 		getTasks(
 			ctx context.Context,
-			sourceCluster string,
+			remoteCluster string,
 			lastReadTaskID int64,
 		) (*replicator.ReplicationMessages, error)
 	}
