@@ -1291,7 +1291,6 @@ func (e *mutableStateBuilder) DeleteActivity(
 		)
 		// log data inconsistency instead of returning an error
 		e.logDataInconsistency()
-		return nil
 	}
 
 	_, ok = e.pendingActivityIDToEventID[activityInfo.ActivityID]
@@ -1302,7 +1301,6 @@ func (e *mutableStateBuilder) DeleteActivity(
 		)
 		// log data inconsistency instead of returning an error
 		e.logDataInconsistency()
-		return nil
 	}
 
 	delete(e.pendingActivityInfoIDs, scheduleEventID)
@@ -1372,7 +1370,6 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 		)
 		// log data inconsistency instead of returning an error
 		e.logDataInconsistency()
-		return nil
 	}
 
 	_, ok = e.pendingTimerEventIDToID[timerInfo.StartedID]
@@ -1383,7 +1380,6 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 		)
 		// log data inconsistency instead of returning an error
 		e.logDataInconsistency()
-		return nil
 	}
 
 	delete(e.pendingTimerInfoIDs, timerID)
