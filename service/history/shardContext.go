@@ -54,7 +54,7 @@ type (
 		GetThrottledLogger() log.Logger
 		GetMetricsClient() metrics.Client
 		GetTimeSource() clock.TimeSource
-		ShardOwnershipChanged() bool
+		PreviousShardOwnerWasDifferent() bool
 
 		GetEngine() Engine
 		SetEngine(Engine)
@@ -129,7 +129,8 @@ type (
 
 		// exist only in memory
 		standbyClusterCurrentTime map[string]time.Time
-		shardOwnershipChanged     bool
+		// true if previous owner was different from the acquirer's identity.
+		previousShardOwnerWasDifferent bool
 	}
 )
 
@@ -796,8 +797,8 @@ func (s *shardContextImpl) GetConfig() *Config {
 	return s.config
 }
 
-func (s *shardContextImpl) ShardOwnershipChanged() bool {
-	return s.shardOwnershipChanged
+func (s *shardContextImpl) PreviousShardOwnerWasDifferent() bool {
+	return s.previousShardOwnerWasDifferent
 }
 
 func (s *shardContextImpl) GetEventsCache() eventsCache {
@@ -1178,18 +1179,18 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 	}
 
 	context := &shardContextImpl{
-		Resource:                  shardItem.Resource,
-		shardItem:                 shardItem,
-		shardID:                   shardItem.shardID,
-		executionManager:          executionMgr,
-		shardInfo:                 updatedShardInfo,
-		closeCh:                   closeCh,
-		config:                    shardItem.config,
-		standbyClusterCurrentTime: standbyClusterCurrentTime,
-		timerMaxReadLevelMap:      timerMaxReadLevelMap, // use ack to init read level
-		logger:                    shardItem.logger,
-		throttledLogger:           shardItem.throttledLogger,
-		shardOwnershipChanged:     ownershipChanged,
+		Resource:                       shardItem.Resource,
+		shardItem:                      shardItem,
+		shardID:                        shardItem.shardID,
+		executionManager:               executionMgr,
+		shardInfo:                      updatedShardInfo,
+		closeCh:                        closeCh,
+		config:                         shardItem.config,
+		standbyClusterCurrentTime:      standbyClusterCurrentTime,
+		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
+		logger:                         shardItem.logger,
+		throttledLogger:                shardItem.throttledLogger,
+		previousShardOwnerWasDifferent: ownershipChanged,
 	}
 	context.eventsCache = newEventsCache(context)
 
