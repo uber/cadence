@@ -286,6 +286,21 @@ func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskL
 	return response, h.handleErr(err, scope)
 }
 
+// ListTaskListPartitions returns information about partitions for a taskList
+func (h *Handler) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (resp *gen.ListTaskListPartitionsResponse, retError error) {
+	defer log.CapturePanic()
+	scope := metrics.MatchingListTaskListPartitionsScope
+	sw := h.startRequestProfile("ListTaskListPartitions", scope)
+	defer sw.Stop()
+
+	if ok := h.rateLimiter.Allow(); !ok {
+		return nil, h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	response, err := h.engine.ListTaskListPartitions(ctx, request)
+	return response, h.handleErr(err, scope)
+}
+
 func (h *Handler) handleErr(err error, scope int) error {
 
 	if err == nil {

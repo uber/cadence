@@ -199,26 +199,26 @@ func (c *clientImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTa
 	return client.DescribeTaskList(ctx, request, opts...)
 }
 
-func (c *clientImpl) GetTaskListPartitionInfo(ctx context.Context, request *m.GetTaskListPartitionInfoRequest, opts ...yarpc.CallOption) (*workflow.GetTaskListPartitionInfoResponse, error) {
+func (c *clientImpl) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*workflow.ListTaskListPartitionsResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 
-	aTPartitionInfo, err := c.getTaskListPartitionInfo(request, persistence.TaskListTypeActivity)
+	aTPartitionInfo, err := c.listTaskListPartitions(request, persistence.TaskListTypeActivity)
 	if err != nil {
 		return nil, err
 	}
-	dTPartitionInfo, err := c.getTaskListPartitionInfo(request, persistence.TaskListTypeDecision)
+	dTPartitionInfo, err := c.listTaskListPartitions(request, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
 	}
-	resp := workflow.GetTaskListPartitionInfoResponse{
-		ActivityTaskPartition: aTPartitionInfo,
-		DecisionTaskPartition: dTPartitionInfo,
+	resp := workflow.ListTaskListPartitionsResponse{
+		ActivityTaskPartitions: aTPartitionInfo,
+		DecisionTaskPartitions: dTPartitionInfo,
 	}
 	return &resp, nil
 }
 
-func (c *clientImpl) getTaskListPartitionInfo(request *m.GetTaskListPartitionInfoRequest, taskListType int) (*workflow.PartitionInfo, error) {
-	partitionInfo := workflow.PartitionInfo{}
+func (c *clientImpl) listTaskListPartitions(request *m.ListTaskListPartitionsRequest, taskListType int) (*workflow.Partitions, error) {
+	partitionInfo := workflow.Partitions{}
 	partitions, err := c.loadBalancer.GetAllPartitions(
 		request.GetDomainUUID(),
 		*request.TaskList,
@@ -239,7 +239,7 @@ func (c *clientImpl) getTaskListPartitionInfo(request *m.GetTaskListPartitionInf
 }
 
 func (c *clientImpl) getHostInfo(partitionKey string) (workflow.HostInfo, error) {
-	hostAddr, err := c.clients.GetHostInfoForClient(partitionKey)
+	hostAddr, err := c.clients.GetHostNameForKey(partitionKey)
 	if err != nil {
 		return workflow.HostInfo{}, err
 	}

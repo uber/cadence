@@ -29,7 +29,7 @@ type (
 	ClientCache interface {
 		GetClientForKey(key string) (interface{}, error)
 		GetClientForClientKey(clientKey string) (interface{}, error)
-		GetHostInfoForClient(key string) (string, error)
+		GetHostNameForKey(key string) (string, error)
 	}
 
 	keyResolver    func(string) (string, error)
@@ -58,12 +58,12 @@ func NewClientCache(
 	}
 }
 
-func (c *clientCacheImpl) GetHostInfoForClient(key string) (string, error) {
-	clientKey, err := c.keyResolver(key)
+func (c *clientCacheImpl) GetHostNameForKey(key string) (string, error) {
+	hostName, err := c.keyResolver(key)
 	if err != nil {
 		return "", err
 	}
-	return clientKey, nil
+	return hostName, nil
 }
 
 func (c *clientCacheImpl) GetClientForKey(key string) (interface{}, error) {

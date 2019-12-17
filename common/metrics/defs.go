@@ -323,6 +323,8 @@ const (
 	MatchingClientCancelOutstandingPollScope
 	// MatchingClientDescribeTaskListScope tracks RPC calls to matching service
 	MatchingClientDescribeTaskListScope
+	// MatchingClientListTaskListPartitionsScope tracks RPC calls to matching service
+	MatchingClientListTaskListPartitionsScope
 	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
 	FrontendClientDeprecateDomainScope
 	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
@@ -895,6 +897,8 @@ const (
 	MatchingCancelOutstandingPollScope
 	// MatchingDescribeTaskListScope tracks DescribeTaskList API calls received by service
 	MatchingDescribeTaskListScope
+	// MatchingListTaskListPartitionsScope tracks ListTaskListPartitions API calls received by service
+	MatchingListTaskListPartitionsScope
 
 	NumMatchingScopes
 )

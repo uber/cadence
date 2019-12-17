@@ -101,7 +101,7 @@ struct DescribeTaskListRequest {
   20: optional shared.DescribeTaskListRequest descRequest
 }
 
-struct GetTaskListPartitionInfoRequest {
+struct ListTaskListPartitionsRequest {
   10: optional string domainUUID
   20: optional shared.TaskList taskList
 }
@@ -216,4 +216,15 @@ service MatchingService {
         3: shared.EntityNotExistsError entityNotExistError,
         4: shared.ServiceBusyError serviceBusyError,
       )
+
+
+  /**
+  * ListTaskListPartitions returns a map of patitionKey and hostAddress for a taskList
+  **/
+  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: ListTaskListPartitionsRequest request)
+    throws (
+        1: shared.BadRequestError badRequestError,
+        2: shared.InternalServiceError internalServiceError,
+        4: shared.ServiceBusyError serviceBusyError,
+    )
 }

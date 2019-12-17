@@ -1468,12 +1468,12 @@ struct DescribeTaskListResponse {
   20: optional TaskListStatus taskListStatus
 }
 
-struct GetTaskListPartitionInfoResponse {
-  10: optional PartitionInfo activityTaskPartition
-  20: optional PartitionInfo decisionTaskPartition
+struct ListTaskListPartitionsResponse {
+  10: optional Partitions activityTaskPartitions
+  20: optional Partitions decisionTaskPartitions
 }
 
-struct PartitionInfo {
+struct Partitions {
   20: optional map<PartitionKey, HostInfo> partitionHostInfo
 }
 
