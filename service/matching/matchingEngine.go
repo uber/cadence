@@ -557,11 +557,7 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 }
 
 func (e *matchingEngineImpl) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (*workflow.ListTaskListPartitionsResponse, error) {
-	taskListPartitions, err := e.matchingClient.ListTaskListPartitions(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	return taskListPartitions, nil
+	return e.matchingClient.ListTaskListPartitions(ctx, request)
 }
 
 // Loads a task from persistence and wraps it in a task context

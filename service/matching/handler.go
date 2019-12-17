@@ -288,7 +288,7 @@ func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskL
 
 // ListTaskListPartitions returns information about partitions for a taskList
 func (h *Handler) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (resp *gen.ListTaskListPartitionsResponse, retError error) {
-	defer log.CapturePanic()
+	defer log.CapturePanic(h.GetLogger(), &retError)
 	scope := metrics.MatchingListTaskListPartitionsScope
 	sw := h.startRequestProfile("ListTaskListPartitions", scope)
 	defer sw.Stop()
