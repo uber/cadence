@@ -54,6 +54,7 @@ type (
 		GetThrottledLogger() log.Logger
 		GetMetricsClient() metrics.Client
 		GetTimeSource() clock.TimeSource
+		PreviousShardOwnerWasDifferent() bool
 
 		GetEngine() Engine
 		SetEngine(Engine)
@@ -66,6 +67,7 @@ type (
 
 		SetCurrentTime(cluster string, currentTime time.Time)
 		GetCurrentTime(cluster string) time.Time
+		GetLastUpdatedTime() time.Time
 		GetTimerMaxReadLevel(cluster string) time.Time
 
 		GetTransferAckLevel() int64
@@ -127,6 +129,9 @@ type (
 
 		// exist only in memory
 		remoteClusterCurrentTime map[string]time.Time
+
+		// true if previous owner was different from the acquirer's identity.
+		previousShardOwnerWasDifferent bool
 	}
 )
 
@@ -793,6 +798,10 @@ func (s *shardContextImpl) GetConfig() *Config {
 	return s.config
 }
 
+func (s *shardContextImpl) PreviousShardOwnerWasDifferent() bool {
+	return s.previousShardOwnerWasDifferent
+}
+
 func (s *shardContextImpl) GetEventsCache() eventsCache {
 	return s.eventsCache
 }
@@ -1089,6 +1098,12 @@ func (s *shardContextImpl) GetCurrentTime(cluster string) time.Time {
 	return s.GetTimeSource().Now()
 }
 
+func (s *shardContextImpl) GetLastUpdatedTime() time.Time {
+	s.RLock()
+	defer s.RUnlock()
+	return s.lastUpdated
+}
+
 func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContext,
 	error) {
 
@@ -1135,10 +1150,11 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 	}
 
 	updatedShardInfo := copyShardInfo(shardInfo)
+	ownershipChanged := shardInfo.Owner != shardItem.GetHostInfo().Identity()
 	updatedShardInfo.Owner = shardItem.GetHostInfo().Identity()
 
 	// initialize the cluster current time to be the same as ack level
-	standbyClusterCurrentTime := make(map[string]time.Time)
+	remoteClusterCurrentTime := make(map[string]time.Time)
 	timerMaxReadLevelMap := make(map[string]time.Time)
 	for clusterName, info := range shardItem.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled {
@@ -1147,10 +1163,10 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 
 		if clusterName != shardItem.GetClusterMetadata().GetCurrentClusterName() {
 			if currentTime, ok := shardInfo.ClusterTimerAckLevel[clusterName]; ok {
-				standbyClusterCurrentTime[clusterName] = currentTime
+				remoteClusterCurrentTime[clusterName] = currentTime
 				timerMaxReadLevelMap[clusterName] = currentTime
 			} else {
-				standbyClusterCurrentTime[clusterName] = shardInfo.TimerAckLevel
+				remoteClusterCurrentTime[clusterName] = shardInfo.TimerAckLevel
 				timerMaxReadLevelMap[clusterName] = shardInfo.TimerAckLevel
 			}
 		} else { // active cluster
@@ -1164,17 +1180,18 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 	}
 
 	context := &shardContextImpl{
-		Resource:                 shardItem.Resource,
-		shardItem:                shardItem,
-		shardID:                  shardItem.shardID,
-		executionManager:         executionMgr,
-		shardInfo:                updatedShardInfo,
-		closeCh:                  closeCh,
-		config:                   shardItem.config,
-		remoteClusterCurrentTime: standbyClusterCurrentTime,
-		timerMaxReadLevelMap:     timerMaxReadLevelMap, // use ack to init read level
-		logger:                   shardItem.logger,
-		throttledLogger:          shardItem.throttledLogger,
+		Resource:                       shardItem.Resource,
+		shardItem:                      shardItem,
+		shardID:                        shardItem.shardID,
+		executionManager:               executionMgr,
+		shardInfo:                      updatedShardInfo,
+		closeCh:                        closeCh,
+		config:                         shardItem.config,
+		remoteClusterCurrentTime:       remoteClusterCurrentTime,
+		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
+		logger:                         shardItem.logger,
+		throttledLogger:                shardItem.throttledLogger,
+		previousShardOwnerWasDifferent: ownershipChanged,
 	}
 	context.eventsCache = newEventsCache(context)
 
@@ -1221,6 +1238,7 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 		ClusterTimerAckLevel:      clusterTimerAckLevel,
 		DomainNotificationVersion: shardInfo.DomainNotificationVersion,
 		ClusterReplicationLevel:   clusterReplicationLevel,
+		UpdatedAt:                 shardInfo.UpdatedAt,
 	}
 
 	return shardInfoCopy

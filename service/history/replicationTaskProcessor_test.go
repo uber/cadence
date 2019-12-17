@@ -103,7 +103,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),
 		logger:                    logger,
-		standbyClusterCurrentTime: make(map[string]time.Time),
+		remoteClusterCurrentTime:  make(map[string]time.Time),
 		executionManager:          s.executionManager,
 	}
 	s.mockEngine = NewMockEngine(s.controller)
