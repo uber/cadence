@@ -2916,6 +2916,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 
 // TestReplicationTransferTaskTasks test
 func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
+	s.ClearReplicationQueue()
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("replication-transfer-task-test"),
@@ -2986,10 +2987,14 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
 
 	err = s.CompleteTransferTask(task1.TaskID)
 	s.NoError(err)
+	tasks2, err := s.GetReplicationTasks(1, false)
+	s.NoError(err)
+	s.Equal(0, len(tasks2))
 }
 
 // TestReplicationTransferTaskRangeComplete test
 func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
+	s.ClearReplicationQueue()
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("replication-transfer-task--range-complete-test"),
@@ -3086,6 +3091,9 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 	s.Equal(2, len(task2.LastReplicationInfo))
 	err = s.CompleteReplicationTask(task2.TaskID)
 	s.NoError(err)
+	tasks3, err := s.GetReplicationTasks(1, false)
+	s.NoError(err)
+	s.Equal(0, len(tasks3))
 }
 
 // TestWorkflowReplicationState test

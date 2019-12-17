@@ -316,7 +316,7 @@ func (mdb *db) DeleteFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilt
 	return mdb.conn.Exec(deleteReplicationTaskQuery, filter.ShardID, filter.TaskID)
 }
 
-// DeleteFromReplicationTasks deletes multi rows from replication_tasks table
+// RangeDeleteFromReplicationTasks deletes multi rows from replication_tasks table
 func (mdb *db) RangeDeleteFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
 	return mdb.conn.Exec(rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
 }
