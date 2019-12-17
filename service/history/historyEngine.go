@@ -98,7 +98,7 @@ type (
 		ReplicateEventsV2(ctx ctx.Context, request *h.ReplicateEventsV2Request) error
 		SyncShardStatus(ctx ctx.Context, request *h.SyncShardStatusRequest) error
 		SyncActivity(ctx ctx.Context, request *h.SyncActivityRequest) error
-		GetReplicationMessages(ctx ctx.Context, remoteCluster string, lastReadMessageID int64) (*r.ReplicationMessages, error)
+		GetReplicationMessages(ctx ctx.Context, pollingCluster string, lastReadMessageID int64) (*r.ReplicationMessages, error)
 		QueryWorkflow(ctx ctx.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
 		ReapplyEvents(ctx ctx.Context, domainUUID string, workflowID string, runID string, events []*workflow.HistoryEvent) error
 
@@ -2748,7 +2748,7 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 
 func (e *historyEngineImpl) GetReplicationMessages(
 	ctx ctx.Context,
-	remoteCluster string,
+	pollingCluster string,
 	lastReadMessageID int64,
 ) (*r.ReplicationMessages, error) {
 
@@ -2758,7 +2758,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 
 	replicationMessages, err := e.replicatorProcessor.getTasks(
 		ctx,
-		remoteCluster,
+		pollingCluster,
 		lastReadMessageID,
 	)
 	if err != nil {

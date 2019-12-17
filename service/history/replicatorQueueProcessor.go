@@ -423,12 +423,12 @@ func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) ma
 
 func (p *replicatorQueueProcessorImpl) getTasks(
 	ctx ctx.Context,
-	remoteCluster string,
+	pollingCluster string,
 	lastReadTaskID int64,
 ) (*replicator.ReplicationMessages, error) {
 
 	if lastReadTaskID == emptyMessageID {
-		lastReadTaskID = p.shard.GetClusterReplicationLevel(remoteCluster)
+		lastReadTaskID = p.shard.GetClusterReplicationLevel(pollingCluster)
 	}
 
 	taskInfoList, hasMore, err := p.readTasksWithBatchSize(lastReadTaskID, p.fetchTasksBatchSize)
@@ -478,7 +478,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	)
 
 	if err := p.shard.UpdateClusterReplicationLevel(
-		remoteCluster,
+		pollingCluster,
 		lastReadTaskID,
 	); err != nil {
 		p.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
