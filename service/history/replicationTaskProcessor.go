@@ -236,7 +236,8 @@ func (p *ReplicationTaskProcessorImpl) cleanupReplicationTaskLoop() {
 		case <-timer.C:
 			err := p.cleanupAckedReplicationTasks()
 			if err != nil {
-				p.logger.Warn("Failed to clean up replication messages.", tag.Error(err))
+				p.logger.Error("Failed to clean up replication messages.", tag.Error(err))
+				p.metricsClient.Scope(metrics.ReplicationTaskCleanupScope).IncCounter(metrics.ReplicationTaskCleanupFailure)
 			}
 			timer.Reset(backoff.JitDuration(
 				p.config.ShardSyncMinInterval(),
@@ -265,6 +266,7 @@ func (p *ReplicationTaskProcessorImpl) cleanupAckedReplicationTasks() error {
 	}
 
 	p.logger.Info("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))
+	p.metricsClient.Scope(metrics.ReplicationTaskCleanupScope).IncCounter(metrics.ReplicationTaskCleanupCount)
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
@@ -329,7 +331,7 @@ func (p *ReplicationTaskProcessorImpl) syncShardStatusLoop() {
 				syncShardTask,
 			); err != nil {
 				p.logger.Error("failed to sync shard status", tag.Error(err))
-				p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicationTasksFailed)
+				p.metricsClient.Scope(metrics.HistorySyncShardStatusScope).IncCounter(metrics.SyncShardFromRemoteFailure)
 			}
 			timer.Reset(backoff.JitDuration(
 				p.config.ShardSyncMinInterval(),
@@ -351,7 +353,7 @@ func (p *ReplicationTaskProcessorImpl) handleSyncShardStatus(
 			time.Unix(0, status.GetTimestamp())) > dropSyncShardTaskTimeThreshold {
 		return nil
 	}
-	p.metricsClient.Scope(metrics.SyncShardTaskScope).IncCounter(metrics.ReplicationTasksFetched)
+	p.metricsClient.Scope(metrics.HistorySyncShardStatusScope).IncCounter(metrics.SyncShardFromRemoteCounter)
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 	return p.historyEngine.SyncShardStatus(ctx, &h.SyncShardStatusRequest{

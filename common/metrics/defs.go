@@ -868,7 +868,8 @@ const (
 	ArchiverClientScope
 	// ReplicationTaskFetcherScope is scope used by all metrics emitted by ReplicationTaskFetcher
 	ReplicationTaskFetcherScope
-
+	// ReplicationTaskCleanupScope is scope used by all metrics emitted by ReplicationTaskProcessor cleanup
+	ReplicationTaskCleanupScope
 	NumHistoryScopes
 )
 
@@ -1315,6 +1316,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		WorkflowCompletionStatsScope:                           {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
 		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
+		ReplicationTaskCleanupScope:                            {operation: "ReplicationTaskCleanup"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1516,6 +1518,8 @@ const (
 	ShardInfoTimerFailoverInProgressTimer
 	ShardInfoTransferFailoverLatencyTimer
 	ShardInfoTimerFailoverLatencyTimer
+	SyncShardFromRemoteCounter
+	SyncShardFromRemoteFailure
 	MembershipChangedCounter
 	NumShardsGauge
 	GetEngineForShardErrorCounter
@@ -1603,6 +1607,8 @@ const (
 	QueryRegistryInvalidStateCount
 	WorkerNotSupportsConsistentQueryCount
 	DecisionStartToCloseTimeoutOverrideCount
+	ReplicationTaskCleanupCount
+	ReplicationTaskCleanupFailure
 
 	NumHistoryMetrics
 )
@@ -1842,6 +1848,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardInfoTimerFailoverInProgressTimer:             {metricName: "shardinfo_timer_failover_in_progress", metricType: Timer},
 		ShardInfoTransferFailoverLatencyTimer:             {metricName: "shardinfo_transfer_failover_latency", metricType: Timer},
 		ShardInfoTimerFailoverLatencyTimer:                {metricName: "shardinfo_timer_failover_latency", metricType: Timer},
+		SyncShardFromRemoteCounter:                        {metricName: "syncshard_remote_count", metricType: Counter},
+		SyncShardFromRemoteFailure:                        {metricName: "syncshard_remote_failed", metricType: Counter},
 		MembershipChangedCounter:                          {metricName: "membership_changed_count", metricType: Counter},
 		NumShardsGauge:                                    {metricName: "numshards_gauge", metricType: Gauge},
 		GetEngineForShardErrorCounter:                     {metricName: "get_engine_for_shard_errors", metricType: Counter},
@@ -1929,6 +1937,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		QueryRegistryInvalidStateCount:                    {metricName: "query_registry_invalid_state", metricType: Counter},
 		WorkerNotSupportsConsistentQueryCount:             {metricName: "worker_not_supports_consistent_query", metricType: Counter},
 		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
+		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
+		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
