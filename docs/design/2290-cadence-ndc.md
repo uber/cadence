@@ -7,7 +7,7 @@ Reference: [#2290](https://github.com/uber/cadence/issues/2290)
 
 ## Abstract
 
-Cadence Cross DC is a feature which asynchronously replicates workflows from active data center to other passive data centers, for reconstruction. When necessary, customer can failover to any of the data centers which has the backup for high availability.
+Cadence Cross DC is a feature which asynchronously replicates workflows from active data center to other passive data centers, for reconstruction. When necessary, customer can failover to any of the data centers which have the backup for high availability.
 
 Cadence Cross DC is an AP (in terms of CAP).
 
@@ -26,13 +26,13 @@ This doc explains the high level concepts about Cadence Cross DC (mainly the N d
 
 Version is a newly introduced concept in Cadence Cross DC which describes the chronological order of events (per customer domain).
 
-Cadence Cross DC is AP, all domain change events & workflow history events are replicated asynchronously for high throughput. This means that data across data centers are not strongly consistent. To guarantee that domain data & workflow data will achieve eventual consistency (expecially when there is data conflict during a failover), version is introduced and attached to customers' domains. All workflow history events generated in a domain will also come with the version in that domain.
+Cadence Cross DC is AP, all domain change events & workflow history events are replicated asynchronously for high throughput. This means that data across data centers are not strongly consistent. To guarantee that domain data & workflow data will achieve eventual consistency (especially when there is data conflict during a failover), version is introduced and attached to customers' domains. All workflow history events generated in a domain will also come with the version in that domain.
 
 All participating data centers are pre-configured with a unique initial version, and a shared version increment:
 
   `initial version < shared version increment`
 
-When performing failover for one domain from one data center to another data center, the version attched to the domain will be changed by the following rule:
+When performing failover for one domain from one data center to another data center, the version attached to the domain will be changed by the following rule:
 
   for all versions which follow `version % (shared version increment) == (active data centers' initial version)`
   find the smallest version which has `version >= old version in domain`
@@ -51,9 +51,13 @@ When a data center is trying to mutate a workflow, version will be checked. A da
 
 Version history is a newly introduced concept which provides high level summary about version information of workflow history.
 
-Whenever there is a new workflow history event generated, the version from domain will be attached. Workflow mutable state will keep track of all hisory events & corresponding version.
+Whenever there is a new workflow history event generated, the version from domain will be attached. Workflow mutable state will keep track of all history events & corresponding version.
 
 Example, version history without data conflict:
+
+Data center A comes with initial version: 1
+Data center B comes with initial version: 2
+Shared version increment: 10
 
 T = 0:  adding event with event ID == 1 & version == 1
 ```
@@ -126,7 +130,12 @@ Example, version history with data conflict:
 
 Below will show version history of the same workflow in 2 different data centers.
 
-T = 0:  existing version history in data center A & B
+Data center A comes with initial version: 1
+Data center B comes with initial version: 2
+Data center C comes with initial version: 3
+Shared version increment: 10
+
+T = 0:  existing version history in data center B & C
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -139,7 +148,7 @@ T = 0:  existing version history in data center A & B
 | -------- | ------------- | --------------- | ------- |
 ```
 
-T = 1: adding event with event ID == 4 & version == 2 in data center A
+T = 1: adding event with event ID == 4 & version == 2 in data center B
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -153,7 +162,7 @@ T = 1: adding event with event ID == 4 & version == 2 in data center A
 | -------- | ------------- | --------------- | ------- |
 ```
 
-T = 1: domain failover triggered, adding event with event ID == 4 & version == 3 in data center B
+T = 1: domain failover to data center C, adding event with event ID == 4 & version == 3 in data center C
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -167,7 +176,7 @@ T = 1: domain failover triggered, adding event with event ID == 4 & version == 3
 | -------- | ------------- | --------------- | ------- |
 ```
 
-T = 2:  replication task from data center B arrives in data center A
+T = 2:  replication task from data center C arrives in data center B
 Note: below are a tree structures
 ```
                 | -------- | ------------- |
@@ -194,6 +203,7 @@ Note: below are a tree structures
           | Event ID        | Version |
           | --------------- | ------- |
           | 2               | 1       |
+          | 3               | 2       |
           | --------------- | ------- |
                             |
                   | ------- | ------------------- |
@@ -201,12 +211,11 @@ Note: below are a tree structures
 | --------------- | ------- |   | --------------- | ------- |
 | Event ID        | Version |   | Event ID        | Version |
 | --------------- | ------- |   | --------------- | ------- |
-| 4               | 2       |   | 3               | 2       |
-| --------------- | ------- |   | 4               | 3       |
-                                | --------------- | ------- |
+| 4               | 2       |   | 4               | 3       |
+| --------------- | ------- |   | --------------- | ------- |
 ```
 
-T = 2:  replication task from data center A arrives in data center B, same as above
+T = 2:  replication task from data center B arrives in data center C, same as above
 
 
 ### Workflow History Conflict Resolution
