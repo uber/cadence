@@ -43,7 +43,7 @@ When there is a data conflict, comparison will be made and workflow history even
 When a data center is trying to mutate a workflow, version will be checked. A data center can mutate a workflow if and only if
 
 * version in the domain belongs to this data center, i.e.
-  `(vesion in domain) % (shared version increment) == (this data centers' initial version)`
+  `(version in domain) % (shared version increment) == (this data centers' initial version)`
 * the version of this workflow's last event is equal or less then version in domain, i.e.
   `(last event's version) <= (version in domain)`
 
@@ -155,7 +155,7 @@ T = 4:  adding event with event ID == 5 & version == 2
 | -------- | ------------- | --------------- | ------- |
 ```
 
-Since Cadence is AP, during failover (change of active data center of a domain), there exist case that more than one data center can modify a workflow, causing divergence of workflow history. Below shows how version history will look like under such condition.
+Since Cadence is AP, during failover (change of active data center of a domain), there exist case that more than one data center can modify a workflow, causing divergence of workflow history. Below shows how version history will look like under such conditions.
 
 Example, version history with data conflict:
 
@@ -253,7 +253,7 @@ T = 2:  replication task from data center B arrives in data center C, same as ab
 
 When a workflow encounters divergence of workflow history, proper conflict resolution should be applied.
 
-In Cadence NDC, workflow history events are modeled as a tree, as shown in second example in [### Version History].
+In Cadence NDC, workflow history events are modeled as a tree, as shown in the second example in [### Version History].
 
 Workflows which encounters divergence will have more than one history branches. Among all history branches, the history branch with the highest version is considered as the `current branch` and workflow mutable state is a summary of the current branch. Whenever there is a switch between workflow history branches, a complete rebuild of workflow mutable state will occur.
 
@@ -264,7 +264,7 @@ There is an existing contract that for any domain & workflow ID combination, the
 
 Cadence NDC aims to keep the workflow state as up-to-date as possible among all participating data centers.
 
-Due to the nature of Cadence NDC, i.e. workflow history events are replicated asynchronously, different run (same domain & workflow ID) can arrive at target data center at different time, sometimes out of order, as shown below:
+Due to the nature of Cadence NDC, i.e. workflow history events are replicated asynchronously, different run (same domain & workflow ID) can arrive at target data center at different times, sometimes out of order, as shown below:
 
 ```
 | ------------- |          | ------------- |          | ------------- |
@@ -292,12 +292,12 @@ Due to the nature of Cadence NDC, i.e. workflow history events are replicated as
 
 Since run 2 appears in data center B first, run 1 cannot be replicated as runnable due to rule `at most one run open` (see above), thus, `zombie` workflow state is introduced. Zombie state indicates a workflow which cannot be actively mutated by a data center (assuming corresponding domain is active in this data center). A zombie workflow can only be changed by replication task.
 
-Run 1 will be replicated similar as run 2, except run 1's workflow state will be zombie before run 1 reaches completion.
+Run 1 will be replicated similar to run 2, except run 1's workflow state will be zombie before run 1 reaches completion.
 
 
 ### Workflow Task Processing
 
-In the context of Cadence NDC, workflow mutable state is an entity which tracks all pending tasks. Prior to the introduction of Cadence NDC, workflow history events are from a signle branch, and Cadence server will only append new events to workflow history.
+In the context of Cadence NDC, workflow mutable state is an entity which tracks all pending tasks. Prior to the introduction of Cadence NDC, workflow history events are from a single branch, and Cadence server will only append new events to workflow history.
 
 After the introduction of Cadence NDC, it is possible that a workflow can have multiple workflow history branches. Tasks generated according to one history branch maybe invalidated by history branch switching during conflict resolution.
 
