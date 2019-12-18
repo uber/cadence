@@ -1068,6 +1068,10 @@ func (d *cassandraPersistence) UpdateShard(request *p.UpdateShardRequest) error 
 	return nil
 }
 
+func (d *cassandraPersistence) ScanCurrentWorkflows(request *p.ScanCurrentWorkflowsRequest) (*p.ScanCurrentWorkflowsResponse, error){
+
+}
+
 func (d *cassandraPersistence) CreateWorkflowExecution(
 	request *p.InternalCreateWorkflowExecutionRequest,
 ) (*p.CreateWorkflowExecutionResponse, error) {

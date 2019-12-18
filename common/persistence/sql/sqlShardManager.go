@@ -157,6 +157,14 @@ func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) e
 	})
 }
 
+func (m *sqlShardManager) ScanCurrentWorkflows(request *persistence.ScanCurrentWorkflowsRequest) (*persistence.ScanCurrentWorkflowsResponse, error){
+	// TODO https://github.com/uber/cadence/issues/2922
+	// Implement it when we need
+	return nil, &workflow.InternalServiceError{
+		Message: "Not yet implemented",
+	}
+}
+
 // initiated by the owning shard
 func lockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
 	rangeID, err := tx.WriteLockShards(&sqlplugin.ShardsFilter{ShardID: int64(shardID)})

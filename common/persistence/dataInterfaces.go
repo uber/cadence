@@ -1424,6 +1424,23 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
+	// ScanCurrentWorkflowsRequest is a request of ScanCurrentWorkflows
+	ScanCurrentWorkflowsRequest struct {
+		// pagination token
+		NextPageToken []byte
+		// maximum number of branches returned per page
+		PageSize int
+		ShardID  int
+	}
+
+	// ScanCurrentWorkflowsResponse is a response to ScanCurrentWorkflows
+	ScanCurrentWorkflowsResponse struct {
+		// pagination token
+		NextPageToken []byte
+		// all current executions
+		CurrentExecutions []workflow.WorkflowExecution
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1436,6 +1453,7 @@ type (
 		CreateShard(request *CreateShardRequest) error
 		GetShard(request *GetShardRequest) (*GetShardResponse, error)
 		UpdateShard(request *UpdateShardRequest) error
+		ScanCurrentWorkflows(request *ScanCurrentWorkflowsRequest) (*ScanCurrentWorkflowsResponse, error)
 	}
 
 	// ExecutionManager is used to manage workflow executions
