@@ -9,7 +9,7 @@ Reference: [#2290](https://github.com/uber/cadence/issues/2290)
 
 ## Abstract
 
-Cadence Cross DC is a feature which asynchronously replicates workflows from active data center to other passive data centers, for reconstruction. When necessary, customer can failover to any of the data centers which have the backup for high availability.
+Cadence Cross DC is a feature which asynchronously replicates workflows from active data center to other passive data centers, for backup & state reconstruction. When necessary, customer can failover to any of the data centers which have the backup for high availability.
 
 Cadence Cross DC is an AP (in terms of CAP).
 
@@ -32,20 +32,20 @@ Cadence Cross DC is AP, all domain change events & workflow history events are r
 
 All participating data centers are pre-configured with a unique initial version, and a shared version increment:
 
-  `initial version < shared version increment`
+* `initial version < shared version increment`
 
 When performing failover for one domain from one data center to another data center, the version attached to the domain will be changed by the following rule:
 
-  for all versions which follow `version % (shared version increment) == (active data centers' initial version)`
-  find the smallest version which has `version >= old version in domain`
+* for all versions which follow `version % (shared version increment) == (active data centers' initial version)`
+* find the smallest version which has `version >= old version in domain`
 
 When there is a data conflict, comparison will be made and workflow history events with the highest version will win.
 
 When a data center is trying to mutate a workflow, version will be checked. A data center can mutate a workflow if and only if
 
-  1. version in the domain belongs to this data center, i.e.
+* version in the domain belongs to this data center, i.e.
   `(vesion in domain) % (shared version increment) == (this data centers' initial version)`
-  2. the version of this workflow's last event is equal or less then version in domain, i.e.
+* the version of this workflow's last event is equal or less then version in domain, i.e.
   `(last event's version) <= (version in domain)`
 
 Domain version change example:
@@ -57,21 +57,25 @@ Domain version change example:
 T = 0: domain α is registered, with active data center set to data center A
 ```
 domain α' version is 1
+all workflows events generated within this domain, will come with version 1
 ```
 
 T = 1: domain β is registered, with active data center set to data center B
 ```
 domain β' version is 2
+all workflows events generated within this domain, will come with version 2
 ```
 
 T = 2: domain α is updated to with active data center set to data center B
 ```
 domain α' version is 2
+all workflows events generated within this domain, will come with version 2
 ```
 
 T = 3: domain β is updated to with active data center set to data center A
 ```
 domain β' version is 11
+all workflows events generated within this domain, will come with version 11
 ```
 
 ### Version History
