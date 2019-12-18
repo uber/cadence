@@ -36,8 +36,7 @@ All participating data centers are pre-configured with a unique initial version,
 
 When performing failover for one domain from one data center to another data center, the version attached to the domain will be changed by the following rule:
 
-* for all versions which follow `version % (shared version increment) == (active data centers' initial version)`
-* find the smallest version which has `version >= old version in domain`
+* for all versions which follow `version % (shared version increment) == (active data centers' initial version)`, find the smallest version which has `version >= old version in domain`
 
 When there is a data conflict, comparison will be made and workflow history events with the highest version will win.
 
@@ -56,25 +55,25 @@ Domain version change example:
 
 T = 0: domain α is registered, with active data center set to data center A
 ```
-domain α' version is 1
+domain α's version is 1
 all workflows events generated within this domain, will come with version 1
 ```
 
 T = 1: domain β is registered, with active data center set to data center B
 ```
-domain β' version is 2
+domain β's version is 2
 all workflows events generated within this domain, will come with version 2
 ```
 
 T = 2: domain α is updated to with active data center set to data center B
 ```
-domain α' version is 2
+domain α's version is 2
 all workflows events generated within this domain, will come with version 2
 ```
 
 T = 3: domain β is updated to with active data center set to data center A
 ```
-domain β' version is 11
+domain β's version is 11
 all workflows events generated within this domain, will come with version 11
 ```
 
