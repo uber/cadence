@@ -90,6 +90,8 @@ Example, version history without data conflict:
 * Shared version increment: 10
 
 T = 0:  adding event with event ID == 1 & version == 1
+
+View in both data center A & B
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -101,6 +103,8 @@ T = 0:  adding event with event ID == 1 & version == 1
 ```
 
 T = 1:  adding event with event ID == 2 & version == 1
+
+View in both data center A & B
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -113,6 +117,8 @@ T = 1:  adding event with event ID == 2 & version == 1
 ```
 
 T = 2:  adding event with event ID == 3 & version == 1
+
+View in both data center A & B
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -127,6 +133,8 @@ T = 2:  adding event with event ID == 3 & version == 1
 
 T = 3:  domain failover triggered, domain version is now 2
         adding event with event ID == 4 & version == 2
+
+View in both data center A & B
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -141,6 +149,8 @@ T = 3:  domain failover triggered, domain version is now 2
 ```
 
 T = 4:  adding event with event ID == 5 & version == 2
+
+View in both data center A & B
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -166,7 +176,9 @@ Below will show version history of the same workflow in 2 different data centers
 * Data center C comes with initial version: 3
 * Shared version increment: 10
 
-T = 0:  existing version history in data center B & C
+T = 0:
+
+View in both data center B & C
 ```
 | -------- | ------------- | --------------- | ------- |
 | Events                   | Version History           |
@@ -208,6 +220,7 @@ T = 1: domain failover to data center C, adding event with event ID == 4 & versi
 ```
 
 T = 2:  replication task from data center C arrives in data center B
+
 Note: below are a tree structures
 ```
                 | -------- | ------------- |
