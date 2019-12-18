@@ -23,7 +23,7 @@ taskToken := activityInfo.TaskToken
 
 // Return from the activity a function indicating that Cadence should wait for an async completion
 // message.
-return "", cadence.ErrActivityResultPending
+return "", activity.ErrResultPending
 ```
 
 The following code demonstrates how to complete the activity successfully:
