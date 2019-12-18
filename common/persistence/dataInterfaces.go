@@ -1438,7 +1438,16 @@ type (
 		// pagination token
 		NextPageToken []byte
 		// all current executions
-		CurrentExecutions []workflow.WorkflowExecution
+		CurrentExecutions []CurrentWorkflowInfo
+	}
+
+	// CurrentWorkflowInfo is details about a current workflow
+	CurrentWorkflowInfo struct{
+		ShardID int
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		WorkflowState int
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
