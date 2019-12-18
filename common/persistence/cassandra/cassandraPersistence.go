@@ -1091,7 +1091,6 @@ func (d *cassandraPersistence) ScanCurrentWorkflows(
 	currentRunID := gocql.UUID{}
 	state := int(-1)
 
-
 	for iter.Scan(&domainID, &workflowID, &runID, &currentRunID, &state) {
 		if runID.String() == permanentRunID{
 			continue
