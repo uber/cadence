@@ -1,5 +1,7 @@
 # Design doc: Cadence NDC
 
+Author: Cadence Team
+
 Last updated: Dec 2019
 
 Reference: [#2290](https://github.com/uber/cadence/issues/2290)
@@ -46,6 +48,31 @@ When a data center is trying to mutate a workflow, version will be checked. A da
   2. the version of this workflow's last event is equal or less then version in domain, i.e.
   `(last event's version) <= (version in domain)`
 
+Domain version change example:
+
+* Data center A comes with initial version: 1
+* Data center B comes with initial version: 2
+* Shared version increment: 10
+
+T = 0: domain α is registered, with active data center set to data center A
+```
+domain α' version is 1
+```
+
+T = 1: domain β is registered, with active data center set to data center B
+```
+domain β' version is 2
+```
+
+T = 2: domain α is updated to with active data center set to data center B
+```
+domain α' version is 2
+```
+
+T = 3: domain β is updated to with active data center set to data center A
+```
+domain β' version is 11
+```
 
 ### Version History
 
@@ -55,9 +82,9 @@ Whenever there is a new workflow history event generated, the version from domai
 
 Example, version history without data conflict:
 
-Data center A comes with initial version: 1
-Data center B comes with initial version: 2
-Shared version increment: 10
+* Data center A comes with initial version: 1
+* Data center B comes with initial version: 2
+* Shared version increment: 10
 
 T = 0:  adding event with event ID == 1 & version == 1
 ```
@@ -131,10 +158,10 @@ Example, version history with data conflict:
 
 Below will show version history of the same workflow in 2 different data centers.
 
-Data center A comes with initial version: 1
-Data center B comes with initial version: 2
-Data center C comes with initial version: 3
-Shared version increment: 10
+* Data center A comes with initial version: 1
+* Data center B comes with initial version: 2
+* Data center C comes with initial version: 3
+* Shared version increment: 10
 
 T = 0:  existing version history in data center B & C
 ```
