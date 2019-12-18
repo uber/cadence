@@ -1428,7 +1428,6 @@ type (
 	ScanCurrentWorkflowsRequest struct {
 		// pagination token
 		NextPageToken []byte
-		// maximum number of branches returned per page
 		PageSize int
 		ShardID  int
 	}
@@ -1443,7 +1442,6 @@ type (
 
 	// CurrentWorkflowInfo is details about a current workflow
 	CurrentWorkflowInfo struct{
-		ShardID int
 		DomainID   string
 		WorkflowID string
 		RunID      string
