@@ -43,7 +43,7 @@ When a data center is trying to mutate a workflow, version will be checked. A da
 
   1. version in the domain belongs to this data center, i.e.
   `(vesion in domain) % (shared version increment) == (this data centers' initial version)`
-  2. the version of this workflow's last event is not less then version in domain, i.e.
+  2. the version of this workflow's last event is equal or less then version in domain, i.e.
   `(last event's version) <= (version in domain)`
 
 
@@ -121,6 +121,7 @@ T = 4:  adding event with event ID == 5 & version == 2
 | 2        | 1             | 5               | 2       |
 | 3        | 1             |                 |         |
 | 4        | 2             |                 |         |
+| 5        | 2             |                 |         |
 | -------- | ------------- | --------------- | ------- |
 ```
 
