@@ -44,7 +44,7 @@ When using the Cadence Go client, provide key-value pairs as SearchAttributes in
 
 SearchAttributes is `map[string]interface{}` where the keys need to be allowlisted so that Cadence knows the attribute key name and value type. The value provided in the map must be the same type as registered.
 
-### Allowlisting Search Attributes
+### Allow Listing Search Attributes
 
 Start by querying the list of search attributes using the CLI:
 
@@ -71,8 +71,6 @@ $ cadence --domain samples-domain cl get-search-attr
 | WorkflowType        | KEYWORD    |
 +---------------------+------------+
 ```
-
-Note that the `--domain` option doesn't affect the output of the results as search attributes are global to the Cadence cluster. There is an [open issue](https://github.com/uber/cadence/issues/2329) to fix this.
 
 Use the admin CLI to add a new search attribute:
 
@@ -236,7 +234,7 @@ If you use retry or the cron feature to query workflows that will start executio
 - Range query on Cadence timestamp (StartTime, CloseTime, ExecutionTime) cannot be larger than 9223372036854775807 (maxInt64 - 1001)
 - Query by time range will have 1ms resolution
 - Query column names are case sensitive
-- ListWorkflow may take longer when retrieving a large number of workflow (10M+)
+- ListWorkflow may take longer when retrieving a large number of workflows (10M+)
 - To retrieve a large number of workflows without caring about order, use the ScanWorkflow API
 - To efficiently count the number of workflows, use the CountWorkflow API
 
