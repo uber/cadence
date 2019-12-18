@@ -669,6 +669,8 @@ const (
 	// FrontendDescribeTaskListScope is the metric scope for frontend.DescribeTaskList
 	FrontendDescribeTaskListScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
+	FrontendListTaskListPartitionsScope
+	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
 	FrontendListDomainsScope

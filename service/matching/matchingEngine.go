@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/membership"
+
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -76,6 +78,7 @@ type (
 		lockableQueryTaskMap lockableQueryTaskMap
 		domainCache          cache.DomainCache
 		versionChecker       client.VersionChecker
+		monitor              membership.Monitor
 	}
 )
 
@@ -105,6 +108,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
+	monitor membership.Monitor,
 ) Engine {
 
 	return &matchingEngineImpl{
@@ -119,6 +123,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
 		versionChecker:       client.NewVersionChecker(),
+		monitor:              monitor,
 	}
 }
 

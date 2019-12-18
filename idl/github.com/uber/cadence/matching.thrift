@@ -104,6 +104,8 @@ struct DescribeTaskListRequest {
 struct ListTaskListPartitionsRequest {
   10: optional string domainUUID
   20: optional shared.TaskList taskList
+  30: optional list<string> activityTaskPartitions
+  40: optional list<string> decisionTaskPartitions
 }
 
 /**

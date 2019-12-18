@@ -1468,6 +1468,11 @@ struct DescribeTaskListResponse {
   20: optional TaskListStatus taskListStatus
 }
 
+struct ListTaskListPartitionsRequest {
+  10: optional string domain
+  20: optional TaskList taskList
+}
+
 struct ListTaskListPartitionsResponse {
   10: optional Partitions activityTaskPartitions
   20: optional Partitions decisionTaskPartitions
