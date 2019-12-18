@@ -405,6 +405,8 @@ const (
 	FrontendClientReapplyEventsScope
 	// FrontendClientGetClusterInfoScope tracks RPC calls to frontend
 	FrontendClientGetClusterInfoScope
+	// FrontendClientListTaskListPartitions tracks RPC calls to frontend service
+	FrontendClientListTaskListPartitions
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientCloseShardScope tracks RPC calls to admin service
@@ -489,6 +491,8 @@ const (
 	DCRedirectionTerminateWorkflowExecutionScope
 	// DCRedirectionUpdateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionUpdateDomainScope
+	// DCRedirectionListTaskListPartitionsScope tracks RPC calls for dc redirection
+	DCRedirectionListTaskListPartitionsScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope

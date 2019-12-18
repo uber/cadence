@@ -801,3 +801,26 @@ func (s *dcRedirectionHandlerSuite) TestTerminateWorkflowExecution() {
 	err = callFn(s.alternativeClusterName)
 	s.Nil(err)
 }
+
+func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
+	apiName := "DescribeTaskList"
+
+	s.mockDCRedirectionPolicy.On("WithDomainNameRedirect",
+		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
+
+	req := &shared.DescribeTaskListRequest{
+		Domain: common.StringPtr(s.domainName),
+	}
+	resp, err := s.handler.ListTaskListPartitions(context.Background(), req)
+	s.Nil(err)
+	// the resp is initialized to nil, since inner function is not called
+	s.Nil(resp)
+
+	callFn := s.mockDCRedirectionPolicy.Calls[0].Arguments[2].(func(string) error)
+	s.mockFrontendHandler.EXPECT().ListTaskListPartitions(gomock.Any(), req).Return(&shared.DescribeTaskListResponse{}, nil).Times(1)
+	err = callFn(s.currentClusterName)
+	s.Nil(err)
+	s.mockRemoteFrontendClient.EXPECT().ListTaskListPartitions(gomock.Any(), req).Return(&shared.DescribeTaskListResponse{}, nil).Times(1)
+	err = callFn(s.alternativeClusterName)
+	s.Nil(err)
+}

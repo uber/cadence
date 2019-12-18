@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -562,7 +563,78 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 }
 
 func (e *matchingEngineImpl) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (*workflow.ListTaskListPartitionsResponse, error) {
-	return e.matchingClient.ListTaskListPartitions(ctx, request)
+	aTPartitionInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeActivity)
+	if err != nil {
+		return nil, err
+	}
+	dTPartitionInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeDecision)
+	if err != nil {
+		return nil, err
+	}
+	resp := workflow.ListTaskListPartitionsResponse{
+		ActivityTaskPartitions: aTPartitionInfo,
+		DecisionTaskPartitions: dTPartitionInfo,
+	}
+	return &resp, nil
+}
+
+func (e *matchingEngineImpl) listTaskListPartitions(request *m.ListTaskListPartitionsRequest, taskListType int) (*workflow.Partitions, error) {
+	partitionInfo := workflow.Partitions{}
+	partitions, err := e.getAllPartitions(
+		request.GetDomain(),
+		*request.TaskList,
+		taskListType,
+	)
+	if err != nil {
+		return nil, err
+	}
+	partitionHostInfo := make(map[workflow.PartitionKey]workflow.HostInfo, len(partitions))
+
+	if err != nil {
+		return nil, err
+	}
+	for _, partition := range partitions {
+		if host, err := e.getHostInfo(partition); err != nil {
+			partitionInfo := workflow.PartitionKey{PartitionKey: common.StringPtr(partition)}
+			partitionHostInfo[partitionInfo] = host
+		}
+	}
+	return &partitionInfo, nil
+}
+
+func (e *matchingEngineImpl) getHostInfo(partitionKey string) (workflow.HostInfo, error) {
+	keyResolver, err := e.monitor.GetResolver(common.MatchingServiceName)
+	host, err := keyResolver.Lookup(partitionKey)
+	if err != nil {
+		return workflow.HostInfo{}, err
+	}
+	return workflow.HostInfo{HostAddress: common.StringPtr(host.GetAddress())}, nil
+}
+
+func (e *matchingEngineImpl) getAllPartitions(
+	domain string,
+	taskList workflow.TaskList,
+	taskListType int,
+) ([]string, error) {
+	var partitionKeys []string
+	taskListName := taskList.GetName()
+	if strings.HasPrefix(taskListName, taskListPartitionPrefix) {
+		// get the original task list name if the name contains partition prefix
+		taskListName = strings.Split(taskListName, "/")[1]
+	}
+	partitionKeys = append(partitionKeys, taskListName)
+
+	nWritePartitions := e.config.GetTasksBatchSize
+	n := nWritePartitions(domain, taskListName, taskListType)
+	if n <= 0 {
+		return partitionKeys, nil
+	}
+
+	for i := 1; i < n; i++ {
+		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, taskListName, i))
+	}
+
+	return partitionKeys, nil
 }
 
 // Loads a task from persistence and wraps it in a task context

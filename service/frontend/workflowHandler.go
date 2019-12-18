@@ -3016,18 +3016,14 @@ func (wh *WorkflowHandler) ListTaskListPartitions(ctx context.Context, request *
 	if request.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
-	domainID, err := wh.GetDomainCache().GetDomainID(request.GetDomain())
-	if err != nil {
-		return nil, wh.error(err, scope)
-	}
 
 	if err := wh.validateTaskList(request.TaskList, scope); err != nil {
 		return nil, err
 	}
 
-	resp, err = wh.GetMatchingClient().ListTaskListPartitions(ctx, &m.ListTaskListPartitionsRequest{
-		DomainUUID: common.StringPtr(domainID),
-		TaskList:   request.TaskList,
+	resp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &m.ListTaskListPartitionsRequest{
+		Domain:   request.Domain,
+		TaskList: request.TaskList,
 	})
 	return resp, err
 }

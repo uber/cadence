@@ -56,14 +56,6 @@ type (
 			taskListType int,
 			forwardedFrom string,
 		) string
-
-		// GetAllPartitions returns the list of all the partitions for a given taskList
-		// A taskList can have 1..n partition
-		GetAllPartitions(
-			domainID string,
-			taskList shared.TaskList,
-			taskListType int,
-		) ([]string, error)
 	}
 
 	defaultLoadBalancer struct {
@@ -141,34 +133,4 @@ func (lb *defaultLoadBalancer) pickPartition(
 	}
 
 	return fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, taskList.GetName(), p)
-}
-
-func (lb *defaultLoadBalancer) GetAllPartitions(
-	domainID string,
-	taskList shared.TaskList,
-	taskListType int,
-) ([]string, error) {
-	var partitionKeys []string
-	taskListName := taskList.GetName()
-	if strings.HasPrefix(taskListName, taskListPartitionPrefix) {
-		// get the original task list name if the name contains partition prefix
-		taskListName = strings.Split(taskListName, "/")[1]
-	}
-	partitionKeys = append(partitionKeys, taskListName)
-
-	domainName, err := lb.domainIDToName(domainID)
-	if err != nil {
-		return partitionKeys, err
-	}
-
-	n := lb.nWritePartitions(domainName, taskListName, taskListType)
-	if n <= 0 {
-		return partitionKeys, nil
-	}
-
-	for i := 1; i < n; i++ {
-		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, taskListName, i))
-	}
-
-	return partitionKeys, nil
 }

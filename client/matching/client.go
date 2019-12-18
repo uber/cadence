@@ -201,49 +201,13 @@ func (c *clientImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTa
 
 func (c *clientImpl) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*workflow.ListTaskListPartitionsResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-
-	aTPartitionInfo, err := c.listTaskListPartitions(request, persistence.TaskListTypeActivity)
+	client, err := c.getClientForTasklist(request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
-	dTPartitionInfo, err := c.listTaskListPartitions(request, persistence.TaskListTypeDecision)
-	if err != nil {
-		return nil, err
-	}
-	resp := workflow.ListTaskListPartitionsResponse{
-		ActivityTaskPartitions: aTPartitionInfo,
-		DecisionTaskPartitions: dTPartitionInfo,
-	}
-	return &resp, nil
-}
-
-func (c *clientImpl) listTaskListPartitions(request *m.ListTaskListPartitionsRequest, taskListType int) (*workflow.Partitions, error) {
-	partitionInfo := workflow.Partitions{}
-	partitions, err := c.loadBalancer.GetAllPartitions(
-		request.GetDomainUUID(),
-		*request.TaskList,
-		taskListType,
-	)
-	if err != nil {
-		return nil, err
-	}
-	partitionHostInfo := make(map[workflow.PartitionKey]workflow.HostInfo, len(partitions))
-	for _, partition := range partitions {
-		if host, err := c.getHostInfo(partition); err != nil {
-			partitionInfo := workflow.PartitionKey{PartitionKey: common.StringPtr(partition)}
-			partitionHostInfo[partitionInfo] = host
-		}
-	}
-
-	return &partitionInfo, nil
-}
-
-func (c *clientImpl) getHostInfo(partitionKey string) (workflow.HostInfo, error) {
-	hostAddr, err := c.clients.GetHostNameForKey(partitionKey)
-	if err != nil {
-		return workflow.HostInfo{}, err
-	}
-	return workflow.HostInfo{HostAddress: common.StringPtr(hostAddr)}, nil
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.ListTaskListPartitions(ctx, request, opts...)
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
