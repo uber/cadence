@@ -709,7 +709,7 @@ func (c *clientImpl) ReapplyEvents(
 
 func (c *clientImpl) GetClusterInfo(
 	ctx context.Context,
-	opts ...yarpc.CallOption
+	opts ...yarpc.CallOption,
 ) (*shared.ClusterInfo, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
