@@ -1132,7 +1132,7 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	return err
 }
 
-// DescribeTaskList API call
+// ListTaskListPartitions API call
 func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 	ctx context.Context,
 	request *shared.ListTaskListPartitionsRequest,

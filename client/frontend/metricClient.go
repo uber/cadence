@@ -765,14 +765,14 @@ func (c *metricClient) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (*shared.ListTaskListPartitionsResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitions, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientListTaskListPartitions, metrics.CadenceClientLatency)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientLatency)
 	resp, err := c.client.ListTaskListPartitions(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitions, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
