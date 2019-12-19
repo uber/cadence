@@ -1424,20 +1424,30 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
-	// ScanMutableStateRequest is a request of ScanCurrentWorkflows
-	ScanMutableStateRequest struct {
+	// ScanWorkflowsRequest is a request of ScanCurrentWorkflows
+	ScanWorkflowsRequest struct {
 		// pagination token
 		NextPageToken []byte
 		PageSize int
 		ShardID  int
 	}
 
-	// ScanMutableStateResponse is a response to ScanCurrentWorkflows
-	ScanMutableStateResponse struct {
+	// ScanWorkflowsResponse is a response to ScanWorkflows
+	ScanWorkflowsResponse struct {
 		// pagination token
 		NextPageToken []byte
-		// all current executions
-		WorkflowInfos []InternalWorkflowExecutionInfo
+		WorkflowExecutions []ScanWorkflowDetailInfo
+	}
+
+	// ScanWorkflowDetailInfo is detail of ScanWorkflowsResponse
+	ScanWorkflowDetailInfo struct{
+		DomainID string
+		WorkflowID string
+		RunID  string
+		State  int
+		IsCurrentWorkflow bool
+		//NOTE: below is NOT applicable for CurrentWorkflows
+		StartTime time.Time
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
@@ -1452,7 +1462,7 @@ type (
 		CreateShard(request *CreateShardRequest) error
 		GetShard(request *GetShardRequest) (*GetShardResponse, error)
 		UpdateShard(request *UpdateShardRequest) error
-		ScanMutableState(request *ScanMutableStateRequest) (*ScanMutableStateResponse, error)
+		ScanWorkflows(request *ScanWorkflowsRequest) (*ScanWorkflowsResponse, error)
 	}
 
 	// ExecutionManager is used to manage workflow executions
