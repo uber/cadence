@@ -1473,21 +1473,14 @@ struct ListTaskListPartitionsRequest {
   20: optional TaskList taskList
 }
 
+struct TaskListPartitionMetadata {
+  10: optional string key
+  20: optional string ownerHostName
+}
+
 struct ListTaskListPartitionsResponse {
-  10: optional Partitions activityTaskPartitions
-  20: optional Partitions decisionTaskPartitions
-}
-
-struct Partitions {
-  20: optional map<PartitionKey, HostInfo> partitionHostInfo
-}
-
-struct PartitionKey {
-  10: optional string partitionKey
-}
-
-struct HostInfo {
-  10: optional string hostAddress
+  10: optional list<TaskListPartitionMetadata> activityTaskListPartitions
+  20: optional list<TaskListPartitionMetadata> decisionTaskListPartitions
 }
 
 struct TaskListStatus {

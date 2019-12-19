@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 	"sync"
 	"time"
 
@@ -563,23 +562,22 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 }
 
 func (e *matchingEngineImpl) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (*workflow.ListTaskListPartitionsResponse, error) {
-	aTPartitionInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeActivity)
+	activityTaskListInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeActivity)
 	if err != nil {
 		return nil, err
 	}
-	dTPartitionInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeDecision)
+	decisionTaskListInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
 	}
 	resp := workflow.ListTaskListPartitionsResponse{
-		ActivityTaskPartitions: aTPartitionInfo,
-		DecisionTaskPartitions: dTPartitionInfo,
+		ActivityTaskListPartitions: activityTaskListInfo,
+		DecisionTaskListPartitions: decisionTaskListInfo,
 	}
 	return &resp, nil
 }
 
-func (e *matchingEngineImpl) listTaskListPartitions(request *m.ListTaskListPartitionsRequest, taskListType int) (*workflow.Partitions, error) {
-	partitionInfo := workflow.Partitions{}
+func (e *matchingEngineImpl) listTaskListPartitions(request *m.ListTaskListPartitionsRequest, taskListType int) ([]*workflow.TaskListPartitionMetadata, error) {
 	partitions, err := e.getAllPartitions(
 		request.GetDomain(),
 		*request.TaskList,
@@ -588,27 +586,30 @@ func (e *matchingEngineImpl) listTaskListPartitions(request *m.ListTaskListParti
 	if err != nil {
 		return nil, err
 	}
-	partitionHostInfo := make(map[workflow.PartitionKey]workflow.HostInfo, len(partitions))
+	partitionHostInfo := make([]*workflow.TaskListPartitionMetadata, len(partitions))
 
 	if err != nil {
 		return nil, err
 	}
 	for _, partition := range partitions {
 		if host, err := e.getHostInfo(partition); err != nil {
-			partitionInfo := workflow.PartitionKey{PartitionKey: common.StringPtr(partition)}
-			partitionHostInfo[partitionInfo] = host
+			partitionHostInfo = append(partitionHostInfo,
+				&workflow.TaskListPartitionMetadata{
+					Key:           common.StringPtr(partition),
+					OwnerHostName: common.StringPtr(host),
+				})
 		}
 	}
-	return &partitionInfo, nil
+	return partitionHostInfo, nil
 }
 
-func (e *matchingEngineImpl) getHostInfo(partitionKey string) (workflow.HostInfo, error) {
+func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
 	keyResolver, err := e.monitor.GetResolver(common.MatchingServiceName)
 	host, err := keyResolver.Lookup(partitionKey)
 	if err != nil {
-		return workflow.HostInfo{}, err
+		return "", err
 	}
-	return workflow.HostInfo{HostAddress: common.StringPtr(host.GetAddress())}, nil
+	return host.GetAddress(), nil
 }
 
 func (e *matchingEngineImpl) getAllPartitions(
@@ -617,21 +618,23 @@ func (e *matchingEngineImpl) getAllPartitions(
 	taskListType int,
 ) ([]string, error) {
 	var partitionKeys []string
-	taskListName := taskList.GetName()
-	if strings.HasPrefix(taskListName, taskListPartitionPrefix) {
-		// get the original task list name if the name contains partition prefix
-		taskListName = strings.Split(taskListName, "/")[1]
+	domainID, err := e.domainCache.GetDomainID(domain)
+	if err != nil {
+		return partitionKeys, err
 	}
-	partitionKeys = append(partitionKeys, taskListName)
+	taskListID, err := newTaskListID(domainID, taskList.GetName(), persistence.TaskListTypeDecision)
+	rootPartition := taskListID.GetRoot()
+
+	partitionKeys = append(partitionKeys, rootPartition)
 
 	nWritePartitions := e.config.GetTasksBatchSize
-	n := nWritePartitions(domain, taskListName, taskListType)
+	n := nWritePartitions(domain, rootPartition, taskListType)
 	if n <= 0 {
 		return partitionKeys, nil
 	}
 
 	for i := 1; i < n; i++ {
-		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, taskListName, i))
+		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, rootPartition, i))
 	}
 
 	return partitionKeys, nil

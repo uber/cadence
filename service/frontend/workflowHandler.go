@@ -3001,10 +3001,6 @@ func (wh *WorkflowHandler) ListTaskListPartitions(ctx context.Context, request *
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListTaskListPartitionsScope, request)
 	defer sw.Stop()
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, wh.error(err, scope)
-	}
-
 	if request == nil {
 		return nil, wh.error(errRequestNotSet, scope)
 	}

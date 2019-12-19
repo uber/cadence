@@ -219,7 +219,7 @@ service MatchingService {
 
 
   /**
-  * ListTaskListPartitions returns a map of patitionKey and hostAddress for a taskList
+  * ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList
   **/
   shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: ListTaskListPartitionsRequest request)
     throws (
