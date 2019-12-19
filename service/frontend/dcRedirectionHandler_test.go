@@ -803,7 +803,7 @@ func (s *dcRedirectionHandlerSuite) TestTerminateWorkflowExecution() {
 }
 
 func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
-	apiName := "DescribeTaskList"
+	apiName := "ListTaskListPartitions"
 
 	s.mockDCRedirectionPolicy.On("WithDomainNameRedirect",
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
@@ -817,10 +817,10 @@ func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
 	s.Nil(resp)
 
 	callFn := s.mockDCRedirectionPolicy.Calls[0].Arguments[2].(func(string) error)
-	s.mockFrontendHandler.EXPECT().ListTaskListPartitions(gomock.Any(), req).Return(&shared.DescribeTaskListResponse{}, nil).Times(1)
+	s.mockFrontendHandler.EXPECT().ListTaskListPartitions(gomock.Any(), req).Return(&shared.ListTaskListPartitionsResponse{}, nil).Times(1)
 	err = callFn(s.currentClusterName)
 	s.Nil(err)
-	s.mockRemoteFrontendClient.EXPECT().ListTaskListPartitions(gomock.Any(), req).Return(&shared.DescribeTaskListResponse{}, nil).Times(1)
+	s.mockRemoteFrontendClient.EXPECT().ListTaskListPartitions(gomock.Any(), req).Return(&shared.ListTaskListPartitionsResponse{}, nil).Times(1)
 	err = callFn(s.alternativeClusterName)
 	s.Nil(err)
 }
