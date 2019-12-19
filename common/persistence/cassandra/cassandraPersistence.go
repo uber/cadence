@@ -1914,7 +1914,7 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
-		if err == gocql.ErrNotFound{
+		if _, ok := err.(*workflow.EntityNotExistsError); ok{
 			// allow bypassing no current record
 			return nil
 		}
