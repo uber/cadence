@@ -126,6 +126,11 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		}
 	}
 
+	// Before registering the domain, double check whether all parameters are parsed
+	if c.NArg() > 0 {
+		ErrorAndExit(fmt.Sprintf("Operation RegisterDomain failed, parameters not parsed: %v", c.Args()), nil)
+	}
+
 	request := &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		Description:                            common.StringPtr(description),
@@ -148,7 +153,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	err = d.registerDomain(ctx, request)
 	if err != nil {
 		if _, ok := err.(*s.DomainAlreadyExistsError); !ok {
-			ErrorAndExit("Register Domain operation failed.", err)
+			ErrorAndExit("Operation RegisterDomain failed.", err)
 		} else {
 			ErrorAndExit(fmt.Sprintf("Domain %s already registered.", domainName), err)
 		}
@@ -277,6 +282,12 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 
 	securityToken := c.String(FlagSecurityToken)
 	updateRequest.SecurityToken = common.StringPtr(securityToken)
+
+	// Before registering the domain, double check whether all parameters are parsed
+	if c.NArg() > 0 {
+		ErrorAndExit(fmt.Sprintf("Operation UpdateDomain failed, parameters not parsed: %v", c.Args()), nil)
+	}
+
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
