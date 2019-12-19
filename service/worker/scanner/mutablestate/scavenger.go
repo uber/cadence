@@ -143,10 +143,10 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 	}
 
 	for {
-		var resp *p.ScanCurrentWorkflowsResponse
+		var resp *p.ScanMutableStateResponse
 		var err error
 		op := func() error {
-			resp, err = s.shardDB.ScanCurrentWorkflows(&p.ScanCurrentWorkflowsRequest{
+			resp, err = s.shardDB.ScanMutableState(&p.ScanMutableStateRequest{
 				PageSize:      pageSize,
 				NextPageToken: s.hbd.NextPageToken,
 				ShardID: s.hbd.CurrentShardID,
@@ -163,8 +163,8 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 		taskCount := 0
 		skipCount := 0
 		// send all tasks
-		for _, wf := range resp.CurrentExecutions {
-			if wf.WorkflowState != p.WorkflowStateRunning && wf.WorkflowState != p.WorkflowStateCompleted {
+		for _, wf := range resp.WorkflowInfos {
+			if wf.State != p.WorkflowStateRunning && wf.State != p.WorkflowStateCorrupted {
 				skipCount++
 			}
 			taskCh <- taskDetail{
