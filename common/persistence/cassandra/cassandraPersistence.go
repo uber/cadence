@@ -343,8 +343,7 @@ const (
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
-	templateScanCurrentWorkflowQuery = `SELECT domain_id, workflow_id,run_id,current_run_id, workflow_state` +
-        `FROM executions WHERE shard_id = ? AND type = ? `
+	templateScanMutableStateQuery = `SELECT execution, run_id FROM executions WHERE shard_id = ? AND type = ? `
 
 	templateUpdateShardQuery = `UPDATE executions ` +
 		`SET shard = ` + templateShardType + `, range_id = ? ` +
@@ -1071,10 +1070,11 @@ func (d *cassandraPersistence) UpdateShard(request *p.UpdateShardRequest) error 
 	return nil
 }
 
-func (d *cassandraPersistence) ScanCurrentWorkflows(
-	request *p.ScanCurrentWorkflowsRequest,
-) (*p.ScanCurrentWorkflowsResponse, error){
-	query := d.session.Query(templateScanCurrentWorkflowQuery)
+func (d *cassandraPersistence) ScanMutableState(
+	request *p.ScanMutableStateRequest,
+) (*p.ScanMutableStateResponse, error){
+
+	query := d.session.Query(templateScanMutableStateQuery)
 
 	iter := query.PageSize(int(request.PageSize)).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -1084,24 +1084,16 @@ func (d *cassandraPersistence) ScanCurrentWorkflows(
 	}
 	pagingToken := iter.PageState()
 
-	infos := make([]p.CurrentWorkflowInfo, 0, int(request.PageSize))
-	domainID := gocql.UUID{}
-	workflowID := ""
-	runID := gocql.UUID{}
-	currentRunID := gocql.UUID{}
-	state := int(-1)
-
-	for iter.Scan(&domainID, &workflowID, &runID, &currentRunID, &state) {
-		if runID.String() == permanentRunID{
+	infos := make([]p.InternalWorkflowExecutionInfo, 0, int(request.PageSize))
+	result := make(map[string]interface{})
+	for iter.MapScan(result) {
+		runID := result["run_id"].(gocql.UUID).String()
+		if runID ==  permanentRunID{
+			// skip current record
 			continue
 		}
-		info := p.CurrentWorkflowInfo{
-			DomainID:domainID.String(),
-			WorkflowID:workflowID,
-			RunID:currentRunID.String(),
-			WorkflowState:state,
-		}
-		infos = append(infos, info)
+		info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+		infos = append(infos, *info)
 	}
 
 	if err := iter.Close(); err != nil {
@@ -1110,8 +1102,8 @@ func (d *cassandraPersistence) ScanCurrentWorkflows(
 		}
 	}
 
-	response := &p.ScanCurrentWorkflowsResponse{
-		CurrentExecutions:      infos,
+	response := &p.ScanMutableStateResponse{
+		WorkflowInfos: infos,
 		NextPageToken: pagingToken,
 	}
 
