@@ -22,6 +22,7 @@ package mutablestate
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/uber/cadence/common/backoff"
 	"time"
 
@@ -44,9 +45,14 @@ type (
 		NextPageToken  []byte
 		CurrentShardID int
 		CurrentPage    int
+
+		// skip if current workflow is not open, or corrupted state with start time less than threshold to delete
 		SkipCount      int
+		// some unknown errors
 		ErrorCount     int
+		// number of workflows that converted into corrupted state
 		CorruptedCount int
+		// number of deleted workflows
 		DeletedCount   int
 	}
 
@@ -72,6 +78,13 @@ type (
 
 		// passing along the current heartbeat details to make heartbeat within a task so that it won't timeout
 		hbd ScavengerHeartbeatDetails
+	}
+
+	taskResult struct{
+		skip bool
+		err  error
+		corrupted bool
+		deleted bool
 	}
 )
 
@@ -122,7 +135,7 @@ var persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
 // Run runs the scavenger
 func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) {
 	taskCh := make(chan taskDetail, pageSize)
-	respCh := make(chan error, pageSize)
+	respCh := make(chan taskResult, pageSize)
 	concurrency := s.rps/rpsPerConcurrency + 1
 
 	for i := 0; i < concurrency; i++ {
@@ -146,13 +159,13 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 		if err != nil {
 			return s.hbd, err
 		}
-		batchCount := len(resp.CurrentExecutions)
 
-		skips := 0
+		taskCount := 0
+		skipCount := 0
 		// send all tasks
 		for _, wf := range resp.CurrentExecutions {
-			if wf.WorkflowState != p.WorkflowStateRunning{
-				skips ++
+			if wf.WorkflowState != p.WorkflowStateRunning && wf.WorkflowState != p.WorkflowStateCompleted {
+				skipCount++
 			}
 			taskCh <- taskDetail{
 				shardID: s.hbd.CurrentShardID,
@@ -162,24 +175,36 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 				hbd: s.hbd,
 			}
+			taskCount ++
 		}
 
-		succCount := 0
-		errCount := 0
-		if batchCount > 0 {
-			// wait for counters indicate this batch is done
+		corruptedCount := 0
+		deletedCount := 0
+		errorCount := 0
+		if taskCount > 0 {
+			// wait for task counters indicate this batch is done
 		Loop:
 			for {
 				select {
-				case err := <-respCh:
-					if err == nil {
-						s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSuccessCount)
-						succCount++
-					} else {
-						s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
-						errCount++
+				case resp := <-respCh:
+					taskCount --
+					if resp.err != nil {
+						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerErrorCount)
+						errorCount++
 					}
-					if succCount+errCount == batchCount {
+					if resp.corrupted {
+						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerCorruptedCount)
+						corruptedCount++
+					}
+					if resp.deleted {
+						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerDeleteCount)
+						deletedCount++
+					}
+					if resp.skip {
+						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerSkipCount)
+						skipCount++
+					}
+					if taskCount == 0 {
 						break Loop
 					}
 				case <-ctx.Done():
@@ -190,15 +215,19 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 		s.hbd.CurrentPage++
 		s.hbd.NextPageToken = resp.NextPageToken
-		s.hbd.CorruptedCount += succCount
-		s.hbd.ErrorCount += errCount + errorsOnSplitting
-		s.hbd.SkipCount += skips
-		if !s.isInTest {
-			activity.RecordHeartbeat(ctx, s.hbd)
-		}
+		s.hbd.CorruptedCount += corruptedCount
+		s.hbd.ErrorCount += errorCount
+		s.hbd.DeletedCount += deletedCount
+		s.hbd.SkipCount += skipCount
 
 		if len(s.hbd.NextPageToken) == 0 {
-			break
+			if s.hbd.CurrentShardID == s.numShards - 1{
+				break
+			}
+			s.hbd.CurrentShardID ++
+		}
+		if !s.isInTest {
+			activity.RecordHeartbeat(ctx, s.hbd)
 		}
 	}
 	return s.hbd, nil
@@ -207,7 +236,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 func (s *Scavenger) startTaskProcessor(
 	ctx context.Context,
 	taskCh chan taskDetail,
-	respCh chan error,
+	respCh chan taskResult,
 ) {
 	for {
 		select {
@@ -222,17 +251,18 @@ func (s *Scavenger) startTaskProcessor(
 				activity.RecordHeartbeat(ctx, s.hbd)
 			}
 
-			err := s.limiter.Wait(ctx)
-			if err != nil {
-				respCh <- err
+			res := taskResult{}
+			res.err = s.limiter.Wait(ctx)
+			if res.err != nil {
+				respCh <- res
 				s.logger.Error("encounter error when wait for rate limiter",
-					getTaskLoggingTags(err, task)...)
+					getTaskLoggingTags(res.err, task)...)
 				continue
 			}
 
 			// this checks if the mutableState still exists
 			// if not then the history branch is garbage, we need to delete the history branch
-			_, err = s.client.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
+			resp, err := s.client.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
 				DomainUUID: common.StringPtr(task.domainID),
 				Execution: &shared.WorkflowExecution{
 					WorkflowId: common.StringPtr(task.workflowID),
@@ -241,43 +271,20 @@ func (s *Scavenger) startTaskProcessor(
 			})
 
 			if err != nil {
-				if _, ok := err.(*shared.EntityNotExistsError); ok {
-					//deleting history branch
-					var branchToken []byte
-					branchToken, err = p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)
-					if err != nil {
-						respCh <- err
-						s.logger.Error("encounter error when creating branch token",
-							getTaskLoggingTags(err, task)...)
-						continue
-					}
-
-					err = s.db.DeleteHistoryBranch(&p.DeleteHistoryBranchRequest{
-						BranchToken: branchToken,
-						// This is a required argument but it is not needed for Cassandra.
-						// Since this scanner is only for Cassandra,
-						// we can fill any number here to let to code go through
-						ShardID: common.IntPtr(1),
-					})
-					if err != nil {
-						respCh <- err
-						s.logger.Error("encounter error when deleting garbage history branch",
-							getTaskLoggingTags(err, task)...)
-					} else {
-						// deleted garbage
-						s.logger.Info("deleted history garbage",
-							getTaskLoggingTags(nil, task)...)
-
-						respCh <- nil
-					}
-				} else {
-					s.logger.Error("encounter error when describing the mutable state",
-						getTaskLoggingTags(err, task)...)
-					respCh <- err
-				}
+				res.err = err
+				s.logger.Error("encounter error when describeMutableState",
+					getTaskLoggingTags(err, task)...)
+				respCh <- res
 			} else {
-				// no garbage
-				respCh <- nil
+				msStr := resp.GetMutableStateInDatabase()
+				ms := p.WorkflowMutableState{}
+				res.err = json.Unmarshal([]byte(msStr), &ms)
+				if err != nil {
+					respCh <- res
+					continue
+				}
+
+
 			}
 		}
 	}
@@ -290,16 +297,12 @@ func getTaskLoggingTags(err error, task taskDetail) []tag.Tag {
 			tag.WorkflowDomainID(task.domainID),
 			tag.WorkflowID(task.workflowID),
 			tag.WorkflowRunID(task.runID),
-			tag.WorkflowTreeID(task.treeID),
-			tag.WorkflowBranchID(task.branchID),
 		}
 	}
 	return []tag.Tag{
 		tag.WorkflowDomainID(task.domainID),
 		tag.WorkflowID(task.workflowID),
 		tag.WorkflowRunID(task.runID),
-		tag.WorkflowTreeID(task.treeID),
-		tag.WorkflowBranchID(task.branchID),
 	}
 }
 
