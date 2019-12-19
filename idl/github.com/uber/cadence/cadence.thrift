@@ -600,6 +600,5 @@ service WorkflowService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.LimitExceededError limitExceededError,
       5: shared.ServiceBusyError serviceBusyError,
-      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
 }
