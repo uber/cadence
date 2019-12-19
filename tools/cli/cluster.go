@@ -27,6 +27,13 @@ func newClusterCommands() []*cli.Command {
 		{
 			Name:  "get-search-attr",
 			Usage: "get list of legal search attributes that can be used in list workflow query.",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    FlagDomain,
+					Aliases: FlagDomainAlias,
+					Usage:   "Domain name",
+				},
+			},
 			Action: func(c *cli.Context) error {
 				GetSearchAttributes(c)
 				return nil

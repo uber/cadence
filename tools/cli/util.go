@@ -531,7 +531,9 @@ func getWorkflowClient(c *cli.Context) client.Client {
 
 func getWorkflowClientWithOptionalDomain(c *cli.Context) client.Client {
 	if !c.IsSet(FlagDomain) {
-		c.Set(FlagDomain, "system-domain")
+		if err := c.Set(FlagDomain, "system-domain"); err != nil {
+			ErrorAndExit("", err)
+		}
 	}
 	return getWorkflowClient(c)
 }

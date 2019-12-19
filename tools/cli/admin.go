@@ -331,8 +331,9 @@ func newAdminDomainCommands() []*cli.Command {
 			Usage:   "Get domainID or domainName",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagDomain,
-					Usage: "DomainName",
+					Name:    FlagDomain,
+					Aliases: FlagDomainAlias,
+					Usage:   "DomainName",
 				},
 				&cli.StringFlag{
 					Name:  FlagDomainID,
