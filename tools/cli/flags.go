@@ -73,6 +73,7 @@ const (
 	FlagParallism                         = "input_parallism"
 	FlagSkipCurrentOpen                   = "skip_current_open"
 	FlagSkipBaseIsNotCurrent              = "skip_base_is_not_current"
+	FlagDryRun                            = "dry_run"
 	FlagNonDeterministicOnly              = "only_non_deterministic"
 	FlagInputTopic                        = "input_topic"
 	FlagInputTopicWithAlias               = FlagInputTopic + ", it"

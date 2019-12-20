@@ -1341,6 +1341,7 @@ type batchResetParamsType struct {
 	skipOpen             bool
 	nonDeterministicOnly bool
 	skipBaseNotCurrent   bool
+	dryRun               bool
 	resetType            string
 }
 
@@ -1367,6 +1368,7 @@ func ResetInBatch(c *cli.Context) {
 		skipOpen:             c.Bool(FlagSkipCurrentOpen),
 		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
+		dryRun:               c.Bool(FlagDryRun),
 		resetType:            resetType,
 	}
 
@@ -1548,21 +1550,24 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	}
 	fmt.Println("DecisionFinishEventId for reset:", wid, rid, resetBaseRunID, decisionFinishID)
 
-	resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(resetBaseRunID),
-		},
-		DecisionFinishEventId: common.Int64Ptr(decisionFinishID),
-		RequestId:             common.StringPtr(uuid.New()),
-		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
-	})
+	if !params.dryRun {
+		resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
+			Domain: common.StringPtr(domain),
+			WorkflowExecution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      common.StringPtr(resetBaseRunID),
+			},
+			DecisionFinishEventId: common.Int64Ptr(decisionFinishID),
+			RequestId:             common.StringPtr(uuid.New()),
+			Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
+		})
 
-	if err != nil {
-		return printErrorAndReturn("ResetWorkflowExecution failed", err)
+		if err != nil {
+			return printErrorAndReturn("ResetWorkflowExecution failed", err)
+		}
+		fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
 	}
-	fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
+
 	return nil
 }
 
@@ -1577,24 +1582,35 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 		NextPageToken:   nil,
 	}
 
+	var firstEvent, decisionFailed *shared.HistoryEvent
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
 			return false, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
+			if firstEvent == nil {
+				firstEvent = e
+			}
 			if e.GetEventType() == shared.EventTypeDecisionTaskFailed {
-				attr := e.GetDecisionTaskFailedEventAttributes()
-				if attr.GetCause() == shared.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure ||
-					strings.Contains(string(attr.GetDetails()), "nondeterministic") {
-					return true, nil
-				}
+				decisionFailed = e
+			} else if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
+				decisionFailed = nil
 			}
 		}
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
 		} else {
 			break
+		}
+	}
+
+	if decisionFailed != nil {
+		attr := decisionFailed.GetDecisionTaskFailedEventAttributes()
+		if attr.GetCause() == shared.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure ||
+			strings.Contains(string(attr.GetDetails()), "nondeterministic") {
+			fmt.Printf("found non determnistic workflow wid:%v, rid:%v, orignalStartTime:%v \n", wid, rid, time.Unix(0, firstEvent.GetTimestamp()))
+			return true, nil
 		}
 	}
 

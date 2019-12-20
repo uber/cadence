@@ -292,12 +292,18 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.BoolFlag{
 					Name: FlagSkipBaseIsNotCurrent,
-					// TODO the right way to prevent needs server side implementation
+					// TODO https://github.com/uber/cadence/issues/2930
+					// The right way to prevent needs server side implementation .
+					// This client side is only best effort
 					Usage: "Skip if base run is not current run.",
 				},
 				cli.BoolFlag{
 					Name:  FlagNonDeterministicOnly,
 					Usage: "Only apply onto workflows whose last event is decisionTaskFailed with non deterministic error.",
+				},
+				cli.BoolFlag{
+					Name:  FlagDryRun,
+					Usage: "Not do real action of reset(just logging in STDOUT)",
 				},
 				cli.StringFlag{
 					Name:  FlagResetType,
