@@ -808,8 +808,12 @@ func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
 	s.mockDCRedirectionPolicy.On("WithDomainNameRedirect",
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
-	req := &shared.DescribeTaskListRequest{
+	req := &shared.ListTaskListPartitionsRequest{
 		Domain: common.StringPtr(s.domainName),
+		TaskList:&shared.TaskList{
+			Name:common.StringPtr("test_tesk_list"),
+			Kind:common.TaskListKindPtr(0),
+		},
 	}
 	resp, err := s.handler.ListTaskListPartitions(context.Background(), req)
 	s.Nil(err)
