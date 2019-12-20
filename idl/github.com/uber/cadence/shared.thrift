@@ -28,6 +28,10 @@ exception InternalServiceError {
   1: required string message
 }
 
+exception InternalDataCorruptionError {
+  1: required string message
+}
+
 exception DomainAlreadyExistsError {
   1: required string message
 }

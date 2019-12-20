@@ -203,11 +203,11 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(
 
 		switch {
 		case nodeID < lastNodeID:
-			return nil, &workflow.InternalServiceError{
+			return nil, &workflow.InternalDataCorruptionError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case nodeID == lastNodeID:
-			return nil, &workflow.InternalServiceError{
+			return nil, &workflow.InternalDataCorruptionError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:

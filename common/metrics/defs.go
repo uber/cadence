@@ -1728,9 +1728,8 @@ const (
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
 	MutableStateScavengerDeleteCount
-	MutableStateScavengerCorruptedCount
+	MutableStateScavengerConvertCorruptionCount
 	MutableStateScavengerErrorCount
-	MutableStateScavengerSkipCount
 
 	NumWorkerMetrics
 )
@@ -2049,14 +2048,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		BatcherProcessorSuccess:                       {metricName: "batcher_processor_requests", metricType: Counter},
 		BatcherProcessorFailures:                      {metricName: "batcher_processor_errors", metricType: Counter},
 		HistoryScavengerSuccessCount:                  {metricName: "scavenger_success", metricType: Counter},
-		HistoryScavengerErrorCount:                    {metricName: "scavenger_errors", metricType: Counter},
-		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
-		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
-		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
-		MutableStateScavengerDeleteCount:              {metricName: "ms_scavenger_deleted", metricType: Counter},
-		MutableStateScavengerCorruptedCount:           {metricName: "ms_scavenger_corrupted", metricType: Counter},
-		MutableStateScavengerErrorCount:               {metricName: "ms_scavenger_error", metricType: Counter},
-		MutableStateScavengerSkipCount:                {metricName: "ms_scavenger_skip", metricType: Counter},
+		HistoryScavengerErrorCount:                  {metricName: "scavenger_errors", metricType: Counter},
+		HistoryScavengerSkipCount:                   {metricName: "scavenger_skips", metricType: Counter},
+		ParentClosePolicyProcessorSuccess:           {metricName: "parent_close_policy_processor_requests", metricType: Counter},
+		ParentClosePolicyProcessorFailures:          {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+		MutableStateScavengerDeleteCount:            {metricName: "ms_scavenger_deleted", metricType: Counter},
+		MutableStateScavengerConvertCorruptionCount: {metricName: "ms_scavenger_convert_corruption", metricType: Counter},
+		MutableStateScavengerErrorCount:             {metricName: "ms_scavenger_error", metricType: Counter},
 	},
 }
 
