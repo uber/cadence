@@ -1306,7 +1306,7 @@ func ResetWorkflow(c *cli.Context) {
 	prettyPrintJSONObject(resp)
 }
 
-func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup, reason, resetType string, skipOpen bool) {
+func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup, params batchResetParamsType) {
 	for {
 		select {
 		case we := <-wes:
@@ -1315,7 +1315,7 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 			rid := we.GetRunId()
 			var err error
 			for i := 0; i < 3; i++ {
-				err = doReset(c, domain, wid, rid, reason, resetType, skipOpen)
+				err = doReset(c, domain, wid, rid, params)
 				if err == nil {
 					break
 				}
@@ -1336,17 +1336,23 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 	}
 }
 
+type batchResetParamsType struct {
+	reason               string
+	skipOpen             bool
+	nonDeterministicOnly bool
+	skipBaseNotCurrent   bool
+	resetType            string
+}
+
 // ResetInBatch resets workflow in batch
 func ResetInBatch(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	reason := getRequiredOption(c, FlagReason)
 	resetType := getRequiredOption(c, FlagResetType)
 
 	inFileName := c.String(FlagInputFile)
 	query := c.String(FlagListQuery)
 	excFileName := c.String(FlagExcludeFile)
 	separator := c.String(FlagInputSeparator)
-	skipOpen := c.Bool(FlagSkipCurrent)
 	parallel := c.Int(FlagParallism)
 
 	extraForResetType, ok := resetTypesMap[resetType]
@@ -1354,6 +1360,14 @@ func ResetInBatch(c *cli.Context) {
 		ErrorAndExit("Not supported reset type", nil)
 	} else if len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
+	}
+
+	batchResetParams := batchResetParamsType{
+		reason:               getRequiredOption(c, FlagReason),
+		skipOpen:             c.Bool(FlagSkipCurrentOpen),
+		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
+		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
+		resetType:            resetType,
 	}
 
 	if inFileName == "" && query == "" {
@@ -1366,7 +1380,7 @@ func ResetInBatch(c *cli.Context) {
 	done := make(chan bool)
 	for i := 0; i < parallel; i++ {
 		wg.Add(1)
-		go processResets(c, domain, wes, done, wg, reason, resetType, skipOpen)
+		go processResets(c, domain, wes, done, wg, batchResetParams)
 	}
 
 	// read exclude
@@ -1485,7 +1499,7 @@ func printErrorAndReturn(msg string, err error) error {
 	return err
 }
 
-func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, skipOpen bool) error {
+func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsType) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
@@ -1501,23 +1515,34 @@ func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, 
 	}
 
 	currentRunID := resp.WorkflowExecutionInfo.Execution.GetRunId()
-	if currentRunID == rid {
-		fmt.Println("current run is the reset run: ", wid, rid)
-		//return nil
+	if currentRunID != rid && params.skipBaseNotCurrent {
+		fmt.Println("skip because base run is different from current run: ", wid, rid, currentRunID)
+		return nil
 	}
 	if rid == "" {
 		rid = currentRunID
 	}
 
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
-		if skipOpen {
+		if params.skipOpen {
 			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
 			//skip and not terminate current if open
 			return nil
 		}
 	}
 
-	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, resetType, domain, wid, rid, frontendClient)
+	if params.nonDeterministicOnly {
+		isLDN, err := isLastEventDecisionTaskFailedWithNonDeterminism(ctx, domain, wid, rid, frontendClient)
+		if err != nil {
+			return printErrorAndReturn("check isLastEventDecisionTaskFailedWithNonDeterminism failed", err)
+		}
+		if !isLDN {
+			fmt.Println("skip because last event is not DecisionTaskFailedWithNonDeterminism")
+			return nil
+		}
+	}
+
+	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, domain, wid, rid, frontendClient)
 	if err != nil {
 		return printErrorAndReturn("getResetEventIDByType failed", err)
 	}
@@ -1531,7 +1556,7 @@ func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, 
 		},
 		DecisionFinishEventId: common.Int64Ptr(decisionFinishID),
 		RequestId:             common.StringPtr(uuid.New()),
-		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
+		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
 	})
 
 	if err != nil {
@@ -1539,6 +1564,41 @@ func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, 
 	}
 	fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
 	return nil
+}
+
+func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (bool, error) {
+	req := &shared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		MaximumPageSize: common.Int32Ptr(1000),
+		NextPageToken:   nil,
+	}
+
+	for {
+		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			return false, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == shared.EventTypeDecisionTaskFailed {
+				attr := e.GetDecisionTaskFailedEventAttributes()
+				if attr.GetCause() == shared.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure ||
+					strings.Contains(string(attr.GetDetails()), "nondeterministic") {
+					return true, nil
+				}
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+
+	return false, nil
 }
 
 func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
