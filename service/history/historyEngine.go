@@ -2814,6 +2814,11 @@ func (e *historyEngineImpl) ReapplyEvents(
 				// TODO when https://github.com/uber/cadence/issues/2420 is finished
 				//  remove this block
 				if baseRebuildLastEventID == common.EmptyEventID {
+					e.logger.Warn("cannot reapply event to a finished workflow",
+						tag.WorkflowDomainID(domainID),
+						tag.WorkflowID(currentExecution.GetWorkflowId()),
+					)
+					e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
 					return &updateWorkflowAction{noop: true}, nil
 				}
 
