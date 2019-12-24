@@ -280,7 +280,16 @@ func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 	currentCluster := r.clusterMetadata.GetCurrentClusterName()
 	isActiveCluster := targetWorkflowActiveCluster == currentCluster
 
+	// workflow events reapplication
+	// we need to handle 3 cases
+	// 1. target workflow is self & self being current & active
+	//  a. workflow still running -> just reapply
+	//  b. workflow closed -> reset current workflow & reapply
+	// 2. anything not case 1 -> find the current & active workflow to reapply
+
+	// case 1
 	if isCurrentWorkflow && isActiveCluster {
+		// case 1.a
 		if isWorkflowRunning {
 			if _, err := r.eventsReapplier.reapplyEvents(
 				ctx,
@@ -293,6 +302,7 @@ func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 			return persistence.UpdateWorkflowModeUpdateCurrent, transactionPolicyActive, nil
 		}
 
+		// case 1.b
 		// need to reset target workflow (which is also the current workflow)
 		// to accept events to be reapplied
 		baseMutableState := targetWorkflow.getMutableState()
@@ -347,6 +357,8 @@ func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 		return persistence.UpdateWorkflowModeBypassCurrent, transactionPolicyPassive, nil
 	}
 
+	// case 2
+	//  find the current & active workflow to reapply
 	if err := targetWorkflow.getContext().reapplyEvents(
 		[]*persistence.WorkflowEvents{targetWorkflowEvents},
 	); err != nil {
