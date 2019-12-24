@@ -2811,8 +2811,8 @@ func (e *historyEngineImpl) ReapplyEvents(
 				resetRunID := uuid.New()
 				baseRebuildLastEventID := mutableState.GetPreviousStartedEventID()
 
-				// TODO when https://github.com/uber/cadence/issues/2420 is finished
-				//  remove this block
+				// TODO when https://github.com/uber/cadence/issues/2420 is finished, remove this block,
+				//  since cannot reapply event to a finished workflow which had no decisions started
 				if baseRebuildLastEventID == common.EmptyEventID {
 					e.logger.Warn("cannot reapply event to a finished workflow",
 						tag.WorkflowDomainID(domainID),
