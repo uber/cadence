@@ -153,6 +153,21 @@ func (mr *MockMonitorMockRecorder) RemoveListener(service, name interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockMonitor)(nil).RemoveListener), service, name)
 }
 
+// GetReachableMembers mocks base method
+func (m *MockMonitor) GetReachableMembers() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReachableMembers")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetReachableMembers indicates an expected call of GetReachableMembers
+func (mr *MockMonitorMockRecorder) GetReachableMembers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReachableMembers", reflect.TypeOf((*MockMonitor)(nil).GetReachableMembers))
+}
+
 // MockServiceResolver is a mock of ServiceResolver interface
 type MockServiceResolver struct {
 	ctrl     *gomock.Controller
@@ -217,4 +232,32 @@ func (m *MockServiceResolver) RemoveListener(name string) error {
 func (mr *MockServiceResolverMockRecorder) RemoveListener(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockServiceResolver)(nil).RemoveListener), name)
+}
+
+// ServerCount mocks base method
+func (m *MockServiceResolver) ServerCount() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServerCount")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// ServerCount indicates an expected call of ServerCount
+func (mr *MockServiceResolverMockRecorder) ServerCount() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServerCount", reflect.TypeOf((*MockServiceResolver)(nil).ServerCount))
+}
+
+// Servers mocks base method
+func (m *MockServiceResolver) Servers() []*HostInfo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Servers")
+	ret0, _ := ret[0].([]*HostInfo)
+	return ret0
+}
+
+// Servers indicates an expected call of Servers
+func (mr *MockServiceResolverMockRecorder) Servers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Servers", reflect.TypeOf((*MockServiceResolver)(nil).Servers))
 }
