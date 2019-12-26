@@ -79,9 +79,9 @@ type (
 		AddListener(name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
 		RemoveListener(name string) error
-		// ServerCount returns host count in hashring for any particular role
-		ServerCount() int
-		// Servers returns all host addresses in hashring for any particular role
-		Servers() []*HostInfo
+		// MemberCount returns host count in hashring for any particular role
+		MemberCount() int
+		// Members returns all host addresses in hashring for any particular role
+		Members() []*HostInfo
 	}
 )

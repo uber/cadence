@@ -168,8 +168,8 @@ struct HostInfo {
 
 struct RingInfo {
   10: optional string role
-  20: optional i32 serverCount
-  30: optional list<HostInfo> servers
+  20: optional i32 memberCount
+  30: optional list<HostInfo> members
 }
 
 struct MembershipInfo {

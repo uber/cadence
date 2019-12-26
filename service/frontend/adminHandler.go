@@ -579,7 +579,7 @@ func (adh *AdminHandler) DescribeCluster(
 			}
 
 			var servers []*admin.HostInfo
-			for _, server := range resolver.Servers() {
+			for _, server := range resolver.Members() {
 				servers = append(servers, &admin.HostInfo{
 					Identity: common.StringPtr(server.Identity()),
 				})
@@ -587,8 +587,8 @@ func (adh *AdminHandler) DescribeCluster(
 
 			rings = append(rings, &admin.RingInfo{
 				Role:        common.StringPtr(role),
-				ServerCount: common.Int32Ptr(int32(resolver.ServerCount())),
-				Servers:     servers,
+				MemberCount: common.Int32Ptr(int32(resolver.MemberCount())),
+				Members:     servers,
 			})
 		}
 		membershipInfo.Rings = rings

@@ -234,30 +234,30 @@ func (mr *MockServiceResolverMockRecorder) RemoveListener(name interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockServiceResolver)(nil).RemoveListener), name)
 }
 
-// ServerCount mocks base method
-func (m *MockServiceResolver) ServerCount() int {
+// MemberCount mocks base method
+func (m *MockServiceResolver) MemberCount() int {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServerCount")
+	ret := m.ctrl.Call(m, "MemberCount")
 	ret0, _ := ret[0].(int)
 	return ret0
 }
 
-// ServerCount indicates an expected call of ServerCount
-func (mr *MockServiceResolverMockRecorder) ServerCount() *gomock.Call {
+// MemberCount indicates an expected call of MemberCount
+func (mr *MockServiceResolverMockRecorder) MemberCount() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServerCount", reflect.TypeOf((*MockServiceResolver)(nil).ServerCount))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MemberCount", reflect.TypeOf((*MockServiceResolver)(nil).MemberCount))
 }
 
-// Servers mocks base method
-func (m *MockServiceResolver) Servers() []*HostInfo {
+// Members mocks base method
+func (m *MockServiceResolver) Members() []*HostInfo {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Servers")
+	ret := m.ctrl.Call(m, "Members")
 	ret0, _ := ret[0].([]*HostInfo)
 	return ret0
 }
 
-// Servers indicates an expected call of Servers
-func (mr *MockServiceResolverMockRecorder) Servers() *gomock.Call {
+// Members indicates an expected call of Members
+func (mr *MockServiceResolverMockRecorder) Members() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Servers", reflect.TypeOf((*MockServiceResolver)(nil).Servers))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Members", reflect.TypeOf((*MockServiceResolver)(nil).Members))
 }

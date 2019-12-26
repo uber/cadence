@@ -79,8 +79,8 @@ func (_m *ServiceResolver) RemoveListener(name string) error {
 	return r0
 }
 
-// ServerCount is am mock implementation
-func (_m *ServiceResolver) ServerCount() int {
+// MemberCount is am mock implementation
+func (_m *ServiceResolver) MemberCount() int {
 	ret := _m.Called()
 
 	var r0 int
@@ -93,8 +93,8 @@ func (_m *ServiceResolver) ServerCount() int {
 	return r0
 }
 
-// Servers is am mock implementation
-func (_m *ServiceResolver) Servers() []*membership.HostInfo {
+// Members is am mock implementation
+func (_m *ServiceResolver) Members() []*membership.HostInfo {
 	ret := _m.Called()
 
 	var r0 []*membership.HostInfo
