@@ -54,3 +54,11 @@ func (s *simpleResolver) AddListener(name string, notifyChannel chan<- *membersh
 func (s *simpleResolver) RemoveListener(name string) error {
 	return nil
 }
+
+func (s *simpleResolver) ServerCount() int {
+	return len(s.hosts)
+}
+
+func (s *simpleResolver) Servers() []*membership.HostInfo {
+	return s.hosts
+}
