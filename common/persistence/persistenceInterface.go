@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/checksum"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -244,6 +246,7 @@ type (
 		SignalInfos         map[int64]*SignalInfo
 		SignalRequestedIDs  map[string]struct{}
 		BufferedEvents      []*DataBlob
+		Checksum            checksum.Checksum
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -380,6 +383,7 @@ type (
 		ReplicationTasks []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
@@ -402,6 +406,7 @@ type (
 		ReplicationTasks []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// InternalAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
