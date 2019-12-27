@@ -133,6 +133,12 @@ type (
 		insertReplicationTasks []persistence.Task
 		insertTimerTasks       []persistence.Task
 
+		// do not rely on this, this is only updated on
+		// Load() and closeTransactionXXX methods. So when
+		// a transaction is in progress, this value will be
+		// wrong. This exist primarily for visibility via CLI
+		checksum checksum.Checksum
+
 		taskGenerator       mutableStateTaskGenerator
 		decisionTaskManager mutableStateDecisionTaskManager
 		queryRegistry       queryRegistry
@@ -260,6 +266,7 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 	state.ExecutionInfo = e.executionInfo
 	state.BufferedEvents = e.bufferedEvents
 	state.VersionHistories = e.versionHistories
+	state.Checksum = e.checksum
 
 	// TODO when 2DC is deprecated, remove this
 	state.ReplicationState = e.replicationState
@@ -269,7 +276,7 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 
 func (e *mutableStateBuilder) Load(
 	state *persistence.WorkflowMutableState,
-) error {
+) {
 
 	e.pendingActivityInfoIDs = state.ActivityInfos
 	for _, activityInfo := range state.ActivityInfos {
@@ -293,15 +300,17 @@ func (e *mutableStateBuilder) Load(
 	e.stateInDB = state.ExecutionInfo.State
 	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
 	e.versionHistories = state.VersionHistories
+	e.checksum = state.Checksum
 
 	if len(state.Checksum.Value) > 0 && e.shouldVerifyChecksum() {
 		if err := verifyMutableStateChecksum(e, state.Checksum); err != nil {
+			// we ignore checksum verification errors for now until this
+			// feature is tested and/or we have mechanisms in place to deal
+			// with these types of errors
 			e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
 			e.logError("mutable state checksum mismatch", tag.Error(err))
-			return checksum.ErrMismatch
 		}
 	}
-	return nil
 }
 
 func (e *mutableStateBuilder) GetCurrentBranchToken() ([]byte, error) {
@@ -3933,6 +3942,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		Checksum:  checksum,
 	}
 
+	e.checksum = checksum
 	if err := e.cleanupTransaction(transactionPolicy); err != nil {
 		return nil, nil, err
 	}
@@ -4011,6 +4021,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		Checksum:  checksum,
 	}
 
+	e.checksum = checksum
 	if err := e.cleanupTransaction(transactionPolicy); err != nil {
 		return nil, nil, err
 	}

@@ -1596,11 +1596,9 @@ func (mr *MockmutableStateMockRecorder) UpdateDuplicatedResource(resourceDedupKe
 }
 
 // Load mocks base method
-func (m *MockmutableState) Load(arg0 *persistence.WorkflowMutableState) error {
+func (m *MockmutableState) Load(arg0 *persistence.WorkflowMutableState) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Load", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "Load", arg0)
 }
 
 // Load indicates an expected call of Load

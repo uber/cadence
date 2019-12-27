@@ -58,9 +58,6 @@ func newMutableStateChecksumPayload(ms mutableState) *private.MutableStateChecks
 	payload := &private.MutableStateChecksumPayload{
 		CancelRequested:      common.BoolPtr(executionInfo.CancelRequested),
 		State:                common.Int16Ptr(int16(executionInfo.State)),
-		CurrentVersion:       common.Int64Ptr(replicationState.CurrentVersion),
-		LastWriteVersion:     common.Int64Ptr(replicationState.LastWriteVersion),
-		LastWriteEventID:     common.Int64Ptr(replicationState.LastWriteEventID),
 		LastFirstEventID:     common.Int64Ptr(executionInfo.LastFirstEventID),
 		NextEventID:          common.Int64Ptr(executionInfo.NextEventID),
 		LastProcessedEventID: common.Int64Ptr(executionInfo.LastProcessedEvent),
@@ -70,6 +67,12 @@ func newMutableStateChecksumPayload(ms mutableState) *private.MutableStateChecks
 		DecisionStartedID:    common.Int64Ptr(executionInfo.DecisionStartedID),
 		DecisionVersion:      common.Int64Ptr(executionInfo.DecisionVersion),
 		StickyTaskListName:   common.StringPtr(executionInfo.StickyTaskList),
+	}
+
+	if replicationState != nil {
+		payload.CurrentVersion = common.Int64Ptr(replicationState.CurrentVersion)
+		payload.LastWriteVersion = common.Int64Ptr(replicationState.LastWriteVersion)
+		payload.LastWriteEventID = common.Int64Ptr(replicationState.LastWriteEventID)
 	}
 
 	// for each of the pendingXXX ids below, sorting is needed to guarantee that

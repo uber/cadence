@@ -29,6 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -50,6 +52,7 @@ type (
 
 		msBuilder *mutableStateBuilder
 		logger    log.Logger
+		testScope tally.TestScope
 	}
 )
 
@@ -86,6 +89,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.mockShard.config.MutableStateChecksumVerifyProbability = func(domain string) int { return 100 }
 	s.mockShard.eventsCache = s.mockEventsCache
 
+	s.testScope = s.mockShard.resource.MetricsScope.(tally.TestScope)
 	s.logger = s.mockShard.GetLogger()
 
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
@@ -372,6 +376,16 @@ func (s *mutableStateSuite) TestChecksum() {
 		},
 	}
 
+	loadErrorsFunc := func() int64 {
+		counter := s.testScope.Snapshot().Counters()["test.mutable_state_checksum_mismatch+operation=WorkflowContext"]
+		if counter != nil {
+			return counter.Value()
+		}
+		return 0
+	}
+
+	var loadErrors int64
+
 	for _, tc := range testCases {
 		s.T().Run(tc.name, func(t *testing.T) {
 			dbState := s.buildWorkflowMutableState()
@@ -380,19 +394,22 @@ func (s *mutableStateSuite) TestChecksum() {
 			}
 
 			// create mutable state and verify checksum is generated on close
-			err := s.msBuilder.Load(dbState)
-			s.Nil(err)
+			loadErrors = loadErrorsFunc()
+			s.msBuilder.Load(dbState)
+			s.Equal(loadErrors, loadErrorsFunc()) // no errors expected
+			s.EqualValues(dbState.Checksum, s.msBuilder.checksum)
 			s.msBuilder.domainEntry = s.newDomainCacheEntry()
 			csum, err := tc.closeTxFunc(s.msBuilder)
 			s.Nil(err)
 			s.NotNil(csum.Value)
 			s.Equal(checksum.FlavorIEEECRC32OverThriftBinary, csum.Flavor)
 			s.Equal(mutableStateChecksumPayloadV1, csum.Version)
+			s.EqualValues(csum, s.msBuilder.checksum)
 
 			// verify checksum is verified on Load
 			dbState.Checksum = csum
-			err = s.msBuilder.Load(dbState)
-			s.Nil(err)
+			s.msBuilder.Load(dbState)
+			s.Equal(loadErrors, loadErrorsFunc())
 
 			// generate checksum again and verify its the same
 			csum, err = tc.closeTxFunc(s.msBuilder)
@@ -402,9 +419,23 @@ func (s *mutableStateSuite) TestChecksum() {
 
 			// modify checksum and verify Load fails
 			dbState.Checksum.Value[0]++
-			err = s.msBuilder.Load(dbState)
-			s.Equal(checksum.ErrMismatch, err)
+			s.msBuilder.Load(dbState)
+			s.Equal(loadErrors+1, loadErrorsFunc())
+			s.EqualValues(dbState.Checksum, s.msBuilder.checksum)
 		})
+	}
+}
+
+func (s *mutableStateSuite) TestChecksumProbabilities() {
+	for _, prob := range []int{0, 100} {
+		s.mockShard.config.MutableStateChecksumGenProbability = func(domain string) int { return prob }
+		s.mockShard.config.MutableStateChecksumVerifyProbability = func(domain string) int { return prob }
+		for i := 0; i < 100; i++ {
+			shouldGenerate := s.msBuilder.shouldGenerateChecksum()
+			shouldVerify := s.msBuilder.shouldVerifyChecksum()
+			s.Equal(prob == 100, shouldGenerate)
+			s.Equal(prob == 100, shouldVerify)
+		}
 	}
 }
 
