@@ -75,6 +75,9 @@ type IntPropertyFnWithTaskListInfoFilters func(domain string, taskList string, t
 // FloatPropertyFn is a wrapper to get float property from dynamic config
 type FloatPropertyFn func(opts ...FilterOption) float64
 
+// FloatPropertyFnWithDomainFilter is a wrapper to get float property from dynamic config with domain as filter
+type FloatPropertyFnWithDomainFilter func(domain string) float64
+
 // DurationPropertyFn is a wrapper to get duration property from dynamic config
 type DurationPropertyFn func(opts ...FilterOption) time.Duration
 
@@ -167,6 +170,18 @@ func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue 
 func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatPropertyFn {
 	return func(opts ...FilterOption) float64 {
 		val, err := c.client.GetFloatValue(key, getFilterMap(opts...), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
+		c.logValue(key, val, defaultValue)
+		return val
+	}
+}
+
+// GetFloat64PropertyFilteredByDomain gets property with domain filter and asserts that it's a float64
+func (c *Collection) GetFloat64PropertyFilteredByDomain(key Key, defaultValue float64) FloatPropertyFnWithDomainFilter {
+	return func(domain string) float64 {
+		val, err := c.client.GetFloatValue(key, getFilterMap(DomainFilter(domain)), defaultValue)
 		if err != nil {
 			c.logNoValue(key, err)
 		}

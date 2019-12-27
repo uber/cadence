@@ -23,6 +23,7 @@ package history
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -32,12 +33,14 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -140,6 +143,7 @@ type (
 		config          *Config
 		timeSource      clock.TimeSource
 		logger          log.Logger
+		metricsClient   metrics.Client
 	}
 )
 
@@ -194,6 +198,7 @@ func newMutableStateBuilder(
 		config:          shard.GetConfig(),
 		timeSource:      shard.GetTimeSource(),
 		logger:          logger,
+		metricsClient:   shard.GetMetricsClient(),
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
 		DecisionVersion:    common.EmptyVersion,
@@ -264,7 +269,7 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 
 func (e *mutableStateBuilder) Load(
 	state *persistence.WorkflowMutableState,
-) {
+) error {
 
 	e.pendingActivityInfoIDs = state.ActivityInfos
 	for _, activityInfo := range state.ActivityInfos {
@@ -288,6 +293,15 @@ func (e *mutableStateBuilder) Load(
 	e.stateInDB = state.ExecutionInfo.State
 	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
 	e.versionHistories = state.VersionHistories
+
+	if len(state.Checksum.Value) > 0 && e.shouldVerifyChecksum() {
+		if err := verifyMutableStateChecksum(e, state.Checksum); err != nil {
+			e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
+			e.logError("mutable state checksum mismatch", tag.Error(err))
+			return checksum.ErrMismatch
+		}
+	}
+	return nil
 }
 
 func (e *mutableStateBuilder) GetCurrentBranchToken() ([]byte, error) {
@@ -3884,6 +3898,13 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// update last update time
 	e.executionInfo.LastUpdatedTimestamp = now
 
+	// we generate checksum here based on the assumption that the returned
+	// snapshot object is considered immutable. As of this writing, the only
+	// code that modifies the returned object lives inside workflowExecutionContext.resetWorkflowExecution
+	// currently, the updates done inside workflowExecutionContext.resetWorkflowExecution doesn't
+	// impact the checksum calculation
+	checksum := e.generateChecksum()
+
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		ReplicationState: e.replicationState,
@@ -3909,6 +3930,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		TimerTasks:       e.insertTimerTasks,
 
 		Condition: e.nextEventIDInDB,
+		Checksum:  checksum,
 	}
 
 	if err := e.cleanupTransaction(transactionPolicy); err != nil {
@@ -3962,6 +3984,13 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	// update last update time
 	e.executionInfo.LastUpdatedTimestamp = now
 
+	// we generate checksum here based on the assumption that the returned
+	// snapshot object is considered immutable. As of this writing, the only
+	// code that modifies the returned object lives inside workflowExecutionContext.resetWorkflowExecution
+	// currently, the updates done inside workflowExecutionContext.resetWorkflowExecution doesn't
+	// impact the checksum calculation
+	checksum := e.generateChecksum()
+
 	workflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    e.executionInfo,
 		ReplicationState: e.replicationState,
@@ -3979,6 +4008,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		TimerTasks:       e.insertTimerTasks,
 
 		Condition: e.nextEventIDInDB,
+		Checksum:  checksum,
 	}
 
 	if err := e.cleanupTransaction(transactionPolicy); err != nil {
@@ -4517,6 +4547,32 @@ func (e *mutableStateBuilder) checkMutability(
 		return ErrWorkflowFinished
 	}
 	return nil
+}
+
+func (e *mutableStateBuilder) generateChecksum() checksum.Checksum {
+	if !e.shouldGenerateChecksum() {
+		return checksum.Checksum{}
+	}
+	csum, err := generateMutableStateChecksum(e)
+	if err != nil {
+		e.logWarn("error generating mutableState checksum", tag.Error(err))
+		return checksum.Checksum{}
+	}
+	return csum
+}
+
+func (e *mutableStateBuilder) shouldGenerateChecksum() bool {
+	if e.domainEntry == nil {
+		return false
+	}
+	return rand.Intn(100) < e.config.MutableStateChecksumGenProbability(e.domainEntry.GetInfo().Name)
+}
+
+func (e *mutableStateBuilder) shouldVerifyChecksum() bool {
+	if e.domainEntry == nil {
+		return false
+	}
+	return rand.Intn(100) < e.config.MutableStateChecksumVerifyProbability(e.domainEntry.GetInfo().Name)
 }
 
 func (e *mutableStateBuilder) createInternalServerError(

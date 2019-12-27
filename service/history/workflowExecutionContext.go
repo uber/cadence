@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/checksum"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -247,7 +249,15 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecution() (mutableState, er
 			c.logger,
 			domainEntry,
 		)
-		c.mutableState.Load(response.State)
+
+		if err := c.mutableState.Load(response.State); err != nil {
+			// we ignore checksum verification errors for now until
+			// we roll this out initially and get some confidence
+			if err != checksum.ErrMismatch {
+				return nil, err
+			}
+		}
+
 		c.stats = response.State.ExecutionStats
 		c.updateCondition = response.State.ExecutionInfo.NextEventID
 
