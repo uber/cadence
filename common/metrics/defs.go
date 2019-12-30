@@ -1727,8 +1727,7 @@ const (
 	HistoryScavengerSkipCount
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
-	MutableStateScavengerDeleteCount
-	MutableStateScavengerConvertCorruptionCount
+	MutableStateScavengerCorruptionCount
 	MutableStateScavengerErrorCount
 
 	NumWorkerMetrics
@@ -2052,8 +2051,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSkipCount:                   {metricName: "scavenger_skips", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:           {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:          {metricName: "parent_close_policy_processor_errors", metricType: Counter},
-		MutableStateScavengerDeleteCount:            {metricName: "ms_scavenger_deleted", metricType: Counter},
-		MutableStateScavengerConvertCorruptionCount: {metricName: "ms_scavenger_convert_corruption", metricType: Counter},
+		MutableStateScavengerCorruptionCount:        {metricName: "ms_scavenger_corruption", metricType: Counter},
 		MutableStateScavengerErrorCount:             {metricName: "ms_scavenger_error", metricType: Counter},
 	},
 }

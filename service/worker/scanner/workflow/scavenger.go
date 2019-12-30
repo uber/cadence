@@ -22,7 +22,6 @@ package workflow
 
 import (
 	"context"
-	"fmt"
 	"github.com/uber/cadence/.gen/go/shared"
 	"time"
 
@@ -47,12 +46,8 @@ type (
 
 		// number of executions processed
 		ProcessedCount      int
-		// number of workflows that convert into corrupted state
-		ConvertCorruptionCount int
-		// number of workflows that are already converted into corrupted state previously but not meeting threshold to delete
+		// number of workflows that are corrupted
 		CorruptionCount int
-		// number of deleted concrete record(a.k.a mutableState)
-		DeletedExecutionCount int
 		// number of task failure due to some errors
 		ErrorCount int
 	}
@@ -71,9 +66,7 @@ type (
 	//d) a run has only mutableState but no current record, workflow state is open
 	//e) a run with completed history without corruption, but timerMap/activityMap/etc are corrupted.
 	//
-	// Today this Scavenger only detecting for a) and perform actions on it.
-	// In addition, we only check at most first 1K events(one page) for a) because of cost consideration.
-	// We leave b),c),d) as TODOs for future need. Our persistence APIs are already supported for those detection.
+	// Today this Scavenger only detecting for a) without performing actions on it.
 	// TODO https://github.com/uber/cadence/issues/2926 for more details.
 	Scavenger struct {
 		shardDB     p.ShardManager
@@ -93,7 +86,6 @@ type (
 		domainID   string
 		workflowID string
 		runID      string
-		taskType   taskType
 
 		// passing along the current heartbeat details to make heartbeat within a task so that it won't timeout
 		hbd ScavengerHeartbeatDetails
@@ -101,11 +93,9 @@ type (
 
 	taskResult struct{
 		err  error
-		converted bool
-		deleted bool
+		corrupted bool
 	}
 
-	taskType int
 )
 
 
@@ -116,14 +106,6 @@ const (
 	pageSize          = 1000
 	// clean up mutable state records if the started time is older than this threshold
 	cleanUpThreshold = time.Hour * 24 * 365
-)
-
-const(
-	taskTypeNone taskType = iota
-	// taskTypeHistoryCorruption is to detecting history corruption(first 1K events). If corrupted, then delete current record, convert mutableState into corrupted state
-	taskTypeHistoryCorruption
-	// taskTypeDeleteMutableState is to deleting the corrupted mutableState after startTime later than threshold
-	taskTypeDeleteMutableState
 )
 
 // NewScavenger returns an instance of history scavenger daemon
@@ -191,39 +173,20 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 		taskCount := 0
 		corruptionCount := 0
+		errorCount := 0
 		for _, wf := range resp.WorkflowExecutions {
-			taskType := taskTypeNone
-			if wf.IsCurrentWorkflow{
-				if p.IsWorkflowRunning(wf.State){
-					taskType = taskTypeHistoryCorruption
-				}
-			}else{
-				if wf.State == p.WorkflowStateCorrupted {
-					if wf.StartTime.Before(time.Now().Add(-cleanUpThreshold)){
-						taskType = taskTypeDeleteMutableState
-					}else{
-						corruptionCount ++
-					}
-				}
-
-			}
-
-			if taskType != taskTypeNone{
+			if wf.IsCurrentWorkflow && p.IsWorkflowRunning(wf.State){
 				taskCount ++
 				taskCh <- taskDetail{
 					shardID:    s.hbd.CurrentShardID,
 					domainID:   wf.DomainID,
 					workflowID: wf.WorkflowID,
 					runID:      wf.RunID,
-					taskType:   taskType,
 					hbd:s.hbd,
 				}
 			}
 		}
 
-		convertCount := 0
-		deletedCount := 0
-		errorCount := 0
 		if taskCount > 0 {
 			// wait for task counters indicate this batch is done
 		Loop:
@@ -235,13 +198,9 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerErrorCount)
 						errorCount++
 					}
-					if resp.converted {
-						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerConvertCorruptionCount)
-						convertCount++
-					}
-					if resp.deleted {
-						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerDeleteCount)
-						deletedCount++
+					if resp.corrupted {
+						s.metrics.IncCounter(metrics.MutableStateScavengerScope, metrics.MutableStateScavengerCorruptionCount)
+						corruptionCount++
 					}
 					if taskCount == 0 {
 						break Loop
@@ -254,9 +213,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 
 		s.hbd.CurrentPage++
 		s.hbd.NextPageToken = resp.NextPageToken
-		s.hbd.ConvertCorruptionCount += convertCount
 		s.hbd.ErrorCount += errorCount
-		s.hbd.DeletedExecutionCount += deletedCount
 		s.hbd.ProcessedCount += len(resp.WorkflowExecutions)
 		s.hbd.CorruptionCount += corruptionCount
 
@@ -300,14 +257,7 @@ func (s *Scavenger) startTaskProcessor(
 				continue
 			}
 
-			switch task.taskType{
-			case taskTypeHistoryCorruption:
-				res.converted, res.err = s.processHistoryCorruptionTask(task)
-			case taskTypeDeleteMutableState:
-				res.err = s.processDeleteMutableStateTask(task)
-			default:
-				res.err = fmt.Errorf("uknown task type %v", task.taskType)
-			}
+			res.corrupted, res.err = s.processHistoryCorruptionTask(task)
 			if res.err != nil{
 				s.logger.Error("encounter error when process task",
 					getTaskLoggingTags(res.err, task)...)
@@ -365,26 +315,8 @@ func (s *Scavenger) processHistoryCorruptionTask(task taskDetail) (bool, error) 
 	// for corrupted, we need to
 	// 1. delete current record
 	// 2. covert into corrupted state
-	
-}
-
-func (s *Scavenger) processDeleteMutableStateTask(task taskDetail) error{
-	mgr, err := s.resource.GetExecutionManager(task.shardID)
-	if err != nil{
-		return err
-	}
-	op := func() error {
-		err = mgr.DeleteWorkflowExecution(&p.DeleteWorkflowExecutionRequest{
-			DomainID:task.domainID,
-			WorkflowID:task.workflowID,
-			RunID:task.runID,
-		})
-		return err
-	}
-
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-
-	return err
+	// TODO  https://github.com/uber/cadence/issues/2926
+	return true, nil
 }
 
 func getTaskLoggingTags(err error, task taskDetail) []tag.Tag {

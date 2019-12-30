@@ -1092,9 +1092,8 @@ func (d *cassandraPersistence) ScanWorkflows(
 	runID := gocql.UUID{}
 	currentRunID := gocql.UUID{}
 	state := int(-1)
-	startTime := time.Time{}
 
-	for iter.Scan(&domainID, &workflowID, &runID, &currentRunID, &state, &startTime) {
+	for iter.Scan(&domainID, &workflowID, &runID, &currentRunID, &state) {
 		info := p.ScanWorkflowDetailInfo{
 			DomainID:domainID.String(),
 			WorkflowID:workflowID,
@@ -1108,7 +1107,6 @@ func (d *cassandraPersistence) ScanWorkflows(
 			//mutable state record
 			info.IsCurrentWorkflow = false
 			info.RunID = runID.String()
-			info.StartTime = startTime
 		}
 		infos = append(infos, info)
 	}

@@ -1446,8 +1446,6 @@ type (
 		RunID  string
 		State  int
 		IsCurrentWorkflow bool
-		//NOTE: below is NOT applicable for CurrentWorkflows
-		StartTime time.Time
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
