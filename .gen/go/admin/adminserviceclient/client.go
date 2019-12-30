@@ -28,6 +28,7 @@ package adminserviceclient
 import (
 	context "context"
 	admin "github.com/uber/cadence/.gen/go/admin"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
@@ -50,6 +51,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	DescribeCluster(
+		ctx context.Context,
+		opts ...yarpc.CallOption,
+	) (*admin.DescribeClusterResponse, error)
+
 	DescribeHistoryHost(
 		ctx context.Context,
 		Request *shared.DescribeHistoryHostRequest,
@@ -62,6 +68,18 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
 
+	GetDomainReplicationMessages(
+		ctx context.Context,
+		Request *replicator.GetDomainReplicationMessagesRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.GetDomainReplicationMessagesResponse, error)
+
+	GetReplicationMessages(
+		ctx context.Context,
+		Request *replicator.GetReplicationMessagesRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.GetReplicationMessagesResponse, error)
+
 	GetWorkflowExecutionRawHistory(
 		ctx context.Context,
 		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
@@ -73,6 +91,12 @@ type Interface interface {
 		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
+
+	ReapplyEvents(
+		ctx context.Context,
+		ReapplyEventsRequest *shared.ReapplyEventsRequest,
+		opts ...yarpc.CallOption,
+	) error
 
 	RemoveTask(
 		ctx context.Context,
@@ -151,6 +175,28 @@ func (c client) CloseShard(
 	return
 }
 
+func (c client) DescribeCluster(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (success *admin.DescribeClusterResponse, err error) {
+
+	args := admin.AdminService_DescribeCluster_Helper.Args()
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeCluster_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeCluster_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) DescribeHistoryHost(
 	ctx context.Context,
 	_Request *shared.DescribeHistoryHostRequest,
@@ -197,6 +243,52 @@ func (c client) DescribeWorkflowExecution(
 	return
 }
 
+func (c client) GetDomainReplicationMessages(
+	ctx context.Context,
+	_Request *replicator.GetDomainReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.GetDomainReplicationMessagesResponse, err error) {
+
+	args := admin.AdminService_GetDomainReplicationMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetDomainReplicationMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetDomainReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetReplicationMessages(
+	ctx context.Context,
+	_Request *replicator.GetReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.GetReplicationMessagesResponse, err error) {
+
+	args := admin.AdminService_GetReplicationMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetReplicationMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) GetWorkflowExecutionRawHistory(
 	ctx context.Context,
 	_GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
@@ -240,6 +332,29 @@ func (c client) GetWorkflowExecutionRawHistoryV2(
 	}
 
 	success, err = admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ReapplyEvents(
+	ctx context.Context,
+	_ReapplyEventsRequest *shared.ReapplyEventsRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_ReapplyEvents_Helper.Args(_ReapplyEventsRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ReapplyEvents_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_ReapplyEvents_Helper.UnwrapResponse(&result)
 	return
 }
 
