@@ -46,7 +46,7 @@ func newTaskListCommands() []cli.Command {
 		{
 			Name:    "list-partition",
 			Aliases: []string{"lp"},
-			Usage:   "List all the tasklist partitions and the host for partitions.",
+			Usage:   "List all the tasklist partitions and the hostname for partitions.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagTaskListTypeWithAlias,
