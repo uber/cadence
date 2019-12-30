@@ -52,11 +52,6 @@ func newTaskListCommands() []cli.Command {
 					Name:  FlagTaskListTypeWithAlias,
 					Usage: "TaskList description",
 				},
-				cli.StringFlag{
-					Name:  FlagTaskListTypeWithAlias,
-					Value: "decision",
-					Usage: "Optional TaskList type [decision|activity]",
-				},
 			},
 			Action: func(c *cli.Context) {
 				ListTaskListPartitions(c)
