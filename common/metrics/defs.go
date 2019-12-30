@@ -1648,6 +1648,7 @@ const (
 	ReplicationTaskCleanupCount
 	ReplicationTaskCleanupFailure
 	MutableStateChecksumMismatch
+	MutableStateChecksumInvalidated
 
 	NumHistoryMetrics
 )
@@ -1980,6 +1981,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
 		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
 		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
+		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

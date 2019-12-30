@@ -302,13 +302,19 @@ func (e *mutableStateBuilder) Load(
 	e.versionHistories = state.VersionHistories
 	e.checksum = state.Checksum
 
-	if len(state.Checksum.Value) > 0 && e.shouldVerifyChecksum() {
-		if err := verifyMutableStateChecksum(e, state.Checksum); err != nil {
-			// we ignore checksum verification errors for now until this
-			// feature is tested and/or we have mechanisms in place to deal
-			// with these types of errors
-			e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
-			e.logError("mutable state checksum mismatch", tag.Error(err))
+	if len(state.Checksum.Value) > 0 {
+		switch {
+		case e.shouldInvalidateCheckum():
+			e.checksum = checksum.Checksum{}
+			e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumInvalidated)
+		case e.shouldVerifyChecksum():
+			if err := verifyMutableStateChecksum(e, state.Checksum); err != nil {
+				// we ignore checksum verification errors for now until this
+				// feature is tested and/or we have mechanisms in place to deal
+				// with these types of errors
+				e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
+				e.logError("mutable state checksum mismatch", tag.Error(err))
+			}
 		}
 	}
 }
@@ -4584,6 +4590,15 @@ func (e *mutableStateBuilder) shouldVerifyChecksum() bool {
 		return false
 	}
 	return rand.Intn(100) < e.config.MutableStateChecksumVerifyProbability(e.domainEntry.GetInfo().Name)
+}
+
+func (e *mutableStateBuilder) shouldInvalidateCheckum() bool {
+	invalidateBeforeEpochSecs := int64(e.config.MutableStateChecksumInvalidateBefore())
+	if invalidateBeforeEpochSecs > 0 {
+		invalidateBefore := time.Unix(invalidateBeforeEpochSecs, 0)
+		return e.executionInfo.LastUpdatedTimestamp.Before(invalidateBefore)
+	}
+	return false
 }
 
 func (e *mutableStateBuilder) createInternalServerError(

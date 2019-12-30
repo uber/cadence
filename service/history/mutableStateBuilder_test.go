@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -422,6 +423,20 @@ func (s *mutableStateSuite) TestChecksum() {
 			s.msBuilder.Load(dbState)
 			s.Equal(loadErrors+1, loadErrorsFunc())
 			s.EqualValues(dbState.Checksum, s.msBuilder.checksum)
+
+			// test checksum is invalidated
+			loadErrors = loadErrorsFunc()
+			s.mockShard.config.MutableStateChecksumInvalidateBefore = func(...dynamicconfig.FilterOption) float64 {
+				return float64((s.msBuilder.executionInfo.LastUpdatedTimestamp.UnixNano() / int64(time.Second)) + 1)
+			}
+			s.msBuilder.Load(dbState)
+			s.Equal(loadErrors, loadErrorsFunc())
+			s.EqualValues(checksum.Checksum{}, s.msBuilder.checksum)
+
+			// revert the config value for the next test case
+			s.mockShard.config.MutableStateChecksumInvalidateBefore = func(...dynamicconfig.FilterOption) float64 {
+				return float64(0)
+			}
 		})
 	}
 }
@@ -437,6 +452,20 @@ func (s *mutableStateSuite) TestChecksumProbabilities() {
 			s.Equal(prob == 100, shouldVerify)
 		}
 	}
+}
+
+func (s *mutableStateSuite) TestChecksumShouldInvalidate() {
+	s.mockShard.config.MutableStateChecksumInvalidateBefore = func(...dynamicconfig.FilterOption) float64 { return 0 }
+	s.False(s.msBuilder.shouldInvalidateCheckum())
+	s.msBuilder.executionInfo.LastUpdatedTimestamp = time.Now()
+	s.mockShard.config.MutableStateChecksumInvalidateBefore = func(...dynamicconfig.FilterOption) float64 {
+		return float64((s.msBuilder.executionInfo.LastUpdatedTimestamp.UnixNano() / int64(time.Second)) + 1)
+	}
+	s.True(s.msBuilder.shouldInvalidateCheckum())
+	s.mockShard.config.MutableStateChecksumInvalidateBefore = func(...dynamicconfig.FilterOption) float64 {
+		return float64((s.msBuilder.executionInfo.LastUpdatedTimestamp.UnixNano() / int64(time.Second)) - 1)
+	}
+	s.False(s.msBuilder.shouldInvalidateCheckum())
 }
 
 func (s *mutableStateSuite) TestTrimEvents() {

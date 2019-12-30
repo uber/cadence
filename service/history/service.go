@@ -196,7 +196,7 @@ type Config struct {
 	// Data integrity check related config knobs
 	MutableStateChecksumGenProbability    dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumVerifyProbability dynamicconfig.IntPropertyFnWithDomainFilter
-	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFnWithDomainFilter
+	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFn
 }
 
 const (
@@ -318,7 +318,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount, 1),
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability, 0),
 		MutableStateChecksumVerifyProbability: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumVerifyProbability, 0),
-		MutableStateChecksumInvalidateBefore:  dc.GetFloat64PropertyFilteredByDomain(dynamicconfig.MutableStateChecksumInvalidateBefore, 0),
+		MutableStateChecksumInvalidateBefore:  dc.GetFloat64Property(dynamicconfig.MutableStateChecksumInvalidateBefore, 0),
 	}
 
 	return cfg
