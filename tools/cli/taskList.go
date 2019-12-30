@@ -43,5 +43,24 @@ func newTaskListCommands() []cli.Command {
 				DescribeTaskList(c)
 			},
 		},
+		{
+			Name:    "list-partition",
+			Aliases: []string{"lp"},
+			Usage:   "List all the tasklist partitions and the host for partitions.",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagTaskListTypeWithAlias,
+					Usage: "TaskList description",
+				},
+				cli.StringFlag{
+					Name:  FlagTaskListTypeWithAlias,
+					Value: "decision",
+					Usage: "Optional TaskList type [decision|activity]",
+				},
+			},
+			Action: func(c *cli.Context) {
+				ListTaskListPartitions(c)
+			},
+		},
 	}
 }
