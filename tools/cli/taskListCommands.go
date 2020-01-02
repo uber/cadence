@@ -89,7 +89,7 @@ func ListTaskListPartitions(c *cli.Context) {
 		printTaskListPartitions("Decision", response.DecisionTaskListPartitions)
 	}
 	if len(response.ActivityTaskListPartitions) > 0 {
-		printTaskListPartitions("Decision", response.ActivityTaskListPartitions)
+		printTaskListPartitions("Activity", response.ActivityTaskListPartitions)
 	}
 }
 
