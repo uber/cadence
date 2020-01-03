@@ -65,6 +65,11 @@ type Interface interface {
 		ctx context.Context,
 	) (*shared.ClusterInfo, error)
 
+	GetRawHistory(
+		ctx context.Context,
+		GetRequest *shared.GetRawHistoryRequest,
+	) (*shared.GetRawHistoryResponse, error)
+
 	GetSearchAttributes(
 		ctx context.Context,
 	) (*shared.GetSearchAttributesResponse, error)
@@ -299,6 +304,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetClusterInfo),
 				},
 				Signature:    "GetClusterInfo() (*shared.ClusterInfo)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetRawHistory",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetRawHistory),
+				},
+				Signature:    "GetRawHistory(GetRequest *shared.GetRawHistoryRequest) (*shared.GetRawHistoryResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -656,7 +672,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 38)
+	procedures := make([]transport.Procedure, 0, 39)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -768,6 +784,25 @@ func (h handler) GetClusterInfo(ctx context.Context, body wire.Value) (thrift.Re
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_GetClusterInfo_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) GetRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetRawHistory_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetRawHistory(ctx, args.GetRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_GetRawHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

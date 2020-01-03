@@ -258,6 +258,39 @@ func (mr *_MockClientRecorder) GetClusterInfo(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetClusterInfo", args...)
 }
 
+// GetRawHistory responds to a GetRawHistory call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetRawHistory(gomock.Any(), ...).Return(...)
+// 	... := client.GetRawHistory(...)
+func (m *MockClient) GetRawHistory(
+	ctx context.Context,
+	_GetRequest *shared.GetRawHistoryRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetRawHistoryResponse, err error) {
+
+	args := []interface{}{ctx, _GetRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetRawHistory", args...)
+	success, _ = ret[i].(*shared.GetRawHistoryResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetRawHistory(
+	ctx interface{},
+	_GetRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _GetRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetRawHistory", args...)
+}
+
 // GetSearchAttributes responds to a GetSearchAttributes call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

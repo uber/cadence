@@ -222,6 +222,27 @@ func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionHistory(
 	return a.frontendHandler.GetWorkflowExecutionHistory(ctx, request)
 }
 
+// GetRawHistory API call
+func (a *AccessControlledWorkflowHandler) GetRawHistory(
+	ctx context.Context,
+	request *shared.GetRawHistoryRequest,
+) (*shared.GetRawHistoryResponse, error) {
+
+	attr := &authorization.Attributes{
+		APIName:    "GetRawHistory",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.frontendHandler.GetRawHistory(ctx, request)
+}
+
 // ListArchivedWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) ListArchivedWorkflowExecutions(
 	ctx context.Context,
