@@ -122,14 +122,14 @@ func (c *metricClient) GetWorkflowExecutionHistory(
 	opts ...yarpc.CallOption,
 ) (*shared.GetWorkflowExecutionHistoryResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendGetWorkflowExecutionHistoryScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendGetWorkflowExecutionHistoryScope, metrics.CadenceClientLatency)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientLatency)
 	resp, err := c.client.GetWorkflowExecutionHistory(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendGetWorkflowExecutionHistoryScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
