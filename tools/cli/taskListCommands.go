@@ -82,9 +82,6 @@ func ListTaskListPartitions(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Operation ListTaskListPartitions failed.", err)
 	}
-	if len(response.DecisionTaskListPartitions) == 0 && len(response.ActivityTaskListPartitions) == 0 {
-		ErrorAndExit(colorMagenta("No partitions for tasklist: "+taskList), nil)
-	}
 	if len(response.DecisionTaskListPartitions) > 0 {
 		printTaskListPartitions("Decision", response.DecisionTaskListPartitions)
 	}
