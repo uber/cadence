@@ -667,6 +667,8 @@ const (
 	FrontendRespondActivityTaskCanceledByIDScope
 	// FrontendGetWorkflowExecutionHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
 	FrontendGetWorkflowExecutionHistoryScope
+	// FrontendGetRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
+	FrontendGetRawHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
 	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution

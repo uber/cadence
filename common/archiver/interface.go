@@ -60,6 +60,22 @@ type (
 		NextPageToken  []byte
 	}
 
+	// GetRawHistoryRequest is the request to Get raw archived history
+	GetRawHistoryRequest struct {
+		DomainID             string
+		WorkflowID           string
+		RunID                string
+		CloseFailoverVersion *int64
+		NextPageToken        []byte
+		PageSize             int
+	}
+
+	// GetRawHistoryResponse is the response of Get raw archived history
+	GetRawHistoryResponse struct {
+		HistoryBlobs  []*shared.DataBlob
+		NextPageToken []byte
+	}
+
 	// HistoryBootstrapContainer contains components needed by all history Archiver implementations
 	HistoryBootstrapContainer struct {
 		HistoryV2Manager persistence.HistoryManager
