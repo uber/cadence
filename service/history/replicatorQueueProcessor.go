@@ -225,8 +225,15 @@ func GenerateReplicationTask(
 ) (*replicator.ReplicationTask, string, error) {
 	var err error
 	if history == nil {
-		history, _, err = GetAllHistory(historyV2Mgr, metricsClient, false,
-			task.FirstEventID, task.NextEventID, task.BranchToken, shardID)
+		history, _, err = GetAllHistory(
+			historyV2Mgr,
+			metricsClient,
+			false,
+			task.FirstEventID,
+			task.NextEventID,
+			task.GetBranchToken(),
+			shardID,
+		)
 		if err != nil {
 			return nil, "", err
 		}
@@ -251,7 +258,7 @@ func GenerateReplicationTask(
 				false,
 				common.FirstEventID,
 				common.FirstEventID+1, // [common.FirstEventID to common.FirstEventID+1) will get the first batch
-				task.NewRunBranchToken,
+				task.GetNewRunBranchToken(),
 				shardID)
 			if err != nil {
 				return nil, "", err
@@ -262,17 +269,19 @@ func GenerateReplicationTask(
 	ret := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
 		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			TargetClusters:  targetClusters,
-			DomainId:        common.StringPtr(task.DomainID),
-			WorkflowId:      common.StringPtr(task.WorkflowID),
-			RunId:           common.StringPtr(task.RunID),
-			FirstEventId:    common.Int64Ptr(task.FirstEventID),
-			NextEventId:     common.Int64Ptr(task.NextEventID),
-			Version:         common.Int64Ptr(task.Version),
-			ReplicationInfo: convertLastReplicationInfo(task.LastReplicationInfo),
-			History:         history,
-			NewRunHistory:   newRunHistory,
-			ResetWorkflow:   common.BoolPtr(task.ResetWorkflow),
+			TargetClusters:    targetClusters,
+			DomainId:          common.StringPtr(task.DomainID),
+			WorkflowId:        common.StringPtr(task.WorkflowID),
+			RunId:             common.StringPtr(task.RunID),
+			FirstEventId:      common.Int64Ptr(task.FirstEventID),
+			NextEventId:       common.Int64Ptr(task.NextEventID),
+			Version:           common.Int64Ptr(task.Version),
+			ReplicationInfo:   convertLastReplicationInfo(task.LastReplicationInfo),
+			History:           history,
+			NewRunHistory:     newRunHistory,
+			ResetWorkflow:     common.BoolPtr(task.ResetWorkflow),
+			BranchToken:       task.GetBranchToken(),
+			NewRunBranchToken: task.GetNewRunBranchToken(),
 		},
 	}
 	return ret, newRunID, nil
@@ -645,8 +654,10 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 			}
 
 			// NDC workflow
+			branchToken := task.GetBranchToken()
+			newRunBranchToken := task.GetNewRunBranchToken()
 			eventsBlob, err := p.getEventsBlob(
-				task.BranchToken,
+				branchToken,
 				task.FirstEventID,
 				task.NextEventID,
 			)
@@ -655,10 +666,10 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 			}
 
 			var newRunEventsBlob *shared.DataBlob
-			if len(task.NewRunBranchToken) != 0 {
+			if len(newRunBranchToken) != 0 {
 				// only get the first batch
 				newRunEventsBlob, err = p.getEventsBlob(
-					task.NewRunBranchToken,
+					newRunBranchToken,
 					common.FirstEventID,
 					common.FirstEventID+1,
 				)
@@ -686,6 +697,8 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 					VersionHistoryItems: versionHistoryItems,
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
+					BranchToken:         branchToken,
+					NewRunBranchToken:   newRunBranchToken,
 				},
 			}
 			return replicationTask, nil

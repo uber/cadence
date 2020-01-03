@@ -471,6 +471,8 @@ func (p *ReplicationTaskProcessorImpl) generateDLQRequest(
 				Version:             taskAttributes.GetVersion(),
 				LastReplicationInfo: toPersistenceReplicationInfo(taskAttributes.GetReplicationInfo()),
 				ResetWorkflow:       taskAttributes.GetResetWorkflow(),
+				BranchToken:         taskAttributes.GetBranchToken(),
+				NewRunBranchToken:   taskAttributes.GetNewRunBranchToken(),
 			},
 		}, nil
 	case r.ReplicationTaskTypeHistoryV2:
@@ -490,14 +492,16 @@ func (p *ReplicationTaskProcessorImpl) generateDLQRequest(
 		return &persistence.PutReplicationTaskToDLQRequest{
 			SourceClusterName: p.sourceCluster,
 			TaskInfo: &persistence.ReplicationTaskInfo{
-				DomainID:     taskAttributes.GetDomainId(),
-				WorkflowID:   taskAttributes.GetWorkflowId(),
-				RunID:        taskAttributes.GetRunId(),
-				TaskID:       replicationTask.GetSourceTaskId(),
-				TaskType:     persistence.ReplicationTaskTypeHistory,
-				FirstEventID: events[0].GetEventId(),
-				NextEventID:  events[len(events)-1].GetEventId(),
-				Version:      events[0].GetVersion(),
+				DomainID:          taskAttributes.GetDomainId(),
+				WorkflowID:        taskAttributes.GetWorkflowId(),
+				RunID:             taskAttributes.GetRunId(),
+				TaskID:            replicationTask.GetSourceTaskId(),
+				TaskType:          persistence.ReplicationTaskTypeHistory,
+				FirstEventID:      events[0].GetEventId(),
+				NextEventID:       events[len(events)-1].GetEventId(),
+				Version:           events[0].GetVersion(),
+				BranchToken:       taskAttributes.GetBranchToken(),
+				NewRunBranchToken: taskAttributes.GetNewRunBranchToken(),
 			},
 		}, nil
 	default:

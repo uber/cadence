@@ -2301,6 +2301,16 @@ func (t *ReplicationTaskInfo) GetDomainID() string {
 	return t.DomainID
 }
 
+// GetBranchToken returns the branch token for replication task
+func (t *ReplicationTaskInfo) GetBranchToken() []byte {
+	return t.BranchToken
+}
+
+// GetNewRunBranchToken returns the new run branch token for replication task
+func (t *ReplicationTaskInfo) GetNewRunBranchToken() []byte {
+	return t.NewRunBranchToken
+}
+
 // GetTaskID returns the task ID for timer task
 func (t *TimerTaskInfo) GetTaskID() int64 {
 	return t.TaskID

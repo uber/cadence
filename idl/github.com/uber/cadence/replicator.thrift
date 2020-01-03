@@ -61,6 +61,8 @@ struct HistoryTaskAttributes {
   110: optional i32 newRunEventStoreVersion
   120: optional bool resetWorkflow
   130: optional bool newRunNDC
+  140: optional binary branchToken
+  150: optional binary newRunBranchToken
 }
 
 struct HistoryMetadataTaskAttributes {
@@ -105,6 +107,8 @@ struct HistoryTaskV2Attributes {
   50: optional shared.DataBlob events
   // new run events does not need version history since there is no prior events
   70: optional shared.DataBlob newRunEvents
+  80: optional binary branchToken
+  90: optional binary newRunBranchToken
 }
 
 struct ReplicationTask {
