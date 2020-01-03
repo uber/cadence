@@ -1621,14 +1621,14 @@ struct ClusterInfo{
   10: optional SupportedClientVersions supportedClientVersions
 }
 
-struct GetRawHistoryRequest {
+struct GetWorkflowExecutionRawHistoryRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional i32 maximumPageSize
   40: optional binary nextPageToken
 }
 
-struct GetRawHistoryResponse {
+struct GetWorkflowExecutionRawHistoryResponse {
   10: optional list<binary> rawHistory
   20: optional binary nextPageToken
 }

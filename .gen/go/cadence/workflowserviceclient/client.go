@@ -73,12 +73,6 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.ClusterInfo, error)
 
-	GetRawHistory(
-		ctx context.Context,
-		GetRequest *shared.GetRawHistoryRequest,
-		opts ...yarpc.CallOption,
-	) (*shared.GetRawHistoryResponse, error)
-
 	GetSearchAttributes(
 		ctx context.Context,
 		opts ...yarpc.CallOption,
@@ -89,6 +83,12 @@ type Interface interface {
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.GetWorkflowExecutionHistoryResponse, error)
+
+	GetWorkflowExecutionRawHistory(
+		ctx context.Context,
+		GetRequest *shared.GetWorkflowExecutionRawHistoryRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetWorkflowExecutionRawHistoryResponse, error)
 
 	ListArchivedWorkflowExecutions(
 		ctx context.Context,
@@ -432,29 +432,6 @@ func (c client) GetClusterInfo(
 	return
 }
 
-func (c client) GetRawHistory(
-	ctx context.Context,
-	_GetRequest *shared.GetRawHistoryRequest,
-	opts ...yarpc.CallOption,
-) (success *shared.GetRawHistoryResponse, err error) {
-
-	args := cadence.WorkflowService_GetRawHistory_Helper.Args(_GetRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result cadence.WorkflowService_GetRawHistory_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	success, err = cadence.WorkflowService_GetRawHistory_Helper.UnwrapResponse(&result)
-	return
-}
-
 func (c client) GetSearchAttributes(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
@@ -497,6 +474,29 @@ func (c client) GetWorkflowExecutionHistory(
 	}
 
 	success, err = cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetWorkflowExecutionRawHistory(
+	ctx context.Context,
+	_GetRequest *shared.GetWorkflowExecutionRawHistoryRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetWorkflowExecutionRawHistoryResponse, err error) {
+
+	args := cadence.WorkflowService_GetWorkflowExecutionRawHistory_Helper.Args(_GetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_GetWorkflowExecutionRawHistory_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_GetWorkflowExecutionRawHistory_Helper.UnwrapResponse(&result)
 	return
 }
 

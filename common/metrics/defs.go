@@ -348,8 +348,8 @@ const (
 	FrontendClientDescribeWorkflowExecutionScope
 	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
 	FrontendClientGetWorkflowExecutionHistoryScope
-	// FrontendClientGetRawHistoryScope tracks RPC calls to frontend service
-	FrontendClientGetRawHistoryScope
+	// FrontendClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
+	FrontendClientGetWorkflowExecutionRawHistoryScope
 	// FrontendClientListArchivedWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientListArchivedWorkflowExecutionsScope
 	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
@@ -448,8 +448,8 @@ const (
 	DCRedirectionDescribeWorkflowExecutionScope
 	// DCRedirectionGetWorkflowExecutionHistoryScope tracks RPC calls for dc redirection
 	DCRedirectionGetWorkflowExecutionHistoryScope
-	// DCRedirectionGetRawHistoryScope tracks RPC calls for dc redirection
-	DCRedirectionGetRawHistoryScope
+	// DCRedirectionGetWorkflowExecutionRawHistoryScope tracks RPC calls for dc redirection
+	DCRedirectionGetWorkflowExecutionRawHistoryScope
 	// DCRedirectionListArchivedWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionListArchivedWorkflowExecutionsScope
 	// DCRedirectionListClosedWorkflowExecutionsScope tracks RPC calls for dc redirection
@@ -671,8 +671,8 @@ const (
 	FrontendRespondActivityTaskCanceledByIDScope
 	// FrontendGetWorkflowExecutionHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
 	FrontendGetWorkflowExecutionHistoryScope
-	// FrontendGetRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
-	FrontendGetRawHistoryScope
+	// FrontendGetWorkflowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistory
+	FrontendGetWorkflowExecutionRawHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
 	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution

@@ -1686,13 +1686,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 }
 
 // GetRawHistory - retrieves raw history directly from DB layer
-func (wh *WorkflowHandler) GetRawHistory(
+func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 	ctx context.Context,
-	getRequest *gen.GetRawHistoryRequest,
-) (resp *gen.GetRawHistoryResponse, retError error) {
+	getRequest *gen.GetWorkflowExecutionRawHistoryRequest,
+) (resp *gen.GetWorkflowExecutionRawHistoryResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendGetRawHistoryScope, getRequest)
+	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendGetWorkflowExecutionRawHistoryScope, getRequest)
 	defer sw.Stop()
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
@@ -1744,15 +1744,14 @@ func (wh *WorkflowHandler) GetRawHistory(
 	// 1. the workflow run ID
 	// 2. the last first event ID (the event ID of the last batch of events in the history)
 	// 3. the next event ID
-	// 4. whether the workflow is closed
 	// 5. error if any
 	queryHistory := func(
 		domainUUID string,
 		execution *gen.WorkflowExecution,
 		expectedNextEventID int64,
 		currentBranchToken []byte,
-	) ([]byte, string, int64, int64, bool, error) {
-		response, err := wh.GetHistoryClient().PollMutableState(ctx, &h.PollMutableStateRequest{
+	) ([]byte, string, int64, int64, error) {
+		response, err := wh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
 			ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
@@ -1760,15 +1759,13 @@ func (wh *WorkflowHandler) GetRawHistory(
 		})
 
 		if err != nil {
-			return nil, "", 0, 0, false, err
+			return nil, "", 0, 0, err
 		}
-		isWorkflowRunning := response.GetWorkflowCloseState() == persistence.WorkflowCloseStatusNone
 
 		return response.CurrentBranchToken,
 			response.Execution.GetRunId(),
 			response.GetLastFirstEventId(),
 			response.GetNextEventId(),
-			isWorkflowRunning,
 			nil
 	}
 
@@ -1785,7 +1782,7 @@ func (wh *WorkflowHandler) GetRawHistory(
 
 		execution.RunId = common.StringPtr(token.RunID)
 	} else {
-		token.BranchToken, runID, _, nextEventID, isWorkflowRunning, err =
+		token.BranchToken, runID, _, nextEventID, err =
 			queryHistory(domainID, execution, queryNextEventID, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
@@ -1803,12 +1800,7 @@ func (wh *WorkflowHandler) GetRawHistory(
 	history := [][]byte{}
 
 	// return all events
-	if token.FirstEventID >= token.NextEventID {
-		// currently there is no new event
-		if !isWorkflowRunning {
-			token = nil
-		}
-	} else {
+	if token.FirstEventID < token.NextEventID {
 		history, token.PersistenceToken, err = wh.getRawHistory(
 			scope,
 			domainID,
@@ -1824,7 +1816,7 @@ func (wh *WorkflowHandler) GetRawHistory(
 			return nil, wh.error(err, scope)
 		}
 
-		if len(token.PersistenceToken) == 0 && !token.IsWorkflowRunning {
+		if len(token.PersistenceToken) == 0 {
 			// meaning, there is no more history to be returned
 			token = nil
 		}
@@ -1834,7 +1826,7 @@ func (wh *WorkflowHandler) GetRawHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return &gen.GetRawHistoryResponse{
+	return &gen.GetWorkflowExecutionRawHistoryResponse{
 		RawHistory:    history,
 		NextPageToken: nextToken,
 	}, nil
@@ -3178,7 +3170,8 @@ func (wh *WorkflowHandler) getRawHistory(
 	scope metrics.Scope,
 	domainID string,
 	execution gen.WorkflowExecution,
-	firstEventID, nextEventID int64,
+	firstEventID int64,
+	nextEventID int64,
 	pageSize int32,
 	nextPageToken []byte,
 	transientDecision *gen.TransientDecisionInfo,

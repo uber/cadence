@@ -65,11 +65,6 @@ type Interface interface {
 		ctx context.Context,
 	) (*shared.ClusterInfo, error)
 
-	GetRawHistory(
-		ctx context.Context,
-		GetRequest *shared.GetRawHistoryRequest,
-	) (*shared.GetRawHistoryResponse, error)
-
 	GetSearchAttributes(
 		ctx context.Context,
 	) (*shared.GetSearchAttributesResponse, error)
@@ -78,6 +73,11 @@ type Interface interface {
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
 	) (*shared.GetWorkflowExecutionHistoryResponse, error)
+
+	GetWorkflowExecutionRawHistory(
+		ctx context.Context,
+		GetRequest *shared.GetWorkflowExecutionRawHistoryRequest,
+	) (*shared.GetWorkflowExecutionRawHistoryResponse, error)
 
 	ListArchivedWorkflowExecutions(
 		ctx context.Context,
@@ -308,17 +308,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetRawHistory",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetRawHistory),
-				},
-				Signature:    "GetRawHistory(GetRequest *shared.GetRawHistoryRequest) (*shared.GetRawHistoryResponse)",
-				ThriftModule: cadence.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "GetSearchAttributes",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -337,6 +326,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionHistory),
 				},
 				Signature:    "GetWorkflowExecutionHistory(GetRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetWorkflowExecutionRawHistory",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionRawHistory),
+				},
+				Signature:    "GetWorkflowExecutionRawHistory(GetRequest *shared.GetWorkflowExecutionRawHistoryRequest) (*shared.GetWorkflowExecutionRawHistoryResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -793,25 +793,6 @@ func (h handler) GetClusterInfo(ctx context.Context, body wire.Value) (thrift.Re
 	return response, err
 }
 
-func (h handler) GetRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_GetRawHistory_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.GetRawHistory(ctx, args.GetRequest)
-
-	hadError := err != nil
-	result, err := cadence.WorkflowService_GetRawHistory_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
 func (h handler) GetSearchAttributes(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_GetSearchAttributes_Args
 	if err := args.FromWire(body); err != nil {
@@ -841,6 +822,25 @@ func (h handler) GetWorkflowExecutionHistory(ctx context.Context, body wire.Valu
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) GetWorkflowExecutionRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetWorkflowExecutionRawHistory_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetWorkflowExecutionRawHistory(ctx, args.GetRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_GetWorkflowExecutionRawHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

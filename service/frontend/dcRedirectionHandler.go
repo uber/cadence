@@ -274,10 +274,10 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 }
 
 // GetRawHistory API call
-func (handler *DCRedirectionHandlerImpl) GetRawHistory(
+func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.GetRawHistoryRequest,
-) (resp *shared.GetRawHistoryResponse, retError error) {
+	request *shared.GetWorkflowExecutionRawHistoryRequest,
+) (resp *shared.GetWorkflowExecutionRawHistoryResponse, retError error) {
 
 	var apiName = "GetRawHistory"
 	var err error
@@ -292,10 +292,10 @@ func (handler *DCRedirectionHandlerImpl) GetRawHistory(
 		cluster = targetDC
 		switch {
 		case targetDC == handler.currentClusterName:
-			resp, err = handler.frontendHandler.GetRawHistory(ctx, request)
+			resp, err = handler.frontendHandler.GetWorkflowExecutionRawHistory(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.GetRawHistory(ctx, request)
+			resp, err = remoteClient.GetWorkflowExecutionRawHistory(ctx, request)
 		}
 		return err
 	})

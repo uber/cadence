@@ -122,16 +122,16 @@ func (c *retryableClient) GetWorkflowExecutionHistory(
 	return resp, err
 }
 
-func (c *retryableClient) GetRawHistory(
+func (c *retryableClient) GetWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.GetRawHistoryRequest,
+	request *shared.GetWorkflowExecutionRawHistoryRequest,
 	opts ...yarpc.CallOption,
-) (*shared.GetRawHistoryResponse, error) {
+) (*shared.GetWorkflowExecutionRawHistoryResponse, error) {
 
-	var resp *shared.GetRawHistoryResponse
+	var resp *shared.GetWorkflowExecutionRawHistoryResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.GetRawHistory(ctx, request, opts...)
+		resp, err = c.client.GetWorkflowExecutionRawHistory(ctx, request, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)

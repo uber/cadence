@@ -223,10 +223,10 @@ func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionHistory(
 }
 
 // GetRawHistory API call
-func (a *AccessControlledWorkflowHandler) GetRawHistory(
+func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.GetRawHistoryRequest,
-) (*shared.GetRawHistoryResponse, error) {
+	request *shared.GetWorkflowExecutionRawHistoryRequest,
+) (*shared.GetWorkflowExecutionRawHistoryResponse, error) {
 
 	attr := &authorization.Attributes{
 		APIName:    "GetRawHistory",
@@ -240,7 +240,7 @@ func (a *AccessControlledWorkflowHandler) GetRawHistory(
 		return nil, errUnauthorized
 	}
 
-	return a.frontendHandler.GetRawHistory(ctx, request)
+	return a.frontendHandler.GetWorkflowExecutionRawHistory(ctx, request)
 }
 
 // ListArchivedWorkflowExecutions API call

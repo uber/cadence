@@ -127,7 +127,7 @@ service WorkflowService {
   /**
   * Returns raw history in binary for specified workflow execution.
   **/
-  shared.GetRawHistoryResponse GetRawHistory(1: shared.GetRawHistoryRequest getRequest)
+  shared.GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: shared.GetWorkflowExecutionRawHistoryRequest getRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       3: shared.EntityNotExistsError entityNotExistError,

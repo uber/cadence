@@ -122,32 +122,32 @@ func (c *metricClient) GetWorkflowExecutionHistory(
 	opts ...yarpc.CallOption,
 ) (*shared.GetWorkflowExecutionHistoryResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientGetRawHistoryScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendGetWorkflowExecutionHistoryScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetRawHistoryScope, metrics.CadenceClientLatency)
+	sw := c.metricsClient.StartTimer(metrics.FrontendGetWorkflowExecutionHistoryScope, metrics.CadenceClientLatency)
 	resp, err := c.client.GetWorkflowExecutionHistory(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientGetRawHistoryScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendGetWorkflowExecutionHistoryScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
 
-func (c *metricClient) GetRawHistory(
+func (c *metricClient) GetWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.GetRawHistoryRequest,
+	request *shared.GetWorkflowExecutionRawHistoryRequest,
 	opts ...yarpc.CallOption,
-) (*shared.GetRawHistoryResponse, error) {
+) (*shared.GetWorkflowExecutionRawHistoryResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionRawHistoryScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientLatency)
-	resp, err := c.client.GetRawHistory(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetWorkflowExecutionRawHistoryScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetWorkflowExecutionRawHistory(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionRawHistoryScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
