@@ -448,6 +448,8 @@ const (
 	DCRedirectionDescribeWorkflowExecutionScope
 	// DCRedirectionGetWorkflowExecutionHistoryScope tracks RPC calls for dc redirection
 	DCRedirectionGetWorkflowExecutionHistoryScope
+	// DCRedirectionGetRawHistoryScope tracks RPC calls for dc redirection
+	DCRedirectionGetRawHistoryScope
 	// DCRedirectionListArchivedWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionListArchivedWorkflowExecutionsScope
 	// DCRedirectionListClosedWorkflowExecutionsScope tracks RPC calls for dc redirection
