@@ -1797,7 +1797,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		token.PersistenceToken = nil
 	}
 
-	history := [][]byte{}
+	history := []*gen.DataBlob{}
 
 	// return all events
 	if token.FirstEventID < token.NextEventID {
@@ -3176,8 +3176,8 @@ func (wh *WorkflowHandler) getRawHistory(
 	nextPageToken []byte,
 	transientDecision *gen.TransientDecisionInfo,
 	branchToken []byte,
-) ([][]byte, []byte, error) {
-	rawHistory := [][]byte{}
+) ([]*gen.DataBlob, []byte, error) {
+	rawHistory := []*gen.DataBlob{}
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 
 	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
@@ -3191,8 +3191,16 @@ func (wh *WorkflowHandler) getRawHistory(
 	if err != nil {
 		return nil, nil, err
 	}
+
 	for _, data := range resp.HistoryEventBlobs {
-		rawHistory = append(rawHistory, data.Data)
+		encoding := gen.EncodingTypeThriftRW.Ptr()
+		if data.Encoding == common.EncodingTypeJSON {
+			encoding = gen.EncodingTypeJSON.Ptr()
+		}
+		rawHistory = append(rawHistory, &gen.DataBlob{
+			EncodingType: encoding,
+			Data:         data.Data,
+		})
 	}
 
 	return rawHistory, resp.NextPageToken, nil
