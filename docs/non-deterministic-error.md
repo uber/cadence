@@ -9,11 +9,11 @@ This article is for Cadence developers to understand and address issues with non
 
 A Cadence workflow can be viewed as a long running process on a distributed operating system(OS). The process’s state and dispatching is owned by Cadence server, and customers’ workers provide CPU/memory resources to execute the process’s code. For most of the time, this process(workflow) is owned by a worker and running like in other normal OS. But because this is a distributed OS, the workflow ownership can be transferred to other workers and continue to run from the previous state. Unlike other OS, this is not restarting from the beginning. This is how workflow is fault tolerant to certain host failures. 
 
-![image alt text](image_0.png)
+![image alt text](images/non-deterministic-err.1.png)
 
 Non-deterministic issues arise during this workflow ownership transfer. Cadence is designed with event sourcing, meaning that it persists each workflow state mutation as "**history event**", instead of the whole workflow state machine. After switching to another worker, the workflow state machine has to be rebuilt. The process of rebuilding the state machine is called “**history replay**”. Any failure during this history replay is a “**non-deterministic error**”.
 
-![image alt text](image_1.png)
+![image alt text](images/non-deterministic-err.2.png)
 
 Even if a workflow ownership doesn’t change, history replay is also required under some circumstances: 
 
