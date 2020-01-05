@@ -411,9 +411,9 @@ Reset-batch is for resetting a list of workflows. Usually reset-batch is more us
 
 2. Where to reset
 
-*ResetType
+* ResetType 
 
-*ResetBadBinaryChecksum
+* ResetBadBinaryChecksum
 
 Other arguments:
 
