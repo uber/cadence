@@ -17,9 +17,9 @@ Non-deterministic issues arise during this workflow ownership transfer. Cadence 
 
 Even if a workflow ownership doesn’t change, history replay is also required under some circumstances: 
 
-1. A workflow stack(of an execution) lives in worker’s memory, a worker can own many workflow executions. So a worker can run out of memory, it has to kick off some workflow executions (with LRU) and rebuild them when necessary.    
+* A workflow stack(of an execution) lives in worker’s memory, a worker can own many workflow executions. So a worker can run out of memory, it has to kick off some workflow executions (with LRU) and rebuild them when necessary.    
 
-2. Sometimes the stack can be stale because of some errors.
+* Sometimes the stack can be stale because of some errors.
 
 In Cadence, Workflow ownership is called "stickiness". 
 
@@ -33,69 +33,69 @@ In Cadence, we use "close" to describe the opposite status of “open”. For ac
 
 ### Decision
 
-    1. This is the key of history replay. 
+* Decision is the key of history replay. It drives the progress of a workflow. 
 
-    2. The decision state machine must be **Scheduled->Started->Closed** 
+* The decision state machine must be **Scheduled->Started->Closed** 
 
-    3. The first decision task is triggered by server. Starting from that, the rest decision task is triggered by some events of workflow itself -- when those events mean something the workflow could be waiting for. For example, Signaled, ActivityClosed, ChildWorkflowClosed, TimerFired events. Events like ActivityStarted won’t trigger decisions.  
+* The first decision task is triggered by server. Starting from that, the rest decision task is triggered by some events of workflow itself -- when those events mean something the workflow could be waiting for. For example, Signaled, ActivityClosed, ChildWorkflowClosed, TimerFired events. Events like ActivityStarted won’t trigger decisions.  
 
-    4. When a decision is started(internally called in flight), there cannot be any other events written into history before a decision is closed. Those events will be put into a buffer until the decision is closed -- flush buffer will write the events into history.
+* When a decision is started(internally called in flight), there cannot be any other events written into history before a decision is closed. Those events will be put into a buffer until the decision is closed -- flush buffer will write the events into history.
 
-    5. **In executing mode**, a decision task will try to complete with some entities: Activities/Timers/Childworkflows/etc Scheduled. 
+* **In executing mode**, a decision task will try to complete with some entities: Activities/Timers/Childworkflows/etc Scheduled. 
 
-    6. **In history replay mode**, decisions use all of those above to rebuild a stack. **Activities/ChildWorkflows/Timers/etc will not be re-executed during history replay.** 
+* **In history replay mode**, decisions use all of those above to rebuild a stack. **Activities/ChildWorkflows/Timers/etc will not be re-executed during history replay.** 
 
 ### Activity 
 
-    1. State machine is **Scheduled->Started->Closed**
+* State machine is **Scheduled->Started->Closed**
 
-    2. Activity is scheduled by DecisionCompleted
+* Activity is scheduled by DecisionCompleted
 
-    3. Activity started by worker. Normally ActivityStartedEvent can be put at any place in history except for the between of DecisionStarted and DecisionClose. 
+* Activity started by worker. Normally ActivityStartedEvent can be put at any place in history except for the between of DecisionStarted and DecisionClose. 
 
-    4. But Activity with RetryPolicy is a special case. Cadence will only write down Started event when Activity is finally closed. 
+* But Activity with RetryPolicy is a special case. Cadence will only write down Started event when Activity is finally closed. 
 
-    5. Activity completed/failed by worker, or timeouted by server -- they all consider activity closed, and it will trigger a decision task if no decision task on going. 
+* Activity completed/failed by worker, or timeouted by server -- they all consider activity closed, and it will trigger a decision task if no decision task on going. 
 
-    6. Like in the above, only ActivityClose events could trigger a decision.
+* Like in the above, only ActivityClose events could trigger a decision.
 
 ### Local activity 
 
-    13. Local activity is executed within decision is processing in flight. 
+* Local activity is executed within decision is processing in flight. 
 
-    14. Local activity is only recorded with DecisionCompleted -- no state machine needed.
+* Local activity is only recorded with DecisionCompleted -- no state machine needed.
 
-    15. Local activity completed with trigger another decision
+* Local activity completed with trigger another decision
 
 ### Timer
 
-1. State machine is **Scheduled->Fired/Canceled**
+* State machine is **Scheduled->Fired/Canceled**
 
-2. Timer is the implementation of "workflow.Sleep()" and “workflow.NewTimer().
+* Timer is the implementation of "workflow.Sleep()" and “workflow.NewTimer().
 
-3. Timer is scheduled by DecisionCompleted
+* Timer is scheduled by DecisionCompleted
 
-4. Timer fired by server. It would trigger a decision.
+* Timer fired by server. It would trigger a decision.
 
-5. Timer canceled by worker(when workflow is canceled)
+* Timer canceled by worker(when workflow is canceled)
 
 ### ChildWorkflow
 
-    16. State machine is **Initiated->Started->Closed**
+* State machine is **Initiated->Started->Closed**
 
-    17. ChildWorkflow is initiated by DecisionCompleted
+* ChildWorkflow is initiated by DecisionCompleted
 
-    18. ChildWorkflow is started by server(returning runID). It could trigger a decision. 
+* ChildWorkflow is started by server(returning runID). It could trigger a decision. 
 
-    19. ChildWorkflow close events can be"canceled/failed/completed". It could trigger a decision.  
+* ChildWorkflow close events can be"canceled/failed/completed". It could trigger a decision.  
 
 ### SignalExternal/RequestCancel 
 
-    20. State machine is **Initiated->Closed**
+* State machine is **Initiated->Closed**
 
-    21. They both initiated by DecisionCompleted, 
+* They both initiated by DecisionCompleted, 
 
-    22. Closed(completed/failed) by server, it could trigger a decision.
+* Closed(completed/failed) by server, it could trigger a decision.
 
 ### More explanation of BufferedEvents 
 
@@ -238,31 +238,31 @@ This usually means workflow history is corrupted due to some bug. For example, t
 
 ## What can cause non-deterministic errors
 
-        5. Changing the order of executing activities/timer/childWorkflows/signalExternal/CancelRequest
+* Changing the order of executing activities/timer/childWorkflows/signalExternal/CancelRequest
 
-        6. Changing signature of activities
+* Changing signature of activities
 
-        7. Changing duration of timer 
+* Changing duration of timer 
 
-        8. Using time.Now() instead of workflow.Now()
+* Using time.Now() instead of workflow.Now()
 
-        9. Use golang builtin "go" to start goroutine in workflow, instead of “workflow.Go”
+* Use golang builtin "go" to start goroutine in workflow, instead of “workflow.Go”
 
-        10. Use golang builtin channel instead of "workflow.Channel" for inter goroutines communication
+* Use golang builtin channel instead of "workflow.Channel" for inter goroutines communication
 
-        11. time.Sleep() will not work, even though it doesn’t cause non-deterministic errors, but changing to workflow.Sleep() will. 
+* time.Sleep() will not work, even though it doesn’t cause non-deterministic errors, but changing to workflow.Sleep() will. 
 
 For those needs, see "How to address non-deterministic issues" in the next section.
 
 ## What will NOT cause non-deterministic errors
 
-        12. Activity input/output is a struct, changing the details of the struct
+* Activity input/output is a struct, changing the details of the struct
 
-        13. Adding/changing some code that will not affect history, for example, code about logs/metrics
+* Adding/changing some code that will not affect history, for example, code about logs/metrics
 
-        14. Change retry policy of activity/local activity
+* Change retry policy of activity/local activity
 
-        15. <TODO: more to come...>
+* <TODO: more to come...>
 
 ## Find the Non-Deterministic Code
 
@@ -297,13 +297,13 @@ We have ideas on how non-deterministic errors can be detected automatically and 
 
 ## Related worker configs
 
-        16. NonDeterministicWorkflowPolicy
+### NonDeterministicWorkflowPolicy
 
-This is a worker option to decide what to do with non-deterministic workflows. Default is **_NonDeterministicWorkflowPolicyBlockWorkflow._**
+This is a worker option to decide what to do with non-deterministic workflows. Default is **NonDeterministicWorkflowPolicyBlockWorkflow**
 
-Another option is **_NonDeterministicWorkflowPolicyFailWorkflow _**which will fail the workflow immediately. You may want that if it is Okay to fail the trouble workflows for now(you can reopen later with reset) so that workers won’t keep on retrying the workflows.  
+Another option is **NonDeterministicWorkflowPolicyFailWorkflow** which will fail the workflow immediately. You may want that if it is Okay to fail the trouble workflows for now(you can reopen later with reset) so that workers won’t keep on retrying the workflows.  
 
-        17. DisableStickyExecution
+### DisableStickyExecution
 
 It defaults to false which means all workflows will stay in stickyCache unless there is memory pressure which causes them to be evicted. This is the desired behavior in production as it saves replay efforts. However it could hide potential non-deterministic errors exactly because of this reason. 
 
@@ -311,11 +311,11 @@ When troubleshooting it might be helpful to let a small number of workers run wi
 
 ## GetVersion() & SideEffect()
 
-		If you know some code change will cause non-deterministic errors, then use 
+If you know some code change will cause non-deterministic errors, then use 
 
 [workflow.GetVersion()](https://cadenceworkflow.io/docs/07_goclient/14_workflow_versioning) API to prevent it. This API will let the workflow that has finished the changing code to go with old code path, but let the workflows that hasn’t to go with new code path.
 
-		For example of "missing decision", instead of simply deleting the code, we could change it to:
+For example of "missing decision", instead of simply deleting the code, we could change it to:
 ```go
 v := workflow.GetVersion(ctx, "delete_timer", workflow.DefaultVersion, 1)
 if v == workflow.DefaultVersion{
@@ -399,21 +399,21 @@ Reset-batch is for resetting a list of workflows. Usually reset-batch is more us
 
 1. What workflows to reset
 
-    1. Input file or query: only one of them is needed. Query will be same as List command(advanced functionality based on ElasticSearch).
+* Input file or query: only one of them is needed. Query will be same as List command(advanced functionality based on ElasticSearch).
 
-    2. Exclude file- for filtering out some workflows that we don’t want to reset
+* Exclude file- for filtering out some workflows that we don’t want to reset
 
-    3. SkipIfCurrentOpen
+* SkipIfCurrentOpen
 
-    4. SkipIfBaseNotCurrent
+* SkipIfBaseNotCurrent
 
-    5. NonDeterministicOnly
+* NonDeterministicOnly
 
 2. Where to reset
 
-    6. ResetType
+*ResetType
 
-    7. ResetBadBinaryChecksum
+*ResetBadBinaryChecksum
 
 Other arguments:
 
