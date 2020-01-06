@@ -1511,34 +1511,35 @@ func (h *Handler) GetDLQReplicationMessages(
 	var wg sync.WaitGroup
 	wg.Add(len(taskInfoPerExecution))
 	tasksChan := make(chan *r.ReplicationTask, len(request.GetTaskInfos()))
+	handleTaskInfoPerExecution := func(taskInfos []*r.ReplicationTaskInfo) {
+		defer wg.Done()
+
+		if len(taskInfos) > 0 {
+			engine, err := h.controller.GetEngine(
+				taskInfos[0].GetWorkflowID(),
+			)
+			if err != nil {
+				h.GetLogger().Warn("History engine not found for workflow ID.", tag.Error(err))
+				return
+			}
+
+			tasks, err := engine.GetDLQReplicationMessages(
+				ctx,
+				taskInfos,
+			)
+			if err != nil {
+				h.GetLogger().Error("Failed to get dlq replication tasks.", tag.Error(err))
+				return
+			}
+
+			for _, task := range tasks {
+				tasksChan <- task
+			}
+		}
+	}
 
 	for _, replicationTaskInfos := range taskInfoPerExecution {
-		go func(taskInfos []*r.ReplicationTaskInfo) {
-			defer wg.Done()
-
-			if len(taskInfos) > 0 {
-				engine, err := h.controller.GetEngine(
-					taskInfos[0].GetWorkflowID(),
-				)
-				if err != nil {
-					h.GetLogger().Warn("History engine not found for workflow ID.", tag.Error(err))
-					return
-				}
-
-				tasks, err := engine.GetDLQReplicationMessages(
-					ctx,
-					taskInfos,
-				)
-				if err != nil {
-					h.GetLogger().Error("Failed to get dlq replication tasks.", tag.Error(err))
-					return
-				}
-
-				for _, task := range tasks {
-					tasksChan <- task
-				}
-			}
-		}(replicationTaskInfos)
+		go handleTaskInfoPerExecution(replicationTaskInfos)
 	}
 	wg.Wait()
 	close(tasksChan)
