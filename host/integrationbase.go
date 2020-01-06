@@ -111,10 +111,7 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	//zapLogger, err := zap.NewDevelopment()
-	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	zapLogger, err := config.Build()
+	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	s.Logger = loggerimpl.NewLogger(zapLogger)
 }
