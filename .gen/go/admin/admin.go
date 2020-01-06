@@ -3274,7 +3274,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "616f2325f9293c22bfe2b0ac255d0c31bd9a9350",
+	SHA1:     "8e3b8cba6e99e64b7b81eb383f72a0bf93453483",
 	Includes: []*thriftreflect.ThriftModule{
 		replicator.ThriftModule,
 		shared.ThriftModule,
@@ -3282,7 +3282,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.LimitExceededError limitExceededError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -6289,11 +6289,7 @@ func init() {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
-		case *shared.LimitExceededError:
-			return true
 		case *shared.ServiceBusyError:
-			return true
-		case *shared.ClientVersionNotSupportedError:
 			return true
 		default:
 			return false
@@ -6311,21 +6307,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDLQReplicationMessages_Result.BadRequestError")
 			}
 			return &AdminService_GetDLQReplicationMessages_Result{BadRequestError: e}, nil
-		case *shared.LimitExceededError:
-			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDLQReplicationMessages_Result.LimitExceededError")
-			}
-			return &AdminService_GetDLQReplicationMessages_Result{LimitExceededError: e}, nil
 		case *shared.ServiceBusyError:
 			if e == nil {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDLQReplicationMessages_Result.ServiceBusyError")
 			}
 			return &AdminService_GetDLQReplicationMessages_Result{ServiceBusyError: e}, nil
-		case *shared.ClientVersionNotSupportedError:
-			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDLQReplicationMessages_Result.ClientVersionNotSupportedError")
-			}
-			return &AdminService_GetDLQReplicationMessages_Result{ClientVersionNotSupportedError: e}, nil
 		}
 
 		return nil, err
@@ -6335,16 +6321,8 @@ func init() {
 			err = result.BadRequestError
 			return
 		}
-		if result.LimitExceededError != nil {
-			err = result.LimitExceededError
-			return
-		}
 		if result.ServiceBusyError != nil {
 			err = result.ServiceBusyError
-			return
-		}
-		if result.ClientVersionNotSupportedError != nil {
-			err = result.ClientVersionNotSupportedError
 			return
 		}
 
@@ -6366,11 +6344,9 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type AdminService_GetDLQReplicationMessages_Result struct {
 	// Value returned by GetDLQReplicationMessages after a successful execution.
-	Success                        *replicator.GetDLQReplicationMessagesResponse `json:"success,omitempty"`
-	BadRequestError                *shared.BadRequestError                       `json:"badRequestError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError                    `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError                      `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError        `json:"clientVersionNotSupportedError,omitempty"`
+	Success          *replicator.GetDLQReplicationMessagesResponse `json:"success,omitempty"`
+	BadRequestError  *shared.BadRequestError                       `json:"badRequestError,omitempty"`
+	ServiceBusyError *shared.ServiceBusyError                      `json:"serviceBusyError,omitempty"`
 }
 
 // ToWire translates a AdminService_GetDLQReplicationMessages_Result struct into a Thrift-level intermediate
@@ -6390,7 +6366,7 @@ type AdminService_GetDLQReplicationMessages_Result struct {
 //   }
 func (v *AdminService_GetDLQReplicationMessages_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -6412,28 +6388,12 @@ func (v *AdminService_GetDLQReplicationMessages_Result) ToWire() (wire.Value, er
 		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	if v.LimitExceededError != nil {
-		w, err = v.LimitExceededError.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 2, Value: w}
-		i++
-	}
 	if v.ServiceBusyError != nil {
 		w, err = v.ServiceBusyError.ToWire()
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 3, Value: w}
-		i++
-	}
-	if v.ClientVersionNotSupportedError != nil {
-		w, err = v.ClientVersionNotSupportedError.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 4, Value: w}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
 
@@ -6446,18 +6406,6 @@ func (v *AdminService_GetDLQReplicationMessages_Result) ToWire() (wire.Value, er
 
 func _GetDLQReplicationMessagesResponse_Read(w wire.Value) (*replicator.GetDLQReplicationMessagesResponse, error) {
 	var v replicator.GetDLQReplicationMessagesResponse
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _LimitExceededError_Read(w wire.Value) (*shared.LimitExceededError, error) {
-	var v shared.LimitExceededError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _ClientVersionNotSupportedError_Read(w wire.Value) (*shared.ClientVersionNotSupportedError, error) {
-	var v shared.ClientVersionNotSupportedError
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -6502,23 +6450,7 @@ func (v *AdminService_GetDLQReplicationMessages_Result) FromWire(w wire.Value) e
 			}
 		case 2:
 			if field.Value.Type() == wire.TStruct {
-				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 3:
-			if field.Value.Type() == wire.TStruct {
 				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 4:
-			if field.Value.Type() == wire.TStruct {
-				v.ClientVersionNotSupportedError, err = _ClientVersionNotSupportedError_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -6534,13 +6466,7 @@ func (v *AdminService_GetDLQReplicationMessages_Result) FromWire(w wire.Value) e
 	if v.BadRequestError != nil {
 		count++
 	}
-	if v.LimitExceededError != nil {
-		count++
-	}
 	if v.ServiceBusyError != nil {
-		count++
-	}
-	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
 	if count != 1 {
@@ -6557,7 +6483,7 @@ func (v *AdminService_GetDLQReplicationMessages_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [3]string
 	i := 0
 	if v.Success != nil {
 		fields[i] = fmt.Sprintf("Success: %v", v.Success)
@@ -6567,16 +6493,8 @@ func (v *AdminService_GetDLQReplicationMessages_Result) String() string {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
 		i++
 	}
-	if v.LimitExceededError != nil {
-		fields[i] = fmt.Sprintf("LimitExceededError: %v", v.LimitExceededError)
-		i++
-	}
 	if v.ServiceBusyError != nil {
 		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
-		i++
-	}
-	if v.ClientVersionNotSupportedError != nil {
-		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
 		i++
 	}
 
@@ -6599,13 +6517,7 @@ func (v *AdminService_GetDLQReplicationMessages_Result) Equals(rhs *AdminService
 	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
 		return false
 	}
-	if !((v.LimitExceededError == nil && rhs.LimitExceededError == nil) || (v.LimitExceededError != nil && rhs.LimitExceededError != nil && v.LimitExceededError.Equals(rhs.LimitExceededError))) {
-		return false
-	}
 	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
-		return false
-	}
-	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
 
@@ -6624,14 +6536,8 @@ func (v *AdminService_GetDLQReplicationMessages_Result) MarshalLogObject(enc zap
 	if v.BadRequestError != nil {
 		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
 	}
-	if v.LimitExceededError != nil {
-		err = multierr.Append(err, enc.AddObject("limitExceededError", v.LimitExceededError))
-	}
 	if v.ServiceBusyError != nil {
 		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
-	}
-	if v.ClientVersionNotSupportedError != nil {
-		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
 	}
 	return err
 }
@@ -6666,21 +6572,6 @@ func (v *AdminService_GetDLQReplicationMessages_Result) IsSetBadRequestError() b
 	return v != nil && v.BadRequestError != nil
 }
 
-// GetLimitExceededError returns the value of LimitExceededError if it is set or its
-// zero value if it is unset.
-func (v *AdminService_GetDLQReplicationMessages_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
-	if v != nil && v.LimitExceededError != nil {
-		return v.LimitExceededError
-	}
-
-	return
-}
-
-// IsSetLimitExceededError returns true if LimitExceededError is not nil.
-func (v *AdminService_GetDLQReplicationMessages_Result) IsSetLimitExceededError() bool {
-	return v != nil && v.LimitExceededError != nil
-}
-
 // GetServiceBusyError returns the value of ServiceBusyError if it is set or its
 // zero value if it is unset.
 func (v *AdminService_GetDLQReplicationMessages_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
@@ -6694,21 +6585,6 @@ func (v *AdminService_GetDLQReplicationMessages_Result) GetServiceBusyError() (o
 // IsSetServiceBusyError returns true if ServiceBusyError is not nil.
 func (v *AdminService_GetDLQReplicationMessages_Result) IsSetServiceBusyError() bool {
 	return v != nil && v.ServiceBusyError != nil
-}
-
-// GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
-// zero value if it is unset.
-func (v *AdminService_GetDLQReplicationMessages_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
-	if v != nil && v.ClientVersionNotSupportedError != nil {
-		return v.ClientVersionNotSupportedError
-	}
-
-	return
-}
-
-// IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
-func (v *AdminService_GetDLQReplicationMessages_Result) IsSetClientVersionNotSupportedError() bool {
-	return v != nil && v.ClientVersionNotSupportedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -7101,6 +6977,18 @@ func (v *AdminService_GetDomainReplicationMessages_Result) ToWire() (wire.Value,
 
 func _GetDomainReplicationMessagesResponse_Read(w wire.Value) (*replicator.GetDomainReplicationMessagesResponse, error) {
 	var v replicator.GetDomainReplicationMessagesResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _LimitExceededError_Read(w wire.Value) (*shared.LimitExceededError, error) {
+	var v shared.LimitExceededError
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ClientVersionNotSupportedError_Read(w wire.Value) (*shared.ClientVersionNotSupportedError, error) {
+	var v shared.ClientVersionNotSupportedError
 	err := v.FromWire(w)
 	return &v, err
 }

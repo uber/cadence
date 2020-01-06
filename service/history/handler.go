@@ -1493,7 +1493,7 @@ func (h *Handler) GetDLQReplicationMessages(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	taskInfoPerExecution := map[string][]*r.ReplicationTaskInfo{}
+	taskInfoPerExecution := map[definition.WorkflowIdentifier][]*r.ReplicationTaskInfo{}
 	// do batch based on workflow ID and run ID
 	for _, taskInfo := range request.GetTaskInfos() {
 		identity := definition.NewWorkflowIdentifier(
@@ -1501,11 +1501,10 @@ func (h *Handler) GetDLQReplicationMessages(
 			taskInfo.GetWorkflowID(),
 			taskInfo.GetRunID(),
 		)
-		key := identity.GetID()
-		if _, ok := taskInfoPerExecution[key]; !ok {
-			taskInfoPerExecution[key] = []*r.ReplicationTaskInfo{}
+		if _, ok := taskInfoPerExecution[identity]; !ok {
+			taskInfoPerExecution[identity] = []*r.ReplicationTaskInfo{}
 		}
-		taskInfoPerExecution[key] = append(taskInfoPerExecution[key], taskInfo)
+		taskInfoPerExecution[identity] = append(taskInfoPerExecution[identity], taskInfo)
 	}
 
 	var wg sync.WaitGroup
@@ -1513,28 +1512,29 @@ func (h *Handler) GetDLQReplicationMessages(
 	tasksChan := make(chan *r.ReplicationTask, len(request.GetTaskInfos()))
 	handleTaskInfoPerExecution := func(taskInfos []*r.ReplicationTaskInfo) {
 		defer wg.Done()
+		if len(taskInfos) == 0 {
+			return
+		}
 
-		if len(taskInfos) > 0 {
-			engine, err := h.controller.GetEngine(
-				taskInfos[0].GetWorkflowID(),
-			)
-			if err != nil {
-				h.GetLogger().Warn("History engine not found for workflow ID.", tag.Error(err))
-				return
-			}
+		engine, err := h.controller.GetEngine(
+			taskInfos[0].GetWorkflowID(),
+		)
+		if err != nil {
+			h.GetLogger().Warn("History engine not found for workflow ID.", tag.Error(err))
+			return
+		}
 
-			tasks, err := engine.GetDLQReplicationMessages(
-				ctx,
-				taskInfos,
-			)
-			if err != nil {
-				h.GetLogger().Error("Failed to get dlq replication tasks.", tag.Error(err))
-				return
-			}
+		tasks, err := engine.GetDLQReplicationMessages(
+			ctx,
+			taskInfos,
+		)
+		if err != nil {
+			h.GetLogger().Error("Failed to get dlq replication tasks.", tag.Error(err))
+			return
+		}
 
-			for _, task := range tasks {
-				tasksChan <- task
-			}
+		for _, task := range tasks {
+			tasksChan <- task
 		}
 	}
 

@@ -826,10 +826,8 @@ service HistoryService {
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
-      3: shared.LimitExceededError limitExceededError,
-      4: shared.ServiceBusyError serviceBusyError,
-      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
-      6: shared.EntityNotExistsError entityNotExistError,
+      3: shared.ServiceBusyError serviceBusyError,
+      4: shared.EntityNotExistsError entityNotExistError,
     )
 
   /**

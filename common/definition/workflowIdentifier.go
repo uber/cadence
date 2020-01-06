@@ -20,12 +20,6 @@
 
 package definition
 
-import "fmt"
-
-const (
-	idTemplate = "%v::%v::%v"
-)
-
 type (
 	// WorkflowIdentifier is the combinations which represent a workflow
 	WorkflowIdentifier struct {
@@ -42,9 +36,4 @@ func NewWorkflowIdentifier(domainID string, workflowID string, runID string) Wor
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}
-}
-
-// GetID returns a string of the WorkflowIdentifier
-func (w *WorkflowIdentifier) GetID() string {
-	return fmt.Sprintf(idTemplate, w.DomainID, w.WorkflowID, w.RunID)
 }

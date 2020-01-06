@@ -670,7 +670,7 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 			}
 
 			// NDC workflow
-			versionHistory, err := p.getVersionHistory(
+			versionHistoryItems, branchToken, err := p.getVersionHistoryItems(
 				mutableState,
 				task.FirstEventID,
 				task.Version,
@@ -678,11 +678,10 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 			if err != nil {
 				return nil, err
 			}
-			versionHistoryItems := versionHistory.ToThrift().GetItems()
 
 			// BranchToken will not set in get dlq replication message request
 			if len(task.BranchToken) == 0 {
-				task.BranchToken = versionHistory.GetBranchToken()
+				task.BranchToken = branchToken
 			}
 
 			eventsBlob, err := p.getEventsBlob(
@@ -764,15 +763,15 @@ func (p *replicatorQueueProcessorImpl) getEventsBlob(
 	return eventBatchBlobs[0].ToThrift(), nil
 }
 
-func (p *replicatorQueueProcessorImpl) getVersionHistory(
+func (p *replicatorQueueProcessorImpl) getVersionHistoryItems(
 	mutableState mutableState,
 	eventID int64,
 	version int64,
-) (*persistence.VersionHistory, error) {
+) ([]*shared.VersionHistoryItem, []byte, error) {
 
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, &shared.InternalServiceError{
+		return nil, nil, &shared.InternalServiceError{
 			Message: "replicatorQueueProcessor encounter workflow without version histories",
 		}
 	}
@@ -784,10 +783,14 @@ func (p *replicatorQueueProcessorImpl) getVersionHistory(
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return versionHistories.GetVersionHistory(versionHistoryIndex)
+	versionHistory, err := versionHistories.GetVersionHistory(versionHistoryIndex)
+	if err != nil {
+		return nil, nil, err
+	}
+	return versionHistory.ToThrift().Items, versionHistory.GetBranchToken(), nil
 }
 
 func (p *replicatorQueueProcessorImpl) processReplication(
