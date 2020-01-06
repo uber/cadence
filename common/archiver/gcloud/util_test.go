@@ -31,8 +31,16 @@ import (
 	"github.com/uber/cadence/common"
 )
 
-func (s *utilSuite) TestEncodeDecodeHistoryBatch() {
-	historyBatches :=
+func (s *utilSuite) TestEncodeDecodeHistoryBatches() {
+	historyBatches := []*shared.History{
+		&shared.History{
+			Events: []*shared.HistoryEvent{
+				&shared.HistoryEvent{
+					EventId: common.Int64Ptr(common.FirstEventID),
+					Version: common.Int64Ptr(1),
+				},
+			},
+		},
 		&shared.History{
 			Events: []*shared.HistoryEvent{
 				&shared.HistoryEvent{
@@ -48,12 +56,13 @@ func (s *utilSuite) TestEncodeDecodeHistoryBatch() {
 					},
 				},
 			},
-		}
+		},
+	}
 
 	encodedHistoryBatches, err := encode(historyBatches)
 	s.NoError(err)
 
-	decodedHistoryBatches, err := decodeHistoryBatch(encodedHistoryBatches)
+	decodedHistoryBatches, err := decodeHistoryBatches(encodedHistoryBatches)
 	s.NoError(err)
 	s.Equal(historyBatches, decodedHistoryBatches)
 }
