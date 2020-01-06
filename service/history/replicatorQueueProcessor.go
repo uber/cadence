@@ -25,8 +25,6 @@ import (
 	"errors"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -494,7 +492,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 }
 
 func (p *replicatorQueueProcessorImpl) getTask(
-	ctx context.Context,
+	ctx ctx.Context,
 	taskInfo *replicator.ReplicationTaskInfo,
 ) (*replicator.ReplicationTask, error) {
 
