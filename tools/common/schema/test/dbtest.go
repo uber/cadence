@@ -87,7 +87,7 @@ func (tb *DBTestBase) RunParseFileTest(content string) {
 	defer os.Remove(cqlFile.Name())
 
 	_, err = cqlFile.WriteString(content)
-	tb.NotNil(err)
+	tb.NoError(err)
 	stmts, err := schema.ParseFile(cqlFile.Name())
 	tb.Nil(err)
 	tb.Equal(2, len(stmts), "wrong number of sql statements")

@@ -26,10 +26,9 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )

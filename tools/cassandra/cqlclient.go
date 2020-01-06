@@ -274,15 +274,15 @@ func (client *cqlClient) dropAllTablesTypes() error {
 	log.Printf("Dropping following types: %v\n", types)
 	numOfTypes := len(types)
 	for i := 0; i < numOfTypes && len(types) > 0; i++ {
-		var tmp []string
+		var erroredTypes []string
 		for _, t := range types {
 			err = client.dropType(t)
 			if err != nil {
 				log.Printf("Error dropping type %v, err=%v\n", t, err)
-				tmp = append(tmp, t)
+				erroredTypes = append(erroredTypes, t)
 			}
 		}
-		types = tmp
+		types = erroredTypes
 	}
 	if len(types) > 0 {
 		return err
