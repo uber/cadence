@@ -1715,6 +1715,7 @@ func (s *ExecutionManagerSuite) TestUpdateDeleteWorkflow() {
 	s.True(ok)
 }
 
+// TestCleanupCorruptedWorkflow test
 func (s *ExecutionManagerSuite) TestCleanupCorruptedWorkflow() {
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{

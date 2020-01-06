@@ -25,6 +25,8 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -491,6 +493,25 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	}, nil
 }
 
+func (p *replicatorQueueProcessorImpl) getTask(
+	ctx context.Context,
+	taskInfo *replicator.ReplicationTaskInfo,
+) (*replicator.ReplicationTask, error) {
+
+	task := &persistence.ReplicationTaskInfo{
+		DomainID:     taskInfo.GetDomainID(),
+		WorkflowID:   taskInfo.GetWorkflowID(),
+		RunID:        taskInfo.GetRunID(),
+		TaskID:       taskInfo.GetTaskID(),
+		TaskType:     int(taskInfo.GetTaskType()),
+		FirstEventID: taskInfo.GetFirstEventID(),
+		NextEventID:  taskInfo.GetNextEventID(),
+		Version:      taskInfo.GetVersion(),
+		ScheduledID:  taskInfo.GetScheduledID(),
+	}
+	return p.toReplicationTask(ctx, task)
+}
+
 func (p *replicatorQueueProcessorImpl) readTasksWithBatchSize(readLevel int64, batchSize int) ([]queueTaskInfo, bool, error) {
 	response, err := p.executionMgr.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
 		ReadLevel:    readLevel,
@@ -540,15 +561,17 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(
 
 func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 	ctx ctx.Context,
-	task *persistence.ReplicationTaskInfo,
+	taskInfo *persistence.ReplicationTaskInfo,
 ) (*replicator.ReplicationTask, error) {
 
 	return p.processReplication(
 		ctx,
 		false, // not necessary to send out sync activity task if workflow closed
-		task,
+		taskInfo.GetDomainID(),
+		taskInfo.GetWorkflowID(),
+		taskInfo.GetRunID(),
 		func(mutableState mutableState) (*replicator.ReplicationTask, error) {
-			activityInfo, ok := mutableState.GetActivityInfo(task.ScheduledID)
+			activityInfo, ok := mutableState.GetActivityInfo(taskInfo.ScheduledID)
 			if !ok {
 				return nil, nil
 			}
@@ -576,9 +599,9 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 			return &replicator.ReplicationTask{
 				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
 				SyncActivityTaskAttributes: &replicator.SyncActivityTaskAttributes{
-					DomainId:           common.StringPtr(task.DomainID),
-					WorkflowId:         common.StringPtr(task.WorkflowID),
-					RunId:              common.StringPtr(task.RunID),
+					DomainId:           common.StringPtr(taskInfo.GetDomainID()),
+					WorkflowId:         common.StringPtr(taskInfo.GetWorkflowID()),
+					RunId:              common.StringPtr(taskInfo.GetRunID()),
 					Version:            common.Int64Ptr(activityInfo.Version),
 					ScheduledId:        common.Int64Ptr(activityInfo.ScheduleID),
 					ScheduledTime:      scheduledTime,
@@ -605,7 +628,9 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 	return p.processReplication(
 		ctx,
 		true, // still necessary to send out history replication message if workflow closed
-		task,
+		task.GetDomainID(),
+		task.GetWorkflowID(),
+		task.GetRunID(),
 		func(mutableState mutableState) (*replicator.ReplicationTask, error) {
 
 			versionHistories := mutableState.GetVersionHistories()
@@ -634,7 +659,7 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 					return nil, err
 				}
 				if newRunID != "" {
-					isNDCWorkflow, err := p.getVersionHistory(ctx, task.DomainID, task.WorkflowID, newRunID)
+					isNDCWorkflow, err := p.isNewRunNDCEnabled(ctx, task.DomainID, task.WorkflowID, newRunID)
 					if err != nil {
 						return nil, err
 					}
@@ -645,6 +670,21 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 			}
 
 			// NDC workflow
+			versionHistory, err := p.getVersionHistory(
+				mutableState,
+				task.FirstEventID,
+				task.Version,
+			)
+			if err != nil {
+				return nil, err
+			}
+			versionHistoryItems := versionHistory.ToThrift().GetItems()
+
+			// BranchToken will not set in get dlq replication message request
+			if len(task.BranchToken) == 0 {
+				task.BranchToken = versionHistory.GetBranchToken()
+			}
+
 			eventsBlob, err := p.getEventsBlob(
 				task.BranchToken,
 				task.FirstEventID,
@@ -665,15 +705,6 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 				if err != nil {
 					return nil, err
 				}
-			}
-
-			versionHistoryItems, err := p.getVersionHistoryItems(
-				mutableState,
-				task.FirstEventID,
-				task.Version,
-			)
-			if err != nil {
-				return nil, err
 			}
 
 			replicationTask := &replicator.ReplicationTask{
@@ -733,11 +764,11 @@ func (p *replicatorQueueProcessorImpl) getEventsBlob(
 	return eventBatchBlobs[0].ToThrift(), nil
 }
 
-func (p *replicatorQueueProcessorImpl) getVersionHistoryItems(
+func (p *replicatorQueueProcessorImpl) getVersionHistory(
 	mutableState mutableState,
 	eventID int64,
 	version int64,
-) ([]*shared.VersionHistoryItem, error) {
+) (*persistence.VersionHistory, error) {
 
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
@@ -756,25 +787,21 @@ func (p *replicatorQueueProcessorImpl) getVersionHistoryItems(
 		return nil, err
 	}
 
-	versionHistory, err := versionHistories.GetVersionHistory(versionHistoryIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	return versionHistory.ToThrift().Items, nil
+	return versionHistories.GetVersionHistory(versionHistoryIndex)
 }
 
 func (p *replicatorQueueProcessorImpl) processReplication(
 	ctx ctx.Context,
 	processTaskIfClosed bool,
-	replicationTask *persistence.ReplicationTaskInfo,
+	domainID string,
+	workflowID string,
+	runID string,
 	action func(mutableState) (*replicator.ReplicationTask, error),
 ) (retReplicationTask *replicator.ReplicationTask, retError error) {
 
-	domainID := replicationTask.DomainID
 	execution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(replicationTask.WorkflowID),
-		RunId:      common.StringPtr(replicationTask.RunID),
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
 	}
 
 	context, release, err := p.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
@@ -798,7 +825,7 @@ func (p *replicatorQueueProcessorImpl) processReplication(
 	}
 }
 
-func (p *replicatorQueueProcessorImpl) getVersionHistory(
+func (p *replicatorQueueProcessorImpl) isNewRunNDCEnabled(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,

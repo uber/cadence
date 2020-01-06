@@ -105,6 +105,14 @@ service AdminService {
       5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
 
+  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.LimitExceededError limitExceededError,
+      3: shared.ServiceBusyError serviceBusyError,
+      4: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
+
   /**
   * ReapplyEvents applies stale events to the current workflow and current run
   **/
