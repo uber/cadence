@@ -26,6 +26,8 @@ import (
 	"encoding/gob"
 	"fmt"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -57,7 +59,11 @@ func (m *sqlStore) txExecute(operation string, f func(tx sqlplugin.Tx) error) er
 	}
 	err = f(tx)
 	if err != nil {
-		tx.Rollback()
+		rollBackErr := tx.Rollback()
+		if rollBackErr != nil {
+			m.logger.Error("transaction rollback error", tag.Error(rollBackErr))
+		}
+
 		switch err.(type) {
 		case *persistence.ConditionFailedError,
 			*persistence.CurrentWorkflowConditionFailedError,
@@ -101,34 +107,6 @@ func gobDeserialize(a []byte, x interface{}) error {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Error in deserialization: %v", err),
 		}
-	}
-	return nil
-}
-
-func boolToInt64(b bool) int64 {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func int64ToBool(i int64) bool {
-	if i == 0 {
-		return false
-	}
-	return true
-}
-
-func takeAddressIfNotNil(a []byte) *[]byte {
-	if a != nil {
-		return &a
-	}
-	return nil
-}
-
-func dereferenceIfNotNil(a *[]byte) []byte {
-	if a != nil {
-		return *a
 	}
 	return nil
 }

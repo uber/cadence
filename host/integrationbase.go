@@ -111,7 +111,10 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	zapLogger, err := zap.NewDevelopment()
+	//zapLogger, err := zap.NewDevelopment()
+	config := zap.NewDevelopmentConfig()
+	config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	zapLogger, err := config.Build()
 	s.Require().NoError(err)
 	s.Logger = loggerimpl.NewLogger(zapLogger)
 }
@@ -170,15 +173,6 @@ func (s *IntegrationBase) registerDomain(
 		HistoryArchivalURI:                     &historyArchivalURI,
 		VisibilityArchivalStatus:               &visibilityArchivalStatus,
 		VisibilityArchivalURI:                  &visibilityArchivalURI,
-	})
-}
-
-func (s *IntegrationBase) describeDomain(domain string) (*workflow.DescribeDomainResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	return s.engine.DescribeDomain(ctx, &workflow.DescribeDomainRequest{
-		Name: &domain,
 	})
 }
 

@@ -83,8 +83,7 @@ func (c *retryableClient) RemoveTask(
 ) error {
 
 	op := func() error {
-		var err error
-		err = c.client.RemoveTask(ctx, request, opts...)
+		err := c.client.RemoveTask(ctx, request, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)
