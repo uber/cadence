@@ -279,7 +279,7 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionRawHistory(
 	request *shared.GetWorkflowExecutionRawHistoryRequest,
 ) (resp *shared.GetWorkflowExecutionRawHistoryResponse, retError error) {
 
-	var apiName = "GetRawHistory"
+	var apiName = "GetWorkflowExecutionRawHistory"
 	var err error
 	var cluster string
 

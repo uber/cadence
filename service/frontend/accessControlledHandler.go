@@ -229,7 +229,7 @@ func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionRawHistory(
 ) (*shared.GetWorkflowExecutionRawHistoryResponse, error) {
 
 	attr := &authorization.Attributes{
-		APIName:    "GetRawHistory",
+		APIName:    "GetWorkflowExecutionRawHistory",
 		DomainName: request.GetDomain(),
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr)

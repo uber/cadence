@@ -1741,16 +1741,16 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 	var isWorkflowRunning bool
 
 	// this function return the following 5 things,
-	// 1. the workflow run ID
-	// 2. the last first event ID (the event ID of the last batch of events in the history)
+	// 1. current branch token
+	// 2. the workflow run ID
 	// 3. the next event ID
-	// 5. error if any
+	// 4. error if any
 	queryHistory := func(
 		domainUUID string,
 		execution *gen.WorkflowExecution,
 		expectedNextEventID int64,
 		currentBranchToken []byte,
-	) ([]byte, string, int64, int64, error) {
+	) ([]byte, string, int64, error) {
 		response, err := wh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
@@ -1759,12 +1759,11 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		})
 
 		if err != nil {
-			return nil, "", 0, 0, err
+			return nil, "", 0, err
 		}
 
 		return response.CurrentBranchToken,
 			response.Execution.GetRunId(),
-			response.GetLastFirstEventId(),
 			response.GetNextEventId(),
 			nil
 	}
@@ -1782,7 +1781,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 
 		execution.RunId = common.StringPtr(token.RunID)
 	} else {
-		token.BranchToken, runID, _, nextEventID, err =
+		token.BranchToken, runID, nextEventID, err =
 			queryHistory(domainID, execution, queryNextEventID, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)

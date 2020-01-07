@@ -362,7 +362,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 	s.Equal(1, len(events))
 }
 
-func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
+func (s *integrationSuite) TestAdminGetWorkflowExecutionRawHistory_All() {
 	workflowID := "integration-get-workflow-history-raw-events-all"
 	workflowTypeName := "integration-get-workflow-history-raw-events-all-type"
 	tasklistName := "integration-get-workflow-history-raw-events-all-tasklist"
@@ -581,7 +581,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	s.True(len(events) == 3)
 }
 
-func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_InTheMiddle() {
+func (s *integrationSuite) TestAdminGetWorkflowExecutionRawHistory_InTheMiddle() {
 	workflowID := "integration-get-workflow-history-raw-events-in-the-middle"
 	workflowTypeName := "integration-get-workflow-history-raw-events-in-the-middle-type"
 	tasklistName := "integration-get-workflow-history-raw-events-in-the-middle-tasklist"
