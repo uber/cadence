@@ -23,7 +23,6 @@ package gcloud
 import (
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"path/filepath"
 	"sort"
@@ -63,14 +62,14 @@ type historyArchiverData struct {
 	historyIterator archiver.HistoryIterator
 }
 
-type historyIteratorState struct {
-	NextEventID       int64
-	FinishedIteration bool
+type progress struct {
+	CurrentPageNumber int64
+	IteratorState     []byte
 }
 
 type getHistoryToken struct {
 	CloseFailoverVersion int64
-	FailoverParts        []int64
+	HistoryParts         []int64
 	NextBatchIdx         int
 }
 
@@ -126,13 +125,15 @@ func (h *historyArchiverData) Archive(ctx context.Context, URI archiver.URI, req
 		return errUploadNonRetriable
 	}
 
+	var totalUploadSize int64
 	historyIterator := h.historyIterator
+	var progress progress
 	if historyIterator == nil { // will only be set by testing code
-		historyIterator, _ = loadHistoryIterator(ctx, request, h.container.HistoryV2Manager, featureCatalog)
+		historyIterator, _ = loadHistoryIterator(ctx, request, h.container.HistoryV2Manager, featureCatalog, &progress)
 	}
 
 	for historyIterator.HasNext() {
-		part := getCurrentHistoryPartNumber(historyIterator)
+		part := progress.CurrentPageNumber
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 
 		if err != nil {
@@ -163,14 +164,14 @@ func (h *historyArchiverData) Archive(ctx context.Context, URI archiver.URI, req
 				return errUploadRetriable
 			}
 
-			scope.AddCounter(metrics.HistoryArchiverTotalUploadSize, int64(binary.Size(encodedHistoryPart)))
-			scope.AddCounter(metrics.HistoryArchiverHistorySize, int64(binary.Size(encodedHistoryPart)))
+			totalUploadSize = totalUploadSize + int64(binary.Size(encodedHistoryPart))
 		}
 
-		saveHistoryIteratorState(ctx, featureCatalog, historyIterator)
-
+		saveHistoryIteratorState(ctx, featureCatalog, historyIterator, part, &progress)
 	}
 
+	scope.AddCounter(metrics.HistoryArchiverTotalUploadSize, totalUploadSize)
+	scope.AddCounter(metrics.HistoryArchiverHistorySize, totalUploadSize)
 	scope.IncCounter(metrics.HistoryArchiverArchiveSuccessCount)
 	return
 }
@@ -200,19 +201,27 @@ func (h *historyArchiverData) Get(ctx context.Context, URI archiver.URI, request
 			NextBatchIdx:         0,
 		}
 	} else {
-		highestVersion, failoverParts, err := h.getHighestVersion(ctx, URI, request)
+		highestVersion, historyParts, err := h.getHighestVersion(ctx, URI, request)
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		token = &getHistoryToken{
 			CloseFailoverVersion: *highestVersion,
-			FailoverParts:        failoverParts,
+			HistoryParts:         historyParts,
 			NextBatchIdx:         0,
 		}
 	}
 
-	historyBatches := []*shared.History{}
-	for _, partNum := range token.FailoverParts {
+	response := &archiver.GetHistoryResponse{}
+	numOfEvents := 0
+	numOfBatches := 0
+	var pageSizeCompleted bool
+	for _, partNum := range token.HistoryParts {
+		historyBatches := []*shared.History{}
+		if pageSizeCompleted {
+			break
+		}
+
 		filename := constructHistoryFilenameMultipart(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion, partNum)
 		encodedHistoryBatches, err := h.gcloudStorage.Get(ctx, URI, filename)
 
@@ -229,28 +238,27 @@ func (h *historyArchiverData) Get(ctx context.Context, URI archiver.URI, request
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		historyBatches = append(historyBatches, batches...)
-	}
 
-	historyBatches = historyBatches[token.NextBatchIdx:]
-	response := &archiver.GetHistoryResponse{}
-	numOfEvents := 0
-	numOfBatches := 0
-	for _, batch := range historyBatches {
-		response.HistoryBatches = append(response.HistoryBatches, batch)
-		numOfBatches++
-		numOfEvents += len(batch.Events)
-		if numOfEvents >= request.PageSize {
-			break
-		}
-	}
+		historyBatches = historyBatches[token.NextBatchIdx:]
 
-	if numOfBatches < len(historyBatches) {
-		token.NextBatchIdx += numOfBatches
-		nextToken, err := serializeToken(token)
-		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+		for _, batch := range historyBatches {
+			response.HistoryBatches = append(response.HistoryBatches, batch)
+			numOfBatches++
+			numOfEvents += len(batch.Events)
+			if numOfEvents >= request.PageSize {
+				pageSizeCompleted = true
+				break
+			}
 		}
-		response.NextPageToken = nextToken
+
+		if numOfBatches < len(historyBatches) {
+			token.NextBatchIdx += numOfBatches
+			nextToken, err := serializeToken(token)
+			if err != nil {
+				return nil, &shared.InternalServiceError{Message: err.Error()}
+			}
+			response.NextPageToken = nextToken
+		}
 	}
 
 	return response, nil
@@ -320,9 +328,9 @@ func (h *historyArchiverData) getHighestVersion(ctx context.Context, URI archive
 	}
 
 	var highestVersion *int64
-	failoverPart := make([]int64, 0, 0)
+	batchesPartIds := make([]int64, 0, 0)
 	for _, filename := range filenames {
-		version, partVersion, err := extractCloseFailoverVersion(filepath.Base(filename))
+		version, partVersionId, err := extractCloseFailoverVersion(filepath.Base(filename))
 		if err != nil {
 			continue
 		}
@@ -330,18 +338,20 @@ func (h *historyArchiverData) getHighestVersion(ctx context.Context, URI archive
 			highestVersion = &version
 		}
 
-		failoverPart = append(failoverPart, partVersion)
+		if highestVersion == nil || *highestVersion == version {
+			batchesPartIds = append(batchesPartIds, partVersionId)
+		}
 
 	}
-	if highestVersion == nil || len(failoverPart) == 0 {
+	if highestVersion == nil || len(batchesPartIds) == 0 {
 		return nil, nil, archiver.ErrHistoryNotExist
 	}
 
-	sort.Slice(failoverPart, func(i, j int) bool { return failoverPart[i] < failoverPart[j] })
-	return highestVersion, failoverPart, nil
+	sort.Slice(batchesPartIds, func(i, j int) bool { return batchesPartIds[i] < batchesPartIds[j] })
+	return highestVersion, batchesPartIds, nil
 }
 
-func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRequest, historyManager persistence.HistoryManager, featureCatalog *archiver.ArchiveFeatureCatalog) (historyIterator archiver.HistoryIterator, err error) {
+func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRequest, historyManager persistence.HistoryManager, featureCatalog *archiver.ArchiveFeatureCatalog, progress *progress) (historyIterator archiver.HistoryIterator, err error) {
 
 	defer func() {
 		if err != nil || historyIterator == nil {
@@ -350,31 +360,28 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 	}()
 
 	if featureCatalog.ProgressManager != nil {
-		historyProgressManager := new(historyIteratorState)
-		err = featureCatalog.ProgressManager.LoadProgress(ctx, &historyProgressManager)
-		if err == nil {
-			iteratorState, _ := json.Marshal(historyProgressManager)
-			historyIterator, err = archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, iteratorState)
+		if featureCatalog.ProgressManager.HasProgress(ctx) {
+			err = featureCatalog.ProgressManager.LoadProgress(ctx, &progress)
+			if err == nil {
+				historyIterator, err = archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, progress.IteratorState)
+			}
 		}
+
 	}
 	return
 }
 
-func saveHistoryIteratorState(ctx context.Context, featureCatalog *archiver.ArchiveFeatureCatalog, historyIterator archiver.HistoryIterator) (err error) {
+func saveHistoryIteratorState(ctx context.Context, featureCatalog *archiver.ArchiveFeatureCatalog, historyIterator archiver.HistoryIterator, currentPartNum int64, progress *progress) (err error) {
 	var state []byte
 	if featureCatalog.ProgressManager != nil {
 		state, err = historyIterator.GetState()
 		if err == nil {
-			err = featureCatalog.ProgressManager.RecordProgress(ctx, state)
+			progress.CurrentPageNumber = currentPartNum + 1
+			progress.IteratorState = state
+
+			err = featureCatalog.ProgressManager.RecordProgress(ctx, progress)
 		}
 	}
 
 	return err
-}
-
-func getCurrentHistoryPartNumber(historyIterator archiver.HistoryIterator) int64 {
-	historyProgressManager := new(historyIteratorState)
-	state, _ := historyIterator.GetState()
-	json.Unmarshal(state, &historyProgressManager)
-	return historyProgressManager.NextEventID
 }
