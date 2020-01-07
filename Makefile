@@ -18,15 +18,15 @@ default: test
 # define the list of thrift files the service depends on
 # (if you have some)
 THRIFTRW_SRCS = \
-  idls/cadence.thrift \
-  idls/health.thrift \
-  idls/history.thrift \
-  idls/matching.thrift \
-  idls/replicator.thrift \
-  idls/indexer.thrift \
-  idls/shared.thrift \
-  idls/admin.thrift \
-  idls/sqlblobs.thrift \
+  idls/thrift/cadence.thrift \
+  idls/thrift/health.thrift \
+  idls/thrift/history.thrift \
+  idls/thrift/matching.thrift \
+  idls/thrift/replicator.thrift \
+  idls/thrift/indexer.thrift \
+  idls/thrift/shared.thrift \
+  idls/thrift/admin.thrift \
+  idls/thrift/sqlblobs.thrift \
 
 PROGS = cadence
 TEST_TIMEOUT = 20m
