@@ -48,29 +48,24 @@ func NewDomainReplicationQueue(
 	logger log.Logger,
 ) DomainReplicationQueue {
 	return &domainReplicationQueueImpl{
-		queue:               queue,
-		clusterName:         clusterName,
-		metricsClient:       metricsClient,
-		logger:              logger,
-		encoder:             codec.NewThriftRWEncoder(),
-		ackNotificationChan: make(chan bool),
-		done:                make(chan bool),
-		lastCleanupTime:     time.Now().UTC(),
+		queue:           queue,
+		clusterName:     clusterName,
+		metricsClient:   metricsClient,
+		logger:          logger,
+		encoder:         codec.NewThriftRWEncoder(),
+		lastCleanupTime: time.Now().UTC(),
 	}
 }
 
 type (
 	domainReplicationQueueImpl struct {
 		sync.RWMutex
-		queue               Queue
-		clusterName         string
-		metricsClient       metrics.Client
-		logger              log.Logger
-		encoder             codec.BinaryEncoder
-		ackLevelUpdated     bool
-		ackNotificationChan chan bool
-		done                chan bool
-		lastCleanupTime     time.Time
+		queue           Queue
+		clusterName     string
+		metricsClient   metrics.Client
+		logger          log.Logger
+		encoder         codec.BinaryEncoder
+		lastCleanupTime time.Time
 	}
 )
 
@@ -91,6 +86,10 @@ func (q *domainReplicationQueueImpl) GetReplicationMessages(
 	lastMessageID int,
 	maxCount int,
 ) ([]*replicator.ReplicationTask, int, error) {
+
+	// trigger a domain queue cleanup
+	go q.purgeProcessor()
+
 	messages, err := q.queue.ReadMessages(lastMessageID, maxCount)
 	if err != nil {
 		return nil, lastMessageID, err
@@ -117,11 +116,6 @@ func (q *domainReplicationQueueImpl) UpdateAckLevel(lastProcessedMessageID int, 
 		return fmt.Errorf("failed to update ack level: %v", err)
 	}
 
-	select {
-	case q.ackNotificationChan <- true:
-	default:
-	}
-
 	return nil
 }
 
@@ -129,13 +123,7 @@ func (q *domainReplicationQueueImpl) GetAckLevels() (map[string]int, error) {
 	return q.queue.GetAckLevels()
 }
 
-func (q *domainReplicationQueueImpl) Close() {
-	close(q.done)
-}
-
 func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
-
-	go q.purgeProcessor()
 	ackLevelByCluster, err := q.GetAckLevels()
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
@@ -160,8 +148,6 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 	q.metricsClient.
 		Scope(metrics.FrontendDomainReplicationQueueScope).
 		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
-
-	q.ackLevelUpdated = false
 
 	return nil
 }

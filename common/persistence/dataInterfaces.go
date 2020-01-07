@@ -1548,7 +1548,6 @@ type (
 
 	// DomainReplicationQueue is used to publish and list domain replication tasks
 	DomainReplicationQueue interface {
-		Closeable
 		Publish(message interface{}) error
 		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
 		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error

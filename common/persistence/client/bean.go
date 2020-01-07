@@ -310,7 +310,6 @@ func (s *BeanImpl) Close() {
 	s.metadataManager.Close()
 	s.taskManager.Close()
 	s.visibilityManager.Close()
-	s.domainReplicationQueue.Close()
 	s.shardManager.Close()
 	s.historyManager.Close()
 	s.executionManagerFactory.Close()
