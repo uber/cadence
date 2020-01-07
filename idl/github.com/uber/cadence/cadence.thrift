@@ -581,8 +581,8 @@ service WorkflowService {
   shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: shared.ListTaskListPartitionsRequest request)
     throws (
       1: shared.BadRequestError badRequestError,
-      3: shared.EntityNotExistsError entityNotExistError,
-      4: shared.LimitExceededError limitExceededError,
-      5: shared.ServiceBusyError serviceBusyError,
+      2: shared.EntityNotExistsError entityNotExistError,
+      3: shared.LimitExceededError limitExceededError,
+      4: shared.ServiceBusyError serviceBusyError,
     )
 }
