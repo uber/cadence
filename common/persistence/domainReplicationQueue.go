@@ -23,16 +23,19 @@ package persistence
 import (
 	"errors"
 	"fmt"
+	"math"
+	"sync"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 )
 
 const (
-	purgeInterval = time.Minute
+	maxMessagePurgeDelta = 30 * time.Minute
 )
 
 var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
@@ -52,18 +55,22 @@ func NewDomainReplicationQueue(
 		encoder:             codec.NewThriftRWEncoder(),
 		ackNotificationChan: make(chan bool),
 		done:                make(chan bool),
+		lastCleanupTime:     time.Now().UTC(),
 	}
 }
 
 type (
 	domainReplicationQueueImpl struct {
+		sync.RWMutex
 		queue               Queue
 		clusterName         string
 		metricsClient       metrics.Client
 		logger              log.Logger
 		encoder             codec.BinaryEncoder
+		ackLevelUpdated     bool
 		ackNotificationChan chan bool
 		done                chan bool
+		lastCleanupTime     time.Time
 	}
 )
 
@@ -124,4 +131,62 @@ func (q *domainReplicationQueueImpl) GetAckLevels() (map[string]int, error) {
 
 func (q *domainReplicationQueueImpl) Close() {
 	close(q.done)
+}
+
+func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
+
+	go q.purgeProcessor()
+	ackLevelByCluster, err := q.GetAckLevels()
+	if err != nil {
+		return fmt.Errorf("failed to purge messages: %v", err)
+	}
+
+	if len(ackLevelByCluster) == 0 {
+		return nil
+	}
+
+	minAckLevel := math.MaxInt64
+	for _, ackLevel := range ackLevelByCluster {
+		if ackLevel < minAckLevel {
+			minAckLevel = ackLevel
+		}
+	}
+
+	err = q.queue.DeleteMessagesBefore(minAckLevel)
+	if err != nil {
+		return fmt.Errorf("failed to purge messages: %v", err)
+	}
+
+	q.metricsClient.
+		Scope(metrics.FrontendDomainReplicationQueueScope).
+		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
+
+	q.ackLevelUpdated = false
+
+	return nil
+}
+
+func (q *domainReplicationQueueImpl) purgeProcessor() {
+	cleanupTime := time.Now().UTC()
+	if cleanupTime.Sub(q.getLastCleanupTime()) < maxMessagePurgeDelta {
+		return
+	}
+	err := q.purgeAckedMessages()
+	if err != nil {
+		q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
+		return
+	}
+	q.updateLastCleanupTime(cleanupTime)
+}
+
+func (q *domainReplicationQueueImpl) updateLastCleanupTime(newCleanupTime time.Time) {
+	q.Lock()
+	defer q.Unlock()
+	q.lastCleanupTime = newCleanupTime
+}
+
+func (q *domainReplicationQueueImpl) getLastCleanupTime() time.Time {
+	q.RLock()
+	defer q.RUnlock()
+	return q.lastCleanupTime
 }
