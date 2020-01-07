@@ -83,12 +83,9 @@ func (c *retryableClient) RemoveTask(
 ) error {
 
 	op := func() error {
-		var err error
-		err = c.client.RemoveTask(ctx, request, opts...)
-		return err
+		return c.client.RemoveTask(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return err
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) CloseShard(
@@ -98,12 +95,9 @@ func (c *retryableClient) CloseShard(
 ) error {
 
 	op := func() error {
-		var err error
-		err = c.client.CloseShard(ctx, request, opts...)
-		return err
+		return c.client.CloseShard(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return err
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) DescribeWorkflowExecution(
@@ -193,6 +187,21 @@ func (c *retryableClient) GetDomainReplicationMessages(
 	op := func() error {
 		var err error
 		resp, err = c.client.GetDomainReplicationMessages(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) GetDLQReplicationMessages(
+	ctx context.Context,
+	request *replicator.GetDLQReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetDLQReplicationMessagesResponse, error) {
+	var resp *replicator.GetDLQReplicationMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetDLQReplicationMessages(ctx, request, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)

@@ -1140,15 +1140,17 @@ func (e *mutableStateBuilder) DeletePendingChildExecution(
 	initiatedEventID int64,
 ) error {
 
-	if _, ok := e.pendingChildExecutionInfoIDs[initiatedEventID]; !ok {
+	if _, ok := e.pendingChildExecutionInfoIDs[initiatedEventID]; ok {
+		delete(e.pendingChildExecutionInfoIDs, initiatedEventID)
+	} else {
 		e.logError(
-			fmt.Sprintf("unable to find child workflow: %v in mutable state", initiatedEventID),
+			fmt.Sprintf("unable to find child workflow event ID: %v in mutable state", initiatedEventID),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
-		return ErrMissingChildWorkflowInfo
+		// log data inconsistency instead of returning an error
+		e.logDataInconsistency()
 	}
 
-	delete(e.pendingChildExecutionInfoIDs, initiatedEventID)
 	e.deleteChildExecutionInfo = common.Int64Ptr(initiatedEventID)
 	return nil
 }
@@ -1158,15 +1160,17 @@ func (e *mutableStateBuilder) DeletePendingRequestCancel(
 	initiatedEventID int64,
 ) error {
 
-	if _, ok := e.pendingRequestCancelInfoIDs[initiatedEventID]; !ok {
+	if _, ok := e.pendingRequestCancelInfoIDs[initiatedEventID]; ok {
+		delete(e.pendingRequestCancelInfoIDs, initiatedEventID)
+	} else {
 		e.logError(
-			fmt.Sprintf("unable to find request cancel info: %v in mutable state", initiatedEventID),
+			fmt.Sprintf("unable to find request cancel external workflow event ID: %v in mutable state", initiatedEventID),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
-		return ErrMissingRequestCancelInfo
+		// log data inconsistency instead of returning an error
+		e.logDataInconsistency()
 	}
 
-	delete(e.pendingRequestCancelInfoIDs, initiatedEventID)
 	e.deleteRequestCancelInfo = common.Int64Ptr(initiatedEventID)
 	return nil
 }
@@ -1176,15 +1180,17 @@ func (e *mutableStateBuilder) DeletePendingSignal(
 	initiatedEventID int64,
 ) error {
 
-	if _, ok := e.pendingSignalInfoIDs[initiatedEventID]; !ok {
+	if _, ok := e.pendingSignalInfoIDs[initiatedEventID]; ok {
+		delete(e.pendingSignalInfoIDs, initiatedEventID)
+	} else {
 		e.logError(
-			fmt.Sprintf("unable to find signal info: %v in mutable state", initiatedEventID),
+			fmt.Sprintf("unable to find signal external workflow event ID: %v in mutable state", initiatedEventID),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
-		return ErrMissingSignalInfo
+		// log data inconsistency instead of returning an error
+		e.logDataInconsistency()
 	}
 
-	delete(e.pendingSignalInfoIDs, initiatedEventID)
 	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
 	return nil
 }
@@ -1204,10 +1210,6 @@ func (e *mutableStateBuilder) writeEventToCache(
 		event.GetEventId(),
 		event,
 	)
-}
-
-func (e *mutableStateBuilder) hasPendingTasks() bool {
-	return len(e.pendingActivityInfoIDs) > 0 || len(e.pendingTimerInfoIDs) > 0
 }
 
 func (e *mutableStateBuilder) HasParentExecution() bool {
@@ -1285,8 +1287,20 @@ func (e *mutableStateBuilder) DeleteActivity(
 	scheduleEventID int64,
 ) error {
 
-	activityInfo, ok := e.pendingActivityInfoIDs[scheduleEventID]
-	if !ok {
+	if activityInfo, ok := e.pendingActivityInfoIDs[scheduleEventID]; ok {
+		delete(e.pendingActivityInfoIDs, scheduleEventID)
+
+		if _, ok = e.pendingActivityIDToEventID[activityInfo.ActivityID]; ok {
+			delete(e.pendingActivityIDToEventID, activityInfo.ActivityID)
+		} else {
+			e.logError(
+				fmt.Sprintf("unable to find activity ID: %v in mutable state", activityInfo.ActivityID),
+				tag.ErrorTypeInvalidMutableStateAction,
+			)
+			// log data inconsistency instead of returning an error
+			e.logDataInconsistency()
+		}
+	} else {
 		e.logError(
 			fmt.Sprintf("unable to find activity event id: %v in mutable state", scheduleEventID),
 			tag.ErrorTypeInvalidMutableStateAction,
@@ -1295,18 +1309,6 @@ func (e *mutableStateBuilder) DeleteActivity(
 		e.logDataInconsistency()
 	}
 
-	_, ok = e.pendingActivityIDToEventID[activityInfo.ActivityID]
-	if !ok {
-		e.logError(
-			fmt.Sprintf("unable to find activity ID: %v in mutable state", activityInfo.ActivityID),
-			tag.ErrorTypeInvalidMutableStateAction,
-		)
-		// log data inconsistency instead of returning an error
-		e.logDataInconsistency()
-	}
-
-	delete(e.pendingActivityInfoIDs, scheduleEventID)
-	delete(e.pendingActivityIDToEventID, activityInfo.ActivityID)
 	e.deleteActivityInfos[scheduleEventID] = struct{}{}
 	return nil
 }
@@ -1364,8 +1366,20 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 	timerID string,
 ) error {
 
-	timerInfo, ok := e.pendingTimerInfoIDs[timerID]
-	if !ok {
+	if timerInfo, ok := e.pendingTimerInfoIDs[timerID]; ok {
+		delete(e.pendingTimerInfoIDs, timerID)
+
+		if _, ok = e.pendingTimerEventIDToID[timerInfo.StartedID]; ok {
+			delete(e.pendingTimerEventIDToID, timerInfo.StartedID)
+		} else {
+			e.logError(
+				fmt.Sprintf("unable to find timer event ID: %v in mutable state", timerID),
+				tag.ErrorTypeInvalidMutableStateAction,
+			)
+			// log data inconsistency instead of returning an error
+			e.logDataInconsistency()
+		}
+	} else {
 		e.logError(
 			fmt.Sprintf("unable to find timer ID: %v in mutable state", timerID),
 			tag.ErrorTypeInvalidMutableStateAction,
@@ -1374,22 +1388,11 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 		e.logDataInconsistency()
 	}
 
-	_, ok = e.pendingTimerEventIDToID[timerInfo.StartedID]
-	if !ok {
-		e.logError(
-			fmt.Sprintf("unable to find timer event ID: %v in mutable state", timerID),
-			tag.ErrorTypeInvalidMutableStateAction,
-		)
-		// log data inconsistency instead of returning an error
-		e.logDataInconsistency()
-	}
-
-	delete(e.pendingTimerInfoIDs, timerID)
-	delete(e.pendingTimerEventIDToID, timerInfo.StartedID)
 	e.deleteTimerInfos[timerID] = struct{}{}
 	return nil
 }
 
+//nolint:unused
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 
 	taskList := e.executionInfo.TaskList
@@ -2066,7 +2069,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		return nil, nil, err
 	}
 
-	ai, ok := e.GetActivityByActivityID(attributes.GetActivityId())
+	_, ok := e.GetActivityByActivityID(attributes.GetActivityId())
 	if ok {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
@@ -2994,7 +2997,7 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(
 	}
 
 	timerID := request.GetTimerId()
-	ti, ok := e.GetUserTimerInfo(timerID)
+	_, ok := e.GetUserTimerInfo(timerID)
 	if ok {
 		e.logWarn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
