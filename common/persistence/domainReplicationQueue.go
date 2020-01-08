@@ -80,6 +80,19 @@ func (q *domainReplicationQueueImpl) Publish(message interface{}) error {
 	return q.queue.EnqueueMessage(bytes)
 }
 
+func (q *domainReplicationQueueImpl) PublishToDLQ(message interface{}) error {
+	task, ok := message.(*replicator.ReplicationTask)
+	if !ok {
+		return errors.New("wrong message type")
+	}
+
+	bytes, err := q.encoder.Encode(task)
+	if err != nil {
+		return fmt.Errorf("failed to encode message: %v", err)
+	}
+	return q.queue.EnqueueMessageToDLQ(bytes)
+}
+
 func (q *domainReplicationQueueImpl) GetReplicationMessages(
 	lastMessageID int,
 	maxCount int,

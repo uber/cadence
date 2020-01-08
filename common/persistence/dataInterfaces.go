@@ -1550,6 +1550,7 @@ type (
 	DomainReplicationQueue interface {
 		Closeable
 		Publish(message interface{}) error
+		PublishToDLQ(message interface{}) error
 		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
 		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
 		GetAckLevels() (map[string]int, error)

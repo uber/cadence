@@ -240,12 +240,22 @@ const (
 	PersistenceScanWorkflowExecutionsScope
 	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
 	PersistenceCountWorkflowExecutionsScope
-	// PersistenceEnqueueMessageScope tracks Encueue calls made by service to persistence layer
+	// PersistenceEnqueueMessageScope tracks Enqueue calls made by service to persistence layer
 	PersistenceEnqueueMessageScope
+	// PersistenceEnqueueMessageToDLQScope tracks Enqueue DLQ calls made by service to persistence layer
+	PersistenceEnqueueMessageToDLQScope
 	// PersistenceReadQueueMessagesScope tracks ReadMessages calls made by service to persistence layer
 	PersistenceReadQueueMessagesScope
+	// PersistenceReadQueueMessagesFromDLQScope tracks ReadMessagesFromDLQ calls made by service to persistence layer
+	PersistenceReadQueueMessagesFromDLQScope
 	// PersistenceDeleteQueueMessagesScope tracks DeleteMessages calls made by service to persistence layer
 	PersistenceDeleteQueueMessagesScope
+	// PersistenceDeleteQueueMessagesFromDLQScope tracks DeleteMessagesFromDLQ calls made by service to persistence layer
+	PersistenceDeleteQueueMessagesFromDLQScope
+	// PersistenceRangeDeleteQueueMessagesFromDLQScope tracks RangeDeleteMessagesFromDLQ calls made by service to persistence layer
+	PersistenceRangeDeleteQueueMessagesFromDLQScope
+	// PersistenceGetLastMessageIDFromDLQScope tracks GetLastMessageIDFromDLQ calls made by service to persistence layer
+	PersistenceGetLastMessageIDFromDLQScope
 	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
 	PersistenceUpdateAckLevelScope
 	// PersistenceGetAckLevelScope tracks GetAckLevel calls made by service to persistence layer
@@ -1034,8 +1044,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 		PersistenceGetAllHistoryTreeBranchesScope:                {operation: "GetAllHistoryTreeBranches"},
 		PersistenceEnqueueMessageScope:                           {operation: "EnqueueMessage"},
+		PersistenceEnqueueMessageToDLQScope:                      {operation: "EnqueueMessageToDLQ"},
 		PersistenceReadQueueMessagesScope:                        {operation: "ReadQueueMessages"},
+		PersistenceReadQueueMessagesFromDLQScope:                 {operation: "ReadQueueMessagesFromDLQ"},
 		PersistenceDeleteQueueMessagesScope:                      {operation: "DeleteQueueMessages"},
+		PersistenceDeleteQueueMessagesFromDLQScope:               {operation: "DeleteQueueMessagesFromDLQ"},
+		PersistenceRangeDeleteQueueMessagesFromDLQScope:          {operation: "RangeDeleteQueueMessagesFromDLQ"},
+		PersistenceGetLastMessageIDFromDLQScope:                  {operation: "GetLastMessageIDFromDLQ"},
 		PersistenceUpdateAckLevelScope:                           {operation: "UpdateAckLevel"},
 		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},
 
