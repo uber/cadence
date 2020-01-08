@@ -795,3 +795,70 @@ func newAdminClusterCommands() []cli.Command {
 		},
 	}
 }
+
+func newAdminDLQCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "info",
+			Aliases: []string{"i"},
+			Usage:   "Get DLQ metadata",
+			Flags: []cli.Flag{
+				cli.GenericFlag{
+					Name:  FlagDLQTypeAlias,
+					Usage: "Type of DLQ to manage",
+				},
+				cli.IntFlag{
+					Name:  FlagShardIDWithAlias,
+					Usage: "ShardID",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetDLQInfo(c)
+			},
+		},
+		{
+			Name:    "purge",
+			Aliases: []string{"p"},
+			Usage:   "Delete DLQ messages with equal or smaller ids than the provided task id",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDLQTypeAlias,
+					Usage: "Type of DLQ to manage",
+				},
+				cli.IntFlag{
+					Name:  FlagShardIDWithAlias,
+					Usage: "ShardID",
+				},
+				cli.Int64Flag{
+					Name:  FlagRemoveTaskID,
+					Usage: "task id which user want to specify",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminPurgeDLQBefore(c)
+			},
+		},
+		{
+			Name:    "merge",
+			Aliases: []string{"m"},
+			Usage:   "Merge DLQ messages with equal or smaller ids than the provided task id",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDLQTypeAlias,
+					Usage: "Type of DLQ to manage",
+				},
+				cli.IntFlag{
+					Name:  FlagShardIDWithAlias,
+					Usage: "ShardID",
+				},
+				cli.Int64Flag{
+					Name:  FlagRemoveTaskID,
+					Usage: "task id which user want to specify",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminMergeDLQBefore(c)
+			},
+		},
+	}
+}
