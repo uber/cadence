@@ -23,16 +23,11 @@ package persistence
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-)
-
-const (
-	purgeInterval = time.Minute
 )
 
 var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)

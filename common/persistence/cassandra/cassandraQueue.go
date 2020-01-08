@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	firstMessageID = 0
+	emptyMessageID = -1
 )
 
 const (
@@ -173,14 +173,14 @@ func (q *cassandraQueue) getLastMessageID(
 	err := query.MapScan(result)
 	if err != nil {
 		if err == gocql.ErrNotFound {
-			return firstMessageID, nil
+			return emptyMessageID, nil
 		} else if isThrottlingError(err) {
-			return 0, &workflow.ServiceBusyError{
+			return emptyMessageID, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", queueType, err),
 			}
 		}
 
-		return 0, &workflow.InternalServiceError{
+		return emptyMessageID, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", queueType, err),
 		}
 	}
