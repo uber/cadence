@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-//
+// 
 // Copyright (c) 2019 Uber Technologies, Inc.
-//
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-//
+// 
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-//
+// 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,34 +27,35 @@ package checksum
 
 import (
 	fmt "fmt"
-	strings "strings"
-
+	shared "github.com/uber/cadence/.gen/go/shared"
 	multierr "go.uber.org/multierr"
 	thriftreflect "go.uber.org/thriftrw/thriftreflect"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
+	strings "strings"
 )
 
 type MutableStateChecksumPayload struct {
-	CancelRequested              *bool   `json:"cancelRequested,omitempty"`
-	State                        *int16  `json:"state,omitempty"`
-	CurrentVersion               *int64  `json:"currentVersion,omitempty"`
-	LastWriteVersion             *int64  `json:"lastWriteVersion,omitempty"`
-	LastWriteEventID             *int64  `json:"lastWriteEventID,omitempty"`
-	LastFirstEventID             *int64  `json:"lastFirstEventID,omitempty"`
-	NextEventID                  *int64  `json:"nextEventID,omitempty"`
-	LastProcessedEventID         *int64  `json:"lastProcessedEventID,omitempty"`
-	SignalCount                  *int64  `json:"signalCount,omitempty"`
-	DecisionAttempt              *int32  `json:"decisionAttempt,omitempty"`
-	DecisionVersion              *int64  `json:"decisionVersion,omitempty"`
-	DecisionScheduledID          *int64  `json:"decisionScheduledID,omitempty"`
-	DecisionStartedID            *int64  `json:"decisionStartedID,omitempty"`
-	PendingTimerStartedIDs       []int64 `json:"pendingTimerStartedIDs,omitempty"`
-	PendingActivityScheduledIDs  []int64 `json:"pendingActivityScheduledIDs,omitempty"`
-	PendingSignalInitiatedIDs    []int64 `json:"pendingSignalInitiatedIDs,omitempty"`
-	PendingReqCancelInitiatedIDs []int64 `json:"pendingReqCancelInitiatedIDs,omitempty"`
-	PendingChildInitiatedIDs     []int64 `json:"pendingChildInitiatedIDs,omitempty"`
-	StickyTaskListName           *string `json:"stickyTaskListName,omitempty"`
+	CancelRequested              *bool                    `json:"cancelRequested,omitempty"`
+	State                        *int16                   `json:"state,omitempty"`
+	CloseStatus                  *int16                   `json:"closeStatus,omitempty"`
+	LastWriteVersion             *int64                   `json:"lastWriteVersion,omitempty"`
+	LastWriteEventID             *int64                   `json:"lastWriteEventID,omitempty"`
+	LastFirstEventID             *int64                   `json:"lastFirstEventID,omitempty"`
+	NextEventID                  *int64                   `json:"nextEventID,omitempty"`
+	LastProcessedEventID         *int64                   `json:"lastProcessedEventID,omitempty"`
+	SignalCount                  *int64                   `json:"signalCount,omitempty"`
+	DecisionAttempt              *int32                   `json:"decisionAttempt,omitempty"`
+	DecisionVersion              *int64                   `json:"decisionVersion,omitempty"`
+	DecisionScheduledID          *int64                   `json:"decisionScheduledID,omitempty"`
+	DecisionStartedID            *int64                   `json:"decisionStartedID,omitempty"`
+	PendingTimerStartedIDs       []int64                  `json:"pendingTimerStartedIDs,omitempty"`
+	PendingActivityScheduledIDs  []int64                  `json:"pendingActivityScheduledIDs,omitempty"`
+	PendingSignalInitiatedIDs    []int64                  `json:"pendingSignalInitiatedIDs,omitempty"`
+	PendingReqCancelInitiatedIDs []int64                  `json:"pendingReqCancelInitiatedIDs,omitempty"`
+	PendingChildInitiatedIDs     []int64                  `json:"pendingChildInitiatedIDs,omitempty"`
+	StickyTaskListName           *string                  `json:"stickyTaskListName,omitempty"`
+	VersionHistories             *shared.VersionHistories `json:"VersionHistories,omitempty"`
 }
 
 type _List_I64_ValueList []int64
@@ -100,7 +101,7 @@ func (_List_I64_ValueList) Close() {}
 //   }
 func (v *MutableStateChecksumPayload) ToWire() (wire.Value, error) {
 	var (
-		fields [19]wire.Field
+		fields [20]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -122,12 +123,12 @@ func (v *MutableStateChecksumPayload) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 15, Value: w}
 		i++
 	}
-	if v.CurrentVersion != nil {
-		w, err = wire.NewValueI64(*(v.CurrentVersion)), error(nil)
+	if v.CloseStatus != nil {
+		w, err = wire.NewValueI16(*(v.CloseStatus)), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 20, Value: w}
+		fields[i] = wire.Field{ID: 16, Value: w}
 		i++
 	}
 	if v.LastWriteVersion != nil {
@@ -258,6 +259,14 @@ func (v *MutableStateChecksumPayload) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 55, Value: w}
 		i++
 	}
+	if v.VersionHistories != nil {
+		w, err = v.VersionHistories.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 56, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -278,6 +287,12 @@ func _List_I64_Read(l wire.ValueList) ([]int64, error) {
 	})
 	l.Close()
 	return o, err
+}
+
+func _VersionHistories_Read(w wire.Value) (*shared.VersionHistories, error) {
+	var v shared.VersionHistories
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a MutableStateChecksumPayload struct from its Thrift-level
@@ -322,11 +337,11 @@ func (v *MutableStateChecksumPayload) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 20:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.CurrentVersion = &x
+		case 16:
+			if field.Value.Type() == wire.TI16 {
+				var x int16
+				x, err = field.Value.GetI16(), error(nil)
+				v.CloseStatus = &x
 				if err != nil {
 					return err
 				}
@@ -482,6 +497,14 @@ func (v *MutableStateChecksumPayload) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 56:
+			if field.Value.Type() == wire.TStruct {
+				v.VersionHistories, err = _VersionHistories_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -495,7 +518,7 @@ func (v *MutableStateChecksumPayload) String() string {
 		return "<nil>"
 	}
 
-	var fields [19]string
+	var fields [20]string
 	i := 0
 	if v.CancelRequested != nil {
 		fields[i] = fmt.Sprintf("CancelRequested: %v", *(v.CancelRequested))
@@ -505,8 +528,8 @@ func (v *MutableStateChecksumPayload) String() string {
 		fields[i] = fmt.Sprintf("State: %v", *(v.State))
 		i++
 	}
-	if v.CurrentVersion != nil {
-		fields[i] = fmt.Sprintf("CurrentVersion: %v", *(v.CurrentVersion))
+	if v.CloseStatus != nil {
+		fields[i] = fmt.Sprintf("CloseStatus: %v", *(v.CloseStatus))
 		i++
 	}
 	if v.LastWriteVersion != nil {
@@ -571,6 +594,10 @@ func (v *MutableStateChecksumPayload) String() string {
 	}
 	if v.StickyTaskListName != nil {
 		fields[i] = fmt.Sprintf("StickyTaskListName: %v", *(v.StickyTaskListName))
+		i++
+	}
+	if v.VersionHistories != nil {
+		fields[i] = fmt.Sprintf("VersionHistories: %v", v.VersionHistories)
 		i++
 	}
 
@@ -658,7 +685,7 @@ func (v *MutableStateChecksumPayload) Equals(rhs *MutableStateChecksumPayload) b
 	if !_I16_EqualsPtr(v.State, rhs.State) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.CurrentVersion, rhs.CurrentVersion) {
+	if !_I16_EqualsPtr(v.CloseStatus, rhs.CloseStatus) {
 		return false
 	}
 	if !_I64_EqualsPtr(v.LastWriteVersion, rhs.LastWriteVersion) {
@@ -709,6 +736,9 @@ func (v *MutableStateChecksumPayload) Equals(rhs *MutableStateChecksumPayload) b
 	if !_String_EqualsPtr(v.StickyTaskListName, rhs.StickyTaskListName) {
 		return false
 	}
+	if !((v.VersionHistories == nil && rhs.VersionHistories == nil) || (v.VersionHistories != nil && rhs.VersionHistories != nil && v.VersionHistories.Equals(rhs.VersionHistories))) {
+		return false
+	}
 
 	return true
 }
@@ -736,8 +766,8 @@ func (v *MutableStateChecksumPayload) MarshalLogObject(enc zapcore.ObjectEncoder
 	if v.State != nil {
 		enc.AddInt16("state", *v.State)
 	}
-	if v.CurrentVersion != nil {
-		enc.AddInt64("currentVersion", *v.CurrentVersion)
+	if v.CloseStatus != nil {
+		enc.AddInt16("closeStatus", *v.CloseStatus)
 	}
 	if v.LastWriteVersion != nil {
 		enc.AddInt64("lastWriteVersion", *v.LastWriteVersion)
@@ -787,6 +817,9 @@ func (v *MutableStateChecksumPayload) MarshalLogObject(enc zapcore.ObjectEncoder
 	if v.StickyTaskListName != nil {
 		enc.AddString("stickyTaskListName", *v.StickyTaskListName)
 	}
+	if v.VersionHistories != nil {
+		err = multierr.Append(err, enc.AddObject("VersionHistories", v.VersionHistories))
+	}
 	return err
 }
 
@@ -820,19 +853,19 @@ func (v *MutableStateChecksumPayload) IsSetState() bool {
 	return v != nil && v.State != nil
 }
 
-// GetCurrentVersion returns the value of CurrentVersion if it is set or its
+// GetCloseStatus returns the value of CloseStatus if it is set or its
 // zero value if it is unset.
-func (v *MutableStateChecksumPayload) GetCurrentVersion() (o int64) {
-	if v != nil && v.CurrentVersion != nil {
-		return *v.CurrentVersion
+func (v *MutableStateChecksumPayload) GetCloseStatus() (o int16) {
+	if v != nil && v.CloseStatus != nil {
+		return *v.CloseStatus
 	}
 
 	return
 }
 
-// IsSetCurrentVersion returns true if CurrentVersion is not nil.
-func (v *MutableStateChecksumPayload) IsSetCurrentVersion() bool {
-	return v != nil && v.CurrentVersion != nil
+// IsSetCloseStatus returns true if CloseStatus is not nil.
+func (v *MutableStateChecksumPayload) IsSetCloseStatus() bool {
+	return v != nil && v.CloseStatus != nil
 }
 
 // GetLastWriteVersion returns the value of LastWriteVersion if it is set or its
@@ -1075,13 +1108,31 @@ func (v *MutableStateChecksumPayload) IsSetStickyTaskListName() bool {
 	return v != nil && v.StickyTaskListName != nil
 }
 
+// GetVersionHistories returns the value of VersionHistories if it is set or its
+// zero value if it is unset.
+func (v *MutableStateChecksumPayload) GetVersionHistories() (o *shared.VersionHistories) {
+	if v != nil && v.VersionHistories != nil {
+		return v.VersionHistories
+	}
+
+	return
+}
+
+// IsSetVersionHistories returns true if VersionHistories is not nil.
+func (v *MutableStateChecksumPayload) IsSetVersionHistories() bool {
+	return v != nil && v.VersionHistories != nil
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "checksum",
 	Package:  "github.com/uber/cadence/.gen/go/checksum",
 	FilePath: "checksum.thrift",
-	SHA1:     "9eb1c1ca8c9ceb88f1ce957091ed5fc64a2f1fa5",
-	Raw:      rawIDL,
+	SHA1:     "085701f09c2d1ec0d52a8abd10e43192e3cb536f",
+	Includes: []*thriftreflect.ThriftModule{
+		shared.ThriftModule,
+	},
+	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2019 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.private\n\nstruct MutableStateChecksumPayload {\n    10: optional bool cancelRequested\n    15: optional i16 state\n\n    20: optional i64 (js.type = \"Long\") currentVersion\n    21: optional i64 (js.type = \"Long\") lastWriteVersion\n    22: optional i64 (js.type = \"Long\") lastWriteEventID\n    23: optional i64 (js.type = \"Long\") lastFirstEventID\n    24: optional i64 (js.type = \"Long\") nextEventID\n    25: optional i64 (js.type = \"Long\") lastProcessedEventID\n    26: optional i64 (js.type = \"Long\") signalCount\n\n    35: optional i32 decisionAttempt\n    36: optional i64 (js.type = \"Long\") decisionVersion\n    37: optional i64 (js.type = \"Long\") decisionScheduledID\n    38: optional i64 (js.type = \"Long\") decisionStartedID\n\n    45: optional list<i64> pendingTimerStartedIDs\n    46: optional list<i64> pendingActivityScheduledIDs\n    47: optional list<i64> pendingSignalInitiatedIDs\n    48: optional list<i64> pendingReqCancelInitiatedIDs\n    49: optional list<i64> pendingChildInitiatedIDs\n\n    55: optional string stickyTaskListName\n}"
+const rawIDL = "// Copyright (c) 2019 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence.checksum\n\nstruct MutableStateChecksumPayload {\n    10: optional bool cancelRequested\n    15: optional i16 state\n    16: optional i16 closeStatus\n\n    21: optional i64 (js.type = \"Long\") lastWriteVersion\n    22: optional i64 (js.type = \"Long\") lastWriteEventID\n    23: optional i64 (js.type = \"Long\") lastFirstEventID\n    24: optional i64 (js.type = \"Long\") nextEventID\n    25: optional i64 (js.type = \"Long\") lastProcessedEventID\n    26: optional i64 (js.type = \"Long\") signalCount\n\n    35: optional i32 decisionAttempt\n    36: optional i64 (js.type = \"Long\") decisionVersion\n    37: optional i64 (js.type = \"Long\") decisionScheduledID\n    38: optional i64 (js.type = \"Long\") decisionStartedID\n\n    45: optional list<i64> pendingTimerStartedIDs\n    46: optional list<i64> pendingActivityScheduledIDs\n    47: optional list<i64> pendingSignalInitiatedIDs\n    48: optional list<i64> pendingReqCancelInitiatedIDs\n    49: optional list<i64> pendingChildInitiatedIDs\n\n    55: optional string stickyTaskListName\n    56: optional shared.VersionHistories VersionHistories\n}"

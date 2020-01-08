@@ -23,7 +23,7 @@ package history
 import (
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/private"
+	checksumgen "github.com/uber/cadence/.gen/go/checksum"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 )
@@ -52,10 +52,10 @@ func verifyMutableStateChecksum(
 	return checksum.Verify(payload, csum)
 }
 
-func newMutableStateChecksumPayload(ms mutableState) *private.MutableStateChecksumPayload {
+func newMutableStateChecksumPayload(ms mutableState) *checksumgen.MutableStateChecksumPayload {
 	executionInfo := ms.GetExecutionInfo()
 	replicationState := ms.GetReplicationState()
-	payload := &private.MutableStateChecksumPayload{
+	payload := &checksumgen.MutableStateChecksumPayload{
 		CancelRequested:      common.BoolPtr(executionInfo.CancelRequested),
 		State:                common.Int16Ptr(int16(executionInfo.State)),
 		LastFirstEventID:     common.Int64Ptr(executionInfo.LastFirstEventID),
@@ -70,9 +70,13 @@ func newMutableStateChecksumPayload(ms mutableState) *private.MutableStateChecks
 	}
 
 	if replicationState != nil {
-		payload.CurrentVersion = common.Int64Ptr(replicationState.CurrentVersion)
 		payload.LastWriteVersion = common.Int64Ptr(replicationState.LastWriteVersion)
 		payload.LastWriteEventID = common.Int64Ptr(replicationState.LastWriteEventID)
+	}
+
+	versionHistories := ms.GetVersionHistories()
+	if versionHistories != nil {
+		payload.VersionHistories = versionHistories.ToThrift()
 	}
 
 	// for each of the pendingXXX ids below, sorting is needed to guarantee that

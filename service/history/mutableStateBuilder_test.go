@@ -809,6 +809,17 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
 	}
 
+	versionHistories := &persistence.VersionHistories{
+		Histories: []*persistence.VersionHistory{
+			{
+				BranchToken: []byte("token#1"),
+				Items: []*persistence.VersionHistoryItem{
+					{EventID: 1, Version: 300},
+				},
+			},
+		},
+	}
+
 	return &persistence.WorkflowMutableState{
 		ExecutionInfo:       info,
 		ActivityInfos:       activityInfos,
@@ -818,5 +829,6 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		SignalRequestedIDs:  signalRequestIDs,
 		BufferedEvents:      bufferedEvents,
 		ReplicationState:    replicationState,
+		VersionHistories:    versionHistories,
 	}
 }

@@ -18,13 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-namespace java com.uber.cadence.private
+include "shared.thrift"
+
+namespace java com.uber.cadence.checksum
 
 struct MutableStateChecksumPayload {
     10: optional bool cancelRequested
     15: optional i16 state
+    16: optional i16 closeStatus
 
-    20: optional i64 (js.type = "Long") currentVersion
     21: optional i64 (js.type = "Long") lastWriteVersion
     22: optional i64 (js.type = "Long") lastWriteEventID
     23: optional i64 (js.type = "Long") lastFirstEventID
@@ -44,4 +46,5 @@ struct MutableStateChecksumPayload {
     49: optional list<i64> pendingChildInitiatedIDs
 
     55: optional string stickyTaskListName
+    56: optional shared.VersionHistories VersionHistories
 }
