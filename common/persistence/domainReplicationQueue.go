@@ -24,10 +24,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -35,11 +36,10 @@ import (
 )
 
 const (
-	purgeInterval = time.Minute
+	purgeInterval = 5 * time.Minute
 )
 
 var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
-var once sync.Once
 
 // NewDomainReplicationQueue creates a new DomainReplicationQueue instance
 func NewDomainReplicationQueue(
@@ -56,6 +56,7 @@ func NewDomainReplicationQueue(
 		encoder:             codec.NewThriftRWEncoder(),
 		ackNotificationChan: make(chan bool),
 		done:                make(chan bool),
+		status:              common.DaemonStatusInitialized,
 	}
 }
 
@@ -69,8 +70,23 @@ type (
 		ackLevelUpdated     bool
 		ackNotificationChan chan bool
 		done                chan bool
+		status              int32
 	}
 )
+
+func (q *domainReplicationQueueImpl) Start() {
+	if !atomic.CompareAndSwapInt32(&q.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+	go q.purgeProcessor()
+}
+
+func (q *domainReplicationQueueImpl) Stop() {
+	if !atomic.CompareAndSwapInt32(&q.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+	close(q.done)
+}
 
 func (q *domainReplicationQueueImpl) Publish(message interface{}) error {
 	task, ok := message.(*replicator.ReplicationTask)
@@ -89,9 +105,6 @@ func (q *domainReplicationQueueImpl) GetReplicationMessages(
 	lastMessageID int,
 	maxCount int,
 ) ([]*replicator.ReplicationTask, int, error) {
-
-	// trigger a domain queue cleanup
-	once.Do(q.purgeProcessor)
 
 	messages, err := q.queue.ReadMessages(lastMessageID, maxCount)
 	if err != nil {
@@ -156,8 +169,6 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 	q.metricsClient.
 		Scope(metrics.HistoryDomainReplicationQueueScope).
 		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
-
-	q.ackLevelUpdated = false
 	return nil
 }
 
@@ -174,14 +185,12 @@ func (q *domainReplicationQueueImpl) purgeProcessor() {
 				err := q.purgeAckedMessages()
 				if err != nil {
 					q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
+				} else {
+					q.ackLevelUpdated = false
 				}
 			}
 		case <-q.ackNotificationChan:
 			q.ackLevelUpdated = true
 		}
 	}
-}
-
-func (q *domainReplicationQueueImpl) Close() {
-	close(q.done)
 }
