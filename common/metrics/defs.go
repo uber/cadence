@@ -893,6 +893,8 @@ const (
 	ReplicationTaskFetcherScope
 	// ReplicationTaskCleanupScope is scope used by all metrics emitted by ReplicationTaskProcessor cleanup
 	ReplicationTaskCleanupScope
+	// HistoryDomainReplicationQueueScope is scope used by all metrics emitted by DomainReplicationQueue cleanup
+	HistoryDomainReplicationQueueScope
 	NumHistoryScopes
 )
 
@@ -1353,6 +1355,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
 		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
 		ReplicationTaskCleanupScope:                            {operation: "ReplicationTaskCleanup"},
+		HistoryDomainReplicationQueueScope:                     {operation: "DomainReplicationQueue"},
 	},
 	// Matching Scope Names
 	Matching: {

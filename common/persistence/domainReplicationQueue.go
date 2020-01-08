@@ -35,10 +35,11 @@ import (
 )
 
 const (
-	maxMessagePurgeDelta = 30 * time.Minute
+	purgeInterval = time.Minute
 )
 
 var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
+var once sync.Once
 
 // NewDomainReplicationQueue creates a new DomainReplicationQueue instance
 func NewDomainReplicationQueue(
@@ -48,24 +49,25 @@ func NewDomainReplicationQueue(
 	logger log.Logger,
 ) DomainReplicationQueue {
 	return &domainReplicationQueueImpl{
-		queue:           queue,
-		clusterName:     clusterName,
-		metricsClient:   metricsClient,
-		logger:          logger,
-		encoder:         codec.NewThriftRWEncoder(),
-		lastCleanupTime: time.Now().UTC(),
+		queue:               queue,
+		clusterName:         clusterName,
+		metricsClient:       metricsClient,
+		logger:              logger,
+		encoder:             codec.NewThriftRWEncoder(),
+		ackNotificationChan: make(chan bool),
 	}
 }
 
 type (
 	domainReplicationQueueImpl struct {
-		sync.RWMutex
-		queue           Queue
-		clusterName     string
-		metricsClient   metrics.Client
-		logger          log.Logger
-		encoder         codec.BinaryEncoder
-		lastCleanupTime time.Time
+		queue               Queue
+		clusterName         string
+		metricsClient       metrics.Client
+		logger              log.Logger
+		encoder             codec.BinaryEncoder
+		ackLevelUpdated     bool
+		ackNotificationChan chan bool
+		done                chan bool
 	}
 )
 
@@ -88,7 +90,7 @@ func (q *domainReplicationQueueImpl) GetReplicationMessages(
 ) ([]*replicator.ReplicationTask, int, error) {
 
 	// trigger a domain queue cleanup
-	go q.purgeProcessor()
+	once.Do(q.purgeProcessor)
 
 	messages, err := q.queue.ReadMessages(lastMessageID, maxCount)
 	if err != nil {
@@ -114,6 +116,11 @@ func (q *domainReplicationQueueImpl) UpdateAckLevel(lastProcessedMessageID int, 
 	err := q.queue.UpdateAckLevel(lastProcessedMessageID, clusterName)
 	if err != nil {
 		return fmt.Errorf("failed to update ack level: %v", err)
+	}
+
+	select {
+	case q.ackNotificationChan <- true:
+	default:
 	}
 
 	return nil
@@ -146,33 +153,34 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 	}
 
 	q.metricsClient.
-		Scope(metrics.FrontendDomainReplicationQueueScope).
+		Scope(metrics.HistoryDomainReplicationQueueScope).
 		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
 
+	q.ackLevelUpdated = false
 	return nil
 }
 
 func (q *domainReplicationQueueImpl) purgeProcessor() {
-	cleanupTime := time.Now().UTC()
-	if cleanupTime.Sub(q.getLastCleanupTime()) < maxMessagePurgeDelta {
-		return
+	ticker := time.NewTicker(purgeInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-q.done:
+			return
+		case <-ticker.C:
+			if q.ackLevelUpdated {
+				err := q.purgeAckedMessages()
+				if err != nil {
+					q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
+				}
+			}
+		case <-q.ackNotificationChan:
+			q.ackLevelUpdated = true
+		}
 	}
-	err := q.purgeAckedMessages()
-	if err != nil {
-		q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
-		return
-	}
-	q.updateLastCleanupTime(cleanupTime)
 }
 
-func (q *domainReplicationQueueImpl) updateLastCleanupTime(newCleanupTime time.Time) {
-	q.Lock()
-	defer q.Unlock()
-	q.lastCleanupTime = newCleanupTime
-}
-
-func (q *domainReplicationQueueImpl) getLastCleanupTime() time.Time {
-	q.RLock()
-	defer q.RUnlock()
-	return q.lastCleanupTime
+func (q *domainReplicationQueueImpl) Close() {
+	close(q.done)
 }
