@@ -55,6 +55,7 @@ func NewDomainReplicationQueue(
 		logger:              logger,
 		encoder:             codec.NewThriftRWEncoder(),
 		ackNotificationChan: make(chan bool),
+		done:                make(chan bool),
 	}
 }
 
