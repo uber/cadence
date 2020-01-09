@@ -893,8 +893,7 @@ const (
 	ReplicationTaskFetcherScope
 	// ReplicationTaskCleanupScope is scope used by all metrics emitted by ReplicationTaskProcessor cleanup
 	ReplicationTaskCleanupScope
-	// HistoryDomainReplicationQueueScope is scope used by all metrics emitted by DomainReplicationQueue cleanup
-	HistoryDomainReplicationQueueScope
+
 	NumHistoryScopes
 )
 
@@ -1355,7 +1354,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
 		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
 		ReplicationTaskCleanupScope:                            {operation: "ReplicationTaskCleanup"},
-		HistoryDomainReplicationQueueScope:                     {operation: "DomainReplicationQueue"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1650,7 +1648,6 @@ const (
 	DecisionStartToCloseTimeoutOverrideCount
 	ReplicationTaskCleanupCount
 	ReplicationTaskCleanupFailure
-	HistoryDomainReplicationTaskAckLevel
 
 	NumHistoryMetrics
 )
@@ -1982,7 +1979,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
 		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
 		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
-		HistoryDomainReplicationTaskAckLevel:              {metricName: "domain_replication_ack_level", metricType: Gauge},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
