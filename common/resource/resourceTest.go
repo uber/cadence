@@ -165,8 +165,10 @@ func NewTest(
 	membershipMonitor.EXPECT().GetResolver(common.HistoryServiceName).Return(historyServiceResolver, nil).AnyTimes()
 	membershipMonitor.EXPECT().GetResolver(common.WorkerServiceName).Return(workerServiceResolver, nil).AnyTimes()
 
+	scope := tally.NewTestScope("test", nil)
+
 	return &Test{
-		MetricsScope:    tally.NoopScope,
+		MetricsScope:    scope,
 		ClusterMetadata: cluster.NewMockMetadata(controller),
 
 		// other common resources
@@ -174,7 +176,7 @@ func NewTest(
 		DomainCache:       cache.NewMockDomainCache(controller),
 		TimeSource:        clock.NewRealTimeSource(),
 		PayloadSerializer: persistence.NewPayloadSerializer(),
-		MetricsClient:     metrics.NewClient(tally.NoopScope, serviceMetricsIndex),
+		MetricsClient:     metrics.NewClient(scope, serviceMetricsIndex),
 		ArchivalMetadata:  &archiver.MockArchivalMetadata{},
 		ArchiverProvider:  &provider.MockArchiverProvider{},
 
