@@ -27,6 +27,7 @@ THRIFTRW_SRCS = \
   idls/thrift/shared.thrift \
   idls/thrift/admin.thrift \
   idls/thrift/sqlblobs.thrift \
+  idls/thrift/checksum.thrift \
 
 PROGS = cadence
 TEST_TIMEOUT = 20m
@@ -245,9 +246,10 @@ cover_ci: $(COVER_ROOT)/cover.out
 
 clean:
 	rm -f cadence
+	rm -f cadence-server
+	rm -f cadence-canary
 	rm -f cadence-sql-tool
 	rm -f cadence-cassandra-tool
-	rm -f cadence-server
 	rm -Rf $(BUILD)
 
 install-schema: bins

@@ -1651,6 +1651,8 @@ const (
 	DecisionStartToCloseTimeoutOverrideCount
 	ReplicationTaskCleanupCount
 	ReplicationTaskCleanupFailure
+	MutableStateChecksumMismatch
+	MutableStateChecksumInvalidated
 
 	NumHistoryMetrics
 )
@@ -1982,6 +1984,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
 		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
 		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
+		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
+		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
