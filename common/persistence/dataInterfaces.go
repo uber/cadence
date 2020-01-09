@@ -27,7 +27,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
@@ -1544,15 +1543,6 @@ type (
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 		ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error)
 		GetMetadata() (*GetMetadataResponse, error)
-	}
-
-	// DomainReplicationQueue is used to publish and list domain replication tasks
-	DomainReplicationQueue interface {
-		common.Daemon
-		Publish(message interface{}) error
-		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
-		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
-		GetAckLevels() (map[string]int, error)
 	}
 )
 

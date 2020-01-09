@@ -1650,6 +1650,7 @@ const (
 	DecisionStartToCloseTimeoutOverrideCount
 	ReplicationTaskCleanupCount
 	ReplicationTaskCleanupFailure
+	HistoryDomainReplicationTaskAckLevel
 
 	NumHistoryMetrics
 )
@@ -1981,6 +1982,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
 		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
 		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
+		HistoryDomainReplicationTaskAckLevel:              {metricName: "domain_replication_ack_level", metricType: Gauge},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

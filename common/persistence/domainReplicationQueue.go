@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination domainReplicationQueue_mock.go -self_package github.com/uber/common/persistence
+
 package persistence
 
 import (
@@ -71,6 +73,15 @@ type (
 		ackNotificationChan chan bool
 		done                chan bool
 		status              int32
+	}
+
+	// DomainReplicationQueue is used to publish and list domain replication tasks
+	DomainReplicationQueue interface {
+		common.Daemon
+		Publish(message interface{}) error
+		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
+		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
+		GetAckLevels() (map[string]int, error)
 	}
 )
 
@@ -168,7 +179,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 
 	q.metricsClient.
 		Scope(metrics.HistoryDomainReplicationQueueScope).
-		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
+		UpdateGauge(metrics.HistoryDomainReplicationTaskAckLevel, float64(minAckLevel))
 	return nil
 }
 
