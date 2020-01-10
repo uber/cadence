@@ -250,10 +250,10 @@ const (
 	PersistenceReadQueueMessagesFromDLQScope
 	// PersistenceDeleteQueueMessagesScope tracks DeleteMessages calls made by service to persistence layer
 	PersistenceDeleteQueueMessagesScope
-	// PersistenceDeleteQueueMessagesFromDLQScope tracks DeleteMessagesFromDLQ calls made by service to persistence layer
-	PersistenceDeleteQueueMessagesFromDLQScope
-	// PersistenceRangeDeleteQueueMessagesFromDLQScope tracks RangeDeleteMessagesFromDLQ calls made by service to persistence layer
-	PersistenceRangeDeleteQueueMessagesFromDLQScope
+	// PersistenceDeleteQueueMessageFromDLQScope tracks DeleteMessageFromDLQ calls made by service to persistence layer
+	PersistenceDeleteQueueMessageFromDLQScope
+	// PersistenceDeleteDLQMessageBeforeScope tracks DeleteDLQMessageBefore calls made by service to persistence layer
+	PersistenceDeleteDLQMessageBeforeScope
 	// PersistenceGetLastMessageIDFromDLQScope tracks GetLastMessageIDFromDLQ calls made by service to persistence layer
 	PersistenceGetLastMessageIDFromDLQScope
 	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
@@ -1048,8 +1048,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceReadQueueMessagesScope:                        {operation: "ReadQueueMessages"},
 		PersistenceReadQueueMessagesFromDLQScope:                 {operation: "ReadQueueMessagesFromDLQ"},
 		PersistenceDeleteQueueMessagesScope:                      {operation: "DeleteQueueMessages"},
-		PersistenceDeleteQueueMessagesFromDLQScope:               {operation: "DeleteQueueMessagesFromDLQ"},
-		PersistenceRangeDeleteQueueMessagesFromDLQScope:          {operation: "RangeDeleteQueueMessagesFromDLQ"},
+		PersistenceDeleteQueueMessageFromDLQScope:                {operation: "DeleteQueueMessageFromDLQ"},
+		PersistenceDeleteDLQMessageBeforeScope:                   {operation: "DeleteDLQMessagesBefore"},
 		PersistenceGetLastMessageIDFromDLQScope:                  {operation: "GetLastMessageIDFromDLQ"},
 		PersistenceUpdateAckLevelScope:                           {operation: "UpdateAckLevel"},
 		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},

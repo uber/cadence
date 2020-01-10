@@ -40,15 +40,15 @@ const (
 )
 
 const (
-	templateEnqueueMessageQuery        = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
-	templateGetLastMessageIDQuery      = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
-	templateGetMessagesQuery           = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
-	templateGetMessagesFromDLQQuery    = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id <= ?`
-	templateDeleteMessagesQuery        = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
-	templateDeleteMessagesFromDLQQuery = `DELETE FROM queue WHERE queue_type = ? and message_id = ?`
-	templateGetQueueMetadataQuery      = `SELECT cluster_ack_level, version FROM queue_metadata WHERE queue_type = ?`
-	templateInsertQueueMetadataQuery   = `INSERT INTO queue_metadata (queue_type, cluster_ack_level, version) VALUES(?, ?, ?) IF NOT EXISTS`
-	templateUpdateQueueMetadataQuery   = `UPDATE queue_metadata SET cluster_ack_level = ?, version = ? WHERE queue_type = ? IF version = ?`
+	templateEnqueueMessageQuery      = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
+	templateGetLastMessageIDQuery    = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
+	templateGetMessagesQuery         = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? ORDER BY message_id ASC LIMIT ?`
+	templateGetMessagesFromDLQQuery  = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? and message_id <= ? ORDER BY message_id ASC LIMIT ?`
+	templateDeleteMessagesQuery      = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
+	templateDeleteMessageQuery       = `DELETE FROM queue WHERE queue_type = ? and message_id = ?`
+	templateGetQueueMetadataQuery    = `SELECT cluster_ack_level, version FROM queue_metadata WHERE queue_type = ?`
+	templateInsertQueueMetadataQuery = `INSERT INTO queue_metadata (queue_type, cluster_ack_level, version) VALUES(?, ?, ?) IF NOT EXISTS`
+	templateUpdateQueueMetadataQuery = `UPDATE queue_metadata SET cluster_ack_level = ?, version = ? WHERE queue_type = ? IF version = ?`
 )
 
 type (
@@ -117,25 +117,25 @@ func (q *cassandraQueue) createQueueMetadataEntryIfNotExist() error {
 func (q *cassandraQueue) EnqueueMessage(
 	messagePayload []byte,
 ) error {
-	nextMessageID, err := q.getLastMessageID(q.queueType)
+	lastMessageID, err := q.getLastMessageID(q.queueType)
 	if err != nil {
 		return err
 	}
 
-	return q.tryEnqueue(q.queueType, nextMessageID+1, messagePayload)
+	return q.tryEnqueue(q.queueType, lastMessageID+1, messagePayload)
 }
 
 func (q *cassandraQueue) EnqueueMessageToDLQ(
 	messagePayload []byte,
 ) error {
 	// Use negative queue type as the dlq type
-	nextMessageID, err := q.getLastMessageID(-q.queueType)
+	lastMessageID, err := q.getLastMessageID(-q.queueType)
 	if err != nil {
 		return err
 	}
 
 	// Use negative queue type as the dlq type
-	return q.tryEnqueue(-q.queueType, nextMessageID+1, messagePayload)
+	return q.tryEnqueue(-q.queueType, lastMessageID+1, messagePayload)
 }
 
 func (q *cassandraQueue) tryEnqueue(
@@ -225,13 +225,17 @@ func (q *cassandraQueue) ReadMessages(
 }
 
 func (q *cassandraQueue) ReadMessagesFromDLQ(
+	firstMessageID int,
 	lastMessageID int,
+	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	// Use negative queue type as the dlq type
 	query := q.session.Query(templateGetMessagesFromDLQQuery,
 		-q.queueType,
+		firstMessageID,
 		lastMessageID,
+		maxCount,
 	)
 
 	iter := query.Iter()
@@ -287,12 +291,12 @@ func (q *cassandraQueue) DeleteMessagesBefore(
 	return nil
 }
 
-func (q *cassandraQueue) DeleteMessagesFromDLQ(
+func (q *cassandraQueue) DeleteMessageFromDLQ(
 	messageID int,
 ) error {
 
 	// Use negative queue type as the dlq type
-	query := q.session.Query(templateDeleteMessagesFromDLQQuery, -q.queueType, messageID)
+	query := q.session.Query(templateDeleteMessageQuery, -q.queueType, messageID)
 	if err := query.Exec(); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteMessagesFromDLQ operation failed. Error %v", err),
@@ -302,7 +306,7 @@ func (q *cassandraQueue) DeleteMessagesFromDLQ(
 	return nil
 }
 
-func (q *cassandraQueue) RangeDeleteMessagesFromDLQ(
+func (q *cassandraQueue) DeleteDLQMessagesBefore(
 	messageID int,
 ) error {
 

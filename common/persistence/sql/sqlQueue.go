@@ -190,10 +190,12 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 }
 
 func (q *sqlQueue) ReadMessagesFromDLQ(
+	firstMessageID int,
 	lastMessageID int,
+	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
 	// Use negative queue type as the dlq type
-	rows, err := q.db.GetMessagesBefore(-q.queueType, lastMessageID)
+	rows, err := q.db.GetMessagesBetween(-q.queueType, firstMessageID, lastMessageID, maxCount)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ReadMessagesFromDLQ operation failed. Error %v", err),
@@ -207,11 +209,11 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 	return messages, nil
 }
 
-func (q *sqlQueue) DeleteMessagesFromDLQ(
+func (q *sqlQueue) DeleteMessageFromDLQ(
 	messageID int,
 ) error {
 	// Use negative queue type as the dlq type
-	_, err := q.db.DeleteMessages(-q.queueType, messageID)
+	_, err := q.db.DeleteMessage(-q.queueType, messageID)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteMessagesFromDLQ operation failed. Error %v", err),
@@ -220,7 +222,7 @@ func (q *sqlQueue) DeleteMessagesFromDLQ(
 	return nil
 }
 
-func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
+func (q *sqlQueue) DeleteDLQMessagesBefore(
 	messageID int,
 ) error {
 	// Use negative queue type as the dlq type

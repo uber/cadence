@@ -783,28 +783,28 @@ func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(message []byte) 
 	return p.persistence.EnqueueMessageToDLQ(message)
 }
 
-func (p *queueRateLimitedPersistenceClient) ReadMessagesFromDLQ(lastMessageID int) ([]*QueueMessage, error) {
+func (p *queueRateLimitedPersistenceClient) ReadMessagesFromDLQ(firstMessageID int, lastMessageID int, maxCount int) ([]*QueueMessage, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.ReadMessagesFromDLQ(lastMessageID)
+	return p.persistence.ReadMessagesFromDLQ(firstMessageID, lastMessageID, maxCount)
 }
 
-func (p *queueRateLimitedPersistenceClient) DeleteMessagesFromDLQ(messageID int) error {
+func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(messageID int) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.DeleteMessagesFromDLQ(messageID)
+	return p.persistence.DeleteMessageFromDLQ(messageID)
 }
 
-func (p *queueRateLimitedPersistenceClient) RangeDeleteMessagesFromDLQ(messageID int) error {
+func (p *queueRateLimitedPersistenceClient) DeleteDLQMessagesBefore(messageID int) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.RangeDeleteMessagesFromDLQ(messageID)
+	return p.persistence.DeleteDLQMessagesBefore(messageID)
 }
 
 func (p *queueRateLimitedPersistenceClient) GetLastMessageIDFromDLQ() (int, error) {

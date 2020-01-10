@@ -142,9 +142,9 @@ type (
 		UpdateAckLevel(messageID int, clusterName string) error
 		GetAckLevels() (map[string]int, error)
 		EnqueueMessageToDLQ(messagePayload []byte) error
-		ReadMessagesFromDLQ(lastMessageID int) ([]*QueueMessage, error)
-		DeleteMessagesFromDLQ(messageID int) error
-		RangeDeleteMessagesFromDLQ(messageID int) error
+		ReadMessagesFromDLQ(firstMessageID int, lastMessageID int, maxCount int) ([]*QueueMessage, error)
+		DeleteMessageFromDLQ(messageID int) error
+		DeleteDLQMessagesBefore(messageID int) error
 		GetLastMessageIDFromDLQ() (int, error)
 	}
 
