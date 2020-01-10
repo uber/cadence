@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,35 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-namespace java com.uber.cadence.indexer
+package checksum
 
-include "shared.thrift"
+import "errors"
 
-enum MessageType {
-  Index
-  Delete
-}
+type (
+	// Checksum represents a checksum value along
+	// with associated metadata
+	Checksum struct {
+		// Version represents version of the payload from
+		Version int
+		// which this checksum was derived
+		Flavor Flavor
+		// Value is the checksum value
+		Value []byte
+	}
 
-enum FieldType {
-  String
-  Int
-  Bool
-  Binary
-}
+	// Flavor is an enum type that represents the type of checksum
+	Flavor int
+)
 
-struct Field {
-  10: optional FieldType type
-  20: optional string stringData
-  30: optional i64 (js.type = "Long") intData
-  40: optional bool boolData
-  50: optional binary binaryData
-}
+const (
+	// FlavorUnknown represents an unknown/uninitialized checksum flavor
+	FlavorUnknown Flavor = iota
+	// FlavorIEEECRC32OverThriftBinary represents crc32 checksum generated over thriftRW serialized payload
+	FlavorIEEECRC32OverThriftBinary
+	maxFlavors
+)
 
-struct Message {
-  10: optional MessageType messageType
-  20: optional string domainID
-  30: optional string workflowID
-  40: optional string runID
-  50: optional i64 (js.type = "Long") version
-  60: optional map<string,Field> fields
+// ErrMismatch indicates a checksum verification failure due to
+// a derived checksum not being equal to expected checksum
+var ErrMismatch = errors.New("checksum mismatch error")
+
+// IsValid returns true if the checksum flavor is valid
+func (f Flavor) IsValid() bool {
+	return f > FlavorUnknown && f < maxFlavors
 }
