@@ -28,6 +28,8 @@ import (
 
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/auth"
+	my "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/mysql"
 	"github.com/uber/cadence/tools/common/schema"
@@ -86,6 +88,7 @@ func CheckCompatibleVersion(
 		Password:   cfg.Password,
 		PluginName: cfg.PluginName,
 		Database:   cfg.DatabaseName,
+		TLS:        cfg.TLS,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create SQL connection: %v", err.Error())
@@ -188,6 +191,17 @@ func parseConnectParams(cli *cli.Context) (*ConnectParams, error) {
 	params.Password = cli.GlobalString(schema.CLIOptPassword)
 	params.Database = cli.GlobalString(schema.CLIOptDatabase)
 	params.PluginName = cli.GlobalString(schema.CLIOptPluginName)
+	// parameters related to tls start
+	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
+		params.TLS = &auth.SQLTLS{
+			Enabled:    true,
+			CertFile:   cli.GlobalString(schema.CLIFlagTLSCertFile),
+			KeyFile:    cli.GlobalString(schema.CLIFlagTLSKeyFile),
+			CaFile:     cli.GlobalString(schema.CLIFlagTLSCaFile),
+			ServerName: cli.GlobalString(schema.CLIFlagTLSServer),
+			Config:     cli.GlobalString(schema.CLIFlagTLSConfig),
+		}
+	}
 	isDryRun := cli.Bool(schema.CLIOptDryrun)
 	if err := ValidateConnectParams(params, isDryRun); err != nil {
 		return nil, err
@@ -205,6 +219,14 @@ func ValidateConnectParams(params *ConnectParams, isDryRun bool) error {
 			return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument ")
 		}
 		params.Database = schema.DryrunDBName
+	}
+	if params.TLS != nil && params.TLS.Enabled && !my.IsTLSConfigReserved(params.TLS.Config) {
+		if params.TLS.CaFile == "" {
+			return schema.NewConfigError("missing " + flag(schema.CLIFlagTLSCaFile) + " argument ")
+		}
+		if params.TLS.Config == "" {
+			return schema.NewConfigError("missing " + flag(schema.CLIFlagTLSConfig) + " argument ")
+		}
 	}
 	return nil
 }

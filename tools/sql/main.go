@@ -94,6 +94,36 @@ func BuildCLIOptions() *cli.App {
 			Name:  schema.CLIFlagQuiet,
 			Usage: "Don't set exit status to 1 on error",
 		},
+		cli.BoolFlag{
+			Name:   schema.CLIFlagEnableTLS,
+			Usage:  "Enable TLS",
+			EnvVar: "MYSQL_ENABLE_TLS",
+		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagTLSConfig,
+			Usage:  "TLS config",
+			EnvVar: "MYSQL_TLS_CONFIG",
+		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagTLSCaFile,
+			Usage:  "TLS CA file",
+			EnvVar: "MYSQL_TLS_CA",
+		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagTLSServer,
+			Usage:  "TLS Server",
+			EnvVar: "MYSQL_TLS_SERVER",
+		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagTLSCertFile,
+			Usage:  "TLS cert file",
+			EnvVar: "MYSQL_TLS_CERT",
+		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagTLSKeyFile,
+			Usage:  "TLS key file",
+			EnvVar: "MYSQL_TLS_KEY",
+		},
 	}
 
 	app.Commands = []cli.Command{

@@ -34,6 +34,13 @@ persistence:
                 connectAttributes:
                     tx_isolation: 'READ-COMMITTED'
                 {{- end }}
+                tls:
+                    enabled: {{ default .Env.MYSQL_ENABLE_TLS false }}
+                    config: {{ default .Env.MYSQL_TLS_CONFIG "" }}
+                    caFile: {{ default .Env.MYSQL_TLS_CA "" }}
+                    serverName: {{ default .Env.MYSQL_TLS_SERVER "" }}
+                    certFile: {{ default .Env.MYSQL_TLS_CERT "" }}
+                    keyFile: {{ default .Env.MYSQL_TLS_KEY "" }}
         visibility:
             sql:
                 pluginName: "mysql"
@@ -46,6 +53,13 @@ persistence:
                 connectAttributes:
                     tx_isolation: 'READ-COMMITTED'
                 {{- end }}
+                tls:
+                    enabled: {{ default .Env.MYSQL_ENABLE_TLS false }}
+                    config: {{ default .Env.MYSQL_TLS_CONFIG "" }}
+                    caFile: {{ default .Env.MYSQL_TLS_CA "" }}
+                    serverName: {{ default .Env.MYSQL_TLS_SERVER "" }}
+                    certFile: {{ default .Env.MYSQL_TLS_CERT "" }}
+                    keyFile: {{ default .Env.MYSQL_TLS_KEY "" }}
         {{- else if eq $db "postgres" }}
         default:
             sql:
