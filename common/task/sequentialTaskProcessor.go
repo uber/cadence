@@ -52,7 +52,7 @@ type (
 
 // NewSequentialTaskProcessor create a new sequential tasks processor
 func NewSequentialTaskProcessor(coroutineSize int, taskQueueHashFn collection.HashFunc, taskQueueFactory SequentialTaskQueueFactory,
-	metricsClient metrics.Client, logger log.Logger) TaskProcessor {
+	metricsClient metrics.Client, logger log.Logger) Processor {
 
 	return &sequentialTaskProcessorImpl{
 		status:           common.DaemonStatusInitialized,

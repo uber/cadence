@@ -25,13 +25,14 @@ import (
 )
 
 type (
-	// TaskProcessor is the generic coroutine pool interface
+	// Processor is the generic coroutine pool interface
 	// which process sequential task
-	TaskProcessor interface {
+	Processor interface {
 		common.Daemon
 		Submit(task Task) error
 	}
 
+	// State represents the current state of a task
 	State int
 
 	// Task is the interface for tasks which should be executed sequentially

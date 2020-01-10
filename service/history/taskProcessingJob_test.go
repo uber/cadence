@@ -1024,7 +1024,7 @@ func (s *taskProcessingJobSuite) TestJob_Split() {
 		tc.job.outstandingTasks = outstandingTasks
 
 		for _, expectedJob := range tc.expectedResult {
-			for key, _ := range expectedJob.outstandingTasks {
+			for key := range expectedJob.outstandingTasks {
 				expectedJob.outstandingTasks[key] = outstandingTasks[key]
 			}
 		}

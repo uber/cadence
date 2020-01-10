@@ -79,6 +79,7 @@ type (
 	}
 
 	taskProcessingJobConfig struct {
+		// TODO: change the following two fields to dynamic configs
 		lookAheadTaskID       int64
 		lookAheadTimeDuration time.Duration
 	}
@@ -165,14 +166,14 @@ func (t *taskProcessingJobImpl) AddTasks(tasks []queueTask) {
 }
 
 func (t *taskProcessingJobImpl) Split(splitPolicy taskProcessingJobSplitPolicy) []taskProcessingJob {
-	// step 1: gather statistics for pending tasks, results represented as domainID -> # of pending tasks
+	// step 1: gather statistics for pending tasks
 	pendingTaskStats := make(map[string]int)
 	for _, task := range t.outstandingTasks {
 		taskDomainID := task.Info().GetDomainID()
 		if _, ok := pendingTaskStats[taskDomainID]; !ok {
 			pendingTaskStats[taskDomainID] = 1
 		} else {
-			pendingTaskStats[taskDomainID] += 1
+			pendingTaskStats[taskDomainID]++
 		}
 	}
 
@@ -208,6 +209,7 @@ func (t *taskProcessingJobImpl) Split(splitPolicy taskProcessingJobSplitPolicy) 
 		newMaxReadLevel = t.MaxReadLevel()
 	}
 
+	// create a job for each new level
 	newLevelToDomainIDs := make(map[int][]string)
 	for domainID, level := range domainIDToNewJobLevel {
 		newLevelToDomainIDs[level] = append(newLevelToDomainIDs[level], domainID)
@@ -227,6 +229,8 @@ func (t *taskProcessingJobImpl) Split(splitPolicy taskProcessingJobSplitPolicy) 
 		newJobs = append(newJobs, newJob)
 	}
 
+	// the job remaining on the current level should also be split into two parts
+	// one from ack level to read level + look ahead
 	excludedDomains := []string{}
 	for domainID := range domainIDToNewJobLevel {
 		excludedDomains = append(excludedDomains, domainID)
@@ -244,6 +248,7 @@ func (t *taskProcessingJobImpl) Split(splitPolicy taskProcessingJobSplitPolicy) 
 	}
 	newJobs = append(newJobs, newJob)
 
+	// the other one from read level + look ahead to max read level
 	if compareTaskKeyLess(&newMaxReadLevel, &t.maxReadLevel) {
 		newJob := newTaskProcessingJob(
 			t.jobLevel,
@@ -279,8 +284,11 @@ func (t *taskProcessingJobImpl) Merge(incomingJob taskProcessingJob) []taskProce
 	}
 
 	generationFunc := []func(*taskProcessingJobImpl, *taskProcessingJobImpl) *taskProcessingJobImpl{
+		// if exists, generate the job for the first non-overlapping part (whose range is before the overlapping part)
 		generateMergedPrefixJob,
+		// generate the job for the overlapping part
 		generateMergedJob,
+		// if exists, generate the job for the second non-overlapping part (whose ranger is after the overlapping part)
 		generateMergedSuffixJob,
 	}
 

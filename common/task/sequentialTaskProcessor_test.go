@@ -39,7 +39,7 @@ import (
 type (
 	SequentialTaskProcessorSuite struct {
 		suite.Suite
-		processor TaskProcessor
+		processor Processor
 	}
 
 	testSequentialTaskQueueImpl struct {

@@ -69,7 +69,7 @@ type (
 		mockMsg              *messageMocks.Message
 		mockDomainReplicator *MockDomainReplicator
 
-		mockSequentialTaskProcessor *task.MockTaskProcessor
+		mockSequentialTaskProcessor *task.MockProcessor
 		mockRereplicator            *xdc.MockHistoryRereplicator
 
 		processor *replicationTaskProcessor
@@ -125,7 +125,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.mockMsg.On("Offset").Return(int64(0))
 	s.mockDomainReplicator = &MockDomainReplicator{}
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
-	s.mockSequentialTaskProcessor = &task.MockTaskProcessor{}
+	s.mockSequentialTaskProcessor = &task.MockProcessor{}
 
 	s.currentCluster = cluster.TestAlternativeClusterName
 	s.sourceCluster = cluster.TestCurrentClusterName
