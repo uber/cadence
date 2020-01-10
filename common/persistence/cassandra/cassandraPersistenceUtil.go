@@ -2525,10 +2525,10 @@ func createReplicationInfoMap(
 }
 
 func createChecksum(result map[string]interface{}) checksum.Checksum {
-	if len(result) == 0 {
-		return checksum.Checksum{}
-	}
 	csum := checksum.Checksum{}
+	if len(result) == 0 {
+		return csum
+	}
 	for k, v := range result {
 		switch k {
 		case "flavor":
