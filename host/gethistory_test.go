@@ -363,9 +363,9 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 }
 
 func (s *integrationSuite) TestAdminGetWorkflowExecutionRawHistory_All() {
-	workflowID := "integration-get-workflow-history-raw-events-all"
-	workflowTypeName := "integration-get-workflow-history-raw-events-all-type"
-	tasklistName := "integration-get-workflow-history-raw-events-all-tasklist"
+	workflowID := "integration-admin-get-workflow-history-raw-events-all"
+	workflowTypeName := "integration-admin-get-workflow-history-raw-events-all-type"
+	tasklistName := "integration-admin-get-workflow-history-raw-events-all-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
@@ -582,9 +582,9 @@ func (s *integrationSuite) TestAdminGetWorkflowExecutionRawHistory_All() {
 }
 
 func (s *integrationSuite) TestAdminGetWorkflowExecutionRawHistory_InTheMiddle() {
-	workflowID := "integration-get-workflow-history-raw-events-in-the-middle"
-	workflowTypeName := "integration-get-workflow-history-raw-events-in-the-middle-type"
-	tasklistName := "integration-get-workflow-history-raw-events-in-the-middle-tasklist"
+	workflowID := "integration-admin-get-workflow-history-raw-events-in-the-middle"
+	workflowTypeName := "integration-admin-get-workflow-history-raw-events-in-the-middle-type"
+	tasklistName := "integration-admin-get-workflow-history-raw-events-in-the-middle-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 

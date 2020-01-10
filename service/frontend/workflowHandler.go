@@ -1838,7 +1838,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		return nil, wh.error(err, scope)
 	}
 	return &gen.GetWorkflowExecutionRawHistoryResponse{
-		RawHistory:       history,
+		RawHistory:    history,
 		NextPageToken: nextToken,
 	}, nil
 }
@@ -3206,8 +3206,8 @@ func (wh *WorkflowHandler) getRawHistory(
 	var encoding *gen.EncodingType
 	for _, data := range resp.HistoryEventBlobs {
 		switch data.Encoding {
-			case common.EncodingTypeJSON:
-				encoding = gen.EncodingTypeJSON.Ptr()
+		case common.EncodingTypeJSON:
+			encoding = gen.EncodingTypeJSON.Ptr()
 		case common.EncodingTypeThriftRW:
 			encoding = gen.EncodingTypeThriftRW.Ptr()
 		default:
