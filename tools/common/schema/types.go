@@ -148,6 +148,11 @@ const (
 	CLIFlagTLSCaFile = "tls-ca-file"
 	// CLIFlagTLSEnableHostVerification enables tls host verification (tls must be enabled)
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
+
+	//CLIFlagTLSConfig provides config name for dsn parameter tls for MySQL MYSQL_TLS_CONFIG
+	CLIFlagTLSConfig = "tls-config"
+	//CLIFlagTLSServer is the key for MySQL
+	CLIFlagTLSServer = "tls-server"
 )
 
 // DryrunDBName is the db name used for dryrun

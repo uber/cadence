@@ -219,6 +219,8 @@ type (
 		// NumShards is the number of storage shards to use for tables
 		// in a sharded sql database. The default value for this param is 1
 		NumShards int `yaml:"nShards"`
+		// TLS configuration for MySQL
+		TLS *auth.SQLTLS `yaml:"tls"`
 	}
 
 	// Replicator describes the configuration of replicator

@@ -23,6 +23,7 @@ package sql
 import (
 	"fmt"
 
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
@@ -38,6 +39,7 @@ type (
 		Password   string
 		Database   string
 		PluginName string
+		TLS        *auth.SQLTLS
 	}
 
 	// Connection is the connection to database
@@ -58,6 +60,7 @@ func NewConnection(params *ConnectParams) (*Connection, error) {
 		Password:     params.Password,
 		DatabaseName: params.Database,
 		ConnectAddr:  fmt.Sprintf("%v:%v", params.Host, params.Port),
+		TLS:          params.TLS,
 	})
 	if err != nil {
 		return nil, err

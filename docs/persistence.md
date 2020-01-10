@@ -117,6 +117,12 @@ persistence:
         maxQPS: 1000                   -- max qps to sql server from one host (optional)
         connectAttributes:             -- custom dsn attributes, map of key-value pairs
           tx_isolation: "READ-COMMITTED"   -- required only for mysql 5.6 and below, optional otherwise
+        tls:                           -- tls is a required parameter for using mySQL over tls
+          config: ""                     -- name of the tls configuration needed when tls is true. Will be set to "custom" if not provided.
+          CaFile: ""                     -- ca cert path required only when tls is true (optional)
+          CertFile: ""                   -- certificate path required only when tls is true and two way ssl is needed.(optional)
+          KeyFile: ""                    -- key file path required only when tls is true and two way ssl is needed.(optional)
+          ServerName: ""                 -- name of tls server is a required parameter when tls is true.
 ```
 
 # Adding support for new database

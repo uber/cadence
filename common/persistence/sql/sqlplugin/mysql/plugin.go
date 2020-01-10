@@ -22,13 +22,19 @@ package mysql
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 
+	"github.com/uber/cadence/common/auth"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -43,6 +49,8 @@ const (
 	isolationLevelAttrName       = "transaction_isolation"
 	isolationLevelAttrNameLegacy = "tx_isolation"
 	defaultIsolationLevel        = "'READ-COMMITTED'"
+	tlsConfig                    = "tls"
+	defaultTLSConfig             = "custom"
 )
 
 var dsnAttrOverrides = map[string]string{
@@ -84,6 +92,17 @@ func (p *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func (p *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+	if cfg.TLS != nil && cfg.TLS.Enabled {
+		if cfg.TLS.Config == "" {
+			cfg.TLS.Config = defaultTLSConfig
+		}
+		if !IsTLSConfigReserved(cfg.TLS.Config) {
+			err := registerTLS(cfg.TLS)
+			if err != nil {
+				return nil, errors.Wrap(err, "register TLS config for mysql")
+			}
+		}
+	}
 	db, err := sqlx.Connect(PluginName, buildDSN(cfg))
 	if err != nil {
 		return nil, err
@@ -124,6 +143,14 @@ func buildDSNAttrs(cfg *config.SQL) string {
 		attrs[isolationLevelAttrName] = defaultIsolationLevel
 	}
 
+	// if tls parameter is empty then set it to 'custom'
+	if cfg.TLS != nil && cfg.TLS.Enabled {
+		attrs[tlsConfig] = defaultTLSConfig
+		if cfg.TLS.Config != "" {
+			attrs[tlsConfig] = cfg.TLS.Config
+		}
+	}
+
 	// these attrs are always overriden
 	for k, v := range dsnAttrOverrides {
 		attrs[k] = v
@@ -160,6 +187,38 @@ func sanitizeAttr(inkey string, invalue string) (string, string) {
 	default:
 		return inkey, invalue
 	}
+}
+
+// registerTLS adds client certificate configuration to the mysql connection.
+func registerTLS(config *auth.SQLTLS) error {
+	rootCertPool := x509.NewCertPool()
+	pem, err := ioutil.ReadFile(config.CaFile)
+	if err != nil {
+		return errors.Wrap(err, "read server-ca pem")
+	}
+	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+		return errors.New("failed to append pem")
+	}
+	cfg := tls.Config{
+		RootCAs: rootCertPool,
+	}
+	// if client certs are provided add them for mutual tls
+	if (config.CertFile != "") && (config.KeyFile != "") {
+		clientCert := make([]tls.Certificate, 0, 1)
+		certs, err := tls.LoadX509KeyPair(config.CertFile, config.KeyFile)
+		if err != nil {
+			return errors.Wrap(err, "load mysql client cert and key")
+		}
+		clientCert = append(clientCert, certs)
+		cfg.Certificates = clientCert
+	}
+	if config.ServerName != "" {
+		cfg.ServerName = config.ServerName
+	}
+	if err := mysql.RegisterTLSConfig(config.Config, &cfg); err != nil {
+		return errors.Wrap(err, "register mysql tls config")
+	}
+	return nil
 }
 
 const (
