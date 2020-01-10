@@ -1733,13 +1733,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
-	execution := getRequest.Execution
-	token := &getHistoryContinuationToken{}
-
-	var runID string
-	var nextEventID int64
-	var isWorkflowRunning bool
-
 	// this function return the following 5 things,
 	// 1. current branch token
 	// 2. the workflow run ID
@@ -1748,13 +1741,12 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 	queryHistory := func(
 		domainUUID string,
 		execution *gen.WorkflowExecution,
-		expectedNextEventID int64,
 		currentBranchToken []byte,
 	) ([]byte, string, int64, error) {
 		response, err := wh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
-			ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
+			ExpectedNextEventId: nil,
 			CurrentBranchToken:  currentBranchToken,
 		})
 
@@ -1768,8 +1760,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 			nil
 	}
 
+	execution := getRequest.Execution
+	token := &getHistoryContinuationToken{}
+
+	var runID string
+	var nextEventID int64
+
 	// process the token for paging
-	queryNextEventID := common.EndEventID
 	if getRequest.NextPageToken != nil {
 		token, err = deserializeHistoryToken(getRequest.NextPageToken)
 		if err != nil {
@@ -1780,9 +1777,21 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		}
 
 		execution.RunId = common.StringPtr(token.RunID)
+
+		// we need to update the current next event ID
+		if len(token.PersistenceToken) == 0 {
+			token.BranchToken, _, nextEventID, err =
+				queryHistory(domainID, execution, token.BranchToken)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			token.FirstEventID = token.NextEventID
+			token.NextEventID = nextEventID
+		}
 	} else {
+
 		token.BranchToken, runID, nextEventID, err =
-			queryHistory(domainID, execution, queryNextEventID, nil)
+			queryHistory(domainID, execution, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -1792,33 +1801,36 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		token.RunID = runID
 		token.FirstEventID = common.FirstEventID
 		token.NextEventID = nextEventID
-		token.IsWorkflowRunning = isWorkflowRunning
 		token.PersistenceToken = nil
 	}
 
 	history := []*gen.DataBlob{}
-
 	// return all events
-	if token.FirstEventID < token.NextEventID {
-		history, token.PersistenceToken, err = wh.getRawHistory(
-			scope,
-			domainID,
-			*execution,
-			token.FirstEventID,
-			token.NextEventID,
-			getRequest.GetMaximumPageSize(),
-			token.PersistenceToken,
-			token.TransientDecision,
-			token.BranchToken,
-		)
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
+	if token.FirstEventID >= token.NextEventID {
+		return &gen.GetWorkflowExecutionRawHistoryResponse{
+			RawHistory:    []*gen.DataBlob{},
+			NextPageToken: nil,
+		}, nil
+	}
 
-		if len(token.PersistenceToken) == 0 {
-			// meaning, there is no more history to be returned
-			token = nil
-		}
+	history, token.PersistenceToken, err = wh.getRawHistory(
+		scope,
+		domainID,
+		*execution,
+		token.FirstEventID,
+		token.NextEventID,
+		getRequest.GetMaximumPageSize(),
+		token.PersistenceToken,
+		token.TransientDecision,
+		token.BranchToken,
+	)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if len(token.PersistenceToken) == 0 {
+		// meaning, there is no more history to be returned
+		token = nil
 	}
 
 	nextToken, err := serializeHistoryToken(token)
@@ -1826,7 +1838,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 		return nil, wh.error(err, scope)
 	}
 	return &gen.GetWorkflowExecutionRawHistoryResponse{
-		RawHistory:    history,
+		RawHistory:       history,
 		NextPageToken: nextToken,
 	}, nil
 }
@@ -3191,10 +3203,15 @@ func (wh *WorkflowHandler) getRawHistory(
 		return nil, nil, err
 	}
 
+	var encoding *gen.EncodingType
 	for _, data := range resp.HistoryEventBlobs {
-		encoding := gen.EncodingTypeThriftRW.Ptr()
-		if data.Encoding == common.EncodingTypeJSON {
-			encoding = gen.EncodingTypeJSON.Ptr()
+		switch data.Encoding {
+			case common.EncodingTypeJSON:
+				encoding = gen.EncodingTypeJSON.Ptr()
+		case common.EncodingTypeThriftRW:
+			encoding = gen.EncodingTypeThriftRW.Ptr()
+		default:
+			panic(fmt.Sprintf("Invalid encoding type for raw history, encoding type: %s", data.Encoding))
 		}
 		rawHistory = append(rawHistory, &gen.DataBlob{
 			EncodingType: encoding,
