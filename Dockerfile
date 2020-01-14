@@ -44,7 +44,7 @@ RUN make clean && CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sq
 
 
 # Download dockerize
-FROM alpine:3.10 AS dockerize
+FROM alpine:3.11 AS dockerize
 
 RUN apk add --no-cache openssl
 
@@ -55,8 +55,9 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
     && echo "**** fix for host id mapping error ****" \
     && chown root:root /usr/local/bin/dockerize
 
+
 # Alpine base image
-FROM alpine:3.10 AS alpine
+FROM alpine:3.11 AS alpine
 
 RUN apk add --update --no-cache ca-certificates tzdata bash curl
 
