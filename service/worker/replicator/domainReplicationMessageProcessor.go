@@ -165,6 +165,7 @@ func (p *domainReplicationMessageProcessor) getAndHandleDomainReplicationTasks()
 			}, p.retryPolicy, isTransientRetryableError)
 			if dlqErr != nil {
 				p.logger.Error("Failed to put replication tasks to DLQ", tag.Error(dlqErr))
+				p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
 				return
 			}
 		}

@@ -192,7 +192,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 	}
 
 	q.metricsClient.
-		Scope(metrics.FrontendDomainReplicationQueueScope).
+		Scope(metrics.PersistenceDomainReplicationQueueScope).
 		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
 	return nil
 }
