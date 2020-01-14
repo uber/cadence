@@ -23,7 +23,6 @@ package replicator
 import (
 	"context"
 	"fmt"
-	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/client"
@@ -74,11 +73,8 @@ type (
 		ReplicatorHistoryBufferRetryCount  dynamicconfig.IntPropertyFn
 		ReplicationTaskMaxRetryCount       dynamicconfig.IntPropertyFn
 		ReplicationTaskMaxRetryDuration    dynamicconfig.DurationPropertyFn
+		ReplicationTaskContextTimeout      dynamicconfig.DurationPropertyFn
 	}
-)
-
-const (
-	replicationTimeout = 30 * time.Second
 )
 
 // NewReplicator creates a new replicator for processing replication tasks
@@ -176,7 +172,7 @@ func (r *Replicator) createKafkaProcessors(currentClusterName string, clusterNam
 			return historyClient.ReplicateRawEvents(ctx, request)
 		},
 		r.historySerializer,
-		replicationTimeout,
+		r.config.ReplicationTaskContextTimeout(),
 		r.logger,
 	)
 	nDCHistoryReplicator := xdc.NewNDCHistoryResender(
