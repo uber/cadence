@@ -307,3 +307,20 @@ func (c *metricClient) MergeDLQMessages(
 	}
 	return resp, err
 }
+
+func (c *metricClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *shared.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	c.metricsClient.IncCounter(metrics.FrontendRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.FrontendRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
+	err := c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
+	}
+	return err
+}
