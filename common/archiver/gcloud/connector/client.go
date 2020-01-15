@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -50,17 +50,19 @@ var (
 	bucketNameRegExp    = regexp.MustCompile(bucketNameRegExpRaw)
 )
 
-// Client is a wrapper around Google cloud storages client library.
-type Client interface {
-	Upload(ctx context.Context, URI archiver.URI, fileName string, file []byte) error
-	Get(ctx context.Context, URI archiver.URI, file string) ([]byte, error)
-	Query(ctx context.Context, URI archiver.URI, fileNamePrefix string) ([]string, error)
-	Exist(ctx context.Context, URI archiver.URI, fileName string) (bool, error)
-}
+type (
+	// Client is a wrapper around Google cloud storages client library.
+	Client interface {
+		Upload(ctx context.Context, URI archiver.URI, fileName string, file []byte) error
+		Get(ctx context.Context, URI archiver.URI, file string) ([]byte, error)
+		Query(ctx context.Context, URI archiver.URI, fileNamePrefix string) ([]string, error)
+		Exist(ctx context.Context, URI archiver.URI, fileName string) (bool, error)
+	}
 
-type storageWrapper struct {
-	client GcloudStorageClient
-}
+	storageWrapper struct {
+		client GcloudStorageClient
+	}
+)
 
 // NewClient return a Cadence gcloudstorage.Client based on default google service account creadentials (ScopeFullControl required).
 // Bucket must be created by Iaas scripts, in other words, this library doesn't create the required Bucket.
@@ -71,13 +73,16 @@ func NewClient(ctx context.Context, config *config.GstorageArchiver) (Client, er
 	if credentialsPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); credentialsPath != "" {
 		clientDelegate, err := newClientDelegateWithCredentials(ctx, credentialsPath)
 		return &storageWrapper{client: clientDelegate}, err
-	} else if config.CredentialsPath != "" {
+	}
+
+	if config.CredentialsPath != "" {
 		clientDelegate, err := newClientDelegateWithCredentials(ctx, config.CredentialsPath)
 		return &storageWrapper{client: clientDelegate}, err
-	} else {
-		clientDelegate, err := newDefaultClientDelegate(ctx)
-		return &storageWrapper{client: clientDelegate}, err
 	}
+
+	clientDelegate, err := newDefaultClientDelegate(ctx)
+	return &storageWrapper{client: clientDelegate}, err
+
 }
 
 // NewClientWithParams return a gcloudstorage.Client based on input parameters
@@ -92,7 +97,9 @@ func (s *storageWrapper) Upload(ctx context.Context, URI archiver.URI, fileName 
 	bucket := s.client.Bucket(URI.Hostname())
 	writer := bucket.Object(formatSinkPath(URI.Path()) + "/" + fileName).NewWriter(ctx)
 	_, err = io.Copy(writer, bytes.NewReader(file))
-	err = writer.Close()
+	if err == nil {
+		err = writer.Close()
+	}
 
 	return err
 }
@@ -102,17 +109,19 @@ func (s *storageWrapper) Upload(ctx context.Context, URI archiver.URI, fileName 
 func (s *storageWrapper) Exist(ctx context.Context, URI archiver.URI, fileName string) (exists bool, err error) {
 	err = errBucketNotFound
 	bucket := s.client.Bucket(URI.Hostname())
-	if _, err = bucket.Attrs(ctx); err == nil {
-		if fileName == "" {
-			exists = true
-		} else if _, err = bucket.Object(fileName).Attrs(ctx); err == nil {
-			exists = true
-		} else {
-			err = errObjectNotFound
-		}
+	if _, err := bucket.Attrs(ctx); err != nil {
+		return false, err
 	}
 
-	return
+	if fileName == "" {
+		return true, nil
+	}
+
+	if _, err = bucket.Object(fileName).Attrs(ctx); err != nil {
+		return false, errObjectNotFound
+	}
+
+	return true, nil
 }
 
 // Get retrieve a file
@@ -139,20 +148,15 @@ func (s *storageWrapper) Query(ctx context.Context, URI archiver.URI, fileNamePr
 	for {
 		attrs, err = it.Next()
 		if err == iterator.Done {
-			err = nil
-			break
-		} else {
-			fileNames = append(fileNames, attrs.Name)
+			return fileNames, nil
 		}
-
+		fileNames = append(fileNames, attrs.Name)
 	}
 
-	return
 }
 
 func formatSinkPath(sinkPath string) string {
-	sinkPath = sinkPath[1:]
-	return sinkPath
+	return sinkPath[1:]
 }
 
 // GetBucketNameFromURI return a bucket name from a given google cloud storage URI

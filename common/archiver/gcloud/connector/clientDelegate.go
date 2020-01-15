@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,60 +30,78 @@ import (
 	"google.golang.org/api/option"
 )
 
-type GcloudStorageClient interface {
-	Bucket(URI string) BucketHandleWrapper
-}
+type (
+	// GcloudStorageClient is an interface that expose some methods from gcloud storage client
+	GcloudStorageClient interface {
+		Bucket(URI string) BucketHandleWrapper
+	}
 
-type BucketHandleWrapper interface {
-	Object(name string) ObjectHandleWrapper
-	Objects(ctx context.Context, q *storage.Query) ObjectIteratorWrapper
-	Attrs(ctx context.Context) (*storage.BucketAttrs, error)
-}
+	clientDelegate struct {
+		nativeClient *storage.Client
+	}
+)
 
-type ObjectHandleWrapper interface {
-	NewWriter(ctx context.Context) WriterWrapper
-	NewReader(ctx context.Context) (ReaderWrapper, error)
-	Attrs(ctx context.Context) (*storage.ObjectAttrs, error)
-}
+type (
+	// BucketHandleWrapper is an interface that expose some methods from gcloud storage bucket
+	BucketHandleWrapper interface {
+		Object(name string) ObjectHandleWrapper
+		Objects(ctx context.Context, q *storage.Query) ObjectIteratorWrapper
+		Attrs(ctx context.Context) (*storage.BucketAttrs, error)
+	}
 
-type WriterWrapper interface {
-	Close() error
-	Write(p []byte) (n int, err error)
-	CloseWithError(err error) error
-}
+	bucketDelegate struct {
+		bucket *storage.BucketHandle
+	}
+)
 
-type ReaderWrapper interface {
-	Close() error
-	Read(p []byte) (int, error)
-}
+type (
+	// ObjectHandleWrapper is an interface that expose some methods from gcloud storage object
+	ObjectHandleWrapper interface {
+		NewWriter(ctx context.Context) WriterWrapper
+		NewReader(ctx context.Context) (ReaderWrapper, error)
+		Attrs(ctx context.Context) (*storage.ObjectAttrs, error)
+	}
 
-type ObjectIteratorWrapper interface {
-	Next() (*storage.ObjectAttrs, error)
-}
+	objectDelegate struct {
+		object *storage.ObjectHandle
+	}
+)
 
-type clientDelegate struct {
-	nativeClient *storage.Client
-}
+type (
+	// WriterWrapper is an interface that expose some methods from gcloud storage writer
+	WriterWrapper interface {
+		Close() error
+		Write(p []byte) (n int, err error)
+		CloseWithError(err error) error
+	}
 
-type bucketDelegate struct {
-	bucket *storage.BucketHandle
-}
+	writerDelegate struct {
+		writer *storage.Writer
+	}
+)
 
-type objectDelegate struct {
-	object *storage.ObjectHandle
-}
+type (
+	// ReaderWrapper is an interface that expose some methods from gcloud storage reader
+	ReaderWrapper interface {
+		Close() error
+		Read(p []byte) (int, error)
+	}
 
-type objectIteratorDelegate struct {
-	iterator *storage.ObjectIterator
-}
+	readerDelegate struct {
+		reader *storage.Reader
+	}
+)
 
-type writerDelegate struct {
-	writer *storage.Writer
-}
+type (
+	// ObjectIteratorWrapper is an interface that expose some methods from gcloud storage objectIterator
+	ObjectIteratorWrapper interface {
+		Next() (*storage.ObjectAttrs, error)
+	}
 
-type readerDelegate struct {
-	reader *storage.Reader
-}
+	objectIteratorDelegate struct {
+		iterator *storage.ObjectIterator
+	}
+)
 
 func newClientDelegate() (*clientDelegate, error) {
 	ctx := context.Background()
@@ -93,24 +111,25 @@ func newClientDelegate() (*clientDelegate, error) {
 	return newDefaultClientDelegate(ctx)
 }
 
-func NewClientDelegateWithParams(client *storage.Client) (*clientDelegate, error) {
-	return &clientDelegate{nativeClient: client}, nil
-}
-
 func newDefaultClientDelegate(ctx context.Context) (*clientDelegate, error) {
 	nativeClient, err := storage.NewClient(ctx)
 	return &clientDelegate{nativeClient: nativeClient}, err
 }
 
 func newClientDelegateWithCredentials(ctx context.Context, credentialsPath string) (*clientDelegate, error) {
-	if jsonKey, err := ioutil.ReadFile(credentialsPath); err == nil {
-		if conf, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl); err == nil {
-			nativeClient, err := storage.NewClient(ctx, option.WithTokenSource(conf.TokenSource(ctx)))
-			return &clientDelegate{nativeClient: nativeClient}, err
-		}
+
+	jsonKey, err := ioutil.ReadFile(credentialsPath)
+	if err != nil {
+		return newDefaultClientDelegate(ctx)
 	}
 
-	return newDefaultClientDelegate(ctx)
+	conf, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
+	if err != nil {
+		return newDefaultClientDelegate(ctx)
+	}
+
+	nativeClient, err := storage.NewClient(ctx, option.WithTokenSource(conf.TokenSource(ctx)))
+	return &clientDelegate{nativeClient: nativeClient}, err
 }
 
 // Bucket returns a BucketHandle, which provides operations on the named bucket.
@@ -120,9 +139,8 @@ func newClientDelegateWithCredentials(ctx context.Context, credentialsPath strin
 // underscores, and dots. The full specification for valid bucket names can be
 // found at:
 //   https://cloud.google.com/storage/docs/bucket-naming
-func (c *clientDelegate) Bucket(bucketName string) (bucket BucketHandleWrapper) {
-	bucket = &bucketDelegate{bucket: c.nativeClient.Bucket(bucketName)}
-	return
+func (c *clientDelegate) Bucket(bucketName string) BucketHandleWrapper {
+	return &bucketDelegate{bucket: c.nativeClient.Bucket(bucketName)}
 }
 
 // Object returns an ObjectHandle, which provides operations on the named object.
@@ -131,9 +149,8 @@ func (c *clientDelegate) Bucket(bucketName string) (bucket BucketHandleWrapper) 
 // name must consist entirely of valid UTF-8-encoded runes. The full specification
 // for valid object names can be found at:
 //   https://cloud.google.com/storage/docs/bucket-naming
-func (b *bucketDelegate) Object(name string) (object ObjectHandleWrapper) {
-	object = &objectDelegate{object: b.bucket.Object(name)}
-	return
+func (b *bucketDelegate) Object(name string) ObjectHandleWrapper {
+	return &objectDelegate{object: b.bucket.Object(name)}
 }
 
 // Objects returns an iterator over the objects in the bucket that match the Query q.
@@ -173,9 +190,8 @@ func (o *objectIteratorDelegate) Next() (*storage.ObjectAttrs, error) {
 //
 // It is the caller's responsibility to call Close when writing is done. To
 // stop writing without saving the data, cancel the context.
-func (o *objectDelegate) NewWriter(ctx context.Context) (writer WriterWrapper) {
-	writer = &writerDelegate{writer: o.object.NewWriter(ctx)}
-	return
+func (o *objectDelegate) NewWriter(ctx context.Context) WriterWrapper {
+	return &writerDelegate{writer: o.object.NewWriter(ctx)}
 }
 
 // NewReader creates a new Reader to read the contents of the
@@ -195,9 +211,8 @@ func (o *objectDelegate) Attrs(ctx context.Context) (attrs *storage.ObjectAttrs,
 // Close completes the write operation and flushes any buffered data.
 // If Close doesn't return an error, metadata about the written object
 // can be retrieved by calling Attrs.
-func (w *writerDelegate) Close() (err error) {
-	err = w.writer.Close()
-	return
+func (w *writerDelegate) Close() error {
+	return w.writer.Close()
 }
 
 // Write appends to w. It implements the io.Writer interface.
@@ -206,9 +221,8 @@ func (w *writerDelegate) Close() (err error) {
 // error even though the write failed (or will fail). Always
 // use the error returned from Writer.Close to determine if
 // the upload was successful.
-func (w *writerDelegate) Write(p []byte) (n int, err error) {
-	n, err = w.writer.Write(p)
-	return
+func (w *writerDelegate) Write(p []byte) (int, error) {
+	return w.writer.Write(p)
 }
 
 // CloseWithError aborts the write operation with the provided error.

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/service/config"
 
@@ -41,9 +44,32 @@ import (
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
 
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
+
+func (s *clientSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+	file, _ := json.MarshalIndent(&fakeData{data: "example"}, "", " ")
+
+	os.MkdirAll("/tmp/cadence_archival/development", os.ModePerm)
+	s.Require().NoError(ioutil.WriteFile("/tmp/cadence_archival/development/myfile.history", file, 0644))
+}
+
+func (s *clientSuite) TearDownTest() {
+	os.Remove("/tmp/cadence_archival/development/myfile.history")
+}
+
+func TestClientSuite(t *testing.T) {
+	suite.Run(t, new(clientSuite))
+}
+
+type clientSuite struct {
+	*require.Assertions
+	suite.Suite
+}
+
+type fakeData struct {
+	data string
+}
 
 func (s *clientSuite) TestUpload() {
 	ctx := context.Background()
@@ -218,16 +244,15 @@ func (s *clientSuite) TestQuery() {
 		mockIterator++
 		if mockIterator == 1 {
 			return attr
-		} else {
-			return nil
 		}
+		return nil
 
 	}, func() error {
 		if mockIterator == 1 {
 			return nil
-		} else {
-			return iterator.Done
 		}
+		return iterator.Done
+
 	}).Times(2)
 
 	var fileNames []string
@@ -235,29 +260,4 @@ func (s *clientSuite) TestQuery() {
 	fileNames, err = storageWrapper.Query(ctx, URI, "7478875943689868082123907395549832634615673687049942026838")
 	s.Require().NoError(err)
 	s.Equal(strings.Join(fileNames, ", "), "fileName_01")
-}
-
-func (s *clientSuite) SetupTest() {
-	s.Assertions = require.New(s.T())
-	file, _ := json.MarshalIndent(&fakeData{data: "example"}, "", " ")
-
-	os.MkdirAll("/tmp/cadence_archival/development", os.ModePerm)
-	s.Require().NoError(ioutil.WriteFile("/tmp/cadence_archival/development/myfile.history", file, 0644))
-}
-
-func (s *clientSuite) TearDownTest() {
-	os.Remove("/tmp/cadence_archival/development/myfile.history")
-}
-
-func TestClientSuite(t *testing.T) {
-	suite.Run(t, new(clientSuite))
-}
-
-type clientSuite struct {
-	*require.Assertions
-	suite.Suite
-}
-
-type fakeData struct {
-	data string
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -60,6 +60,33 @@ var (
 	testBranchToken = []byte{1, 2, 3}
 )
 
+func (h *historyArchiverSuite) SetupTest() {
+	zapLogger := zap.NewNop()
+	h.Assertions = require.New(h.T())
+	h.container = &archiver.HistoryBootstrapContainer{
+		Logger:        loggerimpl.NewLogger(zapLogger),
+		MetricsClient: metrics.NewClient(tally.NoopScope, metrics.History),
+	}
+	h.testArchivalURI, _ = archiver.NewURI("gs://my-bucket-cad/cadence_archival/development")
+}
+
+func TestHistoryArchiverSuite(t *testing.T) {
+	suite.Run(t, new(historyArchiverSuite))
+}
+
+type historyArchiverSuite struct {
+	*require.Assertions
+	suite.Suite
+	container       *archiver.HistoryBootstrapContainer
+	testArchivalURI archiver.URI
+}
+
+func getCanceledContext() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	return ctx
+}
+
 func (h *historyArchiverSuite) TestValidateURI() {
 	testCases := []struct {
 		URI         string
@@ -91,7 +118,7 @@ func (h *historyArchiverSuite) TestValidateURI() {
 		},
 	}
 
-	historyArchiver := new(historyArchiverData)
+	historyArchiver := new(historyArchiver)
 	for _, tc := range testCases {
 		URI, err := archiver.NewURI(tc.URI)
 		h.NoError(err)
@@ -440,31 +467,4 @@ func (h *historyArchiverSuite) TestGet_Success_UseProvidedVersion() {
 	response, err := historyArchiver.Get(ctx, URI, request)
 	h.NoError(err)
 	h.Nil(response.NextPageToken)
-}
-
-func (h *historyArchiverSuite) SetupTest() {
-	zapLogger := zap.NewNop()
-	h.Assertions = require.New(h.T())
-	h.container = &archiver.HistoryBootstrapContainer{
-		Logger:        loggerimpl.NewLogger(zapLogger),
-		MetricsClient: metrics.NewClient(tally.NoopScope, metrics.History),
-	}
-	h.testArchivalURI, _ = archiver.NewURI("gs://my-bucket-cad/cadence_archival/development")
-}
-
-func TestHistoryArchiverSuite(t *testing.T) {
-	suite.Run(t, new(historyArchiverSuite))
-}
-
-type historyArchiverSuite struct {
-	*require.Assertions
-	suite.Suite
-	container       *archiver.HistoryBootstrapContainer
-	testArchivalURI archiver.URI
-}
-
-func getCanceledContext() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	return ctx
 }

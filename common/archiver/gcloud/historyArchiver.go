@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"path/filepath"
-	"sort"
 
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/persistence"
@@ -41,7 +40,6 @@ import (
 
 var (
 	errUploadNonRetriable = errors.New("upload non-retriable error")
-	errUploadRetriable    = errors.New("upload retriable error")
 )
 
 const (
@@ -54,7 +52,7 @@ const (
 	errWriteFile          = "failed to write history to google storage"
 )
 
-type historyArchiverData struct {
+type historyArchiver struct {
 	container     *archiver.HistoryBootstrapContainer
 	gcloudStorage connector.Client
 
@@ -69,7 +67,8 @@ type progress struct {
 
 type getHistoryToken struct {
 	CloseFailoverVersion int64
-	HistoryParts         []int64
+	HighestPart          int64
+	CurrentPart          int64
 	NextBatchIdx         int
 }
 
@@ -86,7 +85,7 @@ func NewHistoryArchiver(
 }
 
 func newHistoryArchiver(container *archiver.HistoryBootstrapContainer, historyIterator archiver.HistoryIterator, storage connector.Client) archiver.HistoryArchiver {
-	return &historyArchiverData{
+	return &historyArchiver{
 		container:       container,
 		gcloudStorage:   storage,
 		historyIterator: historyIterator,
@@ -100,16 +99,22 @@ func newHistoryArchiver(container *archiver.HistoryBootstrapContainer, historyIt
 // to interact with these retries including giving the implementor the ability to cancel retries and record progress
 // between retry attempts.
 // This method will be invoked after a workflow passes its retention period.
-func (h *historyArchiverData) Archive(ctx context.Context, URI archiver.URI, request *archiver.ArchiveHistoryRequest, opts ...archiver.ArchiveOption) (err error) {
+func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request *archiver.ArchiveHistoryRequest, opts ...archiver.ArchiveOption) (err error) {
 	scope := h.container.MetricsClient.Scope(metrics.HistoryArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
 		if err != nil {
+
 			if err.Error() == errUploadNonRetriable.Error() {
-				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+				scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
 			}
+
+			if featureCatalog.NonRetriableError != nil {
+				err = featureCatalog.NonRetriableError()
+			}
+
 		}
 	}()
 
@@ -161,7 +166,8 @@ func (h *historyArchiverData) Archive(ctx context.Context, URI archiver.URI, req
 		if exist, _ := h.gcloudStorage.Exist(ctx, URI, filename); !exist {
 			if err := h.gcloudStorage.Upload(ctx, URI, filename, encodedHistoryPart); err != nil {
 				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
-				return errUploadRetriable
+				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
+				return err
 			}
 
 			totalUploadSize = totalUploadSize + int64(binary.Size(encodedHistoryPart))
@@ -179,9 +185,10 @@ func (h *historyArchiverData) Archive(ctx context.Context, URI archiver.URI, req
 // Get is used to access an archived history. When context expires method should stop trying to fetch history.
 // The URI identifies the resource from which history should be accessed and it is up to the implementor to interpret this URI.
 // This method should thrift errors - see filestore as an example.
-func (h *historyArchiverData) Get(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (tmp *archiver.GetHistoryResponse, err error) {
+func (h *historyArchiver) Get(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*archiver.GetHistoryResponse, error) {
 
-	if err := h.validateURI(ctx, URI); err != nil {
+	err := h.validateURI(ctx, URI)
+	if err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
@@ -196,18 +203,25 @@ func (h *historyArchiverData) Get(ctx context.Context, URI archiver.URI, request
 			return nil, &shared.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
 		}
 	} else if request.CloseFailoverVersion != nil {
+		_, historyhighestPart, historyCurrentPart, err := h.getHighestVersion(ctx, URI, request)
+		if err != nil {
+			return nil, &shared.InternalServiceError{Message: err.Error()}
+		}
 		token = &getHistoryToken{
 			CloseFailoverVersion: *request.CloseFailoverVersion,
+			HighestPart:          *historyhighestPart,
+			CurrentPart:          *historyCurrentPart,
 			NextBatchIdx:         0,
 		}
 	} else {
-		highestVersion, historyParts, err := h.getHighestVersion(ctx, URI, request)
+		highestVersion, historyhighestPart, historyCurrentPart, err := h.getHighestVersion(ctx, URI, request)
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		token = &getHistoryToken{
 			CloseFailoverVersion: *highestVersion,
-			HistoryParts:         historyParts,
+			HighestPart:          *historyhighestPart,
+			CurrentPart:          *historyCurrentPart,
 			NextBatchIdx:         0,
 		}
 	}
@@ -215,13 +229,10 @@ func (h *historyArchiverData) Get(ctx context.Context, URI archiver.URI, request
 	response := &archiver.GetHistoryResponse{}
 	numOfEvents := 0
 	numOfBatches := 0
-	var pageSizeCompleted bool
-	for _, partNum := range token.HistoryParts {
-		historyBatches := []*shared.History{}
-		if pageSizeCompleted {
-			break
-		}
 
+	for partNum := token.CurrentPart; partNum <= token.HighestPart; partNum++ {
+
+		historyBatches := []*shared.History{}
 		filename := constructHistoryFilenameMultipart(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion, partNum)
 		encodedHistoryBatches, err := h.gcloudStorage.Get(ctx, URI, filename)
 
@@ -238,35 +249,35 @@ func (h *historyArchiverData) Get(ctx context.Context, URI archiver.URI, request
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		historyBatches = append(historyBatches, batches...)
-
 		historyBatches = historyBatches[token.NextBatchIdx:]
 
 		for _, batch := range historyBatches {
 			response.HistoryBatches = append(response.HistoryBatches, batch)
 			numOfBatches++
 			numOfEvents += len(batch.Events)
-			if numOfEvents >= request.PageSize {
-				pageSizeCompleted = true
-				break
-			}
+
 		}
 
-		if numOfBatches < len(historyBatches) {
-			token.NextBatchIdx += numOfBatches
-			nextToken, err := serializeToken(token)
-			if err != nil {
-				return nil, &shared.InternalServiceError{Message: err.Error()}
-			}
-			response.NextPageToken = nextToken
+		if numOfEvents >= request.PageSize {
+			break
 		}
 	}
 
-	return response, nil
+	if numOfBatches < len(response.HistoryBatches) {
+		token.NextBatchIdx += numOfBatches
+		nextToken, err := serializeToken(token)
+		if err != nil {
+			return nil, &shared.InternalServiceError{Message: err.Error()}
+		}
+		response.NextPageToken = nextToken
+	}
 
+	return response, nil
 }
 
 // ValidateURI is used to define what a valid URI for an implementation is.
-func (h *historyArchiverData) ValidateURI(URI archiver.URI) (err error) {
+func (h *historyArchiver) ValidateURI(URI archiver.URI) (err error) {
+
 	if URI.Scheme() != URIScheme {
 		return archiver.ErrURISchemeMismatch
 	}
@@ -278,7 +289,7 @@ func (h *historyArchiverData) ValidateURI(URI archiver.URI) (err error) {
 	return
 }
 
-func (h *historyArchiverData) validateURI(ctx context.Context, URI archiver.URI) (err error) {
+func (h *historyArchiver) validateURI(ctx context.Context, URI archiver.URI) (err error) {
 	if err = h.ValidateURI(URI); err == nil {
 		_, err = h.gcloudStorage.Exist(ctx, URI, "")
 	}
@@ -319,18 +330,20 @@ func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*s
 	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 
-func (h *historyArchiverData) getHighestVersion(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*int64, []int64, error) {
+func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*int64, *int64, *int64, error) {
 
 	filenames, err := h.gcloudStorage.Query(ctx, URI, constructHistoryFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var highestVersion *int64
-	batchesPartIds := make([]int64, 0, 0)
+	var highestVersionPart *int64
+	var lowestVersionPart *int64
+
 	for _, filename := range filenames {
-		version, partVersionId, err := extractCloseFailoverVersion(filepath.Base(filename))
+		version, partVersionID, err := extractCloseFailoverVersion(filepath.Base(filename))
 		if err != nil {
 			continue
 		}
@@ -338,17 +351,19 @@ func (h *historyArchiverData) getHighestVersion(ctx context.Context, URI archive
 			highestVersion = &version
 		}
 
-		if highestVersion == nil || *highestVersion == version {
-			batchesPartIds = append(batchesPartIds, partVersionId)
+		if *highestVersion == version {
+			if highestVersionPart == nil || partVersionID > *highestVersionPart {
+				highestVersionPart = &partVersionID
+			}
+
+			if lowestVersionPart == nil || partVersionID < *lowestVersionPart {
+				lowestVersionPart = &partVersionID
+			}
 		}
 
 	}
-	if highestVersion == nil || len(batchesPartIds) == 0 {
-		return nil, nil, archiver.ErrHistoryNotExist
-	}
 
-	sort.Slice(batchesPartIds, func(i, j int) bool { return batchesPartIds[i] < batchesPartIds[j] })
-	return highestVersion, batchesPartIds, nil
+	return highestVersion, highestVersionPart, lowestVersionPart, nil
 }
 
 func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRequest, historyManager persistence.HistoryManager, featureCatalog *archiver.ArchiveFeatureCatalog, progress *progress) (historyIterator archiver.HistoryIterator, err error) {

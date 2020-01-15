@@ -115,7 +115,7 @@ func (p *archiverProvider) RegisterBootstrapContainer(
 	return nil
 }
 
-func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archiver.HistoryArchiver, error) {
+func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (historyArchiver archiver.HistoryArchiver, err error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
 	p.RLock()
 	if historyArchiver, ok := p.historyArchivers[archiverKey]; ok {
@@ -134,7 +134,7 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 		if p.historyArchiverConfigs.Filestore == nil {
 			return nil, ErrArchiverConfigNotFound
 		}
-		historyArchiver, err := filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.Filestore)
+		historyArchiver, err = filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.Filestore)
 		if err != nil {
 			return nil, err
 		}
@@ -144,14 +144,13 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 		if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
 			return existingHistoryArchiver, nil
 		}
-		p.historyArchivers[archiverKey] = historyArchiver
-		return historyArchiver, nil
+
 	case gcloud.URIScheme:
 		if p.historyArchiverConfigs.Gstorage == nil {
 			return nil, ErrArchiverConfigNotFound
 		}
 
-		historyArchiver, err := gcloud.NewHistoryArchiver(container, p.historyArchiverConfigs.Gstorage)
+		historyArchiver, err = gcloud.NewHistoryArchiver(container, p.historyArchiverConfigs.Gstorage)
 		if err != nil {
 			return nil, err
 		}
@@ -160,10 +159,13 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 		if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
 			return existingHistoryArchiver, nil
 		}
-		p.historyArchivers[archiverKey] = historyArchiver
-		return historyArchiver, nil
+
+	default:
+		return nil, ErrUnknownScheme
 	}
-	return nil, ErrUnknownScheme
+
+	p.historyArchivers[archiverKey] = historyArchiver
+	return
 }
 
 func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (archiver.VisibilityArchiver, error) {
