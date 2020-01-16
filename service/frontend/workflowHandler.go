@@ -1778,16 +1778,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 
 		execution.RunId = common.StringPtr(token.RunID)
 
-		// we need to update the current next event ID
-		if len(token.PersistenceToken) == 0 {
-			token.BranchToken, _, nextEventID, err =
-				queryHistory(domainID, execution, token.BranchToken)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			token.FirstEventID = token.NextEventID
-			token.NextEventID = nextEventID
-		}
 	} else {
 
 		token.BranchToken, runID, nextEventID, err =
@@ -3216,6 +3206,35 @@ func (wh *WorkflowHandler) getRawHistory(
 		rawHistory = append(rawHistory, &gen.DataBlob{
 			EncodingType: encoding,
 			Data:         data.Data,
+		})
+	}
+
+	if len(nextPageToken) == 0 && transientDecision != nil {
+		if err := wh.validateTransientDecisionEvents(nextEventID, transientDecision); err != nil {
+			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
+			wh.GetLogger().Error("getHistory error",
+				tag.WorkflowDomainID(domainID),
+				tag.WorkflowID(execution.GetWorkflowId()),
+				tag.WorkflowRunID(execution.GetRunId()),
+				tag.Error(err))
+		}
+
+		blob, err := wh.GetPayloadSerializer().SerializeEvent(transientDecision.ScheduledEvent, common.EncodingTypeThriftRW)
+		if err != nil {
+			return nil, nil, err
+		}
+		rawHistory = append(rawHistory, &gen.DataBlob{
+			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
+			Data:         blob.Data,
+		})
+
+		blob, err = wh.GetPayloadSerializer().SerializeEvent(transientDecision.StartedEvent, common.EncodingTypeThriftRW)
+		if err != nil {
+			return nil, nil, err
+		}
+		rawHistory = append(rawHistory, &gen.DataBlob{
+			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
+			Data:         blob.Data,
 		})
 	}
 
