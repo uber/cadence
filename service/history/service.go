@@ -117,7 +117,6 @@ type Config struct {
 	ReplicatorProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
 	ReplicatorProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	ReplicatorProcessorFetchTasksBatchSize                dynamicconfig.IntPropertyFn
-	ReplicatorSkipTaskProcessing                          dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// Persistence settings
 	ExecutionMgrNumConns dynamicconfig.IntPropertyFn
