@@ -592,6 +592,7 @@ func (f Filter) String() string {
 var filters = []string{
 	"unknownFilter",
 	"domainName",
+	"domainID",
 	"taskListName",
 	"taskType",
 }
@@ -600,6 +601,8 @@ const (
 	unknownFilter Filter = iota
 	// DomainName is the domain name
 	DomainName
+	// DomainID the uuid of the domain
+	DomainID
 	// TaskListName is the tasklist name
 	TaskListName
 	// TaskType is the task type (0:Decision, 1:Activity)
@@ -623,6 +626,13 @@ func TaskListFilter(name string) FilterOption {
 func DomainFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[DomainName] = name
+	}
+}
+
+// DomainIDFilter filters by domain id
+func DomainIDFilter(id string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[DomainID] = id
 	}
 }
 
