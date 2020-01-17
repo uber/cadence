@@ -30,12 +30,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/uber/cadence/common/archiver"
-
+	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
 
-	"cloud.google.com/go/storage"
-
+	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/service/config"
 )
 

@@ -30,20 +30,16 @@ import (
 	"strings"
 	"testing"
 
+	"cloud.google.com/go/storage"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/uber/cadence/common/archiver/gcloud/connector"
-	"github.com/uber/cadence/common/service/config"
-
-	"github.com/uber/cadence/common/archiver"
-
-	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
 
+	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
-
-	"github.com/stretchr/testify/mock"
+	"github.com/uber/cadence/common/service/config"
 )
 
 func (s *clientSuite) SetupTest() {

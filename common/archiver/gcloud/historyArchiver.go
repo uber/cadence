@@ -120,7 +120,7 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 
 	logger := archiver.TagLoggerWithArchiveHistoryRequestAndURI(h.container.Logger, request, URI.String())
 
-	if err := h.validateURI(ctx, URI); err != nil {
+	if err := h.validateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
 		return errUploadNonRetriable
 	}
@@ -187,7 +187,7 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 // This method should thrift errors - see filestore as an example.
 func (h *historyArchiver) Get(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*archiver.GetHistoryResponse, error) {
 
-	err := h.validateURI(ctx, URI)
+	err := h.ValidateURI(URI)
 	if err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
@@ -230,10 +230,11 @@ func (h *historyArchiver) Get(ctx context.Context, URI archiver.URI, request *ar
 	numOfEvents := 0
 	numOfBatches := 0
 
-	for partNum := token.CurrentPart; partNum <= token.HighestPart; partNum++ {
+outer:
+	for token.CurrentPart <= token.HighestPart {
 
 		historyBatches := []*shared.History{}
-		filename := constructHistoryFilenameMultipart(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion, partNum)
+		filename := constructHistoryFilenameMultipart(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion, token.CurrentPart)
 		encodedHistoryBatches, err := h.gcloudStorage.Get(ctx, URI, filename)
 
 		if err != nil {
@@ -249,21 +250,23 @@ func (h *historyArchiver) Get(ctx context.Context, URI archiver.URI, request *ar
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		historyBatches = append(historyBatches, batches...)
-		historyBatches = historyBatches[token.NextBatchIdx:]
 
 		for _, batch := range historyBatches {
 			response.HistoryBatches = append(response.HistoryBatches, batch)
 			numOfBatches++
 			numOfEvents += len(batch.Events)
 
+			if numOfEvents >= request.PageSize {
+				break outer
+			}
+
 		}
 
-		if numOfEvents >= request.PageSize {
-			break
-		}
+		token.CurrentPart++
+
 	}
 
-	if numOfBatches < len(response.HistoryBatches) {
+	if token.CurrentPart < token.HighestPart {
 		token.NextBatchIdx += numOfBatches
 		nextToken, err := serializeToken(token)
 		if err != nil {
@@ -278,20 +281,20 @@ func (h *historyArchiver) Get(ctx context.Context, URI archiver.URI, request *ar
 // ValidateURI is used to define what a valid URI for an implementation is.
 func (h *historyArchiver) ValidateURI(URI archiver.URI) (err error) {
 
+	if err = h.validateURI(URI); err == nil {
+		_, err = h.gcloudStorage.Exist(context.Background(), URI, "")
+	}
+
+	return
+}
+
+func (h *historyArchiver) validateURI(URI archiver.URI) (err error) {
 	if URI.Scheme() != URIScheme {
 		return archiver.ErrURISchemeMismatch
 	}
 
 	if URI.Path() == "" || URI.Hostname() == "" {
 		return archiver.ErrInvalidURI
-	}
-
-	return
-}
-
-func (h *historyArchiver) validateURI(ctx context.Context, URI archiver.URI) (err error) {
-	if err = h.ValidateURI(URI); err == nil {
-		_, err = h.gcloudStorage.Exist(ctx, URI, "")
 	}
 
 	return
@@ -344,11 +347,14 @@ func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.UR
 
 	for _, filename := range filenames {
 		version, partVersionID, err := extractCloseFailoverVersion(filepath.Base(filename))
-		if err != nil {
+		if err != nil || (request.CloseFailoverVersion != nil && version != *request.CloseFailoverVersion) {
 			continue
 		}
+
 		if highestVersion == nil || version > *highestVersion {
 			highestVersion = &version
+			highestVersionPart = new(int64)
+			lowestVersionPart = new(int64)
 		}
 
 		if *highestVersion == version {

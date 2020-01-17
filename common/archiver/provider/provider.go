@@ -34,6 +34,8 @@ import (
 var (
 	// ErrUnknownScheme is the error for unknown archiver scheme
 	ErrUnknownScheme = errors.New("unknown archiver scheme")
+	// ErrNotSupported is the error for not supported archiver implementation
+	ErrNotSupported = errors.New("archiver provider not supported")
 	// ErrBootstrapContainerNotFound is the error for unable to find the bootstrap container given serviceName
 	ErrBootstrapContainerNotFound = errors.New("unable to find bootstrap container for the given service name")
 	// ErrArchiverConfigNotFound is the error for unable to find the config for an archiver given scheme
@@ -135,15 +137,6 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (histo
 			return nil, ErrArchiverConfigNotFound
 		}
 		historyArchiver, err = filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.Filestore)
-		if err != nil {
-			return nil, err
-		}
-
-		p.Lock()
-		defer p.Unlock()
-		if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
-			return existingHistoryArchiver, nil
-		}
 
 	case gcloud.URIScheme:
 		if p.historyArchiverConfigs.Gstorage == nil {
@@ -151,19 +144,20 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (histo
 		}
 
 		historyArchiver, err = gcloud.NewHistoryArchiver(container, p.historyArchiverConfigs.Gstorage)
-		if err != nil {
-			return nil, err
-		}
-		p.Lock()
-		defer p.Unlock()
-		if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
-			return existingHistoryArchiver, nil
-		}
 
 	default:
 		return nil, ErrUnknownScheme
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
+	p.Lock()
+	defer p.Unlock()
+	if existingHistoryArchiver, ok := p.historyArchivers[archiverKey]; ok {
+		return existingHistoryArchiver, nil
+	}
 	p.historyArchivers[archiverKey] = historyArchiver
 	return
 }
@@ -200,7 +194,7 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 		p.visibilityArchivers[archiverKey] = visibilityArchiver
 		return visibilityArchiver, nil
 	case gcloud.URIScheme:
-		// TODO: missing impl
+		return nil, ErrNotSupported
 	}
 	return nil, ErrUnknownScheme
 }
