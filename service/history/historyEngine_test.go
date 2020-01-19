@@ -28,17 +28,13 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/api/encoding"
-	"go.uber.org/yarpc/api/transport"
-
-	cc "github.com/uber/cadence/common/client"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
+	"go.uber.org/yarpc/api/encoding"
+	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
@@ -46,19 +42,17 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 	cconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -67,31 +61,22 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
+		mockShard                *shardContextTest
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
-		mockEventsCache          *MockeventsCache
 		mockDomainCache          *cache.MockDomainCache
 		mockMatchingClient       *matchingservicetest.MockClient
 		mockHistoryClient        *historyservicetest.MockClient
+		mockClusterMetadata      *cluster.MockMetadata
 
-		mockHistoryEngine  *historyEngineImpl
-		mockArchivalClient *archiver.ClientMock
+		mockHistoryEngine *historyEngineImpl
+		mockExecutionMgr  *mocks.ExecutionManager
+		mockHistoryV2Mgr  *mocks.HistoryV2Manager
+		mockShardManager  *mocks.ShardManager
 
-		mockVisibilityMgr   *mocks.VisibilityManager
-		mockExecutionMgr    *mocks.ExecutionManager
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockShardManager    *mocks.ShardManager
-		mockClusterMetadata *mocks.ClusterMetadata
-		mockProducer        *mocks.KafkaProducer
-		mockMessagingClient messaging.Client
-		mockService         service.Service
-		mockMetricClient    metrics.Client
-
-		shardClosedCh chan int
-		eventsCache   eventsCache
-		config        *Config
-		logger        log.Logger
+		eventsCache eventsCache
+		config      *Config
 	}
 )
 
@@ -132,13 +117,6 @@ var testGlobalDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 	nil,
 )
 
-var testLocalParentDomainEntry = cache.NewLocalDomainCacheEntryForTest(
-	&persistence.DomainInfo{ID: testParentDomainID, Name: testParentDomainName},
-	&p.DomainConfig{Retention: 1},
-	cluster.TestCurrentClusterName,
-	nil,
-)
-
 var testGlobalParentDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 	&persistence.DomainInfo{ID: testParentDomainID, Name: testParentDomainName},
 	&p.DomainConfig{Retention: 1},
@@ -153,13 +131,6 @@ var testGlobalParentDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 	nil,
 )
 
-var testLocalTargetDomainEntry = cache.NewLocalDomainCacheEntryForTest(
-	&persistence.DomainInfo{ID: testTargetDomainID, Name: testTargetDomainName},
-	&p.DomainConfig{Retention: 1},
-	cluster.TestCurrentClusterName,
-	nil,
-)
-
 var testGlobalTargetDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 	&persistence.DomainInfo{ID: testTargetDomainID, Name: testTargetDomainName},
 	&p.DomainConfig{Retention: 1},
@@ -171,13 +142,6 @@ var testGlobalTargetDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 		},
 	},
 	testVersion,
-	nil,
-)
-
-var testLocalChildDomainEntry = cache.NewLocalDomainCacheEntryForTest(
-	&persistence.DomainInfo{ID: testChildDomainID, Name: testChildDomainName},
-	&p.DomainConfig{Retention: 1},
-	cluster.TestCurrentClusterName,
 	nil,
 )
 
@@ -210,13 +174,10 @@ func TestEngineSuite(t *testing.T) {
 }
 
 func (s *engineSuite) SetupSuite() {
-
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.config = NewDynamicConfigForTest()
 }
 
 func (s *engineSuite) TearDownSuite() {
-
 }
 
 func (s *engineSuite) SetupTest() {
@@ -226,91 +187,62 @@ func (s *engineSuite) SetupTest() {
 	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
-	s.mockEventsCache = NewMockeventsCache(s.controller)
-	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
-	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
-	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockArchivalClient = &archiver.ClientMock{}
-	s.mockVisibilityMgr = &mocks.VisibilityManager{}
-	s.mockExecutionMgr = &mocks.ExecutionManager{}
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockShardManager = &mocks.ShardManager{}
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockProducer = &mocks.KafkaProducer{}
-	s.shardClosedCh = make(chan int, 100)
-	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(
-		s.mockClusterMetadata,
-		s.mockMessagingClient,
-		s.mockMetricClient,
-		nil,
-		nil,
-		nil,
-		nil)
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		s.config,
+	)
+	s.eventsCache = newEventsCache(s.mockShard)
+	s.mockShard.eventsCache = s.eventsCache
+
+	s.mockMatchingClient = s.mockShard.resource.MatchingClient
+	s.mockHistoryClient = s.mockShard.resource.HistoryClient
+	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockShardManager = s.mockShard.resource.ShardMgr
+	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestSingleDCClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testLocalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(testDomainName).Return(testLocalDomainEntry, nil).AnyTimes()
 
 	historyEventNotifier := newHistoryEventNotifier(
 		clock.NewRealTimeSource(),
-		s.mockMetricClient,
+		s.mockShard.resource.MetricsClient,
 		func(workflowID string) int {
 			return len(workflowID)
 		},
 	)
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	mockShard := &shardContextImpl{
-		service:                   s.mockService,
-		clusterMetadata:           s.mockClusterMetadata,
-		shardInfo:                 &persistence.ShardInfo{RangeID: 1, TransferAckLevel: 0},
-		transferSequenceNumber:    1,
-		executionManager:          s.mockExecutionMgr,
-		historyV2Mgr:              s.mockHistoryV2Mgr,
-		domainCache:               s.mockDomainCache,
-		shardManager:              s.mockShardManager,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   s.shardClosedCh,
-		config:                    s.config,
-		logger:                    s.logger,
-		throttledLogger:           s.logger,
-		metricsClient:             metricsClient,
-		timeSource:                clock.NewRealTimeSource(),
-	}
-	s.eventsCache = newEventsCache(mockShard)
-	mockShard.eventsCache = s.eventsCache
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
-	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testLocalDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomain(testDomainName).Return(testLocalDomainEntry, nil).AnyTimes()
 
-	historyCache := newHistoryCache(mockShard)
-	// this is used by shard context, not relevant to this test, so we do not care how many times "GetCurrentClusterName" os called
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestSingleDCClusterInfo)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
+	historyCache := newHistoryCache(s.mockShard)
 	h := &historyEngineImpl{
-		currentClusterName:   s.mockService.GetClusterMetadata().GetCurrentClusterName(),
-		shard:                mockShard,
+		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
+		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		historyCache:         historyCache,
-		logger:               s.logger,
-		metricsClient:        metricsClient,
+		logger:               s.mockShard.GetLogger(),
+		metricsClient:        s.mockShard.GetMetricsClient(),
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyEventNotifier: historyEventNotifier,
 		config:               NewDynamicConfigForTest(),
-		archivalClient:       s.mockArchivalClient,
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
+		clientChecker:        cc.NewVersionChecker(),
 	}
-	mockShard.SetEngine(h)
+	s.mockShard.SetEngine(h)
 	h.decisionHandler = newDecisionHandler(h)
 
 	h.historyEventNotifier.Start()
@@ -319,14 +251,9 @@ func (s *engineSuite) SetupTest() {
 }
 
 func (s *engineSuite) TearDownTest() {
-	s.mockHistoryEngine.historyEventNotifier.Stop()
-	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
-	s.mockShardManager.AssertExpectations(s.T())
-	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
-	s.mockArchivalClient.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
+	s.mockHistoryEngine.historyEventNotifier.Stop()
 }
 
 func (s *engineSuite) TestGetMutableStateSync() {
@@ -1833,7 +1760,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1878,7 +1804,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1923,7 +1848,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1973,7 +1897,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -2030,7 +1953,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(testDomainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -4997,7 +4919,7 @@ func addDecisionTaskCompletedEvent(builder mutableState, scheduleID, startedID i
 		Identity:         common.StringPtr(identity),
 	}, defaultHistoryMaxAutoResetPoints)
 
-	builder.FlushBufferedEvents()
+	builder.FlushBufferedEvents() //nolint:errcheck
 
 	return event
 }
@@ -5204,7 +5126,10 @@ func newMutableStateBuilderWithReplicationStateWithEventV2(shard ShardContext, e
 
 	msBuilder := newMutableStateBuilderWithReplicationState(shard, eventsCache, logger, testGlobalDomainEntry)
 	msBuilder.GetReplicationState().StartVersion = version
-	msBuilder.UpdateCurrentVersion(version, true)
+	err := msBuilder.UpdateCurrentVersion(version, true)
+	if err != nil {
+		logger.Error("update current version error", tag.Error(err))
+	}
 	_ = msBuilder.SetHistoryTree(runID)
 
 	return msBuilder
@@ -5212,7 +5137,7 @@ func newMutableStateBuilderWithReplicationStateWithEventV2(shard ShardContext, e
 
 func createMutableState(ms mutableState) *persistence.WorkflowMutableState {
 	builder := ms.(*mutableStateBuilder)
-	builder.FlushBufferedEvents()
+	builder.FlushBufferedEvents() //nolint:errcheck
 	info := copyWorkflowExecutionInfo(builder.executionInfo)
 	stats := &persistence.ExecutionStats{}
 	activityInfos := make(map[int64]*persistence.ActivityInfo)
@@ -5236,7 +5161,7 @@ func createMutableState(ms mutableState) *persistence.WorkflowMutableState {
 		childInfos[id] = copyChildInfo(info)
 	}
 
-	builder.FlushBufferedEvents()
+	builder.FlushBufferedEvents() //nolint:errcheck
 	var bufferedEvents []*workflow.HistoryEvent
 	if len(builder.bufferedEvents) > 0 {
 		bufferedEvents = append(bufferedEvents, builder.bufferedEvents...)

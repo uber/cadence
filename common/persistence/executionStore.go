@@ -76,6 +76,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 			SignalInfos:        response.State.SignalInfos,
 			SignalRequestedIDs: response.State.SignalRequestedIDs,
 			ReplicationState:   response.State.ReplicationState,
+			Checksum:           response.State.Checksum,
 		},
 	}
 
@@ -672,6 +673,7 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		TimerTasks:       input.TimerTasks,
 
 		Condition: input.Condition,
+		Checksum:  input.Checksum,
 	}, nil
 }
 
@@ -729,6 +731,7 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		TimerTasks:       input.TimerTasks,
 
 		Condition: input.Condition,
+		Checksum:  input.Checksum,
 	}, nil
 }
 
@@ -811,6 +814,12 @@ func (m *executionManagerImpl) CompleteReplicationTask(
 	request *CompleteReplicationTaskRequest,
 ) error {
 	return m.persistence.CompleteReplicationTask(request)
+}
+
+func (m *executionManagerImpl) RangeCompleteReplicationTask(
+	request *RangeCompleteReplicationTaskRequest,
+) error {
+	return m.persistence.RangeCompleteReplicationTask(request)
 }
 
 func (m *executionManagerImpl) PutReplicationTaskToDLQ(

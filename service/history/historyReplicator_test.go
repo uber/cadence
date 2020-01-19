@@ -42,13 +42,10 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -61,22 +58,19 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
+		mockShard                *shardContextTest
 		mockWorkflowResetor      *MockworkflowResetor
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
 		mockStateBuilder         *MockstateBuilder
 		mockDomainCache          *cache.MockDomainCache
+		mockClusterMetadata      *cluster.MockMetadata
 
-		logger              log.Logger
-		mockExecutionMgr    *mocks.ExecutionManager
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockShardManager    *mocks.ShardManager
-		mockClusterMetadata *mocks.ClusterMetadata
-		mockProducer        *mocks.KafkaProducer
-		mockMessagingClient messaging.Client
-		mockService         service.Service
-		mockShard           *shardContextImpl
+		logger           log.Logger
+		mockExecutionMgr *mocks.ExecutionManager
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
+		mockShardManager *mocks.ShardManager
 
 		historyReplicator *historyReplicator
 	}
@@ -104,53 +98,34 @@ func (s *historyReplicatorSuite) SetupTest() {
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
 	s.mockStateBuilder = NewMockstateBuilder(s.controller)
-	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockExecutionMgr = &mocks.ExecutionManager{}
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockShardManager = &mocks.ShardManager{}
-	s.mockProducer = &mocks.KafkaProducer{}
-	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockService = service.NewTestService(
-		s.mockClusterMetadata,
-		s.mockMessagingClient,
-		metricsClient,
-		nil,
-		nil,
-		nil,
-		nil)
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			ShardID:          testShardID,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		NewDynamicConfigForTest(),
+	)
 
-	s.mockShard = &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: testShardID, RangeID: 1, TransferAckLevel: 0},
-		shardID:                   testShardID,
-		transferSequenceNumber:    1,
-		executionManager:          s.mockExecutionMgr,
-		shardManager:              s.mockShardManager,
-		clusterMetadata:           s.mockClusterMetadata,
-		historyV2Mgr:              s.mockHistoryV2Mgr,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(),
-		logger:                    s.logger,
-		domainCache:               s.mockDomainCache,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
-		standbyClusterCurrentTime: make(map[string]time.Time),
-		timeSource:                clock.NewRealTimeSource(),
-	}
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
+	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockShardManager = s.mockShard.resource.ShardMgr
+	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+
+	s.logger = s.mockShard.GetLogger()
 
 	historyCache := newHistoryCache(s.mockShard)
 	engine := &historyEngineImpl{
-		currentClusterName:   s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
+		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
@@ -158,7 +133,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 		logger:               s.logger,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		metricsClient:        s.mockShard.GetMetricsClient(),
-		timeSource:           s.mockShard.timeSource,
+		timeSource:           s.mockShard.GetTimeSource(),
 		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
@@ -166,16 +141,14 @@ func (s *historyReplicatorSuite) SetupTest() {
 	}
 	s.mockShard.SetEngine(engine)
 
-	s.historyReplicator = newHistoryReplicator(s.mockShard, clock.NewEventTimeSource(), engine, historyCache, s.mockShard.domainCache, s.mockHistoryV2Mgr, s.logger)
+	s.historyReplicator = newHistoryReplicator(s.mockShard, clock.NewEventTimeSource(), engine, historyCache, s.mockDomainCache, s.mockHistoryV2Mgr, s.logger)
 	s.historyReplicator.resetor = s.mockWorkflowResetor
 }
 
 func (s *historyReplicatorSuite) TearDownTest() {
 	s.historyReplicator = nil
-	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockShardManager.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 }
 
 func (s *historyReplicatorSuite) TestApplyStartEvent() {
@@ -341,8 +314,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	}, nil).Times(1)
 	msBuilderCurrent.EXPECT().HasPendingDecision().Return(true).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
 	err := s.historyReplicator.ApplyOtherEventsMissingMutableState(ctx.Background(), domainID, workflowID, runID, req, s.logger)
@@ -442,8 +415,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	}
 	msBuilderCurrent.EXPECT().AddDecisionTaskScheduledEvent(false).Return(newDecision, nil).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
@@ -614,9 +587,9 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	}
 
 	sourceClusterName := cluster.TestAlternativeClusterName
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(sourceClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(sourceClusterName).AnyTimes()
 	currentClusterName := cluster.TestCurrentClusterName
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(currentClusterName).AnyTimes()
 
 	contextCurrent := NewMockworkflowExecutionContext(s.controller)
 	contextCurrent.EXPECT().lock(gomock.Any()).Return(nil).Times(2)
@@ -913,8 +886,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 		// other attributes are not used
 	}, nil)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -971,8 +944,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", lastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(lastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -1053,8 +1026,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}, nil).Times(1)
 	msBuilderCurrent.EXPECT().HasPendingDecision().Return(true).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
@@ -1148,8 +1121,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}
 	msBuilderCurrent.EXPECT().AddDecisionTaskScheduledEvent(false).Return(newDecision, nil).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
@@ -1177,8 +1150,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(true).Times(1)
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{LastWriteVersion: currentLastWriteVersion}).AnyTimes()
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -1225,8 +1198,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}, nil).Times(1)
 	msBuilderIn.EXPECT().HasPendingDecision().Return(true).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	context.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
@@ -1285,8 +1258,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}
 	msBuilderIn.EXPECT().AddDecisionTaskScheduledEvent(false).Return(newDecision, nil).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	context.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
@@ -1332,8 +1305,9 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 	}).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", incomingVersion, currentLastWriteVersion).Return(true)
+
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
+	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(incomingVersion, currentLastWriteVersion).Return(true).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -1358,8 +1332,9 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 	}).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", incomingVersion, currentLastWriteVersion).Return(false)
+
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
+	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(incomingVersion, currentLastWriteVersion).Return(false).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -1415,7 +1390,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(currentState != persistence.WorkflowStateCompleted).AnyTimes()
 	msBuilderIn.EXPECT().GetLastWriteVersion().Return(currentLastWriteVersion, nil).AnyTimes()
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
@@ -1486,7 +1461,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(currentState != persistence.WorkflowStateCompleted)
 	msBuilderIn.EXPECT().GetLastWriteVersion().Return(currentLastWriteVersion, nil).AnyTimes()
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
@@ -1529,7 +1504,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
 	}).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Nil(msBuilderOut)
@@ -1583,7 +1558,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(currentState != persistence.WorkflowStateCompleted).AnyTimes()
 	msBuilderIn.EXPECT().GetLastWriteVersion().Return(currentLastWriteVersion, nil).AnyTimes()
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
@@ -1626,7 +1601,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
 	}).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Nil(msBuilderOut)
@@ -1667,7 +1642,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		LastWriteEventID: currentLastEventID,
 	}).AnyTimes()
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(true).Times(1)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -1760,7 +1735,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(currentState != persistence.WorkflowStateCompleted).AnyTimes()
 	msBuilderIn.EXPECT().GetLastWriteVersion().Return(currentLastWriteVersion, nil).Times(1)
 	msBuilderIn.EXPECT().GetUpdateCondition().Return(updateCondition).AnyTimes()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentLastWriteVersion).Return(prevActiveCluster).AnyTimes()
 
 	mockConflictResolver := NewMockconflictResolver(s.controller)
 	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger log.Logger) conflictResolver {
@@ -1912,7 +1887,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2030,7 +2005,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2144,7 +2119,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2273,7 +2248,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2417,7 +2392,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2553,7 +2528,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2689,7 +2664,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2851,7 +2826,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -2959,8 +2934,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilderCurrent.EXPECT().HasPendingDecision().Return(true).Times(1)
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
@@ -3027,7 +3002,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -3147,8 +3122,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 
 	contextCurrent.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, s.mockStateBuilder, s.logger)
 	s.Nil(err)
@@ -3201,7 +3176,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -3356,7 +3331,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -3520,7 +3495,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	transferTasks := []persistence.Task{&persistence.CloseExecutionTask{Version: version}}
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{Version: version}}
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestAlternativeClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(version).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	historySize := 111
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		CreateRequestID:             requestID,
@@ -3638,7 +3613,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilderCurrent.EXPECT().UpdateCurrentVersion(currentVersion, true).Return(nil).Times(1)
 
 	currentClusterName := cluster.TestCurrentClusterName
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(currentClusterName).AnyTimes()
 
 	msBuilderCurrent.EXPECT().AddWorkflowExecutionTerminatedEvent(
 		currentNextEventID, workflowTerminationReason, gomock.Any(), workflowTerminationIdentity,
@@ -3724,7 +3699,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	incomingVersion := int64(4096)
 	incomingTimestamp := int64(11238)
 	incomingCluster := cluster.TestAlternativeClusterName
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", incomingVersion).Return(incomingCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(incomingVersion).Return(incomingCluster).AnyTimes()
 
 	domainID := testDomainID
 	workflowID := "some random target workflow ID"
@@ -3761,7 +3736,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	currentNextEventID := int64(2333)
 	currentVersion := incomingVersion - 10
 	currentCluster := cluster.TestCurrentClusterName
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(currentVersion).Return(currentCluster).AnyTimes()
 
 	msBuilderCurrent.EXPECT().GetNextEventID().Return(currentNextEventID).AnyTimes()
 	msBuilderCurrent.EXPECT().GetLastWriteVersion().Return(currentVersion, nil).AnyTimes()
@@ -3794,7 +3769,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	incomingVersion := int64(4096)
 	incomingTimestamp := int64(11238)
 	incomingCluster := cluster.TestAlternativeClusterName
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", incomingVersion).Return(incomingCluster)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(incomingVersion).Return(incomingCluster).AnyTimes()
 
 	domainID := testDomainID
 	workflowID := "some random target workflow ID"

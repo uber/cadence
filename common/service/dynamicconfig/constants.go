@@ -68,6 +68,7 @@ var keys = map[Key]string{
 	DisallowQuery:                       "system.disallowQuery",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
+	EnableStickyQuery:                   "system.enableStickyQuery",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -135,6 +136,7 @@ var keys = map[Key]string{
 	EventsCacheMaxSize:                                    "history.eventsCacheMaxSize",
 	EventsCacheTTL:                                        "history.eventsCacheTTL",
 	AcquireShardInterval:                                  "history.acquireShardInterval",
+	AcquireShardConcurrency:                               "history.acquireShardConcurrency",
 	StandbyClusterDelay:                                   "history.standbyClusterDelay",
 	StandbyTaskMissingEventsResendDelay:                   "history.standbyTaskMissingEventsResendDelay",
 	StandbyTaskMissingEventsDiscardDelay:                  "history.standbyTaskMissingEventsDiscardDelay",
@@ -182,6 +184,7 @@ var keys = map[Key]string{
 	MaximumSignalsPerExecution:                            "history.maximumSignalsPerExecution",
 	ShardUpdateMinInterval:                                "history.shardUpdateMinInterval",
 	ShardSyncMinInterval:                                  "history.shardSyncMinInterval",
+	ShardSyncTimerJitterCoefficient:                       "history.shardSyncMinInterval",
 	DefaultEventEncoding:                                  "history.defaultEventEncoding",
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
@@ -201,9 +204,14 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorErrorRetryWait:                "history.ReplicationTaskProcessorErrorRetryWait",
 	ReplicationTaskProcessorErrorRetryMaxAttempts:         "history.ReplicationTaskProcessorErrorRetryMaxAttempts",
 	ReplicationTaskProcessorNoTaskInitialWait:             "history.ReplicationTaskProcessorNoTaskInitialWait",
+	ReplicationTaskProcessorCleanupInterval:               "history.ReplicationTaskProcessorCleanupInterval",
+	ReplicationTaskProcessorCleanupJitterCoefficient:      "history.ReplicationTaskProcessorCleanupJitterCoefficient",
 	EnableConsistentQuery:                                 "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                         "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                 "history.MaxBufferedQueryCount",
+	MutableStateChecksumGenProbability:                    "history.mutableStateChecksumGenProbability",
+	MutableStateChecksumVerifyProbability:                 "history.mutableStateChecksumVerifyProbability",
+	MutableStateChecksumInvalidateBefore:                  "history.mutableStateChecksumInvalidateBefore",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
@@ -213,6 +221,7 @@ var keys = map[Key]string{
 	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
 	WorkerReplicationTaskMaxRetryCount:              "worker.replicationTaskMaxRetryCount",
 	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
+	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
 	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
@@ -410,6 +419,8 @@ const (
 	EventsCacheTTL
 	// AcquireShardInterval is interval that timer used to acquire shard
 	AcquireShardInterval
+	// AcquireShardConcurrency is number of goroutines that can be used to acquire shards in the shard controller.
+	AcquireShardConcurrency
 	// StandbyClusterDelay is the artificial delay added to standby cluster's view of active cluster's time
 	StandbyClusterDelay
 	// StandbyTaskMissingEventsResendDelay is the amount of time standby cluster's will wait (if events are missing)
@@ -506,6 +517,8 @@ const (
 	ShardUpdateMinInterval
 	// ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote
 	ShardSyncMinInterval
+	// ShardSyncTimerJitterCoefficient is the sync shard jitter coefficient
+	ShardSyncTimerJitterCoefficient
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
 	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
@@ -553,6 +566,8 @@ const (
 	WorkerReplicationTaskMaxRetryCount
 	// WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task
 	WorkerReplicationTaskMaxRetryDuration
+	// WorkerReplicationTaskContextDuration is the context timeout for apply replication tasks
+	WorkerReplicationTaskContextDuration
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
@@ -587,6 +602,8 @@ const (
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
 	EnableParentClosePolicyWorker
+	// EnableStickyQuery indicates if sticky query should be enabled per domain
+	EnableStickyQuery
 
 	//ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks
 	ReplicationTaskFetcherParallelism
@@ -602,13 +619,22 @@ const (
 	ReplicationTaskProcessorErrorRetryMaxAttempts
 	// ReplicationTaskProcessorNoTaskInitialWait is the wait time when not ask is returned
 	ReplicationTaskProcessorNoTaskInitialWait
-
+	// ReplicationTaskProcessorCleanupInterval determines how frequently the cleanup replication queue
+	ReplicationTaskProcessorCleanupInterval
+	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
+	ReplicationTaskProcessorCleanupJitterCoefficient
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
 	EnableConsistentQueryByDomain
 	// MaxBufferedQueryCount indicates the maximum number of queries which can be buffered at a given time for a single workflow
 	MaxBufferedQueryCount
+	// MutableStateChecksumGenProbability is the probability [0-100] that checksum will be generated for mutable state
+	MutableStateChecksumGenProbability
+	// MutableStateChecksumVerifyProbability is the probability [0-100] that checksum will be verified for mutable state
+	MutableStateChecksumVerifyProbability
+	// MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded
+	MutableStateChecksumInvalidateBefore
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

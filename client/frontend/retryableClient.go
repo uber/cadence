@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 )
@@ -570,44 +569,31 @@ func (c *retryableClient) UpdateDomain(
 	return resp, err
 }
 
-func (c *retryableClient) GetReplicationMessages(
+func (c *retryableClient) GetClusterInfo(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
-	var resp *replicator.GetReplicationMessagesResponse
+) (*shared.ClusterInfo, error) {
+	var resp *shared.ClusterInfo
 	op := func() error {
 		var err error
-		resp, err = c.client.GetReplicationMessages(ctx, request, opts...)
+		resp, err = c.client.GetClusterInfo(ctx, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
-func (c *retryableClient) GetDomainReplicationMessages(
+func (c *retryableClient) ListTaskListPartitions(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
+	request *shared.ListTaskListPartitionsRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDomainReplicationMessagesResponse, error) {
-	var resp *replicator.GetDomainReplicationMessagesResponse
+) (*shared.ListTaskListPartitionsResponse, error) {
+	var resp *shared.ListTaskListPartitionsResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.GetDomainReplicationMessages(ctx, request, opts...)
+		resp, err = c.client.ListTaskListPartitions(ctx, request, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
-}
-
-func (c *retryableClient) ReapplyEvents(
-	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
-	opts ...yarpc.CallOption,
-) error {
-
-	op := func() error {
-		return c.client.ReapplyEvents(ctx, request, opts...)
-	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
 }

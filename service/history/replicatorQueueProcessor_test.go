@@ -28,22 +28,16 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -51,18 +45,17 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller       *gomock.Controller
-		mockDomainCache  *cache.MockDomainCache
-		mockMutableState *MockmutableState
+		controller          *gomock.Controller
+		mockShard           *shardContextTest
+		mockDomainCache     *cache.MockDomainCache
+		mockMutableState    *MockmutableState
+		mockClusterMetadata *cluster.MockMetadata
 
-		logger              log.Logger
-		mockShard           ShardContext
-		mockExecutionMgr    *mocks.ExecutionManager
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockProducer        *mocks.KafkaProducer
-		mockClusterMetadata *mocks.ClusterMetadata
-		mockMessagingClient messaging.Client
-		mockService         service.Service
+		mockExecutionMgr *mocks.ExecutionManager
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
+		mockProducer     *mocks.KafkaProducer
+
+		logger log.Logger
 
 		replicatorQueueProcessor *replicatorQueueProcessorImpl
 	}
@@ -85,36 +78,28 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)
 
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.mockExecutionMgr = &mocks.ExecutionManager{}
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockProducer = &mocks.KafkaProducer{}
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			ShardID:          0,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		NewDynamicConfigForTest(),
+	)
 
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, nil, nil, nil, nil)
-	s.mockShard = &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
-		clusterMetadata:           s.mockClusterMetadata,
-		transferSequenceNumber:    1,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(),
-		logger:                    s.logger,
-		metricsClient:             metricsClient,
-		domainCache:               s.mockDomainCache,
-		executionManager:          s.mockExecutionMgr,
-		standbyClusterCurrentTime: make(map[string]time.Time),
-		timeSource:                clock.NewRealTimeSource(),
-	}
+	s.mockProducer = &mocks.KafkaProducer{}
+	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
+
+	s.logger = s.mockShard.GetLogger()
 	historyCache := newHistoryCache(s.mockShard)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 
 	s.replicatorQueueProcessor = newReplicatorQueueProcessor(
 		s.mockShard, historyCache, s.mockProducer, s.mockExecutionMgr, s.mockHistoryV2Mgr, s.logger,
@@ -122,10 +107,9 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 }
 
 func (s *replicatorQueueProcessorSuite) TearDownTest() {
-	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
+	s.mockProducer.AssertExpectations(s.T())
 }
 
 func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {

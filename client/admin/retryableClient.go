@@ -26,6 +26,7 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 )
@@ -82,12 +83,9 @@ func (c *retryableClient) RemoveTask(
 ) error {
 
 	op := func() error {
-		var err error
-		err = c.client.RemoveTask(ctx, request, opts...)
-		return err
+		return c.client.RemoveTask(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return err
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) CloseShard(
@@ -97,12 +95,9 @@ func (c *retryableClient) CloseShard(
 ) error {
 
 	op := func() error {
-		var err error
-		err = c.client.CloseShard(ctx, request, opts...)
-		return err
+		return c.client.CloseShard(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return err
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) DescribeWorkflowExecution(
@@ -151,4 +146,76 @@ func (c *retryableClient) GetWorkflowExecutionRawHistoryV2(
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
+}
+
+func (c *retryableClient) DescribeCluster(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*admin.DescribeClusterResponse, error) {
+
+	var resp *admin.DescribeClusterResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.DescribeCluster(ctx, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) GetReplicationMessages(
+	ctx context.Context,
+	request *replicator.GetReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetReplicationMessagesResponse, error) {
+	var resp *replicator.GetReplicationMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetReplicationMessages(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) GetDomainReplicationMessages(
+	ctx context.Context,
+	request *replicator.GetDomainReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetDomainReplicationMessagesResponse, error) {
+	var resp *replicator.GetDomainReplicationMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetDomainReplicationMessages(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) GetDLQReplicationMessages(
+	ctx context.Context,
+	request *replicator.GetDLQReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetDLQReplicationMessagesResponse, error) {
+	var resp *replicator.GetDLQReplicationMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetDLQReplicationMessages(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) ReapplyEvents(
+	ctx context.Context,
+	request *shared.ReapplyEventsRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	op := func() error {
+		return c.client.ReapplyEvents(ctx, request, opts...)
+	}
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }

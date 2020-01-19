@@ -26,22 +26,21 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/go-sql-driver/mysql"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
-	db     sqldb.Interface
+	db     sqlplugin.DB
 	logger log.Logger
 }
 
 func (m *sqlStore) GetName() string {
-	return m.db.DriverName()
+	return m.db.PluginName()
 }
 
 func (m *sqlStore) Close() {
@@ -50,7 +49,7 @@ func (m *sqlStore) Close() {
 	}
 }
 
-func (m *sqlStore) txExecute(operation string, f func(tx sqldb.Tx) error) error {
+func (m *sqlStore) txExecute(operation string, f func(tx sqlplugin.Tx) error) error {
 	tx, err := m.db.BeginTx()
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -59,7 +58,11 @@ func (m *sqlStore) txExecute(operation string, f func(tx sqldb.Tx) error) error 
 	}
 	err = f(tx)
 	if err != nil {
-		tx.Rollback()
+		rollBackErr := tx.Rollback()
+		if rollBackErr != nil {
+			m.logger.Error("transaction rollback error", tag.Error(rollBackErr))
+		}
+
 		switch err.(type) {
 		case *persistence.ConditionFailedError,
 			*persistence.CurrentWorkflowConditionFailedError,
@@ -80,15 +83,6 @@ func (m *sqlStore) txExecute(operation string, f func(tx sqldb.Tx) error) error 
 		}
 	}
 	return nil
-}
-
-// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
-// so we don't do the insert and return a ConditionalUpdate error.
-const ErrDupEntry = 1062
-
-func isDupEntry(err error) bool {
-	sqlErr, ok := err.(*mysql.MySQLError)
-	return ok && sqlErr.Number == ErrDupEntry
 }
 
 func gobSerialize(x interface{}) ([]byte, error) {
@@ -112,34 +106,6 @@ func gobDeserialize(a []byte, x interface{}) error {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Error in deserialization: %v", err),
 		}
-	}
-	return nil
-}
-
-func boolToInt64(b bool) int64 {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func int64ToBool(i int64) bool {
-	if i == 0 {
-		return false
-	}
-	return true
-}
-
-func takeAddressIfNotNil(a []byte) *[]byte {
-	if a != nil {
-		return &a
-	}
-	return nil
-}
-
-func dereferenceIfNotNil(a *[]byte) []byte {
-	if a != nil {
-		return *a
 	}
 	return nil
 }

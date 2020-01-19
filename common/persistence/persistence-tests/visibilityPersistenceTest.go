@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/definition"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -237,8 +239,8 @@ func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 	s.Equal(1, len(resp.Executions))
 	s.assertOpenExecutionEquals(startReq1, resp.Executions[0])
 
-	// TODO: See if it is possible in Cassandra to not return non empty token which is going to return empty result
-	if s.ExecutionManager.GetName() == "cassandra" {
+	// It is possible to not return non empty token which is going to return empty result
+	if len(resp.NextPageToken) != 0 {
 		// Now should get empty result by using token
 		resp, err4 := s.VisibilityMgr.ListOpenWorkflowExecutions(&p.ListWorkflowExecutionsRequest{
 			DomainUUID:        testDomainUUID,
@@ -249,8 +251,6 @@ func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 		})
 		s.Nil(err4)
 		s.Equal(0, len(resp.Executions))
-	} else {
-		s.Equal(0, len(resp.NextPageToken))
 	}
 }
 
@@ -671,6 +671,51 @@ func (s *VisibilityPersistenceSuite) TestDelete() {
 	}
 }
 
+// TestUpsertWorkflowExecution test
+func (s *VisibilityPersistenceSuite) TestUpsertWorkflowExecution() {
+	tests := []struct {
+		request  *p.UpsertWorkflowExecutionRequest
+		expected error
+	}{
+		{
+			request: &p.UpsertWorkflowExecutionRequest{
+				DomainUUID:         "",
+				Domain:             "",
+				Execution:          gen.WorkflowExecution{},
+				WorkflowTypeName:   "",
+				StartTimestamp:     0,
+				ExecutionTimestamp: 0,
+				WorkflowTimeout:    0,
+				TaskID:             0,
+				Memo:               nil,
+				SearchAttributes: map[string][]byte{
+					definition.CadenceChangeVersion: []byte("dummy"),
+				},
+			},
+			expected: nil,
+		},
+		{
+			request: &p.UpsertWorkflowExecutionRequest{
+				DomainUUID:         "",
+				Domain:             "",
+				Execution:          gen.WorkflowExecution{},
+				WorkflowTypeName:   "",
+				StartTimestamp:     0,
+				ExecutionTimestamp: 0,
+				WorkflowTimeout:    0,
+				TaskID:             0,
+				Memo:               nil,
+				SearchAttributes:   nil,
+			},
+			expected: p.NewOperationNotSupportErrorForVis(),
+		},
+	}
+
+	for _, test := range tests {
+		s.Equal(test.expected, s.VisibilityMgr.UpsertWorkflowExecution(test.request))
+	}
+}
+
 func (s *VisibilityPersistenceSuite) assertClosedExecutionEquals(
 	req *p.RecordWorkflowExecutionClosedRequest, resp *gen.WorkflowExecutionInfo) {
 	s.Equal(req.Execution.RunId, resp.Execution.RunId)
@@ -684,7 +729,7 @@ func (s *VisibilityPersistenceSuite) assertClosedExecutionEquals(
 
 func (s *VisibilityPersistenceSuite) assertOpenExecutionEquals(
 	req *p.RecordWorkflowExecutionStartedRequest, resp *gen.WorkflowExecutionInfo) {
-	s.Equal(req.Execution.RunId, resp.Execution.RunId)
+	s.Equal(req.Execution.GetRunId(), resp.Execution.GetRunId())
 	s.Equal(req.Execution.WorkflowId, resp.Execution.WorkflowId)
 	s.Equal(req.WorkflowTypeName, resp.GetType().GetName())
 	s.Equal(s.nanosToMillis(req.StartTimestamp), s.nanosToMillis(resp.GetStartTime()))

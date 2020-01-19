@@ -25,9 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/checksum"
+
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
@@ -100,6 +101,7 @@ const (
 	WorkflowStateCompleted
 	WorkflowStateZombie
 	WorkflowStateVoid
+	WorkflowStateCorrupted
 )
 
 // Workflow execution close status
@@ -630,6 +632,7 @@ type (
 		ReplicationState    *ReplicationState
 		BufferedEvents      []*workflow.HistoryEvent
 		VersionHistories    *VersionHistories
+		Checksum            checksum.Checksum
 	}
 
 	// ActivityInfo details.
@@ -880,6 +883,7 @@ type (
 		TimerTasks       []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// WorkflowSnapshot is used as generic workflow execution state snapshot
@@ -901,6 +905,7 @@ type (
 		TimerTasks       []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -967,6 +972,11 @@ type (
 	// CompleteReplicationTaskRequest is used to complete a task in the replication task queue
 	CompleteReplicationTaskRequest struct {
 		TaskID int64
+	}
+
+	// RangeCompleteReplicationTaskRequest is used to complete a range of task in the replication task queue
+	RangeCompleteReplicationTaskRequest struct {
+		InclusiveEndTaskID int64
 	}
 
 	// PutReplicationTaskToDLQRequest is used to put a replication task to dlq
@@ -1132,6 +1142,7 @@ type (
 	// ClusterReplicationConfig describes the cross DC cluster replication configuration
 	ClusterReplicationConfig struct {
 		ClusterName string
+		// Note: if adding new properties of non-primitive types, remember to update GetCopy()
 	}
 
 	// CreateDomainRequest is used to create the domain
@@ -1455,6 +1466,7 @@ type (
 		// Replication task related methods
 		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
 		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
+		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
 		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 
@@ -1536,15 +1548,6 @@ type (
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 		ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error)
 		GetMetadata() (*GetMetadataResponse, error)
-	}
-
-	// DomainReplicationQueue is used to publish and list domain replication tasks
-	DomainReplicationQueue interface {
-		Closeable
-		Publish(message interface{}) error
-		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
-		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
-		GetAckLevels() (map[string]int, error)
 	}
 )
 
@@ -2367,6 +2370,12 @@ func (config *ClusterReplicationConfig) serialize() map[string]interface{} {
 
 func (config *ClusterReplicationConfig) deserialize(input map[string]interface{}) {
 	config.ClusterName = input["cluster_name"].(string)
+}
+
+// GetCopy return a copy of ClusterReplicationConfig
+func (config *ClusterReplicationConfig) GetCopy() *ClusterReplicationConfig {
+	res := *config
+	return &res
 }
 
 // DBTimestampToUnixNano converts CQL timestamp to UnixNano

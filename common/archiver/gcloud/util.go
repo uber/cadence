@@ -51,7 +51,7 @@ func constructHistoryFilename(domainID, workflowID, runID string, version int64)
 	return fmt.Sprintf("%s_%v.history", combinedHash, version)
 }
 
-func constructHistoryFilenameMultipart(domainID, workflowID, runID string, version int64, partNumber int64) string {
+func constructHistoryFilenameMultipart(domainID, workflowID, runID string, version int64, partNumber int) string {
 	combinedHash := constructHistoryFilenamePrefix(domainID, workflowID, runID)
 	return fmt.Sprintf("%s_%v_%v.history", combinedHash, version, partNumber)
 }
@@ -79,7 +79,7 @@ func deserializeGetHistoryToken(bytes []byte) (*getHistoryToken, error) {
 	return token, err
 }
 
-func extractCloseFailoverVersion(filename string) (int64, int64, error) {
+func extractCloseFailoverVersion(filename string) (int64, int, error) {
 	filenameParts := strings.FieldsFunc(filename, func(r rune) bool {
 		return r == '_' || r == '.'
 	})
@@ -93,7 +93,7 @@ func extractCloseFailoverVersion(filename string) (int64, int64, error) {
 	}
 
 	highestPart, err := strconv.Atoi(filenameParts[2])
-	return failoverVersion, int64(highestPart), err
+	return failoverVersion, highestPart, err
 }
 
 func serializeToken(token interface{}) ([]byte, error) {

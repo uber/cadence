@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go -self_package github.com/uber/cadence/common/membership
+
 package membership
 
 import (
@@ -62,6 +64,8 @@ type (
 		AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
 		RemoveListener(service string, name string) error
+		// GetReachableMembers returns addresses of all members of the ring
+		GetReachableMembers() ([]string, error)
 	}
 
 	// ServiceResolver provides membership information for a specific cadence service.
@@ -75,5 +79,9 @@ type (
 		AddListener(name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
 		RemoveListener(name string) error
+		// MemberCount returns host count in hashring for any particular role
+		MemberCount() int
+		// Members returns all host addresses in hashring for any particular role
+		Members() []*HostInfo
 	}
 )

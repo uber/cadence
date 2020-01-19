@@ -27,9 +27,7 @@ import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -40,8 +38,6 @@ import (
 var _ workflowserviceserver.Interface = (*DCRedirectionHandlerImpl)(nil)
 
 type (
-	clientBeanProvider func() client.Bean
-
 	// DCRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy
 	DCRedirectionHandlerImpl struct {
 		resource.Resource
@@ -58,7 +54,10 @@ type (
 )
 
 // NewDCRedirectionHandler creates a thrift handler for the cadence service, frontend
-func NewDCRedirectionHandler(wfHandler *WorkflowHandler, policy config.DCRedirectionPolicy) *DCRedirectionHandlerImpl {
+func NewDCRedirectionHandler(
+	wfHandler *WorkflowHandler,
+	policy config.DCRedirectionPolicy,
+) *DCRedirectionHandlerImpl {
 	dcRedirectionPolicy := RedirectionPolicyGenerator(
 		wfHandler.GetClusterMetadata(),
 		wfHandler.config,
@@ -1132,28 +1131,41 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	return err
 }
 
-// GetReplicationMessages API call
-func (handler *DCRedirectionHandlerImpl) GetReplicationMessages(
+// ListTaskListPartitions API call
+func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
-) (*replicator.GetReplicationMessagesResponse, error) {
-	return handler.frontendHandler.GetReplicationMessages(ctx, request)
+	request *shared.ListTaskListPartitionsRequest,
+) (resp *shared.ListTaskListPartitionsResponse, retError error) {
+
+	var apiName = "ListTaskListPartitions"
+	var err error
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionListTaskListPartitionsScope)
+	defer func() {
+		handler.afterCall(scope, startTime, cluster, &retError)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			resp, err = handler.frontendHandler.ListTaskListPartitions(ctx, request)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.ListTaskListPartitions(ctx, request)
+		}
+		return err
+	})
+
+	return resp, err
 }
 
-// GetDomainReplicationMessages API call
-func (handler *DCRedirectionHandlerImpl) GetDomainReplicationMessages(
+// GetClusterInfo API call
+func (handler *DCRedirectionHandlerImpl) GetClusterInfo(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
-) (*replicator.GetDomainReplicationMessagesResponse, error) {
-	return handler.frontendHandler.GetDomainReplicationMessages(ctx, request)
-}
-
-// ReapplyEvents API call
-func (handler *DCRedirectionHandlerImpl) ReapplyEvents(
-	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
-) error {
-	return handler.frontendHandler.ReapplyEvents(ctx, request)
+) (*shared.ClusterInfo, error) {
+	return handler.frontendHandler.GetClusterInfo(ctx)
 }
 
 func (handler *DCRedirectionHandlerImpl) beforeCall(

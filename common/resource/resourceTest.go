@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
@@ -71,11 +72,11 @@ type (
 
 		// membership infos
 
-		MembershipMonitor       membership.Monitor
-		FrontendServiceResolver membership.ServiceResolver
-		MatchingServiceResolver membership.ServiceResolver
-		HistoryServiceResolver  membership.ServiceResolver
-		WorkerServiceResolver   membership.ServiceResolver
+		MembershipMonitor       *membership.MockMonitor
+		FrontendServiceResolver *membership.MockServiceResolver
+		MatchingServiceResolver *membership.MockServiceResolver
+		HistoryServiceResolver  *membership.MockServiceResolver
+		WorkerServiceResolver   *membership.MockServiceResolver
 
 		// internal services clients
 
@@ -142,6 +143,9 @@ func NewTest(
 	shardMgr := &mocks.ShardManager{}
 	historyMgr := &mocks.HistoryV2Manager{}
 	executionMgr := &mocks.ExecutionManager{}
+	domainReplicationQueue := persistence.NewMockDomainReplicationQueue(controller)
+	domainReplicationQueue.EXPECT().Start().AnyTimes()
+	domainReplicationQueue.EXPECT().Stop().AnyTimes()
 	persistenceBean := persistenceClient.NewMockBean(controller)
 	persistenceBean.EXPECT().GetMetadataManager().Return(metadataMgr).AnyTimes()
 	persistenceBean.EXPECT().GetTaskManager().Return(taskMgr).AnyTimes()
@@ -149,9 +153,22 @@ func NewTest(
 	persistenceBean.EXPECT().GetHistoryManager().Return(historyMgr).AnyTimes()
 	persistenceBean.EXPECT().GetShardManager().Return(shardMgr).AnyTimes()
 	persistenceBean.EXPECT().GetExecutionManager(gomock.Any()).Return(executionMgr, nil).AnyTimes()
+	persistenceBean.EXPECT().GetDomainReplicationQueue().Return(domainReplicationQueue).AnyTimes()
+
+	membershipMonitor := membership.NewMockMonitor(controller)
+	frontendServiceResolver := membership.NewMockServiceResolver(controller)
+	matchingServiceResolver := membership.NewMockServiceResolver(controller)
+	historyServiceResolver := membership.NewMockServiceResolver(controller)
+	workerServiceResolver := membership.NewMockServiceResolver(controller)
+	membershipMonitor.EXPECT().GetResolver(common.FrontendServiceName).Return(frontendServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(common.MatchingServiceName).Return(matchingServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(common.HistoryServiceName).Return(historyServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(common.WorkerServiceName).Return(workerServiceResolver, nil).AnyTimes()
+
+	scope := tally.NewTestScope("test", nil)
 
 	return &Test{
-		MetricsScope:    tally.NoopScope,
+		MetricsScope:    scope,
 		ClusterMetadata: cluster.NewMockMetadata(controller),
 
 		// other common resources
@@ -159,17 +176,17 @@ func NewTest(
 		DomainCache:       cache.NewMockDomainCache(controller),
 		TimeSource:        clock.NewRealTimeSource(),
 		PayloadSerializer: persistence.NewPayloadSerializer(),
-		MetricsClient:     metrics.NewClient(tally.NoopScope, serviceMetricsIndex),
+		MetricsClient:     metrics.NewClient(scope, serviceMetricsIndex),
 		ArchivalMetadata:  &archiver.MockArchivalMetadata{},
 		ArchiverProvider:  &provider.MockArchiverProvider{},
 
 		// membership infos
 
-		MembershipMonitor:       nil,
-		FrontendServiceResolver: nil,
-		MatchingServiceResolver: nil,
-		HistoryServiceResolver:  nil,
-		WorkerServiceResolver:   nil,
+		MembershipMonitor:       membershipMonitor,
+		FrontendServiceResolver: frontendServiceResolver,
+		MatchingServiceResolver: matchingServiceResolver,
+		HistoryServiceResolver:  historyServiceResolver,
+		WorkerServiceResolver:   workerServiceResolver,
 
 		// internal services clients
 
@@ -186,7 +203,7 @@ func NewTest(
 		MetadataMgr:            metadataMgr,
 		TaskMgr:                taskMgr,
 		VisibilityMgr:          visibilityMgr,
-		DomainReplicationQueue: nil,
+		DomainReplicationQueue: domainReplicationQueue,
 		ShardMgr:               shardMgr,
 		HistoryMgr:             historyMgr,
 		ExecutionMgr:           executionMgr,
@@ -221,8 +238,8 @@ func (s *Test) GetHostName() string {
 }
 
 // GetHostInfo for testing
-func (s *Test) GetHostInfo() (*membership.HostInfo, error) {
-	return testHostInfo, nil
+func (s *Test) GetHostInfo() *membership.HostInfo {
+	return testHostInfo
 }
 
 // GetClusterMetadata for testing
@@ -271,27 +288,27 @@ func (s *Test) GetArchiverProvider() provider.ArchiverProvider {
 
 // GetMembershipMonitor for testing
 func (s *Test) GetMembershipMonitor() membership.Monitor {
-	panic("user should implement this method for test")
+	return s.MembershipMonitor
 }
 
 // GetFrontendServiceResolver for testing
 func (s *Test) GetFrontendServiceResolver() membership.ServiceResolver {
-	panic("user should implement this method for test")
+	return s.FrontendServiceResolver
 }
 
 // GetMatchingServiceResolver for testing
 func (s *Test) GetMatchingServiceResolver() membership.ServiceResolver {
-	panic("user should implement this method for test")
+	return s.MatchingServiceResolver
 }
 
 // GetHistoryServiceResolver for testing
 func (s *Test) GetHistoryServiceResolver() membership.ServiceResolver {
-	panic("user should implement this method for test")
+	return s.HistoryServiceResolver
 }
 
 // GetWorkerServiceResolver for testing
 func (s *Test) GetWorkerServiceResolver() membership.ServiceResolver {
-	panic("user should implement this method for test")
+	return s.WorkerServiceResolver
 }
 
 // internal services clients
@@ -372,7 +389,7 @@ func (s *Test) GetVisibilityManager() persistence.VisibilityManager {
 // GetDomainReplicationQueue for testing
 func (s *Test) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
 	// user should implement this method for test
-	return nil
+	return s.DomainReplicationQueue
 }
 
 // GetShardManager for testing

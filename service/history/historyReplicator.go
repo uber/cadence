@@ -666,7 +666,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 		// this function should be only called when we drop start workflow execution
 		currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 		if err == nil {
-			r.shard.GetHistoryManager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+			r.shard.GetHistoryManager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{ //nolint:errcheck
 				BranchToken: currentBranchToken,
 				ShardID:     common.IntPtr(r.shard.GetShardID()),
 			})
@@ -917,7 +917,7 @@ func (r *historyReplicator) terminateWorkflow(
 	var currentLastWriteVersion int64
 	var err error
 	err = r.historyEngine.updateWorkflowExecution(ctx, domainID, execution, false,
-		func(msBuilder mutableState) error {
+		func(context workflowExecutionContext, msBuilder mutableState) error {
 
 			// compare the current last write version first
 			// since this function has assumption that

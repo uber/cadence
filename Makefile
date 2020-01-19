@@ -1,4 +1,4 @@
-.PHONY: test bins clean cover cover_ci
+.PHONY: git-submodules test bins clean cover cover_ci
 PROJECT_ROOT = github.com/uber/cadence
 
 export PATH := $(shell go env GOPATH)/bin:$(PATH)
@@ -18,15 +18,16 @@ default: test
 # define the list of thrift files the service depends on
 # (if you have some)
 THRIFTRW_SRCS = \
-  idl/github.com/uber/cadence/cadence.thrift \
-  idl/github.com/uber/cadence/health.thrift \
-  idl/github.com/uber/cadence/history.thrift \
-  idl/github.com/uber/cadence/matching.thrift \
-  idl/github.com/uber/cadence/replicator.thrift \
-  idl/github.com/uber/cadence/indexer.thrift \
-  idl/github.com/uber/cadence/shared.thrift \
-  idl/github.com/uber/cadence/admin.thrift \
-  idl/github.com/uber/cadence/sqlblobs.thrift \
+  idls/thrift/cadence.thrift \
+  idls/thrift/health.thrift \
+  idls/thrift/history.thrift \
+  idls/thrift/matching.thrift \
+  idls/thrift/replicator.thrift \
+  idls/thrift/indexer.thrift \
+  idls/thrift/shared.thrift \
+  idls/thrift/admin.thrift \
+  idls/thrift/sqlblobs.thrift \
+  idls/thrift/checksum.thrift \
 
 PROGS = cadence
 TEST_TIMEOUT = 20m
@@ -104,6 +105,9 @@ INTEG_NDC_SQL_COVER_FILE   := $(COVER_ROOT)/integ_ndc_sql_cover.out
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
+git-submodules:
+	git submodule update --init --recursive
+
 yarpc-install:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
 	GOOS= GOARCH= gobin -mod=readonly go.uber.org/thriftrw
@@ -112,7 +116,7 @@ yarpc-install:
 clean_thrift:
 	rm -rf .gen
 
-thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
+thriftc: yarpc-install git-submodules $(THRIFTRW_GEN_SRC) copyright
 
 copyright: cmd/tools/copyright/licensegen.go
 	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
@@ -131,7 +135,11 @@ cadence: $(TOOLS_SRC)
 
 cadence-server: $(ALL_SRC)
 	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -ldflags '$(GO_BUILD_LDFLAGS)' -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
+	go build -ldflags '$(GO_BUILD_LDFLAGS)' -i -o cadence-server cmd/server/main.go
+
+cadence-canary: $(ALL_SRC)
+	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
+	go build -i -o cadence-canary cmd/canary/main.go
 
 go-generate:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
@@ -159,7 +167,7 @@ fmt:
 	@echo "running goimports"
 	@goimports -local "github.com/uber/cadence" -w $(ALL_SRC)
 
-bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
+bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
 
 bins: thriftc bins_nothrift
 
@@ -238,9 +246,10 @@ cover_ci: $(COVER_ROOT)/cover.out
 
 clean:
 	rm -f cadence
+	rm -f cadence-server
+	rm -f cadence-canary
 	rm -f cadence-sql-tool
 	rm -f cadence-cassandra-tool
-	rm -f cadence-server
 	rm -Rf $(BUILD)
 
 install-schema: bins
@@ -260,12 +269,12 @@ install-schema-mysql: bins
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
 
 install-schema-postgres: bins
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --dr postgres create --db cadence
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --dr postgres --db cadence setup -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --dr postgres --db cadence update-schema -d ./schema/postgres/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --dr postgres create --db cadence_visibility
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --dr postgres --db cadence_visibility setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --dr postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
+	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence
+	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence setup -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence update-schema -d ./schema/postgres/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence_visibility
+	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
 
 start: bins
 	./cadence-server start
@@ -303,3 +312,6 @@ start-cdc-standby: bins
 
 start-cdc-other: bins
 	./cadence-server --zone other start
+
+start-canary: bins
+	./cadence-canary start

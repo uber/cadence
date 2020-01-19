@@ -52,7 +52,11 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
+		SQLDBPluginName string
 		DBName          string
+		DBUsername      string
+		DBPassword      string
+		DBHost          string
 		DBPort          int              `yaml:"-"`
 		StoreType       string           `yaml:"-"`
 		SchemaDir       string           `yaml:"-"`
@@ -85,7 +89,6 @@ type (
 		DatabaseName() string
 		SetupTestDatabase()
 		TearDownTestDatabase()
-		CreateSession()
 		DropDatabase()
 		Config() config.Persistence
 		LoadSchema(fileNames []string, schemaDir string)
@@ -107,16 +110,16 @@ func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.DBName, options.DBPort, options.SchemaDir)
+	testCluster := cassandra.NewTestCluster(options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	return newTestBase(options, testCluster)
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
 func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
-		options.DBName = GenerateRandomDBName(10)
+		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := sql.NewTestCluster(options.DBName, options.DBPort, options.SchemaDir)
+	testCluster := sql.NewTestCluster(options.SQLDBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	return newTestBase(options, testCluster)
 }
 
@@ -302,6 +305,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(domainID string, workf
 				},
 			},
 			TimerTasks: timerTasks,
+			Checksum:   testWorkflowChecksum,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -364,6 +368,7 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workf
 			ReplicationState: state,
 			TransferTasks:    transferTasks,
 			ReplicationTasks: replicationTasks,
+			Checksum:         testWorkflowChecksum,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -417,6 +422,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 			},
 			ExecutionStats: &p.ExecutionStats{},
 			TransferTasks:  transferTasks,
+			Checksum:       testWorkflowChecksum,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -769,6 +775,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 			TimerTasks:       timerTasks,
 
 			Condition: condition,
+			Checksum:  testWorkflowChecksum,
 		},
 		Encoding: pickRandomEncoding(),
 	})
@@ -937,6 +944,7 @@ func (s *TestBase) ConflictResolveWorkflowExecution(prevRunID string, prevLastWr
 			RequestCancelInfos:  requestCancelInfos,
 			SignalInfos:         signalInfos,
 			SignalRequestedIDs:  ids,
+			Checksum:            testWorkflowChecksum,
 		},
 		Encoding: pickRandomEncoding(),
 	})
@@ -1074,6 +1082,13 @@ Loop:
 	}
 
 	return result, nil
+}
+
+// RangeCompleteReplicationTask is a utility method to complete a range of replication tasks
+func (s *TestBase) RangeCompleteReplicationTask(inclusiveEndTaskID int64) error {
+	return s.ExecutionManager.RangeCompleteReplicationTask(&p.RangeCompleteReplicationTaskRequest{
+		InclusiveEndTaskID: inclusiveEndTaskID,
+	})
 }
 
 // CompleteTransferTask is a utility method to complete a transfer task
@@ -1261,6 +1276,13 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
+	s.ExecutionMgrFactory.Close()
+	// TODO VisibilityMgr/Store is created with a separated code path, this is incorrect and may cause leaking connection
+	// And Postgres requires all connection to be closed before dropping a database
+	// https://github.com/uber/cadence/issues/2854
+	// Remove the below line after the issue is fix
+	s.VisibilityMgr.Close()
+
 	s.DefaultTestCluster.TearDownTestDatabase()
 }
 
@@ -1297,7 +1319,7 @@ func (s *TestBase) ClearTransferQueue() {
 	counter := 0
 	for _, t := range tasks {
 		s.logger.Info("Deleting transfer task with ID", tag.TaskID(t.TaskID))
-		s.CompleteTransferTask(t.TaskID)
+		s.NoError(s.CompleteTransferTask(t.TaskID))
 		counter++
 	}
 
@@ -1316,7 +1338,7 @@ func (s *TestBase) ClearReplicationQueue() {
 	counter := 0
 	for _, t := range tasks {
 		s.logger.Info("Deleting replication task with ID", tag.TaskID(t.TaskID))
-		s.CompleteReplicationTask(t.TaskID)
+		s.NoError(s.CompleteReplicationTask(t.TaskID))
 		counter++
 	}
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
 package frontend
 
 import (
+	"sync/atomic"
+
 	mock "github.com/stretchr/testify/mock"
 
 	"github.com/uber/cadence/common"
@@ -127,9 +129,12 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 type Service struct {
 	resource.Resource
 
-	stopC  chan struct{}
-	config *Config
-	params *service.BootstrapParams
+	status       int32
+	handler      *AccessControlledWorkflowHandler
+	adminHandler *AdminHandler
+	stopC        chan struct{}
+	config       *Config
+	params       *service.BootstrapParams
 }
 
 // NewService builds a new cadence-frontend service
@@ -186,6 +191,7 @@ func NewService(
 
 	return &Service{
 		Resource: serviceResource,
+		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		stopC:    make(chan struct{}),
 		params:   params,
@@ -194,9 +200,12 @@ func NewService(
 
 // Start starts the service
 func (s *Service) Start() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 
 	logger := s.GetLogger()
-	logger.Info("frontend starting", tag.Service(common.FrontendServiceName))
+	logger.Info("frontend starting")
 
 	var replicationMessageSink messaging.Producer
 	clusterMetadata := s.GetClusterMetadata()
@@ -219,30 +228,36 @@ func (s *Service) Start() {
 
 	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, s.params.DCRedirectionPolicy)
-	dcRedirectionHandler.RegisterHandler()
 
-	adminHandler := NewAdminHandler(s, s.params, s.config)
-	adminHandler.RegisterHandler()
+	s.handler = NewAccessControlledHandlerImpl(dcRedirectionHandler, s.params.Authorizer)
+	s.handler.RegisterHandler()
+
+	s.adminHandler = NewAdminHandler(s, s.params, s.config)
+	s.adminHandler.RegisterHandler()
 
 	// must start resource first
 	s.Resource.Start()
-	dcRedirectionHandler.Start()
-	adminHandler.Start()
+	s.handler.Start()
+	s.adminHandler.Start()
 
 	// base (service is not started in frontend or admin handler) in case of race condition in yarpc registration function
 
-	logger.Info("started", tag.Service(common.FrontendServiceName))
+	logger.Info("frontend started")
 
 	<-s.stopC
-
-	s.Resource.Stop()
 }
 
 // Stop stops the service
 func (s *Service) Stop() {
-	select {
-	case s.stopC <- struct{}{}:
-	default:
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
 	}
-	s.params.Logger.Info("stopped", tag.Service(common.FrontendServiceName))
+
+	close(s.stopC)
+
+	s.handler.Stop()
+	s.adminHandler.Stop()
+	s.Resource.Stop()
+
+	s.params.Logger.Info("frontend stopped")
 }

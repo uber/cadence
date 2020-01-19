@@ -71,7 +71,7 @@ const (
 )
 
 const (
-	bufferSize                 = 4096
+	bufferSize                 = 8192
 	preambleVersion0      byte = 0x59
 	malformedMessage           = "Input was malformed"
 	chanBufferSize             = 10000
@@ -79,7 +79,7 @@ const (
 )
 
 var (
-	r = regexp.MustCompile(`Partition: .*?, Offset: .*?, Key: .*?`)
+	r = regexp.MustCompile(`Partition: \d+, Offset: \d+, Key: [^\n]*\n`)
 )
 
 type writerChannel struct {
@@ -298,7 +298,10 @@ Loop:
 						*task.HistoryTaskAttributes.NextEventId,
 					)
 				}
-				outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				if err != nil {
+					ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
+				}
 			}
 		}
 	}
@@ -344,7 +347,10 @@ Loop:
 						msg.GetVersion(),
 					)
 				}
-				outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				if err != nil {
+					ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
+				}
 			}
 		}
 	}
@@ -697,6 +703,9 @@ func AdminPurgeTopic(c *cli.Context) {
 
 	consumer = createConsumerAndWaitForReady(brokers, tlsConfig, group, topic)
 	msg, ok := <-consumer.Messages()
+	if !ok {
+		fmt.Println("consumer channel is closed")
+	}
 	fmt.Printf("current offset sample: %v: %v \n", msg.Partition, msg.Offset)
 }
 

@@ -29,7 +29,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	test "github.com/uber/cadence/common/testing"
@@ -41,9 +40,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 	runID := uuid.New()
 	workflowType := "event-generator-workflow-type"
 	tasklist := "event-generator-taskList"
-
-	// active has initial version 0
-	historyClient := s.active.GetHistoryClient()
 
 	var historyBatch []*shared.History
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
@@ -58,7 +54,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 	}
 
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
-	standbyClient := s.mockFrontendClient["standby"].(*workflowservicetest.MockClient)
 
 	s.applyEventsThroughFetcher(
 		workflowID,
@@ -67,8 +62,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 		tasklist,
 		versionHistory,
 		historyBatch,
-		historyClient,
-		standbyClient,
 	)
 
 	// Applying replication messages through fetcher is Async.
@@ -91,26 +84,20 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 	workflowType := "event-generator-workflow-type"
 	tasklist := "event-generator-taskList"
 
-	// active has initial version 0
-	historyClient := s.active.GetHistoryClient()
-
 	var historyBatch []*shared.History
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
 
-	for s.generator.HasNextVertex() {
-		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
-		for _, event := range events {
-			historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
-		}
-		historyBatch = append(historyBatch, historyEvents)
+	events := s.generator.GetNextVertices()
+	historyEvents := &shared.History{}
+	for _, event := range events {
+		historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
 	}
+	historyBatch = append(historyBatch, historyEvents)
 
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
 
 	s.NotNil(historyBatch)
 	historyBatch[0].Events[1].Version = common.Int64Ptr(2)
-	standbyClient := s.mockFrontendClient["standby"].(*workflowservicetest.MockClient)
 
 	s.applyEventsThroughFetcher(
 		workflowID,
@@ -119,8 +106,6 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 		tasklist,
 		versionHistory,
 		historyBatch,
-		historyClient,
-		standbyClient,
 	)
 
 	execMgrFactory := s.active.GetExecutionManagerFactory()

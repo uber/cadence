@@ -29,21 +29,16 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -51,19 +46,17 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller        *gomock.Controller
-		mockEventsCache   *MockeventsCache
-		mockTaskRefresher *MockmutableStateTaskRefresher
-		mockDomainCache   *cache.MockDomainCache
+		controller          *gomock.Controller
+		mockShard           *shardContextTest
+		mockEventsCache     *MockeventsCache
+		mockTaskRefresher   *MockmutableStateTaskRefresher
+		mockDomainCache     *cache.MockDomainCache
+		mockClusterMetadata *cluster.MockMetadata
 
-		mockService         service.Service
-		mockShard           *shardContextImpl
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockClusterMetadata *mocks.ClusterMetadata
-		logger              log.Logger
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
+		logger           log.Logger
 
 		domainID   string
-		domainName string
 		workflowID string
 		runID      string
 
@@ -80,39 +73,26 @@ func (s *nDCStateRebuilderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockEventsCache = NewMockeventsCache(s.controller)
 	s.mockTaskRefresher = NewMockmutableStateTaskRefresher(s.controller)
-	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			ShardID:          10,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		NewDynamicConfigForTest(),
+	)
+
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockEventsCache = s.mockShard.mockEventsCache
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockService = service.NewTestService(
-		s.mockClusterMetadata,
-		nil,
-		metricsClient,
-		nil,
-		nil,
-		nil,
-		nil)
-
-	s.mockShard = &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 10, RangeID: 1, TransferAckLevel: 0},
-		transferSequenceNumber:    1,
-		historyV2Mgr:              s.mockHistoryV2Mgr,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(),
-		logger:                    s.logger,
-		domainCache:               s.mockDomainCache,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
-		eventsCache:               s.mockEventsCache,
-		timeSource:                clock.NewRealTimeSource(),
-	}
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.logger = s.mockShard.GetLogger()
 
 	s.workflowID = "some random workflow ID"
 	s.runID = uuid.New()
@@ -123,8 +103,8 @@ func (s *nDCStateRebuilderSuite) SetupTest() {
 }
 
 func (s *nDCStateRebuilderSuite) TearDownTest() {
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 }
 
 func (s *nDCStateRebuilderSuite) TestInitializeBuilders() {

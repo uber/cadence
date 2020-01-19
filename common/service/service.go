@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/authorization"
+
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -46,13 +48,6 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
-
-var cadenceServices = []string{
-	common.FrontendServiceName,
-	common.HistoryServiceName,
-	common.MatchingServiceName,
-	common.WorkerServiceName,
-}
 
 type (
 	// BootstrapParams holds the set of parameters
@@ -80,6 +75,7 @@ type (
 		PublicClient        workflowserviceclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
 		ArchiverProvider    provider.ArchiverProvider
+		Authorizer          authorization.Authorizer
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor
@@ -229,7 +225,7 @@ func (h *serviceImpl) Stop() {
 	}
 
 	if h.dispatcher != nil {
-		h.dispatcher.Stop()
+		h.dispatcher.Stop() //nolint:errcheck
 	}
 
 	h.runtimeMetricsReporter.Stop()

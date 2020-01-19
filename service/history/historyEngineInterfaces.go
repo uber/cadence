@@ -44,7 +44,15 @@ type (
 	// ReplicatorQueueProcessor is the interface for replicator queue processor
 	ReplicatorQueueProcessor interface {
 		queueProcessor
-		getTasks(ctx context.Context, readLevel int64) (*replicator.ReplicationMessages, error)
+		getTasks(
+			ctx context.Context,
+			pollingCluster string,
+			lastReadTaskID int64,
+		) (*replicator.ReplicationMessages, error)
+		getTask(
+			ctx context.Context,
+			taskInfo *replicator.ReplicationTaskInfo,
+		) (*replicator.ReplicationTask, error)
 	}
 
 	queueAckMgr interface {

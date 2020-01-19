@@ -28,7 +28,6 @@ package workflowserviceserver
 import (
 	context "context"
 	cadence "github.com/uber/cadence/.gen/go/cadence"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
@@ -62,15 +61,9 @@ type Interface interface {
 		DescribeRequest *shared.DescribeWorkflowExecutionRequest,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
 
-	GetDomainReplicationMessages(
+	GetClusterInfo(
 		ctx context.Context,
-		Request *replicator.GetDomainReplicationMessagesRequest,
-	) (*replicator.GetDomainReplicationMessagesResponse, error)
-
-	GetReplicationMessages(
-		ctx context.Context,
-		Request *replicator.GetReplicationMessagesRequest,
-	) (*replicator.GetReplicationMessagesResponse, error)
+	) (*shared.ClusterInfo, error)
 
 	GetSearchAttributes(
 		ctx context.Context,
@@ -101,6 +94,11 @@ type Interface interface {
 		ListRequest *shared.ListOpenWorkflowExecutionsRequest,
 	) (*shared.ListOpenWorkflowExecutionsResponse, error)
 
+	ListTaskListPartitions(
+		ctx context.Context,
+		Request *shared.ListTaskListPartitionsRequest,
+	) (*shared.ListTaskListPartitionsResponse, error)
+
 	ListWorkflowExecutions(
 		ctx context.Context,
 		ListRequest *shared.ListWorkflowExecutionsRequest,
@@ -120,11 +118,6 @@ type Interface interface {
 		ctx context.Context,
 		QueryRequest *shared.QueryWorkflowRequest,
 	) (*shared.QueryWorkflowResponse, error)
-
-	ReapplyEvents(
-		ctx context.Context,
-		ReapplyEventsRequest *shared.ReapplyEventsRequest,
-	) error
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -299,24 +292,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetDomainReplicationMessages",
+				Name: "GetClusterInfo",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetDomainReplicationMessages),
+					Unary: thrift.UnaryHandler(h.GetClusterInfo),
 				},
-				Signature:    "GetDomainReplicationMessages(Request *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse)",
-				ThriftModule: cadence.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "GetReplicationMessages",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetReplicationMessages),
-				},
-				Signature:    "GetReplicationMessages(Request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse)",
+				Signature:    "GetClusterInfo() (*shared.ClusterInfo)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -387,6 +369,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ListTaskListPartitions",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ListTaskListPartitions),
+				},
+				Signature:    "ListTaskListPartitions(Request *shared.ListTaskListPartitionsRequest) (*shared.ListTaskListPartitionsResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "ListWorkflowExecutions",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -427,17 +420,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.QueryWorkflow),
 				},
 				Signature:    "QueryWorkflow(QueryRequest *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse)",
-				ThriftModule: cadence.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "ReapplyEvents",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReapplyEvents),
-				},
-				Signature:    "ReapplyEvents(ReapplyEventsRequest *shared.ReapplyEventsRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -674,7 +656,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 39)
+	procedures := make([]transport.Procedure, 0, 38)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -776,35 +758,16 @@ func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value)
 	return response, err
 }
 
-func (h handler) GetDomainReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_GetDomainReplicationMessages_Args
+func (h handler) GetClusterInfo(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetClusterInfo_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.GetDomainReplicationMessages(ctx, args.Request)
+	success, err := h.impl.GetClusterInfo(ctx)
 
 	hadError := err != nil
-	result, err := cadence.WorkflowService_GetDomainReplicationMessages_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) GetReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_GetReplicationMessages_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.GetReplicationMessages(ctx, args.Request)
-
-	hadError := err != nil
-	result, err := cadence.WorkflowService_GetReplicationMessages_Helper.WrapResponse(success, err)
+	result, err := cadence.WorkflowService_GetClusterInfo_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -928,6 +891,25 @@ func (h handler) ListOpenWorkflowExecutions(ctx context.Context, body wire.Value
 	return response, err
 }
 
+func (h handler) ListTaskListPartitions(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ListTaskListPartitions_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ListTaskListPartitions(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ListTaskListPartitions_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) ListWorkflowExecutions(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_ListWorkflowExecutions_Args
 	if err := args.FromWire(body); err != nil {
@@ -995,25 +977,6 @@ func (h handler) QueryWorkflow(ctx context.Context, body wire.Value) (thrift.Res
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_QueryWorkflow_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) ReapplyEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_ReapplyEvents_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
-
-	hadError := err != nil
-	result, err := cadence.WorkflowService_ReapplyEvents_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

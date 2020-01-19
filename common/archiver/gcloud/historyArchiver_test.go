@@ -210,10 +210,8 @@ func (h *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 
 	ctx := getCanceledContext()
 	mockCtrl := gomock.NewController(h.T())
-	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/development")
-	h.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
+	storageWrapper.On("Exist", mock.Anything, mock.Anything, "").Return(true, nil).Times(1)
 
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
@@ -232,7 +230,7 @@ func (h *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 		NextEventID:          testNextEventID,
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
-	err = historyArchiver.Archive(ctx, h.testArchivalURI, request)
+	err := historyArchiver.Archive(ctx, h.testArchivalURI, request)
 	h.Error(err)
 }
 
@@ -518,8 +516,7 @@ func (h *historyArchiverSuite) TestGet_Success_FromToken() {
 	token := &getHistoryToken{
 		CloseFailoverVersion: -24,
 		HighestPart:          3,
-		CurrentPart:          2,
-		NextBatchIdx:         3,
+		NextBatchIdx:         2,
 	}
 
 	nextPageToken, err := serializeToken(token)

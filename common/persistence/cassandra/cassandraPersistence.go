@@ -70,13 +70,9 @@ const (
 	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
 	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
 	// Special TaskId constants
-	rowTypeExecutionTaskID  = int64(-10)
-	rowTypeShardTaskID      = int64(-11)
-	emptyInitiatedID        = int64(-7)
-	defaultDeleteTTLSeconds = int64(time.Hour*24*7) / int64(time.Second) // keep deleted records for 7 days
-
-	// minimum current execution retention TTL when current execution is deleted, in seconds
-	minCurrentExecutionRetentionTTL = int32(24 * time.Hour / time.Second)
+	rowTypeExecutionTaskID = int64(-10)
+	rowTypeShardTaskID     = int64(-11)
+	emptyInitiatedID       = int64(-7)
 
 	stickyTaskListTTL = int32(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
 )
@@ -329,6 +325,12 @@ const (
 		`created_time: ? ` +
 		`}`
 
+	templateChecksumType = `{` +
+		`version: ?, ` +
+		`flavor: ?, ` +
+		`value: ? ` +
+		`}`
+
 	templateCreateShardQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
@@ -378,16 +380,17 @@ workflow_state = ? ` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, {start_version: ?, last_write_version: ?}, ?, ?) IF NOT EXISTS USING TTL 0 `
 
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?) IF NOT EXISTS `
+		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, checksum) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
 
 	templateCreateWorkflowExecutionWithReplicationQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, replication_state, next_event_id, visibility_ts, task_id) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ` + templateReplicationStateType + `, ?, ?, ?) IF NOT EXISTS `
+		`shard_id, domain_id, workflow_id, run_id, type, execution, replication_state, next_event_id, visibility_ts, task_id, checksum) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ` + templateReplicationStateType +
+		`, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
 
 	templateCreateWorkflowExecutionWithVersionHistoriesQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ?, ?) IF NOT EXISTS `
+		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
@@ -412,7 +415,9 @@ workflow_state = ? ` +
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	templateGetWorkflowExecutionQuery = `SELECT execution, replication_state, activity_map, timer_map, child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list, buffered_replication_tasks_map, version_histories, version_histories_encoding ` +
+	templateGetWorkflowExecutionQuery = `SELECT execution, replication_state, activity_map, timer_map, ` +
+		`child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list, ` +
+		`buffered_replication_tasks_map, version_histories, version_histories_encoding, checksum ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -446,6 +451,7 @@ workflow_state = ? ` +
 	templateUpdateWorkflowExecutionQuery = `UPDATE executions ` +
 		`SET execution = ` + templateWorkflowExecutionType +
 		`, next_event_id = ? ` +
+		`, checksum = ` + templateChecksumType +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -459,6 +465,7 @@ workflow_state = ? ` +
 		`SET execution = ` + templateWorkflowExecutionType +
 		`, replication_state = ` + templateReplicationStateType +
 		`, next_event_id = ? ` +
+		`, checksum = ` + templateChecksumType +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -473,6 +480,7 @@ workflow_state = ? ` +
 		`, next_event_id = ? ` +
 		`, version_histories = ? ` +
 		`, version_histories_encoding = ? ` +
+		`, checksum = ` + templateChecksumType +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -732,6 +740,15 @@ workflow_state = ? ` +
 		`and run_id = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id > ? ` +
+		`and task_id <= ?`
+
+	templateRangeCompleteReplicationTaskQuery = `DELETE FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id <= ?`
 
 	templateGetTimerTasksQuery = `SELECT timer ` +
@@ -1352,6 +1369,8 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.BufferedEvents = bufferedEventsBlobs
 
+	state.Checksum = createChecksum(result["checksum"].(map[string]interface{}))
+
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
@@ -1905,6 +1924,10 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
+		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			// allow bypassing no current record
+			return nil
+		}
 		return err
 	} else if resp.RunID == runID {
 		return &p.ConditionFailedError{
@@ -2219,6 +2242,35 @@ func (d *cassandraPersistence) CompleteReplicationTask(request *p.CompleteReplic
 		}
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
+		}
+	}
+
+	return nil
+}
+
+func (d *cassandraPersistence) RangeCompleteReplicationTask(
+	request *p.RangeCompleteReplicationTaskRequest,
+) error {
+
+	query := d.session.Query(templateRangeCompleteReplicationTaskQuery,
+		d.shardID,
+		rowTypeReplicationTask,
+		rowTypeReplicationDomainID,
+		rowTypeReplicationWorkflowID,
+		rowTypeReplicationRunID,
+		defaultVisibilityTimestamp,
+		request.InclusiveEndTaskID,
+	)
+
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("RangeCompleteReplicationTask operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("RangeCompleteReplicationTask operation failed. Error: %v", err),
 		}
 	}
 

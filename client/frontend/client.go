@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -661,11 +660,11 @@ func (c *clientImpl) getRandomClient() (workflowserviceclient.Interface, error) 
 	return client.(workflowserviceclient.Interface), nil
 }
 
-func (c *clientImpl) GetReplicationMessages(
+func (c *clientImpl) GetClusterInfo(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
+) (*shared.ClusterInfo, error) {
+
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -673,14 +672,15 @@ func (c *clientImpl) GetReplicationMessages(
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return client.GetReplicationMessages(ctx, request, opts...)
+	return client.GetClusterInfo(ctx, opts...)
 }
 
-func (c *clientImpl) GetDomainReplicationMessages(
+func (c *clientImpl) ListTaskListPartitions(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
+	request *shared.ListTaskListPartitionsRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDomainReplicationMessagesResponse, error) {
+) (*shared.ListTaskListPartitionsResponse, error) {
+
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -688,21 +688,6 @@ func (c *clientImpl) GetDomainReplicationMessages(
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return client.GetDomainReplicationMessages(ctx, request, opts...)
-}
 
-func (c *clientImpl) ReapplyEvents(
-	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
-	opts ...yarpc.CallOption,
-) error {
-
-	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getRandomClient()
-	if err != nil {
-		return err
-	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return client.ReapplyEvents(ctx, request, opts...)
+	return client.ListTaskListPartitions(ctx, request, opts...)
 }

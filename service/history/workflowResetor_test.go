@@ -33,25 +33,17 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
 
 	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -60,30 +52,23 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
+		mockShard                *shardContextTest
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
 		mockEventsCache          *MockeventsCache
 		mockDomainCache          *cache.MockDomainCache
+		mockClusterMetadata      *cluster.MockMetadata
 
-		historyEngine       *historyEngineImpl
-		mockMatchingClient  *matchingservicetest.MockClient
-		mockHistoryClient   *historyservicetest.MockClient
-		mockVisibilityMgr   *mocks.VisibilityManager
-		mockExecutionMgr    *mocks.ExecutionManager
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockShardManager    *mocks.ShardManager
-		mockClusterMetadata *mocks.ClusterMetadata
-		mockProducer        *mocks.KafkaProducer
-		mockMessagingClient messaging.Client
-		mockService         service.Service
-		mockArchivalClient  *archiver.ClientMock
-		resetor             workflowResetor
+		mockExecutionMgr *mocks.ExecutionManager
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
-		shardClosedCh chan int
-		config        *Config
-		logger        log.Logger
-		shardID       int
+		config  *Config
+		logger  log.Logger
+		shardID int
+
+		historyEngine *historyEngineImpl
+		resetor       workflowResetor
 	}
 )
 
@@ -93,8 +78,6 @@ func TestWorkflowResetorSuite(t *testing.T) {
 }
 
 func (s *resetorSuite) SetupSuite() {
-
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.config = NewDynamicConfigForTest()
 }
 
@@ -104,88 +87,65 @@ func (s *resetorSuite) TearDownSuite() {
 func (s *resetorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
+	shardID := 10
+	s.shardID = shardID
+
 	s.controller = gomock.NewController(s.T())
 	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
-	s.mockEventsCache = NewMockeventsCache(s.controller)
-	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
+
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&p.ShardInfo{
+			ShardID:          shardID,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		s.config,
+	)
+
+	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockEventsCache = s.mockShard.mockEventsCache
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	shardID := 10
-	s.shardID = shardID
+	s.logger = s.mockShard.GetLogger()
 
-	s.mockMatchingClient = matchingservicetest.NewMockClient(s.controller)
-	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
-	s.mockVisibilityMgr = &mocks.VisibilityManager{}
-	s.mockExecutionMgr = &mocks.ExecutionManager{}
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockShardManager = &mocks.ShardManager{}
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockProducer = &mocks.KafkaProducer{}
-	s.shardClosedCh = make(chan int, 100)
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, nil, nil, nil, nil)
-	s.mockArchivalClient = &archiver.ClientMock{}
-
-	mockShard := &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &p.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
-		shardID:                   shardID,
-		transferSequenceNumber:    1,
-		executionManager:          s.mockExecutionMgr,
-		historyV2Mgr:              s.mockHistoryV2Mgr,
-		domainCache:               s.mockDomainCache,
-		eventsCache:               s.mockEventsCache,
-		clusterMetadata:           s.mockClusterMetadata,
-		shardManager:              s.mockShardManager,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   s.shardClosedCh,
-		config:                    s.config,
-		logger:                    s.logger,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
-		standbyClusterCurrentTime: map[string]time.Time{},
-		timeSource:                clock.NewRealTimeSource(),
-	}
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
-
-	historyCache := newHistoryCache(mockShard)
+	historyCache := newHistoryCache(s.mockShard)
 	h := &historyEngineImpl{
-		currentClusterName:   mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
-		shard:                mockShard,
+		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
+		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
-		metricsClient:        metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:        s.mockShard.GetMetricsClient(),
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		config:               s.config,
-		archivalClient:       s.mockArchivalClient,
-		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
+		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), s.mockShard.GetMetricsClient(), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
 	}
-	mockShard.SetEngine(h)
+	s.mockShard.SetEngine(h)
 	s.resetor = newWorkflowResetor(h)
 	h.resetor = s.resetor
 	s.historyEngine = h
 }
 
 func (s *resetorSuite) TearDownTest() {
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
-	s.mockShardManager.AssertExpectations(s.T())
-	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
-	s.mockArchivalClient.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
@@ -749,7 +709,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Times(2)
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
-	s.mockClusterMetadata.On("TestResetWorkflowExecution_NoReplication")
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -1436,8 +1395,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	domainName := "testDomainName"
 	beforeResetVersion := int64(100)
 	afterResetVersion := int64(101)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("standby")
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(beforeResetVersion).Return("standby").AnyTimes()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return("active").AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&p.DomainInfo{ID: testDomainID},
@@ -2141,8 +2100,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	domainName := "testDomainName"
 	beforeResetVersion := int64(100)
 	afterResetVersion := int64(101)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("active")
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("standby")
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(beforeResetVersion).Return("active").AnyTimes()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return("standby").AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&p.DomainInfo{ID: testDomainID},
@@ -2740,8 +2699,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	domainName := "testDomainName"
 	beforeResetVersion := int64(100)
 	afterResetVersion := int64(101)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("standby")
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(beforeResetVersion).Return("standby").AnyTimes()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return("active").AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&p.DomainInfo{ID: testDomainID},
@@ -3432,8 +3391,8 @@ func (s *resetorSuite) TestApplyReset() {
 	domainID := testDomainID
 	beforeResetVersion := int64(100)
 	afterResetVersion := int64(101)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return(cluster.TestAlternativeClusterName)
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(beforeResetVersion).Return(cluster.TestAlternativeClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&p.DomainInfo{ID: testDomainID},

@@ -25,19 +25,15 @@ import (
 	"testing"
 	"time"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -45,14 +41,15 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		clusterName     string
-		logger          log.Logger
-		mockService     service.Service
-		mockShard       ShardContext
+		controller *gomock.Controller
+		mockShard  *shardContextTest
+
 		mockProcessor   *MockTimerProcessor
 		mockQueueAckMgr *MockTimerQueueAckMgr
 
 		scope            int
+		clusterName      string
+		logger           log.Logger
 		notificationChan chan struct{}
 
 		taskProcessor *taskProcessor
@@ -75,31 +72,29 @@ func (s *taskProcessorSuite) TearDownSuite() {
 func (s *taskProcessorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
+	s.controller = gomock.NewController(s.T())
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			ShardID:          0,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		NewDynamicConfigForTest(),
+	)
+
 	s.clusterName = cluster.TestAlternativeClusterName
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockProcessor = &MockTimerProcessor{}
 	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
-	s.mockService = service.NewTestService(nil, nil, metricsClient, nil, nil, nil, nil)
-	s.mockShard = &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
-		transferSequenceNumber:    1,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(),
-		logger:                    s.logger,
-		metricsClient:             metricsClient,
-		standbyClusterCurrentTime: make(map[string]time.Time),
-		timeSource:                clock.NewRealTimeSource(),
-	}
+
+	s.logger = s.mockShard.GetLogger()
 
 	s.scope = 0
 	s.notificationChan = make(chan struct{})
 	h := &historyEngineImpl{
 		shard:         s.mockShard,
 		logger:        s.logger,
-		metricsClient: metricsClient,
+		metricsClient: s.mockShard.GetMetricsClient(),
 	}
 	options := taskProcessorOptions{
 		queueSize:   s.mockShard.GetConfig().TimerTaskBatchSize() * s.mockShard.GetConfig().TimerTaskWorkerCount(),
@@ -109,6 +104,8 @@ func (s *taskProcessorSuite) SetupTest() {
 }
 
 func (s *taskProcessorSuite) TearDownTest() {
+	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 	s.mockProcessor.AssertExpectations(s.T())
 	s.mockQueueAckMgr.AssertExpectations(s.T())
 }

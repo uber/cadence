@@ -31,7 +31,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -45,22 +44,20 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		mockShard           *shardContextImpl
-		mockClusterMetadata *mocks.ClusterMetadata
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockStateRebuilder  *MocknDCStateRebuilder
-		logger              log.Logger
-
 		controller         *gomock.Controller
-		mockTransactionMgr *MocknDCTransactionMgr
+		mockShard          *shardContextTest
+		mockStateRebuilder *MocknDCStateRebuilder
 
-		workflowResetter *workflowResetterImpl
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
+		logger       log.Logger
 		domainID     string
 		workflowID   string
 		baseRunID    string
 		currentRunID string
 		resetRunID   string
+
+		workflowResetter *workflowResetterImpl
 	}
 )
 
@@ -80,26 +77,22 @@ func (s *workflowResetterSuite) SetupTest() {
 
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.controller = gomock.NewController(s.T())
-	s.mockTransactionMgr = NewMocknDCTransactionMgr(s.controller)
 	s.mockStateRebuilder = NewMocknDCStateRebuilder(s.controller)
 
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-
-	s.mockShard = &shardContextImpl{
-		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
-		config:                    NewDynamicConfigForTest(),
-		historyV2Mgr:              s.mockHistoryV2Mgr,
-		clusterMetadata:           s.mockClusterMetadata,
-		maxTransferSequenceNumber: 100000,
-		logger:                    s.logger,
-		timeSource:                clock.NewRealTimeSource(),
-	}
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			ShardID:          0,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		NewDynamicConfigForTest(),
+	)
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
 
 	s.workflowResetter = newWorkflowResetter(
 		s.mockShard,
 		newHistoryCache(s.mockShard),
-		s.mockTransactionMgr,
 		s.logger,
 	)
 	s.workflowResetter.newStateRebuilder = func() nDCStateRebuilder {
@@ -114,9 +107,8 @@ func (s *workflowResetterSuite) SetupTest() {
 }
 
 func (s *workflowResetterSuite) TearDownTest() {
-	s.mockClusterMetadata.AssertExpectations(s.T())
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 }
 
 func (s *workflowResetterSuite) TestPersistToDB_CurrentTerminated() {
@@ -446,17 +438,15 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		NextPageToken: nil,
 	}, nil).Once()
 
-	resetWorkflow := NewMocknDCWorkflow(s.controller)
-	resetReleaseCalled := false
+	resetContext := NewMockworkflowExecutionContext(s.controller)
+	resetContext.EXPECT().lock(gomock.Any()).Return(nil).Times(1)
+	resetContext.EXPECT().unlock().Times(1)
 	resetMutableState := NewMockmutableState(s.controller)
-	var newReleaseFn releaseWorkflowExecutionFunc = func(error) { resetReleaseCalled = true }
-	resetWorkflow.EXPECT().getMutableState().Return(resetMutableState).AnyTimes()
-	resetWorkflow.EXPECT().getReleaseFn().Return(newReleaseFn).AnyTimes()
-
+	resetContext.EXPECT().loadWorkflowExecution().Return(resetMutableState, nil).Times(1)
 	resetMutableState.EXPECT().GetNextEventID().Return(newNextEventID).AnyTimes()
 	resetMutableState.EXPECT().GetCurrentBranchToken().Return(newBranchToken, nil).AnyTimes()
-
-	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, s.domainID, s.workflowID, newRunID).Return(resetWorkflow, nil).Times(1)
+	resetContextCacheKey := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, newRunID)
+	_, _ = s.workflowResetter.historyCache.PutIfNotExist(resetContextCacheKey, resetContext)
 
 	mutableState := NewMockmutableState(s.controller)
 
@@ -471,7 +461,6 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		baseNextEventID,
 	)
 	s.NoError(err)
-	s.True(resetReleaseCalled)
 }
 
 func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {

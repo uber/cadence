@@ -29,18 +29,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -48,14 +43,13 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller       *gomock.Controller
-		mockContext      *MockworkflowExecutionContext
-		mockMutableState *MockmutableState
+		controller          *gomock.Controller
+		mockShard           *shardContextTest
+		mockContext         *MockworkflowExecutionContext
+		mockMutableState    *MockmutableState
+		mockClusterMetadata *cluster.MockMetadata
 
-		mockService         service.Service
-		mockShard           *shardContextImpl
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		mockClusterMetadata *mocks.ClusterMetadata
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
 		logger log.Logger
 
@@ -80,31 +74,21 @@ func (s *nDCBranchMgrSuite) SetupTest() {
 	s.mockContext = NewMockworkflowExecutionContext(s.controller)
 	s.mockMutableState = NewMockmutableState(s.controller)
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockService = service.NewTestService(
-		s.mockClusterMetadata,
-		nil,
-		metricsClient,
-		nil,
-		nil,
-		nil,
-		nil)
-	s.mockShard = &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 10, RangeID: 1, TransferAckLevel: 0},
-		transferSequenceNumber:    1,
-		historyV2Mgr:              s.mockHistoryV2Mgr,
-		maxTransferSequenceNumber: 100000,
-		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(),
-		logger:                    s.logger,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
-		timeSource:                clock.NewRealTimeSource(),
-	}
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockShard = newTestShardContext(
+		s.controller,
+		&persistence.ShardInfo{
+			ShardID:          10,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		NewDynamicConfigForTest(),
+	)
+
+	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+
+	s.logger = s.mockShard.GetLogger()
 
 	s.domainID = uuid.New()
 	s.workflowID = "some random workflow ID"
@@ -116,8 +100,8 @@ func (s *nDCBranchMgrSuite) SetupTest() {
 }
 
 func (s *nDCBranchMgrSuite) TearDownTest() {
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 }
 
 func (s *nDCBranchMgrSuite) TestCreateNewBranch() {
@@ -217,8 +201,8 @@ func (s *nDCBranchMgrSuite) TestFlushBufferedEvents() {
 	).Return(&shared.HistoryEvent{}, nil).Times(1)
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", lastWriteVersion).Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(lastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	s.mockContext.EXPECT().updateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
 

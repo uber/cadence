@@ -21,6 +21,7 @@
 package worker
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -48,11 +49,11 @@ type (
 	// 3. Archiver: Handles archival of workflow histories.
 	Service struct {
 		resource.Resource
-		config *Config
 
+		status int32
+		stopC  chan struct{}
 		params *service.BootstrapParams
-
-		stopC chan struct{}
+		config *Config
 	}
 
 	// Config contains all the service config for worker
@@ -67,8 +68,6 @@ type (
 		EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
 	}
 )
-
-const domainRefreshInterval = time.Second * 11
 
 // NewService builds a new cadence-worker service
 func NewService(
@@ -99,6 +98,7 @@ func NewService(
 
 	return &Service{
 		Resource: serviceResource,
+		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		params:   params,
 		stopC:    make(chan struct{}),
@@ -118,6 +118,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			ReplicatorHistoryBufferRetryCount:  dc.GetIntProperty(dynamicconfig.WorkerReplicatorHistoryBufferRetryCount, 8),
 			ReplicationTaskMaxRetryCount:       dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetryCount, 400),
 			ReplicationTaskMaxRetryDuration:    dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration, 15*time.Minute),
+			ReplicationTaskContextTimeout:      dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskContextDuration, 30*time.Second),
 		},
 		ArchiverConfig: &archiver.Config{
 			ArchiverConcurrency:           dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
@@ -156,9 +157,12 @@ func NewConfig(params *service.BootstrapParams) *Config {
 
 // Start is called to start the service
 func (s *Service) Start() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 
 	logger := s.GetLogger()
-	logger.Info("worker starting", tag.Service(common.WorkerServiceName))
+	logger.Info("worker starting", tag.ComponentWorker)
 
 	s.Resource.Start()
 
@@ -181,14 +185,20 @@ func (s *Service) Start() {
 		s.startParentClosePolicyProcessor()
 	}
 
-	logger.Info("service started", tag.ComponentWorker)
+	logger.Info("worker started", tag.ComponentWorker)
 	<-s.stopC
-	s.Resource.Stop()
 }
 
 // Stop is called to stop the service
 func (s *Service) Stop() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
 	close(s.stopC)
+
+	s.Resource.Stop()
+
 	s.params.Logger.Info("worker stopped", tag.ComponentWorker)
 }
 
@@ -231,11 +241,6 @@ func (s *Service) startScanner() {
 }
 
 func (s *Service) startReplicator() {
-	hostInfo, err := s.GetHostInfo()
-	if err != nil {
-		s.GetLogger().Fatal("failed to get service resolver", tag.Error(err))
-	}
-
 	msgReplicator := replicator.NewReplicator(
 		s.GetClusterMetadata(),
 		s.GetMetadataManager(),
@@ -245,8 +250,9 @@ func (s *Service) startReplicator() {
 		s.GetMessagingClient(),
 		s.GetLogger(),
 		s.GetMetricsClient(),
-		hostInfo,
+		s.GetHostInfo(),
 		s.GetWorkerServiceResolver(),
+		s.GetDomainReplicationQueue(),
 	)
 	if err := msgReplicator.Start(); err != nil {
 		msgReplicator.Stop()
