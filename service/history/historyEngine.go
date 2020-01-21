@@ -2935,7 +2935,19 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetEventsCache(),
 		e.shard.GetLogger(),
 	)
-	return mutableStateTaskRefresher.refreshTasks(e.shard.GetTimeSource().Now(), mutableState)
+
+	now := e.shard.GetTimeSource().Now()
+
+	err = mutableStateTaskRefresher.refreshTasks(now, mutableState)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = mutableState.CloseTransactionAsMutation(now, transactionPolicyPassive)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (e *historyEngineImpl) loadWorkflowOnce(
