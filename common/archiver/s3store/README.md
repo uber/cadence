@@ -1,4 +1,33 @@
 # Amazon S3 blobstore
+## Configuration
+See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials on how to set up authentication against s3
+
+Enabling archival is done by using the configuration below. `Region` and `bucket URI` are required
+```
+archival:
+  history:
+    status: "enabled"
+    enableRead: true
+    provider:
+      s3store:
+        region: "us-east-1"
+  visibility:
+    status: "enabled"
+    enableRead: true
+    provider:
+      s3store:
+        region: "us-east-1"
+
+domainDefaults:
+  archival:
+    history:
+      status: "enabled"
+      URI: "s3://<bucket-name>"
+    visibility:
+      status: "enabled"
+      URI: "s3://<bucket-name>"
+```
+
 ## Visibility query syntax
 You can query the visibility store by using the `cadence workflow listarchived` command
 
@@ -12,16 +41,16 @@ Supported column names are
 
 WorkflowID and SearchPrecision are always required. One of StartTime and CloseTime are required and they are mutually exclusive.
 
-Searching for a record should always be done in the UTC timezone
+Searching for a record will be done in times in the UTC timezone
 
-SearchPrecision specifies what range you want to search for records. If you use SearchPrecision = 'Day'
-it will search all records starting from '2020-01-21T00:00:00Z' to '2020-01-21T59:59:59Z' 
+SearchPrecision specifies what range you want to search for records. If you use `SearchPrecision = 'Day'`
+it will search all records starting from `2020-01-21T00:00:00Z` to `2020-01-21T59:59:59Z` 
 
-###Limitations
+### Limitations
 
 - The only operator supported is `=` due to how records are stored in s3.
 
-###Example
+### Example
 
 *Searches for all records done in day 2020-01-21 with the specified workflow id*
 
@@ -37,8 +66,8 @@ s3://<bucket-name>/<domain-id>/<workflow-id>/
 ```
 
 ## Using localstack for local development
-1. Install awscli from [here][https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html]
-2. Install localstack from [here][https://github.com/localstack/localstack#installing]
+1. Install awscli from [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
+2. Install localstack from [here](https://github.com/localstack/localstack#installing)
 3. Launch localstack with `SERVICES=s3 localstack start`
 4. Create a bucket using `aws --endpoint-url=http://localhost:4572 s3 mb s3://cadence-development` 
 5. Configure archival and domainDefaults with the following configuration
