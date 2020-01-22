@@ -424,8 +424,6 @@ const (
 	FrontendClientGetDLQReplicationTasksScope
 	// FrontendClientReapplyEventsScope tracks RPC calls to frontend service
 	FrontendClientReapplyEventsScope
-	// FrontendRefreshWorkflowTasksScope tracks RPC calls to frontend service
-	FrontendRefreshWorkflowTasksScope
 	// FrontendClientGetClusterInfoScope tracks RPC calls to frontend
 	FrontendClientGetClusterInfoScope
 	// FrontendClientListTaskListPartitionsScope tracks RPC calls to frontend service
@@ -1174,7 +1172,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientGetDomainReplicationTasksScope:        {operation: "FrontendClientGetDomainReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetDLQReplicationTasksScope:           {operation: "FrontendClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientReapplyEventsScope:                    {operation: "FrontendClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendRefreshWorkflowTasksScope:                   {operation: "FrontendRefreshWorkflowTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetClusterInfoScope:                   {operation: "FrontendClientGetClusterInfoScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListTaskListPartitionsScope:           {operation: "FrontendClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		AdminClientAddSearchAttributeScope:                  {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
