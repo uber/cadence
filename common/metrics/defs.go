@@ -240,12 +240,22 @@ const (
 	PersistenceScanWorkflowExecutionsScope
 	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
 	PersistenceCountWorkflowExecutionsScope
-	// PersistenceEnqueueMessageScope tracks Encueue calls made by service to persistence layer
+	// PersistenceEnqueueMessageScope tracks Enqueue calls made by service to persistence layer
 	PersistenceEnqueueMessageScope
+	// PersistenceEnqueueMessageToDLQScope tracks Enqueue DLQ calls made by service to persistence layer
+	PersistenceEnqueueMessageToDLQScope
 	// PersistenceReadQueueMessagesScope tracks ReadMessages calls made by service to persistence layer
 	PersistenceReadQueueMessagesScope
+	// PersistenceReadQueueMessagesFromDLQScope tracks ReadMessagesFromDLQ calls made by service to persistence layer
+	PersistenceReadQueueMessagesFromDLQScope
 	// PersistenceDeleteQueueMessagesScope tracks DeleteMessages calls made by service to persistence layer
 	PersistenceDeleteQueueMessagesScope
+	// PersistenceDeleteQueueMessageFromDLQScope tracks DeleteMessageFromDLQ calls made by service to persistence layer
+	PersistenceDeleteQueueMessageFromDLQScope
+	// PersistenceDeleteDLQMessageBeforeScope tracks DeleteDLQMessageBefore calls made by service to persistence layer
+	PersistenceDeleteDLQMessageBeforeScope
+	// PersistenceGetLastMessageIDFromDLQScope tracks GetLastMessageIDFromDLQ calls made by service to persistence layer
+	PersistenceGetLastMessageIDFromDLQScope
 	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
 	PersistenceUpdateAckLevelScope
 	// PersistenceGetAckLevelScope tracks GetAckLevel calls made by service to persistence layer
@@ -338,6 +348,8 @@ const (
 	FrontendClientDescribeWorkflowExecutionScope
 	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
 	FrontendClientGetWorkflowExecutionHistoryScope
+	// FrontendClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
+	FrontendClientGetWorkflowExecutionRawHistoryScope
 	// FrontendClientListArchivedWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientListArchivedWorkflowExecutionsScope
 	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
@@ -436,6 +448,8 @@ const (
 	DCRedirectionDescribeWorkflowExecutionScope
 	// DCRedirectionGetWorkflowExecutionHistoryScope tracks RPC calls for dc redirection
 	DCRedirectionGetWorkflowExecutionHistoryScope
+	// DCRedirectionGetWorkflowExecutionRawHistoryScope tracks RPC calls for dc redirection
+	DCRedirectionGetWorkflowExecutionRawHistoryScope
 	// DCRedirectionListArchivedWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionListArchivedWorkflowExecutionsScope
 	// DCRedirectionListClosedWorkflowExecutionsScope tracks RPC calls for dc redirection
@@ -533,6 +547,8 @@ const (
 	PersistenceGetHistoryTreeScope
 	// PersistenceGetAllHistoryTreeBranchesScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetAllHistoryTreeBranchesScope
+	// PersistenceDomainReplicationQueueScope is the metrics scope for domain replication queue
+	PersistenceDomainReplicationQueueScope
 
 	// ClusterMetadataArchivalConfigScope tracks ArchivalConfig calls to ClusterMetadata
 	ClusterMetadataArchivalConfigScope
@@ -655,6 +671,8 @@ const (
 	FrontendRespondActivityTaskCanceledByIDScope
 	// FrontendGetWorkflowExecutionHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
 	FrontendGetWorkflowExecutionHistoryScope
+	// FrontendGetWorkflowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistory
+	FrontendGetWorkflowExecutionRawHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
 	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution
@@ -699,8 +717,6 @@ const (
 	FrontendResetWorkflowExecutionScope
 	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
 	FrontendGetSearchAttributesScope
-	// FrontendDomainReplicationQueueScope is the metrics scope for domain replication queue
-	FrontendDomainReplicationQueueScope
 
 	NumFrontendScopes
 )
@@ -723,6 +739,8 @@ const (
 	HistoryRespondActivityTaskCanceledScope
 	// HistoryGetMutableStateScope tracks GetMutableStateScope API calls received by service
 	HistoryGetMutableStateScope
+	// HistoryPollMutableStateScope tracks PollMutableStateScope API calls received by service
+	HistoryPollMutableStateScope
 	// HistoryResetStickyTaskListScope tracks ResetStickyTaskListScope API calls received by service
 	HistoryResetStickyTaskListScope
 	// HistoryDescribeWorkflowExecutionScope tracks DescribeWorkflowExecution API calls received by service
@@ -893,6 +911,7 @@ const (
 	ReplicationTaskFetcherScope
 	// ReplicationTaskCleanupScope is scope used by all metrics emitted by ReplicationTaskProcessor cleanup
 	ReplicationTaskCleanupScope
+
 	NumHistoryScopes
 )
 
@@ -1034,10 +1053,16 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 		PersistenceGetAllHistoryTreeBranchesScope:                {operation: "GetAllHistoryTreeBranches"},
 		PersistenceEnqueueMessageScope:                           {operation: "EnqueueMessage"},
+		PersistenceEnqueueMessageToDLQScope:                      {operation: "EnqueueMessageToDLQ"},
 		PersistenceReadQueueMessagesScope:                        {operation: "ReadQueueMessages"},
+		PersistenceReadQueueMessagesFromDLQScope:                 {operation: "ReadQueueMessagesFromDLQ"},
 		PersistenceDeleteQueueMessagesScope:                      {operation: "DeleteQueueMessages"},
+		PersistenceDeleteQueueMessageFromDLQScope:                {operation: "DeleteQueueMessageFromDLQ"},
+		PersistenceDeleteDLQMessageBeforeScope:                   {operation: "DeleteDLQMessagesBefore"},
+		PersistenceGetLastMessageIDFromDLQScope:                  {operation: "GetLastMessageIDFromDLQ"},
 		PersistenceUpdateAckLevelScope:                           {operation: "UpdateAckLevel"},
 		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},
+		PersistenceDomainReplicationQueueScope:                   {operation: "DomainReplicationQueue"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1085,6 +1110,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientDescribeTaskListScope:                 {operation: "FrontendClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientDescribeWorkflowExecutionScope:        {operation: "FrontendClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetWorkflowExecutionHistoryScope:      {operation: "FrontendClientGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
+		FrontendClientGetWorkflowExecutionRawHistoryScope:   {operation: "FrontendClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListArchivedWorkflowExecutionsScope:   {operation: "FrontendClientListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListClosedWorkflowExecutionsScope:     {operation: "FrontendClientListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListDomainsScope:                      {operation: "FrontendClientListDomains", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
@@ -1134,6 +1160,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DCRedirectionDescribeTaskListScope:                  {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeWorkflowExecutionScope:         {operation: "DCRedirectionDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionGetWorkflowExecutionHistoryScope:       {operation: "DCRedirectionGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetWorkflowExecutionRawHistoryScope:    {operation: "DCRedirectionGetWorkflowExecutionRawHistoryScope", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListArchivedWorkflowExecutionsScope:    {operation: "DCRedirectionListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListClosedWorkflowExecutionsScope:      {operation: "DCRedirectionListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListDomainsScope:                       {operation: "DCRedirectionListDomains", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1234,6 +1261,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendRespondActivityTaskFailedByIDScope:    {operation: "RespondActivityTaskFailedByID"},
 		FrontendRespondActivityTaskCanceledByIDScope:  {operation: "RespondActivityTaskCanceledByID"},
 		FrontendGetWorkflowExecutionHistoryScope:      {operation: "GetWorkflowExecutionHistory"},
+		FrontendGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
 		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
 		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
 		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
@@ -1256,7 +1284,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
-		FrontendDomainReplicationQueueScope:           {operation: "DomainReplicationQueue"},
 	},
 	// History Scope Names
 	History: {
@@ -1268,6 +1295,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRespondActivityTaskFailedScope:                  {operation: "RespondActivityTaskFailed"},
 		HistoryRespondActivityTaskCanceledScope:                {operation: "RespondActivityTaskCanceled"},
 		HistoryGetMutableStateScope:                            {operation: "GetMutableState"},
+		HistoryPollMutableStateScope:                           {operation: "PollMutableState"},
 		HistoryResetStickyTaskListScope:                        {operation: "ResetStickyTaskListScope"},
 		HistoryDescribeWorkflowExecutionScope:                  {operation: "DescribeWorkflowExecution"},
 		HistoryRecordDecisionTaskStartedScope:                  {operation: "RecordDecisionTaskStarted"},
@@ -1481,19 +1509,14 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
+	DomainReplicationTaskAckLevel
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
-)
-
-// Frontend Metrics enum
-const (
-	DomainReplicationTaskAckLevel = iota + NumCommonMetrics
-
-	NumFrontendMetrics
 )
 
 // History Metrics enum
 const (
-	TaskRequests = iota + NumFrontendMetrics
+	TaskRequests = iota + NumCommonMetrics
 	TaskLatency
 	TaskFailures
 	TaskDiscarded
@@ -1627,6 +1650,7 @@ const (
 	ReplicationTasksLag
 	ReplicationTasksFetched
 	ReplicationTasksReturned
+	ReplicationDLQFailed
 	GetReplicationMessagesForShardLatency
 	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
@@ -1647,6 +1671,8 @@ const (
 	DecisionStartToCloseTimeoutOverrideCount
 	ReplicationTaskCleanupCount
 	ReplicationTaskCleanupFailure
+	MutableStateChecksumMismatch
+	MutableStateChecksumInvalidated
 
 	NumHistoryMetrics
 )
@@ -1689,6 +1715,7 @@ const (
 	ReplicatorFailures
 	ReplicatorMessagesDropped
 	ReplicatorLatency
+	ReplicatorDLQFailures
 	ESProcessorRequests
 	ESProcessorRetries
 	ESProcessorFailures
@@ -1820,8 +1847,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
-	},
-	Frontend: {
+
 		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
 	},
 	History: {
@@ -1958,6 +1984,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
 		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
+		ReplicationDLQFailed:                              {metricName: "replication_dlq_enqueue_failed", metricType: Counter},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		GetDLQReplicationMessagesLatency:                  {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
@@ -1978,6 +2005,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
 		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
 		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
+		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
+		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
@@ -2012,6 +2041,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicatorFailures:                            {metricName: "replicator_errors"},
 		ReplicatorMessagesDropped:                     {metricName: "replicator_messages_dropped"},
 		ReplicatorLatency:                             {metricName: "replicator_latency"},
+		ReplicatorDLQFailures:                         {metricName: "replicator_dlq_enqueue_fails", metricType: Counter},
 		ESProcessorRequests:                           {metricName: "es_processor_requests"},
 		ESProcessorRetries:                            {metricName: "es_processor_retries"},
 		ESProcessorFailures:                           {metricName: "es_processor_errors"},

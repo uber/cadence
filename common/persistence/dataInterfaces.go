@@ -25,9 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/checksum"
+
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
@@ -631,6 +632,7 @@ type (
 		ReplicationState    *ReplicationState
 		BufferedEvents      []*workflow.HistoryEvent
 		VersionHistories    *VersionHistories
+		Checksum            checksum.Checksum
 	}
 
 	// ActivityInfo details.
@@ -881,6 +883,7 @@ type (
 		TimerTasks       []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// WorkflowSnapshot is used as generic workflow execution state snapshot
@@ -902,6 +905,7 @@ type (
 		TimerTasks       []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -1544,15 +1548,6 @@ type (
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 		ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error)
 		GetMetadata() (*GetMetadataResponse, error)
-	}
-
-	// DomainReplicationQueue is used to publish and list domain replication tasks
-	DomainReplicationQueue interface {
-		Closeable
-		Publish(message interface{}) error
-		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
-		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
-		GetAckLevels() (map[string]int, error)
 	}
 )
 
