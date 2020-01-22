@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
-	task "github.com/uber/cadence/common/task"
 )
 
 type (
@@ -73,12 +72,6 @@ type (
 		GetWorkflowID() string
 		GetRunID() string
 		GetDomainID() string
-	}
-
-	queueTask interface {
-		task.Task
-		Info() queueTaskInfo
-		Key() taskKey
 	}
 
 	taskExecutor interface {
