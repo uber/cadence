@@ -32,6 +32,7 @@ import (
 )
 
 type (
+	// PriorityTaskProcessorOptions configs PriorityTaskProcessor
 	PriorityTaskProcessorOptions struct {
 		WorkerCount int
 		RetryPolicy backoff.RetryPolicy
@@ -48,6 +49,7 @@ type (
 	}
 )
 
+// NewPriorityTaskProcessor creates a new PriorityTaskProcessor
 func NewPriorityTaskProcessor(
 	scheduler PriorityScheduler,
 	logger log.Logger,

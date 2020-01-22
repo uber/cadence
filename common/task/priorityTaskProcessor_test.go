@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -53,8 +54,8 @@ const (
 )
 
 var (
-	testRetryableError    = errors.New("retryable error")
-	testNonRetryableError = errors.New("non-retryable error")
+	errRetryable    = errors.New("retryable error")
+	errNonRetryable = errors.New("non-retryable error")
 )
 
 func TestPriorityTaskProcessorSuite(t *testing.T) {
@@ -116,12 +117,12 @@ func (s *priorityTaskProcessorSuite) TestTaskWorker() {
 func (s *priorityTaskProcessorSuite) TestExecuteTask_RetryableError() {
 	mockTask := NewMockTask(s.controller)
 	gomock.InOrder(
-		mockTask.EXPECT().Execute().Return(testRetryableError),
-		mockTask.EXPECT().HandleErr(testRetryableError).Return(testRetryableError),
-		mockTask.EXPECT().RetryErr(testRetryableError).Return(true),
-		mockTask.EXPECT().Execute().Return(testRetryableError),
-		mockTask.EXPECT().HandleErr(testRetryableError).Return(testRetryableError),
-		mockTask.EXPECT().RetryErr(testRetryableError).Return(true),
+		mockTask.EXPECT().Execute().Return(errRetryable),
+		mockTask.EXPECT().HandleErr(errRetryable).Return(errRetryable),
+		mockTask.EXPECT().RetryErr(errRetryable).Return(true),
+		mockTask.EXPECT().Execute().Return(errRetryable),
+		mockTask.EXPECT().HandleErr(errRetryable).Return(errRetryable),
+		mockTask.EXPECT().RetryErr(errRetryable).Return(true),
 		mockTask.EXPECT().Execute().Return(nil),
 		mockTask.EXPECT().Ack(),
 	)
@@ -132,9 +133,9 @@ func (s *priorityTaskProcessorSuite) TestExecuteTask_RetryableError() {
 func (s *priorityTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
 	mockTask := NewMockTask(s.controller)
 	gomock.InOrder(
-		mockTask.EXPECT().Execute().Return(testNonRetryableError),
-		mockTask.EXPECT().HandleErr(testNonRetryableError).Return(testNonRetryableError),
-		mockTask.EXPECT().RetryErr(testNonRetryableError).Return(false).AnyTimes(),
+		mockTask.EXPECT().Execute().Return(errNonRetryable),
+		mockTask.EXPECT().HandleErr(errNonRetryable).Return(errNonRetryable),
+		mockTask.EXPECT().RetryErr(errNonRetryable).Return(false).AnyTimes(),
 		mockTask.EXPECT().Nack(),
 	)
 
@@ -143,9 +144,9 @@ func (s *priorityTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
 
 func (s *priorityTaskProcessorSuite) TestExecuteTask_ProcessorStopped() {
 	mockTask := NewMockTask(s.controller)
-	mockTask.EXPECT().Execute().Return(testRetryableError).AnyTimes()
-	mockTask.EXPECT().HandleErr(testRetryableError).Return(testRetryableError).AnyTimes()
-	mockTask.EXPECT().RetryErr(testRetryableError).Return(true).AnyTimes()
+	mockTask.EXPECT().Execute().Return(errRetryable).AnyTimes()
+	mockTask.EXPECT().HandleErr(errRetryable).Return(errRetryable).AnyTimes()
+	mockTask.EXPECT().RetryErr(errRetryable).Return(true).AnyTimes()
 
 	done := make(chan struct{})
 	go func() {
