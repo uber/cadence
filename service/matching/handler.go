@@ -71,7 +71,7 @@ func NewHandler(
 		engine: NewEngine(
 			resource.GetTaskManager(),
 			resource.GetHistoryClient(),
-			resource.GetMatchingClient(),
+			resource.GetMatchingRawClient(),
 			config,
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
