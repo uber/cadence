@@ -43,14 +43,16 @@ import (
 )
 
 const (
-	testDomainID             = "test-domain-id"
-	testDomainName           = "test-domain-name"
-	testWorkflowID           = "test-workflow-id"
-	testRunID                = "test-run-id"
-	testNextEventID          = 1800
-	testCloseFailoverVersion = 100
-	testPageSize             = 100
-	exampleHistoryRecord     = `[{"events":[{"eventId":1,"timestamp":1576800090315103000,"eventType":"WorkflowExecutionStarted","version":-24,"taskId":5242897,"workflowExecutionStartedEventAttributes":{"workflowType":{"name":"MobileOnlyWorkflow::processMobileOnly"},"taskList":{"name":"MobileOnly"},"input":"eyJkbmkiOiI0ODY5NGJmZi04MTU2LTRjZDEtYTYzZi0wZTM0ZDBlYzljMWEiLCJjYXRlZ29yeSI6InVwZGF0ZV9jbGllbnQiLCJhZ2UiOjE4LCJzY29yZSI6MCwic3RhdHVzIjoicGVuZGluZyIsImRlc2NyaXB0aW9uIjoiTG9yZW0gSXBzdW0gaXMgc2ltcGx5IGR1bW15IHRleHQgb2YgdGhlIHByaW50aW5nIGFuZCB0eXBlc2V0dGluZyBpbmR1c3RyeS4gTG9yZW0gSXBzdW0gaGFzIGJlZW4gdGhlIGluZHVzdHJ5XHUwMDI3cyBzdGFuZGFyZCBkdW1teSB0ZXh0IGV2ZXIgc2luY2UgdGhlIDE1MDBzLCB3aGVuIGFuIHVua25vd24gcHJpbnRlciB0b29rIGEgZ2FsbGV5IG9mIHR5cGUgYW5kIHNjcmFtYmxlZCBpdCB0byBtYWtlIGEgdHlwZSBzcGVjaW1lbiBib29rLkl0IGhhcyBzdXJ2aXZlZCBub3Qgb25seSBmaXZlIGNlbnR1cmllcywgYnV0IGFsc28gdGhlIGxlYXAgaW50byBlbGVjdHJvbmljIHR5cGVzZXR0aW5nLCByZW1haW5pbmcgZXNzZW50aWFsbHkgdW5jaGFuZ2VkLkl0IHdhcyBwb3B1bGFyaXNlZCBpbiB0aGUgMTk2MHMgd2l0aCB0aGUgcmVsZWFzZSBvZiBMZXRyYXNldCBzaGVldHMgY29udGFpbmluZyBMb3JlbSBJcHN1bSBwYXNzYWdlcywgYW5kIG1vcmUgcmVjZW50bHkgd2l0aCBkZXNrdG9wIHB1Ymxpc2hpbmcgc29mdHdhcmUgbGlrZSBBbGR1cyBQYWdlTWFrZXIgaW5jbHVkaW5nIHZlcnNpb25zIG9mIExvcmVtIElwc3VtLkl0IGlzIGEgbG9uZyBlc3RhYmxpc2hlZCBmYWN0IHRoYXQgYSByZWFkZXIgd2lsbCBiZSBkaXN0cmFjdGVkIGJ5IHRoZSByZWFkYWJsZSBjb250ZW50IG9mIGEgcGFnZSB3aGVuIGxvb2tpbmcgYXQgaXRzIGxheW91dC4gVGhlIHBvaW50IG9mIHVzaW5nIExvcmVtIElwc3VtIGlzIHRoYXQgaXQgaGFzIGEgbW9yZS1vci1sZXNzIG5vcm1hbCBkaXN0cmlidXRpb24gb2YgbGV0dGVycywgYXMgb3Bwb3NlZCB0byB1c2luZyBcdTAwMjdDb250ZW50IGhlcmUsIGNvbnRlbnQgaGVyZVx1MDAyNywgbWFraW5nIGl0IGxvb2sgbGlrZSByZWFkYWJsZSBFbmdsaXNoLiJ9","executionStartToCloseTimeoutSeconds":300,"taskStartToCloseTimeoutSeconds":60,"originalExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","identity":"","firstExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","attempt":0,"firstDecisionTaskBackoffSeconds":0}}]}]`
+	testDomainID                  = "test-domain-id"
+	testDomainName                = "test-domain-name"
+	testWorkflowID                = "test-workflow-id"
+	testRunID                     = "test-run-id"
+	testNextEventID               = 1800
+	testCloseFailoverVersion      = 100
+	testPageSize                  = 100
+	exampleHistoryRecord          = `[{"events":[{"eventId":1,"timestamp":1576800090315103000,"eventType":"WorkflowExecutionStarted","version":-24,"taskId":5242897,"workflowExecutionStartedEventAttributes":{"workflowType":{"name":"MobileOnlyWorkflow::processMobileOnly"},"taskList":{"name":"MobileOnly"},"input":"eyJkbmkiOiI0ODY5NGJmZi04MTU2LTRjZDEtYTYzZi0wZTM0ZDBlYzljMWEiLCJjYXRlZ29yeSI6InVwZGF0ZV9jbGllbnQiLCJhZ2UiOjE4LCJzY29yZSI6MCwic3RhdHVzIjoicGVuZGluZyIsImRlc2NyaXB0aW9uIjoiTG9yZW0gSXBzdW0gaXMgc2ltcGx5IGR1bW15IHRleHQgb2YgdGhlIHByaW50aW5nIGFuZCB0eXBlc2V0dGluZyBpbmR1c3RyeS4gTG9yZW0gSXBzdW0gaGFzIGJlZW4gdGhlIGluZHVzdHJ5XHUwMDI3cyBzdGFuZGFyZCBkdW1teSB0ZXh0IGV2ZXIgc2luY2UgdGhlIDE1MDBzLCB3aGVuIGFuIHVua25vd24gcHJpbnRlciB0b29rIGEgZ2FsbGV5IG9mIHR5cGUgYW5kIHNjcmFtYmxlZCBpdCB0byBtYWtlIGEgdHlwZSBzcGVjaW1lbiBib29rLkl0IGhhcyBzdXJ2aXZlZCBub3Qgb25seSBmaXZlIGNlbnR1cmllcywgYnV0IGFsc28gdGhlIGxlYXAgaW50byBlbGVjdHJvbmljIHR5cGVzZXR0aW5nLCByZW1haW5pbmcgZXNzZW50aWFsbHkgdW5jaGFuZ2VkLkl0IHdhcyBwb3B1bGFyaXNlZCBpbiB0aGUgMTk2MHMgd2l0aCB0aGUgcmVsZWFzZSBvZiBMZXRyYXNldCBzaGVldHMgY29udGFpbmluZyBMb3JlbSBJcHN1bSBwYXNzYWdlcywgYW5kIG1vcmUgcmVjZW50bHkgd2l0aCBkZXNrdG9wIHB1Ymxpc2hpbmcgc29mdHdhcmUgbGlrZSBBbGR1cyBQYWdlTWFrZXIgaW5jbHVkaW5nIHZlcnNpb25zIG9mIExvcmVtIElwc3VtLkl0IGlzIGEgbG9uZyBlc3RhYmxpc2hlZCBmYWN0IHRoYXQgYSByZWFkZXIgd2lsbCBiZSBkaXN0cmFjdGVkIGJ5IHRoZSByZWFkYWJsZSBjb250ZW50IG9mIGEgcGFnZSB3aGVuIGxvb2tpbmcgYXQgaXRzIGxheW91dC4gVGhlIHBvaW50IG9mIHVzaW5nIExvcmVtIElwc3VtIGlzIHRoYXQgaXQgaGFzIGEgbW9yZS1vci1sZXNzIG5vcm1hbCBkaXN0cmlidXRpb24gb2YgbGV0dGVycywgYXMgb3Bwb3NlZCB0byB1c2luZyBcdTAwMjdDb250ZW50IGhlcmUsIGNvbnRlbnQgaGVyZVx1MDAyNywgbWFraW5nIGl0IGxvb2sgbGlrZSByZWFkYWJsZSBFbmdsaXNoLiJ9","executionStartToCloseTimeoutSeconds":300,"taskStartToCloseTimeoutSeconds":60,"originalExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","identity":"","firstExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","attempt":0,"firstDecisionTaskBackoffSeconds":0}}]}]`
+	twoEventsExampleHistoryRecord = `[{"events":[{"eventId":1,"timestamp":1576800090315103000,"eventType":"WorkflowExecutionStarted","version":-24,"taskId":5242897,"workflowExecutionStartedEventAttributes":{"workflowType":{"name":"MobileOnlyWorkflow::processMobileOnly"},"taskList":{"name":"MobileOnly"},"input":"eyJkbmkiOiI0ODY5NGJmZi04MTU2LTRjZDEtYTYzZi0wZTM0ZDBlYzljMWEiLCJjYXRlZ29yeSI6InVwZGF0ZV9jbGllbnQiLCJhZ2UiOjE4LCJzY29yZSI6MCwic3RhdHVzIjoicGVuZGluZyIsImRlc2NyaXB0aW9uIjoiTG9yZW0gSXBzdW0gaXMgc2ltcGx5IGR1bW15IHRleHQgb2YgdGhlIHByaW50aW5nIGFuZCB0eXBlc2V0dGluZyBpbmR1c3RyeS4gTG9yZW0gSXBzdW0gaGFzIGJlZW4gdGhlIGluZHVzdHJ5XHUwMDI3cyBzdGFuZGFyZCBkdW1teSB0ZXh0IGV2ZXIgc2luY2UgdGhlIDE1MDBzLCB3aGVuIGFuIHVua25vd24gcHJpbnRlciB0b29rIGEgZ2FsbGV5IG9mIHR5cGUgYW5kIHNjcmFtYmxlZCBpdCB0byBtYWtlIGEgdHlwZSBzcGVjaW1lbiBib29rLkl0IGhhcyBzdXJ2aXZlZCBub3Qgb25seSBmaXZlIGNlbnR1cmllcywgYnV0IGFsc28gdGhlIGxlYXAgaW50byBlbGVjdHJvbmljIHR5cGVzZXR0aW5nLCByZW1haW5pbmcgZXNzZW50aWFsbHkgdW5jaGFuZ2VkLkl0IHdhcyBwb3B1bGFyaXNlZCBpbiB0aGUgMTk2MHMgd2l0aCB0aGUgcmVsZWFzZSBvZiBMZXRyYXNldCBzaGVldHMgY29udGFpbmluZyBMb3JlbSBJcHN1bSBwYXNzYWdlcywgYW5kIG1vcmUgcmVjZW50bHkgd2l0aCBkZXNrdG9wIHB1Ymxpc2hpbmcgc29mdHdhcmUgbGlrZSBBbGR1cyBQYWdlTWFrZXIgaW5jbHVkaW5nIHZlcnNpb25zIG9mIExvcmVtIElwc3VtLkl0IGlzIGEgbG9uZyBlc3RhYmxpc2hlZCBmYWN0IHRoYXQgYSByZWFkZXIgd2lsbCBiZSBkaXN0cmFjdGVkIGJ5IHRoZSByZWFkYWJsZSBjb250ZW50IG9mIGEgcGFnZSB3aGVuIGxvb2tpbmcgYXQgaXRzIGxheW91dC4gVGhlIHBvaW50IG9mIHVzaW5nIExvcmVtIElwc3VtIGlzIHRoYXQgaXQgaGFzIGEgbW9yZS1vci1sZXNzIG5vcm1hbCBkaXN0cmlidXRpb24gb2YgbGV0dGVycywgYXMgb3Bwb3NlZCB0byB1c2luZyBcdTAwMjdDb250ZW50IGhlcmUsIGNvbnRlbnQgaGVyZVx1MDAyNywgbWFraW5nIGl0IGxvb2sgbGlrZSByZWFkYWJsZSBFbmdsaXNoLiJ9","executionStartToCloseTimeoutSeconds":300,"taskStartToCloseTimeoutSeconds":60,"originalExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","identity":"","firstExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","attempt":0,"firstDecisionTaskBackoffSeconds":0}}, 
+	{"eventId":2,"timestamp":1576800090315103000,"eventType":"WorkflowExecutionStarted","version":-24,"taskId":5242897,"workflowExecutionStartedEventAttributes":{"workflowType":{"name":"MobileOnlyWorkflow::processMobileOnly"},"taskList":{"name":"MobileOnly"},"input":"eyJkbmkiOiI0ODY5NGJmZi04MTU2LTRjZDEtYTYzZi0wZTM0ZDBlYzljMWEiLCJjYXRlZ29yeSI6InVwZGF0ZV9jbGllbnQiLCJhZ2UiOjE4LCJzY29yZSI6MCwic3RhdHVzIjoicGVuZGluZyIsImRlc2NyaXB0aW9uIjoiTG9yZW0gSXBzdW0gaXMgc2ltcGx5IGR1bW15IHRleHQgb2YgdGhlIHByaW50aW5nIGFuZCB0eXBlc2V0dGluZyBpbmR1c3RyeS4gTG9yZW0gSXBzdW0gaGFzIGJlZW4gdGhlIGluZHVzdHJ5XHUwMDI3cyBzdGFuZGFyZCBkdW1teSB0ZXh0IGV2ZXIgc2luY2UgdGhlIDE1MDBzLCB3aGVuIGFuIHVua25vd24gcHJpbnRlciB0b29rIGEgZ2FsbGV5IG9mIHR5cGUgYW5kIHNjcmFtYmxlZCBpdCB0byBtYWtlIGEgdHlwZSBzcGVjaW1lbiBib29rLkl0IGhhcyBzdXJ2aXZlZCBub3Qgb25seSBmaXZlIGNlbnR1cmllcywgYnV0IGFsc28gdGhlIGxlYXAgaW50byBlbGVjdHJvbmljIHR5cGVzZXR0aW5nLCByZW1haW5pbmcgZXNzZW50aWFsbHkgdW5jaGFuZ2VkLkl0IHdhcyBwb3B1bGFyaXNlZCBpbiB0aGUgMTk2MHMgd2l0aCB0aGUgcmVsZWFzZSBvZiBMZXRyYXNldCBzaGVldHMgY29udGFpbmluZyBMb3JlbSBJcHN1bSBwYXNzYWdlcywgYW5kIG1vcmUgcmVjZW50bHkgd2l0aCBkZXNrdG9wIHB1Ymxpc2hpbmcgc29mdHdhcmUgbGlrZSBBbGR1cyBQYWdlTWFrZXIgaW5jbHVkaW5nIHZlcnNpb25zIG9mIExvcmVtIElwc3VtLkl0IGlzIGEgbG9uZyBlc3RhYmxpc2hlZCBmYWN0IHRoYXQgYSByZWFkZXIgd2lsbCBiZSBkaXN0cmFjdGVkIGJ5IHRoZSByZWFkYWJsZSBjb250ZW50IG9mIGEgcGFnZSB3aGVuIGxvb2tpbmcgYXQgaXRzIGxheW91dC4gVGhlIHBvaW50IG9mIHVzaW5nIExvcmVtIElwc3VtIGlzIHRoYXQgaXQgaGFzIGEgbW9yZS1vci1sZXNzIG5vcm1hbCBkaXN0cmlidXRpb24gb2YgbGV0dGVycywgYXMgb3Bwb3NlZCB0byB1c2luZyBcdTAwMjdDb250ZW50IGhlcmUsIGNvbnRlbnQgaGVyZVx1MDAyNywgbWFraW5nIGl0IGxvb2sgbGlrZSByZWFkYWJsZSBFbmdsaXNoLiJ9","executionStartToCloseTimeoutSeconds":300,"taskStartToCloseTimeoutSeconds":60,"originalExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","identity":"","firstExecutionRunId":"1fd5d4c8-1590-4a0a-8027-535e8729de8e","attempt":0,"firstDecisionTaskBackoffSeconds":0}}]}]`
 )
 
 var (
@@ -508,15 +510,18 @@ func (h *historyArchiverSuite) TestGet_Success_FromToken() {
 	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_0.history").Return([]byte(exampleHistoryRecord), nil)
 	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_1.history").Return([]byte(exampleHistoryRecord), nil)
 	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_2.history").Return([]byte(exampleHistoryRecord), nil)
-	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_3.history").Return([]byte(exampleHistoryRecord), nil)
+	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_3.history").Return([]byte(twoEventsExampleHistoryRecord), nil)
+	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_4.history").Return([]byte(exampleHistoryRecord), nil)
+	storageWrapper.On("Get", ctx, URI, "71817125141568232911739672280485489488911532452831150339470_-24_5.history").Return([]byte(exampleHistoryRecord), nil)
 
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
 
 	token := &getHistoryToken{
 		CloseFailoverVersion: -24,
-		HighestPart:          3,
-		NextBatchIdx:         2,
+		HighestPart:          5,
+		CurrentPart:          2,
+		BatchIdxOffset:       0,
 	}
 
 	nextPageToken, err := serializeToken(token)
@@ -533,6 +538,12 @@ func (h *historyArchiverSuite) TestGet_Success_FromToken() {
 	h.NoError(err)
 	response, err := historyArchiver.Get(ctx, URI, request)
 	h.NoError(err)
-	h.Nil(response.NextPageToken)
-	h.EqualValues(len(response.HistoryBatches), 2)
+	h.NotNil(response.NextPageToken)
+
+	token, err = deserializeGetHistoryToken(response.NextPageToken)
+	h.NoError(err)
+
+	h.EqualValues(5, token.HighestPart)
+	h.EqualValues(4, token.CurrentPart)
+	h.EqualValues(2, len(response.HistoryBatches))
 }

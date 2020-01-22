@@ -105,7 +105,7 @@ func (s *utilSuite) TestconstructHistoryFilename() {
 func (s *utilSuite) TestSerializeDeserializeGetHistoryToken() {
 	token := &getHistoryToken{
 		CloseFailoverVersion: 101,
-		NextBatchIdx:         20,
+		BatchIdxOffset:       20,
 	}
 
 	serializedToken, err := serializeToken(token)
