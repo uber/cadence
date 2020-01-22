@@ -170,42 +170,35 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 		return nil, ErrBootstrapContainerNotFound
 	}
 
+	var visibilityArchiver archiver.VisibilityArchiver
+	var err error
+
 	switch scheme {
 	case filestore.URIScheme:
 		if p.visibilityArchiverConfigs.Filestore == nil {
 			return nil, ErrArchiverConfigNotFound
 		}
-		visibilityArchiver, err := filestore.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.Filestore)
-		if err != nil {
-			return nil, err
-		}
-
-		p.Lock()
-		defer p.Unlock()
-		if existingVisibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
-			return existingVisibilityArchiver, nil
-		}
-		p.visibilityArchivers[archiverKey] = visibilityArchiver
-		return visibilityArchiver, nil
-
+		visibilityArchiver, err = filestore.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.Filestore)
 	case s3store.URIScheme:
 		if p.visibilityArchiverConfigs.S3store == nil {
 			return nil, ErrArchiverConfigNotFound
 		}
-		visibilityArchiver, err := s3store.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.S3store)
-		if err != nil {
-			return nil, err
-		}
-
-		p.Lock()
-		defer p.Unlock()
-		if existingVisibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
-			return existingVisibilityArchiver, nil
-		}
-		p.visibilityArchivers[archiverKey] = visibilityArchiver
-		return visibilityArchiver, nil
+		visibilityArchiver, err = s3store.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.S3store)
+	default:
+		return nil, ErrUnknownScheme
 	}
-	return nil, ErrUnknownScheme
+	if err != nil {
+		return nil, err
+	}
+
+	p.Lock()
+	defer p.Unlock()
+	if existingVisibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
+		return existingVisibilityArchiver, nil
+	}
+	p.visibilityArchivers[archiverKey] = visibilityArchiver
+	return visibilityArchiver, nil
+
 }
 
 func (p *archiverProvider) getArchiverKey(scheme, serviceName string) string {

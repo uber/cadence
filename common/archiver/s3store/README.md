@@ -1,4 +1,33 @@
 # Amazon S3 blobstore
+## Visibility query syntax
+You can query the visibility store by using the `cadence workflow listarchived` command
+
+The syntax for the query is based on SQL
+
+Supported column names are
+- WorkflowID *String*
+- StartTime *Date*
+- CloseTime *Date*
+- SearchPrecision *String - Day, Hour, Minute, Second*
+
+WorkflowID and SearchPrecision are always required. One of StartTime and CloseTime are required and they are mutually exclusive.
+
+Searching for a record should always be done in the UTC timezone
+
+Example:
+
+*Searches for all records done in day 2020-01-21 with the specified workflow id*
+
+`./cadence --do samples-domain workflow listarchived -q "StartTime = '2020-01-21T00:00:00Z' AND WorkflowID='workflow-id' AND SearchPrecision='Day'"`
+## Storage in S3
+Workflow runs are stored in s3 using the following structure
+```
+s3://<bucket-name>/<domain-id>/<workflow-id>/
+	history/<run-id>
+	visibility/
+		startTimeout/2020-01-21T16:16:11Z/<run-id>
+		closeTimeout/2020-01-21T16:16:11Z/<run-id>
+```
 
 ## Using localstack for local development
 1. Install awscli from [here][https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html]

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +24,13 @@ package s3store
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/common/metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -50,7 +53,7 @@ const (
 	errBucketNotExists      = "requested bucket does not exist"
 	errEncodeHistory        = "failed to encode history batches"
 	errWriteKey             = "failed to write history to s3"
-	defaultBlobstoreTimeout = 10 * time.Second
+	defaultBlobstoreTimeout = 60 * time.Second
 	targetHistoryBlobSize   = 2 * 1024 * 1024 // 2MB
 )
 
@@ -115,10 +118,20 @@ func (h *historyArchiver) Archive(
 ) (err error) {
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
+	scope := h.container.MetricsClient.Scope(metrics.HistoryArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
+	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
-		if err != nil && !common.IsPersistenceTransientError(err) && !isRetryableError(err) && featureCatalog.NonRetriableError != nil {
-			err = featureCatalog.NonRetriableError()
+		sw.Stop()
+		if err != nil {
+			if common.IsPersistenceTransientError(err) || isRetryableError(err) {
+				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
+			} else {
+				scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
+				if featureCatalog.NonRetriableError != nil {
+					err = featureCatalog.NonRetriableError()
+				}
+			}
 		}
 	}()
 
@@ -126,12 +139,12 @@ func (h *historyArchiver) Archive(
 
 	if err := h.ValidateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
-		return err
+		return &shared.BadRequestError{Message: err.Error()}
 	}
 
 	if err := archiver.ValidateHistoryArchiveRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
-		return err
+		return &shared.BadRequestError{Message: err.Error()}
 	}
 
 	historyIterator := h.historyIterator
@@ -172,6 +185,10 @@ func (h *historyArchiver) Archive(
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
 		return err
 	}
+	totalUploadSize := int64(binary.Size(encodedHistoryBatches))
+	scope.AddCounter(metrics.HistoryArchiverTotalUploadSize, totalUploadSize)
+	scope.AddCounter(metrics.HistoryArchiverHistorySize, totalUploadSize)
+	scope.IncCounter(metrics.HistoryArchiverArchiveSuccessCount)
 
 	return nil
 }
@@ -181,6 +198,8 @@ func (h *historyArchiver) Get(
 	URI archiver.URI,
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	if err := h.ValidateURI(URI); err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}

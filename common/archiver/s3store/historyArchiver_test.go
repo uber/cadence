@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/uber-go/tally"
+
+	"github.com/uber/cadence/common/metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -97,10 +101,12 @@ func (s *historyArchiverSuite) TearDownSuite() {
 }
 
 func (s *historyArchiverSuite) SetupTest() {
+	scope := tally.NewTestScope("test", nil)
 	s.Assertions = require.New(s.T())
 	zapLogger := zap.NewNop()
 	s.container = &archiver.HistoryBootstrapContainer{
-		Logger: loggerimpl.NewLogger(zapLogger),
+		Logger:        loggerimpl.NewLogger(zapLogger),
+		MetricsClient: metrics.NewClient(scope, metrics.HistoryArchiverScope),
 	}
 }
 

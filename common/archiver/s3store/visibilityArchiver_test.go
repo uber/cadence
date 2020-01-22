@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,10 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/uber-go/tally"
+
+	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/zap"
 
@@ -106,7 +110,7 @@ const (
 
 func (s *visibilityArchiverSuite) SetupSuite() {
 	var err error
-
+	scope := tally.NewTestScope("test", nil)
 	s.s3cli = &mocks.S3API{}
 	setupFsEmulation(s.s3cli)
 
@@ -115,7 +119,8 @@ func (s *visibilityArchiverSuite) SetupSuite() {
 
 	zapLogger := zap.NewNop()
 	s.container = &archiver.VisibilityBootstrapContainer{
-		Logger: loggerimpl.NewLogger(zapLogger),
+		Logger:        loggerimpl.NewLogger(zapLogger),
+		MetricsClient: metrics.NewClient(scope, metrics.VisibilityArchiverScope),
 	}
 	s.setupVisibilityDirectory()
 }
@@ -188,7 +193,7 @@ func (s *visibilityArchiverSuite) TestArchive_Success() {
 		HistoryLength:      int64(101),
 		Memo: &shared.Memo{
 			Fields: map[string][]byte{
-				"testFields": []byte{1, 2, 3},
+				"testFields": {1, 2, 3},
 			},
 		},
 		SearchAttributes: map[string]string{

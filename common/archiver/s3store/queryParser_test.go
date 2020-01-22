@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ func (s *queryParserSuite) SetupTest() {
 	s.parser = NewQueryParser()
 }
 
-func (s *queryParserSuite) TestParseWorkflowID_RunID() {
+func (s *queryParserSuite) TestParseWorkflowID() {
 	testCases := []struct {
 		query       string
 		expectErr   bool
@@ -77,11 +77,10 @@ func (s *queryParserSuite) TestParseWorkflowID_RunID() {
 			},
 		},
 		{
-			query:     "(WorkflowID = \"random workflowID\" and RunID='random runID')",
+			query:     "(WorkflowID = \"random workflowID\")",
 			expectErr: false,
 			parsedQuery: &parsedQuery{
 				workflowID: common.StringPtr("random workflowID"),
-				runID:      common.StringPtr("random runID"),
 			},
 		},
 		{
@@ -116,7 +115,6 @@ func (s *queryParserSuite) TestParseWorkflowID_RunID() {
 		s.Equal(tc.parsedQuery.emptyResult, parsedQuery.emptyResult)
 		if !tc.parsedQuery.emptyResult {
 			s.Equal(tc.parsedQuery.workflowID, parsedQuery.workflowID)
-			s.Equal(tc.parsedQuery.runID, parsedQuery.runID)
 		}
 	}
 }

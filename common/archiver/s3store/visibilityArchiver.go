@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/uber/cadence/common/metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -93,12 +95,21 @@ func (v *visibilityArchiver) Archive(
 	request *archiver.ArchiveVisibilityRequest,
 	opts ...archiver.ArchiveOption,
 ) (err error) {
-
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+	scope := v.container.MetricsClient.Scope(metrics.VisibilityArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
+	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
+		sw.Stop()
 		if err != nil {
-			if featureCatalog.NonRetriableError != nil && !isRetryableError(err) {
-				err = featureCatalog.NonRetriableError()
+			if isRetryableError(err) {
+				scope.IncCounter(metrics.VisibilityArchiverArchiveTransientErrorCount)
+			} else {
+				scope.IncCounter(metrics.VisibilityArchiverArchiveNonRetryableErrorCount)
+				if featureCatalog.NonRetriableError != nil {
+					err = featureCatalog.NonRetriableError()
+				}
 			}
 		}
 	}()
@@ -107,12 +118,12 @@ func (v *visibilityArchiver) Archive(
 
 	if err := v.ValidateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
-		return err
+		return &shared.BadRequestError{Message: err.Error()}
 	}
 
 	if err := archiver.ValidateVisibilityArchivalRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
-		return err
+		return &shared.BadRequestError{Message: err.Error()}
 	}
 
 	encodedVisibilityRecord, err := encode(request)
@@ -132,6 +143,7 @@ func (v *visibilityArchiver) Archive(
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
 		return err
 	}
+	scope.IncCounter(metrics.VisibilityArchiveSuccessCount)
 	return nil
 }
 

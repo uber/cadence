@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,6 @@ type (
 
 	parsedQuery struct {
 		workflowID      *string
-		runID           *string
 		startTime       *int64
 		closeTime       *int64
 		searchPrecision *string
@@ -54,7 +53,6 @@ type (
 // All allowed fields for filtering
 const (
 	WorkflowID      = "WorkflowID"
-	RunID           = "RunID"
 	StartTime       = "StartTime"
 	CloseTime       = "CloseTime"
 	SearchPrecision = "SearchPrecision"
@@ -158,19 +156,6 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return nil
 		}
 		parsedQuery.workflowID = common.StringPtr(val)
-	case RunID:
-		val, err := extractStringValue(valStr)
-		if err != nil {
-			return err
-		}
-		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", RunID)
-		}
-		if parsedQuery.runID != nil && *parsedQuery.runID != val {
-			parsedQuery.emptyResult = true
-			return nil
-		}
-		parsedQuery.runID = common.StringPtr(val)
 	case CloseTime:
 		timestamp, err := convertToTimestamp(valStr)
 		if err != nil {
