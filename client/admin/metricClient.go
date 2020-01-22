@@ -314,13 +314,13 @@ func (c *metricClient) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) error {
 
-	c.metricsClient.IncCounter(metrics.FrontendRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
-	sw := c.metricsClient.StartTimer(metrics.FrontendRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
+	c.metricsClient.IncCounter(metrics.AdminRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.AdminRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
 	err := c.client.RefreshWorkflowTasks(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.AdminRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
 	}
 	return err
 }

@@ -2929,6 +2929,11 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	if err != nil {
 		return err
 	}
+
+	if !mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
+
 	mutableStateTaskRefresher := newMutableStateTaskRefresher(
 		e.shard.GetConfig(),
 		e.shard.GetDomainCache(),
@@ -2943,7 +2948,14 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 
-	_, _, err = mutableState.CloseTransactionAsMutation(now, transactionPolicyPassive)
+	err = context.updateWorkflowExecutionWithNew(
+		now,
+		persistence.UpdateWorkflowModeUpdateCurrent,
+		nil,
+		nil,
+		transactionPolicyActive,
+		nil,
+	)
 	if err != nil {
 		return err
 	}

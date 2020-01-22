@@ -647,6 +647,8 @@ const (
 	AdminGetDLQReplicationMessagesScope
 	// AdminReapplyEventsScope is the metric scope for admin.ReapplyEvents
 	AdminReapplyEventsScope
+	// AdminRefreshWorkflowTasksScope is the metric scope for admin.RefreshWorkflowTasks
+	AdminRefreshWorkflowTasksScope
 	// AdminRemoveTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminRemoveTaskScope
 	//AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
@@ -1181,6 +1183,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryV2Scope:    {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeClusterScope:                     {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminRefreshWorkflowTasksScope:                      {operation: "AdminRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientCloseShardScope:                          {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientReadDLQMessagesScope:                     {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientPurgeDLQMessagesScope:                    {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
@@ -1280,6 +1283,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
 		AdminGetDLQReplicationMessagesScope:        {operation: "AdminGetDLQReplicationMessages"},
 		AdminReapplyEventsScope:                    {operation: "ReapplyEvents"},
+		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
 
 		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},

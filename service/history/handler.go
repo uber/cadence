@@ -1619,8 +1619,8 @@ func (h *Handler) RefreshWorkflowTasks(
 	defer sw.Stop()
 
 	domainID := request.GetDomainUIID()
-	workflowID := request.GetRequest().GetExecution().GetWorkflowId()
 	execution := request.GetRequest().GetExecution()
+	workflowID := execution.GetWorkflowId()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
 		return h.error(err, scope, domainID, workflowID)
@@ -1636,7 +1636,7 @@ func (h *Handler) RefreshWorkflowTasks(
 	)
 
 	if err != nil {
-		return err
+		return h.error(err, scope, domainID, workflowID)
 	}
 
 	return nil
