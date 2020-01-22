@@ -71,7 +71,7 @@ func NewHandler(
 		engine: NewEngine(
 			resource.GetTaskManager(),
 			resource.GetHistoryClient(),
-			resource.GetMatchingRawClient(),
+			resource.GetMatchingRawClient(), // Use non retry client inside matching
 			config,
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
