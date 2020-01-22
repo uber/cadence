@@ -14,7 +14,14 @@ WorkflowID and SearchPrecision are always required. One of StartTime and CloseTi
 
 Searching for a record should always be done in the UTC timezone
 
-Example:
+SearchPrecision specifies what range you want to search for records. If you use SearchPrecision = 'Day'
+it will search all records starting from '2020-01-21T00:00:00Z' to '2020-01-21T59:59:59Z' 
+
+###Limitations
+
+- The only operator supported is `=` due to how records are stored in s3.
+
+###Example
 
 *Searches for all records done in day 2020-01-21 with the specified workflow id*
 
