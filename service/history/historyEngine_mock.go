@@ -29,14 +29,12 @@ package history
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	history "github.com/uber/cadence/.gen/go/history"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	persistence "github.com/uber/cadence/common/persistence"
+	reflect "reflect"
 )
 
 // MockEngine is a mock of Engine interface
@@ -533,6 +531,20 @@ func (m *MockEngine) ReapplyEvents(ctx context.Context, domainUUID, workflowID, 
 func (mr *MockEngineMockRecorder) ReapplyEvents(ctx, domainUUID, workflowID, runID, events interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReapplyEvents", reflect.TypeOf((*MockEngine)(nil).ReapplyEvents), ctx, domainUUID, workflowID, runID, events)
+}
+
+// RefreshWorkflowTasks mocks base method
+func (m *MockEngine) RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution shared.WorkflowExecution) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", ctx, domainUUID, execution)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RefreshWorkflowTasks indicates an expected call of RefreshWorkflowTasks
+func (mr *MockEngineMockRecorder) RefreshWorkflowTasks(ctx, domainUUID, execution interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWorkflowTasks", reflect.TypeOf((*MockEngine)(nil).RefreshWorkflowTasks), ctx, domainUUID, execution)
 }
 
 // NotifyNewHistoryEvent mocks base method
