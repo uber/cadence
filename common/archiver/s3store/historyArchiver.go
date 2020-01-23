@@ -50,7 +50,6 @@ import (
 const (
 	// URIScheme is the scheme for the s3 implementation
 	URIScheme               = "s3"
-	errBucketNotExists      = "requested bucket does not exist"
 	errEncodeHistory        = "failed to encode history batches"
 	errWriteKey             = "failed to write history to s3"
 	defaultBlobstoreTimeout = 60 * time.Second
@@ -59,6 +58,7 @@ const (
 
 var (
 	errNoBucketSpecified = errors.New("no bucket specified")
+	errBucketNotExists   = errors.New("requested bucket does not exist")
 	errEmptyAwsRegion    = errors.New("empty aws region")
 )
 
@@ -116,8 +116,6 @@ func (h *historyArchiver) Archive(
 	request *archiver.ArchiveHistoryRequest,
 	opts ...archiver.ArchiveOption,
 ) (err error) {
-	ctx, cancel := ensureContextTimeout(ctx)
-	defer cancel()
 	scope := h.container.MetricsClient.Scope(metrics.HistoryArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
 	sw := scope.StartTimer(metrics.CadenceLatency)
@@ -137,14 +135,14 @@ func (h *historyArchiver) Archive(
 
 	logger := archiver.TagLoggerWithArchiveHistoryRequestAndURI(h.container.Logger, request, URI.String())
 
-	if err := h.ValidateURI(URI); err != nil {
+	if err := softValidateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
-		return &shared.BadRequestError{Message: err.Error()}
+		return err
 	}
 
 	if err := archiver.ValidateHistoryArchiveRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
-		return &shared.BadRequestError{Message: err.Error()}
+		return err
 	}
 
 	historyIterator := h.historyIterator
@@ -157,10 +155,10 @@ func (h *historyArchiver) Archive(
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
 			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
-			if !common.IsPersistenceTransientError(err) {
-				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
-			} else {
+			if common.IsPersistenceTransientError(err) {
 				logger.Error(archiver.ArchiveTransientErrorMsg)
+			} else {
+				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
 			}
 			return err
 		}
@@ -198,9 +196,7 @@ func (h *historyArchiver) Get(
 	URI archiver.URI,
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
-	ctx, cancel := ensureContextTimeout(ctx)
-	defer cancel()
-	if err := h.ValidateURI(URI); err != nil {
+	if err := softValidateURI(URI); err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
@@ -267,14 +263,11 @@ func (h *historyArchiver) Get(
 }
 
 func (h *historyArchiver) ValidateURI(URI archiver.URI) error {
-	if URI.Scheme() != URIScheme {
-		return archiver.ErrURISchemeMismatch
+	err := softValidateURI(URI)
+	if err != nil {
+		return err
 	}
-	if len(URI.Hostname()) == 0 {
-		return errNoBucketSpecified
-
-	}
-	return nil
+	return bucketExists(context.TODO(), h.s3cli, URI)
 }
 
 func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIterator) (*archiver.HistoryBlob, error) {
@@ -296,6 +289,8 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 }
 
 func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*int64, error) {
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	var prefix = constructHistoryKeyPrefix(URI.Path(), request.DomainID, request.WorkflowID, request.RunID) + "/"
 	results, err := h.s3cli.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(URI.Hostname()),
@@ -303,7 +298,7 @@ func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.UR
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
-			return nil, &shared.BadRequestError{Message: errBucketNotExists}
+			return nil, &shared.BadRequestError{Message: errBucketNotExists.Error()}
 		}
 		return nil, err
 	}
@@ -333,7 +328,6 @@ func isRetryableError(err error) bool {
 		return isStatusCodeRetryable(aerr) || request.IsErrorRetryable(aerr) || request.IsErrorThrottle(aerr)
 	}
 	return false
-
 }
 
 func isStatusCodeRetryable(err error) bool {

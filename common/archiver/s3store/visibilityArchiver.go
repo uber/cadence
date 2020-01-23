@@ -95,8 +95,6 @@ func (v *visibilityArchiver) Archive(
 	request *archiver.ArchiveVisibilityRequest,
 	opts ...archiver.ArchiveOption,
 ) (err error) {
-	ctx, cancel := ensureContextTimeout(ctx)
-	defer cancel()
 	scope := v.container.MetricsClient.Scope(metrics.VisibilityArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
 	sw := scope.StartTimer(metrics.CadenceLatency)
@@ -116,14 +114,14 @@ func (v *visibilityArchiver) Archive(
 
 	logger := archiver.TagLoggerWithArchiveVisibilityRequestAndURI(v.container.Logger, request, URI.String())
 
-	if err := v.ValidateURI(URI); err != nil {
+	if err := softValidateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
-		return &shared.BadRequestError{Message: err.Error()}
+		return err
 	}
 
 	if err := archiver.ValidateVisibilityArchivalRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
-		return &shared.BadRequestError{Message: err.Error()}
+		return err
 	}
 
 	encodedVisibilityRecord, err := encode(request)
@@ -175,7 +173,7 @@ func (v *visibilityArchiver) Query(
 	URI archiver.URI,
 	request *archiver.QueryVisibilityRequest,
 ) (*archiver.QueryVisibilityResponse, error) {
-	if err := v.ValidateURI(URI); err != nil {
+	if err := softValidateURI(URI); err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
@@ -254,11 +252,9 @@ func (v *visibilityArchiver) query(
 }
 
 func (v *visibilityArchiver) ValidateURI(URI archiver.URI) error {
-	if URI.Scheme() != URIScheme {
-		return archiver.ErrURISchemeMismatch
+	err := softValidateURI(URI)
+	if err != nil {
+		return err
 	}
-	if len(URI.Hostname()) == 0 {
-		return errNoBucketSpecified
-	}
-	return nil
+	return bucketExists(context.TODO(), v.s3cli, URI)
 }

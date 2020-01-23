@@ -186,9 +186,18 @@ func (s *historyArchiverSuite) TestValidateURI() {
 		},
 		{
 			URI:         "s3://bucket/a/b/c",
+			expectedErr: errBucketNotExists,
+		},
+		{
+			URI:         testBucketURI,
 			expectedErr: nil,
 		},
 	}
+
+	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.MatchedBy(func(input *s3.HeadBucketInput) bool {
+		return *input.Bucket != s.testArchivalURI.Hostname()
+	})).Return(nil, awserr.New("NotFound", "", nil))
+	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.Anything).Return(&s3.HeadBucketOutput{}, nil)
 
 	historyArchiver := s.newTestHistoryArchiver(nil)
 	for _, tc := range testCases {

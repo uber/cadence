@@ -28,6 +28,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/metrics"
@@ -83,9 +87,18 @@ func (s *visibilityArchiverSuite) TestValidateURI() {
 		},
 		{
 			URI:         "s3://bucket/a/b/c",
+			expectedErr: errBucketNotExists,
+		},
+		{
+			URI:         testBucketURI,
 			expectedErr: nil,
 		},
 	}
+
+	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.MatchedBy(func(input *s3.HeadBucketInput) bool {
+		return *input.Bucket != s.testArchivalURI.Hostname()
+	})).Return(nil, awserr.New("NotFound", "", nil))
+	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.Anything).Return(&s3.HeadBucketOutput{}, nil)
 
 	visibilityArchiver := s.newTestVisibilityArchiver()
 	for _, tc := range testCases {

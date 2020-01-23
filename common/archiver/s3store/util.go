@@ -84,6 +84,34 @@ func serializeQueryVisibilityToken(token string) []byte {
 	return []byte(token)
 }
 
+// Only validates the scheme and buckets are passed
+func softValidateURI(URI archiver.URI) error {
+	if URI.Scheme() != URIScheme {
+		return archiver.ErrURISchemeMismatch
+	}
+	if len(URI.Hostname()) == 0 {
+		return errNoBucketSpecified
+	}
+	return nil
+}
+
+func bucketExists(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI) error {
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+	_, err := s3cli.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(URI.Hostname()),
+	})
+	if err == nil {
+		return nil
+	}
+	if aerr, ok := err.(awserr.Error); ok {
+		if aerr.Code() == "NotFound" {
+			return errBucketNotExists
+		}
+	}
+	return err
+}
+
 // Key construction
 func constructHistoryKey(path, domainID, workflowID, runID string, version int64) string {
 	prefix := constructHistoryKeyPrefix(path, domainID, workflowID, runID)
@@ -121,7 +149,7 @@ func upload(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key stri
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
-				return &shared.BadRequestError{Message: errBucketNotExists}
+				return &shared.BadRequestError{Message: errBucketNotExists.Error()}
 			}
 		}
 		return err
@@ -140,7 +168,7 @@ func download(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key st
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
-				return nil, &shared.BadRequestError{Message: errBucketNotExists}
+				return nil, &shared.BadRequestError{Message: errBucketNotExists.Error()}
 			}
 
 			if aerr.Code() == s3.ErrCodeNoSuchKey {
