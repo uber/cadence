@@ -29,11 +29,9 @@ package frontend
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	shared "github.com/uber/cadence/.gen/go/shared"
+	reflect "reflect"
 )
 
 // MockWorkflowHandler is a mock of Interface interface
@@ -281,6 +279,21 @@ func (m *MockWorkflowHandler) ListWorkflowExecutions(ctx context.Context, ListRe
 func (mr *MockWorkflowHandlerMockRecorder) ListWorkflowExecutions(ctx, ListRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkflowExecutions", reflect.TypeOf((*MockWorkflowHandler)(nil).ListWorkflowExecutions), ctx, ListRequest)
+}
+
+// LongPollWorkflowExecutionRawHistory mocks base method
+func (m *MockWorkflowHandler) LongPollWorkflowExecutionRawHistory(ctx context.Context, GetRequest *shared.LongPollWorkflowExecutionRawHistoryRequest) (*shared.LongPollWorkflowExecutionRawHistoryResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LongPollWorkflowExecutionRawHistory", ctx, GetRequest)
+	ret0, _ := ret[0].(*shared.LongPollWorkflowExecutionRawHistoryResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LongPollWorkflowExecutionRawHistory indicates an expected call of LongPollWorkflowExecutionRawHistory
+func (mr *MockWorkflowHandlerMockRecorder) LongPollWorkflowExecutionRawHistory(ctx, GetRequest interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LongPollWorkflowExecutionRawHistory", reflect.TypeOf((*MockWorkflowHandler)(nil).LongPollWorkflowExecutionRawHistory), ctx, GetRequest)
 }
 
 // PollForActivityTask mocks base method

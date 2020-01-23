@@ -303,6 +303,36 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionRawHistory(
 	return resp, err
 }
 
+// GetRawHistory API call
+func (handler *DCRedirectionHandlerImpl) LongPollWorkflowExecutionRawHistory(
+	ctx context.Context,
+	request *shared.LongPollWorkflowExecutionRawHistoryRequest,
+) (resp *shared.LongPollWorkflowExecutionRawHistoryResponse, retError error) {
+
+	var apiName = "LongPollWorkflowExecutionRawHistory"
+	var err error
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionLongPollWorklfowExecutionRawHistoryScope)
+	defer func() {
+		handler.afterCall(scope, startTime, cluster, &retError)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			resp, err = handler.frontendHandler.LongPollWorkflowExecutionRawHistory(ctx, request)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.LongPollWorkflowExecutionRawHistory(ctx, request)
+		}
+		return err
+	})
+
+	return resp, err
+}
+
 // ListArchivedWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 	ctx context.Context,

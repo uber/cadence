@@ -126,6 +126,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.ListWorkflowExecutionsResponse, error)
 
+	LongPollWorkflowExecutionRawHistory(
+		ctx context.Context,
+		GetRequest *shared.LongPollWorkflowExecutionRawHistoryRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.LongPollWorkflowExecutionRawHistoryResponse, error)
+
 	PollForActivityTask(
 		ctx context.Context,
 		PollRequest *shared.PollForActivityTaskRequest,
@@ -635,6 +641,29 @@ func (c client) ListWorkflowExecutions(
 	}
 
 	success, err = cadence.WorkflowService_ListWorkflowExecutions_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) LongPollWorkflowExecutionRawHistory(
+	ctx context.Context,
+	_GetRequest *shared.LongPollWorkflowExecutionRawHistoryRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.LongPollWorkflowExecutionRawHistoryResponse, err error) {
+
+	args := cadence.WorkflowService_LongPollWorkflowExecutionRawHistory_Helper.Args(_GetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_LongPollWorkflowExecutionRawHistory_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_LongPollWorkflowExecutionRawHistory_Helper.UnwrapResponse(&result)
 	return
 }
 

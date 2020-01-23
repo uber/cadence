@@ -152,6 +152,24 @@ func (c *metricClient) GetWorkflowExecutionRawHistory(
 	return resp, err
 }
 
+func (c *metricClient) LongPollWorkflowExecutionRawHistory(
+	ctx context.Context,
+	request *shared.LongPollWorkflowExecutionRawHistoryRequest,
+	opts ...yarpc.CallOption,
+) (*shared.LongPollWorkflowExecutionRawHistoryResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientLongPollWorkflowExecutionRawHistoryScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientLongPollWorkflowExecutionRawHistoryScope, metrics.CadenceClientLatency)
+	resp, err := c.client.LongPollWorkflowExecutionRawHistory(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientLongPollWorkflowExecutionRawHistoryScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
 func (c *metricClient) ListArchivedWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListArchivedWorkflowExecutionsRequest,
