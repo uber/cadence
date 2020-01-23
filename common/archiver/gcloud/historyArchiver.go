@@ -108,12 +108,13 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 		if err != nil {
 
 			if err.Error() == errUploadNonRetriable.Error() {
-				scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
+				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
+				return
 			}
 
+			scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
 			if featureCatalog.NonRetriableError != nil {
 				err = featureCatalog.NonRetriableError()
-				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
 			}
 
 		}
@@ -262,7 +263,7 @@ outer:
 
 	}
 
-	if token.CurrentPart < token.HighestPart {
+	if token.CurrentPart <= token.HighestPart {
 		nextToken, err := serializeToken(token)
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}

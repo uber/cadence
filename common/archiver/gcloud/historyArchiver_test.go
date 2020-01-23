@@ -531,7 +531,7 @@ func (h *historyArchiverSuite) TestGet_Success_FromToken() {
 		DomainID:      testDomainID,
 		WorkflowID:    testWorkflowID,
 		RunID:         testRunID,
-		PageSize:      2,
+		PageSize:      4,
 		NextPageToken: nextPageToken,
 	}
 
@@ -544,6 +544,12 @@ func (h *historyArchiverSuite) TestGet_Success_FromToken() {
 	h.NoError(err)
 
 	h.EqualValues(5, token.HighestPart)
-	h.EqualValues(4, token.CurrentPart)
-	h.EqualValues(2, len(response.HistoryBatches))
+	h.EqualValues(5, token.CurrentPart)
+	h.EqualValues(3, len(response.HistoryBatches))
+	numOfEvents := 0
+	for _, batch := range response.HistoryBatches {
+		numOfEvents += len(batch.Events)
+	}
+
+	h.EqualValues(4, numOfEvents)
 }
