@@ -152,20 +152,20 @@ func (c *metricClient) GetWorkflowExecutionRawHistory(
 	return resp, err
 }
 
-func (c *metricClient) LongPollWorkflowExecutionRawHistory(
+func (c *metricClient) PollForWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.LongPollWorkflowExecutionRawHistoryRequest,
+	request *shared.PollForWorkflowExecutionRawHistoryRequest,
 	opts ...yarpc.CallOption,
-) (*shared.LongPollWorkflowExecutionRawHistoryResponse, error) {
+) (*shared.PollForWorkflowExecutionRawHistoryResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientLongPollWorkflowExecutionRawHistoryScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientPollForWorkflowExecutionRawHistoryScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientLongPollWorkflowExecutionRawHistoryScope, metrics.CadenceClientLatency)
-	resp, err := c.client.LongPollWorkflowExecutionRawHistory(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientPollForWorkflowExecutionRawHistoryScope, metrics.CadenceClientLatency)
+	resp, err := c.client.PollForWorkflowExecutionRawHistory(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientLongPollWorkflowExecutionRawHistoryScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientPollForWorkflowExecutionRawHistoryScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }

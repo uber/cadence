@@ -304,16 +304,16 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionRawHistory(
 }
 
 // GetRawHistory API call
-func (handler *DCRedirectionHandlerImpl) LongPollWorkflowExecutionRawHistory(
+func (handler *DCRedirectionHandlerImpl) PollForWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.LongPollWorkflowExecutionRawHistoryRequest,
-) (resp *shared.LongPollWorkflowExecutionRawHistoryResponse, retError error) {
+	request *shared.PollForWorkflowExecutionRawHistoryRequest,
+) (resp *shared.PollForWorkflowExecutionRawHistoryResponse, retError error) {
 
-	var apiName = "LongPollWorkflowExecutionRawHistory"
+	var apiName = "PollForWorkflowExecutionRawHistory"
 	var err error
 	var cluster string
 
-	scope, startTime := handler.beforeCall(metrics.DCRedirectionLongPollWorklfowExecutionRawHistoryScope)
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionPollForWorklfowExecutionRawHistoryScope)
 	defer func() {
 		handler.afterCall(scope, startTime, cluster, &retError)
 	}()
@@ -322,10 +322,10 @@ func (handler *DCRedirectionHandlerImpl) LongPollWorkflowExecutionRawHistory(
 		cluster = targetDC
 		switch {
 		case targetDC == handler.currentClusterName:
-			resp, err = handler.frontendHandler.LongPollWorkflowExecutionRawHistory(ctx, request)
+			resp, err = handler.frontendHandler.PollForWorkflowExecutionRawHistory(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.LongPollWorkflowExecutionRawHistory(ctx, request)
+			resp, err = remoteClient.PollForWorkflowExecutionRawHistory(ctx, request)
 		}
 		return err
 	})

@@ -244,13 +244,13 @@ func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionRawHistory(
 }
 
 // GetRawHistoryLongPull API call
-func (a *AccessControlledWorkflowHandler) LongPollWorkflowExecutionRawHistory(
+func (a *AccessControlledWorkflowHandler) PollForWorkflowExecutionRawHistory(
 	ctx context.Context,
-	request *shared.LongPollWorkflowExecutionRawHistoryRequest,
-) (*shared.LongPollWorkflowExecutionRawHistoryResponse, error) {
+	request *shared.PollForWorkflowExecutionRawHistoryRequest,
+) (*shared.PollForWorkflowExecutionRawHistoryResponse, error) {
 
 	attr := &authorization.Attributes{
-		APIName:    "LongPollWorkflowExecutionRawHistory",
+		APIName:    "PollForWorkflowExecutionRawHistory",
 		DomainName: request.GetDomain(),
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -261,7 +261,7 @@ func (a *AccessControlledWorkflowHandler) LongPollWorkflowExecutionRawHistory(
 		return nil, errUnauthorized
 	}
 
-	return a.frontendHandler.LongPollWorkflowExecutionRawHistory(ctx, request)
+	return a.frontendHandler.PollForWorkflowExecutionRawHistory(ctx, request)
 }
 
 // ListArchivedWorkflowExecutions API call

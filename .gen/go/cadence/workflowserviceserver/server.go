@@ -109,11 +109,6 @@ type Interface interface {
 		ListRequest *shared.ListWorkflowExecutionsRequest,
 	) (*shared.ListWorkflowExecutionsResponse, error)
 
-	LongPollWorkflowExecutionRawHistory(
-		ctx context.Context,
-		GetRequest *shared.LongPollWorkflowExecutionRawHistoryRequest,
-	) (*shared.LongPollWorkflowExecutionRawHistoryResponse, error)
-
 	PollForActivityTask(
 		ctx context.Context,
 		PollRequest *shared.PollForActivityTaskRequest,
@@ -123,6 +118,11 @@ type Interface interface {
 		ctx context.Context,
 		PollRequest *shared.PollForDecisionTaskRequest,
 	) (*shared.PollForDecisionTaskResponse, error)
+
+	PollForWorkflowExecutionRawHistory(
+		ctx context.Context,
+		GetRequest *shared.PollForWorkflowExecutionRawHistoryRequest,
+	) (*shared.PollForWorkflowExecutionRawHistoryResponse, error)
 
 	QueryWorkflow(
 		ctx context.Context,
@@ -412,17 +412,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "LongPollWorkflowExecutionRawHistory",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.LongPollWorkflowExecutionRawHistory),
-				},
-				Signature:    "LongPollWorkflowExecutionRawHistory(GetRequest *shared.LongPollWorkflowExecutionRawHistoryRequest) (*shared.LongPollWorkflowExecutionRawHistoryResponse)",
-				ThriftModule: cadence.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "PollForActivityTask",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -441,6 +430,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.PollForDecisionTask),
 				},
 				Signature:    "PollForDecisionTask(PollRequest *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "PollForWorkflowExecutionRawHistory",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.PollForWorkflowExecutionRawHistory),
+				},
+				Signature:    "PollForWorkflowExecutionRawHistory(GetRequest *shared.PollForWorkflowExecutionRawHistoryRequest) (*shared.PollForWorkflowExecutionRawHistoryResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -980,25 +980,6 @@ func (h handler) ListWorkflowExecutions(ctx context.Context, body wire.Value) (t
 	return response, err
 }
 
-func (h handler) LongPollWorkflowExecutionRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_LongPollWorkflowExecutionRawHistory_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.LongPollWorkflowExecutionRawHistory(ctx, args.GetRequest)
-
-	hadError := err != nil
-	result, err := cadence.WorkflowService_LongPollWorkflowExecutionRawHistory_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
 func (h handler) PollForActivityTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_PollForActivityTask_Args
 	if err := args.FromWire(body); err != nil {
@@ -1028,6 +1009,25 @@ func (h handler) PollForDecisionTask(ctx context.Context, body wire.Value) (thri
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_PollForDecisionTask_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) PollForWorkflowExecutionRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_PollForWorkflowExecutionRawHistory_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.PollForWorkflowExecutionRawHistory(ctx, args.GetRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_PollForWorkflowExecutionRawHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

@@ -1833,13 +1833,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
 	}, nil
 }
 
-func (wh *WorkflowHandler) LongPollWorkflowExecutionRawHistory(
+func (wh *WorkflowHandler) PollForWorkflowExecutionRawHistory(
 	ctx context.Context,
-	getRequest *gen.LongPollWorkflowExecutionRawHistoryRequest,
-) (resp *gen.LongPollWorkflowExecutionRawHistoryResponse, retError error) {
+	getRequest *gen.PollForWorkflowExecutionRawHistoryRequest,
+) (resp *gen.PollForWorkflowExecutionRawHistoryResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendLongPollWorklfowExecutionRawHistoryScope, getRequest)
+	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendPollForWorklfowExecutionRawHistoryScope, getRequest)
 	defer sw.Stop()
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
@@ -2027,7 +2027,7 @@ func (wh *WorkflowHandler) LongPollWorkflowExecutionRawHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return &gen.LongPollWorkflowExecutionRawHistoryResponse{
+	return &gen.PollForWorkflowExecutionRawHistoryResponse{
 		RawHistory:    history,
 		NextPageToken: nextToken,
 	}, nil
