@@ -107,7 +107,7 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 		sw.Stop()
 		if err != nil {
 
-			if err.Error() == errUploadNonRetriable.Error() {
+			if err.Error() != errUploadNonRetriable.Error() {
 				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
 				return
 			}
