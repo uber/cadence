@@ -330,6 +330,8 @@ type (
 	// HistoryArchiverProvider contains the config for all history archivers
 	HistoryArchiverProvider struct {
 		Filestore *FilestoreArchiver `yaml:"filestore"`
+		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
+		S3store   *S3Archiver        `yaml:"s3store"`
 	}
 
 	// VisibilityArchival contains the config for visibility archival
@@ -345,12 +347,24 @@ type (
 	// VisibilityArchiverProvider contains the config for all visibility archivers
 	VisibilityArchiverProvider struct {
 		Filestore *FilestoreArchiver `yaml:"filestore"`
+		S3store   *S3Archiver        `yaml:"s3store"`
 	}
 
 	// FilestoreArchiver contain the config for filestore archiver
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
+	}
+
+	// GstorageArchiver contain the config for google storage archiver
+	GstorageArchiver struct {
+		CredentialsPath string `yaml:"credentialsPath"`
+	}
+	// S3Archiver contains the config for S3 archiver
+	S3Archiver struct {
+		Region           string  `yaml:"region"`
+		Endpoint         *string `yaml:"endpoint"`
+		S3ForcePathStyle bool    `yaml:"s3ForcePathStyle"`
 	}
 
 	// PublicClient is config for connecting to cadence frontend
