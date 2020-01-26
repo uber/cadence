@@ -180,7 +180,7 @@ func (t *taskProcessor) processTaskAndAck(
 	task *taskInfo,
 ) {
 
-	var scope metrics.Scope
+	var scope int
 	var err error
 
 FilterLoop:
@@ -204,9 +204,8 @@ FilterLoop:
 		if err != nil {
 			task.attempt++
 			if task.attempt >= t.config.TimerTaskMaxRetryCount() {
-				scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(task.attempt))
-				task.logger.Error("Critical error processing task, retrying.",
-					tag.Error(err), tag.OperationCritical, tag.TaskType(task.task.GetTaskType()))
+				t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(task.attempt))
+				task.logger.Error("Critical error processing timer task, retrying.", tag.Error(err), tag.OperationCritical)
 			}
 		}
 		return err
@@ -238,7 +237,7 @@ FilterLoop:
 func (t *taskProcessor) processTaskOnce(
 	notificationChan <-chan struct{},
 	task *taskInfo,
-) (metrics.Scope, error) {
+) (int, error) {
 
 	select {
 	case <-notificationChan:
@@ -246,18 +245,17 @@ func (t *taskProcessor) processTaskOnce(
 	}
 
 	startTime := t.timeSource.Now()
-	scopeIdx, err := task.processor.process(task)
-	scope := t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(task.task.GetDomainID()))
+	scope, err := task.processor.process(task)
 	if task.shouldProcessTask {
-		scope.IncCounter(metrics.TaskRequests)
-		scope.RecordTimer(metrics.TaskProcessingLatency, time.Since(startTime))
+		t.metricsClient.IncCounter(scope, metrics.TaskRequests)
+		t.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
 	}
 
 	return scope, err
 }
 
 func (t *taskProcessor) handleTaskError(
-	scope metrics.Scope,
+	scope int,
 	task *taskInfo,
 	notificationChan <-chan struct{},
 	err error,
@@ -273,13 +271,13 @@ func (t *taskProcessor) handleTaskError(
 
 	// this is a transient error
 	if err == ErrTaskRetry {
-		scope.IncCounter(metrics.TaskStandbyRetryCounter)
+		t.metricsClient.IncCounter(scope, metrics.TaskStandbyRetryCounter)
 		<-notificationChan
 		return err
 	}
 
 	if err == ErrTaskDiscarded {
-		scope.IncCounter(metrics.TaskDiscarded)
+		t.metricsClient.IncCounter(scope, metrics.TaskDiscarded)
 		err = nil
 	}
 
@@ -288,14 +286,14 @@ func (t *taskProcessor) handleTaskError(
 	//  since the new task life cycle will not give up until task processed / verified
 	if _, ok := err.(*workflow.DomainNotActiveError); ok {
 		if t.timeSource.Now().Sub(task.startTime) > 2*cache.DomainCacheRefreshInterval {
-			scope.IncCounter(metrics.TaskNotActiveCounter)
+			t.metricsClient.IncCounter(scope, metrics.TaskNotActiveCounter)
 			return nil
 		}
 
 		return err
 	}
 
-	scope.IncCounter(metrics.TaskFailures)
+	t.metricsClient.IncCounter(scope, metrics.TaskFailures)
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
 		task.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
@@ -307,23 +305,18 @@ func (t *taskProcessor) handleTaskError(
 }
 
 func (t *taskProcessor) ackTaskOnce(
-	scope metrics.Scope,
+	scope int,
 	task *taskInfo,
 ) {
 
 	task.processor.complete(task)
 	if task.shouldProcessTask {
-		scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(task.attempt))
-		scope.RecordTimer(metrics.TaskLatency, time.Since(task.startTime))
-		scope.RecordTimer(metrics.TaskQueueLatency, time.Since(task.task.GetVisibilityTimestamp()))
+		t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(task.attempt))
+		t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(task.startTime))
+		t.metricsClient.RecordTimer(
+			scope,
+			metrics.TaskQueueLatency,
+			time.Since(task.task.GetVisibilityTimestamp()),
+		)
 	}
-}
-
-func (t *taskProcessor) getDomainTagByID(domainID string) metrics.Tag {
-	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
-	if err != nil {
-		t.logger.Error("Unable to get domainName", tag.Error(err))
-		return metrics.DomainUnknownTag()
-	}
-	return metrics.DomainTag(domainName)
 }
