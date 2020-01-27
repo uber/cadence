@@ -38,19 +38,14 @@ import (
 )
 
 type (
-	priorityTaskProcessorSuite struct {
+	parallelTaskProcessorSuite struct {
 		*require.Assertions
 		suite.Suite
 
-		controller    *gomock.Controller
-		mockScheduler *MockPriorityScheduler
+		controller *gomock.Controller
 
-		processor *priorityTaskProcessorImpl
+		processor *parallelTaskProcessorImpl
 	}
-)
-
-const (
-	testWorkerCount = 3
 )
 
 var (
@@ -58,63 +53,72 @@ var (
 	errNonRetryable = errors.New("non-retryable error")
 )
 
-func TestPriorityTaskProcessorSuite(t *testing.T) {
-	s := new(priorityTaskProcessorSuite)
+func TestParallelTaskProcessorSuite(t *testing.T) {
+	s := new(parallelTaskProcessorSuite)
 	suite.Run(t, s)
 }
 
-func (s *priorityTaskProcessorSuite) SetupTest() {
+func (s *parallelTaskProcessorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockScheduler = NewMockPriorityScheduler(s.controller)
 
-	s.processor = NewPriorityTaskProcessor(
-		s.mockScheduler,
+	s.processor = NewParallelTaskProcessor(
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		metrics.NewClient(tally.NoopScope, metrics.Common),
-		&PriorityTaskProcessorOptions{
-			WorkerCount: testWorkerCount,
+		metrics.NewClient(tally.NoopScope, metrics.Common).Scope(metrics.ParallelTaskProcessingScope),
+		&ParallelTaskProcessorOptions{
+			QueueSize:   0,
+			WorkerCount: 1,
 			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
-	).(*priorityTaskProcessorImpl)
+	).(*parallelTaskProcessorImpl)
 }
 
-func (s *priorityTaskProcessorSuite) TearDownTest() {
+func (s *parallelTaskProcessorSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *priorityTaskProcessorSuite) TestSubmit() {
-	priority := 0
-
+func (s *parallelTaskProcessorSuite) TestSubmit_Success() {
 	mockTask := NewMockTask(s.controller)
-	s.mockScheduler.EXPECT().Schedule(mockTask, priority).Return(nil).Times(1)
-
-	err := s.processor.Submit(mockTask, priority)
-	s.NoError(err)
-}
-
-func (s *priorityTaskProcessorSuite) TestTaskWorker() {
-	numTasks := 5
-
-	mockTask := NewMockTask(s.controller)
-	mockTask.EXPECT().Execute().Return(nil).Times(numTasks)
-	mockTask.EXPECT().Ack().Times(numTasks)
-
-	gomock.InOrder(
-		s.mockScheduler.EXPECT().Consume().Return(mockTask).Times(numTasks),
-		s.mockScheduler.EXPECT().Consume().Return(nil).Times(testWorkerCount),
-	)
-	gomock.InOrder(
-		s.mockScheduler.EXPECT().Start().Times(1),
-		s.mockScheduler.EXPECT().Stop().Times(1),
-	)
-
+	mockTask.EXPECT().Execute().Return(nil).MaxTimes(1)
+	mockTask.EXPECT().Ack().MaxTimes(1)
 	s.processor.Start()
+	err := s.processor.Submit(mockTask)
+	s.NoError(err)
 	s.processor.Stop()
 }
 
-func (s *priorityTaskProcessorSuite) TestExecuteTask_RetryableError() {
+func (s *parallelTaskProcessorSuite) TestSubmit_Fail() {
+	mockTask := NewMockTask(s.controller)
+	s.processor.Start()
+	s.processor.Stop()
+	err := s.processor.Submit(mockTask)
+	s.Equal(ErrTaskProcessorClosed, err)
+}
+
+func (s *parallelTaskProcessorSuite) TestTaskWorker() {
+	numTasks := 5
+
+	done := make(chan struct{})
+	s.processor.workerWG.Add(1)
+
+	go func() {
+		for i := 0; i != numTasks; i++ {
+			mockTask := NewMockTask(s.controller)
+			mockTask.EXPECT().Execute().Return(nil).Times(1)
+			mockTask.EXPECT().Ack().Times(1)
+			err := s.processor.Submit(mockTask)
+			s.NoError(err)
+		}
+		close(s.processor.shutdownCh)
+		close(done)
+	}()
+
+	s.processor.taskWorker()
+	<-done
+}
+
+func (s *parallelTaskProcessorSuite) TestExecuteTask_RetryableError() {
 	mockTask := NewMockTask(s.controller)
 	gomock.InOrder(
 		mockTask.EXPECT().Execute().Return(errRetryable),
@@ -130,7 +134,7 @@ func (s *priorityTaskProcessorSuite) TestExecuteTask_RetryableError() {
 	s.processor.executeTask(mockTask)
 }
 
-func (s *priorityTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
+func (s *parallelTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
 	mockTask := NewMockTask(s.controller)
 	gomock.InOrder(
 		mockTask.EXPECT().Execute().Return(errNonRetryable),
@@ -142,7 +146,7 @@ func (s *priorityTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
 	s.processor.executeTask(mockTask)
 }
 
-func (s *priorityTaskProcessorSuite) TestExecuteTask_ProcessorStopped() {
+func (s *parallelTaskProcessorSuite) TestExecuteTask_ProcessorStopped() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().Execute().Return(errRetryable).AnyTimes()
 	mockTask.EXPECT().HandleErr(errRetryable).Return(errRetryable).AnyTimes()

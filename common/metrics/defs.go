@@ -586,8 +586,8 @@ const (
 
 	// SequentialTaskProcessingScope is used by sequential task processing logic
 	SequentialTaskProcessingScope
-	// PriorityTaskProcessingScope is used by priority task processing logic
-	PriorityTaskProcessingScope
+	// ParallelTaskProcessingScope is used by parallel task processing logic
+	ParallelTaskProcessingScope
 
 	// HistoryArchiverScope is used by history archivers
 	HistoryArchiverScope
@@ -1222,7 +1222,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		ElasticsearchDeleteWorkflowExecutionsScope:                 {operation: "DeleteWorkflowExecution"},
 		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
-		PriorityTaskProcessingScope:                                {operation: "PriorityTaskProcessing"},
+		ParallelTaskProcessingScope:                                {operation: "ParallelTaskProcessing"},
 
 		HistoryArchiverScope:    {operation: "HistoryArchiver"},
 		VisibilityArchiverScope: {operation: "VisibilityArchiver"},
@@ -1488,9 +1488,9 @@ const (
 	SequentialTaskQueueProcessingLatency
 	SequentialTaskTaskProcessingLatency
 
-	PriorityTaskSubmitRequest
-	PriorityTaskSubmitLatency
-	PriorityTaskTaskProcessingLatency
+	ParallelTaskSubmitRequest
+	ParallelTaskSubmitLatency
+	ParallelTaskTaskProcessingLatency
 
 	HistoryArchiverArchiveNonRetryableErrorCount
 	HistoryArchiverArchiveTransientErrorCount
@@ -1835,9 +1835,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SequentialTaskQueueSize:                             {metricName: "sequentialtask_queue_size", metricType: Timer},
 		SequentialTaskQueueProcessingLatency:                {metricName: "sequentialtask_queue_processing_latency", metricType: Timer},
 		SequentialTaskTaskProcessingLatency:                 {metricName: "sequentialtask_task_processing_latency", metricType: Timer},
-		PriorityTaskSubmitRequest:                           {metricName: "prioritytask_submit_request", metricType: Counter},
-		PriorityTaskSubmitLatency:                           {metricName: "prioritytask_submit_latency", metricType: Timer},
-		PriorityTaskTaskProcessingLatency:                   {metricName: "prioritytask_task_processing_latency", metricType: Timer},
+		ParallelTaskSubmitRequest:                           {metricName: "paralleltask_submit_request", metricType: Counter},
+		ParallelTaskSubmitLatency:                           {metricName: "paralleltask_submit_latency", metricType: Timer},
+		ParallelTaskTaskProcessingLatency:                   {metricName: "paralleltask_task_processing_latency", metricType: Timer},
 
 		HistoryArchiverArchiveNonRetryableErrorCount:              {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                 {metricName: "history_archiver_archive_transient_error", metricType: Counter},

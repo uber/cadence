@@ -34,21 +34,6 @@ type (
 		Submit(task Task) error
 	}
 
-	// PriorityTaskProcessor is the generic coroutine pool interface
-	// which process tasks with priority
-	PriorityTaskProcessor interface {
-		common.Daemon
-		Submit(task Task, priority int) error
-	}
-
-	// PriorityScheduler is the generic interface for scheduling
-	// tasks with priority
-	PriorityScheduler interface {
-		common.Daemon
-		Schedule(task interface{}, priority int) error
-		Consume() interface{}
-	}
-
 	// State represents the current state of a task
 	State int
 

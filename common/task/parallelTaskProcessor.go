@@ -21,6 +21,7 @@
 package task
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,40 +33,46 @@ import (
 )
 
 type (
-	// PriorityTaskProcessorOptions configs PriorityTaskProcessor
-	PriorityTaskProcessorOptions struct {
+	// ParallelTaskProcessorOptions configs PriorityTaskProcessor
+	ParallelTaskProcessorOptions struct {
+		QueueSize   int
 		WorkerCount int
 		RetryPolicy backoff.RetryPolicy
 	}
 
-	priorityTaskProcessorImpl struct {
-		scheduler PriorityScheduler
-
+	parallelTaskProcessorImpl struct {
 		status       int32
+		tasksCh      chan Task
+		shutdownCh   chan struct{}
 		workerWG     sync.WaitGroup
 		logger       log.Logger
 		metricsScope metrics.Scope
-		options      *PriorityTaskProcessorOptions
+		options      *ParallelTaskProcessorOptions
 	}
 )
 
-// NewPriorityTaskProcessor creates a new PriorityTaskProcessor
-func NewPriorityTaskProcessor(
-	scheduler PriorityScheduler,
+var (
+	// ErrTaskProcessorClosed is the error return when submiting task to a stopped processor
+	ErrTaskProcessorClosed = errors.New("task processor has already shutdown")
+)
+
+// NewParallelTaskProcessor creates a new PriorityTaskProcessor
+func NewParallelTaskProcessor(
 	logger log.Logger,
-	metricsClient metrics.Client,
-	options *PriorityTaskProcessorOptions,
-) PriorityTaskProcessor {
-	return &priorityTaskProcessorImpl{
-		scheduler:    scheduler,
+	metricsScope metrics.Scope,
+	options *ParallelTaskProcessorOptions,
+) Processor {
+	return &parallelTaskProcessorImpl{
 		status:       common.DaemonStatusInitialized,
+		tasksCh:      make(chan Task, options.QueueSize),
+		shutdownCh:   make(chan struct{}),
 		logger:       logger,
-		metricsScope: metricsClient.Scope(metrics.PriorityTaskProcessingScope),
+		metricsScope: metricsScope,
 		options:      options,
 	}
 }
 
-func (p *priorityTaskProcessorImpl) Start() {
+func (p *parallelTaskProcessorImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
@@ -74,45 +81,49 @@ func (p *priorityTaskProcessorImpl) Start() {
 	for i := 0; i < p.options.WorkerCount; i++ {
 		go p.taskWorker()
 	}
-	p.scheduler.Start()
-	p.logger.Info("Priority task processor started.")
+	p.logger.Info("Parallel task processor started.")
 }
 
-func (p *priorityTaskProcessorImpl) Stop() {
+func (p *parallelTaskProcessorImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
 
-	p.scheduler.Stop()
+	close(p.shutdownCh)
 	if success := common.AwaitWaitGroup(&p.workerWG, time.Minute); !success {
-		p.logger.Warn("Priority task processor timedout on shutdown.")
+		p.logger.Warn("Parallel task processor timedout on shutdown.")
 	}
-	p.logger.Info("Priority task processor shutdown.")
+	p.logger.Info("Parallel task processor shutdown.")
 }
 
-func (p *priorityTaskProcessorImpl) Submit(task Task, priority int) error {
-	p.metricsScope.IncCounter(metrics.PriorityTaskSubmitRequest)
-	sw := p.metricsScope.StartTimer(metrics.PriorityTaskSubmitLatency)
+func (p *parallelTaskProcessorImpl) Submit(task Task) error {
+	p.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
+	sw := p.metricsScope.StartTimer(metrics.ParallelTaskSubmitLatency)
 	defer sw.Stop()
 
-	return p.scheduler.Schedule(task, priority)
+	select {
+	case p.tasksCh <- task:
+		return nil
+	case <-p.shutdownCh:
+		return ErrTaskProcessorClosed
+	}
 }
 
-func (p *priorityTaskProcessorImpl) taskWorker() {
+func (p *parallelTaskProcessorImpl) taskWorker() {
 	defer p.workerWG.Done()
 
 	for {
-		task := p.scheduler.Consume()
-		if task == nil {
+		select {
+		case <-p.shutdownCh:
 			return
+		case task := <-p.tasksCh:
+			p.executeTask(task)
 		}
-
-		p.executeTask(task.(Task))
 	}
 }
 
-func (p *priorityTaskProcessorImpl) executeTask(task Task) {
-	sw := p.metricsScope.StartTimer(metrics.PriorityTaskTaskProcessingLatency)
+func (p *parallelTaskProcessorImpl) executeTask(task Task) {
+	sw := p.metricsScope.StartTimer(metrics.ParallelTaskTaskProcessingLatency)
 	defer sw.Stop()
 
 	op := func() error {
@@ -150,6 +161,6 @@ func (p *priorityTaskProcessorImpl) executeTask(task Task) {
 	}
 }
 
-func (p *priorityTaskProcessorImpl) isStopped() bool {
+func (p *parallelTaskProcessorImpl) isStopped() bool {
 	return atomic.LoadInt32(&p.status) == common.DaemonStatusStopped
 }
