@@ -1516,6 +1516,8 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
+	NonDeterministicErrorCount
+
 	DomainReplicationTaskAckLevel
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
