@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -551,12 +550,14 @@ func (h *Handler) RespondDecisionTaskFailed(
 		token.RunID,
 		token.ScheduleID))
 
-	if failedRequest != nil && failedRequest.GetCause() == workflow.DecisionTaskFailedCauseUnhandledDecision {
-		h.GetLogger().Info("Non-Deterministic Error", tag.WorkflowRunID(token.RunID))
+	if failedRequest != nil && failedRequest.GetCause() == gen.DecisionTaskFailedCauseUnhandledDecision {
+		h.GetLogger().Info("Non-Deterministic Error", tag.WorkflowDomainID(token.DomainID), tag.WorkflowID(token.WorkflowID), tag.WorkflowRunID(token.RunID))
 		domainName, err := h.GetDomainCache().GetDomainName(token.DomainID)
+		counter := metrics.CadenceErrNonDeterministicCounter
 		if err == nil {
-			nonDeterministic := h.GetMetricsClient().Scope(metrics.HistoryRespondDecisionTaskFailedScope, metrics.DomainTag(domainName))
-			nonDeterministic.IncCounter(metrics.NonDeterministicErrorCount)
+			h.GetMetricsClient().Scope(scope, metrics.DomainTag(domainName)).IncCounter(counter)
+		} else {
+			h.GetMetricsClient().Scope(scope, metrics.DomainUnknownTag()).IncCounter(counter)
 		}
 	}
 	err0 = validateTaskToken(token)
