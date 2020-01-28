@@ -75,7 +75,7 @@ type (
 
 const (
 	// TaskStatePending is the state for a task when it's waiting to be processed or currently being processed
-	TaskStatePending State = iota
+	TaskStatePending State = iota + 1
 	// TaskStateAcked is the state for a task if it has been successfully completed
 	TaskStateAcked
 	// TaskStateNacked is the state for a task if it can not be processed
