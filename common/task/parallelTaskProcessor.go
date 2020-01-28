@@ -140,25 +140,19 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task) {
 		return task.RetryErr(err)
 	}
 
-	for {
+	if err := backoff.Retry(op, p.options.RetryPolicy, isRetryable); err != nil {
 		if p.isStopped() {
 			// neither ack or nack here
 			return
 		}
 
-		if err := backoff.Retry(op, p.options.RetryPolicy, isRetryable); err != nil {
-			if !task.RetryErr(err) {
-				// encounter an non-retryable error
-				task.Nack()
-				return
-			}
-			// retryable error, continue the loop
-		} else {
-			// no error
-			task.Ack()
-			return
-		}
+		// non-retryable error or exhausted all retries
+		task.Nack()
+		return
 	}
+
+	// no error
+	task.Ack()
 }
 
 func (p *parallelTaskProcessorImpl) isStopped() bool {
