@@ -81,9 +81,6 @@ type (
 		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
 		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
-		//DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
-		//RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
-		//GetMetadataFromDLQ(request *GetMetadataFromDLQRequest) (*GetMetadataFromDLQResponse, error)
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
