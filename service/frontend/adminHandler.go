@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/olivere/elastic"
-
 	"github.com/pborman/uuid"
+	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -61,6 +62,7 @@ type (
 		numberOfHistoryShards int
 		params                *service.BootstrapParams
 		config                *Config
+		domainDLQHandler      domain.DLQTaskHandler
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -87,6 +89,11 @@ func NewAdminHandler(
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
 		config:                config,
+		domainDLQHandler: domain.NewDLQTaskHandler(
+			resource.GetDomainReplicationTaskHandler(),
+			resource.GetDomainReplicationQueue(),
+			resource.GetLogger().WithTags(),
+		),
 	}
 }
 
@@ -774,6 +781,132 @@ func (adh *AdminHandler) ReapplyEvents(
 		return adh.error(err, scope)
 	}
 	return nil
+}
+
+// ReadDLQMessages reads messages from DLQ
+func (adh *AdminHandler) ReadDLQMessages(
+	ctx context.Context,
+	request *admin.ReadDLQMessagesRequest,
+) (resp *admin.ReadDLQMessagesResponse, err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(metrics.AdminReadDLQMessagesScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	if !request.IsSetQueueType() {
+		return nil, adh.error(errEmptyQueueType, scope)
+	}
+
+	if request.GetMaximumPageSize() <= 0 {
+		request.MaximumPageSize = common.Int32Ptr(common.ReadDLQMessagesPageSize)
+	}
+
+	if !request.IsSetInclusiveEndMessageID() {
+		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
+	}
+
+	var tasks []*replicator.ReplicationTask
+	var token []byte
+	switch request.GetQueueType() {
+	case admin.QueueTypeReplication:
+		return nil, &shared.InternalServiceError{Message: "Not implement."}
+	case admin.QueueTypeDomain:
+		tasks, token, err = adh.domainDLQHandler.ReadMessages(
+			int(request.GetInclusiveEndMessageID()),
+			int(request.GetMaximumPageSize()),
+			request.GetNextPageToken())
+	}
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	return &admin.ReadDLQMessagesResponse{
+		ReplicationTasks: tasks,
+		NextPageToken:    token,
+	}, nil
+}
+
+// PurgeDLQMessages purge messages from DLQ
+func (adh *AdminHandler) PurgeDLQMessages(
+	ctx context.Context,
+	request *admin.PurgeDLQMessagesRequest,
+) (err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(metrics.AdminPurgeDLQMessagesScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return adh.error(errRequestNotSet, scope)
+	}
+
+	if !request.IsSetQueueType() {
+		return adh.error(errEmptyQueueType, scope)
+	}
+
+	if !request.IsSetInclusiveEndMessageID() {
+		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
+	}
+
+	switch request.GetQueueType() {
+	case admin.QueueTypeReplication:
+		return &shared.InternalServiceError{Message: "Not implement."}
+	case admin.QueueTypeDomain:
+		err = adh.domainDLQHandler.PurgeMessages(
+			int(request.GetInclusiveEndMessageID()),
+		)
+	}
+	if err != nil {
+		return adh.error(err, scope)
+	}
+
+	return nil
+}
+
+// MergeDLQMessages merges DLQ messages
+func (adh *AdminHandler) MergeDLQMessages(
+	ctx context.Context,
+	request *admin.MergeDLQMessagesRequest,
+) (resp *admin.MergeDLQMessagesResponse, err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(metrics.AdminMergeDLQMessagesScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	if !request.IsSetQueueType() {
+		return nil, adh.error(errEmptyQueueType, scope)
+	}
+
+	if !request.IsSetInclusiveEndMessageID() {
+		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
+	}
+
+	var token []byte
+	switch request.GetQueueType() {
+	case admin.QueueTypeReplication:
+		return nil, &shared.InternalServiceError{Message: "Not implement."}
+	case admin.QueueTypeDomain:
+		token, err = adh.domainDLQHandler.MergeMessages(
+			int(request.GetInclusiveEndMessageID()),
+			int(request.GetMaximumPageSize()),
+			request.GetNextPageToken(),
+		)
+	}
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	return &admin.MergeDLQMessagesResponse{
+		NextPageToken: token,
+	}, nil
 }
 
 func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(

@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 // 
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ package admin
 import (
 	bytes "bytes"
 	base64 "encoding/base64"
+	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
@@ -36,6 +37,8 @@ import (
 	thriftreflect "go.uber.org/thriftrw/thriftreflect"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
+	math "math"
+	strconv "strconv"
 	strings "strings"
 )
 
@@ -2972,6 +2975,1436 @@ func (v *MembershipInfo) IsSetRings() bool {
 	return v != nil && v.Rings != nil
 }
 
+type MergeDLQMessagesRequest struct {
+	QueueType             *QueueType `json:"queueType,omitempty"`
+	ShardID               *int32     `json:"shardID,omitempty"`
+	InclusiveEndMessageID *int64     `json:"inclusiveEndMessageID,omitempty"`
+	MaximumPageSize       *int32     `json:"maximumPageSize,omitempty"`
+	NextPageToken         []byte     `json:"nextPageToken,omitempty"`
+}
+
+// ToWire translates a MergeDLQMessagesRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *MergeDLQMessagesRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [5]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.QueueType != nil {
+		w, err = v.QueueType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ShardID != nil {
+		w, err = wire.NewValueI32(*(v.ShardID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.InclusiveEndMessageID != nil {
+		w, err = wire.NewValueI64(*(v.InclusiveEndMessageID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _QueueType_Read(w wire.Value) (QueueType, error) {
+	var v QueueType
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a MergeDLQMessagesRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a MergeDLQMessagesRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v MergeDLQMessagesRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *MergeDLQMessagesRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x QueueType
+				x, err = _QueueType_Read(field.Value)
+				v.QueueType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.ShardID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.InclusiveEndMessageID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.MaximumPageSize = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a MergeDLQMessagesRequest
+// struct.
+func (v *MergeDLQMessagesRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [5]string
+	i := 0
+	if v.QueueType != nil {
+		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+		i++
+	}
+	if v.ShardID != nil {
+		fields[i] = fmt.Sprintf("ShardID: %v", *(v.ShardID))
+		i++
+	}
+	if v.InclusiveEndMessageID != nil {
+		fields[i] = fmt.Sprintf("InclusiveEndMessageID: %v", *(v.InclusiveEndMessageID))
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
+		i++
+	}
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+
+	return fmt.Sprintf("MergeDLQMessagesRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _QueueType_EqualsPtr(lhs, rhs *QueueType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this MergeDLQMessagesRequest match the
+// provided MergeDLQMessagesRequest.
+//
+// This function performs a deep comparison.
+func (v *MergeDLQMessagesRequest) Equals(rhs *MergeDLQMessagesRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_QueueType_EqualsPtr(v.QueueType, rhs.QueueType) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.InclusiveEndMessageID, rhs.InclusiveEndMessageID) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of MergeDLQMessagesRequest.
+func (v *MergeDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.QueueType != nil {
+		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	}
+	if v.ShardID != nil {
+		enc.AddInt32("shardID", *v.ShardID)
+	}
+	if v.InclusiveEndMessageID != nil {
+		enc.AddInt64("inclusiveEndMessageID", *v.InclusiveEndMessageID)
+	}
+	if v.MaximumPageSize != nil {
+		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	return err
+}
+
+// GetQueueType returns the value of QueueType if it is set or its
+// zero value if it is unset.
+func (v *MergeDLQMessagesRequest) GetQueueType() (o QueueType) {
+	if v != nil && v.QueueType != nil {
+		return *v.QueueType
+	}
+
+	return
+}
+
+// IsSetQueueType returns true if QueueType is not nil.
+func (v *MergeDLQMessagesRequest) IsSetQueueType() bool {
+	return v != nil && v.QueueType != nil
+}
+
+// GetShardID returns the value of ShardID if it is set or its
+// zero value if it is unset.
+func (v *MergeDLQMessagesRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+
+	return
+}
+
+// IsSetShardID returns true if ShardID is not nil.
+func (v *MergeDLQMessagesRequest) IsSetShardID() bool {
+	return v != nil && v.ShardID != nil
+}
+
+// GetInclusiveEndMessageID returns the value of InclusiveEndMessageID if it is set or its
+// zero value if it is unset.
+func (v *MergeDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
+	if v != nil && v.InclusiveEndMessageID != nil {
+		return *v.InclusiveEndMessageID
+	}
+
+	return
+}
+
+// IsSetInclusiveEndMessageID returns true if InclusiveEndMessageID is not nil.
+func (v *MergeDLQMessagesRequest) IsSetInclusiveEndMessageID() bool {
+	return v != nil && v.InclusiveEndMessageID != nil
+}
+
+// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
+// zero value if it is unset.
+func (v *MergeDLQMessagesRequest) GetMaximumPageSize() (o int32) {
+	if v != nil && v.MaximumPageSize != nil {
+		return *v.MaximumPageSize
+	}
+
+	return
+}
+
+// IsSetMaximumPageSize returns true if MaximumPageSize is not nil.
+func (v *MergeDLQMessagesRequest) IsSetMaximumPageSize() bool {
+	return v != nil && v.MaximumPageSize != nil
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *MergeDLQMessagesRequest) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+// IsSetNextPageToken returns true if NextPageToken is not nil.
+func (v *MergeDLQMessagesRequest) IsSetNextPageToken() bool {
+	return v != nil && v.NextPageToken != nil
+}
+
+type MergeDLQMessagesResponse struct {
+	NextPageToken []byte `json:"nextPageToken,omitempty"`
+}
+
+// ToWire translates a MergeDLQMessagesResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *MergeDLQMessagesResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a MergeDLQMessagesResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a MergeDLQMessagesResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v MergeDLQMessagesResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *MergeDLQMessagesResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a MergeDLQMessagesResponse
+// struct.
+func (v *MergeDLQMessagesResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+
+	return fmt.Sprintf("MergeDLQMessagesResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this MergeDLQMessagesResponse match the
+// provided MergeDLQMessagesResponse.
+//
+// This function performs a deep comparison.
+func (v *MergeDLQMessagesResponse) Equals(rhs *MergeDLQMessagesResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of MergeDLQMessagesResponse.
+func (v *MergeDLQMessagesResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	return err
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *MergeDLQMessagesResponse) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+// IsSetNextPageToken returns true if NextPageToken is not nil.
+func (v *MergeDLQMessagesResponse) IsSetNextPageToken() bool {
+	return v != nil && v.NextPageToken != nil
+}
+
+type PurgeDLQMessagesRequest struct {
+	QueueType             *QueueType `json:"queueType,omitempty"`
+	ShardID               *int32     `json:"shardID,omitempty"`
+	InclusiveEndMessageID *int64     `json:"inclusiveEndMessageID,omitempty"`
+}
+
+// ToWire translates a PurgeDLQMessagesRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *PurgeDLQMessagesRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.QueueType != nil {
+		w, err = v.QueueType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ShardID != nil {
+		w, err = wire.NewValueI32(*(v.ShardID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.InclusiveEndMessageID != nil {
+		w, err = wire.NewValueI64(*(v.InclusiveEndMessageID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a PurgeDLQMessagesRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a PurgeDLQMessagesRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v PurgeDLQMessagesRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *PurgeDLQMessagesRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x QueueType
+				x, err = _QueueType_Read(field.Value)
+				v.QueueType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.ShardID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.InclusiveEndMessageID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a PurgeDLQMessagesRequest
+// struct.
+func (v *PurgeDLQMessagesRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.QueueType != nil {
+		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+		i++
+	}
+	if v.ShardID != nil {
+		fields[i] = fmt.Sprintf("ShardID: %v", *(v.ShardID))
+		i++
+	}
+	if v.InclusiveEndMessageID != nil {
+		fields[i] = fmt.Sprintf("InclusiveEndMessageID: %v", *(v.InclusiveEndMessageID))
+		i++
+	}
+
+	return fmt.Sprintf("PurgeDLQMessagesRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this PurgeDLQMessagesRequest match the
+// provided PurgeDLQMessagesRequest.
+//
+// This function performs a deep comparison.
+func (v *PurgeDLQMessagesRequest) Equals(rhs *PurgeDLQMessagesRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_QueueType_EqualsPtr(v.QueueType, rhs.QueueType) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.InclusiveEndMessageID, rhs.InclusiveEndMessageID) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of PurgeDLQMessagesRequest.
+func (v *PurgeDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.QueueType != nil {
+		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	}
+	if v.ShardID != nil {
+		enc.AddInt32("shardID", *v.ShardID)
+	}
+	if v.InclusiveEndMessageID != nil {
+		enc.AddInt64("inclusiveEndMessageID", *v.InclusiveEndMessageID)
+	}
+	return err
+}
+
+// GetQueueType returns the value of QueueType if it is set or its
+// zero value if it is unset.
+func (v *PurgeDLQMessagesRequest) GetQueueType() (o QueueType) {
+	if v != nil && v.QueueType != nil {
+		return *v.QueueType
+	}
+
+	return
+}
+
+// IsSetQueueType returns true if QueueType is not nil.
+func (v *PurgeDLQMessagesRequest) IsSetQueueType() bool {
+	return v != nil && v.QueueType != nil
+}
+
+// GetShardID returns the value of ShardID if it is set or its
+// zero value if it is unset.
+func (v *PurgeDLQMessagesRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+
+	return
+}
+
+// IsSetShardID returns true if ShardID is not nil.
+func (v *PurgeDLQMessagesRequest) IsSetShardID() bool {
+	return v != nil && v.ShardID != nil
+}
+
+// GetInclusiveEndMessageID returns the value of InclusiveEndMessageID if it is set or its
+// zero value if it is unset.
+func (v *PurgeDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
+	if v != nil && v.InclusiveEndMessageID != nil {
+		return *v.InclusiveEndMessageID
+	}
+
+	return
+}
+
+// IsSetInclusiveEndMessageID returns true if InclusiveEndMessageID is not nil.
+func (v *PurgeDLQMessagesRequest) IsSetInclusiveEndMessageID() bool {
+	return v != nil && v.InclusiveEndMessageID != nil
+}
+
+type QueueType int32
+
+const (
+	QueueTypeReplication QueueType = 0
+	QueueTypeDomain      QueueType = 1
+)
+
+// QueueType_Values returns all recognized values of QueueType.
+func QueueType_Values() []QueueType {
+	return []QueueType{
+		QueueTypeReplication,
+		QueueTypeDomain,
+	}
+}
+
+// UnmarshalText tries to decode QueueType from a byte slice
+// containing its name.
+//
+//   var v QueueType
+//   err := v.UnmarshalText([]byte("Replication"))
+func (v *QueueType) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "Replication":
+		*v = QueueTypeReplication
+		return nil
+	case "Domain":
+		*v = QueueTypeDomain
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "QueueType", err)
+		}
+		*v = QueueType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes QueueType to text.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v QueueType) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("Replication"), nil
+	case 1:
+		return []byte("Domain"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of QueueType.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v QueueType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "Replication")
+	case 1:
+		enc.AddString("name", "Domain")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v QueueType) Ptr() *QueueType {
+	return &v
+}
+
+// ToWire translates QueueType into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v QueueType) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes QueueType from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return QueueType(0), err
+//   }
+//
+//   var v QueueType
+//   if err := v.FromWire(x); err != nil {
+//     return QueueType(0), err
+//   }
+//   return v, nil
+func (v *QueueType) FromWire(w wire.Value) error {
+	*v = (QueueType)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of QueueType.
+func (v QueueType) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "Replication"
+	case 1:
+		return "Domain"
+	}
+	return fmt.Sprintf("QueueType(%d)", w)
+}
+
+// Equals returns true if this QueueType value matches the provided
+// value.
+func (v QueueType) Equals(rhs QueueType) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes QueueType into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v QueueType) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"Replication\""), nil
+	case 1:
+		return ([]byte)("\"Domain\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode QueueType from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *QueueType) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "QueueType")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "QueueType")
+		}
+		*v = (QueueType)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "QueueType")
+	}
+}
+
+type ReadDLQMessagesRequest struct {
+	QueueType             *QueueType `json:"queueType,omitempty"`
+	ShardID               *int32     `json:"shardID,omitempty"`
+	InclusiveEndMessageID *int64     `json:"inclusiveEndMessageID,omitempty"`
+	MaximumPageSize       *int32     `json:"maximumPageSize,omitempty"`
+	NextPageToken         []byte     `json:"nextPageToken,omitempty"`
+}
+
+// ToWire translates a ReadDLQMessagesRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ReadDLQMessagesRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [5]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.QueueType != nil {
+		w, err = v.QueueType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ShardID != nil {
+		w, err = wire.NewValueI32(*(v.ShardID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.InclusiveEndMessageID != nil {
+		w, err = wire.NewValueI64(*(v.InclusiveEndMessageID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ReadDLQMessagesRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ReadDLQMessagesRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ReadDLQMessagesRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ReadDLQMessagesRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x QueueType
+				x, err = _QueueType_Read(field.Value)
+				v.QueueType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.ShardID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.InclusiveEndMessageID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.MaximumPageSize = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ReadDLQMessagesRequest
+// struct.
+func (v *ReadDLQMessagesRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [5]string
+	i := 0
+	if v.QueueType != nil {
+		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+		i++
+	}
+	if v.ShardID != nil {
+		fields[i] = fmt.Sprintf("ShardID: %v", *(v.ShardID))
+		i++
+	}
+	if v.InclusiveEndMessageID != nil {
+		fields[i] = fmt.Sprintf("InclusiveEndMessageID: %v", *(v.InclusiveEndMessageID))
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
+		i++
+	}
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+
+	return fmt.Sprintf("ReadDLQMessagesRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ReadDLQMessagesRequest match the
+// provided ReadDLQMessagesRequest.
+//
+// This function performs a deep comparison.
+func (v *ReadDLQMessagesRequest) Equals(rhs *ReadDLQMessagesRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_QueueType_EqualsPtr(v.QueueType, rhs.QueueType) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.InclusiveEndMessageID, rhs.InclusiveEndMessageID) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ReadDLQMessagesRequest.
+func (v *ReadDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.QueueType != nil {
+		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	}
+	if v.ShardID != nil {
+		enc.AddInt32("shardID", *v.ShardID)
+	}
+	if v.InclusiveEndMessageID != nil {
+		enc.AddInt64("inclusiveEndMessageID", *v.InclusiveEndMessageID)
+	}
+	if v.MaximumPageSize != nil {
+		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	return err
+}
+
+// GetQueueType returns the value of QueueType if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesRequest) GetQueueType() (o QueueType) {
+	if v != nil && v.QueueType != nil {
+		return *v.QueueType
+	}
+
+	return
+}
+
+// IsSetQueueType returns true if QueueType is not nil.
+func (v *ReadDLQMessagesRequest) IsSetQueueType() bool {
+	return v != nil && v.QueueType != nil
+}
+
+// GetShardID returns the value of ShardID if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+
+	return
+}
+
+// IsSetShardID returns true if ShardID is not nil.
+func (v *ReadDLQMessagesRequest) IsSetShardID() bool {
+	return v != nil && v.ShardID != nil
+}
+
+// GetInclusiveEndMessageID returns the value of InclusiveEndMessageID if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
+	if v != nil && v.InclusiveEndMessageID != nil {
+		return *v.InclusiveEndMessageID
+	}
+
+	return
+}
+
+// IsSetInclusiveEndMessageID returns true if InclusiveEndMessageID is not nil.
+func (v *ReadDLQMessagesRequest) IsSetInclusiveEndMessageID() bool {
+	return v != nil && v.InclusiveEndMessageID != nil
+}
+
+// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesRequest) GetMaximumPageSize() (o int32) {
+	if v != nil && v.MaximumPageSize != nil {
+		return *v.MaximumPageSize
+	}
+
+	return
+}
+
+// IsSetMaximumPageSize returns true if MaximumPageSize is not nil.
+func (v *ReadDLQMessagesRequest) IsSetMaximumPageSize() bool {
+	return v != nil && v.MaximumPageSize != nil
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesRequest) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+// IsSetNextPageToken returns true if NextPageToken is not nil.
+func (v *ReadDLQMessagesRequest) IsSetNextPageToken() bool {
+	return v != nil && v.NextPageToken != nil
+}
+
+type ReadDLQMessagesResponse struct {
+	ReplicationTasks []*replicator.ReplicationTask `json:"replicationTasks,omitempty"`
+	NextPageToken    []byte                        `json:"nextPageToken,omitempty"`
+}
+
+type _List_ReplicationTask_ValueList []*replicator.ReplicationTask
+
+func (v _List_ReplicationTask_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_ReplicationTask_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_ReplicationTask_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_ReplicationTask_ValueList) Close() {}
+
+// ToWire translates a ReadDLQMessagesResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ReadDLQMessagesResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ReplicationTasks != nil {
+		w, err = wire.NewValueList(_List_ReplicationTask_ValueList(v.ReplicationTasks)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ReplicationTask_Read(w wire.Value) (*replicator.ReplicationTask, error) {
+	var v replicator.ReplicationTask
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_ReplicationTask_Read(l wire.ValueList) ([]*replicator.ReplicationTask, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*replicator.ReplicationTask, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _ReplicationTask_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a ReadDLQMessagesResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ReadDLQMessagesResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ReadDLQMessagesResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ReadDLQMessagesResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TList {
+				v.ReplicationTasks, err = _List_ReplicationTask_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ReadDLQMessagesResponse
+// struct.
+func (v *ReadDLQMessagesResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.ReplicationTasks != nil {
+		fields[i] = fmt.Sprintf("ReplicationTasks: %v", v.ReplicationTasks)
+		i++
+	}
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+
+	return fmt.Sprintf("ReadDLQMessagesResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_ReplicationTask_Equals(lhs, rhs []*replicator.ReplicationTask) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this ReadDLQMessagesResponse match the
+// provided ReadDLQMessagesResponse.
+//
+// This function performs a deep comparison.
+func (v *ReadDLQMessagesResponse) Equals(rhs *ReadDLQMessagesResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.ReplicationTasks == nil && rhs.ReplicationTasks == nil) || (v.ReplicationTasks != nil && rhs.ReplicationTasks != nil && _List_ReplicationTask_Equals(v.ReplicationTasks, rhs.ReplicationTasks))) {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_ReplicationTask_Zapper []*replicator.ReplicationTask
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_ReplicationTask_Zapper.
+func (l _List_ReplicationTask_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ReadDLQMessagesResponse.
+func (v *ReadDLQMessagesResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ReplicationTasks != nil {
+		err = multierr.Append(err, enc.AddArray("replicationTasks", (_List_ReplicationTask_Zapper)(v.ReplicationTasks)))
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	return err
+}
+
+// GetReplicationTasks returns the value of ReplicationTasks if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesResponse) GetReplicationTasks() (o []*replicator.ReplicationTask) {
+	if v != nil && v.ReplicationTasks != nil {
+		return v.ReplicationTasks
+	}
+
+	return
+}
+
+// IsSetReplicationTasks returns true if ReplicationTasks is not nil.
+func (v *ReadDLQMessagesResponse) IsSetReplicationTasks() bool {
+	return v != nil && v.ReplicationTasks != nil
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *ReadDLQMessagesResponse) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+// IsSetNextPageToken returns true if NextPageToken is not nil.
+func (v *ReadDLQMessagesResponse) IsSetNextPageToken() bool {
+	return v != nil && v.NextPageToken != nil
+}
+
 type RingInfo struct {
 	Role        *string     `json:"role,omitempty"`
 	MemberCount *int32      `json:"memberCount,omitempty"`
@@ -3274,7 +4707,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "8e3b8cba6e99e64b7b81eb383f72a0bf93453483",
+	SHA1:     "c73955a3f3c09e87a7106b74d24945861e2cb7d6",
 	Includes: []*thriftreflect.ThriftModule{
 		replicator.ThriftModule,
 		shared.ThriftModule,
@@ -3282,7 +4715,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privillege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: GetWorkflowExecutionRawHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  ReadDLQMessagesResponse ReadDLQMessages(1: ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  MergeDLQMessagesResponse MergeDLQMessages(1: MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\nstruct GetWorkflowExecutionRawHistoryRequest {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") firstEventId\n  40: optional i64 (js.type = \"Long\") nextEventId\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryResponse {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional map<string, shared.ReplicationInfo> replicationInfo\n  40: optional i32 eventStoreVersion\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n}\n\nenum QueueType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional QueueType queueType\n  20: optional i32 shardID\n  30: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  40: optional i32 maximumPageSize\n  50: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional list<replicator.ReplicationTask> replicationTasks\n  20: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional QueueType queueType\n  20: optional i32 shardID\n  30: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional QueueType queueType\n  20: optional i32 shardID\n  30: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  40: optional i32 maximumPageSize\n  50: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -9183,6 +10616,1707 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) MethodName() stri
 //
 // This will always be Reply for this struct.
 func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_MergeDLQMessages_Args represents the arguments for the AdminService.MergeDLQMessages function.
+//
+// The arguments for MergeDLQMessages are sent and received over the wire as this struct.
+type AdminService_MergeDLQMessages_Args struct {
+	Request *MergeDLQMessagesRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_MergeDLQMessages_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_MergeDLQMessages_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _MergeDLQMessagesRequest_Read(w wire.Value) (*MergeDLQMessagesRequest, error) {
+	var v MergeDLQMessagesRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_MergeDLQMessages_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_MergeDLQMessages_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_MergeDLQMessages_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_MergeDLQMessages_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _MergeDLQMessagesRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_MergeDLQMessages_Args
+// struct.
+func (v *AdminService_MergeDLQMessages_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_MergeDLQMessages_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_MergeDLQMessages_Args match the
+// provided AdminService_MergeDLQMessages_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_MergeDLQMessages_Args) Equals(rhs *AdminService_MergeDLQMessages_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_MergeDLQMessages_Args.
+func (v *AdminService_MergeDLQMessages_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MergeDLQMessages_Args) GetRequest() (o *MergeDLQMessagesRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_MergeDLQMessages_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "MergeDLQMessages" for this struct.
+func (v *AdminService_MergeDLQMessages_Args) MethodName() string {
+	return "MergeDLQMessages"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_MergeDLQMessages_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_MergeDLQMessages_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.MergeDLQMessages
+// function.
+var AdminService_MergeDLQMessages_Helper = struct {
+	// Args accepts the parameters of MergeDLQMessages in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *MergeDLQMessagesRequest,
+	) *AdminService_MergeDLQMessages_Args
+
+	// IsException returns true if the given error can be thrown
+	// by MergeDLQMessages.
+	//
+	// An error can be thrown by MergeDLQMessages only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for MergeDLQMessages
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// MergeDLQMessages into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by MergeDLQMessages
+	//
+	//   value, err := MergeDLQMessages(args)
+	//   result, err := AdminService_MergeDLQMessages_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from MergeDLQMessages: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*MergeDLQMessagesResponse, error) (*AdminService_MergeDLQMessages_Result, error)
+
+	// UnwrapResponse takes the result struct for MergeDLQMessages
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if MergeDLQMessages threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_MergeDLQMessages_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_MergeDLQMessages_Result) (*MergeDLQMessagesResponse, error)
+}{}
+
+func init() {
+	AdminService_MergeDLQMessages_Helper.Args = func(
+		request *MergeDLQMessagesRequest,
+	) *AdminService_MergeDLQMessages_Args {
+		return &AdminService_MergeDLQMessages_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_MergeDLQMessages_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_MergeDLQMessages_Helper.WrapResponse = func(success *MergeDLQMessagesResponse, err error) (*AdminService_MergeDLQMessages_Result, error) {
+		if err == nil {
+			return &AdminService_MergeDLQMessages_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_MergeDLQMessages_Result.BadRequestError")
+			}
+			return &AdminService_MergeDLQMessages_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_MergeDLQMessages_Result.InternalServiceError")
+			}
+			return &AdminService_MergeDLQMessages_Result{InternalServiceError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_MergeDLQMessages_Result.ServiceBusyError")
+			}
+			return &AdminService_MergeDLQMessages_Result{ServiceBusyError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_MergeDLQMessages_Helper.UnwrapResponse = func(result *AdminService_MergeDLQMessages_Result) (success *MergeDLQMessagesResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_MergeDLQMessages_Result represents the result of a AdminService.MergeDLQMessages function call.
+//
+// The result of a MergeDLQMessages execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_MergeDLQMessages_Result struct {
+	// Value returned by MergeDLQMessages after a successful execution.
+	Success              *MergeDLQMessagesResponse    `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *shared.ServiceBusyError     `json:"serviceBusyError,omitempty"`
+}
+
+// ToWire translates a AdminService_MergeDLQMessages_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_MergeDLQMessages_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_MergeDLQMessages_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _MergeDLQMessagesResponse_Read(w wire.Value) (*MergeDLQMessagesResponse, error) {
+	var v MergeDLQMessagesResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_MergeDLQMessages_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_MergeDLQMessages_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_MergeDLQMessages_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_MergeDLQMessages_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _MergeDLQMessagesResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_MergeDLQMessages_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_MergeDLQMessages_Result
+// struct.
+func (v *AdminService_MergeDLQMessages_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_MergeDLQMessages_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_MergeDLQMessages_Result match the
+// provided AdminService_MergeDLQMessages_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_MergeDLQMessages_Result) Equals(rhs *AdminService_MergeDLQMessages_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_MergeDLQMessages_Result.
+func (v *AdminService_MergeDLQMessages_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MergeDLQMessages_Result) GetSuccess() (o *MergeDLQMessagesResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_MergeDLQMessages_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MergeDLQMessages_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_MergeDLQMessages_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MergeDLQMessages_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_MergeDLQMessages_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MergeDLQMessages_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *AdminService_MergeDLQMessages_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "MergeDLQMessages" for this struct.
+func (v *AdminService_MergeDLQMessages_Result) MethodName() string {
+	return "MergeDLQMessages"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_MergeDLQMessages_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_PurgeDLQMessages_Args represents the arguments for the AdminService.PurgeDLQMessages function.
+//
+// The arguments for PurgeDLQMessages are sent and received over the wire as this struct.
+type AdminService_PurgeDLQMessages_Args struct {
+	Request *PurgeDLQMessagesRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_PurgeDLQMessages_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_PurgeDLQMessages_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PurgeDLQMessagesRequest_Read(w wire.Value) (*PurgeDLQMessagesRequest, error) {
+	var v PurgeDLQMessagesRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_PurgeDLQMessages_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_PurgeDLQMessages_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_PurgeDLQMessages_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_PurgeDLQMessages_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _PurgeDLQMessagesRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_PurgeDLQMessages_Args
+// struct.
+func (v *AdminService_PurgeDLQMessages_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_PurgeDLQMessages_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_PurgeDLQMessages_Args match the
+// provided AdminService_PurgeDLQMessages_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_PurgeDLQMessages_Args) Equals(rhs *AdminService_PurgeDLQMessages_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_PurgeDLQMessages_Args.
+func (v *AdminService_PurgeDLQMessages_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_PurgeDLQMessages_Args) GetRequest() (o *PurgeDLQMessagesRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_PurgeDLQMessages_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "PurgeDLQMessages" for this struct.
+func (v *AdminService_PurgeDLQMessages_Args) MethodName() string {
+	return "PurgeDLQMessages"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_PurgeDLQMessages_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_PurgeDLQMessages_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.PurgeDLQMessages
+// function.
+var AdminService_PurgeDLQMessages_Helper = struct {
+	// Args accepts the parameters of PurgeDLQMessages in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *PurgeDLQMessagesRequest,
+	) *AdminService_PurgeDLQMessages_Args
+
+	// IsException returns true if the given error can be thrown
+	// by PurgeDLQMessages.
+	//
+	// An error can be thrown by PurgeDLQMessages only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for PurgeDLQMessages
+	// given the error returned by it. The provided error may
+	// be nil if PurgeDLQMessages did not fail.
+	//
+	// This allows mapping errors returned by PurgeDLQMessages into a
+	// serializable result struct. WrapResponse returns a
+	// non-nil error if the provided error cannot be thrown by
+	// PurgeDLQMessages
+	//
+	//   err := PurgeDLQMessages(args)
+	//   result, err := AdminService_PurgeDLQMessages_Helper.WrapResponse(err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from PurgeDLQMessages: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(error) (*AdminService_PurgeDLQMessages_Result, error)
+
+	// UnwrapResponse takes the result struct for PurgeDLQMessages
+	// and returns the erorr returned by it (if any).
+	//
+	// The error is non-nil only if PurgeDLQMessages threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   err := AdminService_PurgeDLQMessages_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_PurgeDLQMessages_Result) error
+}{}
+
+func init() {
+	AdminService_PurgeDLQMessages_Helper.Args = func(
+		request *PurgeDLQMessagesRequest,
+	) *AdminService_PurgeDLQMessages_Args {
+		return &AdminService_PurgeDLQMessages_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_PurgeDLQMessages_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_PurgeDLQMessages_Helper.WrapResponse = func(err error) (*AdminService_PurgeDLQMessages_Result, error) {
+		if err == nil {
+			return &AdminService_PurgeDLQMessages_Result{}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_PurgeDLQMessages_Result.BadRequestError")
+			}
+			return &AdminService_PurgeDLQMessages_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_PurgeDLQMessages_Result.InternalServiceError")
+			}
+			return &AdminService_PurgeDLQMessages_Result{InternalServiceError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_PurgeDLQMessages_Result.ServiceBusyError")
+			}
+			return &AdminService_PurgeDLQMessages_Result{ServiceBusyError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_PurgeDLQMessages_Helper.UnwrapResponse = func(result *AdminService_PurgeDLQMessages_Result) (err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		return
+	}
+
+}
+
+// AdminService_PurgeDLQMessages_Result represents the result of a AdminService.PurgeDLQMessages function call.
+//
+// The result of a PurgeDLQMessages execution is sent and received over the wire as this struct.
+type AdminService_PurgeDLQMessages_Result struct {
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *shared.ServiceBusyError     `json:"serviceBusyError,omitempty"`
+}
+
+// ToWire translates a AdminService_PurgeDLQMessages_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_PurgeDLQMessages_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_PurgeDLQMessages_Result should have at most one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a AdminService_PurgeDLQMessages_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_PurgeDLQMessages_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_PurgeDLQMessages_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_PurgeDLQMessages_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if count > 1 {
+		return fmt.Errorf("AdminService_PurgeDLQMessages_Result should have at most one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_PurgeDLQMessages_Result
+// struct.
+func (v *AdminService_PurgeDLQMessages_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_PurgeDLQMessages_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_PurgeDLQMessages_Result match the
+// provided AdminService_PurgeDLQMessages_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_PurgeDLQMessages_Result) Equals(rhs *AdminService_PurgeDLQMessages_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_PurgeDLQMessages_Result.
+func (v *AdminService_PurgeDLQMessages_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	return err
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_PurgeDLQMessages_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_PurgeDLQMessages_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_PurgeDLQMessages_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_PurgeDLQMessages_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_PurgeDLQMessages_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *AdminService_PurgeDLQMessages_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "PurgeDLQMessages" for this struct.
+func (v *AdminService_PurgeDLQMessages_Result) MethodName() string {
+	return "PurgeDLQMessages"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_PurgeDLQMessages_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_ReadDLQMessages_Args represents the arguments for the AdminService.ReadDLQMessages function.
+//
+// The arguments for ReadDLQMessages are sent and received over the wire as this struct.
+type AdminService_ReadDLQMessages_Args struct {
+	Request *ReadDLQMessagesRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_ReadDLQMessages_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_ReadDLQMessages_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ReadDLQMessagesRequest_Read(w wire.Value) (*ReadDLQMessagesRequest, error) {
+	var v ReadDLQMessagesRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_ReadDLQMessages_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_ReadDLQMessages_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_ReadDLQMessages_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_ReadDLQMessages_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _ReadDLQMessagesRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_ReadDLQMessages_Args
+// struct.
+func (v *AdminService_ReadDLQMessages_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_ReadDLQMessages_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_ReadDLQMessages_Args match the
+// provided AdminService_ReadDLQMessages_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_ReadDLQMessages_Args) Equals(rhs *AdminService_ReadDLQMessages_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_ReadDLQMessages_Args.
+func (v *AdminService_ReadDLQMessages_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ReadDLQMessages_Args) GetRequest() (o *ReadDLQMessagesRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_ReadDLQMessages_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "ReadDLQMessages" for this struct.
+func (v *AdminService_ReadDLQMessages_Args) MethodName() string {
+	return "ReadDLQMessages"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_ReadDLQMessages_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_ReadDLQMessages_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.ReadDLQMessages
+// function.
+var AdminService_ReadDLQMessages_Helper = struct {
+	// Args accepts the parameters of ReadDLQMessages in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *ReadDLQMessagesRequest,
+	) *AdminService_ReadDLQMessages_Args
+
+	// IsException returns true if the given error can be thrown
+	// by ReadDLQMessages.
+	//
+	// An error can be thrown by ReadDLQMessages only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for ReadDLQMessages
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// ReadDLQMessages into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by ReadDLQMessages
+	//
+	//   value, err := ReadDLQMessages(args)
+	//   result, err := AdminService_ReadDLQMessages_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from ReadDLQMessages: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*ReadDLQMessagesResponse, error) (*AdminService_ReadDLQMessages_Result, error)
+
+	// UnwrapResponse takes the result struct for ReadDLQMessages
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if ReadDLQMessages threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_ReadDLQMessages_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_ReadDLQMessages_Result) (*ReadDLQMessagesResponse, error)
+}{}
+
+func init() {
+	AdminService_ReadDLQMessages_Helper.Args = func(
+		request *ReadDLQMessagesRequest,
+	) *AdminService_ReadDLQMessages_Args {
+		return &AdminService_ReadDLQMessages_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_ReadDLQMessages_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_ReadDLQMessages_Helper.WrapResponse = func(success *ReadDLQMessagesResponse, err error) (*AdminService_ReadDLQMessages_Result, error) {
+		if err == nil {
+			return &AdminService_ReadDLQMessages_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_ReadDLQMessages_Result.BadRequestError")
+			}
+			return &AdminService_ReadDLQMessages_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_ReadDLQMessages_Result.InternalServiceError")
+			}
+			return &AdminService_ReadDLQMessages_Result{InternalServiceError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_ReadDLQMessages_Result.ServiceBusyError")
+			}
+			return &AdminService_ReadDLQMessages_Result{ServiceBusyError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_ReadDLQMessages_Helper.UnwrapResponse = func(result *AdminService_ReadDLQMessages_Result) (success *ReadDLQMessagesResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_ReadDLQMessages_Result represents the result of a AdminService.ReadDLQMessages function call.
+//
+// The result of a ReadDLQMessages execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_ReadDLQMessages_Result struct {
+	// Value returned by ReadDLQMessages after a successful execution.
+	Success              *ReadDLQMessagesResponse     `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *shared.ServiceBusyError     `json:"serviceBusyError,omitempty"`
+}
+
+// ToWire translates a AdminService_ReadDLQMessages_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_ReadDLQMessages_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_ReadDLQMessages_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ReadDLQMessagesResponse_Read(w wire.Value) (*ReadDLQMessagesResponse, error) {
+	var v ReadDLQMessagesResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_ReadDLQMessages_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_ReadDLQMessages_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_ReadDLQMessages_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_ReadDLQMessages_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _ReadDLQMessagesResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_ReadDLQMessages_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_ReadDLQMessages_Result
+// struct.
+func (v *AdminService_ReadDLQMessages_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_ReadDLQMessages_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_ReadDLQMessages_Result match the
+// provided AdminService_ReadDLQMessages_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_ReadDLQMessages_Result) Equals(rhs *AdminService_ReadDLQMessages_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_ReadDLQMessages_Result.
+func (v *AdminService_ReadDLQMessages_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ReadDLQMessages_Result) GetSuccess() (o *ReadDLQMessagesResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_ReadDLQMessages_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ReadDLQMessages_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_ReadDLQMessages_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ReadDLQMessages_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_ReadDLQMessages_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ReadDLQMessages_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *AdminService_ReadDLQMessages_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "ReadDLQMessages" for this struct.
+func (v *AdminService_ReadDLQMessages_Result) MethodName() string {
+	return "ReadDLQMessages"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_ReadDLQMessages_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 

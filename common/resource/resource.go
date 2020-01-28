@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
@@ -65,6 +66,7 @@ type (
 		GetMetricsClient() metrics.Client
 		GetArchiverProvider() provider.ArchiverProvider
 		GetMessagingClient() messaging.Client
+		GetDomainReplicationTaskHandler() domain.ReplicationHandler
 
 		// membership infos
 

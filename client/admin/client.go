@@ -244,6 +244,54 @@ func (c *clientImpl) ReapplyEvents(
 	return client.ReapplyEvents(ctx, request, opts...)
 }
 
+func (c *clientImpl) ReadDLQMessages(
+	ctx context.Context,
+	request *admin.ReadDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*admin.ReadDLQMessagesResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.ReadDLQMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) PurgeDLQMessages(
+	ctx context.Context,
+	request *admin.PurgeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.PurgeDLQMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) MergeDLQMessages(
+	ctx context.Context,
+	request *admin.MergeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*admin.MergeDLQMessagesResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.MergeDLQMessages(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)

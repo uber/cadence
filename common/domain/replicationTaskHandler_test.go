@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package replicator
+package domain
 
 import (
 	"testing"
@@ -39,7 +39,7 @@ type (
 	domainReplicatorSuite struct {
 		suite.Suite
 		persistencetests.TestBase
-		domainReplicator *domainReplicatorImpl
+		domainReplicator *domainReplicationTaskHandlerImpl
 	}
 )
 
@@ -61,10 +61,10 @@ func (s *domainReplicatorSuite) SetupTest() {
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	logger := loggerimpl.NewLogger(zapLogger)
-	s.domainReplicator = NewDomainReplicator(
+	s.domainReplicator = NewReplicationHandler(
 		s.MetadataManager,
 		logger,
-	).(*domainReplicatorImpl)
+	).(*domainReplicationTaskHandlerImpl)
 }
 
 func (s *domainReplicatorSuite) TearDownTest() {

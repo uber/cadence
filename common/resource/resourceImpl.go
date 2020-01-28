@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -77,13 +78,14 @@ type (
 
 		// other common resources
 
-		domainCache       cache.DomainCache
-		timeSource        clock.TimeSource
-		payloadSerializer persistence.PayloadSerializer
-		metricsClient     metrics.Client
-		messagingClient   messaging.Client
-		archivalMetadata  archiver.ArchivalMetadata
-		archiverProvider  provider.ArchiverProvider
+		domainCache              cache.DomainCache
+		timeSource               clock.TimeSource
+		payloadSerializer        persistence.PayloadSerializer
+		metricsClient            metrics.Client
+		messagingClient          messaging.Client
+		archivalMetadata         archiver.ArchivalMetadata
+		archiverProvider         provider.ArchiverProvider
+		domainReplicationHandler domain.ReplicationHandler
 
 		// membership infos
 
@@ -257,6 +259,10 @@ func New(
 	); err != nil {
 		return nil, err
 	}
+	domainReplicationHandler := domain.NewReplicationHandler(
+		persistenceBean.GetMetadataManager(),
+		logger,
+	)
 
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
@@ -271,13 +277,14 @@ func New(
 
 		// other common resources
 
-		domainCache:       domainCache,
-		timeSource:        clock.NewRealTimeSource(),
-		payloadSerializer: persistence.NewPayloadSerializer(),
-		metricsClient:     params.MetricsClient,
-		messagingClient:   params.MessagingClient,
-		archivalMetadata:  params.ArchivalMetadata,
-		archiverProvider:  params.ArchiverProvider,
+		domainCache:              domainCache,
+		timeSource:               clock.NewRealTimeSource(),
+		payloadSerializer:        persistence.NewPayloadSerializer(),
+		metricsClient:            params.MetricsClient,
+		messagingClient:          params.MessagingClient,
+		archivalMetadata:         params.ArchivalMetadata,
+		archiverProvider:         params.ArchiverProvider,
+		domainReplicationHandler: domainReplicationHandler,
 
 		// membership infos
 
@@ -436,6 +443,11 @@ func (h *Impl) GetArchivalMetadata() archiver.ArchivalMetadata {
 // GetArchiverProvider return archival provider
 func (h *Impl) GetArchiverProvider() provider.ArchiverProvider {
 	return h.archiverProvider
+}
+
+// GetDomainReplicationTaskHandler return domain replication task handler
+func (h *Impl) GetDomainReplicationTaskHandler() domain.ReplicationHandler {
+	return h.domainReplicationHandler
 }
 
 // membership infos

@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -48,7 +49,7 @@ type (
 	Replicator struct {
 		domainCache            cache.DomainCache
 		clusterMetadata        cluster.Metadata
-		domainReplicator       DomainReplicator
+		domainReplicator       domain.ReplicationHandler
 		clientBean             client.Bean
 		historyClient          history.Client
 		config                 *Config
@@ -90,6 +91,7 @@ func NewReplicator(
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
 	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationTask domain.ReplicationHandler,
 ) *Replicator {
 
 	logger = logger.WithTags(tag.ComponentReplicator)
@@ -98,7 +100,7 @@ func NewReplicator(
 		serviceResolver:        serviceResolver,
 		domainCache:            domainCache,
 		clusterMetadata:        clusterMetadata,
-		domainReplicator:       NewDomainReplicator(metadataManagerV2, logger),
+		domainReplicator:       domainReplicationTask,
 		clientBean:             clientBean,
 		historyClient:          clientBean.GetHistoryClient(),
 		config:                 config,

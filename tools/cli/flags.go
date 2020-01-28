@@ -209,7 +209,11 @@ const (
 	FlagTLSCaPath                         = "tls_ca_path"
 	FlagTLSEnableHostVerification         = "tls_enable_host_verification"
 	FlagDLQType                           = "dlq_type"
-	FlagDLQTypeAlias                      = FlagDLQType + ", dt"
+	FlagDLQTypeWithAlias                  = FlagDLQType + ", dt"
+	FlagMaxMessageCount                   = "max_message_size"
+	FlagMaxMessageCountWithAlias          = FlagMaxMessageCount + ", mms"
+	FlagLastMessageID                     = "last_message_id"
+	FlagLastMessageIDWithAlias            = FlagLastMessageID + ", lm"
 )
 
 var flagsForExecution = []cli.Flag{

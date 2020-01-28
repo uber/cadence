@@ -219,3 +219,47 @@ func (c *retryableClient) ReapplyEvents(
 	}
 	return backoff.Retry(op, c.policy, c.isRetryable)
 }
+
+func (c *retryableClient) ReadDLQMessages(
+	ctx context.Context,
+	request *admin.ReadDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*admin.ReadDLQMessagesResponse, error) {
+
+	var resp *admin.ReadDLQMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.ReadDLQMessages(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) PurgeDLQMessages(
+	ctx context.Context,
+	request *admin.PurgeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	op := func() error {
+		return c.client.PurgeDLQMessages(ctx, request, opts...)
+	}
+	return backoff.Retry(op, c.policy, c.isRetryable)
+}
+
+func (c *retryableClient) MergeDLQMessages(
+	ctx context.Context,
+	request *admin.MergeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*admin.MergeDLQMessagesResponse, error) {
+
+	var resp *admin.MergeDLQMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.MergeDLQMessages(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}

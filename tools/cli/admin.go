@@ -799,17 +799,29 @@ func newAdminClusterCommands() []cli.Command {
 func newAdminDLQCommands() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "info",
+			Name:    "read",
 			Aliases: []string{"i"},
-			Usage:   "Get DLQ metadata",
+			Usage:   "Read DLQ Messages",
 			Flags: []cli.Flag{
-				cli.GenericFlag{
-					Name:  FlagDLQTypeAlias,
+				cli.StringFlag{
+					Name:  FlagDLQTypeWithAlias,
 					Usage: "Type of DLQ to manage",
 				},
 				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
 					Usage: "ShardID",
+				},
+				cli.IntFlag{
+					Name:  FlagMaxMessageCountWithAlias,
+					Usage: "Max message size to fetch",
+				},
+				cli.IntFlag{
+					Name:  FlagLastMessageID,
+					Usage: "The upper boundary of the read message",
+				},
+				cli.StringFlag{
+					Name:  FlagOutputFilenameWithAlias,
+					Usage: "Output file to write to, if not provided output is written to stdout",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -822,20 +834,20 @@ func newAdminDLQCommands() []cli.Command {
 			Usage:   "Delete DLQ messages with equal or smaller ids than the provided task id",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  FlagDLQTypeAlias,
+					Name:  FlagDLQTypeWithAlias,
 					Usage: "Type of DLQ to manage",
 				},
 				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
 					Usage: "ShardID",
 				},
-				cli.Int64Flag{
-					Name:  FlagRemoveTaskID,
-					Usage: "task id which user want to specify",
+				cli.IntFlag{
+					Name:  FlagLastMessageID,
+					Usage: "The upper boundary of the read message",
 				},
 			},
 			Action: func(c *cli.Context) {
-				AdminPurgeDLQBefore(c)
+				AdminPurgeDLQMessages(c)
 			},
 		},
 		{
@@ -844,20 +856,20 @@ func newAdminDLQCommands() []cli.Command {
 			Usage:   "Merge DLQ messages with equal or smaller ids than the provided task id",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  FlagDLQTypeAlias,
+					Name:  FlagDLQTypeWithAlias,
 					Usage: "Type of DLQ to manage",
 				},
 				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
 					Usage: "ShardID",
 				},
-				cli.Int64Flag{
-					Name:  FlagRemoveTaskID,
-					Usage: "task id which user want to specify",
+				cli.IntFlag{
+					Name:  FlagLastMessageID,
+					Usage: "The upper boundary of the read message",
 				},
 			},
 			Action: func(c *cli.Context) {
-				AdminMergeDLQBefore(c)
+				AdminMergeDLQMessages(c)
 			},
 		},
 	}

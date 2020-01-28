@@ -253,6 +253,7 @@ func (s *Service) startReplicator() {
 		s.GetHostInfo(),
 		s.GetWorkerServiceResolver(),
 		s.GetDomainReplicationQueue(),
+		s.GetDomainReplicationTaskHandler(),
 	)
 	if err := msgReplicator.Start(); err != nil {
 		msgReplicator.Stop()

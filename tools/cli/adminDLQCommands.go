@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,163 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/collection"
+)
+
+const (
+	defaultPageSize = 1000
+)
 
 // AdminGetDLQInfo get DLQ metadata
 func AdminGetDLQInfo(c *cli.Context) {
-	adminClient := cFactory.ServerAdminClient(c)
-	sid := getRequiredIntOption(c, FlagShardID)
-	dlqType := getRequiredInt64Option(c, FlagDLQType)
+	ctx, cancel := newContext(c)
+	defer cancel()
 
+	adminClient := cFactory.ServerAdminClient(c)
+	dlqType := getRequiredOption(c, FlagDLQType)
+	outputFile := getOutputFile(c.String(FlagOutputFilename))
+	defer outputFile.Close()
+
+	maxMessageCount := common.EndMessageID
+	if c.IsSet(FlagMaxMessageCount) {
+		maxMessageCount = c.Int64(FlagMaxMessageCount)
+	}
+	var lastMessageID *int64
+	if c.IsSet(FlagLastMessageID) {
+		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
+	}
+
+	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
+		resp, err := adminClient.ReadDLQMessages(ctx, &admin.ReadDLQMessagesRequest{
+			QueueType:             toQueueType(dlqType),
+			InclusiveEndMessageID: lastMessageID,
+			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
+			NextPageToken:         paginationToken,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		var paginateItems []interface{}
+		for _, item := range resp.GetReplicationTasks() {
+			paginateItems = append(paginateItems, item)
+		}
+		return paginateItems, resp.GetNextPageToken(), err
+	}
+
+	iterator := collection.NewPagingIterator(paginationFunc)
+	var lastReadMessageID int
+	for iterator.HasNext() && maxMessageCount > 0 {
+		item, err := iterator.Next()
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("fail to read dlq message. Last read message id: %v", lastReadMessageID), err)
+		}
+
+		task := item.(*replicator.ReplicationTask)
+		taskStr, err := json.Marshal(task)
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("fail to envode dlq message. Last read message id: %v", lastReadMessageID), err)
+		}
+
+		lastReadMessageID = int(*task.SourceTaskId)
+		maxMessageCount--
+		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
+	}
 }
 
-// AdminPurgeDLQBefore deletes messages from DLQ
-func AdminPurgeDLQBefore(c *cli.Context) {
+// AdminPurgeDLQMessages deletes messages from DLQ
+func AdminPurgeDLQMessages(c *cli.Context) {
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	dlqType := getRequiredOption(c, FlagDLQType)
+
+	var lastMessageID *int64
+	if c.IsSet(FlagLastMessageID) {
+		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
+	} else {
+		fmt.Println("Are you sure to purge all DLQ messages without a upper boundary? (Y/n)")
+		reader := bufio.NewReader(os.Stdin)
+		confirm, err := reader.ReadByte()
+		if err != nil {
+			panic(err)
+		}
+		if confirm != 'Y' {
+			osExit(0)
+		}
+	}
+
 	adminClient := cFactory.ServerAdminClient(c)
+	if err := adminClient.PurgeDLQMessages(ctx, &admin.PurgeDLQMessagesRequest{
+		QueueType:             toQueueType(dlqType),
+		InclusiveEndMessageID: lastMessageID,
+	}); err != nil {
+		ErrorAndExit("Failed to purge dlq", nil)
+	}
 }
 
-// AdminMergeDLQBefore merge message from DLQ
-func AdminMergeDLQBefore(c *cli.Context) {
-	adminClient := cFactory.ServerAdminClient(c)
+// AdminMergeDLQMessages merge message from DLQ
+func AdminMergeDLQMessages(c *cli.Context) {
+	ctx, cancel := newContext(c)
+	defer cancel()
 
+	dlqType := getRequiredOption(c, FlagDLQType)
+
+	var lastMessageID *int64
+	if c.IsSet(FlagLastMessageID) {
+		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
+	} else {
+		fmt.Println("Are you sure to merge all DLQ messages without a upper boundary? (Y/n)")
+		reader := bufio.NewReader(os.Stdin)
+		confirm, err := reader.ReadByte()
+		if err != nil {
+			panic(err)
+		}
+		if confirm != 'Y' {
+			osExit(0)
+		}
+	}
+
+	adminClient := cFactory.ServerAdminClient(c)
+	op := func(token []byte) (*admin.MergeDLQMessagesResponse, error) {
+		return adminClient.MergeDLQMessages(ctx, &admin.MergeDLQMessagesRequest{
+			QueueType:             toQueueType(dlqType),
+			InclusiveEndMessageID: lastMessageID,
+			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
+			NextPageToken:         token,
+		})
+	}
+
+	var pageToken []byte
+	for hasMore := true; hasMore; hasMore = len(pageToken) > 0 {
+		resp, err := op(pageToken)
+		if err != nil {
+			ErrorAndExit("Failed to merge DLQ message", err)
+		}
+		pageToken = resp.GetNextPageToken()
+		fmt.Printf("Successfully merged %v messages. More messages to merge.\n", defaultPageSize)
+	}
+	fmt.Println("Successfully merged all messages.")
 }
 
-func isShardIDRequired()
+func toQueueType(dlqType string) *admin.QueueType {
+	switch dlqType {
+	case "domain":
+		return admin.QueueTypeDomain.Ptr()
+	case "history":
+		return admin.QueueTypeReplication.Ptr()
+	default:
+		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
+	}
+	return nil
+}

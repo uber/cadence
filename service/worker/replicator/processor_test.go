@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	messageMocks "github.com/uber/cadence/common/messaging/mocks"
@@ -67,7 +68,7 @@ type (
 		msgEncoder     codec.BinaryEncoder
 
 		mockMsg              *messageMocks.Message
-		mockDomainReplicator *MockDomainReplicator
+		mockDomainReplicator *domain.MockReplicationHandler
 
 		mockSequentialTaskProcessor *task.MockSequentialTaskProcessor
 		mockRereplicator            *xdc.MockHistoryRereplicator
@@ -124,7 +125,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.mockMsg = &messageMocks.Message{}
 	s.mockMsg.On("Partition").Return(int32(0))
 	s.mockMsg.On("Offset").Return(int64(0))
-	s.mockDomainReplicator = &MockDomainReplicator{}
+	s.mockDomainReplicator = domain.NewMockReplicationHandler(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
 	s.mockSequentialTaskProcessor = &task.MockSequentialTaskProcessor{}
 
@@ -150,7 +151,6 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 
 func (s *replicationTaskProcessorSuite) TearDownTest() {
 	s.mockMsg.AssertExpectations(s.T())
-	s.mockDomainReplicator.AssertExpectations(s.T())
 	s.mockRereplicator.AssertExpectations(s.T())
 	s.mockSequentialTaskProcessor.AssertExpectations(s.T())
 
@@ -176,7 +176,7 @@ func (s *replicationTaskProcessorSuite) TestDecodeMsgAndSubmit_Domain_Success() 
 	replicationTaskBinary, err := s.msgEncoder.Encode(replicationTask)
 	s.Nil(err)
 	s.mockMsg.On("Value").Return(replicationTaskBinary)
-	s.mockDomainReplicator.On("HandleReceivingTask", replicationAttr).Return(nil).Once()
+	s.mockDomainReplicator.EXPECT().HandleReceivingTask(replicationAttr).Return(nil).Times(1)
 	s.mockMsg.On("Ack").Return(nil).Once()
 
 	s.processor.decodeMsgAndSubmit(s.mockMsg)
@@ -194,8 +194,8 @@ func (s *replicationTaskProcessorSuite) TestDecodeMsgAndSubmit_Domain_FailedThen
 	replicationTaskBinary, err := s.msgEncoder.Encode(replicationTask)
 	s.Nil(err)
 	s.mockMsg.On("Value").Return(replicationTaskBinary)
-	s.mockDomainReplicator.On("HandleReceivingTask", replicationAttr).Return(errors.New("some random error")).Once()
-	s.mockDomainReplicator.On("HandleReceivingTask", replicationAttr).Return(nil).Once()
+	s.mockDomainReplicator.EXPECT().HandleReceivingTask(replicationAttr).Return(errors.New("some random error")).Times(1)
+	s.mockDomainReplicator.EXPECT().HandleReceivingTask(replicationAttr).Return(nil).Times(1)
 	s.mockMsg.On("Ack").Return(nil).Once()
 
 	s.processor.decodeMsgAndSubmit(s.mockMsg)

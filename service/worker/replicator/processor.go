@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/domain"
 
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -59,7 +60,7 @@ type (
 		config                  *Config
 		logger                  log.Logger
 		metricsClient           metrics.Client
-		domainReplicator        DomainReplicator
+		domainReplicator        domain.ReplicationHandler
 		historyRereplicator     xdc.HistoryRereplicator
 		nDCHistoryResender      xdc.NDCHistoryResender
 		historyClient           history.Client
@@ -91,7 +92,7 @@ func newReplicationTaskProcessor(
 	config *Config,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	domainReplicator DomainReplicator,
+	domainReplicator domain.ReplicationHandler,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	historyClient history.Client,

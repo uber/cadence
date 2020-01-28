@@ -106,7 +106,7 @@ INTEG_NDC_SQL_COVER_FILE   := $(COVER_ROOT)/integ_ndc_sql_cover.out
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
 git-submodules:
-	git submodule update --init --recursive
+	git submodule update --init --recursive --remote
 
 yarpc-install:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
