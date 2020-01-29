@@ -22,6 +22,7 @@ package replicator
 
 import (
 	"context"
+	"github.com/uber/cadence/common/cache"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -54,6 +55,7 @@ type (
 		timeSource    clock.TimeSource
 		historyClient history.Client
 		metricsClient metrics.Client
+		domainName    string
 	}
 
 	activityReplicationTask struct {
@@ -103,9 +105,11 @@ func newActivityReplicationTask(
 	metricsClient metrics.Client,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
+	domainCache cache.DomainCache,
 ) *activityReplicationTask {
 
 	attr := replicationTask.SyncActivityTaskAttributes
+	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
 
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
@@ -128,6 +132,7 @@ func newActivityReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
+			domainName:    attr.GetDomainId(),
 		},
 		req: &h.SyncActivityRequest{
 			DomainId:           attr.DomainId,

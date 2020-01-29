@@ -358,6 +358,7 @@ func (p *replicationTaskProcessor) handleActivityTask(
 		p.metricsClient,
 		p.historyRereplicator,
 		p.nDCHistoryResender,
+		p.domainCache,
 	)
 	return p.sequentialTaskProcessor.Submit(activityReplicationTask)
 }
