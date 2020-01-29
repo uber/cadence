@@ -172,9 +172,18 @@ func newHistoryReplicationTask(
 	historyClient history.Client,
 	metricsClient metrics.Client,
 	historyRereplicator xdc.HistoryRereplicator,
+	domainCache cache.DomainCache,
 ) *historyReplicationTask {
 
 	attr := replicationTask.HistoryTaskAttributes
+	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
+	var domainTag metrics.Tag
+	if err == nil {
+		domainTag = metrics.DomainTag(domainName)
+	} else {
+		domainTag = metrics.DomainUnknownTag()
+	}
+
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
 		tag.WorkflowRunID(attr.GetRunId()),
@@ -197,6 +206,7 @@ func newHistoryReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
+			domainTag:     domainTag,
 		},
 		req: &h.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr(sourceCluster),
@@ -229,9 +239,17 @@ func newHistoryMetadataReplicationTask(
 	historyClient history.Client,
 	metricsClient metrics.Client,
 	historyRereplicator xdc.HistoryRereplicator,
+	domainCache cache.DomainCache,
 ) *historyMetadataReplicationTask {
 
 	attr := replicationTask.HistoryMetadataTaskAttributes
+	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
+	var domainTag metrics.Tag
+	if err == nil {
+		domainTag = metrics.DomainTag(domainName)
+	} else {
+		domainTag = metrics.DomainUnknownTag()
+	}
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
 		tag.WorkflowRunID(attr.GetRunId()),
@@ -253,6 +271,7 @@ func newHistoryMetadataReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
+			domainTag:     domainTag,
 		},
 		sourceCluster:       sourceCluster,
 		firstEventID:        attr.GetFirstEventId(),
@@ -270,9 +289,17 @@ func newHistoryReplicationV2Task(
 	historyClient history.Client,
 	metricsClient metrics.Client,
 	nDCHistoryResender xdc.NDCHistoryResender,
+	domainCache cache.DomainCache,
 ) *historyReplicationV2Task {
 
 	attr := replicationTask.HistoryTaskV2Attributes
+	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
+	var domainTag metrics.Tag
+	if err == nil {
+		domainTag = metrics.DomainTag(domainName)
+	} else {
+		domainTag = metrics.DomainUnknownTag()
+	}
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
 		tag.WorkflowRunID(attr.GetRunId()),
@@ -293,6 +320,7 @@ func newHistoryReplicationV2Task(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
+			domainTag:     domainTag,
 		},
 		req: &h.ReplicateEventsV2Request{
 			DomainUUID: attr.DomainId,
