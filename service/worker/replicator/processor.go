@@ -384,6 +384,7 @@ func (p *replicationTaskProcessor) handleHistoryReplicationTask(
 		p.historyClient,
 		p.metricsClient,
 		p.historyRereplicator,
+		p.domainCache,
 	)
 	return p.sequentialTaskProcessor.Submit(historyReplicationTask)
 }
@@ -409,6 +410,7 @@ func (p *replicationTaskProcessor) handleHistoryMetadataReplicationTask(
 		p.historyClient,
 		p.metricsClient,
 		p.historyRereplicator,
+		p.domainCache,
 	)
 	return p.sequentialTaskProcessor.Submit(historyMetadataReplicationTask)
 }
@@ -433,6 +435,7 @@ func (p *replicationTaskProcessor) handleHistoryReplicationV2Task(
 		p.historyClient,
 		p.metricsClient,
 		p.nDCHistoryResender,
+		p.domainCache,
 	)
 	return p.sequentialTaskProcessor.Submit(historyReplicationTask)
 }
