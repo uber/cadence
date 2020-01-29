@@ -55,7 +55,7 @@ type (
 		timeSource    clock.TimeSource
 		historyClient history.Client
 		metricsClient metrics.Client
-		domainName    string
+		domainTag     metrics.Tag
 	}
 
 	activityReplicationTask struct {
@@ -110,6 +110,12 @@ func newActivityReplicationTask(
 
 	attr := replicationTask.SyncActivityTaskAttributes
 	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
+	var domainTag metrics.Tag
+	if err == nil {
+		domainTag = metrics.DomainTag(domainName)
+	} else {
+		domainTag = metrics.DomainUnknownTag()
+	}
 
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
@@ -132,7 +138,7 @@ func newActivityReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainName:    attr.GetDomainId(),
+			domainTag:     domainTag,
 		},
 		req: &h.SyncActivityRequest{
 			DomainId:           attr.DomainId,
@@ -520,6 +526,9 @@ func (t *workflowReplicationTask) Nack() {
 	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, t.timeSource.Now().Sub(t.startTime))
 
 	t.state = task.TaskStateNacked
+
+	t.metricsClient.Scope(t.metricsScope, t.domainTag).IncCounter(metrics.ReplicationDLQDumpCount)
+
 	// the underlying implementation will not return anything other than nil
 	// do logging just in case
 	err := t.kafkaMsg.Nack()
