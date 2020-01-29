@@ -553,12 +553,15 @@ func (h *Handler) RespondDecisionTaskFailed(
 	if failedRequest != nil && failedRequest.GetCause() == gen.DecisionTaskFailedCauseUnhandledDecision {
 		h.GetLogger().Info("Non-Deterministic Error", tag.WorkflowDomainID(token.DomainID), tag.WorkflowID(token.WorkflowID), tag.WorkflowRunID(token.RunID))
 		domainName, err := h.GetDomainCache().GetDomainName(token.DomainID)
-		counter := metrics.CadenceErrNonDeterministicCounter
+		var domainTag metrics.Tag
+
 		if err == nil {
-			h.GetMetricsClient().Scope(scope, metrics.DomainTag(domainName)).IncCounter(counter)
+			domainTag = metrics.DomainTag(domainName)
 		} else {
-			h.GetMetricsClient().Scope(scope, metrics.DomainUnknownTag()).IncCounter(counter)
+			domainTag = metrics.DomainUnknownTag()
 		}
+
+		h.GetMetricsClient().Scope(scope, domainTag).IncCounter(metrics.CadenceErrNonDeterministicCounter)
 	}
 	err0 = validateTaskToken(token)
 	if err0 != nil {
