@@ -2832,3 +2832,59 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 
 	return d.populateGetReplicationTasksResponse(query)
 }
+
+func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
+	request *p.DeleteReplicationTaskFromDLQRequest,
+) error {
+
+	query := d.session.Query(templateCompleteTransferTaskQuery,
+		d.shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		request.SourceClusterName,
+		rowTypeDLQRunID,
+		defaultVisibilityTimestamp,
+		request.TaskID,
+	)
+
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("DeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
+		}
+	}
+	return nil
+}
+
+func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
+	request *p.RangeDeleteReplicationTaskFromDLQRequest,
+) error {
+
+	query := d.session.Query(templateCompleteTransferTaskQuery,
+		d.shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		request.SourceClusterName,
+		rowTypeDLQRunID,
+		defaultVisibilityTimestamp,
+		request.InclusiveEndTaskID,
+	)
+
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("RangeDeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("RangeDeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
+		}
+	}
+	return nil
+}

@@ -102,6 +102,9 @@ type (
 		GetDLQReplicationMessages(ctx ctx.Context, taskInfos []*r.ReplicationTaskInfo) ([]*r.ReplicationTask, error)
 		QueryWorkflow(ctx ctx.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
 		ReapplyEvents(ctx ctx.Context, domainUUID string, workflowID string, runID string, events []*workflow.HistoryEvent) error
+		ReadDLQMessages(ctx ctx.Context, messagesRequest *r.ReadDLQMessagesRequest) (*r.ReadDLQMessagesResponse, error)
+		PurgeDLQMessages(ctx ctx.Context, messagesRequest *r.PurgeDLQMessagesRequest) error
+		MergeDLQMessages(ctx ctx.Context, messagesRequest *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
 
 		NotifyNewHistoryEvent(event *historyEventNotification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
@@ -140,6 +143,7 @@ type (
 		matchingClient            matching.Client
 		rawMatchingClient         matching.Client
 		clientChecker             client.VersionChecker
+		replicationMessageHandler replicationMessageHandler
 	}
 )
 
@@ -297,6 +301,9 @@ func NewEngineWithShardContext(
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
+
+	replicationMessageHandler := newReplicationMessageHandler(shard, historyEngImpl)
+	historyEngImpl.replicationMessageHandler = replicationMessageHandler
 
 	shard.SetEngine(historyEngImpl)
 	return historyEngImpl
@@ -2910,6 +2917,59 @@ func (e *historyEngineImpl) ReapplyEvents(
 			}
 			return postActions, nil
 		})
+}
+
+func (e *historyEngineImpl) ReadDLQMessages(
+	ctx context.Context,
+	request *r.ReadDLQMessagesRequest,
+) (*r.ReadDLQMessagesResponse, error) {
+
+	tasks, token, err := e.replicationMessageHandler.readMessages(
+		ctx,
+		request.GetSourceCluster(),
+		request.GetInclusiveEndMessageID(),
+		int(request.GetMaximumPageSize()),
+		request.GetNextPageToken(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r.ReadDLQMessagesResponse{
+		Type:             request.GetType().Ptr(),
+		ReplicationTasks: tasks,
+		NextPageToken:    token,
+	}, nil
+}
+
+func (e *historyEngineImpl) PurgeDLQMessages(
+	ctx context.Context,
+	request *r.PurgeDLQMessagesRequest,
+) (retError error) {
+
+	return e.replicationMessageHandler.purgeMessages(
+		request.GetSourceCluster(),
+		request.GetInclusiveEndMessageID(),
+	)
+}
+
+func (e *historyEngineImpl) MergeDLQMessages(
+	ctx context.Context,
+	request *r.MergeDLQMessagesRequest,
+) (resp *r.MergeDLQMessagesResponse, retError error) {
+
+	token, err := e.replicationMessageHandler.mergeMessages(
+		ctx,
+		request.GetSourceCluster(),
+		request.GetInclusiveEndMessageID(),
+		int(request.GetMaximumPageSize()),
+		request.GetNextPageToken(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r.MergeDLQMessagesResponse{
+		NextPageToken: token,
+	}, nil
 }
 
 func (e *historyEngineImpl) loadWorkflowOnce(
