@@ -131,7 +131,7 @@ func newActivityReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		req: &h.SyncActivityRequest{
 			DomainId:           attr.DomainId,
@@ -192,7 +192,7 @@ func newHistoryReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		req: &h.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr(sourceCluster),
@@ -251,7 +251,7 @@ func newHistoryMetadataReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		sourceCluster:       sourceCluster,
 		firstEventID:        attr.GetFirstEventId(),
@@ -294,7 +294,7 @@ func newHistoryReplicationV2Task(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		req: &h.ReplicateEventsV2Request{
 			DomainUUID: attr.DomainId,
