@@ -174,6 +174,7 @@ func (s *historyReplicationTaskSuite) SetupTest() {
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
 	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 }
 
 func (s *historyReplicationTaskSuite) TearDownTest() {
@@ -206,6 +207,7 @@ func (s *historyMetadataReplicationTaskSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 }
 
 func (s *historyMetadataReplicationTaskSuite) TearDownTest() {
