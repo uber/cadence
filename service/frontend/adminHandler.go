@@ -797,7 +797,7 @@ func (adh *AdminHandler) ReadDLQMessages(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetQueueType() {
+	if !request.IsSetType() {
 		return nil, adh.error(errEmptyQueueType, scope)
 	}
 
@@ -811,7 +811,7 @@ func (adh *AdminHandler) ReadDLQMessages(
 
 	var tasks []*replicator.ReplicationTask
 	var token []byte
-	switch request.GetQueueType() {
+	switch request.GetType() {
 	case replicator.DLQTypeReplication:
 		return nil, &shared.InternalServiceError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
@@ -844,7 +844,7 @@ func (adh *AdminHandler) PurgeDLQMessages(
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetQueueType() {
+	if !request.IsSetType() {
 		return adh.error(errEmptyQueueType, scope)
 	}
 
@@ -852,7 +852,7 @@ func (adh *AdminHandler) PurgeDLQMessages(
 		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
 	}
 
-	switch request.GetQueueType() {
+	switch request.GetType() {
 	case replicator.DLQTypeReplication:
 		return &shared.InternalServiceError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
@@ -881,7 +881,7 @@ func (adh *AdminHandler) MergeDLQMessages(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetQueueType() {
+	if !request.IsSetType() {
 		return nil, adh.error(errEmptyQueueType, scope)
 	}
 
@@ -890,7 +890,7 @@ func (adh *AdminHandler) MergeDLQMessages(
 	}
 
 	var token []byte
-	switch request.GetQueueType() {
+	switch request.GetType() {
 	case replicator.DLQTypeReplication:
 		return nil, &shared.InternalServiceError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:

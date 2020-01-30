@@ -28,7 +28,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
@@ -58,8 +57,8 @@ func AdminGetDLQInfo(c *cli.Context) {
 	}
 
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
-		resp, err := adminClient.ReadDLQMessages(ctx, &admin.ReadDLQMessagesRequest{
-			QueueType:             toQueueType(dlqType),
+		resp, err := adminClient.ReadDLQMessages(ctx, &replicator.ReadDLQMessagesRequest{
+			Type:                  toQueueType(dlqType),
 			InclusiveEndMessageID: lastMessageID,
 			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
 			NextPageToken:         paginationToken,
@@ -117,8 +116,8 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 	}
 
 	adminClient := cFactory.ServerAdminClient(c)
-	if err := adminClient.PurgeDLQMessages(ctx, &admin.PurgeDLQMessagesRequest{
-		QueueType:             toQueueType(dlqType),
+	if err := adminClient.PurgeDLQMessages(ctx, &replicator.PurgeDLQMessagesRequest{
+		Type:                  toQueueType(dlqType),
 		InclusiveEndMessageID: lastMessageID,
 	}); err != nil {
 		ErrorAndExit("Failed to purge dlq", nil)
@@ -148,9 +147,9 @@ func AdminMergeDLQMessages(c *cli.Context) {
 	}
 
 	adminClient := cFactory.ServerAdminClient(c)
-	op := func(token []byte) (*admin.MergeDLQMessagesResponse, error) {
-		return adminClient.MergeDLQMessages(ctx, &admin.MergeDLQMessagesRequest{
-			QueueType:             toQueueType(dlqType),
+	op := func(token []byte) (*replicator.MergeDLQMessagesResponse, error) {
+		return adminClient.MergeDLQMessages(ctx, &replicator.MergeDLQMessagesRequest{
+			Type:                  toQueueType(dlqType),
 			InclusiveEndMessageID: lastMessageID,
 			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
 			NextPageToken:         token,
@@ -169,12 +168,12 @@ func AdminMergeDLQMessages(c *cli.Context) {
 	fmt.Println("Successfully merged all messages.")
 }
 
-func toQueueType(dlqType string) *admin.QueueType {
+func toQueueType(dlqType string) *replicator.DLQType {
 	switch dlqType {
 	case "domain":
-		return admin.QueueTypeDomain.Ptr()
+		return replicator.DLQTypeDomain.Ptr()
 	case "history":
-		return admin.QueueTypeReplication.Ptr()
+		return replicator.DLQTypeReplication.Ptr()
 	default:
 		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
 	}

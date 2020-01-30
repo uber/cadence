@@ -3868,7 +3868,7 @@ func (v *HistoryTaskV2Attributes) IsSetNewRunEvents() bool {
 }
 
 type MergeDLQMessagesRequest struct {
-	QueueType             *DLQType `json:"queueType,omitempty"`
+	Type                  *DLQType `json:"type,omitempty"`
 	ShardID               *int32   `json:"shardID,omitempty"`
 	SourceCluster         *string  `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
@@ -3899,8 +3899,8 @@ func (v *MergeDLQMessagesRequest) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.QueueType != nil {
-		w, err = v.QueueType.ToWire()
+	if v.Type != nil {
+		w, err = v.Type.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -3983,7 +3983,7 @@ func (v *MergeDLQMessagesRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI32 {
 				var x DLQType
 				x, err = _DLQType_Read(field.Value)
-				v.QueueType = &x
+				v.Type = &x
 				if err != nil {
 					return err
 				}
@@ -4052,8 +4052,8 @@ func (v *MergeDLQMessagesRequest) String() string {
 
 	var fields [6]string
 	i := 0
-	if v.QueueType != nil {
-		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+	if v.Type != nil {
+		fields[i] = fmt.Sprintf("Type: %v", *(v.Type))
 		i++
 	}
 	if v.ShardID != nil {
@@ -4100,7 +4100,7 @@ func (v *MergeDLQMessagesRequest) Equals(rhs *MergeDLQMessagesRequest) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !_DLQType_EqualsPtr(v.QueueType, rhs.QueueType) {
+	if !_DLQType_EqualsPtr(v.Type, rhs.Type) {
 		return false
 	}
 	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
@@ -4128,8 +4128,8 @@ func (v *MergeDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	if v == nil {
 		return nil
 	}
-	if v.QueueType != nil {
-		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	if v.Type != nil {
+		err = multierr.Append(err, enc.AddObject("type", *v.Type))
 	}
 	if v.ShardID != nil {
 		enc.AddInt32("shardID", *v.ShardID)
@@ -4149,19 +4149,19 @@ func (v *MergeDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	return err
 }
 
-// GetQueueType returns the value of QueueType if it is set or its
+// GetType returns the value of Type if it is set or its
 // zero value if it is unset.
-func (v *MergeDLQMessagesRequest) GetQueueType() (o DLQType) {
-	if v != nil && v.QueueType != nil {
-		return *v.QueueType
+func (v *MergeDLQMessagesRequest) GetType() (o DLQType) {
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 
 	return
 }
 
-// IsSetQueueType returns true if QueueType is not nil.
-func (v *MergeDLQMessagesRequest) IsSetQueueType() bool {
-	return v != nil && v.QueueType != nil
+// IsSetType returns true if Type is not nil.
+func (v *MergeDLQMessagesRequest) IsSetType() bool {
+	return v != nil && v.Type != nil
 }
 
 // GetShardID returns the value of ShardID if it is set or its
@@ -4376,7 +4376,7 @@ func (v *MergeDLQMessagesResponse) IsSetNextPageToken() bool {
 }
 
 type PurgeDLQMessagesRequest struct {
-	QueueType             *DLQType `json:"queueType,omitempty"`
+	Type                  *DLQType `json:"type,omitempty"`
 	ShardID               *int32   `json:"shardID,omitempty"`
 	SourceCluster         *string  `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
@@ -4405,8 +4405,8 @@ func (v *PurgeDLQMessagesRequest) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.QueueType != nil {
-		w, err = v.QueueType.ToWire()
+	if v.Type != nil {
+		w, err = v.Type.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -4467,7 +4467,7 @@ func (v *PurgeDLQMessagesRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI32 {
 				var x DLQType
 				x, err = _DLQType_Read(field.Value)
-				v.QueueType = &x
+				v.Type = &x
 				if err != nil {
 					return err
 				}
@@ -4518,8 +4518,8 @@ func (v *PurgeDLQMessagesRequest) String() string {
 
 	var fields [4]string
 	i := 0
-	if v.QueueType != nil {
-		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+	if v.Type != nil {
+		fields[i] = fmt.Sprintf("Type: %v", *(v.Type))
 		i++
 	}
 	if v.ShardID != nil {
@@ -4548,7 +4548,7 @@ func (v *PurgeDLQMessagesRequest) Equals(rhs *PurgeDLQMessagesRequest) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !_DLQType_EqualsPtr(v.QueueType, rhs.QueueType) {
+	if !_DLQType_EqualsPtr(v.Type, rhs.Type) {
 		return false
 	}
 	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
@@ -4570,8 +4570,8 @@ func (v *PurgeDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	if v == nil {
 		return nil
 	}
-	if v.QueueType != nil {
-		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	if v.Type != nil {
+		err = multierr.Append(err, enc.AddObject("type", *v.Type))
 	}
 	if v.ShardID != nil {
 		enc.AddInt32("shardID", *v.ShardID)
@@ -4585,19 +4585,19 @@ func (v *PurgeDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	return err
 }
 
-// GetQueueType returns the value of QueueType if it is set or its
+// GetType returns the value of Type if it is set or its
 // zero value if it is unset.
-func (v *PurgeDLQMessagesRequest) GetQueueType() (o DLQType) {
-	if v != nil && v.QueueType != nil {
-		return *v.QueueType
+func (v *PurgeDLQMessagesRequest) GetType() (o DLQType) {
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 
 	return
 }
 
-// IsSetQueueType returns true if QueueType is not nil.
-func (v *PurgeDLQMessagesRequest) IsSetQueueType() bool {
-	return v != nil && v.QueueType != nil
+// IsSetType returns true if Type is not nil.
+func (v *PurgeDLQMessagesRequest) IsSetType() bool {
+	return v != nil && v.Type != nil
 }
 
 // GetShardID returns the value of ShardID if it is set or its
@@ -4646,7 +4646,7 @@ func (v *PurgeDLQMessagesRequest) IsSetInclusiveEndMessageID() bool {
 }
 
 type ReadDLQMessagesRequest struct {
-	QueueType             *DLQType `json:"queueType,omitempty"`
+	Type                  *DLQType `json:"type,omitempty"`
 	ShardID               *int32   `json:"shardID,omitempty"`
 	SourceCluster         *string  `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
@@ -4677,8 +4677,8 @@ func (v *ReadDLQMessagesRequest) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.QueueType != nil {
-		w, err = v.QueueType.ToWire()
+	if v.Type != nil {
+		w, err = v.Type.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -4755,7 +4755,7 @@ func (v *ReadDLQMessagesRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI32 {
 				var x DLQType
 				x, err = _DLQType_Read(field.Value)
-				v.QueueType = &x
+				v.Type = &x
 				if err != nil {
 					return err
 				}
@@ -4824,8 +4824,8 @@ func (v *ReadDLQMessagesRequest) String() string {
 
 	var fields [6]string
 	i := 0
-	if v.QueueType != nil {
-		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+	if v.Type != nil {
+		fields[i] = fmt.Sprintf("Type: %v", *(v.Type))
 		i++
 	}
 	if v.ShardID != nil {
@@ -4862,7 +4862,7 @@ func (v *ReadDLQMessagesRequest) Equals(rhs *ReadDLQMessagesRequest) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !_DLQType_EqualsPtr(v.QueueType, rhs.QueueType) {
+	if !_DLQType_EqualsPtr(v.Type, rhs.Type) {
 		return false
 	}
 	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
@@ -4890,8 +4890,8 @@ func (v *ReadDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 	if v == nil {
 		return nil
 	}
-	if v.QueueType != nil {
-		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	if v.Type != nil {
+		err = multierr.Append(err, enc.AddObject("type", *v.Type))
 	}
 	if v.ShardID != nil {
 		enc.AddInt32("shardID", *v.ShardID)
@@ -4911,19 +4911,19 @@ func (v *ReadDLQMessagesRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 	return err
 }
 
-// GetQueueType returns the value of QueueType if it is set or its
+// GetType returns the value of Type if it is set or its
 // zero value if it is unset.
-func (v *ReadDLQMessagesRequest) GetQueueType() (o DLQType) {
-	if v != nil && v.QueueType != nil {
-		return *v.QueueType
+func (v *ReadDLQMessagesRequest) GetType() (o DLQType) {
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 
 	return
 }
 
-// IsSetQueueType returns true if QueueType is not nil.
-func (v *ReadDLQMessagesRequest) IsSetQueueType() bool {
-	return v != nil && v.QueueType != nil
+// IsSetType returns true if Type is not nil.
+func (v *ReadDLQMessagesRequest) IsSetType() bool {
+	return v != nil && v.Type != nil
 }
 
 // GetShardID returns the value of ShardID if it is set or its
@@ -5002,7 +5002,7 @@ func (v *ReadDLQMessagesRequest) IsSetNextPageToken() bool {
 }
 
 type ReadDLQMessagesResponse struct {
-	QueueType        *DLQType           `json:"queueType,omitempty"`
+	Type             *DLQType           `json:"type,omitempty"`
 	ReplicationTasks []*ReplicationTask `json:"replicationTasks,omitempty"`
 	NextPageToken    []byte             `json:"nextPageToken,omitempty"`
 }
@@ -5030,8 +5030,8 @@ func (v *ReadDLQMessagesResponse) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.QueueType != nil {
-		w, err = v.QueueType.ToWire()
+	if v.Type != nil {
+		w, err = v.Type.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -5084,7 +5084,7 @@ func (v *ReadDLQMessagesResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI32 {
 				var x DLQType
 				x, err = _DLQType_Read(field.Value)
-				v.QueueType = &x
+				v.Type = &x
 				if err != nil {
 					return err
 				}
@@ -5121,8 +5121,8 @@ func (v *ReadDLQMessagesResponse) String() string {
 
 	var fields [3]string
 	i := 0
-	if v.QueueType != nil {
-		fields[i] = fmt.Sprintf("QueueType: %v", *(v.QueueType))
+	if v.Type != nil {
+		fields[i] = fmt.Sprintf("Type: %v", *(v.Type))
 		i++
 	}
 	if v.ReplicationTasks != nil {
@@ -5147,7 +5147,7 @@ func (v *ReadDLQMessagesResponse) Equals(rhs *ReadDLQMessagesResponse) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !_DLQType_EqualsPtr(v.QueueType, rhs.QueueType) {
+	if !_DLQType_EqualsPtr(v.Type, rhs.Type) {
 		return false
 	}
 	if !((v.ReplicationTasks == nil && rhs.ReplicationTasks == nil) || (v.ReplicationTasks != nil && rhs.ReplicationTasks != nil && _List_ReplicationTask_Equals(v.ReplicationTasks, rhs.ReplicationTasks))) {
@@ -5166,8 +5166,8 @@ func (v *ReadDLQMessagesResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	if v == nil {
 		return nil
 	}
-	if v.QueueType != nil {
-		err = multierr.Append(err, enc.AddObject("queueType", *v.QueueType))
+	if v.Type != nil {
+		err = multierr.Append(err, enc.AddObject("type", *v.Type))
 	}
 	if v.ReplicationTasks != nil {
 		err = multierr.Append(err, enc.AddArray("replicationTasks", (_List_ReplicationTask_Zapper)(v.ReplicationTasks)))
@@ -5178,19 +5178,19 @@ func (v *ReadDLQMessagesResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	return err
 }
 
-// GetQueueType returns the value of QueueType if it is set or its
+// GetType returns the value of Type if it is set or its
 // zero value if it is unset.
-func (v *ReadDLQMessagesResponse) GetQueueType() (o DLQType) {
-	if v != nil && v.QueueType != nil {
-		return *v.QueueType
+func (v *ReadDLQMessagesResponse) GetType() (o DLQType) {
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 
 	return
 }
 
-// IsSetQueueType returns true if QueueType is not nil.
-func (v *ReadDLQMessagesResponse) IsSetQueueType() bool {
-	return v != nil && v.QueueType != nil
+// IsSetType returns true if Type is not nil.
+func (v *ReadDLQMessagesResponse) IsSetType() bool {
+	return v != nil && v.Type != nil
 }
 
 // GetReplicationTasks returns the value of ReplicationTasks if it is set or its
@@ -8053,11 +8053,11 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "replicator",
 	Package:  "github.com/uber/cadence/.gen/go/replicator",
 	FilePath: "replicator.thrift",
-	SHA1:     "7112e6548e9ed4d8b06885e80b5df6037d990c0e",
+	SHA1:     "0797cdb4364f446f6029320efd6449262a8e1b6c",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n  HistoryV2\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n}\n\nstruct HistoryTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n  60: optional i64 (js.type = \"Long\") version\n  70: optional map<string, shared.ReplicationInfo> replicationInfo\n  80: optional shared.History history\n  90: optional shared.History newRunHistory\n  100: optional i32 eventStoreVersion\n  110: optional i32 newRunEventStoreVersion\n  120: optional bool resetWorkflow\n  130: optional bool newRunNDC\n}\n\nstruct HistoryMetadataTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActivityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n  140: optional binary lastFailureDetails\n  150: optional shared.VersionHistory versionHistory\n}\n\nstruct HistoryTaskV2Attributes {\n  05: optional i64 (js.type = \"Long\") taskId\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional list<shared.VersionHistoryItem> versionHistoryItems\n  50: optional shared.DataBlob events\n  // new run events does not need version history since there is no prior events\n  70: optional shared.DataBlob newRunEvents\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  11: optional i64 (js.type = \"Long\") sourceTaskId\n  20: optional DomainTaskAttributes domainTaskAttributes\n  30: optional HistoryTaskAttributes historyTaskAttributes  // TODO deprecate once NDC migration is done\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActivityTaskAttributes syncActivityTaskAttributes\n  60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes // TODO deprecate once kafka deprecation is done\n  70: optional HistoryTaskV2Attributes historyTaskV2Attributes\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  // lastRetrivedMessageId is where the next fetch should begin with\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  30: optional i64 (js.type = \"Long\") lastProcessedMessageId\n}\n\nstruct SyncShardStatus {\n    10: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct ReplicationMessages {\n  10: optional list<ReplicationTask> replicationTasks\n  // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  30: optional bool hasMore // Hint for flow control\n  40: optional SyncShardStatus syncShardStatus\n}\n\nstruct ReplicationTaskInfo {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional i16 taskType\n  50: optional i64 (js.type = \"Long\") taskID\n  60: optional i64 (js.type = \"Long\") version\n  70: optional i64 (js.type = \"Long\") firstEventID\n  80: optional i64 (js.type = \"Long\") nextEventID\n  90: optional i64 (js.type = \"Long\") scheduledID\n}\n\nstruct GetReplicationMessagesRequest {\n  10: optional list<ReplicationToken> tokens\n  20: optional string clusterName\n}\n\nstruct GetReplicationMessagesResponse {\n  10: optional map<i32, ReplicationMessages> messagesByShard\n}\n\nstruct GetDomainReplicationMessagesRequest {\n  // lastRetrievedMessageId is where the next fetch should begin with\n  10: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  20: optional i64 (js.type = \"Long\") lastProcessedMessageId\n  // clusterName is the name of the pulling cluster\n  30: optional string clusterName\n}\n\nstruct GetDomainReplicationMessagesResponse {\n  10: optional ReplicationMessages messages\n}\n\nstruct GetDLQReplicationMessagesRequest {\n  10: optional list<ReplicationTaskInfo> taskInfos\n}\n\nstruct GetDLQReplicationMessagesResponse {\n  10: optional list<ReplicationTask> replicationTasks\n}\n\nenum DLQType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional DLQType queueType\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional DLQType queueType\n  20: optional list<ReplicationTask> replicationTasks\n  30: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional DLQType queueType\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional DLQType queueType\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n  HistoryV2\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n}\n\nstruct HistoryTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n  60: optional i64 (js.type = \"Long\") version\n  70: optional map<string, shared.ReplicationInfo> replicationInfo\n  80: optional shared.History history\n  90: optional shared.History newRunHistory\n  100: optional i32 eventStoreVersion\n  110: optional i32 newRunEventStoreVersion\n  120: optional bool resetWorkflow\n  130: optional bool newRunNDC\n}\n\nstruct HistoryMetadataTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActivityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n  140: optional binary lastFailureDetails\n  150: optional shared.VersionHistory versionHistory\n}\n\nstruct HistoryTaskV2Attributes {\n  05: optional i64 (js.type = \"Long\") taskId\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional list<shared.VersionHistoryItem> versionHistoryItems\n  50: optional shared.DataBlob events\n  // new run events does not need version history since there is no prior events\n  70: optional shared.DataBlob newRunEvents\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  11: optional i64 (js.type = \"Long\") sourceTaskId\n  20: optional DomainTaskAttributes domainTaskAttributes\n  30: optional HistoryTaskAttributes historyTaskAttributes  // TODO deprecate once NDC migration is done\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActivityTaskAttributes syncActivityTaskAttributes\n  60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes // TODO deprecate once kafka deprecation is done\n  70: optional HistoryTaskV2Attributes historyTaskV2Attributes\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  // lastRetrivedMessageId is where the next fetch should begin with\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  30: optional i64 (js.type = \"Long\") lastProcessedMessageId\n}\n\nstruct SyncShardStatus {\n    10: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct ReplicationMessages {\n  10: optional list<ReplicationTask> replicationTasks\n  // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  30: optional bool hasMore // Hint for flow control\n  40: optional SyncShardStatus syncShardStatus\n}\n\nstruct ReplicationTaskInfo {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional i16 taskType\n  50: optional i64 (js.type = \"Long\") taskID\n  60: optional i64 (js.type = \"Long\") version\n  70: optional i64 (js.type = \"Long\") firstEventID\n  80: optional i64 (js.type = \"Long\") nextEventID\n  90: optional i64 (js.type = \"Long\") scheduledID\n}\n\nstruct GetReplicationMessagesRequest {\n  10: optional list<ReplicationToken> tokens\n  20: optional string clusterName\n}\n\nstruct GetReplicationMessagesResponse {\n  10: optional map<i32, ReplicationMessages> messagesByShard\n}\n\nstruct GetDomainReplicationMessagesRequest {\n  // lastRetrievedMessageId is where the next fetch should begin with\n  10: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  20: optional i64 (js.type = \"Long\") lastProcessedMessageId\n  // clusterName is the name of the pulling cluster\n  30: optional string clusterName\n}\n\nstruct GetDomainReplicationMessagesResponse {\n  10: optional ReplicationMessages messages\n}\n\nstruct GetDLQReplicationMessagesRequest {\n  10: optional list<ReplicationTaskInfo> taskInfos\n}\n\nstruct GetDLQReplicationMessagesResponse {\n  10: optional list<ReplicationTask> replicationTasks\n}\n\nenum DLQType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional DLQType type\n  20: optional list<ReplicationTask> replicationTasks\n  30: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}"
