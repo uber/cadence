@@ -87,7 +87,7 @@ func newTransferQueueActiveProcessor(
 		MetricScope:                        metrics.TransferActiveQueueProcessorScope,
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
-	logger = logger.WithTags(tag.ClusterName(currentClusterName))
+	logger = logger.WithTags(tag.ClusterName(currentClusterName), tag.ComponentTransferQueue)
 	transferTaskFilter := func(taskInfo *taskInfo) (bool, error) {
 		task, ok := taskInfo.task.(*persistence.TransferTaskInfo)
 		if !ok {
@@ -179,6 +179,7 @@ func newTransferQueueFailoverProcessor(
 		tag.ClusterName(currentClusterName),
 		tag.WorkflowDomainIDs(domainIDs),
 		tag.FailoverMsg("from: "+standbyClusterName),
+		tag.ComponentTransferQueue,
 	)
 
 	transferTaskFilter := func(taskInfo *taskInfo) (bool, error) {

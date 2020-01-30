@@ -78,7 +78,7 @@ func newTransferQueueStandbyProcessor(
 		MaxRetryCount:                      config.TransferTaskMaxRetryCount,
 		MetricScope:                        metrics.TransferStandbyQueueProcessorScope,
 	}
-	logger = logger.WithTags(tag.ClusterName(clusterName))
+	logger = logger.WithTags(tag.ClusterName(clusterName), tag.ComponentTransferQueue)
 
 	transferTaskFilter := func(taskInfo *taskInfo) (bool, error) {
 		task, ok := taskInfo.task.(*persistence.TransferTaskInfo)
