@@ -62,7 +62,7 @@ type (
 		numberOfHistoryShards int
 		params                *service.BootstrapParams
 		config                *Config
-		domainDLQHandler      domain.DLQTaskHandler
+		domainDLQHandler      domain.DLQMessageHandler
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -89,7 +89,7 @@ func NewAdminHandler(
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
 		config:                config,
-		domainDLQHandler: domain.NewDLQTaskHandler(
+		domainDLQHandler: domain.NewDLQMessageHandler(
 			resource.GetDomainReplicationTaskHandler(),
 			resource.GetDomainReplicationQueue(),
 			resource.GetLogger().WithTags(),
@@ -786,8 +786,8 @@ func (adh *AdminHandler) ReapplyEvents(
 // ReadDLQMessages reads messages from DLQ
 func (adh *AdminHandler) ReadDLQMessages(
 	ctx context.Context,
-	request *admin.ReadDLQMessagesRequest,
-) (resp *admin.ReadDLQMessagesResponse, err error) {
+	request *replicator.ReadDLQMessagesRequest,
+) (resp *replicator.ReadDLQMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminReadDLQMessagesScope)
@@ -812,9 +812,9 @@ func (adh *AdminHandler) ReadDLQMessages(
 	var tasks []*replicator.ReplicationTask
 	var token []byte
 	switch request.GetQueueType() {
-	case admin.QueueTypeReplication:
+	case replicator.DLQTypeReplication:
 		return nil, &shared.InternalServiceError{Message: "Not implement."}
-	case admin.QueueTypeDomain:
+	case replicator.DLQTypeDomain:
 		tasks, token, err = adh.domainDLQHandler.ReadMessages(
 			int(request.GetInclusiveEndMessageID()),
 			int(request.GetMaximumPageSize()),
@@ -824,7 +824,7 @@ func (adh *AdminHandler) ReadDLQMessages(
 		return nil, adh.error(err, scope)
 	}
 
-	return &admin.ReadDLQMessagesResponse{
+	return &replicator.ReadDLQMessagesResponse{
 		ReplicationTasks: tasks,
 		NextPageToken:    token,
 	}, nil
@@ -833,7 +833,7 @@ func (adh *AdminHandler) ReadDLQMessages(
 // PurgeDLQMessages purge messages from DLQ
 func (adh *AdminHandler) PurgeDLQMessages(
 	ctx context.Context,
-	request *admin.PurgeDLQMessagesRequest,
+	request *replicator.PurgeDLQMessagesRequest,
 ) (err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
@@ -853,9 +853,9 @@ func (adh *AdminHandler) PurgeDLQMessages(
 	}
 
 	switch request.GetQueueType() {
-	case admin.QueueTypeReplication:
+	case replicator.DLQTypeReplication:
 		return &shared.InternalServiceError{Message: "Not implement."}
-	case admin.QueueTypeDomain:
+	case replicator.DLQTypeDomain:
 		err = adh.domainDLQHandler.PurgeMessages(
 			int(request.GetInclusiveEndMessageID()),
 		)
@@ -870,8 +870,8 @@ func (adh *AdminHandler) PurgeDLQMessages(
 // MergeDLQMessages merges DLQ messages
 func (adh *AdminHandler) MergeDLQMessages(
 	ctx context.Context,
-	request *admin.MergeDLQMessagesRequest,
-) (resp *admin.MergeDLQMessagesResponse, err error) {
+	request *replicator.MergeDLQMessagesRequest,
+) (resp *replicator.MergeDLQMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminMergeDLQMessagesScope)
@@ -891,9 +891,9 @@ func (adh *AdminHandler) MergeDLQMessages(
 
 	var token []byte
 	switch request.GetQueueType() {
-	case admin.QueueTypeReplication:
+	case replicator.DLQTypeReplication:
 		return nil, &shared.InternalServiceError{Message: "Not implement."}
-	case admin.QueueTypeDomain:
+	case replicator.DLQTypeDomain:
 		token, err = adh.domainDLQHandler.MergeMessages(
 			int(request.GetInclusiveEndMessageID()),
 			int(request.GetMaximumPageSize()),
@@ -904,7 +904,7 @@ func (adh *AdminHandler) MergeDLQMessages(
 		return nil, adh.error(err, scope)
 	}
 
-	return &admin.MergeDLQMessagesResponse{
+	return &replicator.MergeDLQMessagesResponse{
 		NextPageToken: token,
 	}, nil
 }

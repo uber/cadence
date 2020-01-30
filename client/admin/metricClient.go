@@ -259,9 +259,9 @@ func (c *metricClient) ReapplyEvents(
 
 func (c *metricClient) ReadDLQMessages(
 	ctx context.Context,
-	request *admin.ReadDLQMessagesRequest,
+	request *replicator.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*admin.ReadDLQMessagesResponse, error) {
+) (*replicator.ReadDLQMessagesResponse, error) {
 
 	c.metricsClient.IncCounter(metrics.AdminClientReadDLQMessagesScope, metrics.CadenceClientRequests)
 	sw := c.metricsClient.StartTimer(metrics.AdminClientReadDLQMessagesScope, metrics.CadenceClientLatency)
@@ -276,7 +276,7 @@ func (c *metricClient) ReadDLQMessages(
 
 func (c *metricClient) PurgeDLQMessages(
 	ctx context.Context,
-	request *admin.PurgeDLQMessagesRequest,
+	request *replicator.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -293,9 +293,9 @@ func (c *metricClient) PurgeDLQMessages(
 
 func (c *metricClient) MergeDLQMessages(
 	ctx context.Context,
-	request *admin.MergeDLQMessagesRequest,
+	request *replicator.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*admin.MergeDLQMessagesResponse, error) {
+) (*replicator.MergeDLQMessagesResponse, error) {
 
 	c.metricsClient.IncCounter(metrics.AdminClientMergeDLQMessagesScope, metrics.CadenceClientRequests)
 	sw := c.metricsClient.StartTimer(metrics.AdminClientMergeDLQMessagesScope, metrics.CadenceClientLatency)

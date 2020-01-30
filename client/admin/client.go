@@ -246,9 +246,9 @@ func (c *clientImpl) ReapplyEvents(
 
 func (c *clientImpl) ReadDLQMessages(
 	ctx context.Context,
-	request *admin.ReadDLQMessagesRequest,
+	request *replicator.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*admin.ReadDLQMessagesResponse, error) {
+) (*replicator.ReadDLQMessagesResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -262,7 +262,7 @@ func (c *clientImpl) ReadDLQMessages(
 
 func (c *clientImpl) PurgeDLQMessages(
 	ctx context.Context,
-	request *admin.PurgeDLQMessagesRequest,
+	request *replicator.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -278,9 +278,9 @@ func (c *clientImpl) PurgeDLQMessages(
 
 func (c *clientImpl) MergeDLQMessages(
 	ctx context.Context,
-	request *admin.MergeDLQMessagesRequest,
+	request *replicator.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*admin.MergeDLQMessagesResponse, error) {
+) (*replicator.MergeDLQMessagesResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()

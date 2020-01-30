@@ -222,11 +222,11 @@ func (c *retryableClient) ReapplyEvents(
 
 func (c *retryableClient) ReadDLQMessages(
 	ctx context.Context,
-	request *admin.ReadDLQMessagesRequest,
+	request *replicator.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*admin.ReadDLQMessagesResponse, error) {
+) (*replicator.ReadDLQMessagesResponse, error) {
 
-	var resp *admin.ReadDLQMessagesResponse
+	var resp *replicator.ReadDLQMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ReadDLQMessages(ctx, request, opts...)
@@ -238,7 +238,7 @@ func (c *retryableClient) ReadDLQMessages(
 
 func (c *retryableClient) PurgeDLQMessages(
 	ctx context.Context,
-	request *admin.PurgeDLQMessagesRequest,
+	request *replicator.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -250,11 +250,11 @@ func (c *retryableClient) PurgeDLQMessages(
 
 func (c *retryableClient) MergeDLQMessages(
 	ctx context.Context,
-	request *admin.MergeDLQMessagesRequest,
+	request *replicator.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*admin.MergeDLQMessagesResponse, error) {
+) (*replicator.MergeDLQMessagesResponse, error) {
 
-	var resp *admin.MergeDLQMessagesResponse
+	var resp *replicator.MergeDLQMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.MergeDLQMessages(ctx, request, opts...)

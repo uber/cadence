@@ -88,18 +88,18 @@ type Interface interface {
 
 	MergeDLQMessages(
 		ctx context.Context,
-		Request *admin.MergeDLQMessagesRequest,
-	) (*admin.MergeDLQMessagesResponse, error)
+		Request *replicator.MergeDLQMessagesRequest,
+	) (*replicator.MergeDLQMessagesResponse, error)
 
 	PurgeDLQMessages(
 		ctx context.Context,
-		Request *admin.PurgeDLQMessagesRequest,
+		Request *replicator.PurgeDLQMessagesRequest,
 	) error
 
 	ReadDLQMessages(
 		ctx context.Context,
-		Request *admin.ReadDLQMessagesRequest,
-	) (*admin.ReadDLQMessagesResponse, error)
+		Request *replicator.ReadDLQMessagesRequest,
+	) (*replicator.ReadDLQMessagesResponse, error)
 
 	ReapplyEvents(
 		ctx context.Context,
@@ -240,7 +240,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.MergeDLQMessages),
 				},
-				Signature:    "MergeDLQMessages(Request *admin.MergeDLQMessagesRequest) (*admin.MergeDLQMessagesResponse)",
+				Signature:    "MergeDLQMessages(Request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -251,7 +251,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.PurgeDLQMessages),
 				},
-				Signature:    "PurgeDLQMessages(Request *admin.PurgeDLQMessagesRequest)",
+				Signature:    "PurgeDLQMessages(Request *replicator.PurgeDLQMessagesRequest)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -262,7 +262,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.ReadDLQMessages),
 				},
-				Signature:    "ReadDLQMessages(Request *admin.ReadDLQMessagesRequest) (*admin.ReadDLQMessagesResponse)",
+				Signature:    "ReadDLQMessages(Request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 

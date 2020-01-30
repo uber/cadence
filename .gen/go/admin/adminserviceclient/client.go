@@ -100,21 +100,21 @@ type Interface interface {
 
 	MergeDLQMessages(
 		ctx context.Context,
-		Request *admin.MergeDLQMessagesRequest,
+		Request *replicator.MergeDLQMessagesRequest,
 		opts ...yarpc.CallOption,
-	) (*admin.MergeDLQMessagesResponse, error)
+	) (*replicator.MergeDLQMessagesResponse, error)
 
 	PurgeDLQMessages(
 		ctx context.Context,
-		Request *admin.PurgeDLQMessagesRequest,
+		Request *replicator.PurgeDLQMessagesRequest,
 		opts ...yarpc.CallOption,
 	) error
 
 	ReadDLQMessages(
 		ctx context.Context,
-		Request *admin.ReadDLQMessagesRequest,
+		Request *replicator.ReadDLQMessagesRequest,
 		opts ...yarpc.CallOption,
-	) (*admin.ReadDLQMessagesResponse, error)
+	) (*replicator.ReadDLQMessagesResponse, error)
 
 	ReapplyEvents(
 		ctx context.Context,
@@ -384,9 +384,9 @@ func (c client) GetWorkflowExecutionRawHistoryV2(
 
 func (c client) MergeDLQMessages(
 	ctx context.Context,
-	_Request *admin.MergeDLQMessagesRequest,
+	_Request *replicator.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.MergeDLQMessagesResponse, err error) {
+) (success *replicator.MergeDLQMessagesResponse, err error) {
 
 	args := admin.AdminService_MergeDLQMessages_Helper.Args(_Request)
 
@@ -407,7 +407,7 @@ func (c client) MergeDLQMessages(
 
 func (c client) PurgeDLQMessages(
 	ctx context.Context,
-	_Request *admin.PurgeDLQMessagesRequest,
+	_Request *replicator.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
@@ -430,9 +430,9 @@ func (c client) PurgeDLQMessages(
 
 func (c client) ReadDLQMessages(
 	ctx context.Context,
-	_Request *admin.ReadDLQMessagesRequest,
+	_Request *replicator.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.ReadDLQMessagesResponse, err error) {
+) (success *replicator.ReadDLQMessagesResponse, err error) {
 
 	args := admin.AdminService_ReadDLQMessages_Helper.Args(_Request)
 

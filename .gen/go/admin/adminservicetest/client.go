@@ -398,9 +398,9 @@ func (mr *_MockClientRecorder) GetWorkflowExecutionRawHistoryV2(
 // 	... := client.MergeDLQMessages(...)
 func (m *MockClient) MergeDLQMessages(
 	ctx context.Context,
-	_Request *admin.MergeDLQMessagesRequest,
+	_Request *replicator.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.MergeDLQMessagesResponse, err error) {
+) (success *replicator.MergeDLQMessagesResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -408,7 +408,7 @@ func (m *MockClient) MergeDLQMessages(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "MergeDLQMessages", args...)
-	success, _ = ret[i].(*admin.MergeDLQMessagesResponse)
+	success, _ = ret[i].(*replicator.MergeDLQMessagesResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
@@ -431,7 +431,7 @@ func (mr *_MockClientRecorder) MergeDLQMessages(
 // 	... := client.PurgeDLQMessages(...)
 func (m *MockClient) PurgeDLQMessages(
 	ctx context.Context,
-	_Request *admin.PurgeDLQMessagesRequest,
+	_Request *replicator.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
@@ -462,9 +462,9 @@ func (mr *_MockClientRecorder) PurgeDLQMessages(
 // 	... := client.ReadDLQMessages(...)
 func (m *MockClient) ReadDLQMessages(
 	ctx context.Context,
-	_Request *admin.ReadDLQMessagesRequest,
+	_Request *replicator.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.ReadDLQMessagesResponse, err error) {
+) (success *replicator.ReadDLQMessagesResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -472,7 +472,7 @@ func (m *MockClient) ReadDLQMessages(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "ReadDLQMessages", args...)
-	success, _ = ret[i].(*admin.ReadDLQMessagesResponse)
+	success, _ = ret[i].(*replicator.ReadDLQMessagesResponse)
 	i++
 	err, _ = ret[i].(error)
 	return

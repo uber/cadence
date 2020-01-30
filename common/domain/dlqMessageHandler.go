@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination dlqTaskHandler_mock.go
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination dlqMessageHandler_mock.go
 
 package domain
 
@@ -33,27 +33,27 @@ import (
 )
 
 type (
-	// DLQTaskHandler is the interface handles domain DLQ messages
-	DLQTaskHandler interface {
+	// DLQMessageHandler is the interface handles domain DLQ messages
+	DLQMessageHandler interface {
 		ReadMessages(lastMessageID int, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
 		PurgeMessages(lastMessageID int) error
 		MergeMessages(lastMessageID int, pageSize int, pageToken []byte) ([]byte, error)
 	}
 
-	dlqTaskHandlerImpl struct {
+	dlqMessageHandlerImpl struct {
 		replicationHandler     ReplicationHandler
 		domainReplicationQueue persistence.DomainReplicationQueue
 		logger                 log.Logger
 	}
 )
 
-// NewDLQTaskHandler returns a DLQTaskHandler instance
-func NewDLQTaskHandler(
+// NewDLQMessageHandler returns a DLQTaskHandler instance
+func NewDLQMessageHandler(
 	replicationHandler ReplicationHandler,
 	domainReplicationQueue persistence.DomainReplicationQueue,
 	logger log.Logger,
-) DLQTaskHandler {
-	return &dlqTaskHandlerImpl{
+) DLQMessageHandler {
+	return &dlqMessageHandlerImpl{
 		replicationHandler:     replicationHandler,
 		domainReplicationQueue: domainReplicationQueue,
 		logger:                 logger,
@@ -61,7 +61,7 @@ func NewDLQTaskHandler(
 }
 
 // ReadMessages reads domain replication DLQ messages
-func (d *dlqTaskHandlerImpl) ReadMessages(
+func (d *dlqMessageHandlerImpl) ReadMessages(
 	lastMessageID int,
 	pageSize int,
 	pageToken []byte,
@@ -81,7 +81,7 @@ func (d *dlqTaskHandlerImpl) ReadMessages(
 }
 
 // PurgeMessages purges domain replication DLQ messages
-func (d *dlqTaskHandlerImpl) PurgeMessages(
+func (d *dlqMessageHandlerImpl) PurgeMessages(
 	lastMessageID int,
 ) error {
 
@@ -107,7 +107,7 @@ func (d *dlqTaskHandlerImpl) PurgeMessages(
 }
 
 // MergeMessages merges domain replication DLQ messages
-func (d *dlqTaskHandlerImpl) MergeMessages(
+func (d *dlqMessageHandlerImpl) MergeMessages(
 	lastMessageID int,
 	pageSize int,
 	pageToken []byte,
