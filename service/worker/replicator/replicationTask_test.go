@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	messageMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/xdc"
@@ -99,6 +100,9 @@ type (
 	}
 )
 
+var testDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
+var testDomainName = "some random domain name"
+
 func TestActivityReplicationTaskSuite(t *testing.T) {
 	s := new(activityReplicationTaskSuite)
 	suite.Run(t, s)
@@ -140,6 +144,12 @@ func (s *activityReplicationTaskSuite) SetupTest() {
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
 	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+
+	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
+		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+	)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 }
 
 func (s *activityReplicationTaskSuite) TearDownTest() {
@@ -175,6 +185,12 @@ func (s *historyReplicationTaskSuite) SetupTest() {
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
 	s.mockNDCResender = &xdc.MockNDCHistoryResender{}
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+
+	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
+		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+	)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 }
 
 func (s *historyReplicationTaskSuite) TearDownTest() {
@@ -208,6 +224,12 @@ func (s *historyMetadataReplicationTaskSuite) SetupTest() {
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+
+	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
+		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+	)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 }
 
 func (s *historyMetadataReplicationTaskSuite) TearDownTest() {
