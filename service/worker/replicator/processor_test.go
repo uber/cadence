@@ -126,7 +126,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.mockMsg.On("Offset").Return(int64(0))
 	s.mockDomainReplicator = &MockDomainReplicator{}
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
-
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainName, nil).AnyTimes()
 	s.currentCluster = cluster.TestAlternativeClusterName
 	s.sourceCluster = cluster.TestCurrentClusterName
 
