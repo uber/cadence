@@ -1659,7 +1659,7 @@ const (
 	ReplicationTasksFetched
 	ReplicationTasksReturned
 	ReplicationDLQFailed
-	ReplicationDLQDumpCount
+	ReplicationTaskNackCount
 	GetReplicationMessagesForShardLatency
 	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
@@ -1998,7 +1998,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		ReplicationDLQFailed:                              {metricName: "replication_dlq_enqueue_failed", metricType: Counter},
-		ReplicationDLQDumpCount:                           {metricName: "replication_dlq_dump_count", metricType: Counter},
+		ReplicationTaskNackCount:                          {metricName: "replication_dlq_dump_count", metricType: Counter},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		GetDLQReplicationMessagesLatency:                  {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},

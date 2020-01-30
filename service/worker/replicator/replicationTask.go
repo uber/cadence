@@ -109,13 +109,6 @@ func newActivityReplicationTask(
 ) *activityReplicationTask {
 
 	attr := replicationTask.SyncActivityTaskAttributes
-	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
-	var domainTag metrics.Tag
-	if err == nil {
-		domainTag = metrics.DomainTag(domainName)
-	} else {
-		domainTag = metrics.DomainUnknownTag()
-	}
 
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
@@ -138,7 +131,7 @@ func newActivityReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     domainTag,
+			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		req: &h.SyncActivityRequest{
 			DomainId:           attr.DomainId,
@@ -176,13 +169,6 @@ func newHistoryReplicationTask(
 ) *historyReplicationTask {
 
 	attr := replicationTask.HistoryTaskAttributes
-	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
-	var domainTag metrics.Tag
-	if err == nil {
-		domainTag = metrics.DomainTag(domainName)
-	} else {
-		domainTag = metrics.DomainUnknownTag()
-	}
 
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
@@ -206,7 +192,7 @@ func newHistoryReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     domainTag,
+			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		req: &h.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr(sourceCluster),
@@ -243,13 +229,7 @@ func newHistoryMetadataReplicationTask(
 ) *historyMetadataReplicationTask {
 
 	attr := replicationTask.HistoryMetadataTaskAttributes
-	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
-	var domainTag metrics.Tag
-	if err == nil {
-		domainTag = metrics.DomainTag(domainName)
-	} else {
-		domainTag = metrics.DomainUnknownTag()
-	}
+
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
 		tag.WorkflowRunID(attr.GetRunId()),
@@ -271,7 +251,7 @@ func newHistoryMetadataReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     domainTag,
+			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		sourceCluster:       sourceCluster,
 		firstEventID:        attr.GetFirstEventId(),
@@ -293,13 +273,7 @@ func newHistoryReplicationV2Task(
 ) *historyReplicationV2Task {
 
 	attr := replicationTask.HistoryTaskV2Attributes
-	domainName, err := domainCache.GetDomainName(attr.GetDomainId())
-	var domainTag metrics.Tag
-	if err == nil {
-		domainTag = metrics.DomainTag(domainName)
-	} else {
-		domainTag = metrics.DomainUnknownTag()
-	}
+
 	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
 		tag.WorkflowID(attr.GetWorkflowId()),
 		tag.WorkflowRunID(attr.GetRunId()),
@@ -320,7 +294,7 @@ func newHistoryReplicationV2Task(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     domainTag,
+			domainTag:     common.GetDomainTag(domainCache.GetDomainName(attr.GetDomainId())),
 		},
 		req: &h.ReplicateEventsV2Request{
 			DomainUUID: attr.DomainId,
@@ -557,7 +531,7 @@ func (t *workflowReplicationTask) Nack() {
 
 	// TODO: need to discuss whether it is the good place to place the counter increment for the metrics because
 	// the retry logic inside Kafka may prevent some requests going to DLQ
-	t.metricsClient.Scope(t.metricsScope, t.domainTag).IncCounter(metrics.ReplicationDLQDumpCount)
+	t.metricsClient.Scope(t.metricsScope, t.domainTag).IncCounter(metrics.ReplicationTaskNackCount)
 
 	// the underlying implementation will not return anything other than nil
 	// do logging just in case
