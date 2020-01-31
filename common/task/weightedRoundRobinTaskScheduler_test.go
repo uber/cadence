@@ -91,7 +91,7 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestSubmit_Success() {
 
 	task := <-s.scheduler.taskChs[taskPriority]
 	s.Equal(mockTask, task)
-	s.Equal(len(testSchedulerWeights), s.scheduler.numPriorities)
+	s.Equal(len(testSchedulerWeights), s.scheduler.numQueues)
 	for _, taskCh := range s.scheduler.taskChs {
 		s.Empty(taskCh)
 	}

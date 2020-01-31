@@ -42,15 +42,15 @@ type (
 	}
 
 	weightedRoundRobinTaskSchedulerImpl struct {
-		status        int32
-		numPriorities int
-		taskChs       []chan PriorityTask
-		shutdownCh    chan struct{}
-		notifyCh      chan struct{}
-		dispatcherWG  sync.WaitGroup
-		logger        log.Logger
-		metricsScope  metrics.Scope
-		options       *WeightedRoundRobinTaskSchedulerOptions
+		status       int32
+		numQueues    int
+		taskChs      []chan PriorityTask
+		shutdownCh   chan struct{}
+		notifyCh     chan struct{}
+		dispatcherWG sync.WaitGroup
+		logger       log.Logger
+		metricsScope metrics.Scope
+		options      *WeightedRoundRobinTaskSchedulerOptions
 
 		processor Processor
 	}
@@ -77,14 +77,14 @@ func NewWeightedRoundRobinTaskScheduler(
 
 	numPriorities := len(options.Weights)
 	scheduler := &weightedRoundRobinTaskSchedulerImpl{
-		status:        common.DaemonStatusInitialized,
-		numPriorities: numPriorities,
-		taskChs:       make([]chan PriorityTask, numPriorities),
-		shutdownCh:    make(chan struct{}),
-		notifyCh:      make(chan struct{}, 1),
-		logger:        logger,
-		metricsScope:  metricsScope,
-		options:       options,
+		status:       common.DaemonStatusInitialized,
+		numQueues:    numPriorities,
+		taskChs:      make([]chan PriorityTask, numPriorities),
+		shutdownCh:   make(chan struct{}),
+		notifyCh:     make(chan struct{}, 1),
+		logger:       logger,
+		metricsScope: metricsScope,
+		options:      options,
 		processor: NewParallelTaskProcessor(
 			logger,
 			metricsScope,
@@ -138,7 +138,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Submit(task PriorityTask) error {
 	defer sw.Stop()
 
 	priority := task.Priority()
-	if priority >= w.numPriorities {
+	if priority >= w.numQueues {
 		return errors.New("task priority exceeds limit")
 	}
 	select {
@@ -173,7 +173,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 		}
 
 		outstandingTasks = false
-		for priority := 0; priority != w.numPriorities; priority++ {
+		for priority := 0; priority != w.numQueues; priority++ {
 			for i := 0; i != w.options.Weights[priority]; i++ {
 				select {
 				case task := <-w.taskChs[priority]:
