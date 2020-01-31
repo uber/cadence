@@ -174,8 +174,8 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 		}
 
 		outstandingTasks = false
-		for priority := 0; priority != w.numQueues; priority++ {
-			for i := 0; i != w.options.Weights[priority]; i++ {
+		for priority := 0; priority < w.numQueues; priority++ {
+			for i := 0; i < w.options.Weights[priority]; i++ {
 				select {
 				case task := <-w.taskChs[priority]:
 					// dispatched at least one task in this round
