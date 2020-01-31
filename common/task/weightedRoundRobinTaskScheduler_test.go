@@ -21,6 +21,7 @@
 package task
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -126,7 +127,7 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestSubmit_Fail_PriorityExceedsLi
 	s.NotEqual(ErrTaskSchedulerClosed, err)
 }
 
-func (s *weightedRoundRobinTaskSchedulerSuite) TestDispatcher() {
+func (s *weightedRoundRobinTaskSchedulerSuite) TestDispatcher_SubmitWithNoError() {
 	numPriorities := len(testSchedulerWeights)
 	tasks := [][]*MockPriorityTask{}
 	var taskWG sync.WaitGroup
@@ -169,6 +170,35 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestDispatcher() {
 		// fifth round
 		s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[2][4])).DoAndReturn(mockFn),
 	)
+	s.scheduler.processor = s.mockProcessor
+
+	doneCh := make(chan struct{})
+	go func() {
+		s.scheduler.dispatcherWG.Add(1)
+		s.scheduler.dispatcher()
+		close(doneCh)
+	}()
+
+	taskWG.Wait()
+	close(s.scheduler.shutdownCh)
+
+	<-doneCh
+}
+
+func (s *weightedRoundRobinTaskSchedulerSuite) TestDispatcher_FailToSubmit() {
+	mockTask := NewMockPriorityTask(s.controller)
+	mockTask.EXPECT().Priority().Return(0)
+	mockTask.EXPECT().Nack()
+
+	var taskWG sync.WaitGroup
+	s.scheduler.Submit(mockTask)
+	taskWG.Add(1)
+
+	mockFn := func(_ Task) error {
+		taskWG.Done()
+		return errors.New("some random error")
+	}
+	s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(mockTask)).DoAndReturn(mockFn)
 	s.scheduler.processor = s.mockProcessor
 
 	doneCh := make(chan struct{})

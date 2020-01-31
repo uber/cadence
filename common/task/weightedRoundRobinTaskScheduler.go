@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -180,9 +181,10 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 					// dispatched at least one task in this round
 					outstandingTasks = true
 
-					// submit will fail only when the processor has shut down,
-					// in which case we can just drop the task
-					_ = w.processor.Submit(task)
+					if err := w.processor.Submit(task); err != nil {
+						w.logger.Error("Fail to submit task to processor", tag.Error(err))
+						task.Nack()
+					}
 				case <-w.shutdownCh:
 					return
 				default:
