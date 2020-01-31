@@ -131,7 +131,7 @@ func newActivityReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     GetDomainTagByID(attr.GetDomainId(), domainCache),
 		},
 		req: &h.SyncActivityRequest{
 			DomainId:           attr.DomainId,
@@ -192,7 +192,7 @@ func newHistoryReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     GetDomainTagByID(attr.GetDomainId(), domainCache),
 		},
 		req: &h.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr(sourceCluster),
@@ -251,7 +251,7 @@ func newHistoryMetadataReplicationTask(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     GetDomainTagByID(attr.GetDomainId(), domainCache),
 		},
 		sourceCluster:       sourceCluster,
 		firstEventID:        attr.GetFirstEventId(),
@@ -294,7 +294,7 @@ func newHistoryReplicationV2Task(
 			timeSource:    timeSource,
 			historyClient: historyClient,
 			metricsClient: metricsClient,
-			domainTag:     common.GetDomainTagByName(domainCache.GetDomainName(attr.GetDomainId())),
+			domainTag:     GetDomainTagByID(attr.GetDomainId(), domainCache),
 		},
 		req: &h.ReplicateEventsV2Request{
 			DomainUUID: attr.DomainId,
@@ -553,4 +553,14 @@ func (t *workflowReplicationTask) convertRetryTaskV2Error(
 
 	retError, ok := err.(*shared.RetryTaskV2Error)
 	return retError, ok
+}
+
+// GetDomainTagByID returns the corresponding tag if the domain id could be found, otherwise return un-known tag
+func GetDomainTagByID(domainId string, domainCache cache.DomainCache) metrics.Tag {
+	domainName, err := domainCache.GetDomainName(domainId)
+	if err == nil {
+		return metrics.DomainTag(domainName)
+	}
+
+	return metrics.DomainUnknownTag()
 }

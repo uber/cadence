@@ -525,12 +525,3 @@ func GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist bool) stri
 	}
 	return AdvancedVisibilityWritingModeOff
 }
-
-// GetDomainTagByName returns the corresponding tag if the domain name could be found, otherwise return un-known tag
-func GetDomainTagByName(domainName string, err error) metrics.Tag {
-	if err == nil {
-		return metrics.DomainTag(domainName)
-	}
-
-	return metrics.DomainUnknownTag()
-}

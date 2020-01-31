@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/service/worker/replicator"
 )
 
 // Handler - Thrift handler interface for history service
@@ -553,7 +554,8 @@ func (h *Handler) RespondDecisionTaskFailed(
 	if failedRequest != nil && failedRequest.GetCause() == gen.DecisionTaskFailedCauseUnhandledDecision {
 		h.GetLogger().Info("Non-Deterministic Error", tag.WorkflowDomainID(token.DomainID), tag.WorkflowID(token.WorkflowID), tag.WorkflowRunID(token.RunID))
 
-		h.GetMetricsClient().Scope(scope, common.GetDomainTagByName(h.GetDomainCache().GetDomainName(token.DomainID))).IncCounter(metrics.CadenceErrNonDeterministicCounter)
+		// not sure whether it makes sense to have reference of replicator here?
+		h.GetMetricsClient().Scope(scope, replicator.GetDomainTagByID(token.DomainID, h.GetDomainCache())).IncCounter(metrics.CadenceErrNonDeterministicCounter)
 	}
 	err0 = validateTaskToken(token)
 	if err0 != nil {
