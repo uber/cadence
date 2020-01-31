@@ -25,12 +25,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/uber/cadence/common"
 
 	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/archiver"
 )
 
 func encode(v interface{}) ([]byte, error) {
@@ -58,6 +64,20 @@ func constructHistoryFilenameMultipart(domainID, workflowID, runID string, versi
 
 func constructHistoryFilenamePrefix(domainID, workflowID, runID string) string {
 	return strings.Join([]string{hash(domainID), hash(workflowID), hash(runID)}, "")
+}
+
+func hashVisibilityFilenamePrefix(domainID, ID string) string {
+	return strings.Join([]string{hash(domainID), hash(ID)}, "")
+}
+
+func constructVisibilityFilenamePrefix(domainID, runID, workflowID string) string {
+	var combinedDomainRunIDHash string
+	if runID != "" {
+		combinedDomainRunIDHash = hashVisibilityFilenamePrefix(domainID, runID)
+	}
+
+	combinedDomainWorkflowIDHash := hashVisibilityFilenamePrefix(domainID, workflowID)
+	return fmt.Sprintf("%s_%s", combinedDomainWorkflowIDHash, combinedDomainRunIDHash)
 }
 
 func hash(s string) string {
@@ -101,4 +121,126 @@ func serializeToken(token interface{}) ([]byte, error) {
 		return nil, nil
 	}
 	return json.Marshal(token)
+}
+
+func decodeVisibilityRecord(data []byte) (*visibilityRecord, error) {
+	record := &visibilityRecord{}
+	err := json.Unmarshal(data, record)
+	if err != nil {
+		return nil, err
+	}
+	return record, nil
+}
+
+func constructVisibilityFilename(domainID, workflowID, runID string, timestamp int64) string {
+	t := time.Unix(0, timestamp).In(time.UTC)
+	prefix := constructVisibilityFilenamePrefix(domainID, runID, workflowID)
+	return fmt.Sprintf("%s_%s.visibility", prefix, t.Format(time.RFC3339))
+}
+
+func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error) {
+	token := &queryVisibilityToken{}
+	err := json.Unmarshal(bytes, token)
+	return token, err
+}
+
+type parsedVisFilename struct {
+	name       string
+	closeTime  int64
+	LastRunID  string
+	WorkflowID string
+}
+
+// sortAndFilterFiles sort visibility record file names based on close timestamp (desc) and use hashed runID to break ties.
+// if a nextPageToken is give, it only returns filenames that have a smaller close timestamp
+func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]string, error) {
+	var parsedFilenames []*parsedVisFilename
+	for _, name := range filenames {
+		pieces := strings.FieldsFunc(name, func(r rune) bool {
+			return r == '_' || r == '.'
+		})
+		if len(pieces) != 5 {
+			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
+		}
+
+		closeTime, err := time.Parse(time.RFC3339, pieces[3])
+		//closeTime, err := strconv.ParseInt(pieces[4], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
+		}
+		parsedFilenames = append(parsedFilenames, &parsedVisFilename{
+			name:       name,
+			closeTime:  closeTime.UnixNano(),
+			WorkflowID: filepath.Base(pieces[1]),
+			LastRunID:  pieces[2],
+		})
+	}
+
+	sort.Slice(parsedFilenames, func(i, j int) bool {
+		if parsedFilenames[i].closeTime == parsedFilenames[j].closeTime {
+			return parsedFilenames[i].LastRunID > parsedFilenames[j].LastRunID
+		}
+		return parsedFilenames[i].closeTime > parsedFilenames[j].closeTime
+	})
+
+	startIdx := 0
+	if token != nil {
+		//LastHashedRunID := hash(token.LastRunID)
+		startIdx = sort.Search(len(parsedFilenames), func(i int) bool {
+			if parsedFilenames[i].closeTime == token.LastCloseTime {
+				return parsedFilenames[i].LastRunID < token.LastRunID
+			}
+			return parsedFilenames[i].closeTime < token.LastCloseTime
+		})
+	}
+
+	if startIdx == len(parsedFilenames) {
+		return []string{}, nil
+	}
+
+	var filteredFilenames []string
+	for _, parsedFilename := range parsedFilenames[startIdx:] {
+		filteredFilenames = append(filteredFilenames, parsedFilename.name)
+	}
+	return filteredFilenames, nil
+}
+
+func matchQuery(record *visibilityRecord, query *parsedQuery) bool {
+	if record.CloseTimestamp > query.closeTime || record.CloseTimestamp < query.startTime {
+		return false
+	}
+	if query.workflowID != nil && record.WorkflowID != *query.workflowID {
+		return false
+	}
+	if *query.runID != "" && record.RunID != *query.runID {
+		return false
+	}
+	if query.workflowTypeName != nil && record.WorkflowTypeName != *query.workflowTypeName {
+		return false
+	}
+	if query.closeStatus != nil && record.CloseStatus != *query.closeStatus {
+		return false
+	}
+	return true
+}
+
+func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
+	return &shared.WorkflowExecutionInfo{
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(record.WorkflowID),
+			RunId:      common.StringPtr(record.RunID),
+		},
+		Type: &shared.WorkflowType{
+			Name: common.StringPtr(record.WorkflowTypeName),
+		},
+		StartTime:     common.Int64Ptr(record.StartTimestamp),
+		ExecutionTime: common.Int64Ptr(record.ExecutionTimestamp),
+		CloseTime:     common.Int64Ptr(record.CloseTimestamp),
+		CloseStatus:   record.CloseStatus.Ptr(),
+		HistoryLength: common.Int64Ptr(record.HistoryLength),
+		Memo:          record.Memo,
+		SearchAttributes: &shared.SearchAttributes{
+			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
+		},
+	}
 }

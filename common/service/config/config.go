@@ -348,6 +348,7 @@ type (
 	VisibilityArchiverProvider struct {
 		Filestore *FilestoreArchiver `yaml:"filestore"`
 		S3store   *S3Archiver        `yaml:"s3store"`
+		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
 	}
 
 	// FilestoreArchiver contain the config for filestore archiver
@@ -360,6 +361,7 @@ type (
 	GstorageArchiver struct {
 		CredentialsPath string `yaml:"credentialsPath"`
 	}
+
 	// S3Archiver contains the config for S3 archiver
 	S3Archiver struct {
 		Region           string  `yaml:"region"`
