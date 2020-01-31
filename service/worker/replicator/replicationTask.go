@@ -529,8 +529,6 @@ func (t *workflowReplicationTask) Nack() {
 
 	t.state = task.TaskStateNacked
 
-	// TODO: need to discuss whether it is the good place to place the counter increment for the metrics because
-	// the retry logic inside Kafka may prevent some requests going to DLQ
 	t.metricsClient.Scope(t.metricsScope, t.domainTag).IncCounter(metrics.ReplicationTaskNackCount)
 
 	// the underlying implementation will not return anything other than nil
