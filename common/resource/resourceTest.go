@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
@@ -64,13 +63,12 @@ type (
 
 		// other common resources
 
-		DomainCache              *cache.MockDomainCache
-		TimeSource               clock.TimeSource
-		PayloadSerializer        persistence.PayloadSerializer
-		MetricsClient            metrics.Client
-		ArchivalMetadata         *archiver.MockArchivalMetadata
-		ArchiverProvider         *provider.MockArchiverProvider
-		DomainReplicationHandler *domain.MockReplicationHandler
+		DomainCache       *cache.MockDomainCache
+		TimeSource        clock.TimeSource
+		PayloadSerializer persistence.PayloadSerializer
+		MetricsClient     metrics.Client
+		ArchivalMetadata  *archiver.MockArchivalMetadata
+		ArchiverProvider  *provider.MockArchiverProvider
 
 		// membership infos
 
@@ -175,13 +173,12 @@ func NewTest(
 
 		// other common resources
 
-		DomainCache:              cache.NewMockDomainCache(controller),
-		TimeSource:               clock.NewRealTimeSource(),
-		PayloadSerializer:        persistence.NewPayloadSerializer(),
-		MetricsClient:            metrics.NewClient(scope, serviceMetricsIndex),
-		ArchivalMetadata:         &archiver.MockArchivalMetadata{},
-		ArchiverProvider:         &provider.MockArchiverProvider{},
-		DomainReplicationHandler: domain.NewMockReplicationHandler(controller),
+		DomainCache:       cache.NewMockDomainCache(controller),
+		TimeSource:        clock.NewRealTimeSource(),
+		PayloadSerializer: persistence.NewPayloadSerializer(),
+		MetricsClient:     metrics.NewClient(scope, serviceMetricsIndex),
+		ArchivalMetadata:  &archiver.MockArchivalMetadata{},
+		ArchiverProvider:  &provider.MockArchiverProvider{},
 
 		// membership infos
 
@@ -285,11 +282,6 @@ func (s *Test) GetArchivalMetadata() archiver.ArchivalMetadata {
 // GetArchiverProvider for testing
 func (s *Test) GetArchiverProvider() provider.ArchiverProvider {
 	return s.ArchiverProvider
-}
-
-// GetDomainReplicationTaskHandler for testing
-func (s *Test) GetDomainReplicationTaskHandler() domain.ReplicationHandler {
-	return s.DomainReplicationHandler
 }
 
 // membership infos

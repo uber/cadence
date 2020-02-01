@@ -23,8 +23,6 @@
 package domain
 
 import (
-	"fmt"
-
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -35,9 +33,9 @@ import (
 type (
 	// DLQMessageHandler is the interface handles domain DLQ messages
 	DLQMessageHandler interface {
-		ReadMessages(lastMessageID int, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
-		PurgeMessages(lastMessageID int) error
-		MergeMessages(lastMessageID int, pageSize int, pageToken []byte) ([]byte, error)
+		Read(lastMessageID int, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
+		Purge(lastMessageID int) error
+		Merge(lastMessageID int, pageSize int, pageToken []byte) ([]byte, error)
 	}
 
 	dlqMessageHandlerImpl struct {
@@ -61,7 +59,7 @@ func NewDLQMessageHandler(
 }
 
 // ReadMessages reads domain replication DLQ messages
-func (d *dlqMessageHandlerImpl) ReadMessages(
+func (d *dlqMessageHandlerImpl) Read(
 	lastMessageID int,
 	pageSize int,
 	pageToken []byte,
@@ -81,7 +79,7 @@ func (d *dlqMessageHandlerImpl) ReadMessages(
 }
 
 // PurgeMessages purges domain replication DLQ messages
-func (d *dlqMessageHandlerImpl) PurgeMessages(
+func (d *dlqMessageHandlerImpl) Purge(
 	lastMessageID int,
 ) error {
 
@@ -107,7 +105,7 @@ func (d *dlqMessageHandlerImpl) PurgeMessages(
 }
 
 // MergeMessages merges domain replication DLQ messages
-func (d *dlqMessageHandlerImpl) MergeMessages(
+func (d *dlqMessageHandlerImpl) Merge(
 	lastMessageID int,
 	pageSize int,
 	pageToken []byte,
@@ -140,18 +138,16 @@ func (d *dlqMessageHandlerImpl) MergeMessages(
 		); err != nil {
 			return nil, err
 		}
-
-		if err := d.domainReplicationQueue.DeleteMessageFromDLQ(int(*message.SourceTaskId)); err != nil {
-			return nil, &shared.InternalServiceError{
-				Message: fmt.Sprintf("Failed to delete DLQ message after merge. Last Merged Message ID: %v, Error: %v.",
-					ackedMessageID,
-					err,
-				),
-			}
-		}
 		ackedMessageID = int(*message.SourceTaskId)
 	}
 
+	if err := d.domainReplicationQueue.RangeDeleteMessagesFromDLQ(
+		ackLevel,
+		ackedMessageID,
+	); err != nil {
+		d.logger.Error("failed to delete merged tasks on merging domain DLQ message", tag.Error(err))
+		return nil, err
+	}
 	if err := d.domainReplicationQueue.UpdateDLQAckLevel(ackedMessageID); err != nil {
 		d.logger.Error("failed to update ack level on merging domain DLQ message", tag.Error(err))
 	}

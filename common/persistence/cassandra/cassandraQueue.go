@@ -113,13 +113,13 @@ func (q *cassandraQueue) createQueueMetadataEntryIfNotExist() error {
 		}
 	}
 
-	dlqMetadata, err := q.getQueueMetadata(-q.queueType)
+	dlqMetadata, err := q.getQueueMetadata(q.getDLQTypeFromQueueType())
 	if err != nil {
 		return err
 	}
 
 	if dlqMetadata == nil {
-		return q.insertInitialQueueMetadataRecord(-q.queueType)
+		return q.insertInitialQueueMetadataRecord(q.getDLQTypeFromQueueType())
 	}
 
 	return nil
@@ -140,13 +140,13 @@ func (q *cassandraQueue) EnqueueMessageToDLQ(
 	messagePayload []byte,
 ) error {
 	// Use negative queue type as the dlq type
-	lastMessageID, err := q.getLastMessageID(-q.queueType)
+	lastMessageID, err := q.getLastMessageID(q.getDLQTypeFromQueueType())
 	if err != nil {
 		return err
 	}
 
 	// Use negative queue type as the dlq type
-	return q.tryEnqueue(-q.queueType, lastMessageID+1, messagePayload)
+	return q.tryEnqueue(q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
 }
 
 func (q *cassandraQueue) tryEnqueue(
@@ -244,7 +244,7 @@ func (q *cassandraQueue) ReadMessagesFromDLQ(
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	// Use negative queue type as the dlq type
 	query := q.session.Query(templateGetMessagesFromDLQQuery,
-		-q.queueType,
+		q.getDLQTypeFromQueueType(),
 		firstMessageID,
 		lastMessageID,
 	).PageSize(pageSize).PageState(pageToken)
@@ -310,7 +310,7 @@ func (q *cassandraQueue) DeleteMessageFromDLQ(
 ) error {
 
 	// Use negative queue type as the dlq type
-	query := q.session.Query(templateDeleteMessageQuery, -q.queueType, messageID)
+	query := q.session.Query(templateDeleteMessageQuery, q.getDLQTypeFromQueueType(), messageID)
 	if err := query.Exec(); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteMessageFromDLQ operation failed. Error %v", err),
@@ -326,7 +326,7 @@ func (q *cassandraQueue) RangeDeleteMessagesFromDLQ(
 ) error {
 
 	// Use negative queue type as the dlq type
-	query := q.session.Query(templateDeleteMessagesQuery, -q.queueType, firstMessageID, lastMessageID)
+	query := q.session.Query(templateDeleteMessagesQuery, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID)
 	if err := query.Exec(); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("RangeDeleteMessagesFromDLQ operation failed. Error %v", err),
@@ -356,29 +356,7 @@ func (q *cassandraQueue) UpdateAckLevel(
 	clusterName string,
 ) error {
 
-	queueMetadata, err := q.getQueueMetadata(q.queueType)
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-		}
-	}
-
-	// Ignore possibly delayed message
-	if queueMetadata.clusterAckLevels[clusterName] > messageID {
-		return nil
-	}
-
-	queueMetadata.clusterAckLevels[clusterName] = messageID
-	queueMetadata.version++
-
-	err = q.updateQueueMetadata(queueMetadata, q.queueType)
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-		}
-	}
-
-	return nil
+	return q.updateAckLevel(messageID, clusterName, q.queueType)
 }
 
 func (q *cassandraQueue) GetAckLevels() (map[string]int, error) {
@@ -395,37 +373,13 @@ func (q *cassandraQueue) UpdateDLQAckLevel(
 	clusterName string,
 ) error {
 
-	// Use negative queue type as the dlq type
-	queueMetadata, err := q.getQueueMetadata(-q.queueType)
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-		}
-	}
-
-	// Ignore possibly delayed message
-	if queueMetadata.clusterAckLevels[clusterName] > messageID {
-		return nil
-	}
-
-	queueMetadata.clusterAckLevels[clusterName] = messageID
-	queueMetadata.version++
-
-	// Use negative queue type as the dlq type
-	err = q.updateQueueMetadata(queueMetadata, -q.queueType)
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-		}
-	}
-
-	return nil
+	return q.updateAckLevel(messageID, clusterName, q.getDLQTypeFromQueueType())
 }
 
 func (q *cassandraQueue) GetDLQAckLevels() (map[string]int, error) {
 
 	// Use negative queue type as the dlq type
-	queueMetadata, err := q.getQueueMetadata(-q.queueType)
+	queueMetadata, err := q.getQueueMetadata(q.getDLQTypeFromQueueType())
 	if err != nil {
 		return nil, err
 	}
@@ -480,6 +434,41 @@ func (q *cassandraQueue) updateQueueMetadata(
 		}
 	}
 
+	return nil
+}
+
+func (q *cassandraQueue) getDLQTypeFromQueueType() common.QueueType {
+	return -q.queueType
+}
+
+func (q *cassandraQueue) updateAckLevel(
+	messageID int,
+	clusterName string,
+	queueType common.QueueType,
+) error {
+
+	queueMetadata, err := q.getQueueMetadata(queueType)
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
+		}
+	}
+
+	// Ignore possibly delayed message
+	if queueMetadata.clusterAckLevels[clusterName] > messageID {
+		return nil
+	}
+
+	queueMetadata.clusterAckLevels[clusterName] = messageID
+	queueMetadata.version++
+
+	// Use negative queue type as the dlq type
+	err = q.updateQueueMetadata(queueMetadata, queueType)
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
+		}
+	}
 	return nil
 }
 

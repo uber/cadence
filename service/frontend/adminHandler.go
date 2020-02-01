@@ -30,7 +30,6 @@ import (
 
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
-	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
@@ -39,6 +38,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
@@ -78,21 +78,30 @@ type (
 	}
 )
 
+var (
+	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
+)
+
 // NewAdminHandler creates a thrift handler for the cadence admin service
 func NewAdminHandler(
 	resource resource.Resource,
 	params *service.BootstrapParams,
 	config *Config,
 ) *AdminHandler {
+
+	domainReplicationHandler := domain.NewReplicationHandler(
+		resource.GetMetadataManager(),
+		resource.GetLogger(),
+	)
 	return &AdminHandler{
 		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
 		config:                config,
 		domainDLQHandler: domain.NewDLQMessageHandler(
-			resource.GetDomainReplicationTaskHandler(),
+			domainReplicationHandler,
 			resource.GetDomainReplicationQueue(),
-			resource.GetLogger().WithTags(),
+			resource.GetLogger(),
 		),
 	}
 }
@@ -811,15 +820,23 @@ func (adh *AdminHandler) ReadDLQMessages(
 
 	var tasks []*replicator.ReplicationTask
 	var token []byte
+	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		return nil, &shared.InternalServiceError{Message: "Not implement."}
+		return nil, &gen.BadRequestError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
-		tasks, token, err = adh.domainDLQHandler.ReadMessages(
-			int(request.GetInclusiveEndMessageID()),
-			int(request.GetMaximumPageSize()),
-			request.GetNextPageToken())
+		op = func() error {
+			var err error
+			tasks, token, err = adh.domainDLQHandler.Read(
+				int(request.GetInclusiveEndMessageID()),
+				int(request.GetMaximumPageSize()),
+				request.GetNextPageToken())
+			return err
+		}
+	default:
+		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
 	}
+	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -852,14 +869,20 @@ func (adh *AdminHandler) PurgeDLQMessages(
 		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
 	}
 
+	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		return &shared.InternalServiceError{Message: "Not implement."}
+		return &gen.BadRequestError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
-		err = adh.domainDLQHandler.PurgeMessages(
-			int(request.GetInclusiveEndMessageID()),
-		)
+		op = func() error {
+			return adh.domainDLQHandler.Purge(
+				int(request.GetInclusiveEndMessageID()),
+			)
+		}
+	default:
+		return &gen.BadRequestError{Message: "The DLQ type is not supported."}
 	}
+	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -890,16 +913,25 @@ func (adh *AdminHandler) MergeDLQMessages(
 	}
 
 	var token []byte
+	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		return nil, &shared.InternalServiceError{Message: "Not implement."}
+		return nil, &gen.BadRequestError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
-		token, err = adh.domainDLQHandler.MergeMessages(
-			int(request.GetInclusiveEndMessageID()),
-			int(request.GetMaximumPageSize()),
-			request.GetNextPageToken(),
-		)
+
+		op = func() error {
+			var err error
+			token, err = adh.domainDLQHandler.Merge(
+				int(request.GetInclusiveEndMessageID()),
+				int(request.GetMaximumPageSize()),
+				request.GetNextPageToken(),
+			)
+			return err
+		}
+	default:
+		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
 	}
+	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}

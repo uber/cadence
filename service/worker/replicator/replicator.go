@@ -91,7 +91,7 @@ func NewReplicator(
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
 	domainReplicationQueue persistence.DomainReplicationQueue,
-	domainReplicationTask domain.ReplicationHandler,
+	domainReplicator domain.ReplicationHandler,
 ) *Replicator {
 
 	logger = logger.WithTags(tag.ComponentReplicator)
@@ -100,7 +100,7 @@ func NewReplicator(
 		serviceResolver:        serviceResolver,
 		domainCache:            domainCache,
 		clusterMetadata:        clusterMetadata,
-		domainReplicator:       domainReplicationTask,
+		domainReplicator:       domainReplicator,
 		clientBean:             clientBean,
 		historyClient:          clientBean.GetHistoryClient(),
 		config:                 config,

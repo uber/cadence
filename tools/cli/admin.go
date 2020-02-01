@@ -800,12 +800,12 @@ func newAdminDLQCommands() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "read",
-			Aliases: []string{"i"},
+			Aliases: []string{"r"},
 			Usage:   "Read DLQ Messages",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage",
+					Usage: "Type of DLQ to manage. (Options: domain, history)",
 				},
 				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
@@ -825,7 +825,7 @@ func newAdminDLQCommands() []cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) {
-				AdminGetDLQInfo(c)
+				AdminGetDLQMessages(c)
 			},
 		},
 		{
@@ -835,7 +835,7 @@ func newAdminDLQCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage",
+					Usage: "Type of DLQ to manage. (Options: domain, history)",
 				},
 				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
@@ -857,7 +857,7 @@ func newAdminDLQCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage",
+					Usage: "Type of DLQ to manage. (Options: domain, history)",
 				},
 				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
