@@ -47,9 +47,9 @@ func AdminGetDLQMessages(c *cli.Context) {
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
 	defer outputFile.Close()
 
-	maxMessageCount := common.EndMessageID
+	remainingMessageCount := common.EndMessageID
 	if c.IsSet(FlagMaxMessageCount) {
-		maxMessageCount = c.Int64(FlagMaxMessageCount)
+		remainingMessageCount = c.Int64(FlagMaxMessageCount)
 	}
 	var lastMessageID *int64
 	if c.IsSet(FlagLastMessageID) {
@@ -75,7 +75,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 
 	iterator := collection.NewPagingIterator(paginationFunc)
 	var lastReadMessageID int
-	for iterator.HasNext() && maxMessageCount > 0 {
+	for iterator.HasNext() && remainingMessageCount > 0 {
 		item, err := iterator.Next()
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("fail to read dlq message. Last read message id: %v", lastReadMessageID), err)
@@ -88,7 +88,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 		}
 
 		lastReadMessageID = int(*task.SourceTaskId)
-		maxMessageCount--
+		remainingMessageCount--
 		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
 		if err != nil {
 			ErrorAndExit("fail to print dlq messages.", err)
