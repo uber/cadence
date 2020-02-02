@@ -117,6 +117,22 @@ func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 	require.True(t, tlm.taskReader.addTasksToBuffer(tasks, time.Now(), time.NewTimer(time.Minute)))
 	require.Equal(t, int64(0), tlm.taskAckManager.getAckLevel())
 	require.Equal(t, int64(12), tlm.taskAckManager.getReadLevel())
+
+	// Now add a mix of valid and expired tasks
+	require.True(t, tlm.taskReader.addTasksToBuffer([]*persistence.TaskInfo{
+		&persistence.TaskInfo{
+			TaskID:      13,
+			Expiry:      time.Now().Add(-time.Minute),
+			CreatedTime: time.Now().Add(-time.Hour),
+		},
+		&persistence.TaskInfo{
+			TaskID:      14,
+			Expiry:      time.Now().Add(time.Hour),
+			CreatedTime: time.Now().Add(time.Minute),
+		},
+	}, time.Now(), time.NewTimer(time.Minute)))
+	require.Equal(t, int64(0), tlm.taskAckManager.getAckLevel())
+	require.Equal(t, int64(14), tlm.taskAckManager.getReadLevel())
 }
 
 func createTestTaskListManager(controller *gomock.Controller) *taskListManagerImpl {
