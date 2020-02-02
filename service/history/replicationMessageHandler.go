@@ -18,18 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination replicationMessageHandler_mock.go -self_package github.com/uber/cadence/service/history
+
 package history
 
 import (
 	"context"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 )
 
 type (
@@ -64,39 +64,9 @@ type (
 
 func newReplicationMessageHandler(
 	shard ShardContext,
-	historyEngine Engine,
+	replicationTaskHandler replicationTaskHandler,
 ) replicationMessageHandler {
 
-	currentCluster := shard.GetClusterMetadata().GetCurrentClusterName()
-	nDCHistoryResender := xdc.NewNDCHistoryResender(
-		shard.GetDomainCache(),
-		shard.GetService().GetClientBean().GetRemoteAdminClient(currentCluster),
-		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-			return shard.GetService().GetHistoryClient().ReplicateEventsV2(ctx, request)
-		},
-		shard.GetService().GetPayloadSerializer(),
-		shard.GetLogger(),
-	)
-	historyRereplicator := xdc.NewHistoryRereplicator(
-		currentCluster,
-		shard.GetDomainCache(),
-		shard.GetService().GetClientBean().GetRemoteAdminClient(currentCluster),
-		func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-			return shard.GetService().GetHistoryClient().ReplicateRawEvents(ctx, request)
-		},
-		shard.GetService().GetPayloadSerializer(),
-		replicationTimeout,
-		shard.GetLogger(),
-	)
-	replicationTaskHandler := newReplicationTaskHandler(
-		shard.GetClusterMetadata().GetCurrentClusterName(),
-		shard.GetDomainCache(),
-		nDCHistoryResender,
-		historyRereplicator,
-		historyEngine,
-		shard.GetMetricsClient(),
-		shard.GetLogger(),
-	)
 	return &replicationMessageHandlerImpl{
 		shard:                  shard,
 		replicationTaskHandler: replicationTaskHandler,
@@ -224,11 +194,13 @@ func (r *replicationMessageHandlerImpl) mergeMessages(
 	}
 
 	for _, task := range dlqResponse.GetReplicationTasks() {
-		r.replicationTaskHandler.process(
+		if _, err := r.replicationTaskHandler.process(
 			sourceCluster,
 			task,
 			true,
-		)
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	err = r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(

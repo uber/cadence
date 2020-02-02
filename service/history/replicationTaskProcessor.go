@@ -34,14 +34,12 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
-	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 )
 
 const (
@@ -60,16 +58,16 @@ var (
 type (
 	// ReplicationTaskProcessorImpl is responsible for processing replication tasks for a shard.
 	ReplicationTaskProcessorImpl struct {
-		currentCluster    string
-		sourceCluster     string
-		status            int32
-		shard             ShardContext
-		historyEngine     Engine
-		historySerializer persistence.PayloadSerializer
-		config            *Config
-		metricsClient     metrics.Client
-		logger            log.Logger
-		taskHandler       replicationTaskHandler
+		currentCluster         string
+		sourceCluster          string
+		status                 int32
+		shard                  ShardContext
+		historyEngine          Engine
+		historySerializer      persistence.PayloadSerializer
+		config                 *Config
+		metricsClient          metrics.Client
+		logger                 log.Logger
+		replicationTaskHandler replicationTaskHandler
 
 		taskRetryPolicy backoff.RetryPolicy
 		dlqRetryPolicy  backoff.RetryPolicy
@@ -99,9 +97,9 @@ func NewReplicationTaskProcessor(
 	shard ShardContext,
 	historyEngine Engine,
 	config *Config,
-	historyClient hc.Client,
 	metricsClient metrics.Client,
 	replicationTaskFetcher ReplicationTaskFetcher,
+	replicationTaskHandler replicationTaskHandler,
 ) *ReplicationTaskProcessorImpl {
 	taskRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorRetryWait())
 	taskRetryPolicy.SetBackoffCoefficient(taskErrorRetryBackoffCoefficient)
@@ -114,36 +112,6 @@ func NewReplicationTaskProcessor(
 	noTaskBackoffPolicy.SetBackoffCoefficient(1)
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
 	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
-
-	nDCHistoryResender := xdc.NewNDCHistoryResender(
-		shard.GetDomainCache(),
-		shard.GetService().GetClientBean().GetRemoteAdminClient(replicationTaskFetcher.GetSourceCluster()),
-		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-			return historyClient.ReplicateEventsV2(ctx, request)
-		},
-		shard.GetService().GetPayloadSerializer(),
-		shard.GetLogger(),
-	)
-	historyRereplicator := xdc.NewHistoryRereplicator(
-		replicationTaskFetcher.GetSourceCluster(),
-		shard.GetDomainCache(),
-		shard.GetService().GetClientBean().GetRemoteAdminClient(replicationTaskFetcher.GetSourceCluster()),
-		func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-			return historyClient.ReplicateRawEvents(ctx, request)
-		},
-		shard.GetService().GetPayloadSerializer(),
-		replicationTimeout,
-		shard.GetLogger(),
-	)
-	taskHandler := newReplicationTaskHandler(
-		shard.GetClusterMetadata().GetCurrentClusterName(),
-		shard.GetDomainCache(),
-		nDCHistoryResender,
-		historyRereplicator,
-		historyEngine,
-		metricsClient,
-		shard.GetLogger(),
-	)
 	return &ReplicationTaskProcessorImpl{
 		currentCluster:         shard.GetClusterMetadata().GetCurrentClusterName(),
 		sourceCluster:          replicationTaskFetcher.GetSourceCluster(),
@@ -154,7 +122,7 @@ func NewReplicationTaskProcessor(
 		config:                 config,
 		metricsClient:          metricsClient,
 		logger:                 shard.GetLogger(),
-		taskHandler:            taskHandler,
+		replicationTaskHandler: replicationTaskHandler,
 		taskRetryPolicy:        taskRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,
 		requestChan:            replicationTaskFetcher.GetRequestChan(),
@@ -386,7 +354,7 @@ func (p *ReplicationTaskProcessorImpl) processSingleTask(replicationTask *r.Repl
 }
 
 func (p *ReplicationTaskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) error {
-	scope, err := p.taskHandler.process(
+	scope, err := p.replicationTaskHandler.process(
 		p.sourceCluster,
 		replicationTask,
 		false)

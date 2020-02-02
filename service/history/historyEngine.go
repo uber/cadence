@@ -54,6 +54,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/xdc"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -288,21 +289,49 @@ func NewEngineWithShardContext(
 	)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
+	nDCHistoryResender := xdc.NewNDCHistoryResender(
+		shard.GetDomainCache(),
+		shard.GetService().GetClientBean().GetRemoteAdminClient(currentClusterName),
+		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+			return shard.GetService().GetHistoryClient().ReplicateEventsV2(ctx, request)
+		},
+		shard.GetService().GetPayloadSerializer(),
+		shard.GetLogger(),
+	)
+	historyRereplicator := xdc.NewHistoryRereplicator(
+		currentClusterName,
+		shard.GetDomainCache(),
+		shard.GetService().GetClientBean().GetRemoteAdminClient(currentClusterName),
+		func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
+			return shard.GetService().GetHistoryClient().ReplicateRawEvents(ctx, request)
+		},
+		shard.GetService().GetPayloadSerializer(),
+		replicationTimeout,
+		shard.GetLogger(),
+	)
+	replicationTaskHandler := newReplicationTaskHandler(
+		currentClusterName,
+		shard.GetDomainCache(),
+		nDCHistoryResender,
+		historyRereplicator,
+		historyEngImpl,
+		shard.GetMetricsClient(),
+		shard.GetLogger(),
+	)
 	var replicationTaskProcessors []ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		replicationTaskProcessor := NewReplicationTaskProcessor(
 			shard,
 			historyEngImpl,
 			config,
-			historyClient,
 			shard.GetMetricsClient(),
 			replicationTaskFetcher,
+			replicationTaskHandler,
 		)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
-
-	replicationMessageHandler := newReplicationMessageHandler(shard, historyEngImpl)
+	replicationMessageHandler := newReplicationMessageHandler(shard, replicationTaskHandler)
 	historyEngImpl.replicationMessageHandler = replicationMessageHandler
 
 	shard.SetEngine(historyEngImpl)

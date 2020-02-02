@@ -2865,13 +2865,14 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
-	query := d.session.Query(templateCompleteTransferTaskQuery,
+	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
 		d.shardID,
 		rowTypeDLQ,
 		rowTypeDLQDomainID,
 		request.SourceClusterName,
 		rowTypeDLQRunID,
 		defaultVisibilityTimestamp,
+		request.ExclusiveBeginTaskID,
 		request.InclusiveEndTaskID,
 	)
 
