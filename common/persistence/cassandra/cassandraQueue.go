@@ -27,7 +27,6 @@ import (
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
@@ -53,7 +52,7 @@ const (
 
 type (
 	cassandraQueue struct {
-		queueType common.QueueType
+		queueType persistence.QueueType
 		logger    log.Logger
 		cassandraStore
 	}
@@ -72,7 +71,7 @@ type (
 func newQueue(
 	cfg config.Cassandra,
 	logger log.Logger,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -139,7 +138,7 @@ func (q *cassandraQueue) EnqueueMessageToDLQ(
 }
 
 func (q *cassandraQueue) tryEnqueue(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 	messageID int,
 	messagePayload []byte,
 ) error {
@@ -165,7 +164,7 @@ func (q *cassandraQueue) tryEnqueue(
 }
 
 func (q *cassandraQueue) getLastMessageID(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (int, error) {
 
 	query := q.session.Query(templateGetLastMessageIDQuery, queueType)

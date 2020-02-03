@@ -24,7 +24,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -47,38 +47,38 @@ func (pdb *db) InsertIntoQueue(row *sqlplugin.QueueRow) (sql.Result, error) {
 }
 
 // GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
-func (pdb *db) GetLastEnqueuedMessageIDForUpdate(queueType common.QueueType) (int, error) {
+func (pdb *db) GetLastEnqueuedMessageIDForUpdate(queueType persistence.QueueType) (int, error) {
 	var lastMessageID int
 	err := pdb.conn.Get(&lastMessageID, templateGetLastMessageIDQuery, queueType)
 	return lastMessageID, err
 }
 
 // GetMessagesFromQueue retrieves messages from the queue
-func (pdb *db) GetMessagesFromQueue(queueType common.QueueType, lastMessageID, maxRows int) ([]sqlplugin.QueueRow, error) {
+func (pdb *db) GetMessagesFromQueue(queueType persistence.QueueType, lastMessageID, maxRows int) ([]sqlplugin.QueueRow, error) {
 	var rows []sqlplugin.QueueRow
 	err := pdb.conn.Select(&rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
 	return rows, err
 }
 
 // GetMessagesBetween retrieves messages from the queue
-func (pdb *db) GetMessagesBetween(queueType common.QueueType, firstMessageID int, lastMessageID int, maxRows int) ([]sqlplugin.QueueRow, error) {
+func (pdb *db) GetMessagesBetween(queueType persistence.QueueType, firstMessageID int, lastMessageID int, maxRows int) ([]sqlplugin.QueueRow, error) {
 	var rows []sqlplugin.QueueRow
 	err := pdb.conn.Select(&rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
 	return rows, err
 }
 
 // DeleteMessagesBefore deletes messages before messageID from the queue
-func (pdb *db) DeleteMessagesBefore(queueType common.QueueType, messageID int) (sql.Result, error) {
+func (pdb *db) DeleteMessagesBefore(queueType persistence.QueueType, messageID int) (sql.Result, error) {
 	return pdb.conn.Exec(templateDeleteMessagesBeforeQuery, queueType, messageID)
 }
 
 // DeleteMessage deletes message with a messageID from the queue
-func (pdb *db) DeleteMessage(queueType common.QueueType, messageID int) (sql.Result, error) {
+func (pdb *db) DeleteMessage(queueType persistence.QueueType, messageID int) (sql.Result, error) {
 	return pdb.conn.Exec(templateDeleteMessageQuery, queueType, messageID)
 }
 
 // InsertAckLevel inserts ack level
-func (pdb *db) InsertAckLevel(queueType common.QueueType, messageID int, clusterName string) error {
+func (pdb *db) InsertAckLevel(queueType persistence.QueueType, messageID int, clusterName string) error {
 	clusterAckLevels := map[string]int{clusterName: messageID}
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
@@ -91,7 +91,7 @@ func (pdb *db) InsertAckLevel(queueType common.QueueType, messageID int, cluster
 }
 
 // UpdateAckLevels updates cluster ack levels
-func (pdb *db) UpdateAckLevels(queueType common.QueueType, clusterAckLevels map[string]int) error {
+func (pdb *db) UpdateAckLevels(queueType persistence.QueueType, clusterAckLevels map[string]int) error {
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (pdb *db) UpdateAckLevels(queueType common.QueueType, clusterAckLevels map[
 }
 
 // GetAckLevels returns ack levels for pulling clusters
-func (pdb *db) GetAckLevels(queueType common.QueueType, forUpdate bool) (map[string]int, error) {
+func (pdb *db) GetAckLevels(queueType persistence.QueueType, forUpdate bool) (map[string]int, error) {
 	queryStr := templateGetQueueMetadataQuery
 	if forUpdate {
 		queryStr = templateGetQueueMetadataForUpdateQuery

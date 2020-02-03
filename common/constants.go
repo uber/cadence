@@ -129,13 +129,12 @@ const (
 	ArchivalPaused = "paused"
 )
 
-// Queue types used in queue table
-// Use positive numbers for queue type
-// Negative numbers are reserved for DLQ
 const (
-	DomainReplicationQueueType QueueType = iota + 1
-	TransferQueueType
+	// TransferQueueType is the type for transfer queue
+	TransferQueueType QueueType = iota + 1
+	// TimerQueueType is the type for timer queue
 	TimerQueueType
+	// ReplicationQueueType is the type for replication queue
 	ReplicationQueueType
 )
 
