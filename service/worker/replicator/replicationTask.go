@@ -518,7 +518,8 @@ func (t *workflowReplicationTask) Nack() {
 		tag.WorkflowDomainID(t.queueID.DomainID),
 		tag.WorkflowID(t.queueID.WorkflowID),
 		tag.WorkflowRunID(t.queueID.RunID),
-		tag.TaskID(t.taskID))
+		tag.TaskID(t.taskID),
+	)
 
 	t.state = task.TaskStateNacked
 	// the underlying implementation will not return anything other than nil
