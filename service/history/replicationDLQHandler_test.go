@@ -88,9 +88,12 @@ func (s *replicationDLQHandlerSuite) SetupTest() {
 	s.shardManager = s.mockResource.ShardMgr
 	logger := log.NewNoop()
 	s.mockShard = &shardContextImpl{
-		shardID:                   0,
-		Resource:                  s.mockResource,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, ReplicationDLQAckLevel: -1},
+		shardID:  0,
+		Resource: s.mockResource,
+		shardInfo: &persistence.ShardInfo{
+			ShardID:                0,
+			RangeID:                1,
+			ReplicationDLQAckLevel: map[string]int64{"test": -1}},
 		transferSequenceNumber:    1,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),

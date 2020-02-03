@@ -82,7 +82,7 @@ func (r *replicationDLQHandlerImpl) readMessages(
 	pageToken []byte,
 ) ([]*replicator.ReplicationTask, []byte, error) {
 
-	ackLevel := r.shard.GetReplicatorDLQAckLevel()
+	ackLevel := r.shard.GetReplicatorDLQAckLevel(sourceCluster)
 	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(&persistence.GetReplicationTasksFromDLQRequest{
 		SourceClusterName: sourceCluster,
 		GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
@@ -128,7 +128,7 @@ func (r *replicationDLQHandlerImpl) purgeMessages(
 	lastMessageID int64,
 ) error {
 
-	ackLevel := r.shard.GetReplicatorDLQAckLevel()
+	ackLevel := r.shard.GetReplicatorDLQAckLevel(sourceCluster)
 	err := r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,
@@ -140,7 +140,10 @@ func (r *replicationDLQHandlerImpl) purgeMessages(
 		return err
 	}
 
-	if err = r.shard.UpdateReplicatorDLQAckLevel(lastMessageID); err != nil {
+	if err = r.shard.UpdateReplicatorDLQAckLevel(
+		sourceCluster,
+		lastMessageID,
+	); err != nil {
 		r.logger.Error("Failed to purge history replication message", tag.Error(err))
 	}
 	return nil
@@ -154,7 +157,7 @@ func (r *replicationDLQHandlerImpl) mergeMessages(
 	pageToken []byte,
 ) ([]byte, error) {
 
-	ackLevel := r.shard.GetReplicatorDLQAckLevel()
+	ackLevel := r.shard.GetReplicatorDLQAckLevel(sourceCluster)
 	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(&persistence.GetReplicationTasksFromDLQRequest{
 		SourceClusterName: sourceCluster,
 		GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
@@ -214,7 +217,10 @@ func (r *replicationDLQHandlerImpl) mergeMessages(
 		return nil, err
 	}
 
-	if err = r.shard.UpdateReplicatorDLQAckLevel(lastMessageID); err != nil {
+	if err = r.shard.UpdateReplicatorDLQAckLevel(
+		sourceCluster,
+		lastMessageID,
+	); err != nil {
 		r.logger.Error("Failed to purge history replication message", tag.Error(err))
 	}
 	return resp.NextPageToken, nil

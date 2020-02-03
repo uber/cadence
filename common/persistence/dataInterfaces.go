@@ -238,7 +238,7 @@ type (
 		StolenSinceRenew          int
 		UpdatedAt                 time.Time
 		ReplicationAckLevel       int64
-		ReplicationDLQAckLevel    int64
+		ReplicationDLQAckLevel    map[string]int64
 		TransferAckLevel          int64
 		TimerAckLevel             time.Time
 		ClusterTransferAckLevel   map[string]int64

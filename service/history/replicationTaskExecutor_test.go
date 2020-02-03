@@ -100,9 +100,13 @@ func (s *replicationTaskExecutorSuite) SetupTest() {
 	s.historyRereplicator = &xdc.MockHistoryRereplicator{}
 	logger := log.NewNoop()
 	s.mockShard = &shardContextImpl{
-		shardID:                   0,
-		Resource:                  s.mockResource,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, ReplicationAckLevel: 0, ReplicationDLQAckLevel: -1},
+		shardID:  0,
+		Resource: s.mockResource,
+		shardInfo: &persistence.ShardInfo{
+			ShardID:                0,
+			RangeID:                1,
+			ReplicationAckLevel:    0,
+			ReplicationDLQAckLevel: map[string]int64{"test": -1}},
 		transferSequenceNumber:    1,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
