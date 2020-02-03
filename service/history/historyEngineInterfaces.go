@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/task"
 )
 
 type (
@@ -72,6 +73,13 @@ type (
 		GetWorkflowID() string
 		GetRunID() string
 		GetDomainID() string
+	}
+
+	queueTask interface {
+		task.PriorityTask
+		queueTaskInfo
+		GetQueueType() common.QueueType
+		// TODO: add a method for getting task shardID
 	}
 
 	taskExecutor interface {

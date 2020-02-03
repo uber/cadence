@@ -133,7 +133,10 @@ const (
 // Use positive numbers for queue type
 // Negative numbers are reserved for DLQ
 const (
-	DomainReplicationQueueType QueueType = 1
+	DomainReplicationQueueType QueueType = iota + 1
+	TransferQueueType
+	TimerQueueType
+	ReplicationQueueType
 )
 
 // enum for dynamic config AdvancedVisibilityWritingMode
