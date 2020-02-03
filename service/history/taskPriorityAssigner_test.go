@@ -21,11 +21,19 @@
 package history
 
 import (
+	"errors"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -33,7 +41,11 @@ type (
 		*require.Assertions
 		suite.Suite
 
-		controller *gomock.Controller
+		controller      *gomock.Controller
+		mockDomainCache *cache.MockDomainCache
+
+		priorityAssigner   *taskPriorityAssignerImpl
+		testTaskProcessRPS int
 	}
 )
 
@@ -46,8 +58,143 @@ func (s *taskPriorityAssignerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+
+	s.testTaskProcessRPS = 10
+	dc := dynamicconfig.NewNopCollection()
+	config := NewDynamicConfigForTest()
+	config.TaskProcessRPS = dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, s.testTaskProcessRPS)
+
+	s.priorityAssigner = newTaskPriorityAssigner(
+		cluster.TestCurrentClusterName,
+		s.mockDomainCache,
+		log.NewNoop(),
+		config,
+	)
 }
 
 func (s *taskPriorityAssignerSuite) TearDownTest() {
 	s.controller.Finish()
+}
+
+func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Active() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
+
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(testDomainID)
+	s.NoError(err)
+	s.Equal(testDomainName, domainName)
+	s.True(isActive)
+}
+
+func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Passive() {
+	testGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestAlternativeClusterName
+	defer func() {
+		testGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestCurrentClusterName
+	}()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
+
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(testDomainID)
+	s.NoError(err)
+	s.Equal(testDomainName, domainName)
+	s.False(isActive)
+}
+
+func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Local() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testLocalDomainEntry, nil)
+
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(testDomainID)
+	s.NoError(err)
+	s.Equal(testDomainName, domainName)
+	s.True(isActive)
+}
+
+func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_DomainNotExist() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(
+		nil,
+		&workflow.EntityNotExistsError{Message: "domain not exist"},
+	)
+
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(testDomainID)
+	s.NoError(err)
+	s.Empty(domainName)
+	s.True(isActive)
+}
+
+func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_UnknownError() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(
+		nil,
+		errors.New("some random error"),
+	)
+
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(testDomainID)
+	s.Error(err)
+	s.Empty(domainName)
+	s.False(isActive)
+}
+
+func (s *taskPriorityAssignerSuite) TestAssign_ReplicationTask() {
+	mockTask := NewMockqueueTask(s.controller)
+	mockTask.EXPECT().GetQueueType().Return(common.ReplicationQueueType).Times(1)
+	mockTask.EXPECT().SetPriority(taskPriorityReplicationStandby).Times(1)
+
+	err := s.priorityAssigner.Assign(mockTask)
+	s.NoError(err)
+}
+
+func (s *taskPriorityAssignerSuite) TestAssign_StandbyTask() {
+	testGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestAlternativeClusterName
+	defer func() {
+		testGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestCurrentClusterName
+	}()
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
+
+	mockTask := NewMockqueueTask(s.controller)
+	mockTask.EXPECT().GetQueueType().Return(common.TransferQueueType).Times(1)
+	mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
+	mockTask.EXPECT().SetPriority(taskPriorityReplicationStandby).Times(1)
+
+	err := s.priorityAssigner.Assign(mockTask)
+	s.NoError(err)
+}
+
+func (s *taskPriorityAssignerSuite) TestAssign_TransferTask() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
+
+	mockTask := NewMockqueueTask(s.controller)
+	mockTask.EXPECT().GetQueueType().Return(common.TransferQueueType).AnyTimes()
+	mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
+	mockTask.EXPECT().SetPriority(taskPriorityActiveTransfer).Times(1)
+
+	err := s.priorityAssigner.Assign(mockTask)
+	s.NoError(err)
+}
+
+func (s *taskPriorityAssignerSuite) TestAssign_TimerTask() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
+
+	mockTask := NewMockqueueTask(s.controller)
+	mockTask.EXPECT().GetQueueType().Return(common.TimerQueueType).AnyTimes()
+	mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
+	mockTask.EXPECT().SetPriority(taskPriorityActiveTimer).Times(1)
+
+	err := s.priorityAssigner.Assign(mockTask)
+	s.NoError(err)
+}
+
+func (s *taskPriorityAssignerSuite) TestAssign_ThrottledTask() {
+	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).AnyTimes()
+
+	for i := 0; i != s.testTaskProcessRPS*2; i++ {
+		mockTask := NewMockqueueTask(s.controller)
+		mockTask.EXPECT().GetQueueType().Return(common.TimerQueueType).AnyTimes()
+		mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
+		if i < s.testTaskProcessRPS {
+			mockTask.EXPECT().SetPriority(taskPriorityActiveTimer).Times(1)
+		} else {
+			mockTask.EXPECT().SetPriority(taskPriorityActiveThrottled).Times(1)
+		}
+
+		err := s.priorityAssigner.Assign(mockTask)
+		s.NoError(err)
+	}
 }

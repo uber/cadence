@@ -21,6 +21,8 @@
 package history
 
 import (
+	"sync"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -37,8 +39,11 @@ type (
 	taskPriorityAssignerImpl struct {
 		currentClusterName string
 		domainCache        cache.DomainCache
-		rateLimiter        quotas.Policy
+		config             *Config
 		logger             log.Logger
+
+		sync.RWMutex
+		rateLimiters map[string]quotas.Limiter
 	}
 )
 
@@ -60,16 +65,9 @@ func newTaskPriorityAssigner(
 	return &taskPriorityAssignerImpl{
 		currentClusterName: currentClusterName,
 		domainCache:        domainCache,
+		config:             config,
 		logger:             logger,
-		rateLimiter: quotas.NewMultiStageRateLimiter(
-			func() float64 {
-				// no global limiter
-				return float64(0)
-			},
-			func(domain string) float64 {
-				return float64(config.TaskProcessRPS(domain))
-			},
-		),
+		rateLimiters:       make(map[string]quotas.Limiter),
 	}
 }
 
@@ -92,7 +90,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 		return nil
 	}
 
-	if !a.rateLimiter.Allow(quotas.Info{Domain: domainName}) {
+	if !a.getRateLimiter(domainName).Allow() {
 		task.SetPriority(taskPriorityActiveThrottled)
 		return nil
 	}
@@ -128,4 +126,30 @@ func (a *taskPriorityAssignerImpl) getDomainInfo(
 		return domainEntry.GetInfo().Name, false, nil
 	}
 	return domainEntry.GetInfo().Name, true, nil
+}
+
+func (a *taskPriorityAssignerImpl) getRateLimiter(
+	domainName string,
+) quotas.Limiter {
+	a.RLock()
+	if limiter, ok := a.rateLimiters[domainName]; ok {
+		a.RUnlock()
+		return limiter
+	}
+	a.RUnlock()
+
+	limiter := quotas.NewDynamicRateLimiter(
+		func() float64 {
+			return float64(a.config.TaskProcessRPS(domainName))
+		},
+	)
+
+	a.Lock()
+	defer a.Unlock()
+	if existingLimiter, ok := a.rateLimiters[domainName]; ok {
+		return existingLimiter
+	}
+
+	a.rateLimiters[domainName] = limiter
+	return limiter
 }
