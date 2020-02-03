@@ -49,7 +49,7 @@ import (
 )
 
 type (
-	replicationTaskHandlerSuite struct {
+	replicationTaskExecutorSuite struct {
 		suite.Suite
 		*require.Assertions
 		controller *gomock.Controller
@@ -68,24 +68,24 @@ type (
 		nDCHistoryResender  *xdc.MockNDCHistoryResender
 		historyRereplicator *xdc.MockHistoryRereplicator
 
-		replicationTaskHandler *replicationTaskHandlerImpl
+		replicationTaskHandler *replicationTaskExecutorImpl
 	}
 )
 
-func TestReplicationTaskHandlerSuite(t *testing.T) {
-	s := new(replicationTaskHandlerSuite)
+func TestReplicationTaskExecutorSuite(t *testing.T) {
+	s := new(replicationTaskExecutorSuite)
 	suite.Run(t, s)
 }
 
-func (s *replicationTaskHandlerSuite) SetupSuite() {
+func (s *replicationTaskExecutorSuite) SetupSuite() {
 
 }
 
-func (s *replicationTaskHandlerSuite) TearDownSuite() {
+func (s *replicationTaskExecutorSuite) TearDownSuite() {
 
 }
 
-func (s *replicationTaskHandlerSuite) SetupTest() {
+func (s *replicationTaskExecutorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
 	s.currentCluster = "test"
@@ -117,7 +117,7 @@ func (s *replicationTaskHandlerSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 
-	s.replicationTaskHandler = newReplicationTaskHandler(
+	s.replicationTaskHandler = newReplicationTaskExecutor(
 		s.currentCluster,
 		s.mockDomainCache,
 		s.nDCHistoryResender,
@@ -125,39 +125,39 @@ func (s *replicationTaskHandlerSuite) SetupTest() {
 		s.mockEngine,
 		metricsClient,
 		s.mockShard.GetLogger(),
-	).(*replicationTaskHandlerImpl)
+	).(*replicationTaskExecutorImpl)
 }
 
-func (s *replicationTaskHandlerSuite) TearDownTest() {
+func (s *replicationTaskExecutorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockResource.Finish(s.T())
 }
 
-func (s *replicationTaskHandlerSuite) TestConvertRetryTaskError_OK() {
+func (s *replicationTaskExecutorSuite) TestConvertRetryTaskError_OK() {
 	err := &shared.RetryTaskError{}
 	_, ok := s.replicationTaskHandler.convertRetryTaskError(err)
 	s.True(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestConvertRetryTaskError_NotOK() {
+func (s *replicationTaskExecutorSuite) TestConvertRetryTaskError_NotOK() {
 	err := &shared.RetryTaskV2Error{}
 	_, ok := s.replicationTaskHandler.convertRetryTaskError(err)
 	s.False(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestConvertRetryTaskV2Error_OK() {
+func (s *replicationTaskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
 	err := &shared.RetryTaskV2Error{}
 	_, ok := s.replicationTaskHandler.convertRetryTaskV2Error(err)
 	s.True(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestConvertRetryTaskV2Error_NotOK() {
+func (s *replicationTaskExecutorSuite) TestConvertRetryTaskV2Error_NotOK() {
 	err := &shared.RetryTaskError{}
 	_, ok := s.replicationTaskHandler.convertRetryTaskV2Error(err)
 	s.False(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestFilterTask() {
+func (s *replicationTaskExecutorSuite) TestFilterTask() {
 	domainID := uuid.New()
 	s.mockDomainCache.EXPECT().
 		GetDomainByID(domainID).
@@ -178,7 +178,7 @@ func (s *replicationTaskHandlerSuite) TestFilterTask() {
 	s.True(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestFilterTask_Error() {
+func (s *replicationTaskExecutorSuite) TestFilterTask_Error() {
 	domainID := uuid.New()
 	s.mockDomainCache.EXPECT().
 		GetDomainByID(domainID).
@@ -188,14 +188,14 @@ func (s *replicationTaskHandlerSuite) TestFilterTask_Error() {
 	s.False(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestFilterTask_EnforceApply() {
+func (s *replicationTaskExecutorSuite) TestFilterTask_EnforceApply() {
 	domainID := uuid.New()
 	ok, err := s.replicationTaskHandler.filterTask(domainID, true)
 	s.NoError(err)
 	s.True(ok)
 }
 
-func (s *replicationTaskHandlerSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
+func (s *replicationTaskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
@@ -214,11 +214,11 @@ func (s *replicationTaskHandlerSuite) TestProcessTaskOnce_SyncActivityReplicatio
 	}
 
 	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
-	_, err := s.replicationTaskHandler.process(s.currentCluster, task, true)
+	_, err := s.replicationTaskHandler.execute(s.currentCluster, task, true)
 	s.NoError(err)
 }
 
-func (s *replicationTaskHandlerSuite) TestProcessTaskOnce_HistoryReplicationTask() {
+func (s *replicationTaskExecutorSuite) TestProcessTaskOnce_HistoryReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
@@ -241,11 +241,11 @@ func (s *replicationTaskHandlerSuite) TestProcessTaskOnce_HistoryReplicationTask
 	}
 
 	s.mockEngine.EXPECT().ReplicateEvents(gomock.Any(), request).Return(nil).Times(1)
-	_, err := s.replicationTaskHandler.process(s.currentCluster, task, true)
+	_, err := s.replicationTaskHandler.execute(s.currentCluster, task, true)
 	s.NoError(err)
 }
 
-func (s *replicationTaskHandlerSuite) TestProcess_HistoryV2ReplicationTask() {
+func (s *replicationTaskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
@@ -266,6 +266,6 @@ func (s *replicationTaskHandlerSuite) TestProcess_HistoryV2ReplicationTask() {
 	}
 
 	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(nil).Times(1)
-	_, err := s.replicationTaskHandler.process(s.currentCluster, task, true)
+	_, err := s.replicationTaskHandler.execute(s.currentCluster, task, true)
 	s.NoError(err)
 }

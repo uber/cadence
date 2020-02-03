@@ -144,7 +144,7 @@ type (
 		matchingClient            matching.Client
 		rawMatchingClient         matching.Client
 		clientChecker             client.VersionChecker
-		replicationMessageHandler replicationMessageHandler
+		replicationDLQHandler     replicationDLQHandler
 	}
 )
 
@@ -309,7 +309,7 @@ func NewEngineWithShardContext(
 		replicationTimeout,
 		shard.GetLogger(),
 	)
-	replicationTaskHandler := newReplicationTaskHandler(
+	replicationTaskExecutor := newReplicationTaskExecutor(
 		currentClusterName,
 		shard.GetDomainCache(),
 		nDCHistoryResender,
@@ -326,13 +326,13 @@ func NewEngineWithShardContext(
 			config,
 			shard.GetMetricsClient(),
 			replicationTaskFetcher,
-			replicationTaskHandler,
+			replicationTaskExecutor,
 		)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
-	replicationMessageHandler := newReplicationMessageHandler(shard, replicationTaskHandler)
-	historyEngImpl.replicationMessageHandler = replicationMessageHandler
+	replicationMessageHandler := newReplicationDLQHandler(shard, replicationTaskExecutor)
+	historyEngImpl.replicationDLQHandler = replicationMessageHandler
 
 	shard.SetEngine(historyEngImpl)
 	return historyEngImpl
@@ -2953,7 +2953,7 @@ func (e *historyEngineImpl) ReadDLQMessages(
 	request *r.ReadDLQMessagesRequest,
 ) (*r.ReadDLQMessagesResponse, error) {
 
-	tasks, token, err := e.replicationMessageHandler.readMessages(
+	tasks, token, err := e.replicationDLQHandler.readMessages(
 		ctx,
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),
@@ -2975,7 +2975,7 @@ func (e *historyEngineImpl) PurgeDLQMessages(
 	request *r.PurgeDLQMessagesRequest,
 ) (retError error) {
 
-	return e.replicationMessageHandler.purgeMessages(
+	return e.replicationDLQHandler.purgeMessages(
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),
 	)
@@ -2986,7 +2986,7 @@ func (e *historyEngineImpl) MergeDLQMessages(
 	request *r.MergeDLQMessagesRequest,
 ) (resp *r.MergeDLQMessagesResponse, retError error) {
 
-	token, err := e.replicationMessageHandler.mergeMessages(
+	token, err := e.replicationDLQHandler.mergeMessages(
 		ctx,
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),

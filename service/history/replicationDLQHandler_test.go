@@ -44,39 +44,39 @@ import (
 )
 
 type (
-	replicationMessageHandlerSuite struct {
+	replicationDLQHandlerSuite struct {
 		suite.Suite
 		*require.Assertions
 		controller *gomock.Controller
 
-		mockResource          *resource.Test
-		mockShard             ShardContext
-		config                *Config
-		mockClientBean        *client.MockBean
-		adminClient           *adminservicetest.MockClient
-		clusterMetadata       *cluster.MockMetadata
-		executionManager      *mocks.ExecutionManager
-		shardManager          *mocks.ShardManager
-		replicatorTaskHandler *MockreplicationTaskHandler
+		mockResource           *resource.Test
+		mockShard              ShardContext
+		config                 *Config
+		mockClientBean         *client.MockBean
+		adminClient            *adminservicetest.MockClient
+		clusterMetadata        *cluster.MockMetadata
+		executionManager       *mocks.ExecutionManager
+		shardManager           *mocks.ShardManager
+		replicatorTaskExecutor *MockreplicationTaskExecutor
 
-		replicationMessageHandler *replicationMessageHandlerImpl
+		replicationMessageHandler *replicationDLQHandlerImpl
 	}
 )
 
 func TestReplicationMessageHandlerSuite(t *testing.T) {
-	s := new(replicationMessageHandlerSuite)
+	s := new(replicationDLQHandlerSuite)
 	suite.Run(t, s)
 }
 
-func (s *replicationMessageHandlerSuite) SetupSuite() {
+func (s *replicationDLQHandlerSuite) SetupSuite() {
 
 }
 
-func (s *replicationMessageHandlerSuite) TearDownSuite() {
+func (s *replicationDLQHandlerSuite) TearDownSuite() {
 
 }
 
-func (s *replicationMessageHandlerSuite) SetupTest() {
+func (s *replicationDLQHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
 
@@ -101,20 +101,20 @@ func (s *replicationMessageHandlerSuite) SetupTest() {
 	}
 	s.config = NewDynamicConfigForTest()
 	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
-	s.replicatorTaskHandler = NewMockreplicationTaskHandler(s.controller)
+	s.replicatorTaskExecutor = NewMockreplicationTaskExecutor(s.controller)
 
-	s.replicationMessageHandler = newReplicationMessageHandler(
+	s.replicationMessageHandler = newReplicationDLQHandler(
 		s.mockShard,
-		s.replicatorTaskHandler,
-	).(*replicationMessageHandlerImpl)
+		s.replicatorTaskExecutor,
+	).(*replicationDLQHandlerImpl)
 }
 
-func (s *replicationMessageHandlerSuite) TearDownTest() {
+func (s *replicationDLQHandlerSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockResource.Finish(s.T())
 }
 
-func (s *replicationMessageHandlerSuite) TestReadMessages_OK() {
+func (s *replicationDLQHandlerSuite) TestReadMessages_OK() {
 	ctx := context.Background()
 	sourceCluster := "test"
 	lastMessageID := int64(1)
@@ -152,7 +152,7 @@ func (s *replicationMessageHandlerSuite) TestReadMessages_OK() {
 	s.Nil(tasks)
 }
 
-func (s *replicationMessageHandlerSuite) TestPurgeMessages_OK() {
+func (s *replicationDLQHandlerSuite) TestPurgeMessages_OK() {
 	sourceCluster := "test"
 	lastMessageID := int64(1)
 
@@ -168,7 +168,7 @@ func (s *replicationMessageHandlerSuite) TestPurgeMessages_OK() {
 	s.NoError(err)
 }
 
-func (s *replicationMessageHandlerSuite) TestMergeMessages_OK() {
+func (s *replicationDLQHandlerSuite) TestMergeMessages_OK() {
 	ctx := context.Background()
 	sourceCluster := "test"
 	lastMessageID := int64(1)
@@ -209,7 +209,7 @@ func (s *replicationMessageHandlerSuite) TestMergeMessages_OK() {
 				replicationTask,
 			},
 		}, nil)
-	s.replicatorTaskHandler.EXPECT().process(sourceCluster, replicationTask, true).Return(0, nil).Times(1)
+	s.replicatorTaskExecutor.EXPECT().execute(sourceCluster, replicationTask, true).Return(0, nil).Times(1)
 	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ",
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,

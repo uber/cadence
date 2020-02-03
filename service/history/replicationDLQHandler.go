@@ -33,8 +33,8 @@ import (
 )
 
 type (
-	// DLQTaskHandler is the interface handles domain DLQ messages
-	replicationMessageHandler interface {
+	// replicationMessageHandler is the interface handles replication DLQ messages
+	replicationDLQHandler interface {
 		readMessages(
 			ctx context.Context,
 			sourceCluster string,
@@ -55,26 +55,26 @@ type (
 		) ([]byte, error)
 	}
 
-	replicationMessageHandlerImpl struct {
-		replicationTaskHandler replicationTaskHandler
-		shard                  ShardContext
-		logger                 log.Logger
+	replicationDLQHandlerImpl struct {
+		replicationTaskExecutor replicationTaskExecutor
+		shard                   ShardContext
+		logger                  log.Logger
 	}
 )
 
-func newReplicationMessageHandler(
+func newReplicationDLQHandler(
 	shard ShardContext,
-	replicationTaskHandler replicationTaskHandler,
-) replicationMessageHandler {
+	replicationTaskExecutor replicationTaskExecutor,
+) replicationDLQHandler {
 
-	return &replicationMessageHandlerImpl{
-		shard:                  shard,
-		replicationTaskHandler: replicationTaskHandler,
-		logger:                 shard.GetLogger(),
+	return &replicationDLQHandlerImpl{
+		shard:                   shard,
+		replicationTaskExecutor: replicationTaskExecutor,
+		logger:                  shard.GetLogger(),
 	}
 }
 
-func (r *replicationMessageHandlerImpl) readMessages(
+func (r *replicationDLQHandlerImpl) readMessages(
 	ctx context.Context,
 	sourceCluster string,
 	lastMessageID int64,
@@ -123,7 +123,7 @@ func (r *replicationMessageHandlerImpl) readMessages(
 	return dlqResponse.ReplicationTasks, resp.NextPageToken, nil
 }
 
-func (r *replicationMessageHandlerImpl) purgeMessages(
+func (r *replicationDLQHandlerImpl) purgeMessages(
 	sourceCluster string,
 	lastMessageID int64,
 ) error {
@@ -146,7 +146,7 @@ func (r *replicationMessageHandlerImpl) purgeMessages(
 	return nil
 }
 
-func (r *replicationMessageHandlerImpl) mergeMessages(
+func (r *replicationDLQHandlerImpl) mergeMessages(
 	ctx context.Context,
 	sourceCluster string,
 	lastMessageID int64,
@@ -194,7 +194,7 @@ func (r *replicationMessageHandlerImpl) mergeMessages(
 	}
 
 	for _, task := range dlqResponse.GetReplicationTasks() {
-		if _, err := r.replicationTaskHandler.process(
+		if _, err := r.replicationTaskExecutor.execute(
 			sourceCluster,
 			task,
 			true,

@@ -58,16 +58,16 @@ var (
 type (
 	// ReplicationTaskProcessorImpl is responsible for processing replication tasks for a shard.
 	ReplicationTaskProcessorImpl struct {
-		currentCluster         string
-		sourceCluster          string
-		status                 int32
-		shard                  ShardContext
-		historyEngine          Engine
-		historySerializer      persistence.PayloadSerializer
-		config                 *Config
-		metricsClient          metrics.Client
-		logger                 log.Logger
-		replicationTaskHandler replicationTaskHandler
+		currentCluster          string
+		sourceCluster           string
+		status                  int32
+		shard                   ShardContext
+		historyEngine           Engine
+		historySerializer       persistence.PayloadSerializer
+		config                  *Config
+		metricsClient           metrics.Client
+		logger                  log.Logger
+		replicationTaskExecutor replicationTaskExecutor
 
 		taskRetryPolicy backoff.RetryPolicy
 		dlqRetryPolicy  backoff.RetryPolicy
@@ -99,7 +99,7 @@ func NewReplicationTaskProcessor(
 	config *Config,
 	metricsClient metrics.Client,
 	replicationTaskFetcher ReplicationTaskFetcher,
-	replicationTaskHandler replicationTaskHandler,
+	replicationTaskExecutor replicationTaskExecutor,
 ) *ReplicationTaskProcessorImpl {
 	taskRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorRetryWait())
 	taskRetryPolicy.SetBackoffCoefficient(taskErrorRetryBackoffCoefficient)
@@ -113,23 +113,23 @@ func NewReplicationTaskProcessor(
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
 	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
 	return &ReplicationTaskProcessorImpl{
-		currentCluster:         shard.GetClusterMetadata().GetCurrentClusterName(),
-		sourceCluster:          replicationTaskFetcher.GetSourceCluster(),
-		status:                 common.DaemonStatusInitialized,
-		shard:                  shard,
-		historyEngine:          historyEngine,
-		historySerializer:      persistence.NewPayloadSerializer(),
-		config:                 config,
-		metricsClient:          metricsClient,
-		logger:                 shard.GetLogger(),
-		replicationTaskHandler: replicationTaskHandler,
-		taskRetryPolicy:        taskRetryPolicy,
-		noTaskRetrier:          noTaskRetrier,
-		requestChan:            replicationTaskFetcher.GetRequestChan(),
-		syncShardChan:          make(chan *r.SyncShardStatus),
-		done:                   make(chan struct{}),
-		lastProcessedMessageID: emptyMessageID,
-		lastRetrievedMessageID: emptyMessageID,
+		currentCluster:          shard.GetClusterMetadata().GetCurrentClusterName(),
+		sourceCluster:           replicationTaskFetcher.GetSourceCluster(),
+		status:                  common.DaemonStatusInitialized,
+		shard:                   shard,
+		historyEngine:           historyEngine,
+		historySerializer:       persistence.NewPayloadSerializer(),
+		config:                  config,
+		metricsClient:           metricsClient,
+		logger:                  shard.GetLogger(),
+		replicationTaskExecutor: replicationTaskExecutor,
+		taskRetryPolicy:         taskRetryPolicy,
+		noTaskRetrier:           noTaskRetrier,
+		requestChan:             replicationTaskFetcher.GetRequestChan(),
+		syncShardChan:           make(chan *r.SyncShardStatus),
+		done:                    make(chan struct{}),
+		lastProcessedMessageID:  emptyMessageID,
+		lastRetrievedMessageID:  emptyMessageID,
 	}
 }
 
@@ -354,7 +354,7 @@ func (p *ReplicationTaskProcessorImpl) processSingleTask(replicationTask *r.Repl
 }
 
 func (p *ReplicationTaskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) error {
-	scope, err := p.replicationTaskHandler.process(
+	scope, err := p.replicationTaskExecutor.execute(
 		p.sourceCluster,
 		replicationTask,
 		false)

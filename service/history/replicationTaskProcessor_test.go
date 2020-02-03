@@ -52,19 +52,19 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		mockResource           *resource.Test
-		mockShard              ShardContext
-		mockEngine             *MockEngine
-		config                 *Config
-		historyClient          *historyservicetest.MockClient
-		replicationTaskFetcher *MockReplicationTaskFetcher
-		mockDomainCache        *cache.MockDomainCache
-		mockClientBean         *client.MockBean
-		adminClient            *adminservicetest.MockClient
-		clusterMetadata        *cluster.MockMetadata
-		executionManager       *mocks.ExecutionManager
-		requestChan            chan *request
-		replicationTaskHandler *MockreplicationTaskHandler
+		mockResource            *resource.Test
+		mockShard               ShardContext
+		mockEngine              *MockEngine
+		config                  *Config
+		historyClient           *historyservicetest.MockClient
+		replicationTaskFetcher  *MockReplicationTaskFetcher
+		mockDomainCache         *cache.MockDomainCache
+		mockClientBean          *client.MockBean
+		adminClient             *adminservicetest.MockClient
+		clusterMetadata         *cluster.MockMetadata
+		executionManager        *mocks.ExecutionManager
+		requestChan             chan *request
+		replicationTaskExecutor *MockreplicationTaskExecutor
 
 		replicationTaskProcessor *ReplicationTaskProcessorImpl
 	}
@@ -93,7 +93,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.adminClient = s.mockResource.RemoteAdminClient
 	s.clusterMetadata = s.mockResource.ClusterMetadata
 	s.executionManager = s.mockResource.ExecutionMgr
-	s.replicationTaskHandler = NewMockreplicationTaskHandler(s.controller)
+	s.replicationTaskExecutor = NewMockreplicationTaskExecutor(s.controller)
 	logger := log.NewNoop()
 	s.mockShard = &shardContextImpl{
 		shardID:                   0,
@@ -125,7 +125,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 		s.config,
 		metricsClient,
 		s.replicationTaskFetcher,
-		s.replicationTaskHandler,
+		s.replicationTaskExecutor,
 	)
 }
 
