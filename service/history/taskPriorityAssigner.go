@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 )
 
@@ -41,6 +42,7 @@ type (
 		domainCache        cache.DomainCache
 		config             *Config
 		logger             log.Logger
+		scope              metrics.Scope
 
 		sync.RWMutex
 		rateLimiters map[string]quotas.Limiter
@@ -60,6 +62,7 @@ func newTaskPriorityAssigner(
 	currentClusterName string,
 	domainCache cache.DomainCache,
 	logger log.Logger,
+	metricClient metrics.Client,
 	config *Config,
 ) *taskPriorityAssignerImpl {
 	return &taskPriorityAssignerImpl{
@@ -67,6 +70,7 @@ func newTaskPriorityAssigner(
 		domainCache:        domainCache,
 		config:             config,
 		logger:             logger,
+		scope:              metricClient.Scope(metrics.TaskPriorityAssignerScope),
 		rateLimiters:       make(map[string]quotas.Limiter),
 	}
 }
@@ -92,6 +96,12 @@ func (a *taskPriorityAssignerImpl) Assign(
 
 	if !a.getRateLimiter(domainName).Allow() {
 		task.SetPriority(taskPriorityActiveThrottled)
+		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
+		if task.GetQueueType() == common.TransferQueueType {
+			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
+		} else {
+			taggedScope.IncCounter(metrics.TimerTaskThrottledCounter)
+		}
 		return nil
 	}
 

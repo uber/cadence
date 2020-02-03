@@ -787,6 +787,8 @@ const (
 	HistoryShardControllerScope
 	// HistoryReapplyEventsScope is the scope used by event reapplication
 	HistoryReapplyEventsScope
+	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
+	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
 	TransferQueueProcessorScope
 	// TransferActiveQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1326,6 +1328,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryGetDLQReplicationMessagesScope:                  {operation: "GetDLQReplicationMessages"},
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
+		TaskPriorityAssignerScope:                              {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
 		TransferStandbyQueueProcessorScope:                     {operation: "TransferStandbyQueueProcessor"},
@@ -1541,6 +1544,9 @@ const (
 	TaskBatchCompleteCounter
 	TaskProcessingLatency
 	TaskQueueLatency
+
+	TransferTaskThrottledCounter
+	TimerTaskThrottledCounter
 
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -1882,6 +1888,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
+		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
+		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                       {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:               {metricName: "schedule_activity_decision", metricType: Counter},

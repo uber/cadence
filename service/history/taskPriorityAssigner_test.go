@@ -27,12 +27,14 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -69,6 +71,7 @@ func (s *taskPriorityAssignerSuite) SetupTest() {
 		cluster.TestCurrentClusterName,
 		s.mockDomainCache,
 		log.NewNoop(),
+		metrics.NewClient(tally.NoopScope, metrics.History),
 		config,
 	)
 }
