@@ -514,7 +514,8 @@ func (t *workflowReplicationTask) Nack() {
 	t.metricsClient.IncCounter(t.metricsScope, metrics.ReplicatorMessages)
 	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, t.timeSource.Now().Sub(t.startTime))
 
-	t.logger.Info("Replication task moved to DLQ", tag.WorkflowDomainID(t.queueID.DomainID),
+	t.logger.Info("Replication task moved to DLQ",
+		tag.WorkflowDomainID(t.queueID.DomainID),
 		tag.WorkflowID(t.queueID.WorkflowID),
 		tag.WorkflowRunID(t.queueID.RunID),
 		tag.TaskID(t.taskID))
