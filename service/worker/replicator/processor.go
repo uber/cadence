@@ -48,26 +48,26 @@ import (
 
 type (
 	replicationTaskProcessor struct {
-		currentCluster          string
-		sourceCluster           string
-		consumerName            string
-		client                  messaging.Client
-		consumer                messaging.Consumer
-		isStarted               int32
-		isStopped               int32
-		shutdownWG              sync.WaitGroup
-		shutdownCh              chan struct{}
-		config                  *Config
-		logger                  log.Logger
-		metricsClient           metrics.Client
-		domainReplicator        domain.ReplicationHandler
-		historyRereplicator     xdc.HistoryRereplicator
-		nDCHistoryResender      xdc.NDCHistoryResender
-		historyClient           history.Client
-		domainCache             cache.DomainCache
-		msgEncoder              codec.BinaryEncoder
-		timeSource              clock.TimeSource
-		sequentialTaskProcessor task.Processor
+		currentCluster                string
+		sourceCluster                 string
+		consumerName                  string
+		client                        messaging.Client
+		consumer                      messaging.Consumer
+		isStarted                     int32
+		isStopped                     int32
+		shutdownWG                    sync.WaitGroup
+		shutdownCh                    chan struct{}
+		config                        *Config
+		logger                        log.Logger
+		metricsClient                 metrics.Client
+		domainreplicationTaskExecutor domain.ReplicationTaskExecutor
+		historyRereplicator           xdc.HistoryRereplicator
+		nDCHistoryResender            xdc.NDCHistoryResender
+		historyClient                 history.Client
+		domainCache                   cache.DomainCache
+		msgEncoder                    codec.BinaryEncoder
+		timeSource                    clock.TimeSource
+		sequentialTaskProcessor       task.Processor
 	}
 )
 
@@ -92,7 +92,7 @@ func newReplicationTaskProcessor(
 	config *Config,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	domainReplicator domain.ReplicationHandler,
+	domainreplicationTaskExecutor domain.ReplicationTaskExecutor,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	historyClient history.Client,
@@ -104,22 +104,22 @@ func newReplicationTaskProcessor(
 		common.IsWhitelistServiceTransientError)
 
 	return &replicationTaskProcessor{
-		currentCluster:          currentCluster,
-		sourceCluster:           sourceCluster,
-		consumerName:            consumer,
-		client:                  client,
-		shutdownCh:              make(chan struct{}),
-		config:                  config,
-		logger:                  logger,
-		metricsClient:           metricsClient,
-		domainReplicator:        domainReplicator,
-		historyRereplicator:     historyRereplicator,
-		nDCHistoryResender:      nDCHistoryResender,
-		historyClient:           retryableHistoryClient,
-		msgEncoder:              codec.NewThriftRWEncoder(),
-		timeSource:              clock.NewRealTimeSource(),
-		domainCache:             domainCache,
-		sequentialTaskProcessor: sequentialTaskProcessor,
+		currentCluster:                currentCluster,
+		sourceCluster:                 sourceCluster,
+		consumerName:                  consumer,
+		client:                        client,
+		shutdownCh:                    make(chan struct{}),
+		config:                        config,
+		logger:                        logger,
+		metricsClient:                 metricsClient,
+		domainreplicationTaskExecutor: domainreplicationTaskExecutor,
+		historyRereplicator:           historyRereplicator,
+		nDCHistoryResender:            nDCHistoryResender,
+		historyClient:                 retryableHistoryClient,
+		msgEncoder:                    codec.NewThriftRWEncoder(),
+		timeSource:                    clock.NewRealTimeSource(),
+		domainCache:                   domainCache,
+		sequentialTaskProcessor:       sequentialTaskProcessor,
 	}
 }
 
@@ -305,7 +305,7 @@ func (p *replicationTaskProcessor) handleDomainReplicationTask(task *replicator.
 		}
 	}()
 
-	err := p.domainReplicator.HandleReceivingTask(task.DomainTaskAttributes)
+	err := p.domainreplicationTaskExecutor.Execute(task.DomainTaskAttributes)
 	if err != nil {
 		return err
 	}

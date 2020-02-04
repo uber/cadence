@@ -67,8 +67,8 @@ type (
 		metricsClient  metrics.Client
 		msgEncoder     codec.BinaryEncoder
 
-		mockMsg              *messageMocks.Message
-		mockDomainReplicator *domain.MockReplicationHandler
+		mockMsg                           *messageMocks.Message
+		mockDomainReplicationTaskExecutor *domain.MockReplicationTaskExecutor
 
 		mockRereplicator *xdc.MockHistoryRereplicator
 
@@ -125,7 +125,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 	s.mockMsg = &messageMocks.Message{}
 	s.mockMsg.On("Partition").Return(int32(0))
 	s.mockMsg.On("Offset").Return(int64(0))
-	s.mockDomainReplicator = domain.NewMockReplicationHandler(s.controller)
+	s.mockDomainReplicationTaskExecutor = domain.NewMockReplicationTaskExecutor(s.controller)
 	s.mockRereplicator = &xdc.MockHistoryRereplicator{}
 
 	s.currentCluster = cluster.TestAlternativeClusterName
@@ -139,7 +139,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 		s.config,
 		s.logger,
 		s.metricsClient,
-		s.mockDomainReplicator,
+		s.mockDomainReplicationTaskExecutor,
 		s.mockRereplicator,
 		s.mockNDCResender,
 		s.mockHistoryClient,
@@ -173,7 +173,7 @@ func (s *replicationTaskProcessorSuite) TestDecodeMsgAndSubmit_Domain_Success() 
 	replicationTaskBinary, err := s.msgEncoder.Encode(replicationTask)
 	s.Nil(err)
 	s.mockMsg.On("Value").Return(replicationTaskBinary)
-	s.mockDomainReplicator.EXPECT().HandleReceivingTask(replicationAttr).Return(nil).Times(1)
+	s.mockDomainReplicationTaskExecutor.EXPECT().Execute(replicationAttr).Return(nil).Times(1)
 	s.mockMsg.On("Ack").Return(nil).Once()
 
 	s.processor.decodeMsgAndSubmit(s.mockMsg)
@@ -191,8 +191,8 @@ func (s *replicationTaskProcessorSuite) TestDecodeMsgAndSubmit_Domain_FailedThen
 	replicationTaskBinary, err := s.msgEncoder.Encode(replicationTask)
 	s.Nil(err)
 	s.mockMsg.On("Value").Return(replicationTaskBinary)
-	s.mockDomainReplicator.EXPECT().HandleReceivingTask(replicationAttr).Return(errors.New("some random error")).Times(1)
-	s.mockDomainReplicator.EXPECT().HandleReceivingTask(replicationAttr).Return(nil).Times(1)
+	s.mockDomainReplicationTaskExecutor.EXPECT().Execute(replicationAttr).Return(errors.New("some random error")).Times(1)
+	s.mockDomainReplicationTaskExecutor.EXPECT().Execute(replicationAttr).Return(nil).Times(1)
 	s.mockMsg.On("Ack").Return(nil).Once()
 
 	s.processor.decodeMsgAndSubmit(s.mockMsg)

@@ -39,7 +39,7 @@ type (
 	}
 
 	dlqMessageHandlerImpl struct {
-		replicationHandler     ReplicationHandler
+		replicationHandler     ReplicationTaskExecutor
 		domainReplicationQueue persistence.DomainReplicationQueue
 		logger                 log.Logger
 	}
@@ -47,7 +47,7 @@ type (
 
 // NewDLQMessageHandler returns a DLQTaskHandler instance
 func NewDLQMessageHandler(
-	replicationHandler ReplicationHandler,
+	replicationHandler ReplicationTaskExecutor,
 	domainReplicationQueue persistence.DomainReplicationQueue,
 	logger log.Logger,
 ) DLQMessageHandler {
@@ -133,7 +133,7 @@ func (d *dlqMessageHandlerImpl) Merge(
 			return nil, &shared.InternalServiceError{Message: "Encounter non domain replication task in domain replication queue."}
 		}
 
-		if err := d.replicationHandler.HandleReceivingTask(
+		if err := d.replicationHandler.Execute(
 			domainTask,
 		); err != nil {
 			return nil, err

@@ -52,7 +52,7 @@ func newDomainReplicationMessageProcessor(
 	logger log.Logger,
 	remotePeer admin.Client,
 	metricsClient metrics.Client,
-	domainReplicationHandler domain.ReplicationHandler,
+	domainReplicationTaskExecutor domain.ReplicationTaskExecutor,
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
 	domainReplicationQueue persistence.DomainReplicationQueue,
@@ -62,37 +62,37 @@ func newDomainReplicationMessageProcessor(
 	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
 
 	return &domainReplicationMessageProcessor{
-		hostInfo:               hostInfo,
-		serviceResolver:        serviceResolver,
-		status:                 common.DaemonStatusInitialized,
-		sourceCluster:          sourceCluster,
-		logger:                 logger,
-		remotePeer:             remotePeer,
-		domainReplicator:       domainReplicationHandler,
-		metricsClient:          metricsClient,
-		retryPolicy:            retryPolicy,
-		lastProcessedMessageID: -1,
-		lastRetrievedMessageID: -1,
-		done:                   make(chan struct{}),
-		domainReplicationQueue: domainReplicationQueue,
+		hostInfo:                      hostInfo,
+		serviceResolver:               serviceResolver,
+		status:                        common.DaemonStatusInitialized,
+		sourceCluster:                 sourceCluster,
+		logger:                        logger,
+		remotePeer:                    remotePeer,
+		domainReplicationTaskExecutor: domainReplicationTaskExecutor,
+		metricsClient:                 metricsClient,
+		retryPolicy:                   retryPolicy,
+		lastProcessedMessageID:        -1,
+		lastRetrievedMessageID:        -1,
+		done:                          make(chan struct{}),
+		domainReplicationQueue:        domainReplicationQueue,
 	}
 }
 
 type (
 	domainReplicationMessageProcessor struct {
-		hostInfo               *membership.HostInfo
-		serviceResolver        membership.ServiceResolver
-		status                 int32
-		sourceCluster          string
-		logger                 log.Logger
-		remotePeer             admin.Client
-		domainReplicator       domain.ReplicationHandler
-		metricsClient          metrics.Client
-		retryPolicy            backoff.RetryPolicy
-		lastProcessedMessageID int64
-		lastRetrievedMessageID int64
-		done                   chan struct{}
-		domainReplicationQueue persistence.DomainReplicationQueue
+		hostInfo                      *membership.HostInfo
+		serviceResolver               membership.ServiceResolver
+		status                        int32
+		sourceCluster                 string
+		logger                        log.Logger
+		remotePeer                    admin.Client
+		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
+		metricsClient                 metrics.Client
+		retryPolicy                   backoff.RetryPolicy
+		lastProcessedMessageID        int64
+		lastRetrievedMessageID        int64
+		done                          chan struct{}
+		domainReplicationQueue        persistence.DomainReplicationQueue
 	}
 )
 
@@ -190,7 +190,7 @@ func (p *domainReplicationMessageProcessor) handleDomainReplicationTask(
 	sw := p.metricsClient.StartTimer(metrics.DomainReplicationTaskScope, metrics.ReplicatorLatency)
 	defer sw.Stop()
 
-	return p.domainReplicator.HandleReceivingTask(task.DomainTaskAttributes)
+	return p.domainReplicationTaskExecutor.Execute(task.DomainTaskAttributes)
 }
 
 func (p *domainReplicationMessageProcessor) Stop() {

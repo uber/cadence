@@ -242,7 +242,7 @@ func (s *Service) startScanner() {
 }
 
 func (s *Service) startReplicator() {
-	domainReplicator := domain.NewReplicationHandler(
+	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		s.GetMetadataManager(),
 		s.GetLogger(),
 	)
@@ -258,7 +258,7 @@ func (s *Service) startReplicator() {
 		s.GetHostInfo(),
 		s.GetWorkerServiceResolver(),
 		s.GetDomainReplicationQueue(),
-		domainReplicator,
+		domainReplicationTaskExecutor,
 	)
 	if err := msgReplicator.Start(); err != nil {
 		msgReplicator.Stop()

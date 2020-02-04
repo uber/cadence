@@ -89,7 +89,7 @@ func NewAdminHandler(
 	config *Config,
 ) *AdminHandler {
 
-	domainReplicationHandler := domain.NewReplicationHandler(
+	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		resource.GetMetadataManager(),
 		resource.GetLogger(),
 	)
@@ -99,7 +99,7 @@ func NewAdminHandler(
 		params:                params,
 		config:                config,
 		domainDLQHandler: domain.NewDLQMessageHandler(
-			domainReplicationHandler,
+			domainReplicationTaskExecutor,
 			resource.GetDomainReplicationQueue(),
 			resource.GetLogger(),
 		),

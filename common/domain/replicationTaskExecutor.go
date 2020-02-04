@@ -55,31 +55,31 @@ var (
 // NOTE: the counterpart of domain replication transmission logic is in service/fropntend package
 
 type (
-	// ReplicationHandler is the interface which can replicate the domain
-	ReplicationHandler interface {
-		HandleReceivingTask(task *replicator.DomainTaskAttributes) error
+	// ReplicationTaskExecutor is the interface which is to execute domain replication task
+	ReplicationTaskExecutor interface {
+		Execute(task *replicator.DomainTaskAttributes) error
 	}
 
-	domainReplicationTaskHandlerImpl struct {
+	domainReplicationTaskExecutorImpl struct {
 		metadataManagerV2 persistence.MetadataManager
 		logger            log.Logger
 	}
 )
 
 // NewReplicationHandler create a new instance of domain replicator
-func NewReplicationHandler(
+func NewReplicationTaskExecutor(
 	metadataManagerV2 persistence.MetadataManager,
 	logger log.Logger,
-) ReplicationHandler {
+) ReplicationTaskExecutor {
 
-	return &domainReplicationTaskHandlerImpl{
+	return &domainReplicationTaskExecutorImpl{
 		metadataManagerV2: metadataManagerV2,
 		logger:            logger,
 	}
 }
 
-// HandleReceiveTask handle receiving of the domain replication task
-func (h *domainReplicationTaskHandlerImpl) HandleReceivingTask(task *replicator.DomainTaskAttributes) error {
+// Execute handles receiving of the domain replication task
+func (h *domainReplicationTaskExecutorImpl) Execute(task *replicator.DomainTaskAttributes) error {
 	if err := h.validateDomainReplicationTask(task); err != nil {
 		return err
 	}
@@ -94,8 +94,8 @@ func (h *domainReplicationTaskHandlerImpl) HandleReceivingTask(task *replicator.
 	}
 }
 
-// handleDomainCreationReplicationTask handle the domain creation replication task
-func (h *domainReplicationTaskHandlerImpl) handleDomainCreationReplicationTask(task *replicator.DomainTaskAttributes) error {
+// handleDomainCreationReplicationTask handles the domain creation replication task
+func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(task *replicator.DomainTaskAttributes) error {
 	// task already validated
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
@@ -177,8 +177,8 @@ func (h *domainReplicationTaskHandlerImpl) handleDomainCreationReplicationTask(t
 	return err
 }
 
-// handleDomainUpdateReplicationTask handle the domain update replication task
-func (h *domainReplicationTaskHandlerImpl) handleDomainUpdateReplicationTask(task *replicator.DomainTaskAttributes) error {
+// handleDomainUpdateReplicationTask handles the domain update replication task
+func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(task *replicator.DomainTaskAttributes) error {
 	// task already validated
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
@@ -255,7 +255,7 @@ func (h *domainReplicationTaskHandlerImpl) handleDomainUpdateReplicationTask(tas
 	return h.metadataManagerV2.UpdateDomain(request)
 }
 
-func (h *domainReplicationTaskHandlerImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {
+func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {
 	if task == nil {
 		return ErrEmptyDomainReplicationTask
 	}
@@ -278,7 +278,7 @@ func (h *domainReplicationTaskHandlerImpl) validateDomainReplicationTask(task *r
 	return nil
 }
 
-func (h *domainReplicationTaskHandlerImpl) convertClusterReplicationConfigFromThrift(
+func (h *domainReplicationTaskExecutorImpl) convertClusterReplicationConfigFromThrift(
 	input []*shared.ClusterReplicationConfiguration) []*persistence.ClusterReplicationConfig {
 	output := []*persistence.ClusterReplicationConfig{}
 	for _, cluster := range input {
@@ -288,7 +288,7 @@ func (h *domainReplicationTaskHandlerImpl) convertClusterReplicationConfigFromTh
 	return output
 }
 
-func (h *domainReplicationTaskHandlerImpl) convertDomainStatusFromThrift(input *shared.DomainStatus) (int, error) {
+func (h *domainReplicationTaskExecutorImpl) convertDomainStatusFromThrift(input *shared.DomainStatus) (int, error) {
 	if input == nil {
 		return 0, ErrInvalidDomainStatus
 	}
