@@ -134,7 +134,7 @@ func (v *AccessDeniedError) String() string {
 	return fmt.Sprintf("AccessDeniedError{%v}", strings.Join(fields[:i], ", "))
 }
 
-git // ErrorName is the name of this type as defined in the Thrift
+// ErrorName is the name of this type as defined in the Thrift
 // file.
 func (*AccessDeniedError) ErrorName() string {
 	return "AccessDeniedError"
