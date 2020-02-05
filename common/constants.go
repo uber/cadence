@@ -68,9 +68,6 @@ const (
 type (
 	// EncodingType is an enum that represents various data encoding types
 	EncodingType string
-
-	// QueueType is an enum that represents various queue types
-	QueueType int
 )
 
 // MaxTaskTimeout is maximum task timeout allowed. 366 days in seconds
@@ -127,15 +124,6 @@ const (
 	ArchivalDisabled = "disabled"
 	// ArchivalPaused is the status for pausing archival
 	ArchivalPaused = "paused"
-)
-
-const (
-	// TransferQueueType is the type for transfer queue
-	TransferQueueType QueueType = iota + 1
-	// TimerQueueType is the type for timer queue
-	TimerQueueType
-	// ReplicationQueueType is the type for replication queue
-	ReplicationQueueType
 )
 
 // enum for dynamic config AdvancedVisibilityWritingMode

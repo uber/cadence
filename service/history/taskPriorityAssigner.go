@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -38,14 +37,14 @@ type (
 	}
 
 	taskPriorityAssignerImpl struct {
+		sync.RWMutex
+
 		currentClusterName string
 		domainCache        cache.DomainCache
 		config             *Config
 		logger             log.Logger
 		scope              metrics.Scope
-
-		sync.RWMutex
-		rateLimiters map[string]quotas.Limiter
+		rateLimiters       map[string]quotas.Limiter
 	}
 )
 
@@ -55,7 +54,7 @@ const (
 	taskPriorityActiveTransfer int = iota
 	taskPriorityActiveTimer
 	taskPriorityActiveThrottled
-	taskPriorityReplicationStandby
+	taskPriorityReplicationAndStandby
 )
 
 func newTaskPriorityAssigner(
@@ -78,8 +77,8 @@ func newTaskPriorityAssigner(
 func (a *taskPriorityAssignerImpl) Assign(
 	task queueTask,
 ) error {
-	if task.GetQueueType() == common.ReplicationQueueType {
-		task.SetPriority(taskPriorityReplicationStandby)
+	if task.GetQueueType() == replicationQueueType {
+		task.SetPriority(taskPriorityReplicationAndStandby)
 		return nil
 	}
 
@@ -90,14 +89,14 @@ func (a *taskPriorityAssignerImpl) Assign(
 	}
 
 	if !active {
-		task.SetPriority(taskPriorityReplicationStandby)
+		task.SetPriority(taskPriorityReplicationAndStandby)
 		return nil
 	}
 
 	if !a.getRateLimiter(domainName).Allow() {
 		task.SetPriority(taskPriorityActiveThrottled)
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
-		if task.GetQueueType() == common.TransferQueueType {
+		if task.GetQueueType() == transferQueueType {
 			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
 		} else {
 			taggedScope.IncCounter(metrics.TimerTaskThrottledCounter)
@@ -105,7 +104,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 		return nil
 	}
 
-	if task.GetQueueType() == common.TransferQueueType {
+	if task.GetQueueType() == transferQueueType {
 		task.SetPriority(taskPriorityActiveTransfer)
 	} else {
 		task.SetPriority(taskPriorityActiveTimer)

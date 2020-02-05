@@ -30,7 +30,6 @@ import (
 	"github.com/uber-go/tally"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
@@ -137,8 +136,8 @@ func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_UnknownError() {
 
 func (s *taskPriorityAssignerSuite) TestAssign_ReplicationTask() {
 	mockTask := NewMockqueueTask(s.controller)
-	mockTask.EXPECT().GetQueueType().Return(common.ReplicationQueueType).Times(1)
-	mockTask.EXPECT().SetPriority(taskPriorityReplicationStandby).Times(1)
+	mockTask.EXPECT().GetQueueType().Return(replicationQueueType).Times(1)
+	mockTask.EXPECT().SetPriority(taskPriorityReplicationAndStandby).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
 	s.NoError(err)
@@ -152,9 +151,9 @@ func (s *taskPriorityAssignerSuite) TestAssign_StandbyTask() {
 	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
 
 	mockTask := NewMockqueueTask(s.controller)
-	mockTask.EXPECT().GetQueueType().Return(common.TransferQueueType).Times(1)
+	mockTask.EXPECT().GetQueueType().Return(transferQueueType).Times(1)
 	mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
-	mockTask.EXPECT().SetPriority(taskPriorityReplicationStandby).Times(1)
+	mockTask.EXPECT().SetPriority(taskPriorityReplicationAndStandby).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
 	s.NoError(err)
@@ -164,7 +163,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_TransferTask() {
 	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
 
 	mockTask := NewMockqueueTask(s.controller)
-	mockTask.EXPECT().GetQueueType().Return(common.TransferQueueType).AnyTimes()
+	mockTask.EXPECT().GetQueueType().Return(transferQueueType).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
 	mockTask.EXPECT().SetPriority(taskPriorityActiveTransfer).Times(1)
 
@@ -176,7 +175,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_TimerTask() {
 	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil)
 
 	mockTask := NewMockqueueTask(s.controller)
-	mockTask.EXPECT().GetQueueType().Return(common.TimerQueueType).AnyTimes()
+	mockTask.EXPECT().GetQueueType().Return(timerQueueType).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
 	mockTask.EXPECT().SetPriority(taskPriorityActiveTimer).Times(1)
 
@@ -189,7 +188,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_ThrottledTask() {
 
 	for i := 0; i != s.testTaskProcessRPS*2; i++ {
 		mockTask := NewMockqueueTask(s.controller)
-		mockTask.EXPECT().GetQueueType().Return(common.TimerQueueType).AnyTimes()
+		mockTask.EXPECT().GetQueueType().Return(timerQueueType).AnyTimes()
 		mockTask.EXPECT().GetDomainID().Return(testDomainID).Times(1)
 		if i < s.testTaskProcessRPS {
 			mockTask.EXPECT().SetPriority(taskPriorityActiveTimer).Times(1)

@@ -78,7 +78,7 @@ type (
 	queueTask interface {
 		task.PriorityTask
 		queueTaskInfo
-		GetQueueType() common.QueueType
+		GetQueueType() queueType
 		// TODO: add a method for getting task shardID
 	}
 
@@ -115,4 +115,12 @@ type (
 		WatchHistoryEvent(identifier definition.WorkflowIdentifier) (string, chan *historyEventNotification, error)
 		UnwatchHistoryEvent(identifier definition.WorkflowIdentifier, subscriberID string) error
 	}
+
+	queueType int
+)
+
+const (
+	transferQueueType queueType = iota + 1
+	timerQueueType
+	replicationQueueType
 )

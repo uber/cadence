@@ -33,7 +33,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	common "github.com/uber/cadence/common"
 	task "github.com/uber/cadence/common/task"
 )
 
@@ -386,10 +385,10 @@ func (mr *MockqueueTaskMockRecorder) GetDomainID() *gomock.Call {
 }
 
 // GetQueueType mocks base method
-func (m *MockqueueTask) GetQueueType() common.QueueType {
+func (m *MockqueueTask) GetQueueType() queueType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetQueueType")
-	ret0, _ := ret[0].(common.QueueType)
+	ret0, _ := ret[0].(queueType)
 	return ret0
 }
 
