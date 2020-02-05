@@ -292,8 +292,8 @@ type (
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`
-		// Prefixes all outgoing metrics with the provided string
-		Prefix string
+		// Prefix sets the prefix to all outgoing metrics
+		Prefix string `yaml:"prefix"`
 	}
 
 	// Statsd contains the config items for statsd metrics reporter
