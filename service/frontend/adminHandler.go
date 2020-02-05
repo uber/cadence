@@ -826,12 +826,17 @@ func (adh *AdminHandler) ReadDLQMessages(
 		return nil, &gen.BadRequestError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
 		op = func() error {
-			var err error
-			tasks, token, err = adh.domainDLQHandler.Read(
-				int(request.GetInclusiveEndMessageID()),
-				int(request.GetMaximumPageSize()),
-				request.GetNextPageToken())
-			return err
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				var err error
+				tasks, token, err = adh.domainDLQHandler.Read(
+					int(request.GetInclusiveEndMessageID()),
+					int(request.GetMaximumPageSize()),
+					request.GetNextPageToken())
+				return err
+			}
 		}
 	default:
 		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
@@ -875,9 +880,14 @@ func (adh *AdminHandler) PurgeDLQMessages(
 		return &gen.BadRequestError{Message: "Not implement."}
 	case replicator.DLQTypeDomain:
 		op = func() error {
-			return adh.domainDLQHandler.Purge(
-				int(request.GetInclusiveEndMessageID()),
-			)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				return adh.domainDLQHandler.Purge(
+					int(request.GetInclusiveEndMessageID()),
+				)
+			}
 		}
 	default:
 		return &gen.BadRequestError{Message: "The DLQ type is not supported."}
@@ -920,13 +930,18 @@ func (adh *AdminHandler) MergeDLQMessages(
 	case replicator.DLQTypeDomain:
 
 		op = func() error {
-			var err error
-			token, err = adh.domainDLQHandler.Merge(
-				int(request.GetInclusiveEndMessageID()),
-				int(request.GetMaximumPageSize()),
-				request.GetNextPageToken(),
-			)
-			return err
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				var err error
+				token, err = adh.domainDLQHandler.Merge(
+					int(request.GetInclusiveEndMessageID()),
+					int(request.GetMaximumPageSize()),
+					request.GetNextPageToken(),
+				)
+				return err
+			}
 		}
 	default:
 		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}

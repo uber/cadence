@@ -85,36 +85,36 @@ type (
 		matchingService common.Daemon
 		historyServices []common.Daemon
 
-		adminClient              adminserviceclient.Interface
-		frontendClient           workflowserviceclient.Interface
-		historyClient            historyserviceclient.Interface
-		logger                   log.Logger
-		clusterMetadata          cluster.Metadata
-		persistenceConfig        config.Persistence
-		dispatcherProvider       client.DispatcherProvider
-		messagingClient          messaging.Client
-		metadataMgr              persistence.MetadataManager
-		shardMgr                 persistence.ShardManager
-		historyV2Mgr             persistence.HistoryManager
-		taskMgr                  persistence.TaskManager
-		visibilityMgr            persistence.VisibilityManager
-		executionMgrFactory      persistence.ExecutionManagerFactory
-		domainReplicationQueue   persistence.DomainReplicationQueue
-		shutdownCh               chan struct{}
-		shutdownWG               sync.WaitGroup
-		clusterNo                int // cluster number
-		replicator               *replicator.Replicator
-		clientWorker             archiver.ClientWorker
-		indexer                  *indexer.Indexer
-		enableNDC                bool
-		archiverMetadata         carchiver.ArchivalMetadata
-		archiverProvider         provider.ArchiverProvider
-		historyConfig            *HistoryConfig
-		esConfig                 *elasticsearch.Config
-		esClient                 elasticsearch.Client
-		workerConfig             *WorkerConfig
-		mockAdminClient          map[string]adminClient.Client
-		domainReplicationHandler domain.ReplicationHandler
+		adminClient                   adminserviceclient.Interface
+		frontendClient                workflowserviceclient.Interface
+		historyClient                 historyserviceclient.Interface
+		logger                        log.Logger
+		clusterMetadata               cluster.Metadata
+		persistenceConfig             config.Persistence
+		dispatcherProvider            client.DispatcherProvider
+		messagingClient               messaging.Client
+		metadataMgr                   persistence.MetadataManager
+		shardMgr                      persistence.ShardManager
+		historyV2Mgr                  persistence.HistoryManager
+		taskMgr                       persistence.TaskManager
+		visibilityMgr                 persistence.VisibilityManager
+		executionMgrFactory           persistence.ExecutionManagerFactory
+		domainReplicationQueue        persistence.DomainReplicationQueue
+		shutdownCh                    chan struct{}
+		shutdownWG                    sync.WaitGroup
+		clusterNo                     int // cluster number
+		replicator                    *replicator.Replicator
+		clientWorker                  archiver.ClientWorker
+		indexer                       *indexer.Indexer
+		enableNDC                     bool
+		archiverMetadata              carchiver.ArchivalMetadata
+		archiverProvider              provider.ArchiverProvider
+		historyConfig                 *HistoryConfig
+		esConfig                      *elasticsearch.Config
+		esClient                      elasticsearch.Client
+		workerConfig                  *WorkerConfig
+		mockAdminClient               map[string]adminClient.Client
+		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
 	}
 
 	// HistoryConfig contains configs for history service
@@ -149,7 +149,7 @@ type (
 		ESClient                      elasticsearch.Client
 		WorkerConfig                  *WorkerConfig
 		MockAdminClient               map[string]adminClient.Client
-		DomainReplicationHandler      domain.ReplicationHandler
+		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor
 	}
 
 	membershipFactoryImpl struct {
@@ -161,29 +161,29 @@ type (
 // NewCadence returns an instance that hosts full cadence in one process
 func NewCadence(params *CadenceParams) Cadence {
 	return &cadenceImpl{
-		logger:                   params.Logger,
-		clusterMetadata:          params.ClusterMetadata,
-		persistenceConfig:        params.PersistenceConfig,
-		dispatcherProvider:       params.DispatcherProvider,
-		messagingClient:          params.MessagingClient,
-		metadataMgr:              params.MetadataMgr,
-		visibilityMgr:            params.VisibilityMgr,
-		shardMgr:                 params.ShardMgr,
-		historyV2Mgr:             params.HistoryV2Mgr,
-		taskMgr:                  params.TaskMgr,
-		executionMgrFactory:      params.ExecutionMgrFactory,
-		domainReplicationQueue:   params.DomainReplicationQueue,
-		shutdownCh:               make(chan struct{}),
-		clusterNo:                params.ClusterNo,
-		enableNDC:                params.EnableNDC,
-		esConfig:                 params.ESConfig,
-		esClient:                 params.ESClient,
-		archiverMetadata:         params.ArchiverMetadata,
-		archiverProvider:         params.ArchiverProvider,
-		historyConfig:            params.HistoryConfig,
-		workerConfig:             params.WorkerConfig,
-		mockAdminClient:          params.MockAdminClient,
-		domainReplicationHandler: params.DomainReplicationHandler,
+		logger:                        params.Logger,
+		clusterMetadata:               params.ClusterMetadata,
+		persistenceConfig:             params.PersistenceConfig,
+		dispatcherProvider:            params.DispatcherProvider,
+		messagingClient:               params.MessagingClient,
+		metadataMgr:                   params.MetadataMgr,
+		visibilityMgr:                 params.VisibilityMgr,
+		shardMgr:                      params.ShardMgr,
+		historyV2Mgr:                  params.HistoryV2Mgr,
+		taskMgr:                       params.TaskMgr,
+		executionMgrFactory:           params.ExecutionMgrFactory,
+		domainReplicationQueue:        params.DomainReplicationQueue,
+		shutdownCh:                    make(chan struct{}),
+		clusterNo:                     params.ClusterNo,
+		enableNDC:                     params.EnableNDC,
+		esConfig:                      params.ESConfig,
+		esClient:                      params.ESClient,
+		archiverMetadata:              params.ArchiverMetadata,
+		archiverProvider:              params.ArchiverProvider,
+		historyConfig:                 params.HistoryConfig,
+		workerConfig:                  params.WorkerConfig,
+		mockAdminClient:               params.MockAdminClient,
+		domainReplicationTaskExecutor: params.DomainReplicationTaskExecutor,
 	}
 }
 
@@ -652,7 +652,7 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 		service.GetHostInfo(),
 		serviceResolver,
 		c.domainReplicationQueue,
-		c.domainReplicationHandler,
+		c.domainReplicationTaskExecutor,
 	)
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
