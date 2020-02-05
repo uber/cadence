@@ -364,6 +364,8 @@ const (
 	FrontendClientGetWorkflowExecutionHistoryScope
 	// FrontendClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
 	FrontendClientGetWorkflowExecutionRawHistoryScope
+	// FrontendClientPollForWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
+	FrontendClientPollForWorkflowExecutionRawHistoryScope
 	// FrontendClientListArchivedWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientListArchivedWorkflowExecutionsScope
 	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
@@ -472,6 +474,8 @@ const (
 	DCRedirectionGetWorkflowExecutionHistoryScope
 	// DCRedirectionGetWorkflowExecutionRawHistoryScope tracks RPC calls for dc redirection
 	DCRedirectionGetWorkflowExecutionRawHistoryScope
+	// DCRedirectionPollForWorklfowExecutionRawHistoryScope tracks RPC calls for dc redirection
+	DCRedirectionPollForWorklfowExecutionRawHistoryScope
 	// DCRedirectionListArchivedWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionListArchivedWorkflowExecutionsScope
 	// DCRedirectionListClosedWorkflowExecutionsScope tracks RPC calls for dc redirection
@@ -707,6 +711,8 @@ const (
 	FrontendGetWorkflowExecutionHistoryScope
 	// FrontendGetWorkflowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistory
 	FrontendGetWorkflowExecutionRawHistoryScope
+	// FrontendPollForWorklfowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistory
+	FrontendPollForWorklfowExecutionRawHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
 	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution
@@ -1164,6 +1170,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientDescribeWorkflowExecutionScope:        {operation: "FrontendClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetWorkflowExecutionHistoryScope:      {operation: "FrontendClientGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetWorkflowExecutionRawHistoryScope:   {operation: "FrontendClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
+		FrontendClientPollForWorkflowExecutionRawHistoryScope: {operation: "FrontendClientPollForWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListArchivedWorkflowExecutionsScope:   {operation: "FrontendClientListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListClosedWorkflowExecutionsScope:     {operation: "FrontendClientListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListDomainsScope:                      {operation: "FrontendClientListDomains", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
@@ -1218,6 +1225,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DCRedirectionDescribeWorkflowExecutionScope:         {operation: "DCRedirectionDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionGetWorkflowExecutionHistoryScope:       {operation: "DCRedirectionGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionGetWorkflowExecutionRawHistoryScope:    {operation: "DCRedirectionGetWorkflowExecutionRawHistoryScope", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForWorklfowExecutionRawHistoryScope:  {operation: "DCRedirectionPollForWorklfowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListArchivedWorkflowExecutionsScope:    {operation: "DCRedirectionListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListClosedWorkflowExecutionsScope:      {operation: "DCRedirectionListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListDomainsScope:                       {operation: "DCRedirectionListDomains", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1309,44 +1317,45 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminReapplyEventsScope:                    {operation: "ReapplyEvents"},
 		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
 
-		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
-		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},
-		FrontendPollForActivityTaskScope:              {operation: "PollForActivityTask"},
-		FrontendRecordActivityTaskHeartbeatScope:      {operation: "RecordActivityTaskHeartbeat"},
-		FrontendRecordActivityTaskHeartbeatByIDScope:  {operation: "RecordActivityTaskHeartbeatByID"},
-		FrontendRespondDecisionTaskCompletedScope:     {operation: "RespondDecisionTaskCompleted"},
-		FrontendRespondDecisionTaskFailedScope:        {operation: "RespondDecisionTaskFailed"},
-		FrontendRespondQueryTaskCompletedScope:        {operation: "RespondQueryTaskCompleted"},
-		FrontendRespondActivityTaskCompletedScope:     {operation: "RespondActivityTaskCompleted"},
-		FrontendRespondActivityTaskFailedScope:        {operation: "RespondActivityTaskFailed"},
-		FrontendRespondActivityTaskCanceledScope:      {operation: "RespondActivityTaskCanceled"},
-		FrontendRespondActivityTaskCompletedByIDScope: {operation: "RespondActivityTaskCompletedByID"},
-		FrontendRespondActivityTaskFailedByIDScope:    {operation: "RespondActivityTaskFailedByID"},
-		FrontendRespondActivityTaskCanceledByIDScope:  {operation: "RespondActivityTaskCanceledByID"},
-		FrontendGetWorkflowExecutionHistoryScope:      {operation: "GetWorkflowExecutionHistory"},
-		FrontendGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
-		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
-		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
-		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
-		FrontendResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
-		FrontendRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
-		FrontendListArchivedWorkflowExecutionsScope:   {operation: "ListArchivedWorkflowExecutions"},
-		FrontendListOpenWorkflowExecutionsScope:       {operation: "ListOpenWorkflowExecutions"},
-		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
-		FrontendListWorkflowExecutionsScope:           {operation: "ListWorkflowExecutions"},
-		FrontendScanWorkflowExecutionsScope:           {operation: "ScanWorkflowExecutions"},
-		FrontendCountWorkflowExecutionsScope:          {operation: "CountWorkflowExecutions"},
-		FrontendRegisterDomainScope:                   {operation: "RegisterDomain"},
-		FrontendDescribeDomainScope:                   {operation: "DescribeDomain"},
-		FrontendListDomainsScope:                      {operation: "ListDomain"},
-		FrontendUpdateDomainScope:                     {operation: "UpdateDomain"},
-		FrontendDeprecateDomainScope:                  {operation: "DeprecateDomain"},
-		FrontendQueryWorkflowScope:                    {operation: "QueryWorkflow"},
-		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
-		FrontendListTaskListPartitionsScope:           {operation: "FrontendListTaskListPartitions"},
-		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
-		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
-		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
+		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
+		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
+		FrontendPollForActivityTaskScope:                {operation: "PollForActivityTask"},
+		FrontendRecordActivityTaskHeartbeatScope:        {operation: "RecordActivityTaskHeartbeat"},
+		FrontendRecordActivityTaskHeartbeatByIDScope:    {operation: "RecordActivityTaskHeartbeatByID"},
+		FrontendRespondDecisionTaskCompletedScope:       {operation: "RespondDecisionTaskCompleted"},
+		FrontendRespondDecisionTaskFailedScope:          {operation: "RespondDecisionTaskFailed"},
+		FrontendRespondQueryTaskCompletedScope:          {operation: "RespondQueryTaskCompleted"},
+		FrontendRespondActivityTaskCompletedScope:       {operation: "RespondActivityTaskCompleted"},
+		FrontendRespondActivityTaskFailedScope:          {operation: "RespondActivityTaskFailed"},
+		FrontendRespondActivityTaskCanceledScope:        {operation: "RespondActivityTaskCanceled"},
+		FrontendRespondActivityTaskCompletedByIDScope:   {operation: "RespondActivityTaskCompletedByID"},
+		FrontendRespondActivityTaskFailedByIDScope:      {operation: "RespondActivityTaskFailedByID"},
+		FrontendRespondActivityTaskCanceledByIDScope:    {operation: "RespondActivityTaskCanceledByID"},
+		FrontendGetWorkflowExecutionHistoryScope:        {operation: "GetWorkflowExecutionHistory"},
+		FrontendGetWorkflowExecutionRawHistoryScope:     {operation: "GetWorkflowExecutionRawHistory"},
+		FrontendPollForWorklfowExecutionRawHistoryScope: {operation: "PollForWorklfowExecutionRawHistory"},
+		FrontendSignalWorkflowExecutionScope:            {operation: "SignalWorkflowExecution"},
+		FrontendSignalWithStartWorkflowExecutionScope:   {operation: "SignalWithStartWorkflowExecution"},
+		FrontendTerminateWorkflowExecutionScope:         {operation: "TerminateWorkflowExecution"},
+		FrontendResetWorkflowExecutionScope:             {operation: "ResetWorkflowExecution"},
+		FrontendRequestCancelWorkflowExecutionScope:     {operation: "RequestCancelWorkflowExecution"},
+		FrontendListArchivedWorkflowExecutionsScope:     {operation: "ListArchivedWorkflowExecutions"},
+		FrontendListOpenWorkflowExecutionsScope:         {operation: "ListOpenWorkflowExecutions"},
+		FrontendListClosedWorkflowExecutionsScope:       {operation: "ListClosedWorkflowExecutions"},
+		FrontendListWorkflowExecutionsScope:             {operation: "ListWorkflowExecutions"},
+		FrontendScanWorkflowExecutionsScope:             {operation: "ScanWorkflowExecutions"},
+		FrontendCountWorkflowExecutionsScope:            {operation: "CountWorkflowExecutions"},
+		FrontendRegisterDomainScope:                     {operation: "RegisterDomain"},
+		FrontendDescribeDomainScope:                     {operation: "DescribeDomain"},
+		FrontendListDomainsScope:                        {operation: "ListDomain"},
+		FrontendUpdateDomainScope:                       {operation: "UpdateDomain"},
+		FrontendDeprecateDomainScope:                    {operation: "DeprecateDomain"},
+		FrontendQueryWorkflowScope:                      {operation: "QueryWorkflow"},
+		FrontendDescribeWorkflowExecutionScope:          {operation: "DescribeWorkflowExecution"},
+		FrontendListTaskListPartitionsScope:             {operation: "FrontendListTaskListPartitions"},
+		FrontendDescribeTaskListScope:                   {operation: "DescribeTaskList"},
+		FrontendResetStickyTaskListScope:                {operation: "ResetStickyTaskList"},
+		FrontendGetSearchAttributesScope:                {operation: "GetSearchAttributes"},
 	},
 	// History Scope Names
 	History: {

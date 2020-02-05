@@ -11071,6 +11071,649 @@ func (v *WorkflowService_PollForDecisionTask_Result) EnvelopeType() wire.Envelop
 	return wire.Reply
 }
 
+// WorkflowService_PollForWorkflowExecutionRawHistory_Args represents the arguments for the WorkflowService.PollForWorkflowExecutionRawHistory function.
+//
+// The arguments for PollForWorkflowExecutionRawHistory are sent and received over the wire as this struct.
+type WorkflowService_PollForWorkflowExecutionRawHistory_Args struct {
+	GetRequest *shared.PollForWorkflowExecutionRawHistoryRequest `json:"getRequest,omitempty"`
+}
+
+// ToWire translates a WorkflowService_PollForWorkflowExecutionRawHistory_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.GetRequest != nil {
+		w, err = v.GetRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PollForWorkflowExecutionRawHistoryRequest_Read(w wire.Value) (*shared.PollForWorkflowExecutionRawHistoryRequest, error) {
+	var v shared.PollForWorkflowExecutionRawHistoryRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_PollForWorkflowExecutionRawHistory_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_PollForWorkflowExecutionRawHistory_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_PollForWorkflowExecutionRawHistory_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.GetRequest, err = _PollForWorkflowExecutionRawHistoryRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_PollForWorkflowExecutionRawHistory_Args
+// struct.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.GetRequest != nil {
+		fields[i] = fmt.Sprintf("GetRequest: %v", v.GetRequest)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_PollForWorkflowExecutionRawHistory_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_PollForWorkflowExecutionRawHistory_Args match the
+// provided WorkflowService_PollForWorkflowExecutionRawHistory_Args.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) Equals(rhs *WorkflowService_PollForWorkflowExecutionRawHistory_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.GetRequest == nil && rhs.GetRequest == nil) || (v.GetRequest != nil && rhs.GetRequest != nil && v.GetRequest.Equals(rhs.GetRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_PollForWorkflowExecutionRawHistory_Args.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.GetRequest != nil {
+		err = multierr.Append(err, enc.AddObject("getRequest", v.GetRequest))
+	}
+	return err
+}
+
+// GetGetRequest returns the value of GetRequest if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) GetGetRequest() (o *shared.PollForWorkflowExecutionRawHistoryRequest) {
+	if v != nil && v.GetRequest != nil {
+		return v.GetRequest
+	}
+
+	return
+}
+
+// IsSetGetRequest returns true if GetRequest is not nil.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) IsSetGetRequest() bool {
+	return v != nil && v.GetRequest != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "PollForWorkflowExecutionRawHistory" for this struct.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) MethodName() string {
+	return "PollForWorkflowExecutionRawHistory"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// WorkflowService_PollForWorkflowExecutionRawHistory_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.PollForWorkflowExecutionRawHistory
+// function.
+var WorkflowService_PollForWorkflowExecutionRawHistory_Helper = struct {
+	// Args accepts the parameters of PollForWorkflowExecutionRawHistory in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		getRequest *shared.PollForWorkflowExecutionRawHistoryRequest,
+	) *WorkflowService_PollForWorkflowExecutionRawHistory_Args
+
+	// IsException returns true if the given error can be thrown
+	// by PollForWorkflowExecutionRawHistory.
+	//
+	// An error can be thrown by PollForWorkflowExecutionRawHistory only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for PollForWorkflowExecutionRawHistory
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// PollForWorkflowExecutionRawHistory into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by PollForWorkflowExecutionRawHistory
+	//
+	//   value, err := PollForWorkflowExecutionRawHistory(args)
+	//   result, err := WorkflowService_PollForWorkflowExecutionRawHistory_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from PollForWorkflowExecutionRawHistory: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*shared.PollForWorkflowExecutionRawHistoryResponse, error) (*WorkflowService_PollForWorkflowExecutionRawHistory_Result, error)
+
+	// UnwrapResponse takes the result struct for PollForWorkflowExecutionRawHistory
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if PollForWorkflowExecutionRawHistory threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := WorkflowService_PollForWorkflowExecutionRawHistory_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_PollForWorkflowExecutionRawHistory_Result) (*shared.PollForWorkflowExecutionRawHistoryResponse, error)
+}{}
+
+func init() {
+	WorkflowService_PollForWorkflowExecutionRawHistory_Helper.Args = func(
+		getRequest *shared.PollForWorkflowExecutionRawHistoryRequest,
+	) *WorkflowService_PollForWorkflowExecutionRawHistory_Args {
+		return &WorkflowService_PollForWorkflowExecutionRawHistory_Args{
+			GetRequest: getRequest,
+		}
+	}
+
+	WorkflowService_PollForWorkflowExecutionRawHistory_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		case *shared.ClientVersionNotSupportedError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	WorkflowService_PollForWorkflowExecutionRawHistory_Helper.WrapResponse = func(success *shared.PollForWorkflowExecutionRawHistoryResponse, err error) (*WorkflowService_PollForWorkflowExecutionRawHistory_Result, error) {
+		if err == nil {
+			return &WorkflowService_PollForWorkflowExecutionRawHistory_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_PollForWorkflowExecutionRawHistory_Result.BadRequestError")
+			}
+			return &WorkflowService_PollForWorkflowExecutionRawHistory_Result{BadRequestError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_PollForWorkflowExecutionRawHistory_Result.EntityNotExistError")
+			}
+			return &WorkflowService_PollForWorkflowExecutionRawHistory_Result{EntityNotExistError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_PollForWorkflowExecutionRawHistory_Result.ServiceBusyError")
+			}
+			return &WorkflowService_PollForWorkflowExecutionRawHistory_Result{ServiceBusyError: e}, nil
+		case *shared.ClientVersionNotSupportedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_PollForWorkflowExecutionRawHistory_Result.ClientVersionNotSupportedError")
+			}
+			return &WorkflowService_PollForWorkflowExecutionRawHistory_Result{ClientVersionNotSupportedError: e}, nil
+		}
+
+		return nil, err
+	}
+	WorkflowService_PollForWorkflowExecutionRawHistory_Helper.UnwrapResponse = func(result *WorkflowService_PollForWorkflowExecutionRawHistory_Result) (success *shared.PollForWorkflowExecutionRawHistoryResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		if result.ClientVersionNotSupportedError != nil {
+			err = result.ClientVersionNotSupportedError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// WorkflowService_PollForWorkflowExecutionRawHistory_Result represents the result of a WorkflowService.PollForWorkflowExecutionRawHistory function call.
+//
+// The result of a PollForWorkflowExecutionRawHistory execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type WorkflowService_PollForWorkflowExecutionRawHistory_Result struct {
+	// Value returned by PollForWorkflowExecutionRawHistory after a successful execution.
+	Success                        *shared.PollForWorkflowExecutionRawHistoryResponse `json:"success,omitempty"`
+	BadRequestError                *shared.BadRequestError                            `json:"badRequestError,omitempty"`
+	EntityNotExistError            *shared.EntityNotExistsError                       `json:"entityNotExistError,omitempty"`
+	ServiceBusyError               *shared.ServiceBusyError                           `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError             `json:"clientVersionNotSupportedError,omitempty"`
+}
+
+// ToWire translates a WorkflowService_PollForWorkflowExecutionRawHistory_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [5]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		w, err = v.ClientVersionNotSupportedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("WorkflowService_PollForWorkflowExecutionRawHistory_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PollForWorkflowExecutionRawHistoryResponse_Read(w wire.Value) (*shared.PollForWorkflowExecutionRawHistoryResponse, error) {
+	var v shared.PollForWorkflowExecutionRawHistoryResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_PollForWorkflowExecutionRawHistory_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_PollForWorkflowExecutionRawHistory_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_PollForWorkflowExecutionRawHistory_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _PollForWorkflowExecutionRawHistoryResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 4:
+			if field.Value.Type() == wire.TStruct {
+				v.ClientVersionNotSupportedError, err = _ClientVersionNotSupportedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("WorkflowService_PollForWorkflowExecutionRawHistory_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_PollForWorkflowExecutionRawHistory_Result
+// struct.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [5]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_PollForWorkflowExecutionRawHistory_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_PollForWorkflowExecutionRawHistory_Result match the
+// provided WorkflowService_PollForWorkflowExecutionRawHistory_Result.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) Equals(rhs *WorkflowService_PollForWorkflowExecutionRawHistory_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_PollForWorkflowExecutionRawHistory_Result.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) GetSuccess() (o *shared.PollForWorkflowExecutionRawHistoryResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+	if v != nil && v.ClientVersionNotSupportedError != nil {
+		return v.ClientVersionNotSupportedError
+	}
+
+	return
+}
+
+// IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) IsSetClientVersionNotSupportedError() bool {
+	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "PollForWorkflowExecutionRawHistory" for this struct.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) MethodName() string {
+	return "PollForWorkflowExecutionRawHistory"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *WorkflowService_PollForWorkflowExecutionRawHistory_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // WorkflowService_QueryWorkflow_Args represents the arguments for the WorkflowService.QueryWorkflow function.
 //
 // The arguments for QueryWorkflow are sent and received over the wire as this struct.
