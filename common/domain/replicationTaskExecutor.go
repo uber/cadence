@@ -66,7 +66,7 @@ type (
 	}
 )
 
-// NewReplicationHandler create a new instance of domain replicator
+// NewReplicationTaskExecutor create a new instance of domain replicator
 func NewReplicationTaskExecutor(
 	metadataManagerV2 persistence.MetadataManager,
 	logger log.Logger,
