@@ -373,7 +373,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
 		t.metricsClient.RecordTimer(
 			metrics.TimerActiveTaskActivityTimeoutScope,
-			metrics.ActivityTimeoutLatencyUpdateExecution,
+			metrics.ActivityTimeoutLatencyInMemory,
 			time.Since(startTime),
 		)
 		return nil
@@ -462,7 +462,7 @@ Loop:
 
 	t.metricsClient.RecordTimer(
 		metrics.TimerActiveTaskActivityTimeoutScope,
-		metrics.ActivityTimeoutLatencyUpdateExecution,
+		metrics.ActivityTimeoutLatencyInMemory,
 		time.Since(startTime),
 	)
 
