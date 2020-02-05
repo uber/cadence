@@ -1496,6 +1496,7 @@ const (
 	ActivityTimeoutLatencyInMemory
 	ActivityTimeoutLatencyUpdateExecution
 	ActivityTimeoutLatencyProcessTimer
+	ActivityTimeoutNumTimer
 
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -1829,6 +1830,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ActivityTimeoutLatencyInMemory:                    {metricName: "activity_timeout_latency_in_memory", metricType: Timer},
 		ActivityTimeoutLatencyUpdateExecution:             {metricName: "activity_timeout_latency_update_execution", metricType: Timer},
 		ActivityTimeoutLatencyProcessTimer:                {metricName: "activity_timeout_latency_process_timer", metricType: Timer},
+		ActivityTimeoutNumTimer:                           {metricName: "activity_timeout_num_timer", metricType: Timer},
 		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},

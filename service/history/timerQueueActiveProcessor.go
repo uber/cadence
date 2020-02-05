@@ -395,8 +395,14 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 	}
 
 	processTimerStartTime := time.Now()
+	activityTimers := timerSequence.loadAndSortActivityTimers()
+	t.metricsClient.RecordTimer(
+		metrics.TimerActiveTaskActivityTimeoutScope,
+		metrics.ActivityTimeoutNumTimer,
+		time.Duration(len(activityTimers)),
+	)
 Loop:
-	for _, timerSequenceID := range timerSequence.loadAndSortActivityTimers() {
+	for _, timerSequenceID := range activityTimers {
 		activityInfo, ok := mutableState.GetActivityInfo(timerSequenceID.eventID)
 		if !ok {
 			//  this case can happen since each activity can have 4 timers
