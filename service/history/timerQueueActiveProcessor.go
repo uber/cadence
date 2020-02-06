@@ -472,7 +472,7 @@ Loop:
 	)
 
 	if time.Since(startTime) > time.Millisecond*150 {
-		t.logger.Warn("Activity timeout timer task latency too high",
+		t.shard.GetThrottledLogger().Warn("Activity timeout timer task latency too high",
 			tag.TaskType(task.GetTaskType()),
 			tag.TaskID(task.GetTaskID()),
 			tag.WorkflowDomainID(task.GetDomainID()),
