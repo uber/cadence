@@ -478,6 +478,7 @@ Loop:
 			tag.WorkflowDomainID(task.GetDomainID()),
 			tag.WorkflowID(task.GetWorkflowID()),
 			tag.WorkflowRunID(task.GetRunID()),
+			tag.ShardID(t.shard.GetShardID()),
 		)
 	}
 
