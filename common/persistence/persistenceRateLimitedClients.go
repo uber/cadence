@@ -209,6 +209,15 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetWorkflowExecution(req
 	return response, err
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) ListExecutions(request *ListExecutionsRequest) (*ListExecutionsResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.ListExecutions(request)
+	return response, err
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded

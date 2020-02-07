@@ -427,6 +427,13 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
+	templateListExecutionsQuery = `SELECT execution, replication_state, activity_map, timer_map, ` +
+		`child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list, ` +
+		`buffered_replication_tasks_map, version_histories, version_histories_encoding, checksum ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ?`
+
 	templateGetCurrentExecutionQuery = `SELECT current_run_id, execution, replication_state ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -1266,8 +1273,9 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (
-	*p.InternalGetWorkflowExecutionResponse, error) {
+func (d *cassandraPersistence) GetWorkflowExecution(
+	request *p.GetWorkflowExecutionRequest,
+) (*p.InternalGetWorkflowExecutionResponse, error) {
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
 		d.shardID,
@@ -1296,34 +1304,81 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 		}
 	}
 
+	return d.mapResultToInternalGetWorkflowExecutionResponse(result, "GetWorkflowExecution", &request.DomainID)
+}
+
+func (d *cassandraPersistence) ListExecutions(
+	request *p.ListExecutionsRequest,
+) (*p.InternalListExecutionsResponse, error) {
+	query := d.session.Query(templateListExecutionsQuery, d.shardID, rowTypeExecution).PageSize(request.PageSize).PageState(request.NextPageToken)
+	iter := query.Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "ListExecutions operation failed, not able to create query iterator.",
+		}
+	}
+
+	response := &p.InternalListExecutionsResponse{}
+	mapExecution := make(map[string]interface{})
+	for iter.MapScan(mapExecution) {
+		execution, err := d.mapResultToInternalGetWorkflowExecutionResponse(mapExecution, "ListExecutions", nil)
+		if err != nil {
+			return nil, err
+		}
+		// Reset task map to get it ready for next scan
+		mapExecution = make(map[string]interface{})
+		response.States = append(response.States, execution.State)
+	}
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListExecutions operation failed. Error: %v", err),
+		}
+	}
+
+	return response, nil
+}
+
+func (d *cassandraPersistence) mapResultToInternalGetWorkflowExecutionResponse(
+	mapResult map[string]interface{},
+	callerMethodName string,
+	domainIDPtr *string,
+) (*p.InternalGetWorkflowExecutionResponse, error) {
 	state := &p.InternalWorkflowMutableState{}
-	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	info := createWorkflowExecutionInfo(mapResult["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
 
-	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
+	replicationState := createReplicationState(mapResult["replication_state"].(map[string]interface{}))
 	state.ReplicationState = replicationState
 
 	state.VersionHistories = p.NewDataBlob(
-		result["version_histories"].([]byte),
-		common.EncodingType(result["version_histories_encoding"].(string)),
+		mapResult["version_histories"].([]byte),
+		common.EncodingType(mapResult["version_histories_encoding"].(string)),
 	)
 
 	if state.VersionHistories != nil && state.ReplicationState != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetWorkflowExecution operation failed. VersionHistories and ReplicationState both are set."),
+			Message: fmt.Sprintf("%v operation failed. VersionHistories and ReplicationState both are set.", callerMethodName),
 		}
 	}
 
 	activityInfos := make(map[int64]*p.InternalActivityInfo)
-	aMap := result["activity_map"].(map[int64]map[string]interface{})
+	aMap := mapResult["activity_map"].(map[int64]map[string]interface{})
 	for key, value := range aMap {
-		info := createActivityInfo(request.DomainID, value)
+		domainID := info.DomainID
+		if domainIDPtr != nil {
+			domainID = *domainIDPtr
+		}
+		info := createActivityInfo(domainID, value)
 		activityInfos[key] = info
 	}
 	state.ActivityInfos = activityInfos
 
 	timerInfos := make(map[string]*p.TimerInfo)
-	tMap := result["timer_map"].(map[string]map[string]interface{})
+	tMap := mapResult["timer_map"].(map[string]map[string]interface{})
 	for key, value := range tMap {
 		info := createTimerInfo(value)
 		timerInfos[key] = info
@@ -1331,7 +1386,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	state.TimerInfos = timerInfos
 
 	childExecutionInfos := make(map[int64]*p.InternalChildExecutionInfo)
-	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
+	cMap := mapResult["child_executions_map"].(map[int64]map[string]interface{})
 	for key, value := range cMap {
 		info := createChildExecutionInfo(value)
 		childExecutionInfos[key] = info
@@ -1339,7 +1394,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	state.ChildExecutionInfos = childExecutionInfos
 
 	requestCancelInfos := make(map[int64]*p.RequestCancelInfo)
-	rMap := result["request_cancel_map"].(map[int64]map[string]interface{})
+	rMap := mapResult["request_cancel_map"].(map[int64]map[string]interface{})
 	for key, value := range rMap {
 		info := createRequestCancelInfo(value)
 		requestCancelInfos[key] = info
@@ -1347,7 +1402,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	state.RequestCancelInfos = requestCancelInfos
 
 	signalInfos := make(map[int64]*p.SignalInfo)
-	sMap := result["signal_map"].(map[int64]map[string]interface{})
+	sMap := mapResult["signal_map"].(map[int64]map[string]interface{})
 	for key, value := range sMap {
 		info := createSignalInfo(value)
 		signalInfos[key] = info
@@ -1355,13 +1410,13 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	state.SignalInfos = signalInfos
 
 	signalRequestedIDs := make(map[string]struct{})
-	sList := result["signal_requested"].([]gocql.UUID)
+	sList := mapResult["signal_requested"].([]gocql.UUID)
 	for _, v := range sList {
 		signalRequestedIDs[v.String()] = struct{}{}
 	}
 	state.SignalRequestedIDs = signalRequestedIDs
 
-	eList := result["buffered_events_list"].([]map[string]interface{})
+	eList := mapResult["buffered_events_list"].([]map[string]interface{})
 	bufferedEventsBlobs := make([]*p.DataBlob, 0, len(eList))
 	for _, v := range eList {
 		blob := createHistoryEventBatchBlob(v)
@@ -1369,7 +1424,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.BufferedEvents = bufferedEventsBlobs
 
-	state.Checksum = createChecksum(result["checksum"].(map[string]interface{}))
+	state.Checksum = createChecksum(mapResult["checksum"].(map[string]interface{}))
 
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }

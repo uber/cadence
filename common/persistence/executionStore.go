@@ -60,7 +60,7 @@ func (m *executionManagerImpl) GetShardID() int {
 	return m.persistence.GetShardID()
 }
 
-// The below three APIs are related to serialization/deserialization
+// The below five APIs are related to serialization/deserialization
 func (m *executionManagerImpl) GetWorkflowExecution(
 	request *GetWorkflowExecutionRequest,
 ) (*GetWorkflowExecutionResponse, error) {
@@ -69,39 +69,69 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	return m.constructWorkflowExecutionResponse(response.State)
+}
+
+func (m *executionManagerImpl) ListExecutions(
+	request *ListExecutionsRequest,
+) (*ListExecutionsResponse, error) {
+
+	response, err := m.persistence.ListExecutions(request)
+	if err != nil {
+		return nil, err
+	}
+	result := &ListExecutionsResponse{
+		NextPageToken: response.NextPageToken,
+		Executions:    make([]*GetWorkflowExecutionResponse, len(response.States), len(response.States)),
+	}
+
+	for i := 0; i < len(response.States); i++ {
+		execution, err := m.constructWorkflowExecutionResponse(response.States[i])
+		if err != nil {
+			return nil, err
+		}
+		result.Executions[i] = execution
+	}
+	return result, nil
+}
+
+func (m *executionManagerImpl) constructWorkflowExecutionResponse(
+	internalMutableState *InternalWorkflowMutableState,
+) (*GetWorkflowExecutionResponse, error) {
 	newResponse := &GetWorkflowExecutionResponse{
 		State: &WorkflowMutableState{
-			TimerInfos:         response.State.TimerInfos,
-			RequestCancelInfos: response.State.RequestCancelInfos,
-			SignalInfos:        response.State.SignalInfos,
-			SignalRequestedIDs: response.State.SignalRequestedIDs,
-			ReplicationState:   response.State.ReplicationState,
-			Checksum:           response.State.Checksum,
+			TimerInfos:         internalMutableState.TimerInfos,
+			RequestCancelInfos: internalMutableState.RequestCancelInfos,
+			SignalInfos:        internalMutableState.SignalInfos,
+			SignalRequestedIDs: internalMutableState.SignalRequestedIDs,
+			ReplicationState:   internalMutableState.ReplicationState,
+			Checksum:           internalMutableState.Checksum,
 		},
 	}
 
-	newResponse.State.ActivityInfos, err = m.DeserializeActivityInfos(response.State.ActivityInfos)
+	var err error
+	newResponse.State.ActivityInfos, err = m.DeserializeActivityInfos(internalMutableState.ActivityInfos)
 	if err != nil {
 		return nil, err
 	}
-	newResponse.State.ChildExecutionInfos, err = m.DeserializeChildExecutionInfos(response.State.ChildExecutionInfos)
+	newResponse.State.ChildExecutionInfos, err = m.DeserializeChildExecutionInfos(internalMutableState.ChildExecutionInfos)
 	if err != nil {
 		return nil, err
 	}
-	newResponse.State.BufferedEvents, err = m.DeserializeBufferedEvents(response.State.BufferedEvents)
+	newResponse.State.BufferedEvents, err = m.DeserializeBufferedEvents(internalMutableState.BufferedEvents)
 	if err != nil {
 		return nil, err
 	}
-	newResponse.State.ExecutionInfo, newResponse.State.ExecutionStats, err = m.DeserializeExecutionInfo(response.State.ExecutionInfo)
+	newResponse.State.ExecutionInfo, newResponse.State.ExecutionStats, err = m.DeserializeExecutionInfo(internalMutableState.ExecutionInfo)
 	if err != nil {
 		return nil, err
 	}
-	versionHistories, err := m.DeserializeVersionHistories(response.State.VersionHistories)
+	versionHistories, err := m.DeserializeVersionHistories(internalMutableState.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
 	newResponse.State.VersionHistories = versionHistories
-	newResponse.MutableStateStats = m.statsComputer.computeMutableStateStats(response)
+	newResponse.MutableStateStats = m.statsComputer.computeMutableStateStats(internalMutableState)
 
 	return newResponse, nil
 }

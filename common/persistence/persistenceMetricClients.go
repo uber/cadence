@@ -246,6 +246,20 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(request *GetWo
 	return response, err
 }
 
+func (p *workflowExecutionPersistenceClient) ListExecutions(request *ListExecutionsRequest) (*ListExecutionsResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceListExecutionsScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetWorkflowExecutionScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ListExecutions(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetWorkflowExecutionScope, err)
+	}
+
+	return response, err
+}
+
 func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.PersistenceRequests)
 

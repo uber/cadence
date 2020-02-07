@@ -138,6 +138,8 @@ const (
 	PersistenceCreateWorkflowExecutionScope
 	// PersistenceGetWorkflowExecutionScope tracks GetWorkflowExecution calls made by service to persistence layer
 	PersistenceGetWorkflowExecutionScope
+	// PersistenceListExecutionsScope
+	PersistenceListExecutionsScope
 	// PersistenceUpdateWorkflowExecutionScope tracks UpdateWorkflowExecution calls made by service to persistence layer
 	PersistenceUpdateWorkflowExecutionScope
 	// PersistenceConflictResolveWorkflowExecutionScope tracks ConflictResolveWorkflowExecution calls made by service to persistence layer
@@ -998,6 +1000,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceUpdateShardScope:                              {operation: "UpdateShard"},
 		PersistenceCreateWorkflowExecutionScope:                  {operation: "CreateWorkflowExecution"},
 		PersistenceGetWorkflowExecutionScope:                     {operation: "GetWorkflowExecution"},
+		PersistenceListExecutionsScope:                           {operation: "ListExecutions"},
 		PersistenceUpdateWorkflowExecutionScope:                  {operation: "UpdateWorkflowExecution"},
 		PersistenceConflictResolveWorkflowExecutionScope:         {operation: "ConflictResolveWorkflowExecution"},
 		PersistenceResetWorkflowExecutionScope:                   {operation: "ResetWorkflowExecution"},

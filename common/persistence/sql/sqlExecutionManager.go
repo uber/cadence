@@ -433,6 +433,14 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	return &p.InternalGetWorkflowExecutionResponse{State: &state}, nil
 }
 
+func (m *sqlExecutionManager) ListExecutions(
+	_ *p.ListExecutionsRequest,
+) (*p.InternalListExecutionsResponse, error) {
+	return nil, &workflow.InternalServiceError{
+		Message: "Not yet implemented",
+	}
+}
+
 func (m *sqlExecutionManager) UpdateWorkflowExecution(
 	request *p.InternalUpdateWorkflowExecutionRequest,
 ) error {

@@ -59,8 +59,9 @@ type (
 		Closeable
 		GetName() string
 		GetShardID() int
-		//The below three APIs are related to serialization/deserialization
+		//The below five APIs are related to serialization/deserialization
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
+		ListExecutions(request *ListExecutionsRequest) (*InternalListExecutionsResponse, error)
 		UpdateWorkflowExecution(request *InternalUpdateWorkflowExecutionRequest) error
 		ConflictResolveWorkflowExecution(request *InternalConflictResolveWorkflowExecutionRequest) error
 		ResetWorkflowExecution(request *InternalResetWorkflowExecutionRequest) error
@@ -446,9 +447,15 @@ type (
 		ShardID int
 	}
 
-	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
+	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
 	InternalGetWorkflowExecutionResponse struct {
 		State *InternalWorkflowMutableState
+	}
+
+	// InternalListExecutionsResponse is the response to ListExecutions for Persistence Interface
+	InternalListExecutionsResponse struct {
+		States        []*InternalWorkflowMutableState
+		NextPageToken []byte
 	}
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch

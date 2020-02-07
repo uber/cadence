@@ -762,10 +762,22 @@ type (
 		Execution workflow.WorkflowExecution
 	}
 
-	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
+	// GetWorkflowExecutionResponse is the response to GetWorkflowExecutionRequest
 	GetWorkflowExecutionResponse struct {
 		State             *WorkflowMutableState
 		MutableStateStats *MutableStateStats
+	}
+
+	// ListExecutionsRequest is the request ot ListExecutions
+	ListExecutionsRequest struct {
+		NextPageToken []byte
+		PageSize      int
+	}
+
+	// ListExecutionsResponse is the response to ListExecutions
+	ListExecutionsResponse struct {
+		NextPageToken []byte
+		Executions    []*GetWorkflowExecutionResponse
 	}
 
 	// GetCurrentExecutionRequest is used to retrieve the current RunId for an execution
@@ -1451,6 +1463,7 @@ type (
 
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
+		ListExecutions(request *ListExecutionsRequest) (*ListExecutionsResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(request *ConflictResolveWorkflowExecutionRequest) error
 		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
