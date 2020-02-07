@@ -53,6 +53,8 @@ type (
 	}
 )
 
+// newReplicationTaskExecutor creates an replication task executor
+// The executor uses by 1) DLQ replication task handler 2) history replication task processor
 func newReplicationTaskExecutor(
 	currentCluster string,
 	domainCache cache.DomainCache,
@@ -82,9 +84,6 @@ func (e *replicationTaskExecutorImpl) execute(
 	var err error
 	var scope int
 	switch replicationTask.GetTaskType() {
-	case r.ReplicationTaskTypeDomain:
-		// Domain replication task should be handled in worker (domainReplicationMessageProcessor)
-		panic("task type not supported")
 	case r.ReplicationTaskTypeSyncShardStatus:
 		// Shard status will be sent as part of the Replication message without kafka
 	case r.ReplicationTaskTypeSyncActivity:

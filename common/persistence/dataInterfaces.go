@@ -992,13 +992,13 @@ type (
 		GetReplicationTasksRequest
 	}
 
-	// DeleteReplicationTaskFromDLQRequest is used to deletes replication task from DLQ
+	// DeleteReplicationTaskFromDLQRequest is used to delete replication task from DLQ
 	DeleteReplicationTaskFromDLQRequest struct {
 		SourceClusterName string
 		TaskID            int64
 	}
 
-	//RangeDeleteReplicationTaskFromDLQRequest is used to deletes replication tasks from DLQ
+	//RangeDeleteReplicationTaskFromDLQRequest is used to delete replication tasks from DLQ
 	RangeDeleteReplicationTaskFromDLQRequest struct {
 		SourceClusterName    string
 		ExclusiveBeginTaskID int64

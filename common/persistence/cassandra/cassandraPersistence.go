@@ -742,7 +742,7 @@ workflow_state = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
-	templateRangeCompleteReplicationTaskQuery = `DELETE FROM executions ` +
+	templateCompleteReplicationTaskBeforeQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -750,6 +750,10 @@ workflow_state = ? ` +
 		`and run_id = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id <= ?`
+
+	templateCompleteReplicationTaskQuery = templateCompleteTransferTaskQuery
+
+	templateRangeCompleteReplicationTaskQuery = templateRangeCompleteTransferTaskQuery
 
 	templateGetTimerTasksQuery = `SELECT timer ` +
 		`FROM executions ` +
@@ -2224,7 +2228,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(request *p.RangeComplet
 }
 
 func (d *cassandraPersistence) CompleteReplicationTask(request *p.CompleteReplicationTaskRequest) error {
-	query := d.session.Query(templateCompleteTransferTaskQuery,
+	query := d.session.Query(templateCompleteReplicationTaskQuery,
 		d.shardID,
 		rowTypeReplicationTask,
 		rowTypeReplicationDomainID,
@@ -2252,7 +2256,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
-	query := d.session.Query(templateRangeCompleteReplicationTaskQuery,
+	query := d.session.Query(templateCompleteReplicationTaskBeforeQuery,
 		d.shardID,
 		rowTypeReplicationTask,
 		rowTypeReplicationDomainID,
@@ -2837,7 +2841,7 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
-	query := d.session.Query(templateCompleteTransferTaskQuery,
+	query := d.session.Query(templateCompleteReplicationTaskQuery,
 		d.shardID,
 		rowTypeDLQ,
 		rowTypeDLQDomainID,
@@ -2865,7 +2869,7 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
-	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
+	query := d.session.Query(templateRangeCompleteReplicationTaskQuery,
 		d.shardID,
 		rowTypeDLQ,
 		rowTypeDLQDomainID,

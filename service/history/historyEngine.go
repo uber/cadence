@@ -2973,7 +2973,7 @@ func (e *historyEngineImpl) ReadDLQMessages(
 func (e *historyEngineImpl) PurgeDLQMessages(
 	ctx context.Context,
 	request *r.PurgeDLQMessagesRequest,
-) (retError error) {
+) error {
 
 	return e.replicationDLQHandler.purgeMessages(
 		request.GetSourceCluster(),
@@ -2984,7 +2984,7 @@ func (e *historyEngineImpl) PurgeDLQMessages(
 func (e *historyEngineImpl) MergeDLQMessages(
 	ctx context.Context,
 	request *r.MergeDLQMessagesRequest,
-) (resp *r.MergeDLQMessagesResponse, retError error) {
+) (*r.MergeDLQMessagesResponse, error) {
 
 	token, err := e.replicationDLQHandler.mergeMessages(
 		ctx,
