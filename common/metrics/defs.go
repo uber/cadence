@@ -138,7 +138,7 @@ const (
 	PersistenceCreateWorkflowExecutionScope
 	// PersistenceGetWorkflowExecutionScope tracks GetWorkflowExecution calls made by service to persistence layer
 	PersistenceGetWorkflowExecutionScope
-	// PersistenceListExecutionsScope
+	// PersistenceListExecutionsScope tracks ListExecution calls made by service to persistence layer
 	PersistenceListExecutionsScope
 	// PersistenceUpdateWorkflowExecutionScope tracks UpdateWorkflowExecution calls made by service to persistence layer
 	PersistenceUpdateWorkflowExecutionScope
