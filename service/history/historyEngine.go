@@ -2919,7 +2919,13 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	execution workflow.WorkflowExecution,
 ) (retError error) {
 
-	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, domainUUID, execution)
+	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	if err != nil {
+		return err
+	}
+	domainID := domainEntry.GetInfo().ID
+
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
 	if err != nil {
 		return err
 	}
@@ -2948,14 +2954,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 
-	err = context.updateWorkflowExecutionWithNew(
-		now,
-		persistence.UpdateWorkflowModeUpdateCurrent,
-		nil,
-		nil,
-		transactionPolicyActive,
-		nil,
-	)
+	err = context.updateWorkflowExecutionAsActive(now)
 	if err != nil {
 		return err
 	}

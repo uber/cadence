@@ -448,6 +448,8 @@ const (
 	AdminClientPurgeDLQMessagesScope
 	// AdminClientMergeDLQMessagesScope tracks RPC calls to admin service
 	AdminClientMergeDLQMessagesScope
+	// AdminClientRefreshWorkflowTasksScope tracks RPC calls to admin service
+	AdminClientRefreshWorkflowTasksScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -1180,7 +1182,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryV2Scope:    {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeClusterScope:                     {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminRefreshWorkflowTasksScope:                      {operation: "AdminRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientRefreshWorkflowTasksScope:                {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientCloseShardScope:                          {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientReadDLQMessagesScope:                     {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientPurgeDLQMessagesScope:                    {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
