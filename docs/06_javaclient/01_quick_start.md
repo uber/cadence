@@ -201,7 +201,7 @@ Now run the worker program. Following is an example log:
 ```
 No Hello printed. This is expected because a worker is just a workflow code host. The workflow has to be started to execute. Let's use Cadence CLI to start the workflow:
 ```bash
-> docker docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
+> docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
 Started Workflow Id: bcacfabd-9f9a-46ac-9b25-83bcea5d7fd7, run Id: e7c40431-8e23-485b-9649-e8f161219efe
 ```
 The output of the program should change to:
@@ -357,7 +357,7 @@ So far our workflow is not very interesting. Let's change it to listen on an ext
       }
       logger.info(++count + ": " + greeting + " " + name + "!");
     }
-    
+
     @Override
     public void updateGreeting(String greeting) {
       this.greeting = greeting;
@@ -369,7 +369,7 @@ every time a new signal of "HelloWorld::updateGreeting" is delivered to a workfl
 one @WorkflowMethod which is a _main_ function of the workflow and as many signal methods as needed.
 
 The updated workflow implementation demonstrates a few important Cadence concepts. The first is that workflow is stateful and can
-have fields of any complex type. Another is that the `Workflow.await` function that blocks until the function it receives as a parameter evaluates to true. The condition is going to be evaluated only on workflow state changes, so it is not a busy wait in traditional sense.   
+have fields of any complex type. Another is that the `Workflow.await` function that blocks until the function it receives as a parameter evaluates to true. The condition is going to be evaluated only on workflow state changes, so it is not a busy wait in traditional sense.
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloSignal" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
 Started Workflow Id: HelloSignal, run Id: 6fa204cb-f478-469a-9432-78060b83b6cd
