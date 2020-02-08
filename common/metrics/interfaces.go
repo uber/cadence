@@ -41,8 +41,7 @@ type (
 		RecordTimer(scope int, timer int, d time.Duration)
 		// UpdateGauge reports Gauge type absolute value metric
 		UpdateGauge(scope int, gauge int, value float64)
-		// Scope return an internal scope that can be used to add additional
-		// information to metrics
+		// Scope return an internal scope that can be used to add additional information to metrics
 		Scope(scope int, tags ...Tag) Scope
 	}
 

@@ -21,6 +21,7 @@
 package metrics
 
 import (
+	"strings"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -29,10 +30,11 @@ import (
 // ClientImpl is used for reporting metrics by various Cadence services
 type ClientImpl struct {
 	//parentReporter is the parent scope for the metrics
-	parentScope tally.Scope
-	childScopes map[int]tally.Scope
-	metricDefs  map[int]metricDefinition
-	serviceIdx  ServiceIdx
+	parentScope  tally.Scope
+	childScopes  map[int]tally.Scope
+	metricDefs   map[int]metricDefinition
+	serviceIdx   ServiceIdx
+	cachedScopes map[string]Scope
 }
 
 // NewClient creates and returns a new instance of
@@ -42,10 +44,11 @@ type ClientImpl struct {
 func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 	totalScopes := len(ScopeDefs[Common]) + len(ScopeDefs[serviceIdx])
 	metricsClient := &ClientImpl{
-		parentScope: scope,
-		childScopes: make(map[int]tally.Scope, totalScopes),
-		metricDefs:  getMetricDefs(serviceIdx),
-		serviceIdx:  serviceIdx,
+		parentScope:  scope,
+		childScopes:  make(map[int]tally.Scope, totalScopes),
+		metricDefs:   getMetricDefs(serviceIdx),
+		serviceIdx:   serviceIdx,
+		cachedScopes: make(map[string]Scope),
 	}
 
 	for idx, def := range ScopeDefs[Common] {
@@ -104,7 +107,14 @@ func (m *ClientImpl) UpdateGauge(scopeIdx int, gaugeIdx int, value float64) {
 // Scope return a new internal metrics scope that can be used to add additional
 // information to the metrics emitted
 func (m *ClientImpl) Scope(scopeIdx int, tags ...Tag) Scope {
-	return newMetricsScope(m.childScopes[scopeIdx], m.metricDefs, false).Tagged(tags...)
+	strScope := stringifyScope(scopeIdx, tags...)
+	scope, ok := m.cachedScopes[strScope]
+	if ok {
+		return scope
+	}
+	scope = newMetricsScope(m.childScopes[scopeIdx], m.metricDefs, false).Tagged(tags...)
+	m.cachedScopes[strScope] = scope
+	return scope
 }
 
 func getMetricDefs(serviceIdx ServiceIdx) map[int]metricDefinition {
@@ -124,4 +134,14 @@ func mergeMapToRight(src map[string]string, dest map[string]string) {
 	for k, v := range src {
 		dest[k] = v
 	}
+}
+
+func stringifyScope(scopeIdx int, tags ...Tag) string {
+	var b strings.Builder
+	b.WriteString(string(scopeIdx))
+	for _, tag := range tags {
+		b.WriteString(tag.Key())
+		b.WriteString(tag.Value())
+	}
+	return b.String()
 }

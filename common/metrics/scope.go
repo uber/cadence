@@ -21,6 +21,7 @@
 package metrics
 
 import (
+	"strings"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -30,15 +31,26 @@ type metricsScope struct {
 	scope          tally.Scope
 	defs           map[int]metricDefinition
 	isDomainTagged bool
+	cachedScopes   map[string]Scope
 }
 
 func newMetricsScope(scope tally.Scope, defs map[int]metricDefinition, isDomain bool) Scope {
-	return &metricsScope{scope, defs, isDomain}
+	return &metricsScope{
+		scope:          scope,
+		defs:           defs,
+		isDomainTagged: isDomain,
+		cachedScopes:   make(map[string]Scope),
+	}
 }
 
 // NoopScope returns a noop scope of metrics
 func NoopScope(serviceIdx ServiceIdx) Scope {
-	return &metricsScope{tally.NoopScope, getMetricDefs(serviceIdx), false}
+	return &metricsScope{
+		scope:          tally.NoopScope,
+		defs:           getMetricDefs(serviceIdx),
+		isDomainTagged: false,
+		cachedScopes:   make(map[string]Scope),
+	}
 }
 
 func (m *metricsScope) IncCounter(id int) {
@@ -85,6 +97,12 @@ func (m *metricsScope) RecordHistogramValue(id int, value float64) {
 }
 
 func (m *metricsScope) Tagged(tags ...Tag) Scope {
+	strTags := stringifyTags(tags...)
+	scope, ok := m.cachedScopes[strTags]
+	if ok {
+		return scope
+	}
+
 	domainTagged := false
 	tagMap := make(map[string]string, len(tags))
 	for _, tag := range tags {
@@ -93,7 +111,9 @@ func (m *metricsScope) Tagged(tags ...Tag) Scope {
 		}
 		tagMap[tag.Key()] = tag.Value()
 	}
-	return newMetricsScope(m.scope.Tagged(tagMap), m.defs, domainTagged)
+	scope = newMetricsScope(m.scope.Tagged(tagMap), m.defs, domainTagged)
+	m.cachedScopes[strTags] = scope
+	return scope
 }
 
 func (m *metricsScope) getBuckets(id int) tally.Buckets {
@@ -105,4 +125,13 @@ func (m *metricsScope) getBuckets(id int) tally.Buckets {
 
 func isDomainTagged(tag Tag) bool {
 	return tag.Key() == domain && tag.Value() != domainAllValue
+}
+
+func stringifyTags(tags ...Tag) string {
+	var b strings.Builder
+	for _, tag := range tags {
+		b.WriteString(tag.Key())
+		b.WriteString(tag.Value())
+	}
+	return b.String()
 }
