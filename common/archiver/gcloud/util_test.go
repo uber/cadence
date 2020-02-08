@@ -115,3 +115,67 @@ func (s *utilSuite) TestSerializeDeserializeGetHistoryToken() {
 	s.Nil(err)
 	s.Equal(token, deserializedToken)
 }
+
+func (s *utilSuite) TestConstructHistoryFilenamePrefix() {
+	s.Equal("28646288347718592068344541402884576509131521284625246243", constructHistoryFilenamePrefix("domainID", "workflowID", "runID"))
+}
+
+func (s *utilSuite) TestConstructHistoryFilenameMultipart() {
+	s.Equal("28646288347718592068344541402884576509131521284625246243_-24_0.history", constructHistoryFilenameMultipart("domainID", "workflowID", "runID", -24, 0))
+}
+
+func (s *utilSuite) TestHashVisibilityFilenamePrefix() {
+	s.Equal("286462883477185920617754214083977428625", hashVisibilityFilenamePrefix("domainID", indexKeyStartTimeout))
+}
+
+func (s *utilSuite) TestConstructVisibilityFilenamePrefix() {
+	s.Equal("startTimeout_28646288347718592068344541402884576509", constructVisibilityFilenamePrefix("domainID", indexKeyStartTimeout, "workflowID"))
+}
+
+func (s *utilSuite) TestConstructTimeBasedSearchKey() {
+	s.Equal("startTimeout_28646288347718592068344541402884576509_1970-01-01T", constructTimeBasedSearchKey("domainID", "workflowID", indexKeyStartTimeout, 1580819141, "Day"))
+}
+
+func (s *utilSuite) TestConstructVisibilityFilename() {
+	s.Equal("startTimeout_28646288347718592068344541402884576509_1970-01-01T00:24:32Z_runID.visibility", constructVisibilityFilename("domainID", "workflowID", "runID", indexKeyStartTimeout, 1472313624305))
+}
+
+func (s *utilSuite) TestSortAndFilterFiles() {
+	testCases := []struct {
+		filenames      []string
+		token          *queryVisibilityToken
+		expectedResult []string
+	}{
+		{
+			filenames:      []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "startTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			expectedResult: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "startTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+		},
+		{
+			filenames: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			token: &queryVisibilityToken{
+				Offset: 1,
+			},
+			expectedResult: []string{},
+		},
+		{
+			filenames: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			token: &queryVisibilityToken{
+				Offset: 0,
+			},
+			expectedResult: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+		},
+		{
+			filenames: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "closeTimeout_102303675890102160768074824903043762171_2020-02-06T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			token: &queryVisibilityToken{
+				Offset: 1,
+			},
+			expectedResult: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+		},
+	}
+
+	for _, tc := range testCases {
+		result, err := sortAndFilterFiles(tc.filenames, tc.token)
+		s.NoError(err)
+		s.Equal(tc.expectedResult, result)
+	}
+}

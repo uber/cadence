@@ -33,6 +33,8 @@ import (
 
 const (
 	errEncodeVisibilityRecord = "failed to encode visibility record"
+	indexKeyStartTimeout      = "startTimeout"
+	indexKeyCloseTimeout      = "closeTimeout"
 )
 
 type (
@@ -43,8 +45,7 @@ type (
 	}
 
 	queryVisibilityToken struct {
-		LastCloseTime int64
-		LastRunID     string
+		Offset int
 	}
 
 	visibilityRecord archiver.ArchiveVisibilityRequest
@@ -57,14 +58,18 @@ type (
 	}
 )
 
-// NewVisibilityArchiver creates a new archiver.VisibilityArchiver based on filestore
-func NewVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, config *config.GstorageArchiver) (archiver.VisibilityArchiver, error) {
-	storage, err := connector.NewClient(context.Background(), config)
+func newVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, storage connector.Client) *visibilityArchiver {
 	return &visibilityArchiver{
 		container:     container,
 		gcloudStorage: storage,
 		queryParser:   NewQueryParser(),
-	}, err
+	}
+}
+
+// NewVisibilityArchiver creates a new archiver.VisibilityArchiver based on filestore
+func NewVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, config *config.GstorageArchiver) (archiver.VisibilityArchiver, error) {
+	storage, err := connector.NewClient(context.Background(), config)
+	return newVisibilityArchiver(container, storage), err
 }
 
 // Archive is used to archive one workflow visibility record.
@@ -100,7 +105,13 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 
 	// The filename has the format: closeTimestamp_hash(runID).visibility
 	// This format allows the archiver to sort all records without reading the file contents
-	filename := constructVisibilityFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseTimestamp)
+	filename := constructVisibilityFilename(request.DomainID, request.WorkflowID, request.RunID, indexKeyCloseTimeout, request.CloseTimestamp)
+	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
+		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		return err
+	}
+
+	filename = constructVisibilityFilename(request.DomainID, request.WorkflowID, request.RunID, indexKeyStartTimeout, request.StartTimestamp)
 	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return err
@@ -150,7 +161,14 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		}
 	}
 
-	prefix := constructVisibilityFilenamePrefix(request.domainID, *request.parsedQuery.runID, *request.parsedQuery.workflowID)
+	var prefix = constructVisibilityFilenamePrefix(request.domainID, indexKeyCloseTimeout, *request.parsedQuery.workflowID)
+	if request.parsedQuery.closeTime != 0 {
+		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowID, indexKeyCloseTimeout, request.parsedQuery.closeTime, *request.parsedQuery.searchPrecision)
+	}
+	if request.parsedQuery.startTime != 0 {
+		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowID, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
+	}
+
 	filenames, err := v.gcloudStorage.Query(ctx, URI, prefix)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
@@ -176,26 +194,19 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 
-		// if record.CloseTimestamp < request.parsedQuery.earliestCloseTime {
-		// 	break
-		// }
-
-		if matchQuery(record, request.parsedQuery) {
-			response.Executions = append(response.Executions, convertToExecutionInfo(record))
-			if len(response.Executions) == request.pageSize {
-				if idx != len(filenames) {
-					newToken := &queryVisibilityToken{
-						LastCloseTime: record.CloseTimestamp,
-						LastRunID:     record.RunID,
-					}
-					encodedToken, err := serializeToken(newToken)
-					if err != nil {
-						return nil, &shared.InternalServiceError{Message: err.Error()}
-					}
-					response.NextPageToken = encodedToken
+		response.Executions = append(response.Executions, convertToExecutionInfo(record))
+		if len(response.Executions) == request.pageSize {
+			if idx != len(filenames) {
+				newToken := &queryVisibilityToken{
+					Offset: idx + 1,
 				}
-				break
+				encodedToken, err := serializeToken(newToken)
+				if err != nil {
+					return nil, &shared.InternalServiceError{Message: err.Error()}
+				}
+				response.NextPageToken = encodedToken
 			}
+			break
 		}
 	}
 

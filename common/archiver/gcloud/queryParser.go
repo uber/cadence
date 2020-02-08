@@ -44,26 +44,32 @@ type (
 	queryParser struct{}
 
 	parsedQuery struct {
-		earliestCloseTime int64
-		latestCloseTime   int64
-		workflowID        *string
-		startTime         int64
-		closeTime         int64
-		runID             *string
-		workflowTypeName  *string
-		closeStatus       *shared.WorkflowExecutionCloseStatus
-		emptyResult       bool
+		workflowID      *string
+		startTime       int64
+		closeTime       int64
+		searchPrecision *string
+		runID           *string
+		emptyResult     bool
 	}
 )
 
 // All allowed fields for filtering
 const (
-	WorkflowID   = "WorkflowID"
-	RunID        = "RunID"
-	WorkflowType = "WorkflowType"
-	CloseTime    = "CloseTime"
-	StartTime    = "StartTime"
-	CloseStatus  = "CloseStatus"
+	WorkflowID      = "WorkflowID"
+	RunID           = "RunID"
+	WorkflowType    = "WorkflowType"
+	CloseTime       = "CloseTime"
+	StartTime       = "StartTime"
+	CloseStatus     = "CloseStatus"
+	SearchPrecision = "SearchPrecision"
+)
+
+// Precision specific values
+const (
+	PrecisionDay    = "Day"
+	PrecisionHour   = "Hour"
+	PrecisionMinute = "Minute"
+	PrecisionSecond = "Second"
 )
 
 const (
@@ -83,10 +89,6 @@ func (p *queryParser) Parse(query string) (*parsedQuery, error) {
 		return nil, err
 	}
 	whereExpr := stmt.(*sqlparser.Select).Where.Expr
-	// parsedQuery := &parsedQuery{
-	// 	earliestCloseTime: 0,
-	// 	latestCloseTime:   time.Now().UnixNano(),
-	// }
 	parsedQuery := &parsedQuery{}
 	if err := p.convertWhereExpr(whereExpr, parsedQuery); err != nil {
 		return nil, err
@@ -95,17 +97,17 @@ func (p *queryParser) Parse(query string) (*parsedQuery, error) {
 		return nil, errors.New("workflowID is required in query")
 	}
 
-	// if parsedQuery.closeTime != 0 && parsedQuery.startTime != 0 {
-	// 	return nil, errors.New("only one of StartTime or CloseTime can be specified in a query")
-	// }
+	if (parsedQuery.closeTime != 0 || parsedQuery.startTime != 0) && parsedQuery.searchPrecision == nil {
+		return nil, errors.New("SearchPrecision is required when searching for a StartTime or CloseTime")
+	}
+
+	if parsedQuery.closeTime == 0 && parsedQuery.startTime == 0 && parsedQuery.searchPrecision != nil {
+		return nil, errors.New("SearchPrecision requires a StartTime or CloseTime")
+	}
 
 	if parsedQuery.runID == nil {
 		parsedQuery.runID = new(string)
 	}
-
-	// if parsedQuery.closeTime != nil || parsedQuery.startTime != nil {
-	// 	return nil, errors.New("SearchPrecision is required when searching for a StartTime or CloseTime")
-	// }
 
 	if parsedQuery.closeTime == 0 && parsedQuery.startTime == 0 {
 		return nil, errors.New("Requires a StartTime or CloseTime")
@@ -181,36 +183,6 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return nil
 		}
 		parsedQuery.runID = common.StringPtr(val)
-	case WorkflowType:
-		val, err := extractStringValue(valStr)
-		if err != nil {
-			return err
-		}
-		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowType)
-		}
-		if parsedQuery.workflowTypeName != nil && *parsedQuery.workflowTypeName != val {
-			parsedQuery.emptyResult = true
-			return nil
-		}
-		parsedQuery.workflowTypeName = common.StringPtr(val)
-	case CloseStatus:
-		val, err := extractStringValue(valStr)
-		if err != nil {
-			return err
-		}
-		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", CloseStatus)
-		}
-		status, err := convertStatusStr(val)
-		if err != nil {
-			return err
-		}
-		if parsedQuery.closeStatus != nil && *parsedQuery.closeStatus != status {
-			parsedQuery.emptyResult = true
-			return nil
-		}
-		parsedQuery.closeStatus = status.Ptr()
 	case CloseTime:
 		timestamp, err := convertToTimestamp(valStr)
 		if err != nil {
@@ -220,7 +192,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return fmt.Errorf("only operation = is support for %s", CloseTime)
 		}
 		parsedQuery.closeTime = timestamp
-		//return p.convertCloseTime(timestamp, op, parsedQuery)
+
 	case StartTime:
 		timestamp, err := convertToTimestamp(valStr)
 		if err != nil {
@@ -230,6 +202,26 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return fmt.Errorf("only operation = is support for %s", CloseTime)
 		}
 		parsedQuery.startTime = timestamp
+	case SearchPrecision:
+		val, err := extractStringValue(valStr)
+		if err != nil {
+			return err
+		}
+		if op != "=" {
+			return fmt.Errorf("only operation = is support for %s", SearchPrecision)
+		}
+		if parsedQuery.searchPrecision != nil && *parsedQuery.searchPrecision != val {
+			return fmt.Errorf("only one expression is allowed for %s", SearchPrecision)
+		}
+		switch val {
+		case PrecisionDay:
+		case PrecisionHour:
+		case PrecisionMinute:
+		case PrecisionSecond:
+		default:
+			return fmt.Errorf("invalid value for %s: %s", SearchPrecision, val)
+		}
+		parsedQuery.searchPrecision = common.StringPtr(val)
 	default:
 		return fmt.Errorf("unknown filter name: %s", colNameStr)
 	}
@@ -246,14 +238,6 @@ func (p *queryParser) convertCloseTime(timestamp int64, op string, parsedQuery *
 		if err := p.convertCloseTime(timestamp, "<=", parsedQuery); err != nil {
 			return err
 		}
-	case "<":
-		parsedQuery.latestCloseTime = common.MinInt64(parsedQuery.latestCloseTime, timestamp-1)
-	case "<=":
-		parsedQuery.latestCloseTime = common.MinInt64(parsedQuery.latestCloseTime, timestamp)
-	case ">":
-		parsedQuery.earliestCloseTime = common.MaxInt64(parsedQuery.earliestCloseTime, timestamp+1)
-	case ">=":
-		parsedQuery.earliestCloseTime = common.MaxInt64(parsedQuery.earliestCloseTime, timestamp)
 	default:
 		return fmt.Errorf("operator %s is not supported for close time", op)
 	}

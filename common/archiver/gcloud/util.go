@@ -70,14 +70,29 @@ func hashVisibilityFilenamePrefix(domainID, ID string) string {
 	return strings.Join([]string{hash(domainID), hash(ID)}, "")
 }
 
-func constructVisibilityFilenamePrefix(domainID, runID, workflowID string) string {
-	var combinedDomainRunIDHash string
-	if runID != "" {
-		combinedDomainRunIDHash = hashVisibilityFilenamePrefix(domainID, runID)
+func constructVisibilityFilenamePrefix(domainID, tag, workflowID string) string {
+	combinedDomainWorkflowIDHash := hashVisibilityFilenamePrefix(domainID, workflowID)
+	return fmt.Sprintf("%s_%s", tag, combinedDomainWorkflowIDHash)
+}
+
+func constructTimeBasedSearchKey(domainID, workflowID, tag string, timestamp int64, precision string) string {
+	t := time.Unix(0, timestamp).In(time.UTC)
+	var timeFormat = ""
+	switch precision {
+	case PrecisionSecond:
+		timeFormat = ":05"
+		fallthrough
+	case PrecisionMinute:
+		timeFormat = ":04" + timeFormat
+		fallthrough
+	case PrecisionHour:
+		timeFormat = "15" + timeFormat
+		fallthrough
+	case PrecisionDay:
+		timeFormat = "2006-01-02T" + timeFormat
 	}
 
-	combinedDomainWorkflowIDHash := hashVisibilityFilenamePrefix(domainID, workflowID)
-	return fmt.Sprintf("%s_%s", combinedDomainWorkflowIDHash, combinedDomainRunIDHash)
+	return fmt.Sprintf("%s_%s", constructVisibilityFilenamePrefix(domainID, tag, workflowID), t.Format(timeFormat))
 }
 
 func hash(s string) string {
@@ -132,10 +147,10 @@ func decodeVisibilityRecord(data []byte) (*visibilityRecord, error) {
 	return record, nil
 }
 
-func constructVisibilityFilename(domainID, workflowID, runID string, timestamp int64) string {
+func constructVisibilityFilename(domainID, workflowID, runID, tag string, timestamp int64) string {
 	t := time.Unix(0, timestamp).In(time.UTC)
-	prefix := constructVisibilityFilenamePrefix(domainID, runID, workflowID)
-	return fmt.Sprintf("%s_%s.visibility", prefix, t.Format(time.RFC3339))
+	prefix := constructVisibilityFilenamePrefix(domainID, tag, workflowID)
+	return fmt.Sprintf("%s_%s_%s.visibility", prefix, t.Format(time.RFC3339), runID)
 }
 
 func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error) {
@@ -156,6 +171,7 @@ type parsedVisFilename struct {
 func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]string, error) {
 	var parsedFilenames []*parsedVisFilename
 	for _, name := range filenames {
+		name := filepath.Base(name)
 		pieces := strings.FieldsFunc(name, func(r rune) bool {
 			return r == '_' || r == '.'
 		})
@@ -163,16 +179,15 @@ func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]stri
 			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
 		}
 
-		closeTime, err := time.Parse(time.RFC3339, pieces[3])
-		//closeTime, err := strconv.ParseInt(pieces[4], 10, 64)
+		closeTime, err := time.Parse(time.RFC3339, pieces[2])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
 		}
 		parsedFilenames = append(parsedFilenames, &parsedVisFilename{
 			name:       name,
 			closeTime:  closeTime.UnixNano(),
-			WorkflowID: filepath.Base(pieces[1]),
-			LastRunID:  pieces[2],
+			WorkflowID: pieces[1],
+			LastRunID:  pieces[3],
 		})
 	}
 
@@ -185,13 +200,7 @@ func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]stri
 
 	startIdx := 0
 	if token != nil {
-		//LastHashedRunID := hash(token.LastRunID)
-		startIdx = sort.Search(len(parsedFilenames), func(i int) bool {
-			if parsedFilenames[i].closeTime == token.LastCloseTime {
-				return parsedFilenames[i].LastRunID < token.LastRunID
-			}
-			return parsedFilenames[i].closeTime < token.LastCloseTime
-		})
+		startIdx = token.Offset
 	}
 
 	if startIdx == len(parsedFilenames) {
@@ -203,25 +212,6 @@ func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]stri
 		filteredFilenames = append(filteredFilenames, parsedFilename.name)
 	}
 	return filteredFilenames, nil
-}
-
-func matchQuery(record *visibilityRecord, query *parsedQuery) bool {
-	if record.CloseTimestamp > query.closeTime || record.CloseTimestamp < query.startTime {
-		return false
-	}
-	if query.workflowID != nil && record.WorkflowID != *query.workflowID {
-		return false
-	}
-	if *query.runID != "" && record.RunID != *query.runID {
-		return false
-	}
-	if query.workflowTypeName != nil && record.WorkflowTypeName != *query.workflowTypeName {
-		return false
-	}
-	if query.closeStatus != nil && record.CloseStatus != *query.closeStatus {
-		return false
-	}
-	return true
 }
 
 func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
