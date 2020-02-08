@@ -784,6 +784,12 @@ func (m *executionManagerImpl) GetCurrentExecution(
 	return m.persistence.GetCurrentExecution(request)
 }
 
+func (m *executionManagerImpl) ListCurrentExecutions(
+	request *ListCurrentExecutionsRequest,
+) (*ListCurrentExecutionsResponse, error) {
+	return m.persistence.ListCurrentExecutions(request)
+}
+
 // Transfer task related methods
 func (m *executionManagerImpl) GetTransferTasks(
 	request *GetTransferTasksRequest,

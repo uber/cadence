@@ -218,6 +218,29 @@ func (_m *ExecutionManager) GetCurrentExecution(request *persistence.GetCurrentE
 	return r0, r1
 }
 
+// ListCurrentExecutions provides a mock function with given fields: request
+func (_m *ExecutionManager) ListCurrentExecutions(request *persistence.ListCurrentExecutionsRequest) (*persistence.ListCurrentExecutionsResponse, error) {
+	ret := _m.Called(request)
+
+	var r0 *persistence.ListCurrentExecutionsResponse
+	if rf, ok := ret.Get(0).(func(*persistence.ListCurrentExecutionsRequest) *persistence.ListCurrentExecutionsResponse); ok {
+		r0 = rf(request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.ListCurrentExecutionsResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.ListCurrentExecutionsRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTransferTasks provides a mock function with given fields: request
 func (_m *ExecutionManager) GetTransferTasks(request *persistence.GetTransferTasksRequest) (*persistence.GetTransferTasksResponse, error) {
 	ret := _m.Called(request)

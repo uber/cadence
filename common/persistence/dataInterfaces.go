@@ -774,6 +774,24 @@ type (
 		WorkflowID string
 	}
 
+	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
+	ListCurrentExecutionsRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListCurrentExecutionsResponse is response to ListCurrentExecutions
+	ListCurrentExecutionsResponse struct {
+		Executions []CurrentExecutionListItem
+		PageToken  []byte
+	}
+
+	// CurrentExecutionListItem is a single execution in ListCurrentExecutionsResponse
+	CurrentExecutionListItem struct {
+		DomainID  string
+		Execution workflow.WorkflowExecution
+	}
+
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
 		StartRequestID   string
@@ -1457,6 +1475,7 @@ type (
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		ListCurrentExecutions(request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
 
 		// Transfer task related methods
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)

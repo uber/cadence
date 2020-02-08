@@ -437,6 +437,12 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
+	templateListCurrentExecutionsQuery = `SELECT domain_id, workflow_id, current_run_id ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and run_id = ?`
+
 	templateCheckWorkflowExecutionQuery = `UPDATE executions ` +
 		`SET next_event_id = ? ` +
 		`WHERE shard_id = ? ` +
@@ -2075,6 +2081,51 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 		CloseStatus:      executionInfo.CloseStatus,
 		LastWriteVersion: replicationState.LastWriteVersion,
 	}, nil
+}
+
+func (d *cassandraPersistence) ListCurrentExecutions(
+	request *p.ListCurrentExecutionsRequest,
+) (*p.ListCurrentExecutionsResponse, error) {
+
+	query := d.session.Query(
+		templateListCurrentExecutionsQuery,
+		d.shardID,
+		rowTypeExecution,
+		permanentRunID,
+	).PageSize(request.PageSize).PageState(request.PageToken)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "ListCurrentExecutions operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	response := &p.ListCurrentExecutionsResponse{}
+	var domainID string
+	var workflowID string
+	var currentRunID string
+	for iter.Scan(&domainID, &workflowID, &currentRunID) {
+		exec := p.CurrentExecutionListItem{
+			DomainID: domainID,
+			Execution: workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(currentRunID),
+			},
+		}
+		response.Executions = append(response.Executions, exec)
+	}
+
+	nextPageToken := iter.PageState()
+	response.PageToken = make([]byte, len(nextPageToken))
+	copy(response.PageToken, nextPageToken)
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListCurrentExecutions operation failed. Error: %v", err),
+		}
+	}
+	return response, nil
 }
 
 func (d *cassandraPersistence) GetTransferTasks(request *p.GetTransferTasksRequest) (*p.GetTransferTasksResponse, error) {
