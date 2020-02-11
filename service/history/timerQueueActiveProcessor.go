@@ -189,6 +189,14 @@ func newTimerQueueFailoverProcessor(
 		),
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
+	processor.taskExecutor = newTimerQueueActiveTaskExecutor(
+		shard,
+		historyService,
+		processor,
+		logger,
+		historyService.metricsClient,
+		shard.GetConfig(),
+	)
 	return updateShardAckLevel, processor
 }
 
