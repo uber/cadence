@@ -180,7 +180,7 @@ test: bins
 
 release: go-generate test
 
-# need to run xdc tests with race detector off because of ringpop bug causing data race issue
+# need to run xdc tests with race detector off because of ringpop bug causing data race issues
 test_xdc: bins
 	@rm -f test
 	@rm -f test.log
