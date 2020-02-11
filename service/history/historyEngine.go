@@ -2320,18 +2320,18 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}, nil
 }
 
-func (e *historyEngineImpl) DeleteExecutionFromVisibility(
-	task *persistence.TimerTaskInfo,
-) error {
+// func (e *historyEngineImpl) DeleteExecutionFromVisibility(
+// 	task *persistence.TimerTaskInfo,
+// ) error {
 
-	request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
-		DomainID:   task.DomainID,
-		WorkflowID: task.WorkflowID,
-		RunID:      task.RunID,
-		TaskID:     task.TaskID,
-	}
-	return e.visibilityMgr.DeleteWorkflowExecution(request) // delete from db
-}
+// 	request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
+// 		DomainID:   task.DomainID,
+// 		WorkflowID: task.WorkflowID,
+// 		RunID:      task.RunID,
+// 		TaskID:     task.TaskID,
+// 	}
+// 	return e.visibilityMgr.DeleteWorkflowExecution(request) // delete from db
+// }
 
 func (e *historyEngineImpl) updateWorkflow(
 	ctx ctx.Context,
