@@ -116,7 +116,7 @@ yarpc-install:
 clean_thrift:
 	rm -rf .gen
 
-thriftc: yarpc-install git-submodules $(THRIFTRW_GEN_SRC) copyright
+thriftc: yarpc-install git-submodules  $(THRIFTRW_GEN_SRC) copyright
 
 copyright: cmd/tools/copyright/licensegen.go
 	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
