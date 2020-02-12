@@ -86,6 +86,7 @@ func (e *replicationTaskExecutorImpl) execute(
 	switch replicationTask.GetTaskType() {
 	case r.ReplicationTaskTypeSyncShardStatus:
 		// Shard status will be sent as part of the Replication message without kafka
+		scope = metrics.SyncShardTaskScope
 	case r.ReplicationTaskTypeSyncActivity:
 		scope = metrics.SyncActivityTaskScope
 		err = e.handleActivityTask(replicationTask, forceApply)
@@ -94,6 +95,7 @@ func (e *replicationTaskExecutorImpl) execute(
 		err = e.handleHistoryReplicationTask(sourceCluster, replicationTask, forceApply)
 	case r.ReplicationTaskTypeHistoryMetadata:
 		// Without kafka we should not have size limits so we don't necessary need this in the new replication scheme.
+		scope = metrics.HistoryMetadataReplicationTaskScope
 	case r.ReplicationTaskTypeHistoryV2:
 		scope = metrics.HistoryReplicationV2TaskScope
 		err = e.handleHistoryReplicationTaskV2(replicationTask, forceApply)
