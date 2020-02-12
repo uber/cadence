@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 // 
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -520,6 +520,37 @@ func (mr *_MockClientRecorder) RecordDecisionTaskStarted(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _AddRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "RecordDecisionTaskStarted", args...)
+}
+
+// RefreshWorkflowTasks responds to a RefreshWorkflowTasks call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RefreshWorkflowTasks(gomock.Any(), ...).Return(...)
+// 	... := client.RefreshWorkflowTasks(...)
+func (m *MockClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	_Request *history.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RefreshWorkflowTasks(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RefreshWorkflowTasks", args...)
 }
 
 // RemoveSignalMutableState responds to a RemoveSignalMutableState call based on the mock expectations. This
