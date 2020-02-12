@@ -167,7 +167,7 @@ func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidVisibilityURI() {
 	request := &archiver.QueryVisibilityRequest{
 		DomainID: testDomainID,
 		PageSize: 10,
-		Query:    "WorkflowID='test-workflow' AND CloseTime='2020-02-05T11:00:00Z' AND SearchPrecision='Day'",
+		Query:    "WorkflowType='type::example' AND CloseTime='2020-02-05T11:00:00Z' AND SearchPrecision='Day'",
 	}
 
 	_, err = visibilityArchiver.Query(ctx, URI, request)
@@ -261,8 +261,8 @@ func (s *visibilityArchiverSuite) TestQuery_Success_NoNextPageToken() {
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
 	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
-	storageWrapper.On("Query", ctx, URI, mock.Anything).Return([]string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"}, nil).Times(1)
-	storageWrapper.On("Get", ctx, URI, "closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Query", ctx, URI, mock.Anything).Return([]string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:14Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"}, nil).Times(1)
+	storageWrapper.On("Get", ctx, URI, "closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:14Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility").Return([]byte(exampleVisibilityRecord), nil)
 
 	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
@@ -274,6 +274,7 @@ func (s *visibilityArchiverSuite) TestQuery_Success_NoNextPageToken() {
 	mockParser.EXPECT().Parse(gomock.Any()).Return(&parsedQuery{
 		closeTime:       int64(101),
 		searchPrecision: &dayPrecision,
+		workflowType:    common.StringPtr("MobileOnlyWorkflow::processMobileOnly"),
 		workflowID:      common.StringPtr(testWorkflowID),
 	}, nil)
 	visibilityArchiver.queryParser = mockParser
@@ -298,10 +299,10 @@ func (s *visibilityArchiverSuite) TestQuery_Success_SmallPageSize() {
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
 	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
-	storageWrapper.On("Query", ctx, URI, mock.Anything).Return([]string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:16Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"}, nil).Times(2)
-	storageWrapper.On("Get", ctx, URI, "closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility").Return([]byte(exampleVisibilityRecord), nil)
-	storageWrapper.On("Get", ctx, URI, "closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility").Return([]byte(exampleVisibilityRecord), nil)
-	storageWrapper.On("Get", ctx, URI, "closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:16Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Query", ctx, URI, mock.Anything).Return([]string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:14Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:16Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"}, nil).Times(2)
+	storageWrapper.On("Get", ctx, URI, "closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:14Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Get", ctx, URI, "closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Get", ctx, URI, "closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:16Z_1234-workflowid-14_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility").Return([]byte(exampleVisibilityRecord), nil)
 
 	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
@@ -313,6 +314,7 @@ func (s *visibilityArchiverSuite) TestQuery_Success_SmallPageSize() {
 	mockParser.EXPECT().Parse(gomock.Any()).Return(&parsedQuery{
 		closeTime:       int64(101),
 		searchPrecision: &dayPrecision,
+		workflowType:    common.StringPtr("MobileOnlyWorkflow::processMobileOnly"),
 		workflowID:      common.StringPtr(testWorkflowID),
 	}, nil).AnyTimes()
 	visibilityArchiver.queryParser = mockParser

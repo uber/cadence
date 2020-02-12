@@ -49,12 +49,13 @@ You can query the visibility store by using the `cadence workflow listarchived` 
 The syntax for the query is based on SQL
 
 Supported column names are
+- WorkflowType *String*
 - WorkflowID *String*
 - StartTime *Date*
 - CloseTime *Date*
 - SearchPrecision *String - Day, Hour, Minute, Second*
 
-WorkflowID and SearchPrecision are always required. One of StartTime and CloseTime are required and they are mutually exclusive.
+WorkflowType and SearchPrecision are always required. One of StartTime and CloseTime are required and they are mutually exclusive.
 
 Searching for a record will be done in times in the UTC timezone
 
@@ -69,7 +70,7 @@ it will search all records starting from `2020-01-21T00:00:00Z` to `2020-01-21T5
 
 *Searches for all records done in day 2020-01-21 with the specified workflow id*
 
-`./cadence --do samples-domain workflow listarchived -q "StartTime = '2020-01-21T00:00:00Z' AND WorkflowID='workflow-id' AND SearchPrecision='Day'"`
+`./cadence --do samples-domain workflow listarchived -q "StartTime = '2020-01-21T00:00:00Z' AND WorkflowType='MobileOnlyWorkflow::processMobileOnly' AND SearchPrecision='Day'"`
 
 ## Archival query syntax
 

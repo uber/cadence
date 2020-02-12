@@ -129,15 +129,15 @@ func (s *utilSuite) TestHashVisibilityFilenamePrefix() {
 }
 
 func (s *utilSuite) TestConstructVisibilityFilenamePrefix() {
-	s.Equal("startTimeout_28646288347718592068344541402884576509", constructVisibilityFilenamePrefix("domainID", indexKeyStartTimeout, "workflowID"))
+	s.Equal("startTimeout_28646288347718592064346151385925082125", constructVisibilityFilenamePrefix("domainID", indexKeyStartTimeout, "workflowTypeName"))
 }
 
 func (s *utilSuite) TestConstructTimeBasedSearchKey() {
-	s.Equal("startTimeout_28646288347718592068344541402884576509_1970-01-01T", constructTimeBasedSearchKey("domainID", "workflowID", indexKeyStartTimeout, 1580819141, "Day"))
+	s.Equal("startTimeout_28646288347718592064346151385925082125_1970-01-01T", constructTimeBasedSearchKey("domainID", "workflowTypeName", indexKeyStartTimeout, 1580819141, "Day"))
 }
 
 func (s *utilSuite) TestConstructVisibilityFilename() {
-	s.Equal("startTimeout_28646288347718592068344541402884576509_1970-01-01T00:24:32Z_runID.visibility", constructVisibilityFilename("domainID", "workflowID", "runID", indexKeyStartTimeout, 1472313624305))
+	s.Equal("startTimeout_28646288347718592064346151385925082125_1970-01-01T00:24:32Z_workflowID_runID.visibility", constructVisibilityFilename("domainID", "workflowTypeName", "workflowID", "runID", indexKeyStartTimeout, 1472313624305))
 }
 
 func (s *utilSuite) TestSortAndFilterFiles() {
@@ -147,29 +147,29 @@ func (s *utilSuite) TestSortAndFilterFiles() {
 		expectedResult []string
 	}{
 		{
-			filenames:      []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "startTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
-			expectedResult: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "startTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:14Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			filenames:      []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "startTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
+			expectedResult: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "startTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
 		},
 		{
-			filenames: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			filenames: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
 			token: &queryVisibilityToken{
 				Offset: 1,
 			},
 			expectedResult: []string{},
 		},
 		{
-			filenames: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			filenames: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
 			token: &queryVisibilityToken{
 				Offset: 0,
 			},
-			expectedResult: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			expectedResult: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
 		},
 		{
-			filenames: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility", "closeTimeout_102303675890102160768074824903043762171_2020-02-06T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			filenames: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "closeTimeout_1023036758901021607612851121011173788097_2020-02-06T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
 			token: &queryVisibilityToken{
 				Offset: 1,
 			},
-			expectedResult: []string{"closeTimeout_102303675890102160768074824903043762171_2020-02-05T09:56:15Z_7efa0eaa-ad04-4715-a263-8a26acc60992.visibility"},
+			expectedResult: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
 		},
 	}
 

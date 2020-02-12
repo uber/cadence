@@ -105,13 +105,14 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 
 	// The filename has the format: closeTimestamp_hash(runID).visibility
 	// This format allows the archiver to sort all records without reading the file contents
-	filename := constructVisibilityFilename(request.DomainID, request.WorkflowID, request.RunID, indexKeyCloseTimeout, request.CloseTimestamp)
+	// MobileOnlyWorkflow::processMobileOnly
+	filename := constructVisibilityFilename(request.DomainID, request.WorkflowTypeName, request.WorkflowID, request.RunID, indexKeyCloseTimeout, request.CloseTimestamp)
 	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return err
 	}
 
-	filename = constructVisibilityFilename(request.DomainID, request.WorkflowID, request.RunID, indexKeyStartTimeout, request.StartTimestamp)
+	filename = constructVisibilityFilename(request.DomainID, request.WorkflowTypeName, request.WorkflowID, request.RunID, indexKeyStartTimeout, request.StartTimestamp)
 	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return err
@@ -161,12 +162,12 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		}
 	}
 
-	var prefix = constructVisibilityFilenamePrefix(request.domainID, indexKeyCloseTimeout, *request.parsedQuery.workflowID)
+	var prefix = constructVisibilityFilenamePrefix(request.domainID, indexKeyCloseTimeout, *request.parsedQuery.workflowType)
 	if request.parsedQuery.closeTime != 0 {
-		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowID, indexKeyCloseTimeout, request.parsedQuery.closeTime, *request.parsedQuery.searchPrecision)
+		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowType, indexKeyCloseTimeout, request.parsedQuery.closeTime, *request.parsedQuery.searchPrecision)
 	}
 	if request.parsedQuery.startTime != 0 {
-		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowID, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
+		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowType, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
 	}
 
 	filenames, err := v.gcloudStorage.Query(ctx, URI, prefix)
@@ -183,7 +184,9 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 	}
 
 	response := &archiver.QueryVisibilityResponse{}
-	for idx, file := range filenames {
+	var idx int
+	var file string
+	for idx, file = range filenames {
 		encodedRecord, err := v.gcloudStorage.Get(ctx, URI, filepath.Base(file))
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}

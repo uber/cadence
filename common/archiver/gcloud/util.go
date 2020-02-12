@@ -70,12 +70,12 @@ func hashVisibilityFilenamePrefix(domainID, ID string) string {
 	return strings.Join([]string{hash(domainID), hash(ID)}, "")
 }
 
-func constructVisibilityFilenamePrefix(domainID, tag, workflowID string) string {
-	combinedDomainWorkflowIDHash := hashVisibilityFilenamePrefix(domainID, workflowID)
-	return fmt.Sprintf("%s_%s", tag, combinedDomainWorkflowIDHash)
+func constructVisibilityFilenamePrefix(domainID, tag, workflowTypeName string) string {
+	combinedDomainWorkflowTypeNameHash := hashVisibilityFilenamePrefix(domainID, workflowTypeName)
+	return fmt.Sprintf("%s_%s", tag, combinedDomainWorkflowTypeNameHash)
 }
 
-func constructTimeBasedSearchKey(domainID, workflowID, tag string, timestamp int64, precision string) string {
+func constructTimeBasedSearchKey(domainID, workflowTypeName, tag string, timestamp int64, precision string) string {
 	t := time.Unix(0, timestamp).In(time.UTC)
 	var timeFormat = ""
 	switch precision {
@@ -92,7 +92,7 @@ func constructTimeBasedSearchKey(domainID, workflowID, tag string, timestamp int
 		timeFormat = "2006-01-02T" + timeFormat
 	}
 
-	return fmt.Sprintf("%s_%s", constructVisibilityFilenamePrefix(domainID, tag, workflowID), t.Format(timeFormat))
+	return fmt.Sprintf("%s_%s", constructVisibilityFilenamePrefix(domainID, tag, workflowTypeName), t.Format(timeFormat))
 }
 
 func hash(s string) string {
@@ -147,10 +147,10 @@ func decodeVisibilityRecord(data []byte) (*visibilityRecord, error) {
 	return record, nil
 }
 
-func constructVisibilityFilename(domainID, workflowID, runID, tag string, timestamp int64) string {
+func constructVisibilityFilename(domainID, workflowTypeName, workflowID, runID, tag string, timestamp int64) string {
 	t := time.Unix(0, timestamp).In(time.UTC)
-	prefix := constructVisibilityFilenamePrefix(domainID, tag, workflowID)
-	return fmt.Sprintf("%s_%s_%s.visibility", prefix, t.Format(time.RFC3339), runID)
+	prefix := constructVisibilityFilenamePrefix(domainID, tag, workflowTypeName)
+	return fmt.Sprintf("%s_%s_%s_%s.visibility", prefix, t.Format(time.RFC3339), workflowID, runID)
 }
 
 func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error) {
@@ -175,7 +175,7 @@ func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]stri
 		pieces := strings.FieldsFunc(name, func(r rune) bool {
 			return r == '_' || r == '.'
 		})
-		if len(pieces) != 5 {
+		if len(pieces) != 6 {
 			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
 		}
 
@@ -186,8 +186,8 @@ func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]stri
 		parsedFilenames = append(parsedFilenames, &parsedVisFilename{
 			name:       name,
 			closeTime:  closeTime.UnixNano(),
-			WorkflowID: pieces[1],
-			LastRunID:  pieces[3],
+			WorkflowID: pieces[2],
+			LastRunID:  pieces[4],
 		})
 	}
 
