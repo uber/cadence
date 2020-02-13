@@ -106,6 +106,7 @@ type (
 		ReadDLQMessages(ctx ctx.Context, messagesRequest *r.ReadDLQMessagesRequest) (*r.ReadDLQMessagesResponse, error)
 		PurgeDLQMessages(ctx ctx.Context, messagesRequest *r.PurgeDLQMessagesRequest) error
 		MergeDLQMessages(ctx ctx.Context, messagesRequest *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
+		RefreshWorkflowTasks(ctx ctx.Context, domainUUID string, execution workflow.WorkflowExecution) error
 
 		NotifyNewHistoryEvent(event *historyEventNotification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
@@ -2356,19 +2357,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}, nil
 }
 
-func (e *historyEngineImpl) DeleteExecutionFromVisibility(
-	task *persistence.TimerTaskInfo,
-) error {
-
-	request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
-		DomainID:   task.DomainID,
-		WorkflowID: task.WorkflowID,
-		RunID:      task.RunID,
-		TaskID:     task.TaskID,
-	}
-	return e.visibilityMgr.DeleteWorkflowExecution(request) // delete from db
-}
-
 func (e *historyEngineImpl) updateWorkflow(
 	ctx ctx.Context,
 	domainID string,
@@ -2999,6 +2987,54 @@ func (e *historyEngineImpl) MergeDLQMessages(
 	return &r.MergeDLQMessagesResponse{
 		NextPageToken: token,
 	}, nil
+}
+
+func (e *historyEngineImpl) RefreshWorkflowTasks(
+	ctx ctx.Context,
+	domainUUID string,
+	execution workflow.WorkflowExecution,
+) (retError error) {
+
+	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	if err != nil {
+		return err
+	}
+	domainID := domainEntry.GetInfo().ID
+
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
+	if err != nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	mutableState, err := context.loadWorkflowExecution()
+	if err != nil {
+		return err
+	}
+
+	if !mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
+
+	mutableStateTaskRefresher := newMutableStateTaskRefresher(
+		e.shard.GetConfig(),
+		e.shard.GetDomainCache(),
+		e.shard.GetEventsCache(),
+		e.shard.GetLogger(),
+	)
+
+	now := e.shard.GetTimeSource().Now()
+
+	err = mutableStateTaskRefresher.refreshTasks(now, mutableState)
+	if err != nil {
+		return err
+	}
+
+	err = context.updateWorkflowExecutionAsActive(now)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (e *historyEngineImpl) loadWorkflowOnce(

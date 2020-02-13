@@ -899,6 +899,21 @@ func (c *clientImpl) MergeDLQMessages(
 	return client.MergeDLQMessages(ctx, request, opts...)
 }
 
+func (c *clientImpl) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *h.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+	client, err := c.getClientForWorkflowID(request.GetRequest().GetExecution().GetWorkflowId())
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		return client.RefreshWorkflowTasks(ctx, request, opts...)
+	}
+	err = c.executeWithRedirect(ctx, client, op)
+	return err
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)
