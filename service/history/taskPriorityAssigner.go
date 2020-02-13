@@ -51,10 +51,19 @@ type (
 var _ taskPriorityAssigner = (*taskPriorityAssignerImpl)(nil)
 
 const (
-	taskPriorityActiveTransfer int = iota
-	taskPriorityActiveTimer
-	taskPriorityActiveThrottled
-	taskPriorityReplicationAndStandby
+	numBitsPerLevel = 3
+)
+
+const (
+	taskHighPriorityClass = iota << numBitsPerLevel
+	taskDefaultPriorityClass
+	taskLowPriorityClass
+)
+
+const (
+	taskHighPrioritySubclass = iota
+	taskDefaultPrioritySubclass
+	taskLowPrioritySubclass
 )
 
 func newTaskPriorityAssigner(
@@ -78,7 +87,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 	task queueTask,
 ) error {
 	if task.GetQueueType() == replicationQueueType {
-		task.SetPriority(taskPriorityReplicationAndStandby)
+		task.SetPriority(getTaskPriority(taskLowPriorityClass, taskDefaultPrioritySubclass))
 		return nil
 	}
 
@@ -89,12 +98,12 @@ func (a *taskPriorityAssignerImpl) Assign(
 	}
 
 	if !active {
-		task.SetPriority(taskPriorityReplicationAndStandby)
+		task.SetPriority(getTaskPriority(taskLowPriorityClass, taskDefaultPrioritySubclass))
 		return nil
 	}
 
 	if !a.getRateLimiter(domainName).Allow() {
-		task.SetPriority(taskPriorityActiveThrottled)
+		task.SetPriority(getTaskPriority(taskDefaultPriorityClass, taskDefaultPrioritySubclass))
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
 		if task.GetQueueType() == transferQueueType {
 			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
@@ -104,11 +113,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 		return nil
 	}
 
-	if task.GetQueueType() == transferQueueType {
-		task.SetPriority(taskPriorityActiveTransfer)
-	} else {
-		task.SetPriority(taskPriorityActiveTimer)
-	}
+	task.SetPriority(getTaskPriority(taskHighPriorityClass, taskDefaultPrioritySubclass))
 	return nil
 }
 
@@ -161,4 +166,10 @@ func (a *taskPriorityAssignerImpl) getRateLimiter(
 
 	a.rateLimiters[domainName] = limiter
 	return limiter
+}
+
+func getTaskPriority(
+	class, subClass int,
+) int {
+	return class | subClass
 }
