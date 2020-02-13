@@ -46,32 +46,32 @@ func startHandler(c *cli.Context) {
 
 	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
-	var cfg config.Config
-	err := config.Load(env, configDir, zone, &cfg)
-	if err != nil {
-		log.Fatal("Config file corrupted.", err)
-	}
-	if cfg.Log.Level == "debug" {
-		log.Printf("config=\n%v\n", cfg.String())
-	}
-
-	if err := cfg.Validate(); err != nil {
-		log.Fatalf("config validation failed: %v", err)
-	}
-	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
-		log.Fatal("Incompatible cassandra versions: ", err)
-	}
-	// sql schema version validation
-	if err := sql.VerifyCompatibleVersion(cfg.Persistence); err != nil {
-		log.Fatal("Incompatible sql versions: ", err)
-	}
-
 	var daemons []common.Daemon
 	services := getServices(c)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM)
 	for _, svc := range services {
+		var cfg config.Config
+		err := config.Load(env, configDir, zone, &cfg)
+		if err != nil {
+			log.Fatal("Config file corrupted.", err)
+		}
+		if cfg.Log.Level == "debug" {
+			log.Printf("config=\n%v\n", cfg.String())
+		}
+
+		if err := cfg.Validate(); err != nil {
+			log.Fatalf("config validation failed: %v", err)
+		}
+		// cassandra schema version validation
+		if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
+			log.Fatal("Incompatible cassandra versions: ", err)
+		}
+		// sql schema version validation
+		if err := sql.VerifyCompatibleVersion(cfg.Persistence); err != nil {
+			log.Fatal("Incompatible sql versions: ", err)
+		}
+
 		if _, ok := cfg.Services[svc]; !ok {
 			log.Fatalf("`%v` service missing config", svc)
 		}
