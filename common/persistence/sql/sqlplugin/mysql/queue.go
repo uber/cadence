@@ -74,7 +74,7 @@ func (mdb *db) DeleteMessagesBefore(queueType persistence.QueueType, messageID i
 }
 
 // RangeDeleteMessages deletes messages before messageID from the queue
-func (mdb *db) RangeDeleteMessages(queueType common.QueueType, exclusiveBeginMessageID int, inclusiveEndMessageID int) (sql.Result, error) {
+func (mdb *db) RangeDeleteMessages(queueType persistence.QueueType, exclusiveBeginMessageID int, inclusiveEndMessageID int) (sql.Result, error) {
 	return mdb.conn.Exec(templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
 }
 

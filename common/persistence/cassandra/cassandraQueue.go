@@ -336,7 +336,7 @@ func (q *cassandraQueue) RangeDeleteMessagesFromDLQ(
 }
 
 func (q *cassandraQueue) insertInitialQueueMetadataRecord(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) error {
 
 	version := 0
@@ -387,7 +387,7 @@ func (q *cassandraQueue) GetDLQAckLevels() (map[string]int, error) {
 }
 
 func (q *cassandraQueue) getQueueMetadata(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (*queueMetadata, error) {
 
 	query := q.session.Query(templateGetQueueMetadataQuery, queueType)
@@ -412,7 +412,7 @@ func (q *cassandraQueue) getQueueMetadata(
 
 func (q *cassandraQueue) updateQueueMetadata(
 	metadata *queueMetadata,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) error {
 
 	query := q.session.Query(templateUpdateQueueMetadataQuery,
@@ -436,14 +436,14 @@ func (q *cassandraQueue) updateQueueMetadata(
 	return nil
 }
 
-func (q *cassandraQueue) getDLQTypeFromQueueType() common.QueueType {
+func (q *cassandraQueue) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }
 
 func (q *cassandraQueue) updateAckLevel(
 	messageID int,
 	clusterName string,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) error {
 
 	queueMetadata, err := q.getQueueMetadata(queueType)
