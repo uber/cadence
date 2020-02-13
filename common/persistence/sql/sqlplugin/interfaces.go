@@ -689,6 +689,7 @@ type (
 		GetMessagesFromQueue(queueType persistence.QueueType, lastMessageID, maxRows int) ([]QueueRow, error)
 		GetMessagesBetween(queueType persistence.QueueType, firstMessageID int, lastMessageID int, maxRows int) ([]QueueRow, error)
 		DeleteMessagesBefore(queueType persistence.QueueType, messageID int) (sql.Result, error)
+		RangeDeleteMessages(queueType persistence.QueueType, exclusiveBeginMessageID int, inclusiveEndMessageID int) (sql.Result, error)
 		DeleteMessage(queueType persistence.QueueType, messageID int) (sql.Result, error)
 		InsertAckLevel(queueType persistence.QueueType, messageID int, clusterName string) error
 		UpdateAckLevels(queueType persistence.QueueType, clusterAckLevels map[string]int) error

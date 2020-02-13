@@ -82,6 +82,12 @@ type (
 		// TODO: add a method for getting task shardID
 	}
 
+	queueTaskExecutor interface {
+		execute(taskInfo *taskInfo) error
+	}
+
+	// TODO: deprecate this interface in favor of the task interface
+	// defined in common/task package
 	taskExecutor interface {
 		process(taskInfo *taskInfo) (int, error)
 		complete(taskInfo *taskInfo)

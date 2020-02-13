@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 // 
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -122,6 +122,12 @@ type Interface interface {
 		AddRequest *history.RecordDecisionTaskStartedRequest,
 		opts ...yarpc.CallOption,
 	) (*history.RecordDecisionTaskStartedResponse, error)
+
+	RefreshWorkflowTasks(
+		ctx context.Context,
+		Request *history.RefreshWorkflowTasksRequest,
+		opts ...yarpc.CallOption,
+	) error
 
 	RemoveSignalMutableState(
 		ctx context.Context,
@@ -587,6 +593,29 @@ func (c client) RecordDecisionTaskStarted(
 	}
 
 	success, err = history.HistoryService_RecordDecisionTaskStarted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RefreshWorkflowTasks(
+	ctx context.Context,
+	_Request *history.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_RefreshWorkflowTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RefreshWorkflowTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_RefreshWorkflowTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
