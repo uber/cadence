@@ -54,6 +54,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/xdc"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -102,6 +103,10 @@ type (
 		GetDLQReplicationMessages(ctx ctx.Context, taskInfos []*r.ReplicationTaskInfo) ([]*r.ReplicationTask, error)
 		QueryWorkflow(ctx ctx.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
 		ReapplyEvents(ctx ctx.Context, domainUUID string, workflowID string, runID string, events []*workflow.HistoryEvent) error
+		ReadDLQMessages(ctx ctx.Context, messagesRequest *r.ReadDLQMessagesRequest) (*r.ReadDLQMessagesResponse, error)
+		PurgeDLQMessages(ctx ctx.Context, messagesRequest *r.PurgeDLQMessagesRequest) error
+		MergeDLQMessages(ctx ctx.Context, messagesRequest *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
+		RefreshWorkflowTasks(ctx ctx.Context, domainUUID string, execution workflow.WorkflowExecution) error
 
 		NotifyNewHistoryEvent(event *historyEventNotification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
@@ -140,6 +145,7 @@ type (
 		matchingClient            matching.Client
 		rawMatchingClient         matching.Client
 		clientChecker             client.VersionChecker
+		replicationDLQHandler     replicationDLQHandler
 	}
 )
 
@@ -284,19 +290,50 @@ func NewEngineWithShardContext(
 	)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
+	nDCHistoryResender := xdc.NewNDCHistoryResender(
+		shard.GetDomainCache(),
+		shard.GetService().GetClientBean().GetRemoteAdminClient(currentClusterName),
+		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+			return shard.GetService().GetHistoryClient().ReplicateEventsV2(ctx, request)
+		},
+		shard.GetService().GetPayloadSerializer(),
+		shard.GetLogger(),
+	)
+	historyRereplicator := xdc.NewHistoryRereplicator(
+		currentClusterName,
+		shard.GetDomainCache(),
+		shard.GetService().GetClientBean().GetRemoteAdminClient(currentClusterName),
+		func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
+			return shard.GetService().GetHistoryClient().ReplicateRawEvents(ctx, request)
+		},
+		shard.GetService().GetPayloadSerializer(),
+		replicationTimeout,
+		shard.GetLogger(),
+	)
+	replicationTaskExecutor := newReplicationTaskExecutor(
+		currentClusterName,
+		shard.GetDomainCache(),
+		nDCHistoryResender,
+		historyRereplicator,
+		historyEngImpl,
+		shard.GetMetricsClient(),
+		shard.GetLogger(),
+	)
 	var replicationTaskProcessors []ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		replicationTaskProcessor := NewReplicationTaskProcessor(
 			shard,
 			historyEngImpl,
 			config,
-			historyClient,
 			shard.GetMetricsClient(),
 			replicationTaskFetcher,
+			replicationTaskExecutor,
 		)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
+	replicationMessageHandler := newReplicationDLQHandler(shard, replicationTaskExecutor)
+	historyEngImpl.replicationDLQHandler = replicationMessageHandler
 
 	shard.SetEngine(historyEngImpl)
 	return historyEngImpl
@@ -2320,19 +2357,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}, nil
 }
 
-func (e *historyEngineImpl) DeleteExecutionFromVisibility(
-	task *persistence.TimerTaskInfo,
-) error {
-
-	request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
-		DomainID:   task.DomainID,
-		WorkflowID: task.WorkflowID,
-		RunID:      task.RunID,
-		TaskID:     task.TaskID,
-	}
-	return e.visibilityMgr.DeleteWorkflowExecution(request) // delete from db
-}
-
 func (e *historyEngineImpl) updateWorkflow(
 	ctx ctx.Context,
 	domainID string,
@@ -2910,6 +2934,107 @@ func (e *historyEngineImpl) ReapplyEvents(
 			}
 			return postActions, nil
 		})
+}
+
+func (e *historyEngineImpl) ReadDLQMessages(
+	ctx context.Context,
+	request *r.ReadDLQMessagesRequest,
+) (*r.ReadDLQMessagesResponse, error) {
+
+	tasks, token, err := e.replicationDLQHandler.readMessages(
+		ctx,
+		request.GetSourceCluster(),
+		request.GetInclusiveEndMessageID(),
+		int(request.GetMaximumPageSize()),
+		request.GetNextPageToken(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r.ReadDLQMessagesResponse{
+		Type:             request.GetType().Ptr(),
+		ReplicationTasks: tasks,
+		NextPageToken:    token,
+	}, nil
+}
+
+func (e *historyEngineImpl) PurgeDLQMessages(
+	ctx context.Context,
+	request *r.PurgeDLQMessagesRequest,
+) error {
+
+	return e.replicationDLQHandler.purgeMessages(
+		request.GetSourceCluster(),
+		request.GetInclusiveEndMessageID(),
+	)
+}
+
+func (e *historyEngineImpl) MergeDLQMessages(
+	ctx context.Context,
+	request *r.MergeDLQMessagesRequest,
+) (*r.MergeDLQMessagesResponse, error) {
+
+	token, err := e.replicationDLQHandler.mergeMessages(
+		ctx,
+		request.GetSourceCluster(),
+		request.GetInclusiveEndMessageID(),
+		int(request.GetMaximumPageSize()),
+		request.GetNextPageToken(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r.MergeDLQMessagesResponse{
+		NextPageToken: token,
+	}, nil
+}
+
+func (e *historyEngineImpl) RefreshWorkflowTasks(
+	ctx ctx.Context,
+	domainUUID string,
+	execution workflow.WorkflowExecution,
+) (retError error) {
+
+	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	if err != nil {
+		return err
+	}
+	domainID := domainEntry.GetInfo().ID
+
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
+	if err != nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	mutableState, err := context.loadWorkflowExecution()
+	if err != nil {
+		return err
+	}
+
+	if !mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
+
+	mutableStateTaskRefresher := newMutableStateTaskRefresher(
+		e.shard.GetConfig(),
+		e.shard.GetDomainCache(),
+		e.shard.GetEventsCache(),
+		e.shard.GetLogger(),
+	)
+
+	now := e.shard.GetTimeSource().Now()
+
+	err = mutableStateTaskRefresher.refreshTasks(now, mutableState)
+	if err != nil {
+		return err
+	}
+
+	err = context.updateWorkflowExecutionAsActive(now)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (e *historyEngineImpl) loadWorkflowOnce(

@@ -168,6 +168,10 @@ const (
 	PersistencePutReplicationTaskToDLQScope
 	// PersistenceGetReplicationTasksFromDLQScope tracks PersistenceGetReplicationTasksFromDLQScope calls made by service to persistence layer
 	PersistenceGetReplicationTasksFromDLQScope
+	// PersistenceDeleteReplicationTaskFromDLQScope tracks PersistenceDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
+	PersistenceDeleteReplicationTaskFromDLQScope
+	// PersistenceRangeDeleteReplicationTaskFromDLQScope tracks PersistenceRangeDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
+	PersistenceRangeDeleteReplicationTaskFromDLQScope
 	// PersistenceGetTimerIndexTasksScope tracks GetTimerIndexTasks calls made by service to persistence layer
 	PersistenceGetTimerIndexTasksScope
 	// PersistenceCompleteTimerTaskScope tracks CompleteTimerTasks calls made by service to persistence layer
@@ -252,14 +256,16 @@ const (
 	PersistenceDeleteQueueMessagesScope
 	// PersistenceDeleteQueueMessageFromDLQScope tracks DeleteMessageFromDLQ calls made by service to persistence layer
 	PersistenceDeleteQueueMessageFromDLQScope
-	// PersistenceDeleteDLQMessageBeforeScope tracks DeleteDLQMessageBefore calls made by service to persistence layer
-	PersistenceDeleteDLQMessageBeforeScope
-	// PersistenceGetLastMessageIDFromDLQScope tracks GetLastMessageIDFromDLQ calls made by service to persistence layer
-	PersistenceGetLastMessageIDFromDLQScope
+	// PersistenceRangeDeleteMessagesFromDLQScope tracks RangeDeleteMessagesFromDLQ calls made by service to persistence layer
+	PersistenceRangeDeleteMessagesFromDLQScope
 	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
 	PersistenceUpdateAckLevelScope
 	// PersistenceGetAckLevelScope tracks GetAckLevel calls made by service to persistence layer
 	PersistenceGetAckLevelScope
+	// PersistenceUpdateDLQAckLevelScope tracks UpdateDLQAckLevel calls made by service to persistence layer
+	PersistenceUpdateDLQAckLevelScope
+	// PersistenceGetDLQAckLevelScope tracks GetDLQAckLevel calls made by service to persistence layer
+	PersistenceGetDLQAckLevelScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
@@ -320,6 +326,14 @@ const (
 	HistoryClientQueryWorkflowScope
 	// HistoryClientReapplyEventsScope tracks RPC calls to history service
 	HistoryClientReapplyEventsScope
+	// HistoryClientReadDLQMessagesScope tracks RPC calls to history service
+	HistoryClientReadDLQMessagesScope
+	// HistoryClientPurgeDLQMessagesScope tracks RPC calls to history service
+	HistoryClientPurgeDLQMessagesScope
+	// HistoryClientMergeDLQMessagesScope tracks RPC calls to history service
+	HistoryClientMergeDLQMessagesScope
+	// HistoryClientRefreshWorkflowTasksScope tracks RPC calls to history service
+	HistoryClientRefreshWorkflowTasksScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -438,6 +452,14 @@ const (
 	AdminClientGetWorkflowExecutionRawHistoryV2Scope
 	// AdminClientDescribeClusterScope tracks RPC calls to admin service
 	AdminClientDescribeClusterScope
+	// AdminClientReadDLQMessagesScope tracks RPC calls to admin service
+	AdminClientReadDLQMessagesScope
+	// AdminClientPurgeDLQMessagesScope tracks RPC calls to admin service
+	AdminClientPurgeDLQMessagesScope
+	// AdminClientMergeDLQMessagesScope tracks RPC calls to admin service
+	AdminClientMergeDLQMessagesScope
+	// AdminClientRefreshWorkflowTasksScope tracks RPC calls to admin service
+	AdminClientRefreshWorkflowTasksScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -635,10 +657,18 @@ const (
 	AdminGetDLQReplicationMessagesScope
 	// AdminReapplyEventsScope is the metric scope for admin.ReapplyEvents
 	AdminReapplyEventsScope
+	// AdminRefreshWorkflowTasksScope is the metric scope for admin.RefreshWorkflowTasks
+	AdminRefreshWorkflowTasksScope
 	// AdminRemoveTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminRemoveTaskScope
 	//AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminCloseShardTaskScope
+	//AdminReadDLQMessagesScope is the metric scope for admin.AdminReadDLQMessagesScope
+	AdminReadDLQMessagesScope
+	//AdminPurgeDLQMessagesScope is the metric scope for admin.AdminPurgeDLQMessagesScope
+	AdminPurgeDLQMessagesScope
+	//AdminMergeDLQMessagesScope is the metric scope for admin.AdminMergeDLQMessagesScope
+	AdminMergeDLQMessagesScope
 
 	NumAdminScopes
 )
@@ -783,10 +813,20 @@ const (
 	HistoryGetReplicationMessagesScope
 	// HistoryGetDLQReplicationMessagesScope tracks GetReplicationMessages API calls received by service
 	HistoryGetDLQReplicationMessagesScope
+	// HistoryReadDLQMessagesScope tracks ReadDLQMessages API calls received by service
+	HistoryReadDLQMessagesScope
+	// HistoryPurgeDLQMessagesScope tracks PurgeDLQMessages API calls received by service
+	HistoryPurgeDLQMessagesScope
+	// HistoryMergeDLQMessagesScope tracks MergeDLQMessages API calls received by service
+	HistoryMergeDLQMessagesScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
 	// HistoryReapplyEventsScope is the scope used by event reapplication
 	HistoryReapplyEventsScope
+	// HistoryRefreshWorkflowTasksScope is the scope used by refresh workflow tasks API
+	HistoryRefreshWorkflowTasksScope
+	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
+	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
 	TransferQueueProcessorScope
 	// TransferActiveQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1011,8 +1051,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetReplicationTasksScope:                      {operation: "GetReplicationTasks"},
 		PersistenceCompleteReplicationTaskScope:                  {operation: "CompleteReplicationTask"},
 		PersistenceRangeCompleteReplicationTaskScope:             {operation: "RangeCompleteReplicationTask"},
-		PersistencePutReplicationTaskToDLQScope:                  {operation: "PersistencePutReplicationTaskToDLQ"},
-		PersistenceGetReplicationTasksFromDLQScope:               {operation: "PersistenceGetReplicationTasksFromDLQ"},
+		PersistencePutReplicationTaskToDLQScope:                  {operation: "PutReplicationTaskToDLQ"},
+		PersistenceGetReplicationTasksFromDLQScope:               {operation: "GetReplicationTasksFromDLQ"},
+		PersistenceDeleteReplicationTaskFromDLQScope:             {operation: "DeleteReplicationTaskFromDLQ"},
+		PersistenceRangeDeleteReplicationTaskFromDLQScope:        {operation: "RangeDeleteReplicationTaskFromDLQ"},
 		PersistenceGetTimerIndexTasksScope:                       {operation: "GetTimerIndexTasks"},
 		PersistenceCompleteTimerTaskScope:                        {operation: "CompleteTimerTask"},
 		PersistenceRangeCompleteTimerTaskScope:                   {operation: "RangeCompleteTimerTask"},
@@ -1062,10 +1104,11 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceReadQueueMessagesFromDLQScope:                 {operation: "ReadQueueMessagesFromDLQ"},
 		PersistenceDeleteQueueMessagesScope:                      {operation: "DeleteQueueMessages"},
 		PersistenceDeleteQueueMessageFromDLQScope:                {operation: "DeleteQueueMessageFromDLQ"},
-		PersistenceDeleteDLQMessageBeforeScope:                   {operation: "DeleteDLQMessagesBefore"},
-		PersistenceGetLastMessageIDFromDLQScope:                  {operation: "GetLastMessageIDFromDLQ"},
+		PersistenceRangeDeleteMessagesFromDLQScope:               {operation: "RangeDeleteMessagesFromDLQ"},
 		PersistenceUpdateAckLevelScope:                           {operation: "UpdateAckLevel"},
 		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},
+		PersistenceUpdateDLQAckLevelScope:                        {operation: "UpdateDLQAckLevel"},
+		PersistenceGetDLQAckLevelScope:                           {operation: "GetDLQAckLevel"},
 		PersistenceDomainReplicationQueueScope:                   {operation: "DomainReplicationQueue"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
@@ -1100,6 +1143,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetDLQReplicationTasksScope:            {operation: "HistoryClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientQueryWorkflowScope:                     {operation: "HistoryClientQueryWorkflowScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientReapplyEventsScope:                     {operation: "HistoryClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientReadDLQMessagesScope:                   {operation: "HistoryClientReadDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientPurgeDLQMessagesScope:                  {operation: "HistoryClientPurgeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientMergeDLQMessagesScope:                  {operation: "HistoryClientMergeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientRefreshWorkflowTasksScope:              {operation: "HistoryClientRefreshWorkflowTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:              {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:              {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                  {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
@@ -1158,7 +1205,11 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryV2Scope:    {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeClusterScope:                     {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientRefreshWorkflowTasksScope:                {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientCloseShardScope:                          {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientReadDLQMessagesScope:                     {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientPurgeDLQMessagesScope:                    {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientMergeDLQMessagesScope:                    {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                   {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                    {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeTaskListScope:                  {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1242,6 +1293,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		// Admin API scope co-locates with with frontend
 		AdminRemoveTaskScope:                       {operation: "AdminRemoveTask"},
 		AdminCloseShardTaskScope:                   {operation: "AdminCloseShardTask"},
+		AdminReadDLQMessagesScope:                  {operation: "AdminReadDLQMessages"},
+		AdminPurgeDLQMessagesScope:                 {operation: "AdminPurgeDLQMessages"},
+		AdminMergeDLQMessagesScope:                 {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:              {operation: "DescribeHistoryHost"},
 		AdminAddSearchAttributeScope:               {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
@@ -1251,6 +1305,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
 		AdminGetDLQReplicationMessagesScope:        {operation: "AdminGetDLQReplicationMessages"},
 		AdminReapplyEventsScope:                    {operation: "ReapplyEvents"},
+		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
 
 		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},
@@ -1324,8 +1379,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryDescribeMutableStateScope:                       {operation: "DescribeMutableState"},
 		HistoryGetReplicationMessagesScope:                     {operation: "GetReplicationMessages"},
 		HistoryGetDLQReplicationMessagesScope:                  {operation: "GetDLQReplicationMessages"},
+		HistoryReadDLQMessagesScope:                            {operation: "ReadDLQMessages"},
+		HistoryPurgeDLQMessagesScope:                           {operation: "PurgeDLQMessages"},
+		HistoryMergeDLQMessagesScope:                           {operation: "MergeDLQMessages"},
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
+		HistoryRefreshWorkflowTasksScope:                       {operation: "RefreshWorkflowTasks"},
+		TaskPriorityAssignerScope:                              {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
 		TransferStandbyQueueProcessorScope:                     {operation: "TransferStandbyQueueProcessor"},
@@ -1541,6 +1601,9 @@ const (
 	TaskBatchCompleteCounter
 	TaskProcessingLatency
 	TaskQueueLatency
+
+	TransferTaskThrottledCounter
+	TimerTaskThrottledCounter
 
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -1882,6 +1945,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
+		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
+		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                       {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:               {metricName: "schedule_activity_decision", metricType: Counter},
