@@ -192,13 +192,6 @@ func (p *domainReplicationMessageProcessor) putDomainReplicationTaskToDLQ(
 		metrics.DomainReplicationTaskScope,
 		metrics.DomainTag(domainAttribute.GetInfo().GetName()),
 	).IncCounter(1)
-	p.metricsClient.Scope(
-		metrics.DomainReplicationTaskScope,
-		metrics.TargetClusterTag(p.sourceCluster),
-	).UpdateGauge(
-		metrics.DomainDLQMaxLevelGauge,
-		float64(task.GetSourceTaskId()),
-	)
 	return p.domainReplicationQueue.PublishToDLQ(task)
 }
 

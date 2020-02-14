@@ -1843,7 +1843,6 @@ const (
 	HistoryScavengerSkipCount
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
-	DomainDLQMaxLevelGauge
 
 	NumWorkerMetrics
 )
@@ -2180,7 +2179,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
-		DomainDLQMaxLevelGauge:                        {metricName: "domain_dlq_max_level", metricType: Gauge},
 	},
 }
 
