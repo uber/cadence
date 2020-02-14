@@ -212,7 +212,20 @@ func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
 	lastProcessedMessageID int,
 ) error {
 
-	return q.queue.UpdateDLQAckLevel(lastProcessedMessageID, localDomainReplicationCluster)
+	if err :=  q.queue.UpdateDLQAckLevel(
+		lastProcessedMessageID,
+		localDomainReplicationCluster,
+	); err != nil {
+		return err
+	}
+
+	q.metricsClient.Scope(
+		metrics.PersistenceDomainReplicationQueueScope,
+	).UpdateGauge(
+		metrics.DomainReplicationTaskAckLevel,
+		float64(lastProcessedMessageID),
+	)
+	return nil
 }
 
 func (q *domainReplicationQueueImpl) GetDLQAckLevel() (int, error) {

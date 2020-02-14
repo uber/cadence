@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -384,6 +385,15 @@ func (p *ReplicationTaskProcessorImpl) putReplicationTaskToDLQ(replicationTask *
 		tag.WorkflowID(request.TaskInfo.GetWorkflowID()),
 		tag.WorkflowRunID(request.TaskInfo.GetRunID()),
 		tag.TaskID(request.TaskInfo.GetTaskID()),
+	)
+
+	p.metricsClient.Scope(
+		metrics.ReplicationDLQStatsScope,
+		metrics.TargetClusterTag(p.sourceCluster),
+		metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
+	).UpdateGauge(
+		metrics.ReplicationDLQMaxLevelGauge,
+		float64(request.TaskInfo.GetTaskID()),
 	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
 	return backoff.Retry(func() error {
