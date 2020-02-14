@@ -23,6 +23,7 @@ package replicator
 import (
 	"context"
 	"fmt"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"sync/atomic"
 	"time"
 
@@ -166,7 +167,7 @@ func (p *domainReplicationMessageProcessor) getAndHandleDomainReplicationTasks()
 			}, p.retryPolicy, isTransientRetryableError)
 			if dlqErr != nil {
 				p.logger.Error("Failed to put replication tasks to DLQ", tag.Error(dlqErr))
-				p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
+				p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorDLQFailures)
 				return
 			}
 		}
@@ -180,6 +181,15 @@ func (p *domainReplicationMessageProcessor) putDomainReplicationTaskToDLQ(
 	task *replicator.ReplicationTask,
 ) error {
 
+	domainAttribute := task.GetDomainTaskAttributes()
+	if domainAttribute == nil {
+		return &workflow.InternalServiceError{
+			Message: "Domain replication task does not set domain task attribute",
+		}
+	}
+	p.metricsClient.
+		Scope(metrics.DomainReplicationTaskScope, metrics.DomainTag(domainAttribute.GetInfo().
+		GetName())).IncCounter(1)
 	return p.domainReplicationQueue.PublishToDLQ(task)
 }
 

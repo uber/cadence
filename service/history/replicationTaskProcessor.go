@@ -197,8 +197,8 @@ Loop:
 func (p *ReplicationTaskProcessorImpl) cleanupReplicationTaskLoop() {
 
 	timer := time.NewTimer(backoff.JitDuration(
-		p.config.ShardSyncMinInterval(),
-		p.config.ShardSyncTimerJitterCoefficient(),
+		p.config.ReplicationTaskProcessorCleanupInterval(),
+		p.config.ReplicationTaskProcessorCleanupJitterCoefficient(),
 	))
 	for {
 		select {
@@ -379,7 +379,12 @@ func (p *ReplicationTaskProcessorImpl) putReplicationTaskToDLQ(replicationTask *
 		// We cannot deserialize the task. Dropping it.
 		return nil
 	}
-
+	p.logger.Info("Put history replication to DLQ",
+		tag.WorkflowDomainID(request.TaskInfo.GetDomainID()),
+		tag.WorkflowID(request.TaskInfo.GetWorkflowID()),
+		tag.WorkflowRunID(request.TaskInfo.GetRunID()),
+		tag.TaskID(request.TaskInfo.GetTaskID()),
+	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
 	return backoff.Retry(func() error {
 		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(request)
