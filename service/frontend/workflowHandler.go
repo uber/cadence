@@ -1925,19 +1925,40 @@ func (wh *WorkflowHandler) PollForWorkflowExecutionRawHistory(
 	// process the token for paging
 	queryNextEventID := common.EndEventID
 
-	token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
-		queryHistory(domainID, execution, queryNextEventID, nil)
-	if err != nil {
-		return nil, wh.error(err, scope)
+	if getRequest.NextPageToken != nil {
+		token, err = deserializeHistoryToken(getRequest.NextPageToken)
+		if err != nil {
+			return nil, wh.error(errInvalidNextPageToken, scope)
+		}
+		if execution.RunId != nil && execution.GetRunId() != token.RunID {
+			return nil, wh.error(errNextPageTokenRunIDMismatch, scope)
+		}
+		execution.RunId = common.StringPtr(token.RunID)
+		if len(token.PersistenceToken) == 0 {
+			token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+				queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			token.FirstEventID = token.NextEventID
+			token.NextEventID = nextEventID
+			token.IsWorkflowRunning = isWorkflowRunning
+		}
+	} else {
+		token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+			queryHistory(domainID, execution, queryNextEventID, nil)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
+
+		execution.RunId = &runID
+
+		token.RunID = runID
+		token.FirstEventID = token.FirstEventID
+		token.NextEventID = nextEventID
+		token.IsWorkflowRunning = isWorkflowRunning
+		token.PersistenceToken = nil
 	}
-
-	execution.RunId = &runID
-
-	token.RunID = runID
-	token.FirstEventID = common.FirstEventID
-	token.NextEventID = nextEventID
-	token.IsWorkflowRunning = isWorkflowRunning
-	token.PersistenceToken = nil
 
 	history := []*gen.DataBlob{}
 	if !isWorkflowRunning {
