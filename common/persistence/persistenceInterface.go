@@ -81,6 +81,8 @@ type (
 		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
 		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
+		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
+		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
@@ -600,7 +602,7 @@ type (
 	InternalDomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
 		Retention                int32
-		EmitMetric               bool
+		EmitMetric               bool                    // deprecated
 		ArchivalBucket           string                  // deprecated
 		ArchivalStatus           workflow.ArchivalStatus // deprecated
 		HistoryArchivalStatus    workflow.ArchivalStatus
