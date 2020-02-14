@@ -243,7 +243,7 @@ func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionRawHistory(
 	return a.frontendHandler.GetWorkflowExecutionRawHistory(ctx, request)
 }
 
-// GetRawHistoryLongPull API call
+// PollForWorkflowExecutionRawHistory API call
 func (a *AccessControlledWorkflowHandler) PollForWorkflowExecutionRawHistory(
 	ctx context.Context,
 	request *shared.PollForWorkflowExecutionRawHistoryRequest,

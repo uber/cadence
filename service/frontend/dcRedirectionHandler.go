@@ -303,7 +303,7 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionRawHistory(
 	return resp, err
 }
 
-// GetRawHistory API call
+// PollForWorkflowExecutionRawHistory API call
 func (handler *DCRedirectionHandlerImpl) PollForWorkflowExecutionRawHistory(
 	ctx context.Context,
 	request *shared.PollForWorkflowExecutionRawHistoryRequest,
