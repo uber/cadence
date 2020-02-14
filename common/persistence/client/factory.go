@@ -23,6 +23,8 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/service/dynamicconfig"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
@@ -138,7 +140,7 @@ func NewFactory(
 		logger:                   logger,
 		clusterName:              clusterName,
 	}
-	limiters := buildRatelimiters(cfg)
+	limiters := buildRateLimiters(cfg)
 	factory.init(clusterName, limiters)
 	return factory
 }
@@ -322,18 +324,18 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func buildRatelimiters(cfg *config.Persistence) map[string]quotas.Limiter {
+func buildRateLimiters(cfg *config.Persistence) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName, ds := range cfg.DataStores {
-		qps := 0
+		var qps dynamicconfig.IntPropertyFn
 		if ds.Cassandra != nil {
 			qps = ds.Cassandra.MaxQPS
 		}
 		if ds.SQL != nil {
 			qps = ds.SQL.MaxQPS
 		}
-		if qps > 0 {
-			result[dsName] = quotas.NewSimpleRateLimiter(qps)
+		if qps != nil {
+			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(qps()) })
 		}
 	}
 	return result
