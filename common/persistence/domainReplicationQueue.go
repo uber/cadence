@@ -130,7 +130,18 @@ func (q *domainReplicationQueueImpl) PublishToDLQ(message interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
-	return q.queue.EnqueueMessageToDLQ(bytes)
+	messageID, err := q.queue.EnqueueMessageToDLQ(bytes)
+	if err != nil {
+		return err
+	}
+
+	q.metricsClient.Scope(
+		metrics.PersistenceDomainReplicationQueueScope,
+	).UpdateGauge(
+		metrics.DomainReplicationDLQMaxLevel,
+		float64(messageID),
+	)
+	return nil
 }
 
 func (q *domainReplicationQueueImpl) GetReplicationMessages(
@@ -212,7 +223,7 @@ func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
 	lastProcessedMessageID int,
 ) error {
 
-	if err :=  q.queue.UpdateDLQAckLevel(
+	if err := q.queue.UpdateDLQAckLevel(
 		lastProcessedMessageID,
 		localDomainReplicationCluster,
 	); err != nil {
@@ -222,7 +233,7 @@ func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
 	q.metricsClient.Scope(
 		metrics.PersistenceDomainReplicationQueueScope,
 	).UpdateGauge(
-		metrics.DomainReplicationTaskAckLevel,
+		metrics.DomainReplicationDLQAckLevel,
 		float64(lastProcessedMessageID),
 	)
 	return nil

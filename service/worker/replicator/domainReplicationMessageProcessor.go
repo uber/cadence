@@ -23,9 +23,10 @@ package replicator
 import (
 	"context"
 	"fmt"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"sync/atomic"
 	"time"
+
+	workflow "github.com/uber/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/admin"

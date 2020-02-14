@@ -276,7 +276,7 @@ func (s *shardContextImpl) UpdateReplicatorDLQAckLevel(
 		metrics.TargetClusterTag(sourceCluster),
 		metrics.InstanceTag(strconv.Itoa(s.shardID)),
 	).UpdateGauge(
-		metrics.ReplicationDLQMaxLevelGauge,
+		metrics.ReplicationDLQAckLevel,
 		float64(ackLevel),
 	)
 	return nil
