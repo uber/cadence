@@ -1914,6 +1914,7 @@ func (wh *WorkflowHandler) PollForWorkflowExecutionRawHistory(
 			nil
 	}
 
+	isCloseEventOnly := getRequest.GetHistoryEventFilterType() == gen.HistoryEventFilterTypeCloseEvent
 	execution := getRequest.Execution
 	token := &getHistoryContinuationToken{}
 
@@ -1961,24 +1962,52 @@ func (wh *WorkflowHandler) PollForWorkflowExecutionRawHistory(
 	}
 
 	history := []*gen.DataBlob{}
-	if !isWorkflowRunning {
-		history, _, err = wh.getRawHistory(
-			scope,
-			domainID,
-			*execution,
-			lastFirstEventID,
-			nextEventID,
-			getRequest.GetMaximumPageSize(),
-			nil,
-			token.TransientDecision,
-			token.BranchToken,
-		)
-		if err != nil {
-			return nil, wh.error(err, scope)
+	if isCloseEventOnly {
+		if !isWorkflowRunning {
+			history, _, err = wh.getRawHistory(
+				scope,
+				domainID,
+				*execution,
+				lastFirstEventID,
+				nextEventID,
+				getRequest.GetMaximumPageSize(),
+				nil,
+				token.TransientDecision,
+				token.BranchToken,
+			)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			// since getHistory func will not return empty history, so the below is safe
+			history = history[len(history)-1 : len(history)]
+			token = nil
+		} else {
+			token.PersistenceToken = nil
 		}
-		// since getHistory func will not return empty history, so the below is safe
-		history = history[len(history)-1 : len(history)]
-		token = nil
+	} else {
+		if token.FirstEventID < token.NextEventID {
+			history, token.PersistenceToken, err = wh.getRawHistory(
+				scope,
+				domainID,
+				*execution,
+				token.FirstEventID,
+				token.NextEventID,
+				getRequest.GetMaximumPageSize(),
+				token.PersistenceToken,
+				token.TransientDecision,
+				token.BranchToken,
+			)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+
+			// here, for long pull on history events, we need to intercept the paging token from cassandra
+			// and do something clever
+			if len(token.PersistenceToken) == 0 && !token.IsWorkflowRunning {
+				// meaning, there is no more history to be returned
+				token = nil
+			}
+		}
 	}
 
 	nextToken, err := serializeHistoryToken(token)

@@ -30370,10 +30370,11 @@ func (v *PollForDecisionTaskResponse) IsSetQueries() bool {
 }
 
 type PollForWorkflowExecutionRawHistoryRequest struct {
-	Domain          *string            `json:"domain,omitempty"`
-	Execution       *WorkflowExecution `json:"execution,omitempty"`
-	MaximumPageSize *int32             `json:"maximumPageSize,omitempty"`
-	NextPageToken   []byte             `json:"nextPageToken,omitempty"`
+	Domain                 *string                 `json:"domain,omitempty"`
+	Execution              *WorkflowExecution      `json:"execution,omitempty"`
+	MaximumPageSize        *int32                  `json:"maximumPageSize,omitempty"`
+	NextPageToken          []byte                  `json:"nextPageToken,omitempty"`
+	HistoryEventFilterType *HistoryEventFilterType `json:"HistoryEventFilterType,omitempty"`
 }
 
 // ToWire translates a PollForWorkflowExecutionRawHistoryRequest struct into a Thrift-level intermediate
@@ -30393,7 +30394,7 @@ type PollForWorkflowExecutionRawHistoryRequest struct {
 //   }
 func (v *PollForWorkflowExecutionRawHistoryRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -30429,6 +30430,14 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) ToWire() (wire.Value, error)
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.HistoryEventFilterType != nil {
+		w, err = v.HistoryEventFilterType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 
@@ -30493,6 +30502,16 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) FromWire(w wire.Value) error
 				}
 
 			}
+		case 50:
+			if field.Value.Type() == wire.TI32 {
+				var x HistoryEventFilterType
+				x, err = _HistoryEventFilterType_Read(field.Value)
+				v.HistoryEventFilterType = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -30506,7 +30525,7 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -30522,6 +30541,10 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) String() string {
 	}
 	if v.NextPageToken != nil {
 		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+	if v.HistoryEventFilterType != nil {
+		fields[i] = fmt.Sprintf("HistoryEventFilterType: %v", *(v.HistoryEventFilterType))
 		i++
 	}
 
@@ -30550,6 +30573,9 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) Equals(rhs *PollForWorkflowE
 	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
 		return false
 	}
+	if !_HistoryEventFilterType_EqualsPtr(v.HistoryEventFilterType, rhs.HistoryEventFilterType) {
+		return false
+	}
 
 	return true
 }
@@ -30571,6 +30597,9 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) MarshalLogObject(enc zapcore
 	}
 	if v.NextPageToken != nil {
 		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	if v.HistoryEventFilterType != nil {
+		err = multierr.Append(err, enc.AddObject("HistoryEventFilterType", *v.HistoryEventFilterType))
 	}
 	return err
 }
@@ -30633,6 +30662,21 @@ func (v *PollForWorkflowExecutionRawHistoryRequest) GetNextPageToken() (o []byte
 // IsSetNextPageToken returns true if NextPageToken is not nil.
 func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetNextPageToken() bool {
 	return v != nil && v.NextPageToken != nil
+}
+
+// GetHistoryEventFilterType returns the value of HistoryEventFilterType if it is set or its
+// zero value if it is unset.
+func (v *PollForWorkflowExecutionRawHistoryRequest) GetHistoryEventFilterType() (o HistoryEventFilterType) {
+	if v != nil && v.HistoryEventFilterType != nil {
+		return *v.HistoryEventFilterType
+	}
+
+	return
+}
+
+// IsSetHistoryEventFilterType returns true if HistoryEventFilterType is not nil.
+func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetHistoryEventFilterType() bool {
+	return v != nil && v.HistoryEventFilterType != nil
 }
 
 type PollForWorkflowExecutionRawHistoryResponse struct {

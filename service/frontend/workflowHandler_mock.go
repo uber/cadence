@@ -29,9 +29,11 @@ package frontend
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	shared "github.com/uber/cadence/.gen/go/shared"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // MockWorkflowHandler is a mock of Interface interface
