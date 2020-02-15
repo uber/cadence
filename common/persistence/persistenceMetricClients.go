@@ -1303,7 +1303,7 @@ func (p *queuePersistenceClient) UpdateDLQAckLevel(messageID int, clusterName st
 	p.metricClient.IncCounter(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceLatency)
-	err := p.persistence.UpdateAckLevel(messageID, clusterName)
+	err := p.persistence.UpdateDLQAckLevel(messageID, clusterName)
 	sw.Stop()
 
 	if err != nil {
