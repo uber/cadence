@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/worker/scanner"
+
 	"github.com/uber/cadence/client/frontend"
 
 	"github.com/uber/cadence/common"
@@ -17,7 +19,7 @@ import (
 type (
 	// Scavenger is the type that holds the state for executions scavenger daemon
 	Scavenger struct {
-		visibilityQuery string // optionally can be provided to limit the scope of a scan, by default all open executions are scanned
+		params scanner.ExecutionsScannerWorkflowParams
 		// TODO: currently frontend client does not support scan visibility records without domain filter (need to chat with Bowei to understand if querying without domain filter is an issue)? Maybe we go directly to elasticSearch?
 		frontendClient frontend.Client // used to query visibility
 		historyDB      p.HistoryManager
@@ -66,7 +68,7 @@ var (
 //  - either all executions are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
 func NewScavenger(
-	visibilityQuery string,
+	params scanner.ExecutionsScannerWorkflowParams,
 	frontendClient frontend.Client,
 	historyDB p.HistoryManager,
 	metricsClient metrics.Client,
@@ -76,13 +78,13 @@ func NewScavenger(
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		executionsBatchSize, executorMaxDeferredTasks, metricsClient, metrics.ExecutionsScavengerScope)
 	return &Scavenger{
-		visibilityQuery: visibilityQuery,
-		frontendClient:  frontendClient,
-		historyDB:       historyDB,
-		metrics:         metricsClient,
-		logger:          logger,
-		stopC:           stopC,
-		executor:        taskExecutor,
+		params:         params,
+		frontendClient: frontendClient,
+		historyDB:      historyDB,
+		metrics:        metricsClient,
+		logger:         logger,
+		stopC:          stopC,
+		executor:       taskExecutor,
 	}
 }
 

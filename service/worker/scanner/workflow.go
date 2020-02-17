@@ -64,7 +64,8 @@ const (
 )
 
 var (
-	tlScavengerHBInterval = 10 * time.Second
+	tlScavengerHBInterval         = 10 * time.Second
+	executionsScavengerHBInterval = 10 * time.Second
 
 	activityRetryPolicy = cadence.RetryPolicy{
 		InitialInterval:    10 * time.Second,
@@ -98,6 +99,15 @@ var (
 		ExecutionStartToCloseTimeout: infiniteDuration,
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		CronSchedule:                 "0 */12 * * *",
+	}
+)
+
+type (
+	// ExecutionsScannerWorkflowParams are the parameters passed to the executions scanner workflow
+	ExecutionsScannerWorkflowParams struct {
+		VisibilityQuery string // optionally can be provided to limit the scope of the scan
+
+		// add other fields here such as: bool generateReport, string outputLocation, bool runInDryMode etc...
 	}
 )
 
@@ -135,10 +145,10 @@ func HistoryScannerWorkflow(
 // ExecutionsScannerWorkflow is the workflow that runs the executions scanner background daemon
 func ExecutionsScannerWorkflow(
 	ctx workflow.Context,
-	visibilityQuery string,
+	executionsScannerWorkflowParams ExecutionsScannerWorkflowParams,
 ) error {
 
-	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), executionsScavengerActivityName, visibilityQuery)
+	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), executionsScavengerActivityName, executionsScannerWorkflowParams)
 	return future.Get(ctx, nil)
 }
 
@@ -192,11 +202,11 @@ func TaskListScavengerActivity(
 // ExecutionsScavengerActivity is the activity that runs executions scavenger
 func ExecutionsScavengerActivity(
 	activityCtx context.Context,
-	visibilityQuery string,
+	executionsScannerWorkflowParams ExecutionsScannerWorkflowParams,
 ) error {
 
 	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
-	scavenger := executions.NewScavenger(visibilityQuery, ctx.GetFrontendClient(), ctx.GetHistoryManager(), ctx.GetMetricsClient(), ctx.GetLogger())
+	scavenger := executions.NewScavenger(executionsScannerWorkflowParams, ctx.GetFrontendClient(), ctx.GetHistoryManager(), ctx.GetMetricsClient(), ctx.GetLogger())
 	ctx.GetLogger().Info("Starting executions scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {
@@ -206,7 +216,7 @@ func ExecutionsScavengerActivity(
 			scavenger.Stop()
 			return activityCtx.Err()
 		}
-		time.Sleep(tlScavengerHBInterval)
+		time.Sleep(executionsScavengerHBInterval)
 	}
 	return nil
 }

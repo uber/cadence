@@ -42,8 +42,13 @@ import (
 const (
 	// scannerStartUpDelay is to let services warm up
 	scannerStartUpDelay = time.Second * 4
-	// fullExecutionsScanDefaultQuery indicates the visibility scanner should scan through all open workflows
-	fullExecutionsScanDefaultQuery = "SELECT * from elasticSearch.executions WHERE state IS open" // TODO: depending on if we go straight to ES or through frontend this query will look different
+)
+
+var (
+	defaultExecutionsScannerParams = ExecutionsScannerWorkflowParams{
+		// fullExecutionsScanDefaultQuery indicates the visibility scanner should scan through all open workflows
+		VisibilityQuery: "SELECT * from elasticSearch.executions WHERE state IS open", // TODO: depending on if we go straight to ES or through frontend this query will look different
+	}
 )
 
 type (
@@ -59,7 +64,7 @@ type (
 		TaskListScannerEnabled dynamicconfig.BoolPropertyFn
 		// HistoryScannerEnabled indicates if history scanner should be started as part of scanner
 		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
-		// ExecutionsScannerEnabled
+		// ExecutionsScannerEnabled indicates if executions scanner should be started as part of scanner
 		ExecutionsScannerEnabled dynamicconfig.BoolPropertyFn
 	}
 
@@ -128,7 +133,7 @@ func (s *Scanner) Start() error {
 	var workerTaskListNames []string
 	if s.context.cfg.ExecutionsScannerEnabled() {
 		workerTaskListNames = append(workerTaskListNames, executionsScannerTaskListName)
-		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, fullExecutionsScanDefaultQuery)
+		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, defaultExecutionsScannerParams)
 	}
 
 	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL && s.context.cfg.TaskListScannerEnabled() {

@@ -1019,7 +1019,7 @@ const (
 	ArchiverArchivalWorkflowScope
 	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
 	TaskListScavengerScope
-	// ExecutionsScavengerScope
+	// ExecutionsScavengerScope is scope used by all metrics emitted by worker.executions.Scavenger module
 	ExecutionsScavengerScope
 	// BatcherScope is scope used by all metrics emitted by worker.Batcher module
 	BatcherScope
