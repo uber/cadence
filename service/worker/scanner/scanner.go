@@ -55,6 +55,12 @@ type (
 		Persistence *config.Persistence
 		// ClusterMetadata contains the metadata for this cluster
 		ClusterMetadata cluster.Metadata
+		// TaskListScannerEnabled indicates if taskList scanner should be started as part of scanner
+		TaskListScannerEnabled dynamicconfig.BoolPropertyFn
+		// HistoryScannerEnabled indicates if history scanner should be started as part of scanner
+		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
+		// ExecutionsScannerEnabled
+		ExecutionsScannerEnabled dynamicconfig.BoolPropertyFn
 	}
 
 	// BootstrapParams contains the set of params needed to bootstrap
@@ -119,12 +125,16 @@ func (s *Scanner) Start() error {
 		BackgroundActivityContext:              context.WithValue(context.Background(), scannerContextKey, s.context),
 	}
 
-	workerTaskListNames := []string{executionsScannerTaskListName}
-	go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, fullExecutionsScanDefaultQuery)
-	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL {
+	var workerTaskListNames []string
+	if s.context.cfg.ExecutionsScannerEnabled() {
+		workerTaskListNames = append(workerTaskListNames, executionsScannerTaskListName)
+		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, fullExecutionsScanDefaultQuery)
+	}
+
+	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL && s.context.cfg.TaskListScannerEnabled() {
 		go s.startWorkflowWithRetry(tlScannerWFStartOptions, tlScannerWFTypeName)
 		workerTaskListNames = append(workerTaskListNames, tlScannerTaskListName)
-	} else if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeCassandra {
+	} else if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeCassandra && s.context.cfg.HistoryScannerEnabled() {
 		go s.startWorkflowWithRetry(historyScannerWFStartOptions, historyScannerWFTypeName)
 		workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
 	}
