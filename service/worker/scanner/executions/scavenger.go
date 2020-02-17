@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/client/frontend"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -16,15 +18,16 @@ type (
 	// Scavenger is the type that holds the state for executions scavenger daemon
 	Scavenger struct {
 		visibilityQuery string // optionally can be provided to limit the scope of a scan, by default all open executions are scanned
-		visDB           p.VisibilityManager
-		historyDB       p.HistoryManager
-		executor        executor.Executor
-		metrics         metrics.Client
-		logger          log.Logger
-		stats           stats
-		status          int32
-		stopC           chan struct{}
-		stopWG          sync.WaitGroup
+		// TODO: currently frontend client does not support scan visibility records without domain filter (need to chat with Bowei to understand if querying without domain filter is an issue)? Maybe we go directly to elasticSearch?
+		frontendClient frontend.Client // used to query visibility
+		historyDB      p.HistoryManager
+		executor       executor.Executor
+		metrics        metrics.Client
+		logger         log.Logger
+		stats          stats
+		status         int32
+		stopC          chan struct{}
+		stopWG         sync.WaitGroup
 	}
 
 	executionKey struct {
@@ -64,7 +67,7 @@ var (
 //  - Stop() method is called to stop the scavenger
 func NewScavenger(
 	visibilityQuery string,
-	visDB p.VisibilityManager,
+	frontendClient frontend.Client,
 	historyDB p.HistoryManager,
 	metricsClient metrics.Client,
 	logger log.Logger,
@@ -74,7 +77,7 @@ func NewScavenger(
 		executionsBatchSize, executorMaxDeferredTasks, metricsClient, metrics.ExecutionsScavengerScope)
 	return &Scavenger{
 		visibilityQuery: visibilityQuery,
-		visDB:           visDB,
+		frontendClient:  frontendClient,
 		historyDB:       historyDB,
 		metrics:         metricsClient,
 		logger:          logger,
@@ -117,7 +120,7 @@ func (s *Scavenger) Alive() bool {
 // run does a single run over all executions and validates them
 func (s *Scavenger) run() {
 	// TODO: implement this
-	// 1. read from visibility manager
+	// 1. read from visibility records from frontend.Client
 	// 2. create executionTasks
 	// 3. pass them off to the executor to run
 	// 4. wait until the executor is done

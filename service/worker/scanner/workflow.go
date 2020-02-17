@@ -24,6 +24,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/service/worker/scanner/executions"
+
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	cclient "go.uber.org/cadence/client"
@@ -90,13 +92,23 @@ var (
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		CronSchedule:                 "0 */12 * * *",
 	}
+	executionsScannerWFStartOptions = cclient.StartWorkflowOptions{
+		ID:                           executionsScannerWFID,
+		TaskList:                     executionsScannerTaskListName,
+		ExecutionStartToCloseTimeout: infiniteDuration,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+		CronSchedule:                 "0 */12 * * *",
+	}
 )
 
 func init() {
 	workflow.RegisterWithOptions(TaskListScannerWorkflow, workflow.RegisterOptions{Name: tlScannerWFTypeName})
 	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
+	workflow.RegisterWithOptions(ExecutionsScannerWorkflow, workflow.RegisterOptions{Name: executionsScannerWFTypeName})
+
 	activity.RegisterWithOptions(TaskListScavengerActivity, activity.RegisterOptions{Name: taskListScavengerActivityName})
 	activity.RegisterWithOptions(HistoryScavengerActivity, activity.RegisterOptions{Name: historyScavengerActivityName})
+	activity.RegisterWithOptions(ExecutionsScavengerActivity, activity.RegisterOptions{Name: executionsScavengerActivityName})
 }
 
 // TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon
@@ -117,6 +129,16 @@ func HistoryScannerWorkflow(
 		workflow.WithActivityOptions(ctx, activityOptions),
 		historyScavengerActivityName,
 	)
+	return future.Get(ctx, nil)
+}
+
+// ExecutionsScannerWorkflow is the workflow that runs the executions scanner background daemon
+func ExecutionsScannerWorkflow(
+	ctx workflow.Context,
+	visibilityQuery string,
+) error {
+
+	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), executionsScavengerActivityName, visibilityQuery)
 	return future.Get(ctx, nil)
 }
 
@@ -154,6 +176,28 @@ func TaskListScavengerActivity(
 	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
 	scavenger := tasklist.NewScavenger(ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
 	ctx.GetLogger().Info("Starting task list scavenger")
+	scavenger.Start()
+	for scavenger.Alive() {
+		activity.RecordHeartbeat(activityCtx)
+		if activityCtx.Err() != nil {
+			ctx.GetLogger().Info("activity context error, stopping scavenger", tag.Error(activityCtx.Err()))
+			scavenger.Stop()
+			return activityCtx.Err()
+		}
+		time.Sleep(tlScavengerHBInterval)
+	}
+	return nil
+}
+
+// ExecutionsScavengerActivity is the activity that runs executions scavenger
+func ExecutionsScavengerActivity(
+	activityCtx context.Context,
+	visibilityQuery string,
+) error {
+
+	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
+	scavenger := executions.NewScavenger(visibilityQuery, ctx.GetFrontendClient(), ctx.GetHistoryManager(), ctx.GetMetricsClient(), ctx.GetLogger())
+	ctx.GetLogger().Info("Starting executions scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {
 		activity.RecordHeartbeat(activityCtx)
