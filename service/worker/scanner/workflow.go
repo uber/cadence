@@ -54,6 +54,11 @@ const (
 	historyScannerWFTypeName     = "cadence-sys-history-scanner-workflow"
 	historyScannerTaskListName   = "cadence-sys-history-scanner-tasklist-0"
 	historyScavengerActivityName = "cadence-sys-history-scanner-scvg-activity"
+
+	executionsScannerWFID           = "cadence-sys-executions-scanner"
+	executionsScannerWFTypeName     = "cadence-sys-executions-scanner-workflow"
+	executionsScannerTaskListName   = "cadence-sys-executions-scanner-tasklist-0"
+	executionsScavengerActivityName = "cadence-sys-executions-scanner-scvg-activity"
 )
 
 var (
