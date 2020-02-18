@@ -102,15 +102,6 @@ var (
 	}
 )
 
-type (
-	// ExecutionsScannerWorkflowParams are the parameters passed to the executions scanner workflow
-	ExecutionsScannerWorkflowParams struct {
-		VisibilityQuery string // optionally can be provided to limit the scope of the scan
-
-		// add other fields here such as: bool generateReport, string outputLocation, bool runInDryMode etc...
-	}
-)
-
 func init() {
 	workflow.RegisterWithOptions(TaskListScannerWorkflow, workflow.RegisterOptions{Name: tlScannerWFTypeName})
 	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
@@ -145,7 +136,7 @@ func HistoryScannerWorkflow(
 // ExecutionsScannerWorkflow is the workflow that runs the executions scanner background daemon
 func ExecutionsScannerWorkflow(
 	ctx workflow.Context,
-	executionsScannerWorkflowParams ExecutionsScannerWorkflowParams,
+	executionsScannerWorkflowParams executions.ScannerWorkflowParams,
 ) error {
 
 	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), executionsScavengerActivityName, executionsScannerWorkflowParams)
@@ -202,7 +193,7 @@ func TaskListScavengerActivity(
 // ExecutionsScavengerActivity is the activity that runs executions scavenger
 func ExecutionsScavengerActivity(
 	activityCtx context.Context,
-	executionsScannerWorkflowParams ExecutionsScannerWorkflowParams,
+	executionsScannerWorkflowParams executions.ScannerWorkflowParams,
 ) error {
 
 	ctx := activityCtx.Value(scannerContextKey).(scannerContext)

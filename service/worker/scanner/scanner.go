@@ -30,6 +30,8 @@ import (
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/service/worker/scanner/executions"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
@@ -45,7 +47,7 @@ const (
 )
 
 var (
-	defaultExecutionsScannerParams = ExecutionsScannerWorkflowParams{
+	defaultExecutionsScannerParams = executions.ScannerWorkflowParams{
 		// fullExecutionsScanDefaultQuery indicates the visibility scanner should scan through all open workflows
 		VisibilityQuery: "SELECT * from elasticSearch.executions WHERE state IS open", // TODO: depending on if we go straight to ES or through frontend this query will look different
 	}
