@@ -22,6 +22,7 @@ package gcloud
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -105,7 +106,6 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 
 	// The filename has the format: closeTimestamp_hash(runID).visibility
 	// This format allows the archiver to sort all records without reading the file contents
-	// MobileOnlyWorkflow::processMobileOnly
 	filename := constructVisibilityFilename(request.DomainID, request.WorkflowTypeName, request.WorkflowID, request.RunID, indexKeyCloseTimeout, request.CloseTimestamp)
 	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
@@ -153,7 +153,7 @@ func (v *visibilityArchiver) Query(ctx context.Context, URI archiver.URI, reques
 }
 
 func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, request *queryVisibilityRequest) (*archiver.QueryVisibilityResponse, error) {
-	var token *queryVisibilityToken
+	token := new(queryVisibilityToken)
 	if request.nextPageToken != nil {
 		var err error
 		token, err = deserializeQueryVisibilityToken(request.nextPageToken)
@@ -162,32 +162,23 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		}
 	}
 
-	var prefix = constructVisibilityFilenamePrefix(request.domainID, indexKeyCloseTimeout, *request.parsedQuery.workflowType)
+	var prefix = constructVisibilityFilenamePrefix(request.domainID, indexKeyCloseTimeout)
 	if request.parsedQuery.closeTime != 0 {
-		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowType, indexKeyCloseTimeout, request.parsedQuery.closeTime, *request.parsedQuery.searchPrecision)
+		prefix = constructTimeBasedSearchKey(request.domainID, indexKeyCloseTimeout, request.parsedQuery.closeTime, *request.parsedQuery.searchPrecision)
 	}
 	if request.parsedQuery.startTime != 0 {
-		prefix = constructTimeBasedSearchKey(request.domainID, *request.parsedQuery.workflowType, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
+		prefix = constructTimeBasedSearchKey(request.domainID, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
 	}
 
-	filenames, err := v.gcloudStorage.Query(ctx, URI, prefix)
+	filters := []connector.Precondition{existWorkflowID(), existRunID(), existWorkflowTypeName()}
+	filenames, completed, currentCursorPos, err := v.gcloudStorage.QueryWithFilters(ctx, URI, prefix, request.pageSize, token.Offset, filters, hash(*request.parsedQuery.workflowID), hash(*request.parsedQuery.runID), hash(*request.parsedQuery.workflowType))
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
-	}
-
-	filenames, err = sortAndFilterFiles(filenames, token)
-	if err != nil {
-		return nil, &shared.InternalServiceError{Message: err.Error()}
-	}
-	if len(filenames) == 0 {
-		return &archiver.QueryVisibilityResponse{}, nil
 	}
 
 	response := &archiver.QueryVisibilityResponse{}
-	var idx int
-	var file string
-	for idx, file = range filenames {
-		encodedRecord, err := v.gcloudStorage.Get(ctx, URI, filepath.Base(file))
+	for _, file := range filenames {
+		encodedRecord, err := v.gcloudStorage.Get(ctx, URI, fmt.Sprintf("%s/%s", request.domainID, filepath.Base(file)))
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
@@ -198,19 +189,17 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		}
 
 		response.Executions = append(response.Executions, convertToExecutionInfo(record))
-		if len(response.Executions) == request.pageSize {
-			if idx != len(filenames) {
-				newToken := &queryVisibilityToken{
-					Offset: idx + 1,
-				}
-				encodedToken, err := serializeToken(newToken)
-				if err != nil {
-					return nil, &shared.InternalServiceError{Message: err.Error()}
-				}
-				response.NextPageToken = encodedToken
-			}
-			break
+	}
+
+	if !completed {
+		newToken := &queryVisibilityToken{
+			Offset: currentCursorPos + 1,
 		}
+		encodedToken, err := serializeToken(newToken)
+		if err != nil {
+			return nil, &shared.InternalServiceError{Message: err.Error()}
+		}
+		response.NextPageToken = encodedToken
 	}
 
 	return response, nil

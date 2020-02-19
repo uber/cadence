@@ -25,8 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/gcloud/connector"
 )
 
 func encode(v interface{}) ([]byte, error) {
@@ -66,16 +65,11 @@ func constructHistoryFilenamePrefix(domainID, workflowID, runID string) string {
 	return strings.Join([]string{hash(domainID), hash(workflowID), hash(runID)}, "")
 }
 
-func hashVisibilityFilenamePrefix(domainID, ID string) string {
-	return strings.Join([]string{hash(domainID), hash(ID)}, "")
+func constructVisibilityFilenamePrefix(domainID, tag string) string {
+	return fmt.Sprintf("%s/%s", domainID, tag)
 }
 
-func constructVisibilityFilenamePrefix(domainID, tag, workflowTypeName string) string {
-	combinedDomainWorkflowTypeNameHash := hashVisibilityFilenamePrefix(domainID, workflowTypeName)
-	return fmt.Sprintf("%s_%s", tag, combinedDomainWorkflowTypeNameHash)
-}
-
-func constructTimeBasedSearchKey(domainID, workflowTypeName, tag string, timestamp int64, precision string) string {
+func constructTimeBasedSearchKey(domainID, tag string, timestamp int64, precision string) string {
 	t := time.Unix(0, timestamp).In(time.UTC)
 	var timeFormat = ""
 	switch precision {
@@ -92,11 +86,14 @@ func constructTimeBasedSearchKey(domainID, workflowTypeName, tag string, timesta
 		timeFormat = "2006-01-02T" + timeFormat
 	}
 
-	return fmt.Sprintf("%s_%s", constructVisibilityFilenamePrefix(domainID, tag, workflowTypeName), t.Format(timeFormat))
+	return fmt.Sprintf("%s_%s", constructVisibilityFilenamePrefix(domainID, tag), t.Format(timeFormat))
 }
 
-func hash(s string) string {
-	return fmt.Sprintf("%v", farm.Fingerprint64([]byte(s)))
+func hash(s string) (result string) {
+	if s != "" {
+		return fmt.Sprintf("%v", farm.Fingerprint64([]byte(s)))
+	}
+	return
 }
 
 func contextExpired(ctx context.Context) bool {
@@ -147,10 +144,10 @@ func decodeVisibilityRecord(data []byte) (*visibilityRecord, error) {
 	return record, nil
 }
 
-func constructVisibilityFilename(domainID, workflowTypeName, workflowID, runID, tag string, timestamp int64) string {
+func constructVisibilityFilename(domain, workflowTypeName, workflowID, runID, tag string, timestamp int64) string {
 	t := time.Unix(0, timestamp).In(time.UTC)
-	prefix := constructVisibilityFilenamePrefix(domainID, tag, workflowTypeName)
-	return fmt.Sprintf("%s_%s_%s_%s.visibility", prefix, t.Format(time.RFC3339), workflowID, runID)
+	prefix := constructVisibilityFilenamePrefix(domain, tag)
+	return fmt.Sprintf("%s_%s_%s_%s_%s.visibility", prefix, t.Format(time.RFC3339), hash(workflowTypeName), hash(workflowID), hash(runID))
 }
 
 func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error) {
@@ -164,54 +161,6 @@ type parsedVisFilename struct {
 	closeTime  int64
 	LastRunID  string
 	WorkflowID string
-}
-
-// sortAndFilterFiles sort visibility record file names based on close timestamp (desc) and use hashed runID to break ties.
-// if a nextPageToken is give, it only returns filenames that have a smaller close timestamp
-func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]string, error) {
-	var parsedFilenames []*parsedVisFilename
-	for _, name := range filenames {
-		name := filepath.Base(name)
-		pieces := strings.FieldsFunc(name, func(r rune) bool {
-			return r == '_' || r == '.'
-		})
-		if len(pieces) != 6 {
-			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
-		}
-
-		closeTime, err := time.Parse(time.RFC3339, pieces[2])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse visibility filename %s", name)
-		}
-		parsedFilenames = append(parsedFilenames, &parsedVisFilename{
-			name:       name,
-			closeTime:  closeTime.UnixNano(),
-			WorkflowID: pieces[2],
-			LastRunID:  pieces[4],
-		})
-	}
-
-	sort.Slice(parsedFilenames, func(i, j int) bool {
-		if parsedFilenames[i].closeTime == parsedFilenames[j].closeTime {
-			return parsedFilenames[i].LastRunID > parsedFilenames[j].LastRunID
-		}
-		return parsedFilenames[i].closeTime > parsedFilenames[j].closeTime
-	})
-
-	startIdx := 0
-	if token != nil {
-		startIdx = token.Offset
-	}
-
-	if startIdx == len(parsedFilenames) {
-		return []string{}, nil
-	}
-
-	var filteredFilenames []string
-	for _, parsedFilename := range parsedFilenames[startIdx:] {
-		filteredFilenames = append(filteredFilenames, parsedFilename.name)
-	}
-	return filteredFilenames, nil
 }
 
 func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
@@ -232,5 +181,38 @@ func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionI
 		SearchAttributes: &shared.SearchAttributes{
 			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
 		},
+	}
+}
+
+func existWorkflowID() connector.Precondition {
+	return func(subject interface{}, params ...string) bool {
+		if len(params) == 0 || params[0] == "" {
+			return true
+		}
+
+		fileName := subject.(string)
+		return strings.Contains(fileName, params[0])
+	}
+}
+
+func existRunID() connector.Precondition {
+	return func(subject interface{}, params ...string) bool {
+		if len(params) == 0 || params[1] == "" {
+			return true
+		}
+
+		fileName := subject.(string)
+		return strings.Contains(fileName, params[1])
+	}
+}
+
+func existWorkflowTypeName() connector.Precondition {
+	return func(subject interface{}, params ...string) bool {
+		if len(params) == 0 || params[2] == "" {
+			return true
+		}
+
+		fileName := subject.(string)
+		return strings.Contains(fileName, params[2])
 	}
 }

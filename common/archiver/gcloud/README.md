@@ -55,7 +55,7 @@ Supported column names are
 - CloseTime *Date*
 - SearchPrecision *String - Day, Hour, Minute, Second*
 
-WorkflowType and SearchPrecision are always required. One of StartTime and CloseTime are required and they are mutually exclusive.
+One of these fields are required, StartTime or CloseTime and they are mutually exclusive and also SearchPrecision.
 
 Searching for a record will be done in times in the UTC timezone
 
@@ -64,13 +64,14 @@ it will search all records starting from `2020-01-21T00:00:00Z` to `2020-01-21T5
 
 ### Limitations
 
-- The only operator supported is `=` 
+- The only operator supported is `=`
+- Currently It's not possible to guarantee the resulSet order, specially if the pageSize it's fullfilled.  
 
 ### Example
 
-*Searches for all records done in day 2020-01-21 with the specified workflow id*
+*Searches the first 20 records for a given day 2020-01-21*
 
-`./cadence --do samples-domain workflow listarchived -q "StartTime = '2020-01-21T00:00:00Z' AND WorkflowType='MobileOnlyWorkflow::processMobileOnly' AND SearchPrecision='Day'"`
+`./cadence --do samples-domain workflow listarchived -ps="20" -q "StartTime = '2020-01-21T00:00:00Z' AND SearchPrecision='Day'"`
 
 ## Archival query syntax
 

@@ -96,7 +96,7 @@ func (p *queryParser) Parse(query string) (*parsedQuery, error) {
 	}
 
 	if parsedQuery.workflowType == nil {
-		return nil, errors.New("workflowType name is required in query")
+		parsedQuery.workflowType = new(string)
 	}
 
 	if parsedQuery.workflowID == nil {

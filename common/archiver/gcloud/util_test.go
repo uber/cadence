@@ -124,58 +124,116 @@ func (s *utilSuite) TestConstructHistoryFilenameMultipart() {
 	s.Equal("28646288347718592068344541402884576509131521284625246243_-24_0.history", constructHistoryFilenameMultipart("domainID", "workflowID", "runID", -24, 0))
 }
 
-func (s *utilSuite) TestHashVisibilityFilenamePrefix() {
-	s.Equal("286462883477185920617754214083977428625", hashVisibilityFilenamePrefix("domainID", indexKeyStartTimeout))
-}
-
 func (s *utilSuite) TestConstructVisibilityFilenamePrefix() {
-	s.Equal("startTimeout_28646288347718592064346151385925082125", constructVisibilityFilenamePrefix("domainID", indexKeyStartTimeout, "workflowTypeName"))
+	s.Equal("domainID/startTimeout", constructVisibilityFilenamePrefix("domainID", indexKeyStartTimeout))
 }
 
 func (s *utilSuite) TestConstructTimeBasedSearchKey() {
-	s.Equal("startTimeout_28646288347718592064346151385925082125_1970-01-01T", constructTimeBasedSearchKey("domainID", "workflowTypeName", indexKeyStartTimeout, 1580819141, "Day"))
+	s.Equal("domainID/startTimeout_1970-01-01T", constructTimeBasedSearchKey("domainID", indexKeyStartTimeout, 1580819141, "Day"))
 }
 
 func (s *utilSuite) TestConstructVisibilityFilename() {
-	s.Equal("startTimeout_28646288347718592064346151385925082125_1970-01-01T00:24:32Z_workflowID_runID.visibility", constructVisibilityFilename("domainID", "workflowTypeName", "workflowID", "runID", indexKeyStartTimeout, 1472313624305))
+	s.Equal("domainID/startTimeout_1970-01-01T00:24:32Z_4346151385925082125_8344541402884576509_131521284625246243.visibility", constructVisibilityFilename("domainID", "workflowTypeName", "workflowID", "runID", indexKeyStartTimeout, 1472313624305))
 }
 
-func (s *utilSuite) TestSortAndFilterFiles() {
+func (s *utilSuite) TestWorkflowIdPrecondition() {
 	testCases := []struct {
-		filenames      []string
-		token          *queryVisibilityToken
-		expectedResult []string
+		workflowID     string
+		fileName       string
+		expectedResult bool
 	}{
 		{
-			filenames:      []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "startTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
-			expectedResult: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "startTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
+			workflowID:     "testWorkflowID",
+			fileName:       "startTimeout_1970-01-01T_testWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult: true,
 		},
 		{
-			filenames: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
-			token: &queryVisibilityToken{
-				Offset: 1,
-			},
-			expectedResult: []string{},
+			workflowID:     "testWorkflowID",
+			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult: false,
 		},
 		{
-			filenames: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
-			token: &queryVisibilityToken{
-				Offset: 0,
-			},
-			expectedResult: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
-		},
-		{
-			filenames: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility", "closeTimeout_1023036758901021607612851121011173788097_2020-02-06T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
-			token: &queryVisibilityToken{
-				Offset: 1,
-			},
-			expectedResult: []string{"closeTimeout_1023036758901021607612851121011173788097_2020-02-05T09:56:15Z_workflowID_718c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"},
+			workflowID:     "",
+			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult: true,
 		},
 	}
 
-	for _, tc := range testCases {
-		result, err := sortAndFilterFiles(tc.filenames, tc.token)
-		s.NoError(err)
-		s.Equal(tc.expectedResult, result)
+	precondition := existWorkflowID()
+	for _, testCase := range testCases {
+		s.Equal(precondition(testCase.fileName, testCase.workflowID), testCase.expectedResult)
 	}
+
+}
+
+func (s *utilSuite) TestRunIdPrecondition() {
+	testCases := []struct {
+		workflowID     string
+		runID          string
+		fileName       string
+		expectedResult bool
+	}{
+		{
+			workflowID:     "testWorkflowID",
+			runID:          "runID",
+			fileName:       "startTimeout_1970-01-01T_testWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult: true,
+		},
+		{
+			workflowID:     "testWorkflowID",
+			runID:          "runID",
+			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runUnKnownID.visibility",
+			expectedResult: false,
+		},
+		{
+			workflowID:     "testWorkflowID",
+			runID:          "",
+			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult: true,
+		},
+	}
+
+	precondition := existRunID()
+	for _, testCase := range testCases {
+		s.Equal(precondition(testCase.fileName, testCase.workflowID, testCase.runID), testCase.expectedResult)
+	}
+
+}
+
+func (s *utilSuite) TestWorkflowTypeNamePrecondition() {
+	testCases := []struct {
+		workflowID       string
+		runID            string
+		workflowTypeName string
+		fileName         string
+		expectedResult   bool
+	}{
+		{
+			workflowID:       "testWorkflowID",
+			runID:            "runID",
+			workflowTypeName: "workflowTypeName",
+			fileName:         "startTimeout_1970-01-01T_testWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult:   true,
+		},
+		{
+			workflowID:       "testWorkflowID",
+			runID:            "runID",
+			workflowTypeName: "workflowTypeName",
+			fileName:         "startTimeout_1970-01-01T_UnkownWorkflowID_workflowUnkownTypeName_runID.visibility",
+			expectedResult:   false,
+		},
+		{
+			workflowID:       "testWorkflowID",
+			runID:            "runID",
+			workflowTypeName: "",
+			fileName:         "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			expectedResult:   true,
+		},
+	}
+
+	precondition := existWorkflowTypeName()
+	for _, testCase := range testCases {
+		s.Equal(precondition(testCase.fileName, testCase.workflowID, testCase.runID, testCase.workflowTypeName), testCase.expectedResult)
+	}
+
 }

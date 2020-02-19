@@ -257,3 +257,59 @@ func (s *clientSuite) TestQuery() {
 	s.Require().NoError(err)
 	s.Equal(strings.Join(fileNames, ", "), "fileName_01")
 }
+
+func (s *clientSuite) TestQueryWithFilter() {
+
+	ctx := context.Background()
+	mockBucketHandleClient := &mocks.BucketHandleWrapper{}
+	mockStorageClient := &mocks.GcloudStorageClient{}
+	mockObjectIterator := &mocks.ObjectIteratorWrapper{}
+	storageWrapper, _ := connector.NewClientWithParams(mockStorageClient)
+
+	workflowId := "1234-pablos-domain-gs-14"
+	runId := "718c54ba-15ef-4b2c-a38b-ac6cf797eb55"
+	attr := new(storage.ObjectAttrs)
+	attr.Name = "closeTimeout_1023036758901021607612851121011173788097_2020-02-12T15%3A19%3A26Z_" + workflowId + "_" + runId + ".visibility"
+	attrInvalid := new(storage.ObjectAttrs)
+	attrInvalid.Name = "closeTimeout_1023036758901021607612851121011173788097_2020-02-12T15%3A19%3A26Z_1235-pablos-domain-gs-14_918c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"
+
+	mockStorageClient.On("Bucket", "my-bucket-cad").Return(mockBucketHandleClient).Times(1)
+	mockBucketHandleClient.On("Objects", ctx, mock.Anything).Return(mockObjectIterator).Times(1)
+	mockIterator := 0
+	mockObjectIterator.On("Next").Return(func() *storage.ObjectAttrs {
+		mockIterator++
+		switch mockIterator {
+		case 1:
+			return attr
+		case 2:
+			return attrInvalid
+		default:
+			return nil
+		}
+
+	}, func() error {
+		switch mockIterator {
+		case 1:
+			return nil
+		case 2:
+			return nil
+		default:
+			return iterator.Done
+		}
+
+	}).Times(3)
+
+	var fileNames []string
+	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/development")
+	fileNames, _, _, err = storageWrapper.QueryWithFilters(ctx, URI, "7478875943689868082123907395549832634615673687049942026838", 0, 0, []connector.Precondition{existWorkflowID()}, workflowId, runId)
+
+	s.Require().NoError(err)
+	s.Equal(strings.Join(fileNames, ", "), "closeTimeout_1023036758901021607612851121011173788097_2020-02-12T15%3A19%3A26Z_"+workflowId+"_"+runId+".visibility")
+}
+
+func existWorkflowID() connector.Precondition {
+	return func(subject interface{}, params ...string) bool {
+		fileName := subject.(string)
+		return strings.Contains(fileName, params[0])
+	}
+}
