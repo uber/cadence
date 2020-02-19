@@ -78,6 +78,8 @@ type (
 		Metrics Metrics `yaml:"metrics"`
 		// PProf is the PProf configuration
 		PProf PProf `yaml:"pprof"`
+		// MaxQPS is the max qps configuration
+		MaxQPS int `yaml:"MaxQPS"`
 	}
 
 	// PProf contains the rpc config items

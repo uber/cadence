@@ -126,6 +126,7 @@ func (s *server) startService() common.Daemon {
 		params.Name,
 		params.Logger,
 	)
+	params.MaxQPS = svcCfg.MaxQPS
 	if err != nil {
 		log.Fatalf("error creating ringpop factory: %v", err)
 	}

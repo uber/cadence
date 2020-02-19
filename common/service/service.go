@@ -76,6 +76,7 @@ type (
 		ArchivalMetadata    archiver.ArchivalMetadata
 		ArchiverProvider    provider.ArchiverProvider
 		Authorizer          authorization.Authorizer
+		MaxQPS              int
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor

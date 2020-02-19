@@ -29,6 +29,7 @@ services:
         prefix: "cadence"
     pprof:
       port: 7936
+    MaxQPS: 1000
 
   matching:
     rpc:
@@ -40,6 +41,7 @@ services:
         prefix: "cadence"
     pprof:
       port: 7938
+    MaxQPS: 1000
 
   history:
     rpc:
@@ -51,6 +53,7 @@ services:
         prefix: "cadence"
     pprof:
       port: 7937
+    MaxQPS: 1000
 
   worker:
     rpc:
@@ -62,6 +65,7 @@ services:
         prefix: "cadence"
     pprof:
       port: 7940
+    MaxQPS: 1000
 
 clusterMetadata:
   enableGlobalDomain: false

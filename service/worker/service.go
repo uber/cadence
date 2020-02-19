@@ -77,10 +77,17 @@ func NewService(
 
 	serviceConfig := NewConfig(params)
 
-	params.PersistenceConfig.SetMaxQPS(
-		params.PersistenceConfig.DefaultStore,
-		serviceConfig.ReplicationCfg.PersistenceMaxQPS(),
-	)
+	if params.MaxQPS > 0 {
+		params.PersistenceConfig.SetMaxQPS(
+			params.PersistenceConfig.DefaultStore,
+			params.MaxQPS,
+		)
+	} else {
+		params.PersistenceConfig.SetMaxQPS(
+			params.PersistenceConfig.DefaultStore,
+			serviceConfig.ReplicationCfg.PersistenceMaxQPS(),
+		)
+	}
 
 	serviceResource, err := resource.New(
 		params,
