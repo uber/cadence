@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
@@ -113,6 +114,18 @@ func newActivityOptions() workflow.ActivityOptions {
 		ScheduleToStartTimeout: scheduleToStartTimeout,
 		ScheduleToCloseTimeout: scheduleToStartTimeout + activityTaskTimeout,
 	}
+}
+
+// newActivityOptionsWithRetry builds and returns activityOptions with reasonable defaults and retry policy
+func newActivityOptionsWithRetry(nonRetriableErrorReasons []string) workflow.ActivityOptions {
+	ao := newActivityOptions()
+	ao.RetryPolicy = &cadence.RetryPolicy{
+		InitialInterval:          time.Second,
+		BackoffCoefficient:       2,
+		ExpirationInterval:       activityTaskExpirationInterval,
+		NonRetriableErrorReasons: nonRetriableErrorReasons,
+	}
+	return ao
 }
 
 // newChildWorkflowOptions builds and returns childWorkflowOptions for given domain

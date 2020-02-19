@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,15 +36,28 @@ import (
 )
 
 const (
-	numArchivals = 5
-	resultSize   = 1024 // 1KB
+	numHistoryArchivals = 5
+	resultSize          = 1024 // 1KB
+)
+
+const (
+	// run visibility archival checks at a low probability
+	// as each query can be expensive and take a long time
+	visArchivalQueryProbability = 0.01
+	visArchivalPageSize         = 100
+
+	// TODO: remove the check on URI scheme once
+	// https://github.com/uber/cadence/issues/3003 is done
+	visArchivalScheme        = "file"
+	visArchivalQueryTemplate = "WorkflowType = '%s' and CloseTime >= %v and CloseTime <= %v"
 )
 
 func init() {
 	registerWorkflow(archivalWorkflow, wfTypeArchival)
-	registerActivity(archivalActivity, activityTypeArchival)
-	registerWorkflow(archivalExternalWorkflow, wfTypeArchivalExternal)
-	registerActivity(archivalLargeResultActivity, activityTypeLargeResult)
+	registerActivity(historyArchivalActivity, activityTypeHistoryArchival)
+	registerWorkflow(historyArchivalExternalWorkflow, wfTypeHistoryArchivalExternal)
+	registerActivity(largeResultActivity, activityTypeLargeResult)
+	registerActivity(visibilityArchivalActivity, activityTypeVisibilityArchival)
 }
 
 func archivalWorkflow(ctx workflow.Context, scheduledTimeNanos int64, _ string) error {
@@ -51,11 +65,11 @@ func archivalWorkflow(ctx workflow.Context, scheduledTimeNanos int64, _ string) 
 	if err != nil {
 		return err
 	}
-	ch := workflow.NewBufferedChannel(ctx, numArchivals)
-	for i := 0; i < numArchivals; i++ {
+	ch := workflow.NewBufferedChannel(ctx, numHistoryArchivals)
+	for i := 0; i < numHistoryArchivals; i++ {
 		workflow.Go(ctx, func(ctx2 workflow.Context) {
 			aCtx := workflow.WithActivityOptions(ctx2, newActivityOptions())
-			err := workflow.ExecuteActivity(aCtx, activityTypeArchival, workflow.Now(ctx2).UnixNano()).Get(aCtx, nil)
+			err := workflow.ExecuteActivity(aCtx, activityTypeHistoryArchival, workflow.Now(ctx2).UnixNano()).Get(aCtx, nil)
 			errStr := ""
 			if err != nil {
 				errStr = err.Error()
@@ -64,7 +78,7 @@ func archivalWorkflow(ctx workflow.Context, scheduledTimeNanos int64, _ string) 
 		})
 	}
 	successfulArchivalsCount := 0
-	for i := 0; i < numArchivals; i++ {
+	for i := 0; i < numHistoryArchivals; i++ {
 		var errStr string
 		ch.Receive(ctx, &errStr)
 		if errStr != "" {
@@ -73,20 +87,38 @@ func archivalWorkflow(ctx workflow.Context, scheduledTimeNanos int64, _ string) 
 		}
 		successfulArchivalsCount++
 	}
+
+	var queryArchivedVisRecords bool
+	if err := workflow.SideEffect(ctx, func(ctx workflow.Context) interface{} {
+		return rand.Float64() <= visArchivalQueryProbability
+	}).Get(&queryArchivedVisRecords); err != nil {
+		workflow.GetLogger(ctx).Error("unable to determine if visibility archival test should be run", zap.Error(err))
+		return profile.end(err)
+	}
+
+	if queryArchivedVisRecords {
+		aCtx := workflow.WithActivityOptions(ctx, newActivityOptionsWithRetry(nil))
+		err := workflow.ExecuteActivity(aCtx, activityTypeVisibilityArchival, workflow.Now(ctx).UnixNano()).Get(aCtx, nil)
+		if err != nil {
+			workflow.GetLogger(aCtx).Error("failed to list archived workflows", zap.Error(err))
+			return profile.end(err)
+		}
+	}
+
 	return profile.end(nil)
 }
 
-func archivalActivity(ctx context.Context, scheduledTimeNanos int64) error {
+func historyArchivalActivity(ctx context.Context, scheduledTimeNanos int64) error {
 	scope := activity.GetMetricsScope(ctx)
 	var err error
-	scope, sw := recordActivityStart(scope, activityTypeArchival, scheduledTimeNanos)
+	scope, sw := recordActivityStart(scope, activityTypeHistoryArchival, scheduledTimeNanos)
 	defer recordActivityEnd(scope, sw, err)
 
 	client := getActivityArchivalContext(ctx).cadence
-	workflowID := fmt.Sprintf("%v.%v", wfTypeArchivalExternal, uuid.New().String())
+	workflowID := fmt.Sprintf("%v.%v", wfTypeHistoryArchivalExternal, uuid.New().String())
 	ops := newWorkflowOptions(workflowID, childWorkflowTimeout)
 	ops.TaskList = archivalTaskListName
-	workflowRun, err := client.ExecuteWorkflow(context.Background(), ops, wfTypeArchivalExternal, scheduledTimeNanos)
+	workflowRun, err := client.ExecuteWorkflow(context.Background(), ops, wfTypeHistoryArchivalExternal, scheduledTimeNanos)
 	if err != nil {
 		return err
 	}
@@ -135,8 +167,8 @@ func archivalActivity(ctx context.Context, scheduledTimeNanos int64) error {
 	return fmt.Errorf("failed to get archived history within time limit, %v", failureReason)
 }
 
-func archivalExternalWorkflow(ctx workflow.Context, scheduledTimeNanos int64) error {
-	profile, err := beginWorkflow(ctx, wfTypeArchivalExternal, scheduledTimeNanos)
+func historyArchivalExternalWorkflow(ctx workflow.Context, scheduledTimeNanos int64) error {
+	profile, err := beginWorkflow(ctx, wfTypeHistoryArchivalExternal, scheduledTimeNanos)
 	if err != nil {
 		return err
 	}
@@ -158,6 +190,81 @@ func archivalExternalWorkflow(ctx workflow.Context, scheduledTimeNanos int64) er
 	return profile.end(nil)
 }
 
-func archivalLargeResultActivity() ([]byte, error) {
+func largeResultActivity() ([]byte, error) {
 	return make([]byte, resultSize, resultSize), nil
+}
+
+func visibilityArchivalActivity(ctx context.Context, scheduledTimeNanos int64) error {
+	scope := activity.GetMetricsScope(ctx)
+	var err error
+	scope, sw := recordActivityStart(scope, activityTypeVisibilityArchival, scheduledTimeNanos)
+	defer recordActivityEnd(scope, sw, err)
+
+	client := getActivityArchivalContext(ctx).cadence
+	resp, err := client.Describe(ctx, archivalDomain)
+	if err != nil {
+		return err
+	}
+
+	if resp.Configuration != nil &&
+		resp.Configuration.GetVisibilityArchivalStatus() == shared.ArchivalStatusDisabled {
+		return errors.New("domain not configured for visibility archival")
+	}
+
+	visArchivalURI := ""
+	if resp.Configuration != nil {
+		visArchivalURI = resp.Configuration.GetVisibilityArchivalURI()
+	}
+
+	scheme := getURIScheme(visArchivalURI)
+	if scheme != visArchivalScheme {
+		return fmt.Errorf("unknown visibility archival scheme: %s, expecting %s", scheme, visArchivalScheme)
+	}
+
+	listReq := &shared.ListArchivedWorkflowExecutionsRequest{
+		Domain:   stringPtr(archivalDomain),
+		PageSize: int32Ptr(visArchivalPageSize),
+		Query: stringPtr(fmt.Sprintf(visArchivalQueryTemplate,
+			wfTypeArchival,
+			time.Now().Add(-time.Hour*12).UnixNano(),
+			time.Now().Add(-time.Hour*6).UnixNano(),
+		)),
+	}
+	listResp := &shared.ListArchivedWorkflowExecutionsResponse{}
+	var executions []*shared.WorkflowExecutionInfo
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		listResp, err = client.ListArchivedWorkflow(ctx, listReq)
+		if err != nil {
+			return err
+		}
+
+		if len(listResp.Executions) != 0 {
+			executions = append(executions, listResp.Executions...)
+		}
+
+		if listResp.NextPageToken == nil {
+			break
+		}
+
+		listReq.NextPageToken = listResp.NextPageToken
+	}
+
+	if len(listResp.Executions) == 0 {
+		return errors.New("list archived workflow returned empty result")
+	}
+
+	return nil
+}
+
+func getURIScheme(URI string) string {
+	if idx := strings.Index(URI, "://"); idx != -1 {
+		return URI[:idx]
+	}
+	return ""
 }
