@@ -43,7 +43,7 @@ const (
 const (
 	// run visibility archival checks at a low probability
 	// as each query can be expensive and take a long time
-	visArchivalQueryProbability = 0.01
+	visArchivalQueryProbability = 0.01 // every 50 mins on average
 	visArchivalPageSize         = 100
 
 	// TODO: remove the check on URI scheme once
@@ -239,8 +239,12 @@ func visibilityArchivalActivity(ctx context.Context, scheduledTimeNanos int64) e
 		default:
 		}
 
+		scope.Counter(listArchivedWorkflowCount).Inc(1)
+		sw := scope.Timer(listArchivedWorkflowsLatency).Start()
 		listResp, err = client.ListArchivedWorkflow(ctx, listReq)
+		sw.Stop()
 		if err != nil {
+			scope.Counter(listArchivedWorkflowFailureCount).Inc(1)
 			return err
 		}
 
