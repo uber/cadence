@@ -1925,71 +1925,43 @@ func (wh *WorkflowHandler) PollForWorkflowExecutionRawHistory(
 	// process the token for paging
 	queryNextEventID := common.EndEventID
 
-	if getRequest.NextPageToken != nil {
-		token, err = deserializeHistoryToken(getRequest.NextPageToken)
-		if err != nil {
-			return nil, wh.error(errInvalidNextPageToken, scope)
-		}
-		if execution.RunId != nil && execution.GetRunId() != token.RunID {
-			return nil, wh.error(errNextPageTokenRunIDMismatch, scope)
-		}
-		execution.RunId = common.StringPtr(token.RunID)
-		if len(token.PersistenceToken) == 0 {
-			token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err =
-				queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			token.FirstEventID = token.NextEventID
-			token.NextEventID = nextEventID
-			token.IsWorkflowRunning = isWorkflowRunning
-		}
-	} else {
-		token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
-			queryHistory(domainID, execution, queryNextEventID, nil)
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
-
-		execution.RunId = &runID
-
-		token.RunID = runID
-		token.FirstEventID = common.FirstEventID
-		token.NextEventID = nextEventID
-		token.IsWorkflowRunning = isWorkflowRunning
-		token.PersistenceToken = nil
-	}
-
-	history := []*gen.DataBlob{}
-	if !isWorkflowRunning {
-		history, _, err = wh.getRawHistory(
-			scope,
-			domainID,
-			*execution,
-			lastFirstEventID,
-			nextEventID,
-			getRequest.GetMaximumPageSize(),
-			nil,
-			token.TransientDecision,
-			token.BranchToken,
-		)
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
-		// since getHistory func will not return empty history, so the below is safe
-		history = history[len(history)-1 : len(history)]
-		token = nil
-	} else {
-		token.PersistenceToken = nil
-	}
-
-	nextToken, err := serializeHistoryToken(token)
+	token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+		queryHistory(domainID, execution, queryNextEventID, nil)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+
+	execution.RunId = &runID
+
+	token.RunID = runID
+	token.FirstEventID = common.FirstEventID
+	token.NextEventID = nextEventID
+	token.IsWorkflowRunning = isWorkflowRunning
+
+	history := []*gen.DataBlob{}
+	if isWorkflowRunning {
+		return nil, wh.error(fmt.Errorf("PollMutableState failed to poll until workflow is completed"), scope)
+	}
+	history, _, err = wh.getRawHistory(
+		scope,
+		domainID,
+		*execution,
+		lastFirstEventID,
+		nextEventID,
+		getRequest.GetMaximumPageSize(),
+		nil,
+		token.TransientDecision,
+		token.BranchToken,
+	)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	// since getHistory func will not return empty history, so the below is safe
+	history = history[len(history)-1 : len(history)]
+
 	return &gen.PollForWorkflowExecutionRawHistoryResponse{
 		RawHistory:    history,
-		NextPageToken: nextToken,
+		NextPageToken: nil,
 	}, nil
 }
 
