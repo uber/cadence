@@ -326,12 +326,13 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 
 func buildRateLimiters(cfg *config.Persistence, service *config.Service) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
+
 	for dsName, ds := range cfg.DataStores {
 		var qps dynamicconfig.IntPropertyFn
-		if ds.Cassandra != nil {
+		if service != nil && ds.Cassandra != nil {
 			qps = service.MaxQPS
 		}
-		if ds.SQL != nil {
+		if service != nil && ds.SQL != nil {
 			qps = service.MaxQPS
 		}
 		if qps != nil {
