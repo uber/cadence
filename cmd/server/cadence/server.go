@@ -119,6 +119,7 @@ func (s *server) startService() common.Daemon {
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
 	svcCfg := s.cfg.Services[s.name]
+	params.Service = svcCfg
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(

@@ -126,6 +126,7 @@ var storeTypes = []storeType{
 // The objects returned by this factory enforce ratelimit and maxconns according to
 // given configuration. In addition, all objects will emit metrics automatically
 func NewFactory(
+	service *config.Service,
 	cfg *config.Persistence,
 	abstractDataStoreFactory AbstractDataStoreFactory,
 	clusterName string,
@@ -139,7 +140,7 @@ func NewFactory(
 		logger:                   logger,
 		clusterName:              clusterName,
 	}
-	limiters := buildRateLimiters(cfg)
+	limiters := buildRateLimiters(cfg, service)
 	factory.init(clusterName, limiters)
 	return factory
 }
@@ -323,15 +324,15 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func buildRateLimiters(cfg *config.Persistence) map[string]quotas.Limiter {
+func buildRateLimiters(cfg *config.Persistence, service *config.Service) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName, ds := range cfg.DataStores {
 		var qps dynamicconfig.IntPropertyFn
 		if ds.Cassandra != nil {
-			qps = ds.Cassandra.MaxQPS
+			qps = service.MaxQPS
 		}
 		if ds.SQL != nil {
-			qps = ds.SQL.MaxQPS
+			qps = service.MaxQPS
 		}
 		if qps != nil {
 			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(qps()) })
