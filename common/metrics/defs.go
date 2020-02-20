@@ -1834,6 +1834,7 @@ const (
 	TaskListProcessedCount
 	TaskListDeletedCount
 	TaskListOutstandingCount
+	ExecutionsOutstandingCount
 	StartedCount
 	StoppedCount
 	ExecutorTasksDeferredCount
@@ -2168,6 +2169,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListProcessedCount:                        {metricName: "tasklist_processed", metricType: Gauge},
 		TaskListDeletedCount:                          {metricName: "tasklist_deleted", metricType: Gauge},
 		TaskListOutstandingCount:                      {metricName: "tasklist_outstanding", metricType: Gauge},
+		ExecutionsOutstandingCount:                    {metricName: "executions_outstanding", metricType: Gauge},
 		StartedCount:                                  {metricName: "started", metricType: Counter},
 		StoppedCount:                                  {metricName: "stopped", metricType: Counter},
 		ExecutorTasksDeferredCount:                    {metricName: "executor_deferred", metricType: Counter},

@@ -164,7 +164,7 @@ func (s *Scavenger) awaitExecutor() {
 		select {
 		case <-time.After(executorPollInterval):
 			outstanding = s.executor.TaskCount()
-			s.metrics.UpdateGauge(metrics.ExecutionsScavengerScope, metrics.TaskListOutstandingCount, float64(outstanding))
+			s.metrics.UpdateGauge(metrics.ExecutionsScavengerScope, metrics.ExecutionsOutstandingCount, float64(outstanding))
 		case <-s.stopC:
 			return
 		}
