@@ -21,6 +21,7 @@
 package client
 
 import (
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
@@ -327,8 +328,13 @@ func buildRateLimiters(cfg *config.Persistence, service *config.Service) map[str
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 
 	for dsName, _ := range cfg.DataStores {
-		if service.MaxQPS != nil {
-			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(service.MaxQPS()) })
+		var qps dynamicconfig.IntPropertyFn
+		if service != nil {
+			qps = service.MaxQPS
+		}
+
+		if qps != nil {
+			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(qps()) })
 		}
 	}
 	return result
