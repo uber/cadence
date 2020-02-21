@@ -1772,7 +1772,7 @@ func (s *integrationSuite) TestVisibilityWithPollForWorkflowExecutionRawHistory(
 
 	// wait until the start workflow is done
 	var nextToken []byte
-	//historyEventFilterType := workflow.HistoryEventFilterTypeCloseEvent
+	historyEventFilterType := workflow.HistoryEventFilterTypeCloseEvent
 	for {
 		historyResponse, historyErr := s.engine.PollForWorkflowExecutionRawHistory(createContext(), &workflow.PollForWorkflowExecutionRawHistoryRequest{
 			Domain: startRequest.Domain,
@@ -1781,6 +1781,7 @@ func (s *integrationSuite) TestVisibilityWithPollForWorkflowExecutionRawHistory(
 				RunId:      startResponse.RunId,
 			},
 			NextPageToken:          nextToken,
+			HistoryEventFilterType: &historyEventFilterType,
 		})
 		s.Nil(historyErr)
 		if len(historyResponse.NextPageToken) == 0 {
