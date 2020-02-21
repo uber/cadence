@@ -244,7 +244,7 @@ func (p *ReplicationTaskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.TargetClusterTag(p.currentCluster),
 	).RecordTimer(
 		metrics.ReplicationTasksLag,
-		time.Duration(p.shard.GetTransferMaxReadLevel() - minAckLevel),
+		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		&persistence.RangeCompleteReplicationTaskRequest{

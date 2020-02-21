@@ -21,13 +21,15 @@
 package persistencetests
 
 import (
-	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service"
 	"math"
 	"math/rand"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber-go/tally"
+
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"

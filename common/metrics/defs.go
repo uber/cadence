@@ -1843,6 +1843,7 @@ const (
 	HistoryScavengerSkipCount
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
+	DomainReplicationEnqueueDLQCount
 
 	NumWorkerMetrics
 )
@@ -2179,6 +2180,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
 	},
 }
 

@@ -191,7 +191,7 @@ func (p *domainReplicationMessageProcessor) putDomainReplicationTaskToDLQ(
 	p.metricsClient.Scope(
 		metrics.DomainReplicationTaskScope,
 		metrics.DomainTag(domainAttribute.GetInfo().GetName()),
-	).IncCounter(1)
+	).IncCounter(metrics.DomainReplicationEnqueueDLQCount)
 	return p.domainReplicationQueue.PublishToDLQ(task)
 }
 
