@@ -240,6 +240,12 @@ func (p *ReplicationTaskProcessorImpl) cleanupAckedReplicationTasks() error {
 
 	p.logger.Info("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))
 	p.metricsClient.Scope(metrics.ReplicationTaskCleanupScope).IncCounter(metrics.ReplicationTaskCleanupCount)
+	p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope,
+		metrics.TargetClusterTag(p.currentCluster),
+	).RecordTimer(
+		metrics.ReplicationTasksLag,
+		time.Duration(p.shard.GetTransferMaxReadLevel() - minAckLevel),
+	)
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
