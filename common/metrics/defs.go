@@ -825,6 +825,8 @@ const (
 	HistoryReapplyEventsScope
 	// HistoryRefreshWorkflowTasksScope is the scope used by refresh workflow tasks API
 	HistoryRefreshWorkflowTasksScope
+	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
+	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
 	TransferQueueProcessorScope
 	// TransferActiveQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1019,6 +1021,8 @@ const (
 	ArchiverArchivalWorkflowScope
 	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
 	TaskListScavengerScope
+	// ExecutionsScavengerScope is scope used by all metrics emitted by worker.executions.Scavenger module
+	ExecutionsScavengerScope
 	// BatcherScope is scope used by all metrics emitted by worker.Batcher module
 	BatcherScope
 	// HistoryScavengerScope is scope used by all metrics emitted by worker.history.Scavenger module
@@ -1385,6 +1389,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
 		HistoryRefreshWorkflowTasksScope:                       {operation: "RefreshWorkflowTasks"},
+		TaskPriorityAssignerScope:                              {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
 		TransferStandbyQueueProcessorScope:                     {operation: "TransferStandbyQueueProcessor"},
@@ -1479,6 +1484,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                      {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:          {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
+		ExecutionsScavengerScope:               {operation: "executionsscavenger"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
@@ -1603,6 +1609,9 @@ const (
 	TaskBatchCompleteCounter
 	TaskProcessingLatency
 	TaskQueueLatency
+
+	TransferTaskThrottledCounter
+	TimerTaskThrottledCounter
 
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -1832,6 +1841,7 @@ const (
 	TaskListProcessedCount
 	TaskListDeletedCount
 	TaskListOutstandingCount
+	ExecutionsOutstandingCount
 	StartedCount
 	StoppedCount
 	ExecutorTasksDeferredCount
@@ -1949,6 +1959,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
+		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
+		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                       {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:               {metricName: "schedule_activity_decision", metricType: Counter},
@@ -2169,6 +2181,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListProcessedCount:                        {metricName: "tasklist_processed", metricType: Gauge},
 		TaskListDeletedCount:                          {metricName: "tasklist_deleted", metricType: Gauge},
 		TaskListOutstandingCount:                      {metricName: "tasklist_outstanding", metricType: Gauge},
+		ExecutionsOutstandingCount:                    {metricName: "executions_outstanding", metricType: Gauge},
 		StartedCount:                                  {metricName: "started", metricType: Counter},
 		StoppedCount:                                  {metricName: "stopped", metricType: Counter},
 		ExecutorTasksDeferredCount:                    {metricName: "executor_deferred", metricType: Counter},
