@@ -354,7 +354,7 @@ func NewService(
 		params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
-	params.PersistenceConfig.SetMaxQPS(params.Service, serviceConfig.PersistenceMaxQPS)
+	params.Service.MaxQPS = serviceConfig.PersistenceMaxQPS
 	params.PersistenceConfig.VisibilityConfig = &config.VisibilityConfig{
 		VisibilityOpenMaxQPS:            serviceConfig.VisibilityOpenMaxQPS,
 		VisibilityClosedMaxQPS:          serviceConfig.VisibilityClosedMaxQPS,

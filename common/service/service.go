@@ -79,7 +79,6 @@ type (
 		ArchivalMetadata         archiver.ArchivalMetadata
 		ArchiverProvider         provider.ArchiverProvider
 		Authorizer               authorization.Authorizer
-		MaxQPS                   dynamicconfig.IntPropertyFn
 		Service                  config.Service
 	}
 
