@@ -26,13 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber-go/tally"
-
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -42,10 +38,12 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 )
 

@@ -192,7 +192,7 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 	if err != nil {
 		return emptyMessageID, &workflow.InternalServiceError{Message: err.Error()}
 	}
-	return lastMessageID+1, nil
+	return lastMessageID + 1, nil
 }
 
 func (q *sqlQueue) ReadMessagesFromDLQ(

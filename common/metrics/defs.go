@@ -1583,9 +1583,9 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
-	DomainReplicationTaskAckLevel
-	DomainReplicationDLQAckLevel
-	DomainReplicationDLQMaxLevel
+	DomainReplicationTaskAckLevelGauge
+	DomainReplicationDLQAckLevelGauge
+	DomainReplicationDLQMaxLevelGauge
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1728,7 +1728,7 @@ const (
 	ReplicationTasksReturned
 	ReplicationDLQFailed
 	ReplicationDLQMaxLevelGauge
-	ReplicationDLQAckLevel
+	ReplicationDLQAckLevelGauge
 	GetReplicationMessagesForShardLatency
 	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
@@ -1933,9 +1933,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
 
-		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
-		DomainReplicationDLQAckLevel:  {metricName: "domain_dlq_ack_level", metricType: Gauge},
-		DomainReplicationDLQMaxLevel:  {metricName: "domain_dlq_max_level", metricType: Gauge},
+		DomainReplicationTaskAckLevelGauge: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
+		DomainReplicationDLQAckLevelGauge:  {metricName: "domain_dlq_ack_level", metricType: Gauge},
+		DomainReplicationDLQMaxLevelGauge:  {metricName: "domain_dlq_max_level", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
@@ -2073,7 +2073,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		ReplicationDLQFailed:                              {metricName: "replication_dlq_enqueue_failed", metricType: Counter},
 		ReplicationDLQMaxLevelGauge:                       {metricName: "replication_dlq_max_level", metricType: Gauge},
-		ReplicationDLQAckLevel:                            {metricName: "replication_dlq_ack_level", metricType: Gauge},
+		ReplicationDLQAckLevelGauge:                       {metricName: "replication_dlq_ack_level", metricType: Gauge},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		GetDLQReplicationMessagesLatency:                  {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},

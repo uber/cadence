@@ -138,7 +138,7 @@ func (q *domainReplicationQueueImpl) PublishToDLQ(message interface{}) error {
 	q.metricsClient.Scope(
 		metrics.PersistenceDomainReplicationQueueScope,
 	).UpdateGauge(
-		metrics.DomainReplicationDLQMaxLevel,
+		metrics.DomainReplicationDLQMaxLevelGauge,
 		float64(messageID),
 	)
 	return nil
@@ -233,7 +233,7 @@ func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
 	q.metricsClient.Scope(
 		metrics.PersistenceDomainReplicationQueueScope,
 	).UpdateGauge(
-		metrics.DomainReplicationDLQAckLevel,
+		metrics.DomainReplicationDLQAckLevelGauge,
 		float64(lastProcessedMessageID),
 	)
 	return nil
@@ -298,7 +298,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 
 	q.metricsClient.
 		Scope(metrics.PersistenceDomainReplicationQueueScope).
-		UpdateGauge(metrics.DomainReplicationTaskAckLevel, float64(minAckLevel))
+		UpdateGauge(metrics.DomainReplicationTaskAckLevelGauge, float64(minAckLevel))
 	return nil
 }
 
