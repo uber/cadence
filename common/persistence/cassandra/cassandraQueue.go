@@ -27,7 +27,6 @@ import (
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
@@ -53,7 +52,7 @@ const (
 
 type (
 	cassandraQueue struct {
-		queueType common.QueueType
+		queueType persistence.QueueType
 		logger    log.Logger
 		cassandraStore
 	}
@@ -72,7 +71,7 @@ type (
 func newQueue(
 	cfg config.Cassandra,
 	logger log.Logger,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -151,7 +150,7 @@ func (q *cassandraQueue) EnqueueMessageToDLQ(
 }
 
 func (q *cassandraQueue) tryEnqueue(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 	messageID int,
 	messagePayload []byte,
 ) (int, error) {
@@ -177,7 +176,7 @@ func (q *cassandraQueue) tryEnqueue(
 }
 
 func (q *cassandraQueue) getLastMessageID(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (int, error) {
 
 	query := q.session.Query(templateGetLastMessageIDQuery, queueType)
@@ -338,7 +337,7 @@ func (q *cassandraQueue) RangeDeleteMessagesFromDLQ(
 }
 
 func (q *cassandraQueue) insertInitialQueueMetadataRecord(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) error {
 
 	version := 0
@@ -389,7 +388,7 @@ func (q *cassandraQueue) GetDLQAckLevels() (map[string]int, error) {
 }
 
 func (q *cassandraQueue) getQueueMetadata(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (*queueMetadata, error) {
 
 	query := q.session.Query(templateGetQueueMetadataQuery, queueType)
@@ -414,7 +413,7 @@ func (q *cassandraQueue) getQueueMetadata(
 
 func (q *cassandraQueue) updateQueueMetadata(
 	metadata *queueMetadata,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) error {
 
 	query := q.session.Query(templateUpdateQueueMetadataQuery,
@@ -438,14 +437,14 @@ func (q *cassandraQueue) updateQueueMetadata(
 	return nil
 }
 
-func (q *cassandraQueue) getDLQTypeFromQueueType() common.QueueType {
+func (q *cassandraQueue) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }
 
 func (q *cassandraQueue) updateAckLevel(
 	messageID int,
 	clusterName string,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) error {
 
 	queueMetadata, err := q.getQueueMetadata(queueType)

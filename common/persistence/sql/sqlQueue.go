@@ -28,7 +28,6 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -40,7 +39,7 @@ const (
 
 type (
 	sqlQueue struct {
-		queueType common.QueueType
+		queueType persistence.QueueType
 		logger    log.Logger
 		sqlStore
 	}
@@ -49,7 +48,7 @@ type (
 func newQueue(
 	db sqlplugin.DB,
 	logger log.Logger,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
 	return &sqlQueue{
 		sqlStore: sqlStore{
@@ -102,7 +101,7 @@ func (q *sqlQueue) ReadMessages(
 }
 
 func newQueueRow(
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 	messageID int,
 	payload []byte,
 ) *sqlplugin.QueueRow {
