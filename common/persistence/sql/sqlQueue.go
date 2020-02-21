@@ -306,6 +306,6 @@ func (q *sqlQueue) GetDLQAckLevels() (map[string]int, error) {
 	return q.db.GetAckLevels(q.getDLQTypeFromQueueType(), false)
 }
 
-func (q *sqlQueue) getDLQTypeFromQueueType() common.QueueType {
+func (q *sqlQueue) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }

@@ -183,7 +183,7 @@ func (s *TestBase) Setup() {
 	cfg := s.DefaultTestCluster.Config()
 	scope := tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 	metricsClient := metrics.NewClient(scope, service.GetMetricsServiceIdx(common.HistoryServiceName, s.logger))
-	factory := client.NewFactory(&cfg, clusterName, metricsClient, s.logger)
+	factory := client.NewFactory(&cfg, nil, clusterName, metricsClient, s.logger)
 
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
