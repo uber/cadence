@@ -42,7 +42,6 @@ type (
 
 		state         task.State
 		priority      int
-		queueType     queueType
 		attempt       int
 		timeSource    clock.TimeSource
 		submitTime    time.Time
@@ -51,31 +50,86 @@ type (
 		taskExecutor  queueTaskExecutor
 		maxRetryCount dynamicconfig.IntPropertyFn
 
-		// TODO: following fields should be removed after new task lifecycle is implemented
+		// TODO: following two fields should be removed after new task lifecycle is implemented
 		taskFilter        taskFilter
 		shouldProcessTask bool
 	}
 
+	// TODO: we don't need the following two implementation after rewriting queueAckMgr.
+	// (timer)queueAckMgr should store queueTask object instead of just the key. Then by
+	// State() on the queueTask, it can know if the task has been acked or not.
 	timerQueueTask struct {
-		queueTaskBase
+		*queueTaskBase
 
-		timerQueueAckMgr
+		ackMgr timerQueueAckMgr
+	}
+
+	transferQueueTask struct {
+		*queueTaskBase
+
+		ackMgr queueAckMgr
 	}
 )
 
-func newQueueTaskBase(
-	queueTaskInfo queueTaskInfo,
-	queueType queueType,
+func newTimerQueueTask(
+	taskInfo queueTaskInfo,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter taskFilter,
 	taskExecutor queueTaskExecutor,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
+	ackMgr timerQueueAckMgr,
 ) queueTask {
+	return &timerQueueTask{
+		queueTaskBase: newQueueTaskBase(
+			taskInfo,
+			scope,
+			logger,
+			taskFilter,
+			taskExecutor,
+			timeSource,
+			maxRetryCount,
+		),
+		ackMgr: ackMgr,
+	}
+}
+
+func newTransferQueueTask(
+	taskInfo queueTaskInfo,
+	scope metrics.Scope,
+	logger log.Logger,
+	taskFilter taskFilter,
+	taskExecutor queueTaskExecutor,
+	timeSource clock.TimeSource,
+	maxRetryCount dynamicconfig.IntPropertyFn,
+	ackMgr queueAckMgr,
+) queueTask {
+	return &transferQueueTask{
+		queueTaskBase: newQueueTaskBase(
+			taskInfo,
+			scope,
+			logger,
+			taskFilter,
+			taskExecutor,
+			timeSource,
+			maxRetryCount,
+		),
+		ackMgr: ackMgr,
+	}
+}
+
+func newQueueTaskBase(
+	queueTaskInfo queueTaskInfo,
+	scope metrics.Scope,
+	logger log.Logger,
+	taskFilter taskFilter,
+	taskExecutor queueTaskExecutor,
+	timeSource clock.TimeSource,
+	maxRetryCount dynamicconfig.IntPropertyFn,
+) *queueTaskBase {
 	return &queueTaskBase{
 		queueTaskInfo: queueTaskInfo,
-		queueType:     queueType,
 		state:         task.TaskStatePending,
 		scope:         scope,
 		logger:        logger,
@@ -88,56 +142,28 @@ func newQueueTaskBase(
 	}
 }
 
-func (t *queueTaskBase) Priority() int {
-	t.Lock()
-	defer t.Unlock()
+func (t *timerQueueTask) Ack() {
+	t.queueTaskBase.Ack()
 
-	return t.priority
-}
-
-func (t *queueTaskBase) SetPriority(
-	priority int,
-) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.priority = priority
-}
-
-func (t *queueTaskBase) State() task.State {
-	t.Lock()
-	defer t.Unlock()
-
-	return t.state
-}
-
-func (t *queueTaskBase) Ack() {
-	t.Lock()
-	defer t.Unlock()
-
-	t.state = task.TaskStateAcked
-	if t.shouldProcessTask {
-		t.scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(t.attempt))
-		t.scope.RecordTimer(metrics.TaskLatency, time.Since(t.submitTime))
-		t.scope.RecordTimer(metrics.TaskQueueLatency, time.Since(t.GetVisibilityTimestamp()))
+	timerTask, ok := t.queueTaskInfo.(*persistence.TimerTaskInfo)
+	if !ok {
+		return
 	}
+	t.ackMgr.completeTimerTask(timerTask)
 }
 
-func (t *queueTaskBase) Nack() {
-	t.Lock()
-	defer t.Unlock()
-
-	t.state = task.TaskStateNacked
+func (t *timerQueueTask) GetQueueType() queueType {
+	return timerQueueType
 }
 
-func (t *queueTaskBase) RetryErr(
-	err error,
-) bool {
-	return true
+func (t *transferQueueTask) Ack() {
+	t.queueTaskBase.Ack()
+
+	t.ackMgr.completeQueueTask(t.GetTaskID())
 }
 
-func (t *queueTaskBase) GetQueueType() queueType {
-	return t.queueType
+func (t *transferQueueTask) GetQueueType() queueType {
+	return transferQueueType
 }
 
 func (t *queueTaskBase) Execute() error {
@@ -213,4 +239,55 @@ func (t *queueTaskBase) HandleErr(
 
 	t.logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
 	return err
+}
+
+func (t *queueTaskBase) RetryErr(
+	err error,
+) bool {
+	return true
+}
+
+func (t *queueTaskBase) Ack() {
+	t.Lock()
+	defer t.Unlock()
+
+	t.state = task.TaskStateAcked
+	if t.shouldProcessTask {
+		t.scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(t.attempt))
+		t.scope.RecordTimer(metrics.TaskLatency, time.Since(t.submitTime))
+		t.scope.RecordTimer(metrics.TaskQueueLatency, time.Since(t.GetVisibilityTimestamp()))
+	}
+}
+
+func (t *queueTaskBase) Nack() {
+	t.Lock()
+	defer t.Unlock()
+
+	t.state = task.TaskStateNacked
+
+	// TODO: Nack should also notify the queue processor to redispatch the task
+	// implement this after redispatch functionality is added to the processor
+}
+
+func (t *queueTaskBase) State() task.State {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.state
+}
+
+func (t *queueTaskBase) Priority() int {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.priority
+}
+
+func (t *queueTaskBase) SetPriority(
+	priority int,
+) {
+	t.Lock()
+	defer t.Unlock()
+
+	t.priority = priority
 }

@@ -32,7 +32,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -46,12 +45,10 @@ type (
 		controller *gomock.Controller
 		mockShard  *shardContextTest
 
-		mockProcessor   *MockTimerProcessor
-		mockQueueAckMgr *MockTimerQueueAckMgr
+		mockProcessor *MockTimerProcessor
 
 		scopeIdx         int
 		scope            metrics.Scope
-		clusterName      string
 		logger           log.Logger
 		notificationChan chan struct{}
 
@@ -86,9 +83,7 @@ func (s *taskProcessorSuite) SetupTest() {
 		NewDynamicConfigForTest(),
 	)
 
-	s.clusterName = cluster.TestAlternativeClusterName
 	s.mockProcessor = &MockTimerProcessor{}
-	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
 
 	s.logger = s.mockShard.GetLogger()
 
@@ -111,7 +106,6 @@ func (s *taskProcessorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
 	s.mockProcessor.AssertExpectations(s.T())
-	s.mockQueueAckMgr.AssertExpectations(s.T())
 }
 
 func (s *taskProcessorSuite) TestProcessTaskAndAck_ShutDown() {
