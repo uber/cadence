@@ -119,16 +119,7 @@ func constructHistoryKey(path, domainID, workflowID, runID string, version int64
 }
 
 func constructHistoryKeyPrefix(path, domainID, workflowID, runID string) string {
-	return fmt.Sprintf("%s/%s", constructCommonKeyPrefix(path, domainID, workflowID, "history"), runID)
-}
-
-func constructVisibilitySearchPrefix(path, domainID, workflowID, indexType string) string {
-	return constructCommonKeyPrefix(path, domainID, workflowID, fmt.Sprintf("visibility/%s", indexType))
-}
-
-// Make sure there are no trailing slashes
-func constructCommonKeyPrefix(path, domainID, workflowID, entryType string) string {
-	return strings.TrimLeft(strings.Join([]string{path, domainID, workflowID, entryType}, "/"), "/")
+	return strings.TrimLeft(strings.Join([]string{path, domainID, "history", workflowID, runID}, "/"), "/")
 }
 
 func ensureContextTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
