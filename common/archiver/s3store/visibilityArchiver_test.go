@@ -511,7 +511,7 @@ func (s *visibilityArchiverSuite) TestArchiveAndQuery() {
 
 	mockParser := NewMockQueryParser(s.controller)
 	mockParser.EXPECT().Parse(gomock.Any()).Return(&parsedQuery{
-		workflowID:      common.StringPtr(testWorkflowID),
+		workflowID: common.StringPtr(testWorkflowID),
 	}, nil).AnyTimes()
 	visibilityArchiver.queryParser = mockParser
 	request := &archiver.QueryVisibilityRequest{
