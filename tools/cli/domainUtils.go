@@ -62,10 +62,6 @@ var (
 			Usage: "Workflow execution retention in days",
 		},
 		cli.StringFlag{
-			Name:  FlagEmitMetricWithAlias,
-			Usage: "Flag to emit metric",
-		},
-		cli.StringFlag{
 			Name:  FlagActiveClusterNameWithAlias,
 			Usage: "Active cluster name",
 		},
@@ -118,10 +114,6 @@ var (
 		cli.StringFlag{
 			Name:  FlagRetentionDaysWithAlias,
 			Usage: "Workflow execution retention in days",
-		},
-		cli.StringFlag{
-			Name:  FlagEmitMetricWithAlias,
-			Usage: "Flag to emit metric",
 		},
 		cli.StringFlag{
 			Name:  FlagActiveClusterNameWithAlias,
@@ -298,6 +290,7 @@ func initializeMetadataMgr(
 	}
 	pFactory := client.NewFactory(
 		&pConfig,
+		nil, // TODO propagate abstract datastore factory from the CLI.
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
 		logger,

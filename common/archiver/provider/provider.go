@@ -201,6 +201,7 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 			return nil, ErrArchiverConfigNotFound
 		}
 		visibilityArchiver, err = gcloud.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.Gstorage)
+
 	default:
 		return nil, ErrUnknownScheme
 	}

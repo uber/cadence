@@ -594,3 +594,71 @@ func (c *metricClient) ReapplyEvents(
 	}
 	return err
 }
+
+func (c *metricClient) ReadDLQMessages(
+	ctx context.Context,
+	request *replicator.ReadDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.ReadDLQMessagesResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.HistoryClientReadDLQMessagesScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientReadDLQMessagesScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ReadDLQMessages(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientReadDLQMessagesScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) PurgeDLQMessages(
+	ctx context.Context,
+	request *replicator.PurgeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	c.metricsClient.IncCounter(metrics.HistoryClientPurgeDLQMessagesScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientPurgeDLQMessagesScope, metrics.CadenceClientLatency)
+	err := c.client.PurgeDLQMessages(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientPurgeDLQMessagesScope, metrics.CadenceClientFailures)
+	}
+	return err
+}
+
+func (c *metricClient) MergeDLQMessages(
+	ctx context.Context,
+	request *replicator.MergeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.MergeDLQMessagesResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.HistoryClientMergeDLQMessagesScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientMergeDLQMessagesScope, metrics.CadenceClientLatency)
+	resp, err := c.client.MergeDLQMessages(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientMergeDLQMessagesScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *h.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	c.metricsClient.IncCounter(metrics.HistoryClientRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
+	err := c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
+	}
+	return err
+}

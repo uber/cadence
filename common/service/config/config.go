@@ -146,6 +146,8 @@ type (
 		Cassandra *Cassandra `yaml:"cassandra"`
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
+		// Custom contains the config for custom datastore implementation
+		CustomDataStoreConfig *CustomDatastoreConfig `yaml:"customDatastore"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *elasticsearch.Config `yaml:"elasticsearch"`
 	}
@@ -223,6 +225,14 @@ type (
 		TLS *auth.TLS `yaml:"tls"`
 	}
 
+	// CustomDB is the configuration for connecting to a custom datastore that is not supported by cadence core
+	CustomDatastoreConfig struct {
+		// Name of the custom datastore
+		Name string `yaml:"name"`
+		// ConnectAttributes is a set of key-value attributes that can be used by AbstractDatastoreFactory implementation
+		ConnectAttributes map[string]string `yaml:"connectAttributes"`
+	}
+
 	// Replicator describes the configuration of replicator
 	Replicator struct{}
 
@@ -292,6 +302,8 @@ type (
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`
+		// Prefix sets the prefix to all outgoing metrics
+		Prefix string `yaml:"prefix"`
 	}
 
 	// Statsd contains the config items for statsd metrics reporter
