@@ -8,7 +8,7 @@ along with all its dependencies (cassandra, statsd, graphite). Exposes cadence
 frontend on port 7933 and grafana metrics frontend on port 8080.
 
 ```
-cd $GOPATH/src/github.com/uber/cadence/docker
+cd $GOPATH/src/go.uber.org/cadence/docker/buildkite
 docker-compose up
 ```
 
