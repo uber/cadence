@@ -55,7 +55,7 @@ type (
 		shouldProcessTask bool
 	}
 
-	// TODO: we don't need the following two implementation after rewriting queueAckMgr.
+	// TODO: we don't need the following two implementations after rewriting queueAckMgr.
 	// (timer)queueAckMgr should store queueTask object instead of just the key. Then by
 	// State() on the queueTask, it can know if the task has been acked or not.
 	timerQueueTask struct {
@@ -167,6 +167,10 @@ func (t *transferQueueTask) GetQueueType() queueType {
 }
 
 func (t *queueTaskBase) Execute() error {
+	// TODO: after mergering active and standby queue,
+	// the task should be smart enough to tell if it should be 
+	// processed as active or standby and use the corresponding 
+	// task executor.
 	var err error
 	t.shouldProcessTask, err = t.taskFilter(t.queueTaskInfo)
 	if err != nil {
