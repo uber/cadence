@@ -178,7 +178,7 @@ func (s *TestBase) Setup() {
 	}
 
 	cfg := s.DefaultTestCluster.Config()
-	factory := client.NewFactory(&cfg, clusterName, nil, s.logger)
+	factory := client.NewFactory(&cfg, nil, clusterName, nil, s.logger)
 
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
@@ -199,7 +199,7 @@ func (s *TestBase) Setup() {
 	visibilityFactory := factory
 	if s.VisibilityTestCluster != s.DefaultTestCluster {
 		vCfg := s.VisibilityTestCluster.Config()
-		visibilityFactory = client.NewFactory(&vCfg, clusterName, nil, s.logger)
+		visibilityFactory = client.NewFactory(&vCfg, nil, clusterName, nil, s.logger)
 	}
 	// SQL currently doesn't have support for visibility manager
 	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
@@ -1088,6 +1088,64 @@ Loop:
 func (s *TestBase) RangeCompleteReplicationTask(inclusiveEndTaskID int64) error {
 	return s.ExecutionManager.RangeCompleteReplicationTask(&p.RangeCompleteReplicationTaskRequest{
 		InclusiveEndTaskID: inclusiveEndTaskID,
+	})
+}
+
+// PutReplicationTaskToDLQ is a utility method to insert a replication task info
+func (s *TestBase) PutReplicationTaskToDLQ(
+	sourceCluster string,
+	taskInfo *p.ReplicationTaskInfo,
+) error {
+
+	return s.ExecutionManager.PutReplicationTaskToDLQ(&p.PutReplicationTaskToDLQRequest{
+		SourceClusterName: sourceCluster,
+		TaskInfo:          taskInfo,
+	})
+}
+
+// GetReplicationTasksFromDLQ is a utility method to read replication task info
+func (s *TestBase) GetReplicationTasksFromDLQ(
+	sourceCluster string,
+	readLevel int64,
+	maxReadLevel int64,
+	pageSize int,
+	pageToken []byte,
+) (*p.GetReplicationTasksFromDLQResponse, error) {
+
+	return s.ExecutionManager.GetReplicationTasksFromDLQ(&p.GetReplicationTasksFromDLQRequest{
+		SourceClusterName: sourceCluster,
+		GetReplicationTasksRequest: p.GetReplicationTasksRequest{
+			ReadLevel:     readLevel,
+			MaxReadLevel:  maxReadLevel,
+			BatchSize:     pageSize,
+			NextPageToken: pageToken,
+		},
+	})
+}
+
+// DeleteReplicationTaskFromDLQ is a utility method to delete a replication task info
+func (s *TestBase) DeleteReplicationTaskFromDLQ(
+	sourceCluster string,
+	taskID int64,
+) error {
+
+	return s.ExecutionManager.DeleteReplicationTaskFromDLQ(&p.DeleteReplicationTaskFromDLQRequest{
+		SourceClusterName: sourceCluster,
+		TaskID:            taskID,
+	})
+}
+
+// RangeDeleteReplicationTaskFromDLQ is a utility method to delete  replication task info
+func (s *TestBase) RangeDeleteReplicationTaskFromDLQ(
+	sourceCluster string,
+	beginTaskID int64,
+	endTaskID int64,
+) error {
+
+	return s.ExecutionManager.RangeDeleteReplicationTaskFromDLQ(&p.RangeDeleteReplicationTaskFromDLQRequest{
+		SourceClusterName:    sourceCluster,
+		ExclusiveBeginTaskID: beginTaskID,
+		InclusiveEndTaskID:   endTaskID,
 	})
 }
 
