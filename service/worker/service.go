@@ -341,7 +341,7 @@ func getResource(
 	persistenceMaxQPS dynamicconfig.IntPropertyFn,
 ) (resource.Resource, error) {
 
-	params.Service.MaxQPS = persistenceMaxQPS
+	params.PersistenceConfig.SetMaxQPS(params.PersistenceConfig.DefaultStore, persistenceMaxQPS)
 	return resource.New(
 		params,
 		common.WorkerServiceName,

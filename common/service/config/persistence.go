@@ -22,6 +22,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
@@ -30,6 +32,19 @@ const (
 	// StoreTypeCassandra refers to cassandra as persistence store
 	StoreTypeCassandra = "cassandra"
 )
+
+// SetMaxQPS sets the MaxQPS value for the given datastore
+func (c *Persistence) SetMaxQPS(key string, qps dynamicconfig.IntPropertyFn) {
+	ds, ok := c.DataStores[key]
+	if !ok {
+		return
+	}
+	if ds.Cassandra != nil {
+		ds.Cassandra.MaxQPS = qps
+		return
+	}
+	ds.SQL.MaxQPS = qps
+}
 
 // DefaultStoreType returns the storeType for the default persistence store
 func (c *Persistence) DefaultStoreType() string {

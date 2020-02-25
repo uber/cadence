@@ -27,12 +27,13 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/uber/cadence/tools/cassandra"
+	"github.com/uber/cadence/tools/sql"
+
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/tools/cassandra"
-	"github.com/uber/cadence/tools/sql"
 )
 
 // validServices is the list of all valid cadence services
@@ -55,18 +56,6 @@ func startHandler(c *cli.Context) {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
 
-	if err := cfg.Validate(); err != nil {
-		log.Fatalf("config validation failed: %v", err)
-	}
-	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
-		log.Fatal("cassandra schema version compatibility check failed: ", err)
-	}
-	// sql schema version validation
-	if err := sql.VerifyCompatibleVersion(cfg.Persistence); err != nil {
-		log.Fatal("sql schema version compatibility check failed: ", err)
-	}
-
 	var daemons []common.Daemon
 	services := getServices(c)
 	sigc := make(chan os.Signal, 1)
@@ -75,6 +64,18 @@ func startHandler(c *cli.Context) {
 		if _, ok := cfg.Services[svc]; !ok {
 			log.Fatalf("`%v` service missing config", svc)
 		}
+		if err := cfg.Validate(svc); err != nil {
+			log.Fatalf("config validation failed: %v", err)
+		}
+		// cassandra schema version validation
+		if err := cassandra.VerifyCompatibleVersion(cfg.Services[svc].Persistence); err != nil {
+			log.Fatal("cassandra schema version compatibility check failed: ", err)
+		}
+		// sql schema version validation
+		if err := sql.VerifyCompatibleVersion(cfg.Services[svc].Persistence); err != nil {
+			log.Fatal("sql schema version compatibility check failed: ", err)
+		}
+
 		server := newServer(svc, &cfg)
 		daemons = append(daemons, server)
 		server.Start()

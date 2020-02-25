@@ -47,8 +47,6 @@ type (
 	Config struct {
 		// Ringpop is the ringpop related configuration
 		Ringpop Ringpop `yaml:"ringpop"`
-		// Persistence contains the configuration for cadence datastores
-		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
 		Log Logger `yaml:"log"`
 		// ClusterMetadata is the config containing all valid clusters and active cluster
@@ -78,8 +76,8 @@ type (
 		Metrics Metrics `yaml:"metrics"`
 		// PProf is the PProf configuration
 		PProf PProf `yaml:"pprof"`
-		// MaxQPS is the max request rate to this datastore
-		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// Persistence contains the configuration for cadence datastores
+		Persistence Persistence `yaml:"persistence"`
 	}
 
 	// PProf contains the rpc config items
@@ -188,6 +186,8 @@ type (
 		Keyspace string `yaml:"keyspace" validate:"nonzero"`
 		// Datacenter is the data center filter arg for cassandra
 		Datacenter string `yaml:"datacenter"`
+		// MaxQPS is the max request rate to this datastore
+		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
 		// MaxConns is the max number of connections to this datastore for a single keyspace
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
@@ -210,6 +210,8 @@ type (
 		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
 		// ConnectAttributes is a set of key-value attributes to be sent as part of connect data_source_name url
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
+		// MaxQPS is the max request rate to this datastore
+		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
 		// MaxConns the max number of connections to this datastore
 		MaxConns int `yaml:"maxConns"`
 		// MaxIdleConns is the max number of idle connections to this datastore
@@ -420,8 +422,9 @@ type (
 )
 
 // Validate validates this config
-func (c *Config) Validate() error {
-	if err := c.Persistence.Validate(); err != nil {
+func (c *Config) Validate(serviceName string) error {
+	persistence := c.Services[serviceName].Persistence
+	if err := persistence.Validate(); err != nil {
 		return err
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
