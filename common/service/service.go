@@ -79,7 +79,6 @@ type (
 		ArchivalMetadata         archiver.ArchivalMetadata
 		ArchiverProvider         provider.ArchiverProvider
 		Authorizer               authorization.Authorizer
-		Service                  config.Service
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor

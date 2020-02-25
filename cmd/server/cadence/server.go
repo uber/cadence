@@ -109,7 +109,8 @@ func (s *server) startService() common.Daemon {
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
 	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
-	params.PersistenceConfig = s.cfg.Persistence
+	svcCfg := s.cfg.Services[s.name]
+	params.PersistenceConfig = svcCfg.Persistence
 
 	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
 	if err != nil {
@@ -118,8 +119,6 @@ func (s *server) startService() common.Daemon {
 	}
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
-	svcCfg := s.cfg.Services[s.name]
-	params.Service = svcCfg
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
@@ -168,8 +167,8 @@ func (s *server) startService() common.Daemon {
 
 	if isAdvancedVisEnabled {
 		// verify config of advanced visibility store
-		advancedVisStoreKey := s.cfg.Persistence.AdvancedVisibilityStore
-		advancedVisStore, ok := s.cfg.Persistence.DataStores[advancedVisStoreKey]
+		advancedVisStoreKey := svcCfg.Persistence.AdvancedVisibilityStore
+		advancedVisStore, ok := svcCfg.Persistence.DataStores[advancedVisStoreKey]
 		if !ok {
 			log.Fatalf("not able to find advanced visibility store in config: %v", advancedVisStoreKey)
 		}

@@ -280,26 +280,30 @@ func initializeMetadataMgr(
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) persistence.MetadataManager {
+	for _, svc := range serviceConfig.Services {
+		pConfig := svc.Persistence
+		pConfig.SetMaxQPS(pConfig.DefaultStore, dynamicconfig.GetIntPropertyFn(dependencyMaxQPS))
 
-	pConfig := serviceConfig.Persistence
-	pConfig.SetMaxQPS(pConfig.DefaultStore, dependencyMaxQPS)
-	pConfig.VisibilityConfig = &config.VisibilityConfig{
-		VisibilityListMaxQPS:            dynamicconfig.GetIntPropertyFilteredByDomain(dependencyMaxQPS),
-		EnableSampling:                  dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
-		EnableReadFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
+		pConfig.VisibilityConfig = &config.VisibilityConfig{
+			VisibilityListMaxQPS:            dynamicconfig.GetIntPropertyFilteredByDomain(dependencyMaxQPS),
+			EnableSampling:                  dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
+			EnableReadFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
+		}
+		pFactory := client.NewFactory(
+			&pConfig,
+			nil, // TODO propagate abstract datastore factory from the CLI.
+			clusterMetadata.GetCurrentClusterName(),
+			metricsClient,
+			logger,
+		)
+		metadata, err := pFactory.NewMetadataManager()
+		if err != nil {
+			ErrorAndExit("Unable to initialize metadata manager.", err)
+		}
+		return metadata
 	}
-	pFactory := client.NewFactory(
-		&pConfig,
-		nil, // TODO propagate abstract datastore factory from the CLI.
-		clusterMetadata.GetCurrentClusterName(),
-		metricsClient,
-		logger,
-	)
-	metadata, err := pFactory.NewMetadataManager()
-	if err != nil {
-		ErrorAndExit("Unable to initialize metadata manager.", err)
-	}
-	return metadata
+
+	return nil
 }
 
 func initializeClusterMetadata(

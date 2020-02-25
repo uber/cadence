@@ -190,7 +190,6 @@ func New(
 	}
 
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
-		&params.Service,
 		&params.PersistenceConfig,
 		params.AbstractDatastoreFactory,
 		params.ClusterMetadata.GetCurrentClusterName(),
