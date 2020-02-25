@@ -21,6 +21,7 @@
 package client
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/uber/cadence/common"
@@ -130,7 +131,7 @@ func NewFactory(
 		logger:        logger,
 		clusterName:   clusterName,
 	}
-	limiters := buildRatelimiters(cfg)
+	limiters := buildRatelimiters(cfg, logger)
 	factory.init(clusterName, limiters)
 	return factory
 }
@@ -312,7 +313,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func buildRatelimiters(cfg *config.Persistence) map[string]quotas.Limiter {
+func buildRatelimiters(cfg *config.Persistence, logger log.Logger) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName, ds := range cfg.DataStores {
 		qps := 0
@@ -322,6 +323,7 @@ func buildRatelimiters(cfg *config.Persistence) map[string]quotas.Limiter {
 		if ds.SQL != nil {
 			qps = ds.SQL.MaxQPS
 		}
+		logger.Info(fmt.Sprintf("rate limiter QPS was %d",  qps))
 		if qps > 0 {
 			result[dsName] = quotas.NewSimpleRateLimiter(qps)
 		}
