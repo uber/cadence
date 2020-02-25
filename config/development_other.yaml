@@ -1,17 +1,3 @@
-persistence:
-  defaultStore: cass-default
-  visibilityStore: cass-visibility
-  numHistoryShards: 4
-  datastores:
-    cass-default:
-      cassandra:
-        hosts: "127.0.0.1"
-        keyspace: "cadence_other"
-    cass-visibility:
-      cassandra:
-        hosts: "127.0.0.1"
-        keyspace: "cadence_visibility_other"
-
 ringpop:
   name: cadence_other
   bootstrapMode: hosts
@@ -29,6 +15,19 @@ services:
         prefix: "cadence_other"
     pprof:
       port: 9936
+    persistence:
+      defaultStore: cass-default
+      visibilityStore: cass-visibility
+      numHistoryShards: 4
+      datastores:
+        cass-default:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_other"
+        cass-visibility:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_visibility_other"
 
   matching:
     rpc:
@@ -40,6 +39,19 @@ services:
         prefix: "cadence_other"
     pprof:
       port: 9938
+    persistence:
+      defaultStore: cass-default
+      visibilityStore: cass-visibility
+      numHistoryShards: 4
+      datastores:
+        cass-default:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_other"
+        cass-visibility:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_visibility_other"
 
   history:
     rpc:
@@ -51,6 +63,19 @@ services:
         prefix: "cadence_other"
     pprof:
       port: 9937
+    persistence:
+      defaultStore: cass-default
+      visibilityStore: cass-visibility
+      numHistoryShards: 4
+      datastores:
+        cass-default:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_other"
+        cass-visibility:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_visibility_other"
 
   worker:
     rpc:
@@ -62,6 +87,19 @@ services:
         prefix: "cadence_other"
     pprof:
       port: 9941
+    persistence:
+      defaultStore: cass-default
+      visibilityStore: cass-visibility
+      numHistoryShards: 4
+      datastores:
+        cass-default:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_other"
+        cass-visibility:
+          cassandra:
+            hosts: "127.0.0.1"
+            keyspace: "cadence_visibility_other"
 
 clusterMetadata:
   enableGlobalDomain: true

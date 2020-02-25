@@ -1,31 +1,3 @@
-persistence:
-  defaultStore: postgres-default
-  visibilityStore: postgres-visibility
-  numHistoryShards: 4
-  datastores:
-    postgres-default:
-      sql:
-        pluginName: "postgres"
-        databaseName: "cadence"
-        connectAddr: "127.0.0.1:5432"
-        connectProtocol: "tcp"
-        user: "postgres"
-        password: "cadence"
-        maxConns: 20
-        maxIdleConns: 20
-        maxConnLifetime: "1h"
-    postgres-visibility:
-      sql:
-        pluginName: "postgres"
-        databaseName: "cadence_visibility"
-        connectAddr: "127.0.0.1:5432"
-        connectProtocol: "tcp"
-        user: "postgres"
-        password: "cadence"
-        maxConns: 2
-        maxIdleConns: 2
-        maxConnLifetime: "1h"
-
 ringpop:
   name: cadence
   bootstrapMode: hosts
@@ -43,6 +15,33 @@ services:
         prefix: "cadence"
     pprof:
       port: 7936
+    persistence:
+      defaultStore: postgres-default
+      visibilityStore: postgres-visibility
+      numHistoryShards: 4
+      datastores:
+        postgres-default:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 20
+            maxIdleConns: 20
+            maxConnLifetime: "1h"
+        postgres-visibility:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence_visibility"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 2
+            maxIdleConns: 2
+            maxConnLifetime: "1h"
 
   matching:
     rpc:
@@ -54,6 +53,33 @@ services:
         prefix: "cadence"
     pprof:
       port: 7938
+    persistence:
+      defaultStore: postgres-default
+      visibilityStore: postgres-visibility
+      numHistoryShards: 4
+      datastores:
+        postgres-default:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 20
+            maxIdleConns: 20
+            maxConnLifetime: "1h"
+        postgres-visibility:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence_visibility"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 2
+            maxIdleConns: 2
+            maxConnLifetime: "1h"
 
   history:
     rpc:
@@ -65,6 +91,33 @@ services:
         prefix: "cadence"
     pprof:
       port: 7937
+    persistence:
+      defaultStore: postgres-default
+      visibilityStore: postgres-visibility
+      numHistoryShards: 4
+      datastores:
+        postgres-default:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 20
+            maxIdleConns: 20
+            maxConnLifetime: "1h"
+        postgres-visibility:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence_visibility"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 2
+            maxIdleConns: 2
+            maxConnLifetime: "1h"
 
   worker:
     rpc:
@@ -76,6 +129,33 @@ services:
         prefix: "cadence"
     pprof:
       port: 7940
+    persistence:
+      defaultStore: postgres-default
+      visibilityStore: postgres-visibility
+      numHistoryShards: 4
+      datastores:
+        postgres-default:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 20
+            maxIdleConns: 20
+            maxConnLifetime: "1h"
+        postgres-visibility:
+          sql:
+            pluginName: "postgres"
+            databaseName: "cadence_visibility"
+            connectAddr: "127.0.0.1:5432"
+            connectProtocol: "tcp"
+            user: "postgres"
+            password: "cadence"
+            maxConns: 2
+            maxIdleConns: 2
+            maxConnLifetime: "1h"
 
 clusterMetadata:
   enableGlobalDomain: false
