@@ -23,6 +23,7 @@ package matching
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -115,6 +116,8 @@ const (
 )
 
 var _ taskListManager = (*taskListManagerImpl)(nil)
+
+var errRemoteSyncMatchFailed = errors.New("remote sync match failed")
 
 func newTaskListManager(
 	e *matchingEngineImpl,
@@ -219,9 +222,13 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return &persistence.CreateTasksResponse{}, err
 		}
 
-		r, err := c.taskWriter.appendTask(params.execution, params.taskInfo)
-		syncMatch = false
-		return r, err
+		if params.forwardedFrom != "" {
+			// forwarded from child partition - only do sync match
+			// child partition will persist the task when sync match fails
+			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
+		}
+
+		return c.taskWriter.appendTask(params.execution, params.taskInfo)
 	})
 	if err == nil {
 		c.taskReader.Signal()
