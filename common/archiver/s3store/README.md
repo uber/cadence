@@ -62,10 +62,10 @@ Workflow runs are stored in s3 using the following structure
 s3://<bucket-name>/<domain-id>/
 	history/<workflow-id>/<run-id>
 	visibility/
-            <workflow-type-name>/
+            workflowTypeName/<workflow-type-name>/
                 startTimeout/2020-01-21T16:16:11Z/<run-id>
                 closeTimeout/2020-01-21T16:16:11Z/<run-id>
-            <workflow-id>/
+            workflowID/<workflow-id>/
                 startTimeout/2020-01-21T16:16:11Z/<run-id>
                 closeTimeout/2020-01-21T16:16:11Z/<run-id>
 ```

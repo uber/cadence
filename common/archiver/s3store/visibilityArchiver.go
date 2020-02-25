@@ -22,9 +22,6 @@ package s3store
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"time"
 
 	"github.com/uber/cadence/common/metrics"
 
@@ -53,6 +50,13 @@ type (
 		pageSize      int
 		nextPageToken []byte
 		parsedQuery   *parsedQuery
+	}
+
+	indexToArchive struct {
+		primaryIndex            string
+		primaryIndexValue       string
+		secondaryIndex          string
+		secondaryIndexTimestamp int64
 	}
 )
 
@@ -101,13 +105,17 @@ func (v *visibilityArchiver) Archive(
 	scope := v.container.MetricsClient.Scope(metrics.VisibilityArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
 	sw := scope.StartTimer(metrics.CadenceLatency)
+	logger := archiver.TagLoggerWithArchiveVisibilityRequestAndURI(v.container.Logger, request, URI.String())
+	archiveFailReason := ""
 	defer func() {
 		sw.Stop()
 		if err != nil {
 			if isRetryableError(err) {
 				scope.IncCounter(metrics.VisibilityArchiverArchiveTransientErrorCount)
+				logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(archiveFailReason), tag.Error(err))
 			} else {
 				scope.IncCounter(metrics.VisibilityArchiverArchiveNonRetryableErrorCount)
+				logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiveFailReason), tag.Error(err))
 				if featureCatalog.NonRetriableError != nil {
 					err = featureCatalog.NonRetriableError()
 				}
@@ -115,73 +123,42 @@ func (v *visibilityArchiver) Archive(
 		}
 	}()
 
-	logger := archiver.TagLoggerWithArchiveVisibilityRequestAndURI(v.container.Logger, request, URI.String())
-
 	if err := softValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+		archiveFailReason = archiver.ErrReasonInvalidURI
 		return err
 	}
 
 	if err := archiver.ValidateVisibilityArchivalRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
+		archiveFailReason = archiver.ErrReasonInvalidArchiveRequest
 		return err
 	}
 
 	encodedVisibilityRecord, err := encode(request)
 	if err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeVisibilityRecord), tag.Error(err))
+		archiveFailReason = errEncodeVisibilityRecord
 		return err
 	}
-	var indexes = []struct {
-		primaryIndex            string
-		primaryIndexValue       string
-		secondaryIndex          string
-		secondaryIndexTimestamp int64
-	}{
-		{primaryIndexKeyWorkflowTypeName, request.WorkflowTypeName, secondaryIndexKeyCloseTimeout, request.CloseTimestamp},
-		{primaryIndexKeyWorkflowTypeName, request.WorkflowTypeName, secondaryIndexKeyStartTimeout, request.StartTimestamp},
-		{primaryIndexKeyWorkflowID, request.WorkflowID, secondaryIndexKeyCloseTimeout, request.CloseTimestamp},
-		{primaryIndexKeyWorkflowID, request.WorkflowID, secondaryIndexKeyStartTimeout, request.StartTimestamp},
-	}
+	indexes := createIndexesToArchive(request)
 	// Upload archive to all indexes
 	for _, element := range indexes {
 		key := constructTimestampIndex(URI.Path(), request.DomainID, element.primaryIndex, element.primaryIndexValue, element.secondaryIndex, element.secondaryIndexTimestamp, request.RunID)
 		if err := upload(ctx, v.s3cli, URI, key, encodedVisibilityRecord); err != nil {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteKey), tag.Error(err))
+			archiveFailReason = errWriteKey
 			return err
 		}
 	}
 	scope.IncCounter(metrics.VisibilityArchiveSuccessCount)
 	return nil
 }
-
-func constructTimeBasedSearchKey(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey string, timestamp int64, precision string) string {
-	t := time.Unix(0, timestamp).In(time.UTC)
-	var timeFormat = ""
-	switch precision {
-	case PrecisionSecond:
-		timeFormat = ":05"
-		fallthrough
-	case PrecisionMinute:
-		timeFormat = ":04" + timeFormat
-		fallthrough
-	case PrecisionHour:
-		timeFormat = "15" + timeFormat
-		fallthrough
-	case PrecisionDay:
-		timeFormat = "2006-01-02T" + timeFormat
+func createIndexesToArchive(request *archiver.ArchiveVisibilityRequest) []indexToArchive {
+	return []indexToArchive{
+		{primaryIndexKeyWorkflowTypeName, request.WorkflowTypeName, secondaryIndexKeyCloseTimeout, request.CloseTimestamp},
+		{primaryIndexKeyWorkflowTypeName, request.WorkflowTypeName, secondaryIndexKeyStartTimeout, request.StartTimestamp},
+		{primaryIndexKeyWorkflowID, request.WorkflowID, secondaryIndexKeyCloseTimeout, request.CloseTimestamp},
+		{primaryIndexKeyWorkflowID, request.WorkflowID, secondaryIndexKeyStartTimeout, request.StartTimestamp},
 	}
-
-	return fmt.Sprintf("%s/%s", constructVisibilitySearchPrefix(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey), t.Format(timeFormat))
-}
-func constructTimestampIndex(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey string, timestamp int64, runID string) string {
-	t := time.Unix(0, timestamp).In(time.UTC)
-	return fmt.Sprintf("%s/%s/%s", constructVisibilitySearchPrefix(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey), t.Format(time.RFC3339), runID)
 }
 
-func constructVisibilitySearchPrefix(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexType string) string {
-	return strings.TrimLeft(strings.Join([]string{path, domainID, "visibility", primaryIndexKey, primaryIndexValue, secondaryIndexType}, "/"), "/")
-}
 func (v *visibilityArchiver) Query(
 	ctx context.Context,
 	URI archiver.URI,
