@@ -192,27 +192,6 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestDispatcher_SubmitWithNoError(
 		}
 	}
 
-	// // first round
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[0][0])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[0][1])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[0][2])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[1][0])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[1][1])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[2][0])).DoAndReturn(mockFn)
-	// // second round
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[0][3])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[0][4])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[1][2])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[1][3])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[2][1])).DoAndReturn(mockFn)
-	// // third round
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[1][4])).DoAndReturn(mockFn)
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[2][2])).DoAndReturn(mockFn)
-	// // fourth round
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[2][3])).DoAndReturn(mockFn)
-	// // fifth round
-	// s.mockProcessor.EXPECT().Submit(newMockPriorityTaskMatcher(tasks[2][4])).DoAndReturn(mockFn)
-
 	s.scheduler.processor = s.mockProcessor
 
 	doneCh := make(chan struct{})
