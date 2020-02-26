@@ -191,8 +191,8 @@ func New(
 	}
 
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
-		persistenceMaxQPS,
 		&params.PersistenceConfig,
+		persistenceMaxQPS,
 		params.AbstractDatastoreFactory,
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,

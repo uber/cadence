@@ -324,11 +324,11 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func buildRatelimiters(cfg *config.Persistence, persistenceMaxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {
+func buildRatelimiters(cfg *config.Persistence, maxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName, _ := range cfg.DataStores {
-		if persistenceMaxQPS != nil && persistenceMaxQPS() > 0 {
-			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(persistenceMaxQPS()) })
+		if maxQPS != nil && maxQPS() > 0 {
+			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(maxQPS()) })
 		}
 	}
 	return result

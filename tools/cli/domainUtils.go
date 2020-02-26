@@ -288,8 +288,8 @@ func initializeMetadataMgr(
 		EnableReadFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
 	}
 	pFactory := client.NewFactory(
-		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
 		&pConfig,
+		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
 		nil, // TODO propagate abstract datastore factory from the CLI.
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
