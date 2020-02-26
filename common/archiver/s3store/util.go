@@ -113,9 +113,16 @@ func bucketExists(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI) er
 }
 
 // Key construction
-func constructHistoryKey(path, domainID, workflowID, runID string, version int64) string {
+func constructHistoryKey(path, domainID, workflowID, runID string, version int64, batchIdx int) string {
+	prefix := constructHistoryKeyPrefixWithVersion(path, domainID, workflowID, runID, version)
+	// Note batchIdx has an upper limit of 200 and we rely on them being sorted alphabetically.
+	// Hence we need to zero pad the number
+	return fmt.Sprintf("%s%03d", prefix, batchIdx)
+}
+
+func constructHistoryKeyPrefixWithVersion(path, domainID, workflowID, runID string, version int64) string {
 	prefix := constructHistoryKeyPrefix(path, domainID, workflowID, runID)
-	return fmt.Sprintf("%s/%v", prefix, version)
+	return fmt.Sprintf("%s/%v/", prefix, version)
 }
 
 func constructHistoryKeyPrefix(path, domainID, workflowID, runID string) string {

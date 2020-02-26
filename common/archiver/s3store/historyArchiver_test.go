@@ -127,13 +127,28 @@ func setupFsEmulation(s3cli *mocks.S3API) {
 	s3cli.On("ListObjectsV2WithContext", mock.Anything, mock.Anything).
 		Return(func(_ context.Context, input *s3.ListObjectsV2Input, opts ...request.Option) *s3.ListObjectsV2Output {
 			objects := make([]*s3.Object, 0)
+			commonPrefixMap := map[string]bool{}
 			for k := range fs {
 				if strings.HasPrefix(k, *input.Bucket+*input.Prefix) {
-					objects = append(objects, &s3.Object{
-						Key: aws.String(k[len(*input.Bucket):]),
-					})
+					key := k[len(*input.Bucket):]
+					keyWithoutPrefix := key[len(*input.Prefix):]
+					index := strings.Index(keyWithoutPrefix, "/")
+					if index == -1 {
+						objects = append(objects, &s3.Object{
+							Key: aws.String(key),
+						})
+					} else {
+						commonPrefixMap[key[:len(*input.Prefix)+index]] = true
+					}
 				}
 			}
+			commonPrefixes := make([]*s3.CommonPrefix, 0)
+			for k, _ := range commonPrefixMap {
+				commonPrefixes = append(commonPrefixes, &s3.CommonPrefix{
+					Prefix: aws.String(k),
+				})
+			}
+
 			sort.SliceStable(objects, func(i, j int) bool {
 				return *objects[i].Key < *objects[j].Key
 			})
@@ -146,6 +161,14 @@ func setupFsEmulation(s3cli *mocks.S3API) {
 				start, _ = strconv.Atoi(*input.ContinuationToken)
 			}
 
+			if input.StartAfter != nil {
+				for k, v := range objects {
+					if *input.StartAfter == *v.Key {
+						start = k + 1
+					}
+				}
+			}
+
 			isTruncated := false
 			var nextContinuationToken *string
 			if len(objects) > start+maxKeys {
@@ -156,7 +179,24 @@ func setupFsEmulation(s3cli *mocks.S3API) {
 				objects = objects[start:]
 			}
 
+			if input.StartAfter != nil {
+				for k, v := range commonPrefixes {
+					if *input.StartAfter == *v.Prefix {
+						start = k + 1
+					}
+				}
+			}
+
+			if len(commonPrefixes) > start+maxKeys {
+				isTruncated = true
+				nextContinuationToken = common.StringPtr(fmt.Sprintf("%d", start+maxKeys))
+				commonPrefixes = commonPrefixes[start : start+maxKeys]
+			} else if len(commonPrefixes) > 0 {
+				commonPrefixes = commonPrefixes[start:]
+			}
+
 			return &s3.ListObjectsV2Output{
+				CommonPrefixes:        commonPrefixes,
 				Contents:              objects,
 				IsTruncated:           &isTruncated,
 				NextContinuationToken: nextContinuationToken,
@@ -405,7 +445,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 	err = historyArchiver.Archive(context.Background(), URI, request)
 	s.NoError(err)
 
-	expectedkey := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion)
+	expectedkey := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, 0)
 	s.assertKeyExists(expectedkey)
 }
 
@@ -569,9 +609,6 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 	err = historyArchiver.Archive(context.Background(), URI, archiveRequest)
 	s.NoError(err)
 
-	expectedkey := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion)
-	s.assertKeyExists(expectedkey)
-
 	getRequest := &archiver.GetHistoryRequest{
 		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
@@ -640,15 +677,17 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 }
 
 func (s *historyArchiverSuite) writeHistoryBatchesForGetTest(historyBatches []*shared.History, version int64) {
-	data, err := encode(historyBatches)
-	s.Require().NoError(err)
-	key := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, version)
-	_, err = s.s3cli.PutObjectWithContext(context.Background(), &s3.PutObjectInput{
-		Bucket: aws.String(testBucket),
-		Key:    aws.String(key),
-		Body:   bytes.NewReader(data),
-	})
-	s.Require().NoError(err)
+	for i, batch := range historyBatches {
+		data, err := encode([]*shared.History{batch})
+		s.Require().NoError(err)
+		key := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, version, i)
+		_, err = s.s3cli.PutObjectWithContext(context.Background(), &s3.PutObjectInput{
+			Bucket: aws.String(testBucket),
+			Key:    aws.String(key),
+			Body:   bytes.NewReader(data),
+		})
+		s.Require().NoError(err)
+	}
 }
 
 func (s *historyArchiverSuite) assertKeyExists(key string) {
