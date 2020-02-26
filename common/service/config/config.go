@@ -210,6 +210,8 @@ type (
 		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
 		// ConnectAttributes is a set of key-value attributes to be sent as part of connect data_source_name url
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
+		// MaxQPS is the max request rate to this datastore
+		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
 		// MaxConns the max number of connections to this datastore
 		MaxConns int `yaml:"maxConns"`
 		// MaxIdleConns is the max number of idle connections to this datastore
@@ -420,8 +422,9 @@ type (
 )
 
 // Validate validates this config
-func (c *Config) Validate() error {
-	if err := c.Persistence.Validate(); err != nil {
+func (c *Config) Validate(serviceName string) error {
+	persistence := c.Services[serviceName].Persistence
+	if err := persistence.Validate(); err != nil {
 		return err
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
