@@ -23,8 +23,6 @@ package client
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
@@ -32,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -127,8 +126,8 @@ var storeTypes = []storeType{
 // The objects returned by this factory enforce ratelimit and maxconns according to
 // given configuration. In addition, all objects will emit metrics automatically
 func NewFactory(
-	persistenceMaxQPS dynamicconfig.IntPropertyFn,
 	cfg *config.Persistence,
+	persistenceMaxQPS dynamicconfig.IntPropertyFn,
 	abstractDataStoreFactory AbstractDataStoreFactory,
 	clusterName string,
 	metricsClient metrics.Client,
@@ -328,7 +327,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 func buildRatelimiters(cfg *config.Persistence, persistenceMaxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName, _ := range cfg.DataStores {
-		if persistenceMaxQPS != nil {
+		if persistenceMaxQPS != nil && persistenceMaxQPS() > 0 {
 			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(persistenceMaxQPS()) })
 		}
 	}
