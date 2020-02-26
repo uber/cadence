@@ -143,7 +143,7 @@ func setupFsEmulation(s3cli *mocks.S3API) {
 				}
 			}
 			commonPrefixes := make([]*s3.CommonPrefix, 0)
-			for k, _ := range commonPrefixMap {
+			for k := range commonPrefixMap {
 				commonPrefixes = append(commonPrefixes, &s3.CommonPrefix{
 					Prefix: aws.String(k),
 				})
