@@ -150,10 +150,6 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Submit(task PriorityTask) error {
 func (w *weightedRoundRobinTaskSchedulerImpl) TrySubmit(
 	task PriorityTask,
 ) (bool, error) {
-	w.metricsScope.IncCounter(metrics.PriorityTaskSubmitRequest)
-	sw := w.metricsScope.StartTimer(metrics.PriorityTaskSubmitLatency)
-	defer sw.Stop()
-
 	taskCh, err := w.getOrCreateTaskChan(task.Priority())
 	if err != nil {
 		return false, err
@@ -161,6 +157,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) TrySubmit(
 
 	select {
 	case taskCh <- task:
+		w.metricsScope.IncCounter(metrics.PriorityTaskSubmitRequest)
 		w.notifyDispatcher()
 		return true, nil
 	case <-w.shutdownCh:
@@ -174,6 +171,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 	defer w.dispatcherWG.Done()
 
 	outstandingTasks := false
+	taskChs := make(map[int]chan PriorityTask)
 
 	for {
 		if !outstandingTasks {
@@ -188,7 +186,8 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 		}
 
 		outstandingTasks = false
-		for priority, taskCh := range w.copyTaskChs() {
+		w.updateTaskChs(taskChs)
+		for priority, taskCh := range taskChs {
 			for i := 0; i < w.options.Weights[priority](); i++ {
 				select {
 				case task := <-taskCh:
@@ -234,15 +233,15 @@ func (w *weightedRoundRobinTaskSchedulerImpl) getOrCreateTaskChan(
 	return taskCh, nil
 }
 
-func (w *weightedRoundRobinTaskSchedulerImpl) copyTaskChs() map[int]chan PriorityTask {
+func (w *weightedRoundRobinTaskSchedulerImpl) updateTaskChs(taskChs map[int]chan PriorityTask) {
 	w.RLock()
 	defer w.RUnlock()
 
-	taskChs := make(map[int]chan PriorityTask)
 	for priority, taskCh := range w.taskChs {
-		taskChs[priority] = taskCh
+		if _, ok := taskChs[priority]; !ok {
+			taskChs[priority] = taskCh
+		}
 	}
-	return taskChs
 }
 
 func (w *weightedRoundRobinTaskSchedulerImpl) notifyDispatcher() {

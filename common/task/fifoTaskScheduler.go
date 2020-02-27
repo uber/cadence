@@ -126,12 +126,9 @@ func (f *fifoTaskSchedulerImpl) Submit(
 func (f *fifoTaskSchedulerImpl) TrySubmit(
 	task PriorityTask,
 ) (bool, error) {
-	f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
-	sw := f.metricsScope.StartTimer(metrics.ParallelTaskSubmitLatency)
-	defer sw.Stop()
-
 	select {
 	case f.taskCh <- task:
+		f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
 		return true, nil
 	case <-f.shutdownCh:
 		return false, ErrTaskSchedulerClosed
