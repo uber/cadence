@@ -154,11 +154,7 @@ func (h *historyArchiver) Archive(
 	var progress uploadProgress
 	historyIterator := h.historyIterator
 	if historyIterator == nil { // will only be set by testing code
-		historyIterator, err = loadHistoryIterator(ctx, request, h.container.HistoryV2Manager, featureCatalog, &progress)
-		if err != nil {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
-			return err
-		}
+		historyIterator = loadHistoryIterator(ctx, request, h.container.HistoryV2Manager, featureCatalog, &progress)
 	}
 	for historyIterator.HasNext() {
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
@@ -223,19 +219,23 @@ func (h *historyArchiver) Archive(
 	return nil
 }
 
-func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRequest, historyManager persistence.HistoryManager, featureCatalog *archiver.ArchiveFeatureCatalog, progress *uploadProgress) (historyIterator archiver.HistoryIterator, err error) {
+func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRequest, historyManager persistence.HistoryManager, featureCatalog *archiver.ArchiveFeatureCatalog, progress *uploadProgress) (historyIterator archiver.HistoryIterator) {
 	if featureCatalog.ProgressManager != nil {
 		if featureCatalog.ProgressManager.HasProgress(ctx) {
-			err = featureCatalog.ProgressManager.LoadProgress(ctx, progress)
-			if err != nil {
-				progress.IteratorState = nil
-				progress.BatchIdx = 0
-				progress.historySize = 0
-				progress.uploadedSize = 0
+			err := featureCatalog.ProgressManager.LoadProgress(ctx, progress)
+			if err == nil {
+				historyIterator, err := archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, progress.IteratorState)
+				if err == nil {
+					return historyIterator
+				}
 			}
+			progress.IteratorState = nil
+			progress.BatchIdx = 0
+			progress.historySize = 0
+			progress.uploadedSize = 0
 		}
 	}
-	return archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, progress.IteratorState)
+	return archiver.NewHistoryIterator(request, historyManager, targetHistoryBlobSize)
 }
 
 func saveHistoryIteratorState(ctx context.Context, featureCatalog *archiver.ArchiveFeatureCatalog, historyIterator archiver.HistoryIterator, progress *uploadProgress) {
