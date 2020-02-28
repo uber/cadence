@@ -143,25 +143,24 @@ func (s *utilSuite) TestWorkflowIdPrecondition() {
 		expectedResult bool
 	}{
 		{
-			workflowID:     "testWorkflowID",
-			fileName:       "startTimeout_1970-01-01T_testWorkflowID_workflowTypeName_runID.visibility",
+			workflowID:     "4418294404690464320",
+			fileName:       "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility",
 			expectedResult: true,
 		},
 		{
 			workflowID:     "testWorkflowID",
-			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			fileName:       "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility",
 			expectedResult: false,
 		},
 		{
 			workflowID:     "",
-			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			fileName:       "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility",
 			expectedResult: true,
 		},
 	}
 
-	precondition := existWorkflowID()
 	for _, testCase := range testCases {
-		s.Equal(precondition(testCase.fileName, testCase.workflowID), testCase.expectedResult)
+		s.Equal(newWorkflowIDPrecondition(testCase.workflowID)(testCase.fileName), testCase.expectedResult)
 	}
 
 }
@@ -174,28 +173,27 @@ func (s *utilSuite) TestRunIdPrecondition() {
 		expectedResult bool
 	}{
 		{
-			workflowID:     "testWorkflowID",
-			runID:          "runID",
-			fileName:       "startTimeout_1970-01-01T_testWorkflowID_workflowTypeName_runID.visibility",
+			workflowID:     "4418294404690464320",
+			runID:          "15619178330501475177",
+			fileName:       "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility",
 			expectedResult: true,
 		},
 		{
-			workflowID:     "testWorkflowID",
-			runID:          "runID",
-			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runUnKnownID.visibility",
+			workflowID:     "4418294404690464320",
+			runID:          "15619178330501475177",
+			fileName:       "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_unkonwnRunID.visibility",
 			expectedResult: false,
 		},
 		{
-			workflowID:     "testWorkflowID",
+			workflowID:     "4418294404690464320",
 			runID:          "",
-			fileName:       "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			fileName:       "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_unkonwnRunID.visibility",
 			expectedResult: true,
 		},
 	}
 
-	precondition := existRunID()
 	for _, testCase := range testCases {
-		s.Equal(precondition(testCase.fileName, testCase.workflowID, testCase.runID), testCase.expectedResult)
+		s.Equal(newRunIDPrecondition(testCase.runID)(testCase.fileName), testCase.expectedResult)
 	}
 
 }
@@ -209,31 +207,30 @@ func (s *utilSuite) TestWorkflowTypeNamePrecondition() {
 		expectedResult   bool
 	}{
 		{
-			workflowID:       "testWorkflowID",
-			runID:            "runID",
-			workflowTypeName: "workflowTypeName",
-			fileName:         "startTimeout_1970-01-01T_testWorkflowID_workflowTypeName_runID.visibility",
+			workflowID:       "4418294404690464320",
+			runID:            "15619178330501475177",
+			workflowTypeName: "12851121011173788097",
+			fileName:         "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility",
 			expectedResult:   true,
 		},
 		{
-			workflowID:       "testWorkflowID",
-			runID:            "runID",
-			workflowTypeName: "workflowTypeName",
-			fileName:         "startTimeout_1970-01-01T_UnkownWorkflowID_workflowUnkownTypeName_runID.visibility",
+			workflowID:       "4418294404690464320",
+			runID:            "15619178330501475177",
+			workflowTypeName: "12851121011173788097",
+			fileName:         "closeTimeout_2020-02-27T09:42:28Z_12851121011173788098_4418294404690464320_15619178330501475177.visibility",
 			expectedResult:   false,
 		},
 		{
-			workflowID:       "testWorkflowID",
-			runID:            "runID",
+			workflowID:       "4418294404690464320",
+			runID:            "15619178330501475177",
 			workflowTypeName: "",
-			fileName:         "startTimeout_1970-01-01T_UnkownWorkflowID_workflowTypeName_runID.visibility",
+			fileName:         "closeTimeout_2020-02-27T09:42:28Z_unkownWorkflowTypeName_4418294404690464320_15619178330501475177.visibility",
 			expectedResult:   true,
 		},
 	}
 
-	precondition := existWorkflowTypeName()
 	for _, testCase := range testCases {
-		s.Equal(precondition(testCase.fileName, testCase.workflowID, testCase.runID, testCase.workflowTypeName), testCase.expectedResult)
+		s.Equal(newWorkflowTypeNamePrecondition(testCase.workflowTypeName)(testCase.fileName), testCase.expectedResult)
 	}
 
 }

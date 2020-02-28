@@ -156,13 +156,6 @@ func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error
 	return token, err
 }
 
-type parsedVisFilename struct {
-	name       string
-	closeTime  int64
-	LastRunID  string
-	WorkflowID string
-}
-
 func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
 	return &shared.WorkflowExecutionInfo{
 		Execution: &shared.WorkflowExecution{
@@ -184,35 +177,87 @@ func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionI
 	}
 }
 
-func existWorkflowID() connector.Precondition {
-	return func(subject interface{}, params ...string) bool {
-		if len(params) == 0 || params[0] == "" {
+func newRunIDPrecondition(runID string) connector.Precondition {
+	return func(subject interface{}) bool {
+
+		if runID == "" {
 			return true
 		}
 
-		fileName := subject.(string)
-		return strings.Contains(fileName, params[0])
+		fileName, ok := subject.(string)
+		if !ok {
+			return false
+		}
+
+		if strings.Contains(fileName, runID) {
+			fileNameParts := strings.Split(fileName, "_")
+			if len(fileNameParts) != 5 {
+				return true
+			}
+			return strings.Contains(fileName, fileNameParts[4])
+		}
+
+		return false
 	}
 }
 
-func existRunID() connector.Precondition {
-	return func(subject interface{}, params ...string) bool {
-		if len(params) == 0 || params[1] == "" {
+func newWorkflowIDPrecondition(workflowID string) connector.Precondition {
+	return func(subject interface{}) bool {
+
+		if workflowID == "" {
 			return true
 		}
 
-		fileName := subject.(string)
-		return strings.Contains(fileName, params[1])
+		fileName, ok := subject.(string)
+		if !ok {
+			return false
+		}
+
+		if strings.Contains(fileName, workflowID) {
+			fileNameParts := strings.Split(fileName, "_")
+			if len(fileNameParts) != 5 {
+				return true
+			}
+			return strings.Contains(fileName, fileNameParts[3])
+		}
+
+		return false
 	}
 }
 
-func existWorkflowTypeName() connector.Precondition {
-	return func(subject interface{}, params ...string) bool {
-		if len(params) == 0 || params[2] == "" {
+func newWorkflowTypeNamePrecondition(workflowTypeName string) connector.Precondition {
+	return func(subject interface{}) bool {
+
+		if workflowTypeName == "" {
 			return true
 		}
 
-		fileName := subject.(string)
-		return strings.Contains(fileName, params[2])
+		fileName, ok := subject.(string)
+		if !ok {
+			return false
+		}
+
+		if strings.Contains(fileName, workflowTypeName) {
+			fileNameParts := strings.Split(fileName, "_")
+			if len(fileNameParts) != 5 {
+				return true
+			}
+			return strings.Contains(fileName, fileNameParts[2])
+		}
+
+		return false
 	}
+}
+
+func isRetryableError(err error) (retryable bool) {
+	switch err.Error() {
+	case connector.ErrBucketNotFound.Error(),
+		archiver.ErrURISchemeMismatch.Error(),
+		archiver.ErrInvalidURI.Error():
+		retryable = false
+	default:
+		retryable = true
+	}
+
+	return
 }

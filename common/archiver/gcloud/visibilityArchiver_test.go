@@ -81,7 +81,6 @@ type visibilityArchiverSuite struct {
 }
 
 func (s *visibilityArchiverSuite) TestValidateVisibilityURI() {
-	ctx := context.Background()
 	testCases := []struct {
 		URI         string
 		expectedErr error
@@ -113,7 +112,7 @@ func (s *visibilityArchiverSuite) TestValidateVisibilityURI() {
 	}
 
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, mock.Anything, "").Return(false, nil)
+	storageWrapper.On("Exist", mock.Anything, mock.Anything, "").Return(false, nil)
 	visibilityArchiver := new(visibilityArchiver)
 	visibilityArchiver.gcloudStorage = storageWrapper
 	for _, tc := range testCases {
@@ -128,7 +127,7 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_InvalidVisibilityURI() {
 	URI, err := archiver.NewURI("wrongscheme://")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
+	storageWrapper.On("Exist", mock.Anything, URI, "").Return(true, nil).Times(1)
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 
@@ -154,7 +153,7 @@ func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidVisibilityURI() {
 	URI, err := archiver.NewURI("wrongscheme://")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
+	storageWrapper.On("Exist", mock.Anything, URI, "").Return(true, nil).Times(1)
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 
@@ -179,8 +178,8 @@ func (s *visibilityArchiverSuite) TestVisibilityArchive() {
 	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/visibility")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
-	storageWrapper.On("Upload", ctx, URI, mock.Anything, mock.Anything).Return(nil)
+	storageWrapper.On("Exist", mock.Anything, URI, mock.Anything).Return(false, nil)
+	storageWrapper.On("Upload", mock.Anything, URI, mock.Anything, mock.Anything).Return(nil)
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 
@@ -209,7 +208,7 @@ func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidQuery() {
 	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/visibility")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
+	storageWrapper.On("Exist", mock.Anything, URI, mock.Anything).Return(false, nil)
 	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
 	mockCtrl := gomock.NewController(s.T())
@@ -228,11 +227,10 @@ func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidQuery() {
 }
 
 func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidToken() {
-	ctx := context.Background()
 	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/visibility")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
+	storageWrapper.On("Exist", mock.Anything, URI, mock.Anything).Return(false, nil)
 	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
 	mockCtrl := gomock.NewController(s.T())
@@ -260,9 +258,9 @@ func (s *visibilityArchiverSuite) TestQuery_Success_NoNextPageToken() {
 	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/visibility")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
-	storageWrapper.On("QueryWithFilters", ctx, URI, mock.Anything, 10, 0, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{"closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility"}, true, 1, nil).Times(1)
-	storageWrapper.On("Get", ctx, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Exist", mock.Anything, URI, mock.Anything).Return(false, nil)
+	storageWrapper.On("QueryWithFilters", mock.Anything, URI, mock.Anything, 10, 0, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{"closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility"}, true, 1, nil).Times(1)
+	storageWrapper.On("Get", mock.Anything, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
 
 	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
@@ -300,12 +298,12 @@ func (s *visibilityArchiverSuite) TestQuery_Success_SmallPageSize() {
 	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/visibility")
 	s.NoError(err)
 	storageWrapper := &mocks.Client{}
-	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
-	storageWrapper.On("QueryWithFilters", ctx, URI, mock.Anything, pageSize, 0, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{"closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility", "closeTimeout_2020-02-05T09:56:15Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility"}, false, 1, nil).Times(2)
-	storageWrapper.On("QueryWithFilters", ctx, URI, mock.Anything, pageSize, 2, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{"closeTimeout_2020-02-05T09:56:16Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility"}, true, 2, nil).Times(2)
-	storageWrapper.On("Get", ctx, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
-	storageWrapper.On("Get", ctx, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:15Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
-	storageWrapper.On("Get", ctx, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:16Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Exist", mock.Anything, URI, mock.Anything).Return(false, nil)
+	storageWrapper.On("QueryWithFilters", mock.Anything, URI, mock.Anything, pageSize, 0, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{"closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility", "closeTimeout_2020-02-05T09:56:15Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility"}, false, 1, nil).Times(2)
+	storageWrapper.On("QueryWithFilters", mock.Anything, URI, mock.Anything, pageSize, 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{"closeTimeout_2020-02-05T09:56:16Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility"}, true, 2, nil).Times(2)
+	storageWrapper.On("Get", mock.Anything, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:14Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Get", mock.Anything, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:15Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
+	storageWrapper.On("Get", mock.Anything, URI, "test-domain-id/closeTimeout_2020-02-05T09:56:16Z_test-workflow-id_MobileOnlyWorkflow::processMobileOnly_test-run-id.visibility").Return([]byte(exampleVisibilityRecord), nil)
 
 	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)

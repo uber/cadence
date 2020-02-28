@@ -79,4 +79,4 @@ Once you have a workflowId and a runId you can retrieve your workflow history.
 
 example:
 
-`./cadence --do samples-domain --ct 15000  workflow  show  -w workflow-id -r runId`
+`./cadence --do samples-domain  workflow  show  -w workflow-id -r runId`

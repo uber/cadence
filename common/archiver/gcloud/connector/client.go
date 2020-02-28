@@ -42,22 +42,23 @@ const (
 
 var (
 	errInvalidBucketURI = errors.New("invalid bucket URI format")
-	errBucketNotFound   = errors.New("bucket not found")
-	errObjectNotFound   = errors.New("object not found")
-	bucketNameRegExp    = regexp.MustCompile(bucketNameRegExpRaw)
+	// ErrBucketNotFound is non retriable error that is thrown when the bucket doesn't exist
+	ErrBucketNotFound = errors.New("bucket not found")
+	errObjectNotFound = errors.New("object not found")
+	bucketNameRegExp  = regexp.MustCompile(bucketNameRegExpRaw)
 )
 
 type (
 	// Precondition is a function that allow you to filter a query result.
 	// If subject match params conditions then return true, else return false.
-	Precondition func(subject interface{}, params ...string) bool
+	Precondition func(subject interface{}) bool
 
 	// Client is a wrapper around Google cloud storages client library.
 	Client interface {
 		Upload(ctx context.Context, URI archiver.URI, fileName string, file []byte) error
 		Get(ctx context.Context, URI archiver.URI, file string) ([]byte, error)
 		Query(ctx context.Context, URI archiver.URI, fileNamePrefix string) ([]string, error)
-		QueryWithFilters(ctx context.Context, URI archiver.URI, fileNamePrefix string, pageSize, offset int, filters []Precondition, params ...string) ([]string, bool, int, error)
+		QueryWithFilters(ctx context.Context, URI archiver.URI, fileNamePrefix string, pageSize, offset int, filters []Precondition) ([]string, bool, int, error)
 		Exist(ctx context.Context, URI archiver.URI, fileName string) (bool, error)
 	}
 
@@ -109,7 +110,7 @@ func (s *storageWrapper) Upload(ctx context.Context, URI archiver.URI, fileName 
 // Exist check if a bucket or an object exist
 // If fileName is empty, then 'Exist' function will only check if the given bucket exist.
 func (s *storageWrapper) Exist(ctx context.Context, URI archiver.URI, fileName string) (exists bool, err error) {
-	err = errBucketNotFound
+	err = ErrBucketNotFound
 	bucket := s.client.Bucket(URI.Hostname())
 	if _, err := bucket.Attrs(ctx); err != nil {
 		return false, err
@@ -158,7 +159,7 @@ func (s *storageWrapper) Query(ctx context.Context, URI archiver.URI, fileNamePr
 }
 
 // QueryWithFilter, retieves filenames that match filter parameters. PageSize is optional, 0 means all records.
-func (s *storageWrapper) QueryWithFilters(ctx context.Context, URI archiver.URI, fileNamePrefix string, pageSize, offset int, filters []Precondition, params ...string) ([]string, bool, int, error) {
+func (s *storageWrapper) QueryWithFilters(ctx context.Context, URI archiver.URI, fileNamePrefix string, pageSize, offset int, filters []Precondition) ([]string, bool, int, error) {
 
 	var err error
 	currentPos := offset
@@ -181,7 +182,7 @@ func (s *storageWrapper) QueryWithFilters(ctx context.Context, URI archiver.URI,
 
 		var valid bool
 		for _, f := range filters {
-			if valid = f(attrs.Name, params...); !valid {
+			if valid = f(attrs.Name); !valid {
 				break
 			}
 		}

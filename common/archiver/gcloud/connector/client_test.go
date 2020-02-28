@@ -266,12 +266,10 @@ func (s *clientSuite) TestQueryWithFilter() {
 	mockObjectIterator := &mocks.ObjectIteratorWrapper{}
 	storageWrapper, _ := connector.NewClientWithParams(mockStorageClient)
 
-	workflowId := "1234-pablos-domain-gs-14"
-	runId := "718c54ba-15ef-4b2c-a38b-ac6cf797eb55"
 	attr := new(storage.ObjectAttrs)
-	attr.Name = "closeTimeout_1023036758901021607612851121011173788097_2020-02-12T15%3A19%3A26Z_" + workflowId + "_" + runId + ".visibility"
+	attr.Name = "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility"
 	attrInvalid := new(storage.ObjectAttrs)
-	attrInvalid.Name = "closeTimeout_1023036758901021607612851121011173788097_2020-02-12T15%3A19%3A26Z_1235-pablos-domain-gs-14_918c54ba-15ef-4b2c-a38b-ac6cf797eb55.visibility"
+	attrInvalid.Name = "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464321_15619178330501475177.visibility"
 
 	mockStorageClient.On("Bucket", "my-bucket-cad").Return(mockBucketHandleClient).Times(1)
 	mockBucketHandleClient.On("Objects", ctx, mock.Anything).Return(mockObjectIterator).Times(1)
@@ -301,15 +299,32 @@ func (s *clientSuite) TestQueryWithFilter() {
 
 	var fileNames []string
 	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/development")
-	fileNames, _, _, err = storageWrapper.QueryWithFilters(ctx, URI, "7478875943689868082123907395549832634615673687049942026838", 0, 0, []connector.Precondition{existWorkflowID()}, workflowId, runId)
+	fileNames, _, _, err = storageWrapper.QueryWithFilters(ctx, URI, "closeTimeout_2020-02-27T09:42:28Z", 0, 0, []connector.Precondition{newWorkflowIDPrecondition("4418294404690464320")})
 
 	s.Require().NoError(err)
-	s.Equal(strings.Join(fileNames, ", "), "closeTimeout_1023036758901021607612851121011173788097_2020-02-12T15%3A19%3A26Z_"+workflowId+"_"+runId+".visibility")
+	s.Equal(strings.Join(fileNames, ", "), "closeTimeout_2020-02-27T09:42:28Z_12851121011173788097_4418294404690464320_15619178330501475177.visibility")
 }
 
-func existWorkflowID() connector.Precondition {
-	return func(subject interface{}, params ...string) bool {
-		fileName := subject.(string)
-		return strings.Contains(fileName, params[0])
+func newWorkflowIDPrecondition(workflowID string) connector.Precondition {
+	return func(subject interface{}) bool {
+
+		if workflowID == "" {
+			return true
+		}
+
+		fileName, ok := subject.(string)
+		if !ok {
+			return false
+		}
+
+		if strings.Contains(fileName, workflowID) {
+			fileNameParts := strings.Split(fileName, "_")
+			if len(fileNameParts) != 5 {
+				return true
+			}
+			return strings.Contains(fileName, fileNameParts[3])
+		}
+
+		return false
 	}
 }

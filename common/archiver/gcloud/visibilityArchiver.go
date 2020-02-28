@@ -22,13 +22,17 @@ package gcloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -36,6 +40,11 @@ const (
 	errEncodeVisibilityRecord = "failed to encode visibility record"
 	indexKeyStartTimeout      = "startTimeout"
 	indexKeyCloseTimeout      = "closeTimeout"
+	timeout                   = 5
+)
+
+var (
+	errRetriable = errors.New("retriable error")
 )
 
 type (
@@ -79,16 +88,30 @@ func NewVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, con
 // Please make sure your implementation is lossless. If any in-memory batching mechanism is used, then those batched records will be lost during server restarts.
 // This method will be invoked when workflow closes. Note that because of conflict resolution, it is possible for a workflow to through the closing process multiple times, which means that this method can be invoked more than once after a workflow closes.
 func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, request *archiver.ArchiveVisibilityRequest, opts ...archiver.ArchiveOption) (err error) {
+	scope := v.container.MetricsClient.Scope(metrics.HistoryArchiverScope, metrics.DomainTag(request.DomainName))
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
+	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
-		if err != nil && featureCatalog.NonRetriableError != nil {
-			err = featureCatalog.NonRetriableError()
+		sw.Stop()
+		if err != nil {
+			if isRetryableError(err) {
+				scope.IncCounter(metrics.VisibilityArchiverArchiveTransientErrorCount)
+			} else {
+				scope.IncCounter(metrics.VisibilityArchiverArchiveNonRetryableErrorCount)
+				if featureCatalog.NonRetriableError != nil {
+					err = featureCatalog.NonRetriableError()
+				}
+			}
 		}
 	}()
 
 	logger := archiver.TagLoggerWithArchiveVisibilityRequestAndURI(v.container.Logger, request, URI.String())
 
 	if err := v.ValidateURI(URI); err != nil {
+		if isRetryableError(err) {
+			logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
+			return err
+		}
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
 		return err
 	}
@@ -107,17 +130,18 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 	// The filename has the format: closeTimestamp_hash(runID).visibility
 	// This format allows the archiver to sort all records without reading the file contents
 	filename := constructVisibilityFilename(request.DomainID, request.WorkflowTypeName, request.WorkflowID, request.RunID, indexKeyCloseTimeout, request.CloseTimestamp)
-	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
-		return err
+	if err := v.gcloudStorage.Upload(ctx, URI, filename, encodedVisibilityRecord); err != nil {
+		logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		return errRetriable
 	}
 
 	filename = constructVisibilityFilename(request.DomainID, request.WorkflowTypeName, request.WorkflowID, request.RunID, indexKeyStartTimeout, request.StartTimestamp)
-	if err := v.gcloudStorage.Upload(context.Background(), URI, filename, encodedVisibilityRecord); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
-		return err
+	if err := v.gcloudStorage.Upload(ctx, URI, filename, encodedVisibilityRecord); err != nil {
+		logger.Error(archiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
+		return errRetriable
 	}
 
+	scope.IncCounter(metrics.VisibilityArchiveSuccessCount)
 	return nil
 }
 
@@ -170,8 +194,13 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		prefix = constructTimeBasedSearchKey(request.domainID, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
 	}
 
-	filters := []connector.Precondition{existWorkflowID(), existRunID(), existWorkflowTypeName()}
-	filenames, completed, currentCursorPos, err := v.gcloudStorage.QueryWithFilters(ctx, URI, prefix, request.pageSize, token.Offset, filters, hash(*request.parsedQuery.workflowID), hash(*request.parsedQuery.runID), hash(*request.parsedQuery.workflowType))
+	filters := []connector.Precondition{
+		newWorkflowIDPrecondition(hash(common.StringDefault(request.parsedQuery.workflowID))),
+		newRunIDPrecondition(hash(common.StringDefault(request.parsedQuery.runID))),
+		newWorkflowTypeNamePrecondition(hash(common.StringDefault(request.parsedQuery.workflowType))),
+	}
+
+	filenames, completed, currentCursorPos, err := v.gcloudStorage.QueryWithFilters(ctx, URI, prefix, request.pageSize, token.Offset, filters)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
@@ -193,7 +222,7 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 
 	if !completed {
 		newToken := &queryVisibilityToken{
-			Offset: currentCursorPos + 1,
+			Offset: currentCursorPos,
 		}
 		encodedToken, err := serializeToken(newToken)
 		if err != nil {
@@ -207,9 +236,11 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 
 // ValidateURI is used to define what a valid URI for an implementation is.
 func (v *visibilityArchiver) ValidateURI(URI archiver.URI) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
 
 	if err = v.validateURI(URI); err == nil {
-		_, err = v.gcloudStorage.Exist(context.Background(), URI, "")
+		_, err = v.gcloudStorage.Exist(ctx, URI, "")
 	}
 
 	return

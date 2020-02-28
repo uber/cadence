@@ -95,28 +95,12 @@ func (p *queryParser) Parse(query string) (*parsedQuery, error) {
 		return nil, err
 	}
 
-	if parsedQuery.workflowType == nil {
-		parsedQuery.workflowType = new(string)
-	}
-
-	if parsedQuery.workflowID == nil {
-		parsedQuery.workflowID = new(string)
-	}
-
-	if (parsedQuery.closeTime != 0 || parsedQuery.startTime != 0) && parsedQuery.searchPrecision == nil {
-		return nil, errors.New("SearchPrecision is required when searching for a StartTime or CloseTime")
-	}
-
-	if parsedQuery.closeTime == 0 && parsedQuery.startTime == 0 && parsedQuery.searchPrecision != nil {
-		return nil, errors.New("SearchPrecision requires a StartTime or CloseTime")
-	}
-
-	if parsedQuery.runID == nil {
-		parsedQuery.runID = new(string)
-	}
-
 	if (parsedQuery.closeTime == 0 && parsedQuery.startTime == 0) || (parsedQuery.closeTime != 0 && parsedQuery.startTime != 0) {
 		return nil, errors.New("Requires a StartTime or CloseTime")
+	}
+
+	if parsedQuery.searchPrecision == nil {
+		return nil, errors.New("SearchPrecision is required when searching for a StartTime or CloseTime")
 	}
 
 	return parsedQuery, nil
