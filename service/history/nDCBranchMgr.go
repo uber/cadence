@@ -204,6 +204,7 @@ func (r *nDCBranchMgrImpl) verifyEventsOrder(
 	if incomingFirstEventID > nextEventID {
 		executionInfo := r.mutableState.GetExecutionInfo()
 		return false, newNDCRetryTaskErrorWithHint(
+			"Resend events due to disorder",
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
 			executionInfo.RunID,

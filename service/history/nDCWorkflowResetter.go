@@ -172,6 +172,7 @@ func (r *nDCWorkflowResetterImpl) getBaseBranchToken(
 		// only re-replicate the gap on the incoming branch
 		// the base branch event will eventually arrived
 		return nil, newNDCRetryTaskErrorWithHint(
+			"Resend events due to reset workflow",
 			r.domainID,
 			r.workflowID,
 			r.newRunID,
