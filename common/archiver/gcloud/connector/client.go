@@ -41,7 +41,6 @@ const (
 )
 
 var (
-	errInvalidBucketURI = errors.New("invalid bucket URI format")
 	// ErrBucketNotFound is non retriable error that is thrown when the bucket doesn't exist
 	ErrBucketNotFound = errors.New("bucket not found")
 	errObjectNotFound = errors.New("object not found")

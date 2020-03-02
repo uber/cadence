@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/config"
 )
 
 const (
@@ -131,11 +130,7 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_InvalidVisibilityURI() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 
-	config := &config.GstorageArchiver{
-		CredentialsPath: "/tmp/credentials",
-	}
-
-	visibilityArchiver, err := NewVisibilityArchiver(s.container, config)
+	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
 	request := &archiver.ArchiveVisibilityRequest{
 		DomainID:   testDomainID,
@@ -157,11 +152,7 @@ func (s *visibilityArchiverSuite) TestQuery_Fail_InvalidVisibilityURI() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 
-	config := &config.GstorageArchiver{
-		CredentialsPath: "/tmp/credentials",
-	}
-
-	visibilityArchiver, err := NewVisibilityArchiver(s.container, config)
+	visibilityArchiver := newVisibilityArchiver(s.container, storageWrapper)
 	s.NoError(err)
 	request := &archiver.QueryVisibilityRequest{
 		DomainID: testDomainID,

@@ -40,7 +40,7 @@ const (
 	errEncodeVisibilityRecord = "failed to encode visibility record"
 	indexKeyStartTimeout      = "startTimeout"
 	indexKeyCloseTimeout      = "closeTimeout"
-	timeout                   = 5
+	timeoutInSeconds          = 5
 )
 
 var (
@@ -236,7 +236,7 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 
 // ValidateURI is used to define what a valid URI for an implementation is.
 func (v *visibilityArchiver) ValidateURI(URI archiver.URI) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutInSeconds*time.Second)
 	defer cancel()
 
 	if err = v.validateURI(URI); err == nil {
