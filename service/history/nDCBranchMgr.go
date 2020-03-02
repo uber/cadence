@@ -35,6 +35,9 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+const (
+	outOfOrderDeliveryMessage = "Resend events due to out of order delivery"
+)
 type (
 	nDCBranchMgr interface {
 		prepareVersionHistory(
@@ -204,7 +207,7 @@ func (r *nDCBranchMgrImpl) verifyEventsOrder(
 	if incomingFirstEventID > nextEventID {
 		executionInfo := r.mutableState.GetExecutionInfo()
 		return false, newNDCRetryTaskErrorWithHint(
-			"Resend events due to out of order delivery",
+			outOfOrderDeliveryMessage,
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
 			executionInfo.RunID,
