@@ -54,8 +54,9 @@ type (
 )
 
 var (
-	errUnknownTaskSchedulerType = errors.New("unknown task scheduler type")
-	errTaskProcessorNotRunning  = errors.New("queue task processor is not running")
+	errUnknownTaskSchedulerType         = errors.New("unknown task scheduler type")
+	errTaskSchedulerOptionsNotSpecified = errors.New("task scheduler option is not specified")
+	errTaskProcessorNotRunning          = errors.New("queue task processor is not running")
 )
 
 func newQueueTaskProcessor(
@@ -64,9 +65,19 @@ func newQueueTaskProcessor(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (queueTaskProcessor, error) {
-	if options.schedulerType != task.SchedulerTypeFIFO && options.schedulerType != task.SchedulerTypeWRR {
+	switch options.schedulerType {
+	case task.SchedulerTypeFIFO:
+		if options.fifoSchedulerOptions == nil {
+			return nil, errTaskSchedulerOptionsNotSpecified
+		}
+	case task.SchedulerTypeWRR:
+		if options.wRRSchedulerOptions == nil {
+			return nil, errTaskSchedulerOptionsNotSpecified
+		}
+	default:
 		return nil, errUnknownTaskSchedulerType
 	}
+
 	return &queueTaskProcessorImpl{
 		priorityAssigner: priorityAssigner,
 		schedulers:       make(map[int]task.Scheduler),

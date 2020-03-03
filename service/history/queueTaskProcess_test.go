@@ -224,6 +224,19 @@ func (s *queueTaskProcessorSuite) TestNewQueueTaskProcessor_UnknownSchedulerType
 	s.Nil(processor)
 }
 
+func (s *queueTaskProcessorSuite) TestNewQueueTaskProcessor_SchedulerOptionNotSpecified() {
+	processor, err := newQueueTaskProcessor(
+		s.mockPriorityAssigner,
+		&queueTaskProcessorOptions{
+			schedulerType: task.SchedulerTypeFIFO,
+		},
+		s.logger,
+		s.metricsClient,
+	)
+	s.Equal(errTaskSchedulerOptionsNotSpecified, err)
+	s.Nil(processor)
+}
+
 func (s *queueTaskProcessorSuite) newTestQueueTaskProcessor() *queueTaskProcessorImpl {
 	processor, err := newQueueTaskProcessor(
 		s.mockPriorityAssigner,
