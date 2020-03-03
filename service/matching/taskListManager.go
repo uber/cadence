@@ -50,6 +50,7 @@ type (
 	addTaskParams struct {
 		execution     *s.WorkflowExecution
 		taskInfo      *persistence.TaskInfo
+		source        matching.TaskSource
 		forwardedFrom string
 	}
 
@@ -473,8 +474,14 @@ func (c *taskListManagerImpl) executeWithRetry(
 }
 
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	childCtx, cancel := c.newChildContext(ctx, maxSyncMatchWaitTime, time.Second)
-	task := newInternalTask(params.taskInfo, c.completeTask, params.forwardedFrom, true)
+	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true)
+	childCtx := ctx
+	cancel := func() {}
+	if !task.isForwarded() {
+		// when task is forwarded from another matching host, we trust the context as is
+		// otherwise, we override to limit the amount of time we can block on sync match
+		childCtx, cancel = c.newChildContext(ctx, maxSyncMatchWaitTime, time.Second)
+	}
 	matched, err := c.matcher.Offer(childCtx, task)
 	cancel()
 	return matched, err
@@ -511,10 +518,6 @@ func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind s.Ta
 	return !taskList.IsRoot() && kind != s.TaskListKindSticky
 }
 
-func createServiceBusyError(msg string) *s.ServiceBusyError {
-	return &s.ServiceBusyError{Message: msg}
-}
-
 func (c *taskListManagerImpl) domainScope() metrics.Scope {
 	scope := c.domainScopeValue.Load().(metrics.Scope)
 	if scope != nil {
@@ -543,6 +546,10 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 			c.domainScopeValue.Store(scope)
 		}
 	}
+}
+
+func createServiceBusyError(msg string) *s.ServiceBusyError {
+	return &s.ServiceBusyError{Message: msg}
 }
 
 // if domainCache return error, it will return "" as domainName and a scope without domainName tagged
