@@ -38,6 +38,7 @@ import (
 const (
 	outOfOrderDeliveryMessage = "Resend events due to out of order delivery"
 )
+
 type (
 	nDCBranchMgr interface {
 		prepareVersionHistory(

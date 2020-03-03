@@ -47,6 +47,7 @@ var (
 const (
 	mutableStateMissingMessage = "Resend events due to missing mutable state"
 )
+
 type (
 	stateBuilderProvider func(
 		mutableState mutableState,
