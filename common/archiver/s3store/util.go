@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -46,13 +47,13 @@ func encode(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func decodeHistoryBatches(data []byte) ([]*shared.History, error) {
-	historyBatches := []*shared.History{}
-	err := json.Unmarshal(data, &historyBatches)
+func decodeHistoryBlob(data []byte) (*archiver.HistoryBlob, error) {
+	historyBlob := &archiver.HistoryBlob{}
+	err := json.Unmarshal(data, historyBlob)
 	if err != nil {
 		return nil, err
 	}
-	return historyBatches, nil
+	return historyBlob, nil
 }
 func decodeVisibilityRecord(data []byte) (*visibilityRecord, error) {
 	record := &visibilityRecord{}
@@ -104,31 +105,75 @@ func bucketExists(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI) er
 	if err == nil {
 		return nil
 	}
-	if aerr, ok := err.(awserr.Error); ok {
-		if aerr.Code() == "NotFound" {
-			return errBucketNotExists
-		}
+	if isNotFoundError(err) {
+		return errBucketNotExists
 	}
 	return err
 }
 
+func keyExists(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key string) (bool, error) {
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+	_, err := s3cli.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(URI.Hostname()),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		if isNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func isNotFoundError(err error) bool {
+	aerr, ok := err.(awserr.Error)
+	return ok && (aerr.Code() == "NotFound")
+}
+
 // Key construction
-func constructHistoryKey(path, domainID, workflowID, runID string, version int64) string {
+func constructHistoryKey(path, domainID, workflowID, runID string, version int64, batchIdx int) string {
+	prefix := constructHistoryKeyPrefixWithVersion(path, domainID, workflowID, runID, version)
+	return fmt.Sprintf("%s%d", prefix, batchIdx)
+}
+
+func constructHistoryKeyPrefixWithVersion(path, domainID, workflowID, runID string, version int64) string {
 	prefix := constructHistoryKeyPrefix(path, domainID, workflowID, runID)
-	return fmt.Sprintf("%s/%v", prefix, version)
+	return fmt.Sprintf("%s/%v/", prefix, version)
 }
 
 func constructHistoryKeyPrefix(path, domainID, workflowID, runID string) string {
-	return fmt.Sprintf("%s/%s", constructCommonKeyPrefix(path, domainID, workflowID, "history"), runID)
+	return strings.TrimLeft(strings.Join([]string{path, domainID, "history", workflowID, runID}, "/"), "/")
 }
 
-func constructVisibilitySearchPrefix(path, domainID, workflowID, indexType string) string {
-	return constructCommonKeyPrefix(path, domainID, workflowID, fmt.Sprintf("visibility/%s", indexType))
+func constructTimeBasedSearchKey(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey string, timestamp int64, precision string) string {
+	t := time.Unix(0, timestamp).In(time.UTC)
+	var timeFormat = ""
+	switch precision {
+	case PrecisionSecond:
+		timeFormat = ":05"
+		fallthrough
+	case PrecisionMinute:
+		timeFormat = ":04" + timeFormat
+		fallthrough
+	case PrecisionHour:
+		timeFormat = "15" + timeFormat
+		fallthrough
+	case PrecisionDay:
+		timeFormat = "2006-01-02T" + timeFormat
+	}
+
+	return fmt.Sprintf("%s/%s", constructVisibilitySearchPrefix(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey), t.Format(timeFormat))
 }
 
-// Make sure there are no trailing slashes
-func constructCommonKeyPrefix(path, domainID, workflowID, entryType string) string {
-	return strings.TrimLeft(strings.Join([]string{path, domainID, workflowID, entryType}, "/"), "/")
+func constructTimestampIndex(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey string, timestamp int64, runID string) string {
+	t := time.Unix(0, timestamp).In(time.UTC)
+	return fmt.Sprintf("%s/%s/%s", constructVisibilitySearchPrefix(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexKey), t.Format(time.RFC3339), runID)
+}
+
+func constructVisibilitySearchPrefix(path, domainID, primaryIndexKey, primaryIndexValue, secondaryIndexType string) string {
+	return strings.TrimLeft(strings.Join([]string{path, domainID, "visibility", primaryIndexKey, primaryIndexValue, secondaryIndexType}, "/"), "/")
 }
 
 func ensureContextTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
@@ -172,7 +217,7 @@ func download(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key st
 			}
 
 			if aerr.Code() == s3.ErrCodeNoSuchKey {
-				return nil, &shared.BadRequestError{Message: archiver.ErrHistoryNotExist.Error()}
+				return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 			}
 		}
 		return nil, err
