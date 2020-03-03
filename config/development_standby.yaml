@@ -24,10 +24,9 @@ services:
       port: 8933
       bindOnLocalHost: true
     metrics:
-      m3:
-        hostPort: "127.0.0.1:9052"
-        service: "cadence_frontend"
-        env: "standby"
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_standby"
     pprof:
       port: 8936
 
@@ -36,10 +35,9 @@ services:
       port: 8935
       bindOnLocalHost: true
     metrics:
-      m3:
-        hostPort: "127.0.0.1:9052"
-        service: "cadence_matching"
-        env: "standby"
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_standby"
     pprof:
       port: 8938
 
@@ -48,10 +46,9 @@ services:
       port: 8934
       bindOnLocalHost: true
     metrics:
-      m3:
-        hostPort: "127.0.0.1:9052"
-        service: "cadence_history"
-        env: "standby"
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_standby"
     pprof:
       port: 8937
 
@@ -60,10 +57,9 @@ services:
       port: 8940
       bindOnLocalHost: true
     metrics:
-      m3:
-        hostPort: "127.0.0.1:9052"
-        service: "cadence_worker"
-        env: "standby"
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_standby"
     pprof:
       port: 8941
 
