@@ -88,14 +88,6 @@ func (s *queueTaskProcessorSuite) TestIsRunning() {
 	s.False(s.processor.isRunning())
 }
 
-func (s *queueTaskProcessorSuite) TestPrepareSubmit_ProcessorNotRunning() {
-	mockTask := NewMockqueueTask(s.controller)
-
-	scheduler, err := s.processor.prepareSubmit(mockTask)
-	s.Equal(errTaskProcessorNotRunning, err)
-	s.Nil(scheduler)
-}
-
 func (s *queueTaskProcessorSuite) TestPrepareSubmit_AssignPriorityFailed() {
 	mockTask := NewMockqueueTask(s.controller)
 	errAssign := errors.New("some random error")
@@ -104,6 +96,18 @@ func (s *queueTaskProcessorSuite) TestPrepareSubmit_AssignPriorityFailed() {
 	s.processor.Start()
 	scheduler, err := s.processor.prepareSubmit(mockTask)
 	s.Equal(errAssign, err)
+	s.Nil(scheduler)
+}
+
+func (s *queueTaskProcessorSuite) TestPrepareSubmit_ProcessorNotRunning() {
+	shardID := 0
+
+	mockTask := NewMockqueueTask(s.controller)
+	mockTask.EXPECT().GetShardID().Return(shardID).Times(1)
+	s.mockPriorityAssigner.EXPECT().Assign(newMockQueueTaskMatcher(mockTask)).Return(nil).Times(1)
+
+	scheduler, err := s.processor.prepareSubmit(mockTask)
+	s.Equal(errTaskProcessorNotRunning, err)
 	s.Nil(scheduler)
 }
 
@@ -202,10 +206,29 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 	s.False(submitted)
 }
 
+func (s *queueTaskProcessorSuite) TestNewQueueTaskProcessor_UnknownSchedulerType() {
+	processor, err := newQueueTaskProcessor(
+		s.mockPriorityAssigner,
+		&queueTaskProcessorOptions{
+			schedulerType: 0,
+			fifoSchedulerOptions: &task.FIFOTaskSchedulerOptions{
+				QueueSize:   100,
+				WorkerCount: 10,
+				RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
+			},
+		},
+		s.logger,
+		s.metricsClient,
+	)
+	s.Equal(errUnknownTaskSchedulerType, err)
+	s.Nil(processor)
+}
+
 func (s *queueTaskProcessorSuite) newTestQueueTaskProcessor() *queueTaskProcessorImpl {
 	processor, err := newQueueTaskProcessor(
 		s.mockPriorityAssigner,
 		&queueTaskProcessorOptions{
+			schedulerType: task.SchedulerTypeFIFO,
 			fifoSchedulerOptions: &task.FIFOTaskSchedulerOptions{
 				QueueSize:   100,
 				WorkerCount: 10,

@@ -33,6 +33,7 @@ import (
 
 type (
 	queueTaskProcessorOptions struct {
+		schedulerType        task.SchedulerType
 		fifoSchedulerOptions *task.FIFOTaskSchedulerOptions
 		wRRSchedulerOptions  *task.WeightedRoundRobinTaskSchedulerOptions
 	}
@@ -53,7 +54,8 @@ type (
 )
 
 var (
-	errTaskProcessorNotRunning = errors.New("queue task processor is not running")
+	errUnknownTaskSchedulerType = errors.New("unknown task scheduler type")
+	errTaskProcessorNotRunning  = errors.New("queue task processor is not running")
 )
 
 func newQueueTaskProcessor(
@@ -62,9 +64,8 @@ func newQueueTaskProcessor(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (queueTaskProcessor, error) {
-	if (options.fifoSchedulerOptions != nil && options.wRRSchedulerOptions != nil) ||
-		(options.fifoSchedulerOptions == nil && options.wRRSchedulerOptions == nil) {
-		return nil, errors.New("please specify options for exactly one type of task scheduler")
+	if options.schedulerType != task.SchedulerTypeFIFO && options.schedulerType != task.SchedulerTypeWRR {
+		return nil, errUnknownTaskSchedulerType
 	}
 	return &queueTaskProcessorImpl{
 		priorityAssigner: priorityAssigner,
@@ -140,10 +141,6 @@ func (p *queueTaskProcessorImpl) TrySubmit(
 func (p *queueTaskProcessorImpl) prepareSubmit(
 	task queueTask,
 ) (task.Scheduler, error) {
-	if !p.isRunning() {
-		return nil, errTaskProcessorNotRunning
-	}
-
 	if err := p.priorityAssigner.Assign(task); err != nil {
 		return nil, err
 	}
@@ -167,20 +164,28 @@ func (p *queueTaskProcessorImpl) getOrCreateTaskScheduler(
 		return scheduler, nil
 	}
 
+	if !p.isRunning() {
+		p.Unlock()
+		return nil, errTaskProcessorNotRunning
+	}
+
 	var scheduler task.Scheduler
 	var err error
-	if p.options.fifoSchedulerOptions != nil {
+	switch p.options.schedulerType {
+	case task.SchedulerTypeFIFO:
 		scheduler = task.NewFIFOTaskScheduler(
 			p.logger,
 			p.metricsClient.Scope(metrics.TaskSchedulerScope),
 			p.options.fifoSchedulerOptions,
 		)
-	} else {
+	case task.SchedulerTypeWRR:
 		scheduler, err = task.NewWeightedRoundRobinTaskScheduler(
 			p.logger,
 			p.metricsClient.Scope(metrics.TaskSchedulerScope),
 			p.options.wRRSchedulerOptions,
 		)
+	default:
+		err = errUnknownTaskSchedulerType
 	}
 
 	if err != nil {
