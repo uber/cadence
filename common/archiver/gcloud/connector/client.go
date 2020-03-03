@@ -179,7 +179,7 @@ func (s *storageWrapper) QueryWithFilters(ctx context.Context, URI archiver.URI,
 			return resultSet, completed, currentPos, err
 		}
 
-		var valid bool
+		valid := len(filters) == 0
 		for _, f := range filters {
 			if valid = f(attrs.Name); !valid {
 				break

@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/log/tag"
@@ -194,10 +193,17 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		prefix = constructTimeBasedSearchKey(request.domainID, indexKeyStartTimeout, request.parsedQuery.startTime, *request.parsedQuery.searchPrecision)
 	}
 
-	filters := []connector.Precondition{
-		newWorkflowIDPrecondition(hash(common.StringDefault(request.parsedQuery.workflowID))),
-		newRunIDPrecondition(hash(common.StringDefault(request.parsedQuery.runID))),
-		newWorkflowTypeNamePrecondition(hash(common.StringDefault(request.parsedQuery.workflowType))),
+	filters := make([]connector.Precondition, 0)
+	if request.parsedQuery.workflowID != nil {
+		filters = append(filters, newWorkflowIDPrecondition(hash(*request.parsedQuery.workflowID)))
+	}
+
+	if request.parsedQuery.runID != nil {
+		filters = append(filters, newWorkflowIDPrecondition(hash(*request.parsedQuery.runID)))
+	}
+
+	if request.parsedQuery.workflowType != nil {
+		filters = append(filters, newWorkflowIDPrecondition(hash(*request.parsedQuery.workflowType)))
 	}
 
 	filenames, completed, currentCursorPos, err := v.gcloudStorage.QueryWithFilters(ctx, URI, prefix, request.pageSize, token.Offset, filters)
