@@ -24,9 +24,10 @@ services:
       port: 8933
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+      m3:
+        hostPort: "127.0.0.1:9052"
+        service: "cadence_frontend"
+        env: "standby"
     pprof:
       port: 8936
 
@@ -35,9 +36,10 @@ services:
       port: 8935
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+      m3:
+        hostPort: "127.0.0.1:9052"
+        service: "cadence_matching"
+        env: "standby"
     pprof:
       port: 8938
 
@@ -46,9 +48,10 @@ services:
       port: 8934
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+      m3:
+        hostPort: "127.0.0.1:9052"
+        service: "cadence_history"
+        env: "standby"
     pprof:
       port: 8937
 
@@ -57,9 +60,10 @@ services:
       port: 8940
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+      m3:
+        hostPort: "127.0.0.1:9052"
+        service: "cadence_worker"
+        env: "standby"
     pprof:
       port: 8941
 
@@ -82,7 +86,7 @@ clusterMetadata:
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:8933"
     other:
-      enabled: true
+      enabled: false
       initialFailoverVersion: 2
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:9933"

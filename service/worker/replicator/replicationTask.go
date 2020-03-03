@@ -462,6 +462,12 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
+	t.logger.Info("Received retry error to do resend on history replication.",
+		tag.WorkflowDomainID(t.req.GetDomainUUID()),
+		tag.WorkflowID(t.req.GetWorkflowExecution().GetWorkflowId()),
+		tag.WorkflowRunID(t.req.GetWorkflowExecution().GetRunId()),
+		tag.Name(retryErr.Message))
+
 	if resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
 		retryErr.GetDomainId(),
 		retryErr.GetWorkflowId(),
