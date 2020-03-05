@@ -26,7 +26,7 @@ import (
 
 const (
 	// Version is the controlled version string. It should be updated every time
-	// before we release a new version.
+	// before  we release a new version.
 	Version = "0.9.1"
 )
 
