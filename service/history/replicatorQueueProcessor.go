@@ -143,6 +143,21 @@ func (p *replicatorQueueProcessorImpl) process(
 	// replication queue should always process all tasks
 	// so should not do anything to shouldProcessTask variable
 
+	// TODO: Remove this if statement after mitigation
+	if task.GetDomainID() == "73e3f6f3-897c-425f-9e53-d48f40089dd3" {
+		err := p.executionMgr.CompleteReplicationTask(&persistence.CompleteReplicationTaskRequest{TaskID: task.GetTaskID()})
+		if err != nil {
+			p.logger.Error(
+				"complete replication task failed",
+				tag.WorkflowDomainID(task.GetDomainID()),
+				tag.WorkflowID(task.GetWorkflowID()),
+				tag.WorkflowRunID(task.GetRunID()),
+				tag.TaskID(task.GetTaskID()),
+				tag.Error(err))
+		}
+		return metrics.ReplicatorQueueProcessorScope, err
+	}
+
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
 		err := p.processSyncActivityTask(task)
