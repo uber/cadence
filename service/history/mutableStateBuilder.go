@@ -1245,6 +1245,7 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 	return e.executionInfo.ParentDomainID != "" && e.executionInfo.ParentWorkflowID != ""
 }
 
+
 func (e *mutableStateBuilder) UpdateActivityProgress(
 	ai *persistence.ActivityInfo,
 	request *workflow.RecordActivityTaskHeartbeatRequest,
