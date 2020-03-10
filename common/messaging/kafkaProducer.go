@@ -22,6 +22,7 @@ package messaging
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Shopify/sarama"
 
@@ -118,7 +119,7 @@ func (p *kafkaProducer) getKeyForReplicationTask(task *replicator.ReplicationTas
 		replicator.ReplicationTaskTypeSyncShardStatus:
 		return nil
 	default:
-		panic("encounter unsupported replication task type")
+		panic(fmt.Sprintf("encounter unsupported replication task type: %v", task.GetTaskType()))
 	}
 
 	return nil
