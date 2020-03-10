@@ -89,7 +89,7 @@ func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scopeFunc func() me
 // Cases when this method will block:
 //
 // Ratelimit:
-// When a ratelimit is token is not available, this method might block
+// When a ratelimit token is not available, this method might block
 // waiting for a token until the provided context timeout. Rate limits are
 // not enforced for forwarded tasks from child partition.
 //
