@@ -113,6 +113,12 @@ func (p *kafkaProducer) getKeyForReplicationTask(task *replicator.ReplicationTas
 		// the messaging layer perspective
 		attributes := task.SyncActivityTaskAttributes
 		return sarama.StringEncoder(attributes.GetWorkflowId())
+	case replicator.ReplicationTaskTypeHistoryMetadata,
+		replicator.ReplicationTaskTypeDomain,
+		replicator.ReplicationTaskTypeSyncShardStatus:
+		return nil
+	default:
+		panic("encounter unsupported replication task type")
 	}
 
 	return nil
