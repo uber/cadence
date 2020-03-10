@@ -22,6 +22,12 @@ include "shared.thrift"
 
 namespace java com.uber.cadence.matching
 
+// TaskSource is the source from which a task was produced
+enum TaskSource {
+    HISTORY,    // Task produced by history service
+    DB_BACKLOG // Task produced from matching db backlog
+}
+
 struct PollForDecisionTaskRequest {
   10: optional string domainUUID
   15: optional string pollerID
@@ -62,6 +68,7 @@ struct AddDecisionTaskRequest {
   30: optional shared.TaskList taskList
   40: optional i64 (js.type = "Long") scheduleId
   50: optional i32 scheduleToStartTimeoutSeconds
+  59: optional TaskSource source
   60: optional string forwardedFrom
 }
 
@@ -72,6 +79,7 @@ struct AddActivityTaskRequest {
   40: optional shared.TaskList taskList
   50: optional i64 (js.type = "Long") scheduleId
   60: optional i32 scheduleToStartTimeoutSeconds
+  69: optional TaskSource source 
   70: optional string forwardedFrom
 }
 
