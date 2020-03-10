@@ -158,8 +158,12 @@ func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *internalTask) (
 	select {
 	case tm.taskC <- task: // poller picked up the task
 		if task.responseC != nil {
-			err := <-task.responseC
-			return true, err
+			select {
+			case err := <-task.responseC:
+				return true, err
+			case <-ctx.Done():
+				return false, nil
+			}
 		}
 		return false, nil
 	case <-ctx.Done():
