@@ -541,6 +541,13 @@ const (
 
 	// EnableParentClosePolicy whether to  ParentClosePolicy
 	EnableParentClosePolicy
+
+	// EnableRawHistoryQuery is whether to enable raw history retrieving
+	EnableRawHistoryQuery
+
+	// EnableRawHistoryQuery is whether to enable raw history retrieving by domain
+	EnableRawHistoryQueryByDomain
+
 	// ParentClosePolicyThreshold decides that parent close policy will be processed by sys workers(if enabled) if
 	// the number of children greater than or equal to this threshold
 	ParentClosePolicyThreshold
