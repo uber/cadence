@@ -126,8 +126,8 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		MinRetentionDays:                    dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
 		VisibilityArchivalQueryMaxPageSize:  dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisallowQuery, false),
-		EnableRawHistoryQuery:               dc.GetBoolProperty(dynamicconfig.EnableRawHistoryQuery, true),
-		EnableRawHistoryQueryByDomain:       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableRawHistoryQueryByDomain, true),
+		EnableRawHistoryQuery:               dc.GetBoolProperty(dynamicconfig.EnableRawHistoryQuery, false),
+		EnableRawHistoryQueryByDomain:       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableRawHistoryQueryByDomain, false),
 	}
 }
 
