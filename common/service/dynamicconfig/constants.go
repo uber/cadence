@@ -93,6 +93,8 @@ var keys = map[Key]string{
 	DisableListVisibilityByFilter:         "frontend.disableListVisibilityByFilter",
 	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
 	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
+	EnableRawHistoryQuery:                 "frontend.enableRawHistoryQuery",
+	EnableRawHistoryQueryByDomain:         "frontend.enableRawHistoryQueryByDomain",
 	ValidSearchAttributes:                 "frontend.validSearchAttributes",
 	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
 	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
@@ -339,6 +341,11 @@ const (
 	FrontendThrottledLogRPS
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
+	// EnableRawHistoryQuery is whether to enable raw history retrieving
+	EnableRawHistoryQuery
+	// EnableRawHistoryQuery is whether to enable raw history retrieving by domain
+	EnableRawHistoryQueryByDomain
+
 	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	FrontendMaxBadBinaries
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
@@ -541,13 +548,6 @@ const (
 
 	// EnableParentClosePolicy whether to  ParentClosePolicy
 	EnableParentClosePolicy
-
-	// EnableRawHistoryQuery is whether to enable raw history retrieving
-	EnableRawHistoryQuery
-
-	// EnableRawHistoryQuery is whether to enable raw history retrieving by domain
-	EnableRawHistoryQueryByDomain
-
 	// ParentClosePolicyThreshold decides that parent close policy will be processed by sys workers(if enabled) if
 	// the number of children greater than or equal to this threshold
 	ParentClosePolicyThreshold
