@@ -1461,7 +1461,8 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
+	var activityStartedTime time.Time
+	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(context workflowExecutionContext, mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
@@ -1492,8 +1493,13 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 				// Unable to add ActivityTaskCompleted event to history
 				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 			}
+			activityStartedTime = ai.StartedTime
 			return nil
 		})
+	if err == nil && !activityStartedTime.IsZero() {
+		e.metricsClient.RecordTimer(metrics.HistoryRespondActivityTaskCompletedScope, metrics.ActivityE2ELatency, time.Since(activityStartedTime))
+	}
+	return err
 }
 
 // RespondActivityTaskFailed completes an activity task failure.
@@ -1519,7 +1525,8 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	return e.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
+	var activityStartedTime time.Time
+	err = e.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
 		func(context workflowExecutionContext, mutableState mutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1560,8 +1567,13 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 				postActions.createDecision = true
 			}
 
+			activityStartedTime = ai.StartedTime
 			return postActions, nil
 		})
+	if err == nil && !activityStartedTime.IsZero() {
+		e.metricsClient.RecordTimer(metrics.HistoryRespondActivityTaskFailedScope, metrics.ActivityE2ELatency, time.Since(activityStartedTime))
+	}
+	return err
 }
 
 // RespondActivityTaskCanceled completes an activity task failure.
@@ -1587,7 +1599,8 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
+	var activityStartedTime time.Time
+	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(context workflowExecutionContext, mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
@@ -1624,9 +1637,13 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 			}
 
+			activityStartedTime = ai.StartedTime
 			return nil
 		})
-
+	if err == nil && !activityStartedTime.IsZero() {
+		e.metricsClient.RecordTimer(metrics.HistoryClientRespondActivityTaskCanceledScope, metrics.ActivityE2ELatency, time.Since(activityStartedTime))
+	}
+	return err
 }
 
 // RecordActivityTaskHeartbeat records an hearbeat for a task.
