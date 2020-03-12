@@ -437,7 +437,7 @@ pollLoop:
 			continue pollLoop
 		}
 		task.finish(nil)
-		return e.createPollForActivityTaskResponse(task, resp), nil
+		return e.createPollForActivityTaskResponse(task, resp, taskListName), nil
 	}
 }
 
@@ -706,6 +706,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	task *internalTask,
 	historyResponse *h.RecordActivityTaskStartedResponse,
+	taskListName string,
 ) *workflow.PollForActivityTaskResponse {
 
 	scheduledEvent := historyResponse.ScheduledEvent
@@ -743,6 +744,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 		ScheduleAttempt: historyResponse.GetAttempt(),
 		ActivityID:      attributes.GetActivityId(),
 		ActivityType:    attributes.GetActivityType().GetName(),
+		TaskList:        taskListName,
 	}
 
 	response.TaskToken, _ = e.tokenSerializer.Serialize(token)

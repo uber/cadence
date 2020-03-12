@@ -1502,7 +1502,9 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 			Tagged(
 				metrics.DomainTag(domainName),
 				metrics.WorkflowTypeTag(token.WorkflowType),
-				metrics.ActivityTypeTag(token.ActivityType))
+				metrics.ActivityTypeTag(token.ActivityType),
+				metrics.TaskListTag(token.TaskList),
+			)
 		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
 	return err
@@ -1582,7 +1584,9 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			Tagged(
 				metrics.DomainTag(domainName),
 				metrics.WorkflowTypeTag(token.WorkflowType),
-				metrics.ActivityTypeTag(token.ActivityType))
+				metrics.ActivityTypeTag(token.ActivityType),
+				metrics.TaskListTag(token.TaskList),
+			)
 		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
 	return err
@@ -1658,7 +1662,9 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 			Tagged(
 				metrics.DomainTag(domainName),
 				metrics.WorkflowTypeTag(token.WorkflowType),
-				metrics.ActivityTypeTag(token.ActivityType))
+				metrics.ActivityTypeTag(token.ActivityType),
+				metrics.TaskListTag(token.TaskList),
+			)
 		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
 	return err
