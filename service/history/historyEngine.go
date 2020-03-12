@@ -1449,6 +1449,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
+	domainName := domainEntry.GetInfo().Name
 
 	request := req.CompleteRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
@@ -1497,7 +1498,12 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 			return nil
 		})
 	if err == nil && !activityStartedTime.IsZero() {
-		e.metricsClient.RecordTimer(metrics.HistoryRespondActivityTaskCompletedScope, metrics.ActivityE2ELatency, time.Since(activityStartedTime))
+		scope := e.metricsClient.Scope(metrics.HistoryRespondActivityTaskCompletedScope).
+			Tagged(
+				metrics.DomainTag(domainName),
+				metrics.WorkflowTypeTag(token.WorkflowType),
+				metrics.ActivityTypeTag(token.ActivityType))
+		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
 	return err
 }
@@ -1513,6 +1519,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
+	domainName := domainEntry.GetInfo().Name
 
 	request := req.FailedRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
@@ -1571,7 +1578,12 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			return postActions, nil
 		})
 	if err == nil && !activityStartedTime.IsZero() {
-		e.metricsClient.RecordTimer(metrics.HistoryRespondActivityTaskFailedScope, metrics.ActivityE2ELatency, time.Since(activityStartedTime))
+		scope := e.metricsClient.Scope(metrics.HistoryRespondActivityTaskFailedScope).
+			Tagged(
+				metrics.DomainTag(domainName),
+				metrics.WorkflowTypeTag(token.WorkflowType),
+				metrics.ActivityTypeTag(token.ActivityType))
+		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
 	return err
 }
@@ -1587,6 +1599,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
+	domainName := domainEntry.GetInfo().Name
 
 	request := req.CancelRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
@@ -1641,7 +1654,12 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 			return nil
 		})
 	if err == nil && !activityStartedTime.IsZero() {
-		e.metricsClient.RecordTimer(metrics.HistoryClientRespondActivityTaskCanceledScope, metrics.ActivityE2ELatency, time.Since(activityStartedTime))
+		scope := e.metricsClient.Scope(metrics.HistoryClientRespondActivityTaskCanceledScope).
+			Tagged(
+				metrics.DomainTag(domainName),
+				metrics.WorkflowTypeTag(token.WorkflowType),
+				metrics.ActivityTypeTag(token.ActivityType))
+		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
 	return err
 }
