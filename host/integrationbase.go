@@ -99,7 +99,8 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 	s.domainName = s.randomizeStr("integration-test-domain")
 	s.Require().NoError(
 		s.registerDomain(s.domainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
-
+	s.Require().NoError(
+		s.registerDomain(s.testRawHistoryDomainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
 	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
 	s.Require().NoError(
 		s.registerDomain(s.foreignDomainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
