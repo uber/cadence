@@ -39,7 +39,6 @@ type (
 		ScheduleAttempt int64  `json:"scheduleAttempt"`
 		ActivityID      string `json:"activityId"`
 		ActivityType    string `json:"activityType"`
-		TaskList        string `json:"taskList"`
 	}
 
 	// QueryTaskToken identifies a query task
