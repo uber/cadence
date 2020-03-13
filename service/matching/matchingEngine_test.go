@@ -585,7 +585,6 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			ScheduleID:   scheduleID,
 			ActivityID:   activityID,
 			ActivityType: activityTypeName,
-			TaskList:     taskList.GetName(),
 		}
 
 		taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
@@ -735,7 +734,6 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			ScheduleID:   scheduleID,
 			ActivityID:   activityID,
 			ActivityType: activityTypeName,
-			TaskList:     taskList.GetName(),
 		}
 
 		taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
@@ -920,7 +918,6 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					ScheduleID:   scheduleID,
 					ActivityID:   activityID,
 					ActivityType: activityTypeName,
-					TaskList:     taskList.GetName(),
 				}
 				resultToken, err := s.matchingEngine.tokenSerializer.Deserialize(result.TaskToken)
 				s.NoError(err)
@@ -1220,7 +1217,6 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					ScheduleID:   scheduleID,
 					ActivityID:   activityID,
 					ActivityType: activityTypeName,
-					TaskList:     taskList.GetName(),
 				}
 				resultToken, err := engine.tokenSerializer.Deserialize(result.TaskToken)
 				if err != nil {
