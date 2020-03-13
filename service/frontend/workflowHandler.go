@@ -1827,11 +1827,11 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		token.IsWorkflowRunning = isWorkflowRunning
 		token.PersistenceToken = nil
 	}
-	rawHistoryQueryEnabled := wh.config.EnableRawHistoryQuery() && wh.config.EnableRawHistoryQueryByDomain(getRequest.GetDomain())
+	rawHistoryQueryEnabled := wh.config.SendRawWorkflowHistoryByDomain(getRequest.GetDomain())
 
-	history := &gen.History{}
-	historyBlob := []*gen.DataBlob{}
-	history.Events = []*gen.HistoryEvent{}
+	var history *gen.History
+	var historyBlob []*gen.DataBlob
+
 	if isCloseEventOnly {
 		if !isWorkflowRunning {
 			if rawHistoryQueryEnabled {
@@ -1879,6 +1879,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		// return all events
 		if token.FirstEventID >= token.NextEventID {
 			// currently there is no new event
+			history = &gen.History{}
 			history.Events = []*gen.HistoryEvent{}
 			if !isWorkflowRunning {
 				token = nil

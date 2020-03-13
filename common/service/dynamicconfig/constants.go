@@ -93,9 +93,8 @@ var keys = map[Key]string{
 	DisableListVisibilityByFilter:         "frontend.disableListVisibilityByFilter",
 	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
 	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
-	EnableRawHistoryQuery:                 "frontend.enableRawHistoryQuery",
-	EnableRawHistoryQueryByDomain:         "frontend.enableRawHistoryQueryByDomain",
 	ValidSearchAttributes:                 "frontend.validSearchAttributes",
+	SendRawWorkflowHistoryByDomain:        "frontend.sendRawWorkflowHistoryByDomain",
 	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
 	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
 	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
@@ -341,15 +340,13 @@ const (
 	FrontendThrottledLogRPS
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
-	// EnableRawHistoryQuery is whether to enable raw history retrieving
-	EnableRawHistoryQuery
-	// EnableRawHistoryQuery is whether to enable raw history retrieving by domain
-	EnableRawHistoryQueryByDomain
 
 	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	FrontendMaxBadBinaries
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes
+	// SendRawWorkflowHistoryByDomain is whether to enable raw history retrieving by domain
+	SendRawWorkflowHistoryByDomain
 	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
 	SearchAttributesNumberOfKeysLimit
 	// SearchAttributesSizeOfValueLimit is the size limit of each value
