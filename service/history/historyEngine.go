@@ -2897,6 +2897,24 @@ func (e *historyEngineImpl) ReapplyEvents(
 		domainID,
 		currentExecution,
 		func(context workflowExecutionContext, mutableState mutableState) (*updateWorkflowAction, error) {
+			// Filter out reapply event from the same cluster
+			toReapplyEvents := make([]*workflow.HistoryEvent, len(reapplyEvents))
+			lastWriteVersion, err := mutableState.GetLastWriteVersion()
+			if err != nil {
+				return nil, err
+			}
+			for _, event := range reapplyEvents {
+				dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+				if event.GetVersion() == lastWriteVersion || mutableState.IsResourceDuplicated(dedupResource) {
+					continue
+				}
+				toReapplyEvents = append(toReapplyEvents, event)
+			}
+			if len(toReapplyEvents) == 0 {
+				return &updateWorkflowAction{
+					noop: true,
+				}, nil
+			}
 
 			if !mutableState.IsWorkflowExecutionRunning() {
 				// need to reset target workflow (which is also the current workflow)
@@ -2948,7 +2966,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 						noopReleaseFn,
 					),
 					eventsReapplicationResetWorkflowReason,
-					reapplyEvents,
+					toReapplyEvents,
 				); err != nil {
 					return nil, err
 				}
@@ -2967,7 +2985,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 			reappliedEvents, err := e.eventsReapplier.reapplyEvents(
 				ctx,
 				mutableState,
-				reapplyEvents,
+				toReapplyEvents,
 				runID,
 			)
 			if err != nil {
