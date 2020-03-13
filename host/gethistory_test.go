@@ -464,7 +464,8 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_GetRawHistoryData() {
 			NextPageToken:   token,
 		})
 		s.Nil(err)
-
+		s.NotNil(responseInner.RawHistory)
+		s.Nil(responseInner.History)
 		return responseInner.RawHistory, responseInner.NextPageToken
 	}
 
@@ -478,7 +479,8 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_GetRawHistoryData() {
 			NextPageToken:   token,
 		})
 		s.Nil(err)
-
+		s.NotNil(responseInner.RawHistory)
+		s.Nil(responseInner.History)
 		return responseInner.RawHistory, responseInner.NextPageToken
 	}
 
