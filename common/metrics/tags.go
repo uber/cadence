@@ -166,17 +166,17 @@ func WorkflowTypeTag(value string) Tag {
 	return workflowTypeTag{value}
 }
 
-// Key returns the key of the task list tag
+// Key returns the key of the workflow type tag
 func (d workflowTypeTag) Key() string {
 	return workflowType
 }
 
-// Value returns the value of the task list tag
+// Value returns the value of the workflow type tag
 func (d workflowTypeTag) Value() string {
 	return d.value
 }
 
-// ActivityTypeTag returns a new workflow type tag.
+// ActivityTypeTag returns a new activity type tag.
 func ActivityTypeTag(value string) Tag {
 	if len(value) == 0 {
 		value = unknownValue
@@ -184,12 +184,12 @@ func ActivityTypeTag(value string) Tag {
 	return activityTypeTag{value}
 }
 
-// Key returns the key of the task list tag
+// Key returns the key of the activity type tag
 func (d activityTypeTag) Key() string {
 	return activityType
 }
 
-// Value returns the value of the task list tag
+// Value returns the value of the activity type tag
 func (d activityTypeTag) Value() string {
 	return d.value
 }
