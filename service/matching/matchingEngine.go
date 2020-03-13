@@ -437,7 +437,7 @@ pollLoop:
 			continue pollLoop
 		}
 		task.finish(nil)
-		return e.createPollForActivityTaskResponse(task, resp, taskListName), nil
+		return e.createPollForActivityTaskResponse(task, resp), nil
 	}
 }
 
@@ -706,7 +706,6 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	task *internalTask,
 	historyResponse *h.RecordActivityTaskStartedResponse,
-	taskListName string,
 ) *workflow.PollForActivityTaskResponse {
 
 	scheduledEvent := historyResponse.ScheduledEvent
