@@ -44,6 +44,9 @@ var (
 		dynamicconfig.ReplicationTaskFetcherErrorRetryWait:          50 * time.Millisecond,
 		dynamicconfig.ReplicationTaskProcessorErrorRetryWait:        time.Millisecond,
 		dynamicconfig.EnableConsistentQueryByDomain:                 true,
+		dynamicconfig.SendRawWorkflowHistoryByDomain: map[dynamicconfig.Filter]interface{}{
+			dynamicconfig.DomainName: map[string]interface{}{"TestRawHistoryDomain": true},
+		},
 	}
 )
 
