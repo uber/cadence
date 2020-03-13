@@ -1463,6 +1463,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	}
 
 	var activityStartedTime time.Time
+	var taskList string
 	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(context workflowExecutionContext, mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
@@ -1495,6 +1496,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 			}
 			activityStartedTime = ai.StartedTime
+			taskList = ai.TaskList
 			return nil
 		})
 	if err == nil && !activityStartedTime.IsZero() {
@@ -1503,7 +1505,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 				metrics.DomainTag(domainName),
 				metrics.WorkflowTypeTag(token.WorkflowType),
 				metrics.ActivityTypeTag(token.ActivityType),
-				metrics.TaskListTag(token.TaskList),
+				metrics.TaskListTag(taskList),
 			)
 		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
@@ -1535,6 +1537,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	}
 
 	var activityStartedTime time.Time
+	var taskList string
 	err = e.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
 		func(context workflowExecutionContext, mutableState mutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
@@ -1577,6 +1580,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			}
 
 			activityStartedTime = ai.StartedTime
+			taskList = ai.TaskList
 			return postActions, nil
 		})
 	if err == nil && !activityStartedTime.IsZero() {
@@ -1585,7 +1589,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 				metrics.DomainTag(domainName),
 				metrics.WorkflowTypeTag(token.WorkflowType),
 				metrics.ActivityTypeTag(token.ActivityType),
-				metrics.TaskListTag(token.TaskList),
+				metrics.TaskListTag(taskList),
 			)
 		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
@@ -1617,6 +1621,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	}
 
 	var activityStartedTime time.Time
+	var taskList string
 	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(context workflowExecutionContext, mutableState mutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
@@ -1655,6 +1660,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 			}
 
 			activityStartedTime = ai.StartedTime
+			taskList = ai.TaskList
 			return nil
 		})
 	if err == nil && !activityStartedTime.IsZero() {
@@ -1663,7 +1669,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 				metrics.DomainTag(domainName),
 				metrics.WorkflowTypeTag(token.WorkflowType),
 				metrics.ActivityTypeTag(token.ActivityType),
-				metrics.TaskListTag(token.TaskList),
+				metrics.TaskListTag(taskList),
 			)
 		scope.RecordTimer(metrics.ActivityE2ELatency, time.Since(activityStartedTime))
 	}
