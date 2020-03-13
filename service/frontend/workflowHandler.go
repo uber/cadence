@@ -1846,6 +1846,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 					token.TransientDecision,
 					token.BranchToken,
 				)
+				if err != nil {
+					return nil, wh.error(err, scope)
+				}
 			} else {
 				history, _, err = wh.getHistory(
 					scope,
@@ -1858,12 +1861,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 					token.TransientDecision,
 					token.BranchToken,
 				)
+
+				if err != nil {
+					return nil, wh.error(err, scope)
+				}
+				// since getHistory func will not return empty history, so the below is safe
+				history.Events = history.Events[len(history.Events)-1 : len(history.Events)]
 			}
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			// since getHistory func will not return empty history, so the below is safe
-			history.Events = history.Events[len(history.Events)-1 : len(history.Events)]
 			token = nil
 		} else if isLongPoll {
 			// set the persistence token to be nil so next time we will query history for updates
