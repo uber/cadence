@@ -303,6 +303,10 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 			HistoryEventFilterType: &closeEventOnly,
 		})
 
+		if responseInner.History == nil {
+			return nil, responseInner.NextPageToken
+		}
+
 		return responseInner.History.Events, responseInner.NextPageToken
 	}
 
