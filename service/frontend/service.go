@@ -88,7 +88,7 @@ type Config struct {
 	// VisibilityArchival system protection
 	VisibilityArchivalQueryMaxPageSize dynamicconfig.IntPropertyFn
 
-	SendRawWorkflowHistoryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	SendRawWorkflowHistory dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -124,7 +124,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		MinRetentionDays:                    dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
 		VisibilityArchivalQueryMaxPageSize:  dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisallowQuery, false),
-		SendRawWorkflowHistoryByDomain:      dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.SendRawWorkflowHistoryByDomain, false),
+		SendRawWorkflowHistory:              dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.SendRawWorkflowHistory, false),
 	}
 }
 
