@@ -60,7 +60,7 @@ type (
 	// RespondQueryTaskCompleted() or through an internal service error causing cadence to be unable to dispatch
 	// query task to workflow worker.
 	lockableQueryTaskMap struct {
-		sync.Mutex
+		sync.RWMutex
 		queryTaskMap map[string]chan *queryResult
 	}
 
@@ -244,6 +244,7 @@ func (e *matchingEngineImpl) AddDecisionTask(ctx context.Context, addRequest *m.
 	return tlMgr.AddTask(ctx, addTaskParams{
 		execution:     addRequest.Execution,
 		taskInfo:      taskInfo,
+		source:        addRequest.GetSource(),
 		forwardedFrom: addRequest.GetForwardedFrom(),
 	})
 }
@@ -282,6 +283,7 @@ func (e *matchingEngineImpl) AddActivityTask(ctx context.Context, addRequest *m.
 	return tlMgr.AddTask(ctx, addTaskParams{
 		execution:     addRequest.Execution,
 		taskInfo:      taskInfo,
+		source:        addRequest.GetSource(),
 		forwardedFrom: addRequest.GetForwardedFrom(),
 	})
 }
@@ -735,9 +737,12 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	token := &common.TaskToken{
 		DomainID:        task.event.DomainID,
 		WorkflowID:      task.event.WorkflowID,
+		WorkflowType:    historyResponse.WorkflowType.GetName(),
 		RunID:           task.event.RunID,
 		ScheduleID:      task.event.ScheduleID,
 		ScheduleAttempt: historyResponse.GetAttempt(),
+		ActivityID:      attributes.GetActivityId(),
+		ActivityType:    attributes.GetActivityType().GetName(),
 	}
 
 	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
@@ -827,8 +832,8 @@ func (m *lockableQueryTaskMap) put(key string, value chan *queryResult) {
 }
 
 func (m *lockableQueryTaskMap) get(key string) (chan *queryResult, bool) {
-	m.Lock()
-	defer m.Unlock()
+	m.RLock()
+	defer m.RUnlock()
 	result, ok := m.queryTaskMap[key]
 	return result, ok
 }
