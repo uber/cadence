@@ -1849,6 +1849,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				if err != nil {
 					return nil, wh.error(err, scope)
 				}
+
+				// since getHistory func will not return empty history, so the below is safe
+				historyBlob = historyBlob[len(historyBlob)-1 : len(historyBlob)]
 			} else {
 				history, _, err = wh.getHistory(
 					scope,
