@@ -1829,7 +1829,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 	rawHistoryQueryEnabled := wh.config.SendRawWorkflowHistory(getRequest.GetDomain())
 
-	var history *gen.History
+	history := &gen.History{}
+	history.Events = []*gen.HistoryEvent{}
 	var historyBlob []*gen.DataBlob
 
 	if isCloseEventOnly {
@@ -1882,7 +1883,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		// return all events
 		if token.FirstEventID >= token.NextEventID {
 			// currently there is no new event
-			history = &gen.History{}
 			history.Events = []*gen.HistoryEvent{}
 			if !isWorkflowRunning {
 				token = nil
