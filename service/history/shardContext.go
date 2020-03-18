@@ -113,7 +113,7 @@ type (
 		executionManager persistence.ExecutionManager
 		eventsCache      eventsCache
 		closeCh          chan<- int
-		isClosed         bool
+		isClosed         int64
 		config           *Config
 		logger           log.Logger
 		throttledLogger  log.Logger
@@ -451,6 +451,7 @@ Create_Loop:
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
 						s.closeShard()
+						break Create_Loop
 					}
 				}
 			default:
@@ -465,6 +466,7 @@ Create_Loop:
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
 						s.closeShard()
+						break Create_Loop
 					}
 				}
 			}
@@ -542,6 +544,7 @@ Update_Loop:
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
 						s.closeShard()
+						break Update_Loop
 					}
 				}
 			default:
@@ -556,6 +559,7 @@ Update_Loop:
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
 						s.closeShard()
+						break Update_Loop
 					}
 				}
 			}
@@ -628,6 +632,7 @@ Reset_Loop:
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
 						s.closeShard()
+						break Reset_Loop
 					}
 				}
 			default:
@@ -642,6 +647,7 @@ Reset_Loop:
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
 						s.closeShard()
+						break Reset_Loop
 					}
 				}
 			}
@@ -727,6 +733,7 @@ Reset_Loop:
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
 						s.closeShard()
+						break Reset_Loop
 					}
 				}
 			default:
@@ -741,6 +748,7 @@ Reset_Loop:
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
 						s.closeShard()
+						break Reset_Loop
 					}
 				}
 			}
@@ -819,11 +827,11 @@ func (s *shardContextImpl) getRangeID() int64 {
 }
 
 func (s *shardContextImpl) closeShard() {
-	if s.isClosed {
+	if atomic.LoadInt64(&s.isClosed) != 0 {
 		return
 	}
 
-	s.isClosed = true
+	atomic.StoreInt64(&s.isClosed, 1)
 
 	go s.shardItem.stopEngine()
 
@@ -897,6 +905,10 @@ func (s *shardContextImpl) renewRangeLocked(isStealing bool) error {
 	return nil
 }
 
+func (s *shardContextImpl) closed() bool {
+	return atomic.LoadInt64(&s.isClosed) != 0
+}
+
 func (s *shardContextImpl) updateMaxReadLevelLocked(rl int64) {
 	if rl > s.transferMaxReadLevel {
 		s.logger.Debug(fmt.Sprintf("Updating MaxReadLevel: %v", rl))
@@ -905,6 +917,10 @@ func (s *shardContextImpl) updateMaxReadLevelLocked(rl int64) {
 }
 
 func (s *shardContextImpl) updateShardInfoLocked() error {
+	if s.closed() {
+		return &persistence.ShardOwnershipLostError{ShardID: s.shardID}
+	}
+
 	var err error
 	now := clock.NewRealTimeSource().Now()
 	if s.lastUpdated.Add(s.config.ShardUpdateMinInterval()).After(now) {

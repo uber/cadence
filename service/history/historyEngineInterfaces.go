@@ -57,7 +57,7 @@ type (
 		completeQueueTask(taskID int64)
 		getQueueAckLevel() int64
 		getQueueReadLevel() int64
-		updateQueueAckLevel()
+		updateQueueAckLevel() error
 	}
 
 	queueTaskInfo interface {

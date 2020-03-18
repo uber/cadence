@@ -53,7 +53,7 @@ func newTestShardContext(
 		rangeID:                   shardInfo.RangeID,
 		shardInfo:                 shardInfo,
 		executionManager:          resource.ExecutionMgr,
-		isClosed:                  false,
+		isClosed:                  0,
 		closeCh:                   make(chan int, 100),
 		config:                    config,
 		logger:                    resource.GetLogger(),

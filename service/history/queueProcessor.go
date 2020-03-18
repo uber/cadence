@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/persistence"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
@@ -195,7 +197,12 @@ processorPumpLoop:
 				p.options.UpdateAckInterval(),
 				p.options.UpdateAckIntervalJitterCoefficient(),
 			))
-			p.ackMgr.updateQueueAckLevel()
+			err := p.ackMgr.updateQueueAckLevel()
+			_, shutdown := err.(*persistence.ShardOwnershipLostError)
+			if shutdown {
+				go p.Stop()
+				break processorPumpLoop
+			}
 		}
 	}
 
