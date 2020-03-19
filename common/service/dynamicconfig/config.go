@@ -218,8 +218,8 @@ func (c *Collection) GetDurationPropertyFilteredByDomain(key Key, defaultValue t
 
 // GetDurationPropertyFilteredByDomainID gets property with domainID filter and asserts that it's a duration
 func (c *Collection) GetDurationPropertyFilteredByDomainID(key Key, defaultValue time.Duration) DurationPropertyFnWithDomainIDFilter {
-	return func(domain string) time.Duration {
-		val, err := c.client.GetDurationValue(key, getFilterMap(DomainIDFilter(domain)), defaultValue)
+	return func(domainID string) time.Duration {
+		val, err := c.client.GetDurationValue(key, getFilterMap(DomainIDFilter(domainID)), defaultValue)
 		if err != nil {
 			c.logError(key, err)
 		}

@@ -117,6 +117,7 @@ func (s *historyRereplicatorSuite) SetupTest() {
 		},
 		persistence.NewPayloadSerializer(),
 		30*time.Second,
+		nil,
 		s.logger,
 	)
 }

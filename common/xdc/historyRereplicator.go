@@ -428,7 +428,7 @@ func (c *historyRereplicationContext) getHistory(
 
 	ctx, cancel := context.WithTimeout(c.ctx, c.rereplicator.replicationTimeout)
 	defer cancel()
-	defer cancel()
+
 	response, err := c.rereplicator.adminClient.GetWorkflowExecutionRawHistory(ctx, &admin.GetWorkflowExecutionRawHistoryRequest{
 		Domain: common.StringPtr(domainName),
 		Execution: &shared.WorkflowExecution{

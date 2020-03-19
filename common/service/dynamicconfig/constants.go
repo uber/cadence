@@ -684,11 +684,11 @@ const (
 	TaskListName
 	// TaskType is the task type (0:Decision, 1:Activity)
 	TaskType
+	// DomainID is the domain id
+	DomainID
 
 	// lastFilterTypeForTest must be the last one in this const group for testing purpose
 	lastFilterTypeForTest
-	// DomainID is the domain id
-	DomainID
 )
 
 // FilterOption is used to provide filters for dynamic config keys
@@ -709,9 +709,9 @@ func DomainFilter(name string) FilterOption {
 }
 
 // DomainIDFilter filters by domain id
-func DomainIDFilter(name string) FilterOption {
+func DomainIDFilter(domainID string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
-		filterMap[DomainID] = name
+		filterMap[DomainID] = domainID
 	}
 }
 
