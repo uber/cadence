@@ -103,7 +103,10 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 
 	ctx := context.Background()
 	var cancel context.CancelFunc
-	timeout := rereplicator.rereplicationTimeout(domainID)
+	var timeout time.Duration
+	if rereplicator.rereplicationTimeout != nil {
+		timeout = rereplicator.rereplicationTimeout(domainID)
+	}
 	if timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 	}
