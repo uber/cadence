@@ -22,6 +22,7 @@ package xdc
 
 import (
 	"context"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -70,6 +71,7 @@ type (
 		historyReplicationFn historyReplicationFn
 		serializer           persistence.PayloadSerializer
 		replicationTimeout   time.Duration
+		rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		logger               log.Logger
 	}
 
@@ -84,6 +86,7 @@ type (
 		endingNextEventID     int64
 		rereplicator          *HistoryRereplicatorImpl
 		logger                log.Logger
+		ctx                   context.Context
 	}
 )
 
@@ -91,10 +94,19 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 	beginningRunID string, beginningFirstEventID int64,
 	endingRunID string, endingNextEventID int64,
 	rereplicator *HistoryRereplicatorImpl) *historyRereplicationContext {
+
 	logger := rereplicator.logger.WithTags(
 		tag.WorkflowDomainID(domainID), tag.WorkflowID(workflowID), tag.WorkflowBeginningRunID(beginningRunID),
 		tag.WorkflowBeginningFirstEventID(beginningFirstEventID), tag.WorkflowEndingRunID(endingRunID),
 		tag.WorkflowEndingNextEventID(endingNextEventID))
+
+	ctx := context.Background()
+	var cancel context.CancelFunc
+	timeout := rereplicator.rereplicationTimeout(domainID)
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
 	return &historyRereplicationContext{
 		seenEmptyEvents:       false,
 		rpcCalls:              0,
@@ -106,12 +118,20 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 		endingNextEventID:     endingNextEventID,
 		rereplicator:          rereplicator,
 		logger:                logger,
+		ctx:                   ctx,
 	}
 }
 
 // NewHistoryRereplicator create a new HistoryRereplicatorImpl
-func NewHistoryRereplicator(targetClusterName string, domainCache cache.DomainCache, adminClient a.Client, historyReplicationFn historyReplicationFn,
-	serializer persistence.PayloadSerializer, replicationTimeout time.Duration, logger log.Logger) *HistoryRereplicatorImpl {
+func NewHistoryRereplicator(
+	targetClusterName string,
+	domainCache cache.DomainCache,
+	adminClient a.Client,
+	historyReplicationFn historyReplicationFn,
+	serializer persistence.PayloadSerializer,
+	replicationTimeout time.Duration,
+	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
+	logger log.Logger) *HistoryRereplicatorImpl {
 
 	return &HistoryRereplicatorImpl{
 		targetClusterName:    targetClusterName,
@@ -120,6 +140,7 @@ func NewHistoryRereplicator(targetClusterName string, domainCache cache.DomainCa
 		historyReplicationFn: historyReplicationFn,
 		serializer:           serializer,
 		replicationTimeout:   replicationTimeout,
+		rereplicationTimeout: rereplicationTimeout,
 		logger:               logger,
 	}
 }
@@ -299,7 +320,7 @@ func (c *historyRereplicationContext) sendReplicationRawRequest(request *history
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.rereplicator.replicationTimeout)
+	ctx, cancel := context.WithTimeout(c.ctx, c.rereplicator.replicationTimeout)
 	defer func() {
 		cancel()
 		c.rpcCalls++
@@ -309,7 +330,7 @@ func (c *historyRereplicationContext) sendReplicationRawRequest(request *history
 		return nil
 	}
 
-	logger := c.logger.WithTags(tag.WorkflowEndingRunID(request.WorkflowExecution.GetRunId()))
+	logger := c.logger.WithTags(tag.WorkflowBeginningRunID(c.beginningRunID), tag.WorkflowEndingRunID(request.WorkflowExecution.GetRunId()))
 
 	// sometimes there can be case when the first re-replication call
 	// trigger an history reset and this reset can leave a hole in target
@@ -320,11 +341,11 @@ func (c *historyRereplicationContext) sendReplicationRawRequest(request *history
 		return err
 	}
 	if c.rpcCalls > 0 {
-		logger.Error("encounter RetryTaskError not in first call")
+		logger.Error("encounter RetryTaskError not in first call", tag.Error(retryErr))
 		return err
 	}
 	if retryErr.GetRunId() != c.beginningRunID {
-		logger.Error("encounter RetryTaskError with non expected run ID")
+		logger.Error("encounter RetryTaskError with non expected run ID", tag.Error(retryErr))
 		return err
 	}
 	if retryErr.GetNextEventId() >= c.beginningFirstEventID {
@@ -340,7 +361,7 @@ func (c *historyRereplicationContext) sendReplicationRawRequest(request *history
 	}
 
 	// after the amend of the missing history events after history reset, redo the request
-	ctxAgain, cancelAgain := context.WithTimeout(context.Background(), c.rereplicator.replicationTimeout)
+	ctxAgain, cancelAgain := context.WithTimeout(c.ctx, c.rereplicator.replicationTimeout)
 	defer cancelAgain()
 	return c.rereplicator.historyReplicationFn(ctxAgain, request)
 }
@@ -395,7 +416,7 @@ func (c *historyRereplicationContext) getHistory(
 	}
 	domainName := domainEntry.GetInfo().Name
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.rereplicator.replicationTimeout)
+	ctx, cancel := context.WithTimeout(c.ctx, c.rereplicator.replicationTimeout)
 	defer cancel()
 	response, err := c.rereplicator.adminClient.GetWorkflowExecutionRawHistory(ctx, &admin.GetWorkflowExecutionRawHistoryRequest{
 		Domain: common.StringPtr(domainName),
