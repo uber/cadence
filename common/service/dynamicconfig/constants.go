@@ -681,12 +681,12 @@ const (
 	unknownFilter Filter = iota
 	// DomainName is the domain name
 	DomainName
+	// DomainID is the domain id
+	DomainID
 	// TaskListName is the tasklist name
 	TaskListName
 	// TaskType is the task type (0:Decision, 1:Activity)
 	TaskType
-	// DomainID is the domain id
-	DomainID
 
 	// lastFilterTypeForTest must be the last one in this const group for testing purpose
 	lastFilterTypeForTest
