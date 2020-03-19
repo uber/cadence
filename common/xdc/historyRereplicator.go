@@ -24,8 +24,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -36,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 var (
@@ -88,6 +87,7 @@ type (
 		rereplicator          *HistoryRereplicatorImpl
 		logger                log.Logger
 		ctx                   context.Context
+		cancel                context.CancelFunc
 	}
 )
 
@@ -106,8 +106,8 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 	timeout := rereplicator.rereplicationTimeout(domainID)
 	if timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
 	}
+
 	return &historyRereplicationContext{
 		seenEmptyEvents:       false,
 		rpcCalls:              0,
@@ -120,6 +120,7 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 		rereplicator:          rereplicator,
 		logger:                logger,
 		ctx:                   ctx,
+		cancel:                cancel,
 	}
 }
 
@@ -156,6 +157,11 @@ func (h *HistoryRereplicatorImpl) SendMultiWorkflowHistory(domainID string, work
 	// endingRunID must not be empty, since this function is trigger missing events of endingRunID
 
 	rereplicationContext := newHistoryRereplicationContext(domainID, workflowID, beginningRunID, beginningFirstEventID, endingRunID, endingNextEventID, h)
+	defer func() {
+		if rereplicationContext.cancel != nil {
+			rereplicationContext.cancel()
+		}
+	}()
 
 	runID := beginningRunID
 	for len(runID) != 0 && runID != endingRunID {
@@ -418,6 +424,7 @@ func (c *historyRereplicationContext) getHistory(
 	domainName := domainEntry.GetInfo().Name
 
 	ctx, cancel := context.WithTimeout(c.ctx, c.rereplicator.replicationTimeout)
+	defer cancel()
 	defer cancel()
 	response, err := c.rereplicator.adminClient.GetWorkflowExecutionRawHistory(ctx, &admin.GetWorkflowExecutionRawHistoryRequest{
 		Domain: common.StringPtr(domainName),
