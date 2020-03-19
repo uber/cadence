@@ -833,7 +833,12 @@ func (s *shardContextImpl) closeShard() {
 
 	atomic.StoreInt64(&s.isClosed, 1)
 
-	go s.shardItem.stopEngine()
+	go func() {
+		item, _ := s.shardItem.controller.removeHistoryShardItem(s.shardID)
+		if item == s.shardItem {
+			item.stopEngine()
+		}
+	}()
 
 	// fails any writes that may start after this point.
 	s.shardInfo.RangeID = -1
@@ -842,7 +847,7 @@ func (s *shardContextImpl) closeShard() {
 	if s.closeCh != nil {
 		// This is the channel passed in by shard controller to monitor if a shard needs to be unloaded
 		// It will trigger the HistoryEngine unload and removal of engine from shard controller
-		s.closeCh <- s.shardID
+		//	s.closeCh <- s.shardID
 	}
 }
 

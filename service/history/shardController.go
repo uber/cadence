@@ -70,8 +70,9 @@ type (
 		engineFactory   EngineFactory
 
 		sync.RWMutex
-		status historyShardsItemStatus
-		engine Engine
+		status     historyShardsItemStatus
+		engine     Engine
+		controller *shardController
 	}
 )
 
@@ -107,6 +108,7 @@ func newHistoryShardsItem(
 	shardID int,
 	factory EngineFactory,
 	config *Config,
+	controller *shardController,
 ) (*historyShardsItem, error) {
 
 	hostIdentity := resource.GetHostInfo().Identity()
@@ -116,6 +118,7 @@ func newHistoryShardsItem(
 		status:          historyShardsItemStatusInitialized,
 		engineFactory:   factory,
 		config:          config,
+		controller:      controller,
 		logger:          resource.GetLogger().WithTags(tag.ShardID(shardID), tag.Address(hostIdentity)),
 		throttledLogger: resource.GetThrottledLogger().WithTags(tag.ShardID(shardID), tag.Address(hostIdentity)),
 	}, nil
@@ -211,6 +214,7 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 			shardID,
 			c.engineFactory,
 			c.config,
+			c,
 		)
 		if err != nil {
 			return nil, err
