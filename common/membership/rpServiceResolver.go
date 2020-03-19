@@ -205,7 +205,7 @@ func (r *ringpopServiceResolver) HandleEvent(
 	}
 }
 
-func (r *ringpopServiceResolver) refresh() error {
+func (r *ringpopServiceResolver) tryRefresh() error {
 	r.ringLock.Lock()
 	defer r.ringLock.Unlock()
 
@@ -213,7 +213,16 @@ func (r *ringpopServiceResolver) refresh() error {
 		// refresh too frequently
 		return nil
 	}
+	return r.refreshNoLock()
+}
 
+func (r *ringpopServiceResolver) refresh() error {
+	r.ringLock.Lock()
+	defer r.ringLock.Unlock()
+	return r.refreshNoLock()
+}
+
+func (r *ringpopServiceResolver) refreshNoLock() error {
 	r.ring = hashring.New(farm.Fingerprint32, replicaPoints)
 
 	addrs, err := r.rp.GetReachableMembers(swim.MemberWithLabelAndValue(RoleKey, r.service))
@@ -271,11 +280,11 @@ func (r *ringpopServiceResolver) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case <-r.refreshChan:
-			if err := r.refresh(); err != nil {
+			if err := r.tryRefresh(); err != nil {
 				r.logger.Error("error periodically refreshing ring", tag.Error(err))
 			}
 		case <-refreshTicker.C:
-			if err := r.refresh(); err != nil {
+			if err := r.tryRefresh(); err != nil {
 				r.logger.Error("error periodically refreshing ring", tag.Error(err))
 			}
 		}

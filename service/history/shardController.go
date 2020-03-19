@@ -295,7 +295,7 @@ func (c *shardController) acquireShards() {
 	sw := c.metricsScope.StartTimer(metrics.AcquireShardsLatency)
 	defer sw.Stop()
 
-	concurrency := common.MaxInt(c.config.AcquireShardConcurrency(), 1)
+	concurrency := 10 // common.MaxInt(c.config.AcquireShardConcurrency(), 1)
 	shardActionCh := make(chan int, concurrency)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
