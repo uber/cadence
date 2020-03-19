@@ -22,8 +22,9 @@ package xdc
 
 import (
 	"context"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"time"
+
+	"github.com/uber/cadence/common/service/dynamicconfig"
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"

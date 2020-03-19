@@ -221,9 +221,9 @@ func (c *Collection) GetDurationPropertyFilteredByDomainID(key Key, defaultValue
 	return func(domain string) time.Duration {
 		val, err := c.client.GetDurationValue(key, getFilterMap(DomainIDFilter(domain)), defaultValue)
 		if err != nil {
-			c.logNoValue(key, err)
+			c.logError(key, err)
 		}
-		c.logValue(key, val, defaultValue)
+		c.logValue(key, val, defaultValue, durationCompareEquals)
 		return val
 	}
 }
