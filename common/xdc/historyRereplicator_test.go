@@ -1262,5 +1262,6 @@ func (s *historyRereplicatorSuite) getDummyRereplicationContext() *historyRerepl
 	return &historyRereplicationContext{
 		rereplicator: s.rereplicator,
 		logger:       s.rereplicator.logger,
+		ctx:          context.Background(),
 	}
 }
