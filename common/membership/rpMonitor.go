@@ -103,6 +103,10 @@ func (rpo *ringpopMonitor) Stop() {
 	rpo.rp.Stop()
 }
 
+func (rpo *ringpopMonitor) SelfEvict() error {
+	return rpo.rp.SelfEvict()
+}
+
 func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {
 	address, err := rpo.rp.WhoAmI()
 	if err != nil {

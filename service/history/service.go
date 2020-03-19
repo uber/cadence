@@ -420,6 +420,8 @@ func (s *Service) Stop() {
 		return
 	}
 
+	s.Resource.GetMembershipMonitor().SelfEvict()
+	time.Sleep(time.Second * 7)
 	close(s.stopC)
 
 	s.handler.Stop()

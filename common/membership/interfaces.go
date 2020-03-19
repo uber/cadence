@@ -52,6 +52,7 @@ type (
 	Monitor interface {
 		common.Daemon
 
+		SelfEvict() error
 		WhoAmI() (*HostInfo, error)
 		Lookup(service string, key string) (*HostInfo, error)
 		GetResolver(service string) (ServiceResolver, error)

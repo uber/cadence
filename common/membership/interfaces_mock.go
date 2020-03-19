@@ -89,6 +89,14 @@ func (m *MockMonitor) WhoAmI() (*HostInfo, error) {
 	return ret0, ret1
 }
 
+// SelfEvict mocks base method
+func (m *MockMonitor) SelfEvict() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SelfEvict")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
 // WhoAmI indicates an expected call of WhoAmI
 func (mr *MockMonitorMockRecorder) WhoAmI() *gomock.Call {
 	mr.mock.ctrl.T.Helper()

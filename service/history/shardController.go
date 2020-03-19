@@ -315,7 +315,7 @@ func (c *shardController) acquireShards() {
 							c.logger.Error("Unable to create history shard engine", tag.Error(err1), tag.OperationFailed, tag.ShardID(shardID))
 						}
 					} else {
-						c.removeEngineForShard(shardID)
+						//c.removeEngineForShard(shardID)
 					}
 				}
 			}
