@@ -31,6 +31,7 @@ type (
 	}
 )
 
+// NewConcurrentQueue creates a new concurrent queue
 func NewConcurrentQueue() Queue {
 	return &concurrentQueueImpl{
 		items: make([]interface{}, 0),

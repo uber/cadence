@@ -28,6 +28,8 @@ type (
 		// Add push an item to the queue
 		Add(item interface{})
 		// Remove pop an item from the queue
+		// TODO: consider return an error here to indicate no more item in the Queue
+		// so that this interface can support use cases for multiple concurrent consumer
 		Remove() interface{}
 		// IsEmpty indicate if the queue is empty
 		IsEmpty() bool
