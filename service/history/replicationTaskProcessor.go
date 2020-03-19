@@ -136,6 +136,7 @@ func NewReplicationTaskProcessor(
 		},
 		shard.GetService().GetPayloadSerializer(),
 		replicationTimeout,
+		nil,
 		shard.GetLogger(),
 	)
 	return &ReplicationTaskProcessorImpl{

@@ -73,6 +73,7 @@ type (
 		ReplicationTaskMaxRetryCount       dynamicconfig.IntPropertyFn
 		ReplicationTaskMaxRetryDuration    dynamicconfig.DurationPropertyFn
 		ReplicationTaskContextTimeout      dynamicconfig.DurationPropertyFn
+		ReReplicationContextTimeout        dynamicconfig.DurationPropertyFnWithDomainIDFilter
 	}
 )
 
@@ -169,6 +170,7 @@ func (r *Replicator) createKafkaProcessors(currentClusterName string, clusterNam
 		},
 		r.historySerializer,
 		r.config.ReplicationTaskContextTimeout(),
+		r.config.ReReplicationContextTimeout,
 		r.logger,
 	)
 	nDCHistoryReplicator := xdc.NewNDCHistoryResender(

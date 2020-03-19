@@ -219,6 +219,7 @@ var keys = map[Key]string{
 	WorkerReplicationTaskMaxRetryCount:              "worker.replicationTaskMaxRetryCount",
 	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
 	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
+	WorkerReReplicationContextTimeout:               "worker.workerReReplicationContextTimeout",
 	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
@@ -565,6 +566,8 @@ const (
 	WorkerReplicationTaskMaxRetryDuration
 	// WorkerReplicationTaskContextDuration is the context timeout for apply replication tasks
 	WorkerReplicationTaskContextDuration
+	// WorkerReReplicationContextTimeout is the context timeout for end to end  re-replication process
+	WorkerReReplicationContextTimeout
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor

@@ -283,7 +283,6 @@ func NewEngineWithShardContext(
 		logger,
 	)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
-
 	var replicationTaskProcessors []ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		replicationTaskProcessor := NewReplicationTaskProcessor(
