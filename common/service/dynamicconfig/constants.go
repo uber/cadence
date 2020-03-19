@@ -672,6 +672,7 @@ func (f Filter) String() string {
 var filters = []string{
 	"unknownFilter",
 	"domainName",
+	"domainID",
 	"taskListName",
 	"taskType",
 }
