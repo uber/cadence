@@ -183,7 +183,7 @@ var (
 	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
 	ErrQueryEnteredInvalidState = &workflow.BadRequestError{Message: "query entered invalid state, this should be impossible"}
 	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
-	ErrQueryWorkflowBeforeFirstDecision = errors.New("workflow must handle at least one decision task before it can be queried")
+	ErrQueryWorkflowBeforeFirstDecision = &workflow.QueryFailedError{Message: "workflow must handle at least one decision task before it can be queried"}
 	// ErrConsistentQueryNotEnabled is error indicating that consistent query was requested but either cluster or domain does not enable consistent query
 	ErrConsistentQueryNotEnabled = &workflow.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
 	// ErrConsistentQueryBufferExceeded is error indicating that too many consistent queries have been buffered and until buffered queries are finished new consistent queries cannot be buffered
