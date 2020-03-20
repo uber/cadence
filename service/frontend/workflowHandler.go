@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -65,7 +66,7 @@ type (
 	// WorkflowHandler - Thrift handler interface for workflow service
 	WorkflowHandler struct {
 		resource.Resource
-
+		isHealthy                 int64
 		tokenSerializer           common.TaskTokenSerializer
 		rateLimiter               quotas.Policy
 		config                    *Config
@@ -143,6 +144,7 @@ func NewWorkflowHandler(
 	return &WorkflowHandler{
 		Resource:        resource,
 		config:          config,
+		isHealthy:       1,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
 			func() float64 {
@@ -187,13 +189,17 @@ func (wh *WorkflowHandler) Start() {
 
 // Stop stops the handler
 func (wh *WorkflowHandler) Stop() {
+	atomic.StoreInt64(&wh.isHealthy, 0)
 }
 
 // Health is for health check
 func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	wh.GetLogger().Debug("Frontend health check endpoint reached.")
-	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("frontend good")}
-	return hs, nil
+	healthy := atomic.LoadInt64(&wh.isHealthy) != 0
+	if !healthy {
+		return &health.HealthStatus{Ok: false, Msg: common.StringPtr("going down")}, nil
+	}
+	return &health.HealthStatus{Ok: true, Msg: common.StringPtr("healthy")}, nil
 }
 
 // RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level

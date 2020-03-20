@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"sync/atomic"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -257,6 +258,7 @@ func (s *Service) Stop() {
 
 	s.handler.Stop()
 	s.adminHandler.Stop()
+	time.Sleep(6 * time.Second)
 	s.Resource.Stop()
 
 	s.params.Logger.Info("frontend stopped")

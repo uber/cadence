@@ -22,6 +22,7 @@ package matching
 
 import (
 	"sync/atomic"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -102,6 +103,8 @@ func (s *Service) Stop() {
 		return
 	}
 
+	s.GetMembershipMonitor().SelfEvict()
+	time.Sleep(time.Second)
 	close(s.stopC)
 
 	s.handler.Stop()
