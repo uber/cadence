@@ -258,7 +258,7 @@ func (s *Service) Stop() {
 
 	s.handler.Stop()
 	s.adminHandler.Stop()
-	time.Sleep(6 * time.Second)
+	time.Sleep(10 * time.Second)
 	s.Resource.Stop()
 
 	s.params.Logger.Info("frontend stopped")
