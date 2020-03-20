@@ -94,6 +94,7 @@ var keys = map[Key]string{
 	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
 	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
 	ValidSearchAttributes:                 "frontend.validSearchAttributes",
+	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
 	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
 	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
 	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
@@ -232,6 +233,7 @@ var keys = map[Key]string{
 	WorkerReplicationTaskMaxRetryCount:              "worker.replicationTaskMaxRetryCount",
 	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
 	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
+	WorkerReReplicationContextTimeout:               "worker.workerReReplicationContextTimeout",
 	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
@@ -348,10 +350,13 @@ const (
 	FrontendThrottledLogRPS
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
+
 	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	FrontendMaxBadBinaries
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes
+	// SendRawWorkflowHistory is whether to enable raw history retrieving
+	SendRawWorkflowHistory
 	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
 	SearchAttributesNumberOfKeysLimit
 	// SearchAttributesSizeOfValueLimit is the size limit of each value
@@ -601,6 +606,8 @@ const (
 	WorkerReplicationTaskMaxRetryDuration
 	// WorkerReplicationTaskContextDuration is the context timeout for apply replication tasks
 	WorkerReplicationTaskContextDuration
+	// WorkerReReplicationContextTimeout is the context timeout for end to end  re-replication process
+	WorkerReReplicationContextTimeout
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
@@ -692,6 +699,7 @@ func (f Filter) String() string {
 var filters = []string{
 	"unknownFilter",
 	"domainName",
+	"domainID",
 	"taskListName",
 	"taskType",
 }
@@ -700,6 +708,8 @@ const (
 	unknownFilter Filter = iota
 	// DomainName is the domain name
 	DomainName
+	// DomainID is the domain id
+	DomainID
 	// TaskListName is the tasklist name
 	TaskListName
 	// TaskType is the task type (0:Decision, 1:Activity)
@@ -723,6 +733,13 @@ func TaskListFilter(name string) FilterOption {
 func DomainFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[DomainName] = name
+	}
+}
+
+// DomainIDFilter filters by domain id
+func DomainIDFilter(domainID string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[DomainID] = domainID
 	}
 }
 
