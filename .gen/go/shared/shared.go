@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2020 Uber Technologies, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -18722,10 +18722,40 @@ func (v *GetWorkflowExecutionHistoryRequest) IsSetHistoryEventFilterType() bool 
 }
 
 type GetWorkflowExecutionHistoryResponse struct {
-	History       *History `json:"history,omitempty"`
-	NextPageToken []byte   `json:"nextPageToken,omitempty"`
-	Archived      *bool    `json:"archived,omitempty"`
+	History       *History    `json:"history,omitempty"`
+	RawHistory    []*DataBlob `json:"rawHistory,omitempty"`
+	NextPageToken []byte      `json:"nextPageToken,omitempty"`
+	Archived      *bool       `json:"archived,omitempty"`
 }
+
+type _List_DataBlob_ValueList []*DataBlob
+
+func (v _List_DataBlob_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_DataBlob_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_DataBlob_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_DataBlob_ValueList) Close() {}
 
 // ToWire translates a GetWorkflowExecutionHistoryResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -18744,7 +18774,7 @@ type GetWorkflowExecutionHistoryResponse struct {
 //   }
 func (v *GetWorkflowExecutionHistoryResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -18758,12 +18788,20 @@ func (v *GetWorkflowExecutionHistoryResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
+	if v.RawHistory != nil {
+		w, err = wire.NewValueList(_List_DataBlob_ValueList(v.RawHistory)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
 	if v.NextPageToken != nil {
 		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 20, Value: w}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	if v.Archived != nil {
@@ -18771,7 +18809,7 @@ func (v *GetWorkflowExecutionHistoryResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 30, Value: w}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -18782,6 +18820,30 @@ func _History_Read(w wire.Value) (*History, error) {
 	var v History
 	err := v.FromWire(w)
 	return &v, err
+}
+
+func _DataBlob_Read(w wire.Value) (*DataBlob, error) {
+	var v DataBlob
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_DataBlob_Read(l wire.ValueList) ([]*DataBlob, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*DataBlob, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _DataBlob_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
 }
 
 // FromWire deserializes a GetWorkflowExecutionHistoryResponse struct from its Thrift-level
@@ -18815,6 +18877,14 @@ func (v *GetWorkflowExecutionHistoryResponse) FromWire(w wire.Value) error {
 
 			}
 		case 20:
+			if field.Value.Type() == wire.TList {
+				v.RawHistory, err = _List_DataBlob_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
 			if field.Value.Type() == wire.TBinary {
 				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
@@ -18822,7 +18892,7 @@ func (v *GetWorkflowExecutionHistoryResponse) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 30:
+		case 40:
 			if field.Value.Type() == wire.TBool {
 				var x bool
 				x, err = field.Value.GetBool(), error(nil)
@@ -18845,10 +18915,14 @@ func (v *GetWorkflowExecutionHistoryResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.History != nil {
 		fields[i] = fmt.Sprintf("History: %v", v.History)
+		i++
+	}
+	if v.RawHistory != nil {
+		fields[i] = fmt.Sprintf("RawHistory: %v", v.RawHistory)
 		i++
 	}
 	if v.NextPageToken != nil {
@@ -18861,6 +18935,21 @@ func (v *GetWorkflowExecutionHistoryResponse) String() string {
 	}
 
 	return fmt.Sprintf("GetWorkflowExecutionHistoryResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_DataBlob_Equals(lhs, rhs []*DataBlob) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Equals returns true if all the fields of this GetWorkflowExecutionHistoryResponse match the
@@ -18876,6 +18965,9 @@ func (v *GetWorkflowExecutionHistoryResponse) Equals(rhs *GetWorkflowExecutionHi
 	if !((v.History == nil && rhs.History == nil) || (v.History != nil && rhs.History != nil && v.History.Equals(rhs.History))) {
 		return false
 	}
+	if !((v.RawHistory == nil && rhs.RawHistory == nil) || (v.RawHistory != nil && rhs.RawHistory != nil && _List_DataBlob_Equals(v.RawHistory, rhs.RawHistory))) {
+		return false
+	}
 	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
 		return false
 	}
@@ -18886,6 +18978,17 @@ func (v *GetWorkflowExecutionHistoryResponse) Equals(rhs *GetWorkflowExecutionHi
 	return true
 }
 
+type _List_DataBlob_Zapper []*DataBlob
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_DataBlob_Zapper.
+func (l _List_DataBlob_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
 // fast logging of GetWorkflowExecutionHistoryResponse.
 func (v *GetWorkflowExecutionHistoryResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
@@ -18894,6 +18997,9 @@ func (v *GetWorkflowExecutionHistoryResponse) MarshalLogObject(enc zapcore.Objec
 	}
 	if v.History != nil {
 		err = multierr.Append(err, enc.AddObject("history", v.History))
+	}
+	if v.RawHistory != nil {
+		err = multierr.Append(err, enc.AddArray("rawHistory", (_List_DataBlob_Zapper)(v.RawHistory)))
 	}
 	if v.NextPageToken != nil {
 		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
@@ -18917,6 +19023,21 @@ func (v *GetWorkflowExecutionHistoryResponse) GetHistory() (o *History) {
 // IsSetHistory returns true if History is not nil.
 func (v *GetWorkflowExecutionHistoryResponse) IsSetHistory() bool {
 	return v != nil && v.History != nil
+}
+
+// GetRawHistory returns the value of RawHistory if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionHistoryResponse) GetRawHistory() (o []*DataBlob) {
+	if v != nil && v.RawHistory != nil {
+		return v.RawHistory
+	}
+
+	return
+}
+
+// IsSetRawHistory returns true if RawHistory is not nil.
+func (v *GetWorkflowExecutionHistoryResponse) IsSetRawHistory() bool {
+	return v != nil && v.RawHistory != nil
 }
 
 // GetNextPageToken returns the value of NextPageToken if it is set or its
@@ -18947,529 +19068,6 @@ func (v *GetWorkflowExecutionHistoryResponse) GetArchived() (o bool) {
 // IsSetArchived returns true if Archived is not nil.
 func (v *GetWorkflowExecutionHistoryResponse) IsSetArchived() bool {
 	return v != nil && v.Archived != nil
-}
-
-type GetWorkflowExecutionRawHistoryRequest struct {
-	Domain          *string            `json:"domain,omitempty"`
-	Execution       *WorkflowExecution `json:"execution,omitempty"`
-	MaximumPageSize *int32             `json:"maximumPageSize,omitempty"`
-	NextPageToken   []byte             `json:"nextPageToken,omitempty"`
-}
-
-// ToWire translates a GetWorkflowExecutionRawHistoryRequest struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *GetWorkflowExecutionRawHistoryRequest) ToWire() (wire.Value, error) {
-	var (
-		fields [4]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.Domain != nil {
-		w, err = wire.NewValueString(*(v.Domain)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.Execution != nil {
-		w, err = v.Execution.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.MaximumPageSize != nil {
-		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.NextPageToken != nil {
-		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-// FromWire deserializes a GetWorkflowExecutionRawHistoryRequest struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryRequest struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v GetWorkflowExecutionRawHistoryRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *GetWorkflowExecutionRawHistoryRequest) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.Domain = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TStruct {
-				v.Execution, err = _WorkflowExecution_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.MaximumPageSize = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 40:
-			if field.Value.Type() == wire.TBinary {
-				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a GetWorkflowExecutionRawHistoryRequest
-// struct.
-func (v *GetWorkflowExecutionRawHistoryRequest) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [4]string
-	i := 0
-	if v.Domain != nil {
-		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
-		i++
-	}
-	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
-		i++
-	}
-	if v.MaximumPageSize != nil {
-		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
-		i++
-	}
-	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
-		i++
-	}
-
-	return fmt.Sprintf("GetWorkflowExecutionRawHistoryRequest{%v}", strings.Join(fields[:i], ", "))
-}
-
-// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryRequest match the
-// provided GetWorkflowExecutionRawHistoryRequest.
-//
-// This function performs a deep comparison.
-func (v *GetWorkflowExecutionRawHistoryRequest) Equals(rhs *GetWorkflowExecutionRawHistoryRequest) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
-		return false
-	}
-	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
-		return false
-	}
-	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
-		return false
-	}
-	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
-		return false
-	}
-
-	return true
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of GetWorkflowExecutionRawHistoryRequest.
-func (v *GetWorkflowExecutionRawHistoryRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.Domain != nil {
-		enc.AddString("domain", *v.Domain)
-	}
-	if v.Execution != nil {
-		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
-	}
-	if v.MaximumPageSize != nil {
-		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
-	}
-	if v.NextPageToken != nil {
-		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
-	}
-	return err
-}
-
-// GetDomain returns the value of Domain if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequest) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
-	}
-
-	return
-}
-
-// IsSetDomain returns true if Domain is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequest) IsSetDomain() bool {
-	return v != nil && v.Domain != nil
-}
-
-// GetExecution returns the value of Execution if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-
-	return
-}
-
-// IsSetExecution returns true if Execution is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequest) IsSetExecution() bool {
-	return v != nil && v.Execution != nil
-}
-
-// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
-	}
-
-	return
-}
-
-// IsSetMaximumPageSize returns true if MaximumPageSize is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequest) IsSetMaximumPageSize() bool {
-	return v != nil && v.MaximumPageSize != nil
-}
-
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryRequest) GetNextPageToken() (o []byte) {
-	if v != nil && v.NextPageToken != nil {
-		return v.NextPageToken
-	}
-
-	return
-}
-
-// IsSetNextPageToken returns true if NextPageToken is not nil.
-func (v *GetWorkflowExecutionRawHistoryRequest) IsSetNextPageToken() bool {
-	return v != nil && v.NextPageToken != nil
-}
-
-type GetWorkflowExecutionRawHistoryResponse struct {
-	RawHistory    []*DataBlob `json:"rawHistory,omitempty"`
-	NextPageToken []byte      `json:"nextPageToken,omitempty"`
-}
-
-type _List_DataBlob_ValueList []*DataBlob
-
-func (v _List_DataBlob_ValueList) ForEach(f func(wire.Value) error) error {
-	for i, x := range v {
-		if x == nil {
-			return fmt.Errorf("invalid [%v]: value is nil", i)
-		}
-		w, err := x.ToWire()
-		if err != nil {
-			return err
-		}
-		err = f(w)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (v _List_DataBlob_ValueList) Size() int {
-	return len(v)
-}
-
-func (_List_DataBlob_ValueList) ValueType() wire.Type {
-	return wire.TStruct
-}
-
-func (_List_DataBlob_ValueList) Close() {}
-
-// ToWire translates a GetWorkflowExecutionRawHistoryResponse struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *GetWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
-	var (
-		fields [2]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.RawHistory != nil {
-		w, err = wire.NewValueList(_List_DataBlob_ValueList(v.RawHistory)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.NextPageToken != nil {
-		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _DataBlob_Read(w wire.Value) (*DataBlob, error) {
-	var v DataBlob
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _List_DataBlob_Read(l wire.ValueList) ([]*DataBlob, error) {
-	if l.ValueType() != wire.TStruct {
-		return nil, nil
-	}
-
-	o := make([]*DataBlob, 0, l.Size())
-	err := l.ForEach(func(x wire.Value) error {
-		i, err := _DataBlob_Read(x)
-		if err != nil {
-			return err
-		}
-		o = append(o, i)
-		return nil
-	})
-	l.Close()
-	return o, err
-}
-
-// FromWire deserializes a GetWorkflowExecutionRawHistoryResponse struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryResponse struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v GetWorkflowExecutionRawHistoryResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *GetWorkflowExecutionRawHistoryResponse) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TList {
-				v.RawHistory, err = _List_DataBlob_Read(field.Value.GetList())
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TBinary {
-				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a GetWorkflowExecutionRawHistoryResponse
-// struct.
-func (v *GetWorkflowExecutionRawHistoryResponse) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [2]string
-	i := 0
-	if v.RawHistory != nil {
-		fields[i] = fmt.Sprintf("RawHistory: %v", v.RawHistory)
-		i++
-	}
-	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
-		i++
-	}
-
-	return fmt.Sprintf("GetWorkflowExecutionRawHistoryResponse{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _List_DataBlob_Equals(lhs, rhs []*DataBlob) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for i, lv := range lhs {
-		rv := rhs[i]
-		if !lv.Equals(rv) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryResponse match the
-// provided GetWorkflowExecutionRawHistoryResponse.
-//
-// This function performs a deep comparison.
-func (v *GetWorkflowExecutionRawHistoryResponse) Equals(rhs *GetWorkflowExecutionRawHistoryResponse) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !((v.RawHistory == nil && rhs.RawHistory == nil) || (v.RawHistory != nil && rhs.RawHistory != nil && _List_DataBlob_Equals(v.RawHistory, rhs.RawHistory))) {
-		return false
-	}
-	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
-		return false
-	}
-
-	return true
-}
-
-type _List_DataBlob_Zapper []*DataBlob
-
-// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
-// fast logging of _List_DataBlob_Zapper.
-func (l _List_DataBlob_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
-	for _, v := range l {
-		err = multierr.Append(err, enc.AppendObject(v))
-	}
-	return err
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of GetWorkflowExecutionRawHistoryResponse.
-func (v *GetWorkflowExecutionRawHistoryResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.RawHistory != nil {
-		err = multierr.Append(err, enc.AddArray("rawHistory", (_List_DataBlob_Zapper)(v.RawHistory)))
-	}
-	if v.NextPageToken != nil {
-		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
-	}
-	return err
-}
-
-// GetRawHistory returns the value of RawHistory if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryResponse) GetRawHistory() (o []*DataBlob) {
-	if v != nil && v.RawHistory != nil {
-		return v.RawHistory
-	}
-
-	return
-}
-
-// IsSetRawHistory returns true if RawHistory is not nil.
-func (v *GetWorkflowExecutionRawHistoryResponse) IsSetRawHistory() bool {
-	return v != nil && v.RawHistory != nil
-}
-
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryResponse) GetNextPageToken() (o []byte) {
-	if v != nil && v.NextPageToken != nil {
-		return v.NextPageToken
-	}
-
-	return
-}
-
-// IsSetNextPageToken returns true if NextPageToken is not nil.
-func (v *GetWorkflowExecutionRawHistoryResponse) IsSetNextPageToken() bool {
-	return v != nil && v.NextPageToken != nil
 }
 
 type Header struct {
@@ -30453,494 +30051,6 @@ func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery)
 // IsSetQueries returns true if Queries is not nil.
 func (v *PollForDecisionTaskResponse) IsSetQueries() bool {
 	return v != nil && v.Queries != nil
-}
-
-type PollForWorkflowExecutionRawHistoryRequest struct {
-	Domain                 *string                 `json:"domain,omitempty"`
-	Execution              *WorkflowExecution      `json:"execution,omitempty"`
-	MaximumPageSize        *int32                  `json:"maximumPageSize,omitempty"`
-	NextPageToken          []byte                  `json:"nextPageToken,omitempty"`
-	HistoryEventFilterType *HistoryEventFilterType `json:"HistoryEventFilterType,omitempty"`
-}
-
-// ToWire translates a PollForWorkflowExecutionRawHistoryRequest struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *PollForWorkflowExecutionRawHistoryRequest) ToWire() (wire.Value, error) {
-	var (
-		fields [5]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.Domain != nil {
-		w, err = wire.NewValueString(*(v.Domain)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.Execution != nil {
-		w, err = v.Execution.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.MaximumPageSize != nil {
-		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.NextPageToken != nil {
-		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-	if v.HistoryEventFilterType != nil {
-		w, err = v.HistoryEventFilterType.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-// FromWire deserializes a PollForWorkflowExecutionRawHistoryRequest struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a PollForWorkflowExecutionRawHistoryRequest struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v PollForWorkflowExecutionRawHistoryRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *PollForWorkflowExecutionRawHistoryRequest) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.Domain = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TStruct {
-				v.Execution, err = _WorkflowExecution_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.MaximumPageSize = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 40:
-			if field.Value.Type() == wire.TBinary {
-				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 50:
-			if field.Value.Type() == wire.TI32 {
-				var x HistoryEventFilterType
-				x, err = _HistoryEventFilterType_Read(field.Value)
-				v.HistoryEventFilterType = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a PollForWorkflowExecutionRawHistoryRequest
-// struct.
-func (v *PollForWorkflowExecutionRawHistoryRequest) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [5]string
-	i := 0
-	if v.Domain != nil {
-		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
-		i++
-	}
-	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
-		i++
-	}
-	if v.MaximumPageSize != nil {
-		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
-		i++
-	}
-	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
-		i++
-	}
-	if v.HistoryEventFilterType != nil {
-		fields[i] = fmt.Sprintf("HistoryEventFilterType: %v", *(v.HistoryEventFilterType))
-		i++
-	}
-
-	return fmt.Sprintf("PollForWorkflowExecutionRawHistoryRequest{%v}", strings.Join(fields[:i], ", "))
-}
-
-// Equals returns true if all the fields of this PollForWorkflowExecutionRawHistoryRequest match the
-// provided PollForWorkflowExecutionRawHistoryRequest.
-//
-// This function performs a deep comparison.
-func (v *PollForWorkflowExecutionRawHistoryRequest) Equals(rhs *PollForWorkflowExecutionRawHistoryRequest) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
-		return false
-	}
-	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
-		return false
-	}
-	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
-		return false
-	}
-	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
-		return false
-	}
-	if !_HistoryEventFilterType_EqualsPtr(v.HistoryEventFilterType, rhs.HistoryEventFilterType) {
-		return false
-	}
-
-	return true
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of PollForWorkflowExecutionRawHistoryRequest.
-func (v *PollForWorkflowExecutionRawHistoryRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.Domain != nil {
-		enc.AddString("domain", *v.Domain)
-	}
-	if v.Execution != nil {
-		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
-	}
-	if v.MaximumPageSize != nil {
-		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
-	}
-	if v.NextPageToken != nil {
-		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
-	}
-	if v.HistoryEventFilterType != nil {
-		err = multierr.Append(err, enc.AddObject("HistoryEventFilterType", *v.HistoryEventFilterType))
-	}
-	return err
-}
-
-// GetDomain returns the value of Domain if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryRequest) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
-	}
-
-	return
-}
-
-// IsSetDomain returns true if Domain is not nil.
-func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetDomain() bool {
-	return v != nil && v.Domain != nil
-}
-
-// GetExecution returns the value of Execution if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-
-	return
-}
-
-// IsSetExecution returns true if Execution is not nil.
-func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetExecution() bool {
-	return v != nil && v.Execution != nil
-}
-
-// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
-	}
-
-	return
-}
-
-// IsSetMaximumPageSize returns true if MaximumPageSize is not nil.
-func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetMaximumPageSize() bool {
-	return v != nil && v.MaximumPageSize != nil
-}
-
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryRequest) GetNextPageToken() (o []byte) {
-	if v != nil && v.NextPageToken != nil {
-		return v.NextPageToken
-	}
-
-	return
-}
-
-// IsSetNextPageToken returns true if NextPageToken is not nil.
-func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetNextPageToken() bool {
-	return v != nil && v.NextPageToken != nil
-}
-
-// GetHistoryEventFilterType returns the value of HistoryEventFilterType if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryRequest) GetHistoryEventFilterType() (o HistoryEventFilterType) {
-	if v != nil && v.HistoryEventFilterType != nil {
-		return *v.HistoryEventFilterType
-	}
-
-	return
-}
-
-// IsSetHistoryEventFilterType returns true if HistoryEventFilterType is not nil.
-func (v *PollForWorkflowExecutionRawHistoryRequest) IsSetHistoryEventFilterType() bool {
-	return v != nil && v.HistoryEventFilterType != nil
-}
-
-type PollForWorkflowExecutionRawHistoryResponse struct {
-	RawHistory    []*DataBlob `json:"rawHistory,omitempty"`
-	NextPageToken []byte      `json:"nextPageToken,omitempty"`
-}
-
-// ToWire translates a PollForWorkflowExecutionRawHistoryResponse struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *PollForWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
-	var (
-		fields [2]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.RawHistory != nil {
-		w, err = wire.NewValueList(_List_DataBlob_ValueList(v.RawHistory)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.NextPageToken != nil {
-		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-// FromWire deserializes a PollForWorkflowExecutionRawHistoryResponse struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a PollForWorkflowExecutionRawHistoryResponse struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v PollForWorkflowExecutionRawHistoryResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *PollForWorkflowExecutionRawHistoryResponse) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TList {
-				v.RawHistory, err = _List_DataBlob_Read(field.Value.GetList())
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TBinary {
-				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a PollForWorkflowExecutionRawHistoryResponse
-// struct.
-func (v *PollForWorkflowExecutionRawHistoryResponse) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [2]string
-	i := 0
-	if v.RawHistory != nil {
-		fields[i] = fmt.Sprintf("RawHistory: %v", v.RawHistory)
-		i++
-	}
-	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
-		i++
-	}
-
-	return fmt.Sprintf("PollForWorkflowExecutionRawHistoryResponse{%v}", strings.Join(fields[:i], ", "))
-}
-
-// Equals returns true if all the fields of this PollForWorkflowExecutionRawHistoryResponse match the
-// provided PollForWorkflowExecutionRawHistoryResponse.
-//
-// This function performs a deep comparison.
-func (v *PollForWorkflowExecutionRawHistoryResponse) Equals(rhs *PollForWorkflowExecutionRawHistoryResponse) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !((v.RawHistory == nil && rhs.RawHistory == nil) || (v.RawHistory != nil && rhs.RawHistory != nil && _List_DataBlob_Equals(v.RawHistory, rhs.RawHistory))) {
-		return false
-	}
-	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
-		return false
-	}
-
-	return true
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of PollForWorkflowExecutionRawHistoryResponse.
-func (v *PollForWorkflowExecutionRawHistoryResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.RawHistory != nil {
-		err = multierr.Append(err, enc.AddArray("rawHistory", (_List_DataBlob_Zapper)(v.RawHistory)))
-	}
-	if v.NextPageToken != nil {
-		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
-	}
-	return err
-}
-
-// GetRawHistory returns the value of RawHistory if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryResponse) GetRawHistory() (o []*DataBlob) {
-	if v != nil && v.RawHistory != nil {
-		return v.RawHistory
-	}
-
-	return
-}
-
-// IsSetRawHistory returns true if RawHistory is not nil.
-func (v *PollForWorkflowExecutionRawHistoryResponse) IsSetRawHistory() bool {
-	return v != nil && v.RawHistory != nil
-}
-
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *PollForWorkflowExecutionRawHistoryResponse) GetNextPageToken() (o []byte) {
-	if v != nil && v.NextPageToken != nil {
-		return v.NextPageToken
-	}
-
-	return
-}
-
-// IsSetNextPageToken returns true if NextPageToken is not nil.
-func (v *PollForWorkflowExecutionRawHistoryResponse) IsSetNextPageToken() bool {
-	return v != nil && v.NextPageToken != nil
 }
 
 type PollerInfo struct {
