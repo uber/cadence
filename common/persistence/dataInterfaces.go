@@ -253,8 +253,8 @@ type (
 		TimerAckLevel             time.Time                        `json:"timer_ack_level"`
 		ClusterTransferAckLevel   map[string]int64                 `json:"cluster_transfer_ack_level"`
 		ClusterTimerAckLevel      map[string]time.Time             `json:"cluster_timer_ack_level"`
-		TransferFailoverLevels    map[string]TransferFailoverLevel `json:"transfer_failover_levels"`
-		TimerFailoverLevels       map[string]TimerFailoverLevel    `json:"timer_failover_levels"`
+		TransferFailoverLevels    map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
+		TimerFailoverLevels       map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
 		ClusterReplicationLevel   map[string]int64                 `json:"cluster_replication_level"`
 		DomainNotificationVersion int64                            `json:"domain_notification_version"`
 	}
