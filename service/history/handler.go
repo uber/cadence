@@ -49,7 +49,7 @@ import (
 type (
 	Handler struct {
 		resource.Resource
-
+		shuttingDown            int64
 		controller              *shardController
 		tokenSerializer         common.TaskTokenSerializer
 		startWG                 sync.WaitGroup
@@ -140,6 +140,14 @@ func (h *Handler) Stop() {
 	h.replicationTaskFetchers.Stop()
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
+}
+
+func (h *Handler) prepareForShutdown() {
+	atomic.StoreInt64(&h.shuttingDown, 1)
+}
+
+func (h *Handler) isShuttingDown() bool {
+	return atomic.LoadInt64(&h.shuttingDown) != 0
 }
 
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
@@ -574,6 +582,10 @@ func (h *Handler) StartWorkflowExecution(
 	wrappedRequest *hist.StartWorkflowExecutionRequest,
 ) (resp *gen.StartWorkflowExecutionResponse, retError error) {
 
+	if h.isShuttingDown() {
+		return nil, &persistence.ShardOwnershipLostError{}
+	}
+
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
@@ -861,6 +873,10 @@ func (h *Handler) SignalWorkflowExecution(
 	wrappedRequest *hist.SignalWorkflowExecutionRequest,
 ) (retError error) {
 
+	if h.isShuttingDown() {
+		return &persistence.ShardOwnershipLostError{}
+	}
+
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
@@ -902,6 +918,10 @@ func (h *Handler) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	wrappedRequest *hist.SignalWithStartWorkflowExecutionRequest,
 ) (resp *gen.StartWorkflowExecutionResponse, retError error) {
+
+	if h.isShuttingDown() {
+		return nil, &persistence.ShardOwnershipLostError{}
+	}
 
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()

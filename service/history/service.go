@@ -422,7 +422,11 @@ func (s *Service) Stop() {
 
 	s.GetLogger().Warn("Self evicting from ringpop")
 	s.Resource.GetMembershipMonitor().SelfEvict()
-	time.Sleep(time.Second * 7)
+	time.Sleep(time.Millisecond * 400)
+	s.handler.controller.PrepareForShutdown()
+	time.Sleep(time.Second * 5)
+	s.handler.prepareForShutdown()
+	time.Sleep(time.Second * 2)
 	s.GetLogger().Warn("Stopping history service")
 	close(s.stopC)
 
