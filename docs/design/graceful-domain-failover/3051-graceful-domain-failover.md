@@ -25,6 +25,8 @@ Users can force complete domain failover via Cadence CLI:
 
 `cadence --domain cadence-global domain update force -active_cluster XYZ`
 
+*we can provide a default failover timeout after we do a end-to-end testing.
+
 ## Prerequisites
 There are conditions before starting a graceful domain failover.
 1. All clusters are available.
@@ -61,7 +63,7 @@ The basic protocol is to insert markers in the active-to-passive cluster to indi
 
 11, The inserted failover marker replicates to cluster Y.
 
-12, Each shard in cluster Y listens to the failover marker and reports the ‘ready’ state to the failover coordinator after it receives the failover marker.
+12, Each shard in cluster Y listens to the failover marker and reports the ‘ready’ state to the failover coordinator after it receives the failover marker. Even if the shard receives the failover marker, the shard won't process tasks as active until all shards receives failover markers.
 
 13, The failover coordinator updates domain from pending_active to active when received ‘ready’ signal from all shards.
 
@@ -72,16 +74,23 @@ From the high level sequence diagram, it explains how the protocol works within 
 ### Cluster X
 ![cross cluster X sequence diagram](3051-clusterX.png)
 
-1. Frontend receives a domain replication message.
-2. Frontend updates the domain data in Database with activeCluster set to Cluster Y and a higher failover version.
-3. Domain cache fetch domain updates in a refresh loop.
-4. Database returns the domain data.
-5. After the domain updates, domain cache sends a domain failover notification to each shard.
-6. After the domain updates, domain cache sends a domain failover notification to each shard.
-7. Shard 1 updates the shard info with a pending failover marker to insert.
-8. Shard 1 try to insert the failover marker and remove the pending failover marker from shard info after successful insertion.
-9. Shard 2 updates the shard info with a pending failover marker to insert.
-10. Shard 2 try to insert the failover marker and remove the pending failover marker from shard info after successful insertion.
+1, Frontend receives a domain replication message.
+
+2, Frontend updates the domain data in Database with activeCluster set to Cluster Y and a higher failover version.
+
+3, Domain cache fetch domain updates in a refresh loop.
+
+4, Database returns the domain data.
+
+5-6, After the domain updates, domain cache sends a domain failover notification to each shard.
+
+7, Shard 1 updates the shard info with a pending failover marker to insert.
+
+8, Shard 1 try to insert the failover marker and remove the pending failover marker from shard info after successful insertion.
+
+9, Shard 2 updates the shard info with a pending failover marker to insert.
+
+10, Shard 2 try to insert the failover marker and remove the pending failover marker from shard info after successful insertion.
 
 ### Cluster Y
 ![cross cluster Y sequence diagram](3051-clusterY.png)
@@ -151,7 +160,8 @@ New components:
 
 ### Domain
 
-A new state "Pending_Active "introduced when domain moves from Passive to Active.
+A new state "Pending_Active "introduced when domain moves from Passive to Active. When domain is in Pending_Active, no task will be processed as active.
+
 ![Domain state transition](3051-state-transition.png)
 
 Active to Passive: This happens when a domain failover from ‘active’ to ‘passive’ in the cluster.
@@ -168,8 +178,9 @@ Pending_Active to Active: The coordinator moves domain from ‘pending_active’
 
 As the new state introduced during graceful domain failover in the passive cluster, new task processor introduce here to handle the task in Pending_Active state.
 
-Transfer: No ops during failover.
-Timer: Blocked on processing task during failover.
+Transfer: Blocked on processing task during failover and continue to process tasks after domain switches to active.
+
+Timer: Blocked on processing task during failover and continue to process tasks after domain switches to active.
 
 ### Failover marker
 FailoverMarker {
