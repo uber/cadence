@@ -316,6 +316,7 @@ func (r *ringpopServiceResolver) compareMembers(addrs []string) (map[string]stru
 	for addr := range r.membersMap {
 		if _, ok := newMembersMap[addr]; !ok {
 			changed = true
+			break
 		}
 	}
 	return newMembersMap, changed
