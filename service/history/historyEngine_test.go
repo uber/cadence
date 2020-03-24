@@ -5316,8 +5316,8 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 		LastFailureReason:        sourceInfo.LastFailureReason,
 		LastWorkerIdentity:       sourceInfo.LastWorkerIdentity,
 		LastFailureDetails:       sourceInfo.LastFailureDetails,
-		//// Not written to database - This is used only for deduping heartbeat timer creation
-		LastHeartbeatTimeoutVisibility: sourceInfo.LastHeartbeatTimeoutVisibility,
+		// Not written to database - This is used only for deduping heartbeat timer creation
+		LastHeartbeatTimeoutVisibilityInSeconds: sourceInfo.LastHeartbeatTimeoutVisibilityInSeconds,
 	}
 }
 
