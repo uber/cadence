@@ -17,15 +17,13 @@ The graceful domain failover uses to solve those two problems.
 
 ## Use cases
 
-Users can trigger graceful domain failover via Cadence CLI:
+Users can trigger graceful domain failover via Cadence CLI (timeout is optional):
 
-`cadence --domain cadence-global domain failover graceful -active_cluster XYZ -failover_timeout 120s`
+`cadence --domain cadence-global domain update -failover_type graceful -active_cluster XYZ -failover_timeout 120s`
 
 Users can force complete domain failover via Cadence CLI:
 
-`cadence --domain cadence-global domain update force -active_cluster XYZ`
-
-*we can provide a default failover timeout after we do a end-to-end testing.
+`cadence --domain cadence-global domain update -failover_type force -active_cluster XYZ`
 
 ## Prerequisites
 There are conditions before starting a graceful domain failover.
