@@ -21,9 +21,12 @@
 package validator
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -73,12 +76,19 @@ func (sv *SearchAttributesValidator) ValidateSearchAttributes(input *gen.SearchA
 	}
 
 	totalSize := 0
+	validAttr := sv.validSearchAttributes()
 	for key, val := range fields {
 		// verify: key is whitelisted
-		if !sv.isValidSearchAttributes(key) {
+		if !sv.isValidSearchAttributesKey(validAttr, key) {
 			sv.logger.WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
-				Error("invalid search attribute")
-			return &gen.BadRequestError{Message: fmt.Sprintf("%s is not valid search attribute", key)}
+				Error("invalid search attribute key")
+			return &gen.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute key", key)}
+		}
+		// verify: value has the correct type
+		if !sv.isValidSearchAttributesValue(validAttr, key, val) {
+			sv.logger.WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
+				Error(fmt.Sprintf("%s is not a valid search attribute value for key %s", val, key))
+			return &gen.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute value for key %s", val, key)}
 		}
 		// verify: key is not system reserved
 		if definition.IsSystemIndexedKey(key) {
@@ -105,9 +115,61 @@ func (sv *SearchAttributesValidator) ValidateSearchAttributes(input *gen.SearchA
 	return nil
 }
 
-// isValidSearchAttributes return true if key is registered
-func (sv *SearchAttributesValidator) isValidSearchAttributes(key string) bool {
-	validAttr := sv.validSearchAttributes()
+// isValidSearchAttributesKey return true if key is registered
+func (sv *SearchAttributesValidator) isValidSearchAttributesKey(
+	validAttr map[string]interface{},
+	key string,
+) bool {
 	_, isValidKey := validAttr[key]
 	return isValidKey
+}
+
+// isValidSearchAttributesValue return true if value has the correct representation for the attribute key
+func (sv *SearchAttributesValidator) isValidSearchAttributesValue(
+	validAttr map[string]interface{},
+	key string,
+	value []byte,
+) bool {
+	valueType := common.ConvertIndexedValueTypeToThriftType(validAttr[key], sv.logger)
+	var unmarshalErr error
+	switch valueType {
+	case gen.IndexedValueTypeString, gen.IndexedValueTypeKeyword:
+		var val string
+		unmarshalErr = json.Unmarshal(value, &val)
+		if unmarshalErr != nil {
+			var listVal []string
+			unmarshalErr = json.Unmarshal(value, &listVal)
+		}
+	case gen.IndexedValueTypeInt:
+		var val int64
+		unmarshalErr = json.Unmarshal(value, &val)
+		if unmarshalErr != nil {
+			var listVal []int64
+			unmarshalErr = json.Unmarshal(value, &listVal)
+		}
+	case gen.IndexedValueTypeDouble:
+		var val float64
+		unmarshalErr = json.Unmarshal(value, &val)
+		if unmarshalErr != nil {
+			var listVal []float64
+			unmarshalErr = json.Unmarshal(value, &listVal)
+		}
+	case gen.IndexedValueTypeBool:
+		var val bool
+		unmarshalErr = json.Unmarshal(value, &val)
+		if unmarshalErr != nil {
+			var listVal []bool
+			unmarshalErr = json.Unmarshal(value, &listVal)
+		}
+	case gen.IndexedValueTypeDatetime:
+		var val time.Time
+		unmarshalErr = json.Unmarshal(value, &val)
+		if unmarshalErr != nil {
+			var listVal []time.Time
+			unmarshalErr = json.Unmarshal(value, &listVal)
+		}
+	default:
+		return false
+	}
+	return unmarshalErr == nil
 }
