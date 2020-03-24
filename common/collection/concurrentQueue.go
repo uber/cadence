@@ -34,7 +34,7 @@ type (
 // NewConcurrentQueue creates a new concurrent queue
 func NewConcurrentQueue() Queue {
 	return &concurrentQueueImpl{
-		items: make([]interface{}, 0),
+		items: make([]interface{}, 0, 1000),
 	}
 }
 
@@ -43,12 +43,16 @@ func (q *concurrentQueueImpl) Peek() interface{} {
 	defer q.Unlock()
 
 	if q.isEmptyLocked() {
-		panic("Cannot peek items because queue is empty")
+		return nil
 	}
 	return q.items[0]
 }
 
 func (q *concurrentQueueImpl) Add(item interface{}) {
+	if item == nil {
+		panic("cannot add nil item to queue")
+	}
+
 	q.Lock()
 	defer q.Unlock()
 
@@ -59,10 +63,11 @@ func (q *concurrentQueueImpl) Remove() interface{} {
 	q.Lock()
 	defer q.Unlock()
 	if q.isEmptyLocked() {
-		panic("Cannot remove item because queue is empty")
+		return nil
 	}
 
 	item := q.items[0]
+	q.items[0] = nil
 	q.items = q.items[1:]
 
 	return item

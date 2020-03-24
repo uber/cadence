@@ -55,6 +55,8 @@ func (s *concurrentQueueImpl) TearDownTest() {
 func (s *concurrentQueueSuite) TestAddAndRemove() {
 	s.Equal(0, s.concurrentQueue.Len())
 	s.True(s.concurrentQueue.IsEmpty())
+	s.Nil(s.concurrentQueue.Peek())
+	s.Nil(s.concurrentQueue.Remove())
 
 	numItems := 100
 	items := make([]int, 0, numItems)
@@ -73,6 +75,8 @@ func (s *concurrentQueueSuite) TestAddAndRemove() {
 		s.Equal(numItems-i-1, s.concurrentQueue.Len())
 	}
 	s.True(s.concurrentQueue.IsEmpty())
+	s.Nil(s.concurrentQueue.Peek())
+	s.Nil(s.concurrentQueue.Remove())
 }
 
 func (s *concurrentQueueSuite) TestMultipleProducer() {
