@@ -41,14 +41,14 @@ var errUnauthorized = &shared.BadRequestError{Message: "Request unauthorized."}
 type AccessControlledWorkflowHandler struct {
 	resource.Resource
 
-	frontendHandler workflowserviceserver.Interface
+	frontendHandler ServerHandler
 	authorizer      authorization.Authorizer
 
 	startFn func()
 	stopFn  func()
 }
 
-var _ workflowserviceserver.Interface = (*AccessControlledWorkflowHandler)(nil)
+var _ ServerHandler = (*AccessControlledWorkflowHandler)(nil)
 
 // NewAccessControlledHandlerImpl creates frontend handler with authentication support
 func NewAccessControlledHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authorizer authorization.Authorizer) *AccessControlledWorkflowHandler {
@@ -60,8 +60,6 @@ func NewAccessControlledHandlerImpl(wfHandler *DCRedirectionHandlerImpl, authori
 		Resource:        wfHandler.Resource,
 		frontendHandler: wfHandler,
 		authorizer:      authorizer,
-		startFn:         func() { wfHandler.Start() },
-		stopFn:          func() { wfHandler.Stop() },
 	}
 }
 
@@ -73,6 +71,12 @@ func (a *AccessControlledWorkflowHandler) RegisterHandler() {
 	a.GetDispatcher().Register(metaserver.New(a))
 }
 
+// UpdateHealthStatus sets the health status for this rpc handler.
+// This health status will be used within the rpc health check handler
+func (a *AccessControlledWorkflowHandler) UpdateHealthStatus(status HealthStatus) {
+	a.frontendHandler.UpdateHealthStatus(status)
+}
+
 // Health callback for for health check
 func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("auth is good")}
@@ -81,12 +85,12 @@ func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.H
 
 // Start starts the handler
 func (a *AccessControlledWorkflowHandler) Start() {
-	a.startFn()
+	a.frontendHandler.Start()
 }
 
 // Stop stops the handler
 func (a *AccessControlledWorkflowHandler) Stop() {
-	a.stopFn()
+	a.frontendHandler.Stop()
 }
 
 // CountWorkflowExecutions API call

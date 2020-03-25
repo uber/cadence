@@ -35,7 +35,7 @@ import (
 	"github.com/uber/cadence/common/service/config"
 )
 
-var _ workflowserviceserver.Interface = (*DCRedirectionHandlerImpl)(nil)
+var _ ServerHandler = (*DCRedirectionHandlerImpl)(nil)
 
 type (
 	// DCRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy
@@ -46,7 +46,7 @@ type (
 		config             *Config
 		redirectionPolicy  DCRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
-		frontendHandler    workflowserviceserver.Interface
+		frontendHandler    ServerHandler
 
 		startFn func()
 		stopFn  func()
@@ -72,8 +72,6 @@ func NewDCRedirectionHandler(
 		redirectionPolicy:  dcRedirectionPolicy,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		frontendHandler:    wfHandler,
-		startFn:            func() { wfHandler.Start() },
-		stopFn:             func() { wfHandler.Stop() },
 	}
 }
 
@@ -85,18 +83,23 @@ func (handler *DCRedirectionHandlerImpl) RegisterHandler() {
 
 // Start starts the handler
 func (handler *DCRedirectionHandlerImpl) Start() {
-	handler.startFn()
+	handler.frontendHandler.Start()
 }
 
 // Stop stops the handler
 func (handler *DCRedirectionHandlerImpl) Stop() {
-	handler.stopFn()
+	handler.frontendHandler.Stop()
+}
+
+// UpdateHealthStatus sets the health status for this rpc handler.
+// This health status will be used within the rpc health check handler
+func (handler *DCRedirectionHandlerImpl) UpdateHealthStatus(status HealthStatus) {
+	handler.frontendHandler.UpdateHealthStatus(status)
 }
 
 // Health is for health check
 func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
-	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("dc redirection good")}
-	return hs, nil
+	return handler.frontendHandler.Health(ctx)
 }
 
 // Domain APIs, domain APIs does not require redirection
