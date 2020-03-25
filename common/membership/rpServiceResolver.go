@@ -81,8 +81,12 @@ func newRingpopServiceResolver(
 		membersMap:  make(map[string]struct{}),
 		listeners:   make(map[string]chan<- *ChangedEvent),
 	}
-	resolver.ringValue.Store(hashring.New(farm.Fingerprint32, replicaPoints))
+	resolver.ringValue.Store(newHashRing())
 	return resolver
+}
+
+func newHashRing() *hashring.HashRing {
+	return hashring.New(farm.Fingerprint32, replicaPoints)
 }
 
 // Start starts the oracle
@@ -117,7 +121,7 @@ func (r *ringpopServiceResolver) Stop() {
 	r.listenerLock.Lock()
 	defer r.listenerLock.Unlock()
 	r.rp.RemoveListener(r)
-	r.ringValue.Store(hashring.New(farm.Fingerprint32, replicaPoints))
+	r.ringValue.Store(newHashRing())
 	r.listeners = make(map[string]chan<- *ChangedEvent)
 	close(r.shutdownCh)
 
@@ -230,7 +234,7 @@ func (r *ringpopServiceResolver) refreshNoLock() error {
 		return nil
 	}
 
-	ring := hashring.New(farm.Fingerprint32, replicaPoints)
+	ring := newHashRing()
 	for _, addr := range addrs {
 		host := NewHostInfo(addr, r.getLabelsMap())
 		ring.AddMembers(host)
