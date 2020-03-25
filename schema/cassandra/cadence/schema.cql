@@ -281,6 +281,11 @@ CREATE TYPE domain_replication_config (
   clusters            list<frozen<cluster_replication_config>>
 );
 
+CREATE TYPE domain_failover_config (
+  failover_start_time timestamp,
+  failover_timeout int,
+);
+
 CREATE TYPE serialized_event_batch (
   encoding_type text,
   version       int,
@@ -404,6 +409,7 @@ CREATE TABLE domains_by_name_v2 (
   config_version                bigint, -- indicating the version of domain config, excluding the failover / change of active cluster name
   failover_version              bigint, -- indicating the version of active domain only, used for domain failover
   failover_notification_version bigint, -- indicating the last change related to domain failover
+  failover_config               frozen<domain_failover_config>, -- indicating domain failover state
   notification_version          bigint,
   PRIMARY KEY (domains_partition, name)
 )  WITH COMPACTION = {

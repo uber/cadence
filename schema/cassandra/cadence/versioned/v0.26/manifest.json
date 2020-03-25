@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.26",
+  "MinCompatibleVersion": "0.26",
+  "Description": "Add graceful failover config in domain data",
+  "SchemaUpdateCqlFiles": [
+    "domain_failover_config.cql"
+  ]
+}

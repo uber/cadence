@@ -215,6 +215,13 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		badBinaries = persistence.NewDataBlob(domainInfo.BadBinaries, common.EncodingType(*domainInfo.BadBinariesEncoding))
 	}
 
+	var failoverConfig *persistence.DomainFailoverConfig
+	if domainInfo.FailoverStartTime != nil && domainInfo.FailoverTimeout != nil {
+		failoverConfig = &persistence.DomainFailoverConfig{
+			StartTime: *domainInfo.FailoverStartTime,
+			Timeout:   *domainInfo.FailoverTimeout,
+		}
+	}
 	return &persistence.InternalGetDomainResponse{
 		Info: &persistence.DomainInfo{
 			ID:          row.ID.String(),
@@ -239,6 +246,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
 			Clusters:          persistence.GetOrUseDefaultClusters(m.activeClusterName, clusters),
 		},
+		FailoverConfig:              failoverConfig,
 		IsGlobalDomain:              row.IsGlobal,
 		FailoverVersion:             domainInfo.GetFailoverVersion(),
 		ConfigVersion:               domainInfo.GetConfigVersion(),
@@ -247,7 +255,10 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 	}, nil
 }
 
-func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.InternalUpdateDomainRequest) error {
+func (m *sqlMetadataManagerV2) UpdateDomain(
+	request *persistence.InternalUpdateDomainRequest,
+) error {
+
 	clusters := make([]string, len(request.ReplicationConfig.Clusters))
 	for i := range clusters {
 		clusters[i] = request.ReplicationConfig.Clusters[i].ClusterName
@@ -259,6 +270,14 @@ func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.InternalUpdateD
 		badBinaries = request.Config.BadBinaries.Data
 		badBinariesEncoding = common.StringPtr(string(request.Config.BadBinaries.GetEncoding()))
 	}
+
+	var failoverStartTime *int64
+	var failoverTimeout *int32
+	if request.FailoverConfig != nil {
+		failoverStartTime = common.Int64Ptr(request.FailoverConfig.StartTime)
+		failoverTimeout = common.Int32Ptr(request.FailoverConfig.Timeout)
+	}
+
 	domainInfo := &sqlblobs.DomainInfo{
 		Status:                      common.Int32Ptr(int32(request.Info.Status)),
 		Description:                 &request.Info.Description,
@@ -278,6 +297,8 @@ func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.InternalUpdateD
 		FailoverVersion:             common.Int64Ptr(request.FailoverVersion),
 		NotificationVersion:         common.Int64Ptr(request.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(request.FailoverNotificationVersion),
+		FailoverStartTime:           failoverStartTime,
+		FailoverTimeout:             failoverTimeout,
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
