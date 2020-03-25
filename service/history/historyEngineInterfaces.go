@@ -119,7 +119,7 @@ type (
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() timerKey
 		getReadLevel() timerKey
-		updateAckLevel()
+		updateAckLevel() error
 	}
 
 	historyEventNotifier interface {
