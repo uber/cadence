@@ -91,6 +91,13 @@ func (s *searchAttributesValidatorSuite) TestValidateSearchAttributes() {
 	s.Equal(`BadRequestError{Message: 123 is not a valid search attribute value for key CustomBoolField}`, err.Error())
 
 	fields = map[string][]byte{
+		"CustomIntField": []byte(`[1,2]`),
+	}
+	attr.IndexedFields = fields
+	err = validator.ValidateSearchAttributes(attr, domain)
+	s.NoError(err)
+
+	fields = map[string][]byte{
 		"StartTime": []byte(`1`),
 	}
 	attr.IndexedFields = fields

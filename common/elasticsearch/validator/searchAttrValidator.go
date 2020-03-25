@@ -21,9 +21,7 @@
 package validator
 
 import (
-	"encoding/json"
 	"fmt"
-	"time"
 
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -131,45 +129,6 @@ func (sv *SearchAttributesValidator) isValidSearchAttributesValue(
 	value []byte,
 ) bool {
 	valueType := common.ConvertIndexedValueTypeToThriftType(validAttr[key], sv.logger)
-	var unmarshalErr error
-	switch valueType {
-	case gen.IndexedValueTypeString, gen.IndexedValueTypeKeyword:
-		var val string
-		unmarshalErr = json.Unmarshal(value, &val)
-		if unmarshalErr != nil {
-			var listVal []string
-			unmarshalErr = json.Unmarshal(value, &listVal)
-		}
-	case gen.IndexedValueTypeInt:
-		var val int64
-		unmarshalErr = json.Unmarshal(value, &val)
-		if unmarshalErr != nil {
-			var listVal []int64
-			unmarshalErr = json.Unmarshal(value, &listVal)
-		}
-	case gen.IndexedValueTypeDouble:
-		var val float64
-		unmarshalErr = json.Unmarshal(value, &val)
-		if unmarshalErr != nil {
-			var listVal []float64
-			unmarshalErr = json.Unmarshal(value, &listVal)
-		}
-	case gen.IndexedValueTypeBool:
-		var val bool
-		unmarshalErr = json.Unmarshal(value, &val)
-		if unmarshalErr != nil {
-			var listVal []bool
-			unmarshalErr = json.Unmarshal(value, &listVal)
-		}
-	case gen.IndexedValueTypeDatetime:
-		var val time.Time
-		unmarshalErr = json.Unmarshal(value, &val)
-		if unmarshalErr != nil {
-			var listVal []time.Time
-			unmarshalErr = json.Unmarshal(value, &listVal)
-		}
-	default:
-		return false
-	}
-	return unmarshalErr == nil
+	_, err := common.DeserializeSearchAttributeValue(value, valueType)
+	return err == nil
 }
