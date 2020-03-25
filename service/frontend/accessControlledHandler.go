@@ -43,9 +43,6 @@ type AccessControlledWorkflowHandler struct {
 
 	frontendHandler ServerHandler
 	authorizer      authorization.Authorizer
-
-	startFn func()
-	stopFn  func()
 }
 
 var _ ServerHandler = (*AccessControlledWorkflowHandler)(nil)

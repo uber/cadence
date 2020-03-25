@@ -47,9 +47,6 @@ type (
 		redirectionPolicy  DCRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
 		frontendHandler    ServerHandler
-
-		startFn func()
-		stopFn  func()
 	}
 )
 
