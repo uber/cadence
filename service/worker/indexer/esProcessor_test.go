@@ -23,6 +23,9 @@ package indexer
 import (
 	"encoding/json"
 	"errors"
+	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"sync"
 	"testing"
 	"time"
@@ -86,6 +89,7 @@ func (s *esProcessorSuite) SetupTest() {
 		config:        config,
 		logger:        loggerimpl.NewLogger(zapLogger),
 		metricsClient: s.mockMetricClient,
+		msgEncoder:    codec.NewThriftRWEncoder(),
 	}
 	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
 	p.processor = s.mockBulkProcessor
@@ -240,10 +244,16 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 		Items:  []map[string]*elastic.BulkResponseItem{mFailed},
 	}
 
+	wid := "test-wrokflowID"
+	rid := "test-runID"
+	domainID := "test-domainID"
+	payload := s.getEncodedMsg(wid, rid, domainID)
+
 	mockKafkaMsg := &msgMocks.Message{}
 	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
+	mockKafkaMsg.On("Value").Return(payload).Once()
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
@@ -300,6 +310,11 @@ func (s *esProcessorSuite) TestNackKafkaMsg() {
 	// no msg in map, nothing called
 	s.esProcessor.nackKafkaMsg(key)
 
+	wid := "test-wrokflowID"
+	rid := "test-runID"
+	domainID := "test-domainID"
+	payload := s.getEncodedMsg(wid, rid, domainID)
+
 	request := elastic.NewBulkIndexRequest()
 	mockKafkaMsg := &msgMocks.Message{}
 	s.mockBulkProcessor.On("Add", request).Return().Once()
@@ -308,6 +323,7 @@ func (s *esProcessorSuite) TestNackKafkaMsg() {
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 
 	mockKafkaMsg.On("Nack").Return(nil).Once()
+	mockKafkaMsg.On("Value").Return(payload).Once()
 	s.esProcessor.nackKafkaMsg(key)
 	mockKafkaMsg.AssertExpectations(s.T())
 	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
@@ -316,6 +332,42 @@ func (s *esProcessorSuite) TestNackKafkaMsg() {
 func (s *esProcessorSuite) TestHashFn() {
 	s.Equal(uint32(0), s.esProcessor.hashFn(0))
 	s.NotEqual(uint32(0), s.esProcessor.hashFn("test"))
+}
+
+func (s *esProcessorSuite) getEncodedMsg(wid string, rid string, domainID string) []byte {
+	indexMsg := &indexer.Message{
+		DomainID:   common.StringPtr(domainID),
+		WorkflowID: common.StringPtr(wid),
+		RunID:      common.StringPtr(rid),
+	}
+	payload, err := s.esProcessor.msgEncoder.Encode(indexMsg)
+	s.NoError(err)
+	return payload
+}
+
+func (s *esProcessorSuite) TestGetMsgInfo() {
+	testWid := "test-wrokflowID"
+	testRid := "test-runID"
+	testDomainid := "test-domainID"
+	payload := s.getEncodedMsg(testWid, testRid, testDomainid)
+
+	mockKafkaMsg := &msgMocks.Message{}
+	mockKafkaMsg.On("Value").Return(payload).Once()
+	wid, rid, domainID, err := s.esProcessor.getMsgInfo(mockKafkaMsg)
+	s.NoError(err)
+	s.Equal(testWid, wid)
+	s.Equal(testRid, rid)
+	s.Equal(testDomainid, domainID)
+}
+
+func (s *esProcessorSuite) TestGetMsgInfo_Error() {
+	mockKafkaMsg := &msgMocks.Message{}
+	mockKafkaMsg.On("Value").Return([]byte{}).Once()
+	wid, rid, domainID, err := s.esProcessor.getMsgInfo(mockKafkaMsg)
+	s.NotNil(err)
+	s.Equal("", wid)
+	s.Equal("", rid)
+	s.Equal("", domainID)
 }
 
 func (s *esProcessorSuite) TestGetKeyForKafkaMsg() {

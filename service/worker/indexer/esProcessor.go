@@ -23,6 +23,8 @@ package indexer
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/common/codec"
 	"time"
 
 	"github.com/olivere/elastic"
@@ -65,6 +67,7 @@ type (
 		config        *Config
 		logger        log.Logger
 		metricsClient metrics.Client
+		msgEncoder    codec.BinaryEncoder
 	}
 
 	kafkaMessageWithMetrics struct { // value of esProcessorImpl.mapToKafkaMsg
@@ -89,6 +92,7 @@ func NewESProcessorAndStart(config *Config, client es.Client, processorName stri
 		config:        config,
 		logger:        logger.WithTags(tag.ComponentIndexerESProcessor),
 		metricsClient: metricsClient,
+		msgEncoder:    codec.NewThriftRWEncoder(),
 	}
 
 	params := &es.BulkProcessorParameters{
@@ -191,12 +195,36 @@ func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
 	}
 
 	if nack {
+		wid, rid, domainID, err := p.getMsgInfo(kafkaMsg.message)
+		if err != nil {
+			p.logger.Error("Unable to process message.", tag.WorkflowID(wid), tag.WorkflowRunID(rid),
+				tag.WorkflowDomainID(domainID))
+		} else {
+			p.logger.Error("Unable to process message with failed decoding.")
+		}
 		kafkaMsg.Nack()
 	} else {
 		kafkaMsg.Ack()
 	}
 
 	p.mapToKafkaMsg.Remove(key)
+}
+
+func (p *esProcessorImpl) getMsgInfo(kafkaMsg messaging.Message) (wid string, rid string, domainID string, err error) {
+	var msg indexer.Message
+	if err := p.msgEncoder.Decode(kafkaMsg.Value(), &msg); err != nil {
+		p.logger.Error("Failed to deserialize kafka message.", tag.Error(err))
+		return "", "", "", err
+	}
+	return *msg.WorkflowID, *msg.RunID, *msg.DomainID, nil
+}
+
+func (p *esProcessorImpl) deserialize(payload []byte) (*indexer.Message, error) {
+	var msg indexer.Message
+	if err := p.msgEncoder.Decode(payload, &msg); err != nil {
+		return nil, err
+	}
+	return &msg, nil
 }
 
 func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
