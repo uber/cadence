@@ -879,7 +879,6 @@ func (s *shardContextImpl) closeShard() {
 
 	go func() {
 		s.closeCallback(s.shardID, s.shardItem)
-		s.shardItem.stopEngine()
 	}()
 
 	// fails any writes that may start after this point.
