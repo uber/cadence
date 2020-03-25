@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/resource"
 )
 
@@ -76,8 +75,7 @@ func (a *AccessControlledWorkflowHandler) UpdateHealthStatus(status HealthStatus
 
 // Health callback for for health check
 func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
-	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("auth is good")}
-	return hs, nil
+	return a.frontendHandler.Health(ctx)
 }
 
 // Start starts the handler
