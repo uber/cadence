@@ -62,7 +62,7 @@ const (
 
 const (
 	// HealthStatusOK is used when this node is healthy and rpc requests are allowed
-	HealthStatusOK HealthStatus = iota
+	HealthStatusOK HealthStatus = iota + 1
 	// HealthStatusShuttingDown is used when the rpc handler is shutting down
 	HealthStatusShuttingDown
 )
@@ -165,6 +165,7 @@ func NewWorkflowHandler(
 	return &WorkflowHandler{
 		Resource:        resource,
 		config:          config,
+		healthStatus:    HealthStatusOK,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
 			func() float64 {

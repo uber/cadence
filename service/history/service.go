@@ -457,7 +457,9 @@ func (s *Service) Stop() {
 	// 2. wait for other members to discover we are going down
 	// 3. stop acquiring new shards (periodically or based on other membership changes)
 	// 4. wait for shard ownership to transfer (and inflight requests to drain) while still accepting new requests
-	// 5. reject all requests arriving at rpc handler to avoid taking on more work
+	// 5. Reject all requests arriving at rpc handler to avoid taking on more work except for RespondXXXCompleted and
+	//    RecordXXStarted APIs - for these APIs, most of the work is already one and rejecting at last stage is
+	//    probably not that desirable. If the shard is closed, these requests will fail anyways.
 	// 6. wait for grace period
 	// 7. force stop the whole world and return
 
