@@ -172,6 +172,10 @@ func (c *shardController) removeEngineForShard(shardID int, shardItem *historySh
 	sw := c.metricsScope.StartTimer(metrics.RemoveEngineForShardLatency)
 	defer sw.Stop()
 	item, _ := c.removeHistoryShardItem(shardID)
+	// the shardItem comparison is just a defensive check to make sure we are deleting
+	// what we intend to delete. In the event that multiple callers call removeEngine / getEngine
+	// concurrently, it is possible to reorder a delete/delete/add sequence into a delete/add/delete
+	// sequence. This check is to protect against those scenarios.
 	if item != nil && (item == shardItem || shardItem == nil) {
 		item.stopEngine()
 	}
