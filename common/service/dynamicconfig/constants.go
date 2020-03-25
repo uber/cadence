@@ -90,6 +90,7 @@ var keys = map[Key]string{
 	FrontendRPS:                           "frontend.rps",
 	FrontendDomainRPS:                     "frontend.domainrps",
 	FrontendHistoryMgrNumConns:            "frontend.historyMgrNumConns",
+	FrontendShutdownDrainDuration:         "frontend.shutdownDrainDuration",
 	DisableListVisibilityByFilter:         "frontend.disableListVisibilityByFilter",
 	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
 	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
@@ -122,6 +123,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxOutstandingTasks:    "matching.forwarderMaxOutstandingTasks",
 	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
+	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
 
 	// history settings
 	HistoryRPS:                                             "history.rps",
@@ -133,6 +135,7 @@ var keys = map[Key]string{
 	HistoryMaxAutoResetPoints:                              "history.historyMaxAutoResetPoints",
 	HistoryCacheMaxSize:                                    "history.cacheMaxSize",
 	HistoryCacheTTL:                                        "history.cacheTTL",
+	HistoryShutdownDrainDuration:                           "history.shutdownDrainDuration",
 	EventsCacheInitialSize:                                 "history.eventsCacheInitialSize",
 	EventsCacheMaxSize:                                     "history.eventsCacheMaxSize",
 	EventsCacheTTL:                                         "history.eventsCacheTTL",
