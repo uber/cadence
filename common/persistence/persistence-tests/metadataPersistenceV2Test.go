@@ -1122,10 +1122,10 @@ func (m *MetadataPersistenceSuiteV2) UpdateDomain(
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
+		FailoverConfig:              failoverConfig,
 		ConfigVersion:               configVersion,
 		FailoverVersion:             failoverVersion,
 		FailoverNotificationVersion: failoverNotificationVersion,
-		FailoverConfig:              failoverConfig,
 		NotificationVersion:         notificationVersion,
 	})
 }
