@@ -66,11 +66,11 @@ require (
 	go.uber.org/thriftrw v1.20.2
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	golang.org/x/tools v0.0.0-20200326210457-5d86d385bf88
+	golang.org/x/tools v0.0.0-20200127195909-ed30b9180dd3
 	google.golang.org/api v0.14.0
 	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
