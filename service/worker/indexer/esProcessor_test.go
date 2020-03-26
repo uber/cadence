@@ -23,9 +23,6 @@ package indexer
 import (
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/codec"
 	"sync"
 	"testing"
 	"time"
@@ -35,6 +32,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
 	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"

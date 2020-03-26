@@ -23,7 +23,6 @@ package indexer
 import (
 	"context"
 	"encoding/json"
-
 	"time"
 
 	"github.com/olivere/elastic"
@@ -210,7 +209,6 @@ func (p *esProcessorImpl) getKafkaMsg(key string) (kafkaMsg *kafkaMessageWithMet
 	kafkaMsg, ok = msg.(*kafkaMessageWithMetrics)
 	if !ok { // must be bug in code and bad deployment
 		p.logger.Fatal("Message is not kafka message.", tag.ESKey(key))
-		return
 	}
 	return kafkaMsg, ok
 }
