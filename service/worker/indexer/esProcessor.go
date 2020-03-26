@@ -187,7 +187,7 @@ func (p *esProcessorImpl) nackKafkaMsg(key string) {
 }
 
 func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
-	var kafkaMsg, ok = p.getKafkaMsg(key)
+	kafkaMsg, ok := p.getKafkaMsg(key)
 	if !ok {
 		return
 	}
@@ -213,8 +213,7 @@ func (p *esProcessorImpl) getKafkaMsg(key string) (kafkaMsg *kafkaMessageWithMet
 	return kafkaMsg, ok
 }
 
-func (p *esProcessorImpl) getMsgWithInfo(key string) (wid string,
-	rid string, domainID string) {
+func (p *esProcessorImpl) getMsgWithInfo(key string) (wid string, rid string, domainID string) {
 	kafkaMsg, ok := p.getKafkaMsg(key)
 	if !ok {
 		return
@@ -222,7 +221,7 @@ func (p *esProcessorImpl) getMsgWithInfo(key string) (wid string,
 
 	var msg indexer.Message
 	if err := p.msgEncoder.Decode(kafkaMsg.message.Value(), &msg); err != nil {
-		p.logger.Error("Failed to deserialize kafka message.", tag.Error(err))
+		p.logger.Error("failed to deserialize kafka message.", tag.Error(err))
 		return
 	}
 	return msg.GetWorkflowID(), msg.GetRunID(), msg.GetDomainID()
