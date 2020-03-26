@@ -57,7 +57,7 @@ type (
 		completeQueueTask(taskID int64)
 		getQueueAckLevel() int64
 		getQueueReadLevel() int64
-		updateQueueAckLevel()
+		updateQueueAckLevel() error
 	}
 
 	queueTaskInfo interface {
@@ -94,7 +94,7 @@ type (
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() timerKey
 		getReadLevel() timerKey
-		updateAckLevel()
+		updateAckLevel() error
 	}
 
 	historyEventNotifier interface {

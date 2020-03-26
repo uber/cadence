@@ -195,7 +195,11 @@ processorPumpLoop:
 				p.options.UpdateAckInterval(),
 				p.options.UpdateAckIntervalJitterCoefficient(),
 			))
-			p.ackMgr.updateQueueAckLevel()
+			if err := p.ackMgr.updateQueueAckLevel(); err == ErrShardClosed {
+				// shard is no longer owned by this instance, bail out
+				go p.Stop()
+				break processorPumpLoop
+			}
 		}
 	}
 
