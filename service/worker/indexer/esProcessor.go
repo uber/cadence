@@ -23,14 +23,15 @@ package indexer
 import (
 	"context"
 	"encoding/json"
-	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/common/codec"
+
 	"time"
 
 	"github.com/olivere/elastic"
 	"github.com/uber-go/tally"
 
+	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -87,12 +88,12 @@ const (
 
 // NewESProcessorAndStart create new ESProcessor and start
 func NewESProcessorAndStart(config *Config, client es.Client, processorName string,
-	logger log.Logger, metricsClient metrics.Client) (ESProcessor, error) {
+	logger log.Logger, metricsClient metrics.Client, msgEncoder codec.BinaryEncoder) (ESProcessor, error) {
 	p := &esProcessorImpl{
 		config:        config,
 		logger:        logger.WithTags(tag.ComponentIndexerESProcessor),
 		metricsClient: metricsClient,
-		msgEncoder:    codec.NewThriftRWEncoder(),
+		msgEncoder:    msgEncoder,
 	}
 
 	params := &es.BulkProcessorParameters{
@@ -165,8 +166,10 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 			case isResponseSuccess(resp.Status):
 				p.ackKafkaMsg(key)
 			case !isResponseRetriable(resp.Status):
+				wid, rid, domainID := p.getMsgWithInfo(key)
 				p.logger.Error("ES request failed.",
-					tag.ESResponseStatus(resp.Status), tag.ESResponseError(getErrorMsgFromESResp(resp)))
+					tag.ESResponseStatus(resp.Status), tag.ESResponseError(getErrorMsgFromESResp(resp)), tag.WorkflowID(wid), tag.WorkflowRunID(rid),
+					tag.WorkflowDomainID(domainID))
 				p.nackKafkaMsg(key)
 			default: // bulk processor will retry
 				p.logger.Info("ES request retried.", tag.ESResponseStatus(resp.Status))
@@ -185,23 +188,12 @@ func (p *esProcessorImpl) nackKafkaMsg(key string) {
 }
 
 func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
-	msg, ok := p.mapToKafkaMsg.Get(key)
+	var kafkaMsg, ok = p.getKafkaMsg(key)
 	if !ok {
-		return // duplicate kafka message
-	}
-	kafkaMsg, ok := msg.(*kafkaMessageWithMetrics)
-	if !ok { // must be bug in code and bad deployment
-		p.logger.Fatal("Message is not kafka message.", tag.ESKey(key))
+		return
 	}
 
 	if nack {
-		wid, rid, domainID, err := p.getMsgInfo(kafkaMsg.message)
-		if err != nil {
-			p.logger.Error("Unable to process message.", tag.WorkflowID(wid), tag.WorkflowRunID(rid),
-				tag.WorkflowDomainID(domainID))
-		} else {
-			p.logger.Error("Unable to process message with failed decoding.")
-		}
 		kafkaMsg.Nack()
 	} else {
 		kafkaMsg.Ack()
@@ -210,21 +202,32 @@ func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
 	p.mapToKafkaMsg.Remove(key)
 }
 
-func (p *esProcessorImpl) getMsgInfo(kafkaMsg messaging.Message) (wid string, rid string, domainID string, err error) {
-	var msg indexer.Message
-	if err := p.msgEncoder.Decode(kafkaMsg.Value(), &msg); err != nil {
-		p.logger.Error("Failed to deserialize kafka message.", tag.Error(err))
-		return "", "", "", err
+func (p *esProcessorImpl) getKafkaMsg(key string) (kafkaMsg *kafkaMessageWithMetrics, ok bool) {
+	msg, ok := p.mapToKafkaMsg.Get(key)
+	if !ok {
+		return // duplicate kafka message
 	}
-	return *msg.WorkflowID, *msg.RunID, *msg.DomainID, nil
+	kafkaMsg, ok = msg.(*kafkaMessageWithMetrics)
+	if !ok { // must be bug in code and bad deployment
+		p.logger.Fatal("Message is not kafka message.", tag.ESKey(key))
+		return
+	}
+	return kafkaMsg, ok
 }
 
-func (p *esProcessorImpl) deserialize(payload []byte) (*indexer.Message, error) {
-	var msg indexer.Message
-	if err := p.msgEncoder.Decode(payload, &msg); err != nil {
-		return nil, err
+func (p *esProcessorImpl) getMsgWithInfo(key string) (wid string,
+	rid string, domainID string) {
+	kafkaMsg, ok := p.getKafkaMsg(key)
+	if !ok {
+		return
 	}
-	return &msg, nil
+
+	var msg indexer.Message
+	if err := p.msgEncoder.Decode(kafkaMsg.message.Value(), &msg); err != nil {
+		p.logger.Error("Failed to deserialize kafka message.", tag.Error(err))
+		return
+	}
+	return msg.GetWorkflowID(), msg.GetRunID(), msg.GetDomainID()
 }
 
 func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
