@@ -84,8 +84,8 @@ func (sv *SearchAttributesValidator) ValidateSearchAttributes(input *gen.SearchA
 		}
 		// verify: value has the correct type
 		if !sv.isValidSearchAttributesValue(validAttr, key, val) {
-			sv.logger.WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
-				Error(fmt.Sprintf("%s is not a valid search attribute value for key %s", val, key))
+			sv.logger.WithTags(tag.ESKey(key), tag.ESValue(val), tag.WorkflowDomainName(domain)).
+				Error("invalid search attribute value")
 			return &gen.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute value for key %s", val, key)}
 		}
 		// verify: key is not system reserved
