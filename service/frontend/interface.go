@@ -36,7 +36,6 @@ type (
 	Handler interface {
 		workflowserviceserver.Interface
 		common.Daemon
-		//resource.Resource
 
 		GetResource() resource.Resource
 		GetConfig() *Config
