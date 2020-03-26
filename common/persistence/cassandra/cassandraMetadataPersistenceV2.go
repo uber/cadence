@@ -427,7 +427,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
 	var failoverConfig *p.DomainFailoverConfig
-	if failoverStartTime > 0 &&  failoverTimeout > 0 {
+	if failoverStartTime > 0 && failoverTimeout > 0 {
 		failoverConfig = &p.DomainFailoverConfig{
 			StartTime: failoverStartTime,
 			Timeout:   failoverTimeout,
