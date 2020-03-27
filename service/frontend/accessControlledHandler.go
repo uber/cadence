@@ -121,9 +121,7 @@ func (a *AccessControlledWorkflowHandler) DeprecateDomain(
 	request *shared.DeprecateDomainRequest,
 ) error {
 
-	scope := a.GetResource().GetMetricsClient().
-		Scope(metrics.FrontendDeprecateDomainScope).
-		Tagged(metrics.DomainTag(request.GetName()))
+	scope := a.getMetricsScopeWithDomainName(metrics.FrontendDeprecateDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
 		APIName:    "DeprecateDomain",
@@ -146,9 +144,7 @@ func (a *AccessControlledWorkflowHandler) DescribeDomain(
 	request *shared.DescribeDomainRequest,
 ) (*shared.DescribeDomainResponse, error) {
 
-	scope := a.GetResource().GetMetricsClient().
-		Scope(metrics.FrontendDescribeDomainScope).
-		Tagged(metrics.DomainTag(request.GetName()))
+	scope := a.getMetricsScopeWithDomainName(metrics.FrontendDescribeDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
 		APIName:    "DescribeDomain",
@@ -454,9 +450,7 @@ func (a *AccessControlledWorkflowHandler) RegisterDomain(
 	request *shared.RegisterDomainRequest,
 ) error {
 
-	scope := a.GetResource().GetMetricsClient().
-		Scope(metrics.FrontendRegisterDomainScope).
-		Tagged(metrics.DomainTag(request.GetName()))
+	scope := a.getMetricsScopeWithDomainName(metrics.FrontendRegisterDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
 		APIName:    "RegisterDomain",
@@ -758,9 +752,7 @@ func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	request *shared.UpdateDomainRequest,
 ) (*shared.UpdateDomainResponse, error) {
 
-	scope := a.GetResource().GetMetricsClient().
-		Scope(metrics.FrontendUpdateDomainScope).
-		Tagged(metrics.DomainTag(request.GetName()))
+	scope := a.getMetricsScopeWithDomainName(metrics.FrontendUpdateDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
 		APIName:    "UpdateDomain",
@@ -802,12 +794,27 @@ func (a *AccessControlledWorkflowHandler) getMetricsScopeWithDomain(
 	scope int,
 	d domainGetter,
 ) metrics.Scope {
+	return getMetricsScopeWithDomain(scope, d, a.GetResource().GetMetricsClient())
+}
+
+func getMetricsScopeWithDomain(
+	scope int,
+	d domainGetter,
+	metricsClient metrics.Client,
+) metrics.Scope {
 	var metricsScope metrics.Scope
-	metricsClient := a.GetResource().GetMetricsClient()
 	if d != nil {
 		metricsScope = metricsClient.Scope(scope).Tagged(metrics.DomainTag(d.GetDomain()))
 	} else {
 		metricsScope = metricsClient.Scope(scope).Tagged(metrics.DomainUnknownTag())
 	}
 	return metricsScope
+}
+
+// getMetricsScopeWithDomainName is for XXXDomain APIs, whose request is not domainGetter
+func (a *AccessControlledWorkflowHandler) getMetricsScopeWithDomainName(
+	scope int,
+	domainName string,
+) metrics.Scope {
+	return a.GetResource().GetMetricsClient().Scope(scope).Tagged(metrics.DomainTag(domainName))
 }
