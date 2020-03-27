@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/task"
 )
 
 // Handler - Thrift handler interface for history service
@@ -59,6 +60,7 @@ type (
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers ReplicationTaskFetchers
+		queueTaskProcessor      queueTaskProcessor
 	}
 )
 
@@ -119,9 +121,51 @@ func (h *Handler) Start() {
 		h.config,
 		h.GetClusterMetadata().GetReplicationConsumerConfig(),
 		h.GetClusterMetadata(),
-		h.GetClientBean())
+		h.GetClientBean(),
+	)
 
 	h.replicationTaskFetchers.Start()
+
+	if h.config.EnablePriorityTaskProcessor() {
+		var err error
+		taskPriorityAssigner := newTaskPriorityAssigner(
+			h.GetClusterMetadata().GetCurrentClusterName(),
+			h.GetDomainCache(),
+			h.GetLogger(),
+			h.GetMetricsClient(),
+			h.config,
+		)
+		queueTaskProcessorOptions := &queueTaskProcessorOptions{}
+		switch schedulerType := task.SchedulerType(h.config.TaskSchedulerType()); schedulerType {
+		case task.SchedulerTypeFIFO:
+			queueTaskProcessorOptions.schedulerType = schedulerType
+			queueTaskProcessorOptions.fifoSchedulerOptions = &task.FIFOTaskSchedulerOptions{
+				QueueSize:   h.config.TaskSchedulerQueueSize(),
+				WorkerCount: h.config.TaskSchedulerWorkerCount(),
+				RetryPolicy: common.CreatePersistanceRetryPolicy(),
+			}
+		case task.SchedulerTypeWRR:
+			queueTaskProcessorOptions.schedulerType = schedulerType
+			queueTaskProcessorOptions.wRRSchedulerOptions = &task.WeightedRoundRobinTaskSchedulerOptions{
+				Weights:     h.config.TaskSchedulerRoundRobinWeights,
+				QueueSize:   h.config.TaskSchedulerQueueSize(),
+				WorkerCount: h.config.TaskSchedulerWorkerCount(),
+				RetryPolicy: common.CreatePersistanceRetryPolicy(),
+			}
+		default:
+			h.GetLogger().Fatal("Unknown task scheduler type", tag.Value(schedulerType))
+		}
+		h.queueTaskProcessor, err = newQueueTaskProcessor(
+			taskPriorityAssigner,
+			queueTaskProcessorOptions,
+			h.GetLogger(),
+			h.GetMetricsClient(),
+		)
+		if err != nil {
+			h.GetLogger().Fatal("Creating priority task processor failed", tag.Error(err))
+		}
+		h.queueTaskProcessor.Start()
+	}
 
 	h.controller = newShardController(
 		h.Resource,
@@ -139,6 +183,9 @@ func (h *Handler) Start() {
 // Stop stops the handler
 func (h *Handler) Stop() {
 	h.replicationTaskFetchers.Stop()
+	if h.queueTaskProcessor != nil {
+		h.queueTaskProcessor.Stop()
+	}
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
 }
@@ -158,6 +205,7 @@ func (h *Handler) CreateEngine(
 		h.config,
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
+		h.queueTaskProcessor,
 	)
 }
 

@@ -186,13 +186,13 @@ func (p *queueTaskProcessorImpl) getOrCreateTaskScheduler(
 	case task.SchedulerTypeFIFO:
 		scheduler = task.NewFIFOTaskScheduler(
 			p.logger,
-			p.metricsClient.Scope(metrics.TaskSchedulerScope),
+			p.metricsClient,
 			p.options.fifoSchedulerOptions,
 		)
 	case task.SchedulerTypeWRR:
 		scheduler, err = task.NewWeightedRoundRobinTaskScheduler(
 			p.logger,
-			p.metricsClient.Scope(metrics.TaskSchedulerScope),
+			p.metricsClient,
 			p.options.wRRSchedulerOptions,
 		)
 	default:

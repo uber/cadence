@@ -23,6 +23,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -38,7 +39,7 @@ import (
 type (
 	// WeightedRoundRobinTaskSchedulerOptions configs WRR task scheduler
 	WeightedRoundRobinTaskSchedulerOptions struct {
-		Weights     map[int]dynamicconfig.IntPropertyFn
+		Weights     dynamicconfig.MapPropertyFn
 		QueueSize   int
 		WorkerCount int
 		RetryPolicy backoff.RetryPolicy
@@ -48,6 +49,7 @@ type (
 		sync.RWMutex
 
 		status       int32
+		weights      atomic.Value // store the currently used weights
 		taskChs      map[int]chan PriorityTask
 		shutdownCh   chan struct{}
 		notifyCh     chan struct{}
@@ -61,7 +63,8 @@ type (
 )
 
 const (
-	wRRTaskProcessorQueueSize = 1
+	wRRTaskProcessorQueueSize    = 1
+	defaultUpdateWeightsInterval = 5 * time.Second
 )
 
 var (
@@ -72,31 +75,39 @@ var (
 // NewWeightedRoundRobinTaskScheduler creates a new WRR task scheduler
 func NewWeightedRoundRobinTaskScheduler(
 	logger log.Logger,
-	metricsScope metrics.Scope,
+	metricsClient metrics.Client,
 	options *WeightedRoundRobinTaskSchedulerOptions,
 ) (Scheduler, error) {
-	if len(options.Weights) == 0 {
+	weights, err := convertWeightsFromDynamicConfig(options.Weights())
+	if err != nil {
+		return nil, err
+	}
+
+	if len(weights) == 0 {
 		return nil, errors.New("weight is not specified in the scheduler option")
 	}
 
-	return &weightedRoundRobinTaskSchedulerImpl{
+	scheduler := &weightedRoundRobinTaskSchedulerImpl{
 		status:       common.DaemonStatusInitialized,
 		taskChs:      make(map[int]chan PriorityTask),
 		shutdownCh:   make(chan struct{}),
 		notifyCh:     make(chan struct{}, 1),
 		logger:       logger,
-		metricsScope: metricsScope,
+		metricsScope: metricsClient.Scope(metrics.TaskSchedulerScope),
 		options:      options,
 		processor: NewParallelTaskProcessor(
 			logger,
-			metricsScope,
+			metricsClient,
 			&ParallelTaskProcessorOptions{
 				QueueSize:   wRRTaskProcessorQueueSize,
 				WorkerCount: options.WorkerCount,
 				RetryPolicy: options.RetryPolicy,
 			},
 		),
-	}, nil
+	}
+	scheduler.weights.Store(weights)
+
+	return scheduler, nil
 }
 
 func (w *weightedRoundRobinTaskSchedulerImpl) Start() {
@@ -108,6 +119,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Start() {
 
 	w.dispatcherWG.Add(1)
 	go w.dispatcher()
+	go w.updateWeights()
 
 	w.logger.Info("Weighted round robin task scheduler started.")
 }
@@ -187,8 +199,9 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 
 		outstandingTasks = false
 		w.updateTaskChs(taskChs)
+		weights := w.getWeights()
 		for priority, taskCh := range taskChs {
-			for i := 0; i < w.options.Weights[priority](); i++ {
+			for i := 0; i < weights[priority]; i++ {
 				select {
 				case task := <-taskCh:
 					// dispatched at least one task in this round
@@ -212,7 +225,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 func (w *weightedRoundRobinTaskSchedulerImpl) getOrCreateTaskChan(
 	priority int,
 ) (chan PriorityTask, error) {
-	if _, ok := w.options.Weights[priority]; !ok {
+	if _, ok := w.getWeights()[priority]; !ok {
 		return nil, fmt.Errorf("unknown task priority: %v", priority)
 	}
 
@@ -251,4 +264,44 @@ func (w *weightedRoundRobinTaskSchedulerImpl) notifyDispatcher() {
 	default:
 		// do not block if there's already a notification
 	}
+}
+
+func (w *weightedRoundRobinTaskSchedulerImpl) getWeights() map[int]int {
+	return w.weights.Load().(map[int]int)
+}
+
+func (w *weightedRoundRobinTaskSchedulerImpl) updateWeights() {
+	ticker := time.NewTicker(defaultUpdateWeightsInterval)
+	for {
+		select {
+		case <-ticker.C:
+			weights, err := convertWeightsFromDynamicConfig(w.options.Weights())
+			if err != nil {
+				w.logger.Error("failed to update weight for round robin task scheduler", tag.Error(err))
+			} else {
+				w.weights.Store(weights)
+			}
+		case <-w.shutdownCh:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+func convertWeightsFromDynamicConfig(
+	weightsFromDC map[string]interface{},
+) (map[int]int, error) {
+	weights := make(map[int]int)
+	for key, value := range weightsFromDC {
+		priority, err := strconv.Atoi(key)
+		if err != nil {
+			return nil, err
+		}
+		weight, ok := value.(int)
+		if !ok {
+			return nil, fmt.Errorf("failed to convert weight %v", value)
+		}
+		weights[priority] = weight
+	}
+	return weights, nil
 }
