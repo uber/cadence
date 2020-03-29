@@ -1,2 +1,9 @@
-ALTER TYPE shard ADD replication_dlq_ack_level map<text, bigint>;
-ALTER TABLE queue ALTER message_id TYPE bigint;
+DROP TABLE queue;
+CREATE TABLE queue (
+  queue_type      int,
+  message_id      bigint,
+  message_payload blob,
+  PRIMARY KEY  (queue_type, message_id)
+) WITH COMPACTION = {
+    'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
+  };
