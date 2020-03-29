@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//+build test
+
 package domain
 
 import (
@@ -82,8 +84,8 @@ func (s *dlqMessageHandlerSuite) TearDownTest() {
 }
 
 func (s *dlqMessageHandlerSuite) TestReadMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
 
@@ -105,7 +107,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages() {
 }
 
 func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
-	lastMessageID := 20
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
 
@@ -116,7 +118,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
 		},
 	}
 	testError := fmt.Errorf("test")
-	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(-1, testError).Times(1)
+	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(int64(-1), testError).Times(1)
 	s.mockReplicationQueue.EXPECT().GetMessagesFromDLQ(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(tasks, nil, nil).Times(0)
 
@@ -126,8 +128,8 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
 }
 
 func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnReadMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
 
@@ -142,8 +144,8 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnReadMessages() {
 }
 
 func (s *dlqMessageHandlerSuite) TestPurgeMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(ackLevel, nil).Times(1)
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(ackLevel, lastMessageID).Return(nil).Times(1)
@@ -154,10 +156,10 @@ func (s *dlqMessageHandlerSuite) TestPurgeMessages() {
 }
 
 func (s *dlqMessageHandlerSuite) TestPurgeMessages_ThrowErrorOnGetDLQAckLevel() {
-	lastMessageID := 20
+	lastMessageID := int64(20)
 	testError := fmt.Errorf("test")
 
-	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(-1, testError).Times(1)
+	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(int64(-1), testError).Times(1)
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), gomock.Any()).Return(nil).Times(0)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any()).Times(0)
 	err := s.dlqMessageHandler.Purge(lastMessageID)
@@ -166,8 +168,8 @@ func (s *dlqMessageHandlerSuite) TestPurgeMessages_ThrowErrorOnGetDLQAckLevel() 
 }
 
 func (s *dlqMessageHandlerSuite) TestPurgeMessages_ThrowErrorOnPurgeMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	testError := fmt.Errorf("test")
 
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(ackLevel, nil).Times(1)
@@ -179,11 +181,11 @@ func (s *dlqMessageHandlerSuite) TestPurgeMessages_ThrowErrorOnPurgeMessages() {
 }
 
 func (s *dlqMessageHandlerSuite) TestMergeMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
-	messageID := 11
+	messageID := int64(11)
 
 	domainAttribute := &replicator.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
@@ -192,7 +194,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 	tasks := []*replicator.ReplicationTask{
 		{
 			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID)),
+			SourceTaskId:         common.Int64Ptr(messageID),
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
@@ -209,10 +211,10 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 }
 
 func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() {
-	lastMessageID := 20
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
-	messageID := 11
+	messageID := int64(11)
 	testError := fmt.Errorf("test")
 	domainAttribute := &replicator.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
@@ -225,7 +227,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
-	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(-1, testError).Times(1)
+	s.mockReplicationQueue.EXPECT().GetDLQAckLevel().Return(int64(-1), testError).Times(1)
 	s.mockReplicationQueue.EXPECT().GetMessagesFromDLQ(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(tasks, nil, nil).Times(0)
 	s.mockReplicationTaskExecutor.EXPECT().Execute(gomock.Any()).Times(0)
@@ -238,8 +240,8 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 }
 
 func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
 	testError := fmt.Errorf("test")
@@ -257,12 +259,12 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQMessages() 
 }
 
 func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTask() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
-	messageID1 := 11
-	messageID2 := 12
+	messageID1 := int64(11)
+	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
 	domainAttribute1 := &replicator.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
@@ -273,12 +275,12 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 	tasks := []*replicator.ReplicationTask{
 		{
 			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID1)),
+			SourceTaskId:         common.Int64Ptr(messageID1),
 			DomainTaskAttributes: domainAttribute1,
 		},
 		{
 			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID2)),
+			SourceTaskId:         common.Int64Ptr(messageID2),
 			DomainTaskAttributes: domainAttribute2,
 		},
 	}
@@ -297,12 +299,12 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 }
 
 func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
-	messageID1 := 11
-	messageID2 := 12
+	messageID1 := int64(11)
+	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
 	domainAttribute1 := &replicator.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
@@ -313,12 +315,12 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 	tasks := []*replicator.ReplicationTask{
 		{
 			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID1)),
+			SourceTaskId:         common.Int64Ptr(messageID1),
 			DomainTaskAttributes: domainAttribute1,
 		},
 		{
 			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID2)),
+			SourceTaskId:         common.Int64Ptr(messageID2),
 			DomainTaskAttributes: domainAttribute2,
 		},
 	}
@@ -336,11 +338,11 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 }
 
 func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLevel() {
-	ackLevel := 10
-	lastMessageID := 20
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
 	pageSize := 100
 	pageToken := []byte{}
-	messageID := 11
+	messageID := int64(11)
 	testError := fmt.Errorf("test")
 	domainAttribute := &replicator.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
@@ -349,7 +351,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	tasks := []*replicator.ReplicationTask{
 		{
 			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID)),
+			SourceTaskId:         common.Int64Ptr(messageID),
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
