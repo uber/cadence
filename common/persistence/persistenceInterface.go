@@ -628,11 +628,11 @@ type (
 		Info                        *DomainInfo
 		Config                      *InternalDomainConfig
 		ReplicationConfig           *DomainReplicationConfig
-		FailoverConfig              *DomainFailoverConfig
 		IsGlobalDomain              bool
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
 
@@ -641,10 +641,10 @@ type (
 		Info                        *DomainInfo
 		Config                      *InternalDomainConfig
 		ReplicationConfig           *DomainReplicationConfig
-		FailoverConfig              *DomainFailoverConfig
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
 

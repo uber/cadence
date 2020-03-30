@@ -1163,12 +1163,6 @@ type (
 		Clusters          []*ClusterReplicationConfig
 	}
 
-	// DomainFailoverConfig describes the domain failover state.
-	DomainFailoverConfig struct {
-		StartTime int64
-		Timeout   int32
-	}
-
 	// ClusterReplicationConfig describes the cross DC cluster replication configuration
 	ClusterReplicationConfig struct {
 		ClusterName string
@@ -1201,11 +1195,11 @@ type (
 		Info                        *DomainInfo
 		Config                      *DomainConfig
 		ReplicationConfig           *DomainReplicationConfig
-		FailoverConfig              *DomainFailoverConfig
 		IsGlobalDomain              bool
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
 
@@ -1214,10 +1208,10 @@ type (
 		Info                        *DomainInfo
 		Config                      *DomainConfig
 		ReplicationConfig           *DomainReplicationConfig
-		FailoverConfig              *DomainFailoverConfig
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
 

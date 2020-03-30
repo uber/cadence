@@ -36,8 +36,11 @@ import (
 	"github.com/uber/cadence/common/service/config"
 )
 
-const constDomainPartition = 0
-const domainMetadataRecordName = "cadence-domain-metadata"
+const (
+	constDomainPartition     = 0
+	domainMetadataRecordName = "cadence-domain-metadata"
+	emptyFailoverEndTime     = int64(-1)
+)
 
 const (
 	templateDomainInfoType = `{` +
@@ -67,11 +70,6 @@ const (
 		`clusters: ? ` +
 		`}`
 
-	templateDomainFailoverConfigType = `{` +
-		`failover_start_time: ?, ` +
-		`failover_timeout: ? ` +
-		`}`
-
 	templateCreateDomainQuery = `INSERT INTO domains (` +
 		`id, domain) ` +
 		`VALUES(?, {name: ?}) IF NOT EXISTS`
@@ -98,8 +96,7 @@ const (
 		`config_version, ` +
 		`failover_version, ` +
 		`failover_notification_version, ` +
-		`failover_config.failover_start_time, ` +
-		`failover_config.failover_timeout, ` +
+		`failover_end_time, ` +
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
@@ -112,7 +109,7 @@ const (
 		`config_version = ? ,` +
 		`failover_version = ? ,` +
 		`failover_notification_version = ? , ` +
-		`failover_config = ` + templateDomainFailoverConfigType + `, ` +
+		`failover_end_time = ` +
 		`notification_version = ? ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ?`
@@ -143,6 +140,7 @@ const (
 		`config_version, ` +
 		`failover_version, ` +
 		`failover_notification_version, ` +
+		`failover_end_time, ` +
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? `
@@ -279,7 +277,11 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 	request *p.InternalUpdateDomainRequest,
 ) error {
 
-	failoverConfig := m.getFailoverConfig(request)
+	failoverEndTime := emptyFailoverEndTime
+	if request.FailoverEndTime != nil {
+		failoverEndTime = *request.FailoverEndTime
+	}
+
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		request.Info.ID,
@@ -303,8 +305,7 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 		request.ConfigVersion,
 		request.FailoverVersion,
 		request.FailoverNotificationVersion,
-		failoverConfig.StartTime,
-		failoverConfig.Timeout,
+		failoverEndTime,
 		request.NotificationVersion,
 		constDomainPartition,
 		request.Info.Name,
@@ -343,8 +344,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	var failoverNotificationVersion int64
 	var notificationVersion int64
 	var failoverVersion int64
-	var failoverStartTime int64
-	var failoverTimeout int32
+	var failoverEndTime int64
 	var configVersion int64
 	var isGlobalDomain bool
 
@@ -409,8 +409,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 		&configVersion,
 		&failoverVersion,
 		&failoverNotificationVersion,
-		&failoverStartTime,
-		&failoverTimeout,
+		&failoverEndTime,
 		&notificationVersion,
 	)
 
@@ -426,12 +425,9 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
-	var failoverConfig *p.DomainFailoverConfig
-	if failoverStartTime > 0 && failoverTimeout > 0 {
-		failoverConfig = &p.DomainFailoverConfig{
-			StartTime: failoverStartTime,
-			Timeout:   failoverTimeout,
-		}
+	var responseFailoverEndTime *int64
+	if failoverEndTime != emptyFailoverEndTime {
+		responseFailoverEndTime = &failoverEndTime
 	}
 
 	return &p.InternalGetDomainResponse{
@@ -442,7 +438,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 		ConfigVersion:               configVersion,
 		FailoverVersion:             failoverVersion,
 		FailoverNotificationVersion: failoverNotificationVersion,
-		FailoverConfig:              failoverConfig,
+		FailoverEndTime:             responseFailoverEndTime,
 		NotificationVersion:         notificationVersion,
 	}, nil
 }
@@ -467,6 +463,7 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 	var replicationClusters []map[string]interface{}
 	var badBinariesData []byte
 	var badBinariesDataEncoding string
+	var failoverEndTime int64
 	response := &p.InternalListDomainsResponse{}
 	for iter.Scan(
 		&name,
@@ -492,6 +489,7 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 		&domain.ConfigVersion,
 		&domain.FailoverVersion,
 		&domain.FailoverNotificationVersion,
+		&failoverEndTime,
 		&domain.NotificationVersion,
 	) {
 		if name != domainMetadataRecordName {
@@ -505,6 +503,10 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 			domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 			domain.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, domain.ReplicationConfig.Clusters)
+
+			if failoverEndTime != emptyFailoverEndTime {
+				domain.FailoverEndTime = &failoverEndTime
+			}
 			response.Domains = append(response.Domains, domain)
 		}
 		domain = &p.InternalGetDomainResponse{
@@ -543,7 +545,7 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainReq
 func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil
@@ -599,16 +601,4 @@ func (m *cassandraMetadataPersistenceV2) deleteDomain(name, ID string) error {
 	}
 
 	return nil
-}
-
-func (m *cassandraMetadataPersistenceV2) getFailoverConfig(
-	request *p.InternalUpdateDomainRequest,
-) p.DomainFailoverConfig {
-
-	config := p.DomainFailoverConfig{}
-	if request.FailoverConfig != nil {
-		config.StartTime = request.FailoverConfig.StartTime
-		config.Timeout = request.FailoverConfig.Timeout
-	}
-	return config
 }
