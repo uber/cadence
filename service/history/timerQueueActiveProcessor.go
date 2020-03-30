@@ -104,7 +104,7 @@ func newTimerQueueActiveProcessor(
 	)
 	timerQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
 		return newTimerQueueTask(
-			shard.GetShardID(),
+			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
 				getTimerTaskMetricScope(taskInfo.GetTaskType(), true),
@@ -218,7 +218,7 @@ func newTimerQueueFailoverProcessor(
 	)
 	timerQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
 		return newTimerQueueTask(
-			shard.GetShardID(),
+			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
 				getTimerTaskMetricScope(taskInfo.GetTaskType(), true),

@@ -131,14 +131,13 @@ func newTransferQueueActiveProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	transferQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
-		shardID := shard.GetShardID()
 		return newTransferQueueTask(
-			shardID,
+			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
 				getTransferTaskMetricsScope(taskInfo.GetTaskType(), true),
 			),
-			initializeLoggerForTask(shardID, taskInfo, logger),
+			initializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			transferTaskFilter,
 			processor.taskExecutor,
 			redispatchQueue,
@@ -265,14 +264,13 @@ func newTransferQueueFailoverProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	transferQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
-		shardID := shard.GetShardID()
 		return newTransferQueueTask(
-			shardID,
+			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
 				getTransferTaskMetricsScope(taskInfo.GetTaskType(), true),
 			),
-			initializeLoggerForTask(shardID, taskInfo, logger),
+			initializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			transferTaskFilter,
 			processor.taskExecutor,
 			redispatchQueue,

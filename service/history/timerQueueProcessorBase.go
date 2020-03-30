@@ -337,7 +337,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 	}
 
 	for _, task := range timerTasks {
-		if shutdown := t.submitTask(task); shutdown {
+		if submitted := t.submitTask(task); !submitted {
 			return nil, nil
 		}
 		select {
@@ -371,13 +371,13 @@ func (t *timerQueueProcessorBase) submitTask(
 	timeQueueTask := t.queueTaskInitializer(taskInfo)
 	submitted, err := t.queueTaskProcessor.TrySubmit(timeQueueTask)
 	if err != nil {
-		return true
+		return false
 	}
 	if !submitted {
 		t.redispatchQueue.Add(timeQueueTask)
 	}
 
-	return false
+	return true
 }
 
 func (t *timerQueueProcessorBase) redispatchTasks() {

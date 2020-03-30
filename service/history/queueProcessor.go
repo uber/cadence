@@ -265,7 +265,8 @@ func (p *queueProcessorBase) processBatch() {
 	}
 
 	for _, task := range tasks {
-		if shutdown := p.submitTask(task); shutdown {
+		if submitted := p.submitTask(task); !submitted {
+			// submitted since processor has been shutdown
 			return
 		}
 		select {
@@ -300,13 +301,13 @@ func (p *queueProcessorBase) submitTask(
 	queueTask := p.queueTaskInitializer(taskInfo)
 	submitted, err := p.queueTaskProcessor.TrySubmit(queueTask)
 	if err != nil {
-		return true
+		return false
 	}
 	if !submitted {
 		p.redispatchQueue.Add(queueTask)
 	}
 
-	return false
+	return true
 }
 
 func (p *queueProcessorBase) redispatchTasks() {

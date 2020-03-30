@@ -137,17 +137,19 @@ func (h *Handler) Start() {
 			h.GetMetricsClient(),
 			h.config,
 		)
-		queueTaskProcessorOptions := &queueTaskProcessorOptions{}
-		switch schedulerType := task.SchedulerType(h.config.TaskSchedulerType()); schedulerType {
+
+		schedulerType := task.SchedulerType(h.config.TaskSchedulerType())
+		queueTaskProcessorOptions := &queueTaskProcessorOptions{
+			schedulerType: schedulerType,
+		}
+		switch schedulerType {
 		case task.SchedulerTypeFIFO:
-			queueTaskProcessorOptions.schedulerType = schedulerType
 			queueTaskProcessorOptions.fifoSchedulerOptions = &task.FIFOTaskSchedulerOptions{
 				QueueSize:   h.config.TaskSchedulerQueueSize(),
 				WorkerCount: h.config.TaskSchedulerWorkerCount(),
 				RetryPolicy: common.CreatePersistanceRetryPolicy(),
 			}
 		case task.SchedulerTypeWRR:
-			queueTaskProcessorOptions.schedulerType = schedulerType
 			queueTaskProcessorOptions.wRRSchedulerOptions = &task.WeightedRoundRobinTaskSchedulerOptions{
 				Weights:     h.config.TaskSchedulerRoundRobinWeights,
 				QueueSize:   h.config.TaskSchedulerQueueSize(),

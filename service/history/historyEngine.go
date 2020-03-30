@@ -381,7 +381,7 @@ func (e *historyEngineImpl) Stop() {
 	}
 
 	if e.queueTaskProcessor != nil {
-		e.queueTaskProcessor.StopShardProcessor(e.shard.GetShardID())
+		e.queueTaskProcessor.StopShardProcessor(e.shard)
 	}
 
 	// unset the failover callback

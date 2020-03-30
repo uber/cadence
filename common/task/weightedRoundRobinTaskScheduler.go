@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -293,7 +294,7 @@ func convertWeightsFromDynamicConfig(
 ) (map[int]int, error) {
 	weights := make(map[int]int)
 	for key, value := range weightsFromDC {
-		priority, err := strconv.Atoi(key)
+		priority, err := strconv.Atoi(strings.TrimSpace(key))
 		if err != nil {
 			return nil, err
 		}
