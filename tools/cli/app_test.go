@@ -525,6 +525,38 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 	s.Nil(err)
 }
 
+func (s *cliAppSuite) TestAdminFailover() {
+	var listDomainsResponse = &serverShared.ListDomainsResponse{
+		Domains: []*serverShared.DescribeDomainResponse{
+			{
+				DomainInfo: &serverShared.DomainInfo{
+					Name:        common.StringPtr("test-domain"),
+					Description: common.StringPtr("a test domain"),
+					OwnerEmail:  common.StringPtr("test@uber.com"),
+					Data: map[string]string{
+						managedFailoverDomainData: "true",
+					},
+				},
+				ReplicationConfiguration: &serverShared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("active"),
+					Clusters: []*serverShared.ClusterReplicationConfiguration{
+						{
+							ClusterName: common.StringPtr("active"),
+						},
+						{
+							ClusterName: common.StringPtr("standby"),
+						},
+					},
+				},
+			},
+		},
+	}
+	s.serverFrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(listDomainsResponse, nil).Times(1)
+	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+	err := s.app.Run([]string{"", "admin", "cl", "fo", "--ac", "standby"})
+	s.Nil(err)
+}
+
 func (s *cliAppSuite) TestDescribeTaskList() {
 	resp := describeTaskListResponse
 	s.clientFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)

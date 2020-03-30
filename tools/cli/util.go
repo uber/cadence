@@ -509,8 +509,7 @@ func mapKeysToArray(m map[string]string) []string {
 	return out
 }
 
-// ErrorAndExit print easy to understand error msg first then error detail in a new line
-func ErrorAndExit(msg string, err error) {
+func printError(msg string, err error) {
 	if err != nil {
 		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
@@ -522,6 +521,11 @@ func ErrorAndExit(msg string, err error) {
 	} else {
 		fmt.Printf("%s %s\n", colorRed("Error:"), msg)
 	}
+}
+
+// ErrorAndExit print easy to understand error msg first then error detail in a new line
+func ErrorAndExit(msg string, err error) {
+	printError(msg, err)
 	osExit(1)
 }
 

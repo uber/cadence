@@ -65,6 +65,8 @@ const (
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 
 	searchAttrInputSeparator = "|"
+
+	managedFailoverDomainData = "IsManagedByCadence"
 )
 
 var envKeysForUserName = []string{
