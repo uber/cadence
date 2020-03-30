@@ -27,28 +27,51 @@ import (
 )
 
 type metricsScope struct {
-	scope          tally.Scope
-	defs           map[int]metricDefinition
-	isDomainTagged bool
+	scope tally.Scope
+	// cached scope with tags = { domain:all, tasklist:all }.
+	// this is non-nil when isTaskListTagged is true for this scope.
+	// when emitting metrics with tasklist tag, it is often necessary
+	// to also visualize the same metrics across all domains / all tasklists
+	// To facilitate that, this scope will dual emit metrics automatically when
+	// with special tags = { domain: all, tasklist: all} when taskListTagged is true
+	taskListAllScope tally.Scope
+	defs             map[int]metricDefinition
+	isDomainTagged   bool
+	isTaskListTagged bool
 }
 
-func newMetricsScope(scope tally.Scope, defs map[int]metricDefinition, isDomain bool) Scope {
-	return &metricsScope{scope, defs, isDomain}
+func newMetricsScope(scope tally.Scope, defs map[int]metricDefinition, isDomain bool, isTaskList bool) Scope {
+	mScope := &metricsScope{
+		scope:            scope,
+		defs:             defs,
+		isDomainTagged:   isDomain,
+		isTaskListTagged: isTaskList,
+	}
+	if mScope.isDomainTagged && mScope.isTaskListTagged {
+		// pre-allocate { domain:all, tasklist:all } scope to save cost on each call
+		mScope.taskListAllScope = scope.Tagged(map[string]string{domain: domainAllValue, taskList: taskListAllValue})
+	}
+	return mScope
 }
 
 // NoopScope returns a noop scope of metrics
 func NoopScope(serviceIdx ServiceIdx) Scope {
-	return &metricsScope{tally.NoopScope, getMetricDefs(serviceIdx), false}
+	return &metricsScope{
+		scope: tally.NoopScope,
+		defs:  getMetricDefs(serviceIdx),
+	}
 }
 
 func (m *metricsScope) IncCounter(id int) {
-	name := string(m.defs[id].metricName)
-	m.scope.Counter(name).Inc(1)
+	m.AddCounter(id, 1)
 }
 
 func (m *metricsScope) AddCounter(id int, delta int64) {
 	name := string(m.defs[id].metricName)
 	m.scope.Counter(name).Inc(delta)
+	if m.isTaskListTagged {
+		m.taskListAllScope.Counter(name).Inc(delta)
+	}
 }
 
 func (m *metricsScope) UpdateGauge(id int, value float64) {
@@ -59,17 +82,24 @@ func (m *metricsScope) UpdateGauge(id int, value float64) {
 func (m *metricsScope) StartTimer(id int) Stopwatch {
 	name := string(m.defs[id].metricName)
 	timer := m.scope.Timer(name)
-	if m.isDomainTagged {
+	switch {
+	case m.isTaskListTagged:
+		return NewStopwatch(timer, m.taskListAllScope.Timer(name))
+	case m.isDomainTagged:
 		timerAll := m.scope.Tagged(map[string]string{domain: domainAllValue}).Timer(name)
 		return NewStopwatch(timer, timerAll)
+	default:
+		return NewStopwatch(timer)
 	}
-	return NewStopwatch(timer)
 }
 
 func (m *metricsScope) RecordTimer(id int, d time.Duration) {
 	name := string(m.defs[id].metricName)
 	m.scope.Timer(name).Record(d)
-	if m.isDomainTagged {
+	switch {
+	case m.isTaskListTagged:
+		m.taskListAllScope.Timer(name).Record(d)
+	case m.isDomainTagged:
 		m.scope.Tagged(map[string]string{domain: domainAllValue}).Timer(name).Record(d)
 	}
 }
@@ -86,14 +116,18 @@ func (m *metricsScope) RecordHistogramValue(id int, value float64) {
 
 func (m *metricsScope) Tagged(tags ...Tag) Scope {
 	domainTagged := false
+	taskListTagged := false
 	tagMap := make(map[string]string, len(tags))
 	for _, tag := range tags {
-		if isDomainTagged(tag) {
+		switch {
+		case isDomainTagged(tag):
 			domainTagged = true
+		case isTaskListTagged(tag):
+			taskListTagged = true
 		}
 		tagMap[tag.Key()] = tag.Value()
 	}
-	return newMetricsScope(m.scope.Tagged(tagMap), m.defs, domainTagged)
+	return newMetricsScope(m.scope.Tagged(tagMap), m.defs, domainTagged, taskListTagged)
 }
 
 func (m *metricsScope) getBuckets(id int) tally.Buckets {
@@ -105,4 +139,8 @@ func (m *metricsScope) getBuckets(id int) tally.Buckets {
 
 func isDomainTagged(tag Tag) bool {
 	return tag.Key() == domain && tag.Value() != domainAllValue
+}
+
+func isTaskListTagged(tag Tag) bool {
+	return tag.Key() == taskList && tag.Value() != taskListAllValue
 }

@@ -35,8 +35,9 @@ const (
 	activityType  = "activityType"
 	decisionType  = "decisionType"
 
-	domainAllValue = "all"
-	unknownValue   = "_unknown_"
+	domainAllValue   = "all"
+	taskListAllValue = "all"
+	unknownValue     = "_unknown_"
 )
 
 // Tag is an interface to define metrics tags
