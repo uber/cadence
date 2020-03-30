@@ -1,1 +1,1 @@
-ALTER TABLE domains_by_name_v2 ADD failover_end_time timestamp;
+ALTER TABLE domains_by_name_v2 ADD failover_end_time bigint;
