@@ -332,7 +332,7 @@ func (d *domainCLIImpl) getAllDomains() []*shared.DescribeDomainResponse {
 
 func isDomainFailoverManagedByCadence(domain *shared.DescribeDomainResponse) bool {
 	domainData := domain.DomainInfo.GetData()
-	return strings.ToLower(strings.TrimSpace(domainData[managedFailoverDomainData])) == "true"
+	return strings.ToLower(strings.TrimSpace(domainData[common.DomainDataKeyForManagedFailover])) == "true"
 }
 
 func (d *domainCLIImpl) failover(c *cli.Context, domainName string, targetCluster string) error {

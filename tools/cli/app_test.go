@@ -534,7 +534,7 @@ func (s *cliAppSuite) TestAdminFailover() {
 					Description: common.StringPtr("a test domain"),
 					OwnerEmail:  common.StringPtr("test@uber.com"),
 					Data: map[string]string{
-						managedFailoverDomainData: "true",
+						common.DomainDataKeyForManagedFailover: "true",
 					},
 				},
 				ReplicationConfiguration: &serverShared.DomainReplicationConfiguration{
