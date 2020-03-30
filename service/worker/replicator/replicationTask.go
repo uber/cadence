@@ -494,7 +494,12 @@ func (t *workflowReplicationTask) RetryErr(err error) bool {
 
 func (t *workflowReplicationTask) Ack() {
 	t.metricsClient.IncCounter(t.metricsScope, metrics.ReplicatorMessages)
-	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, t.timeSource.Now().Sub(t.startTime))
+	taskProcessLatency := t.timeSource.Now().Sub(t.startTime)
+	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, taskProcessLatency)
+
+	if taskProcessLatency > 10 * time.Minute {
+		t.logger.Warn("Processed task exceeded warning latency when ack.")
+	}
 
 	// the underlying implementation will not return anything other than nil
 	// do logging just in case
@@ -506,8 +511,12 @@ func (t *workflowReplicationTask) Ack() {
 
 func (t *workflowReplicationTask) Nack() {
 	t.metricsClient.IncCounter(t.metricsScope, metrics.ReplicatorMessages)
-	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, t.timeSource.Now().Sub(t.startTime))
+	taskProcessLatency := t.timeSource.Now().Sub(t.startTime)
+	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, taskProcessLatency)
 
+	if taskProcessLatency > 10 * time.Minute {
+		t.logger.Warn("Processed task exceeded warning latency when nack.")
+	}
 	// the underlying implementation will not return anything other than nil
 	// do logging just in case
 	err := t.kafkaMsg.Nack()
