@@ -1,5 +1,5 @@
 {
-  "CurrVersion": "0.26",
+  "CurrVersion": "0.27",
   "MinCompatibleVersion": "0.26",
   "Description": "Add graceful failover end time in domain data",
   "SchemaUpdateCqlFiles": [
