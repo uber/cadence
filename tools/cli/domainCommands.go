@@ -285,8 +285,14 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 
 // FailoverDomains is used for managed failover all domains with domain data IsManagedByCadence=true
 func (d *domainCLIImpl) FailoverDomains(c *cli.Context) {
-	targetCluster := getRequiredOption(c, FlagActiveClusterName)
+	// ask user for confirmation
+	prompt("You are trying to failover all managed domains, continue? Y/N")
+	d.failoverDomains(c)
+}
 
+// return succeed and failed domains for testing purpose
+func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string) {
+	targetCluster := getRequiredOption(c, FlagActiveClusterName)
 	domains := d.getAllDomains()
 	shouldFailover := func(domain *shared.DescribeDomainResponse) bool {
 		isDomainNotActiveInTargetCluster := domain.ReplicationConfiguration.GetActiveClusterName() != targetCluster
@@ -309,6 +315,7 @@ func (d *domainCLIImpl) FailoverDomains(c *cli.Context) {
 	}
 	fmt.Printf("Succeed %d: %v\n", len(succeedDomains), succeedDomains)
 	fmt.Printf("Failed  %d: %v\n", len(failedDomains), failedDomains)
+	return succeedDomains, failedDomains
 }
 
 func (d *domainCLIImpl) getAllDomains() []*shared.DescribeDomainResponse {

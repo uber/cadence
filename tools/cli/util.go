@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -887,4 +888,15 @@ func showNextPage() bool {
 	var input string
 	fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""
+}
+
+// prompt will show input msg, then waiting user input y/yes to continue
+func prompt(msg string) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println(msg)
+	text, _ := reader.ReadString('\n')
+	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
+	if textLower != "y" && textLower != "yes" {
+		os.Exit(0)
+	}
 }
