@@ -293,7 +293,7 @@ func (d *domainCLIImpl) FailoverDomains(c *cli.Context) {
 // return succeed and failed domains for testing purpose
 func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string) {
 	targetCluster := getRequiredOption(c, FlagActiveClusterName)
-	domains := d.getAllDomains()
+	domains := d.getAllDomains(c)
 	shouldFailover := func(domain *shared.DescribeDomainResponse) bool {
 		isDomainNotActiveInTargetCluster := domain.ReplicationConfiguration.GetActiveClusterName() != targetCluster
 		return isDomainNotActiveInTargetCluster && isDomainFailoverManagedByCadence(domain)
@@ -318,16 +318,18 @@ func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string) {
 	return succeedDomains, failedDomains
 }
 
-func (d *domainCLIImpl) getAllDomains() []*shared.DescribeDomainResponse {
+func (d *domainCLIImpl) getAllDomains(c *cli.Context) []*shared.DescribeDomainResponse {
 	var res []*shared.DescribeDomainResponse
 	pagesize := int32(200)
 	var token []byte
+	ctx, cancel := newContext(c)
+	defer cancel()
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &shared.ListDomainsRequest{
 			PageSize:      common.Int32Ptr(pagesize),
 			NextPageToken: token,
 		}
-		listResp, err := d.listDomains(context.Background(), listRequest)
+		listResp, err := d.listDomains(ctx, listRequest)
 		if err != nil {
 			ErrorAndExit("Error when list domains info", err)
 		}
