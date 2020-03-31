@@ -40,7 +40,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 	}
 
 	// ask user for confirmation
-	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N\n",
+	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N",
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
 	prompt(promptMsg)
 
