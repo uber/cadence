@@ -160,6 +160,13 @@ func NewWorkflowHandler(
 				return float64(config.RPS())
 			},
 			func(domain string) float64 {
+				if monitor := resource.GetMembershipMonitor(); monitor != nil {
+					ringSize, err := monitor.GetMemberCountWithRole(common.FrontendServiceName)
+					if err == nil && ringSize > 0 {
+						avgQuota := config.GlobalDomainRPS(domain) / ringSize
+						return float64(common.MinInt(avgQuota, config.DomainRPS(domain)))
+					}
+				}
 				return float64(config.DomainRPS(domain))
 			},
 		),

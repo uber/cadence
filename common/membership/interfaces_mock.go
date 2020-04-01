@@ -182,6 +182,21 @@ func (mr *MockMonitorMockRecorder) GetReachableMembers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReachableMembers", reflect.TypeOf((*MockMonitor)(nil).GetReachableMembers))
 }
 
+// GetMemberCountWithRole mocks base method
+func (m *MockMonitor) GetMemberCountWithRole(role string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMemberCountWithRole", role)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMemberCountWithRole indicates an expected call of GetMemberCountWithRole
+func (mr *MockMonitorMockRecorder) GetMemberCountWithRole(role interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMemberCountWithRole", reflect.TypeOf((*MockMonitor)(nil).GetMemberCountWithRole), role)
+}
+
 // MockServiceResolver is a mock of ServiceResolver interface
 type MockServiceResolver struct {
 	ctrl     *gomock.Controller
