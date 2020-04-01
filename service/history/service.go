@@ -102,6 +102,7 @@ type Config struct {
 	TimerProcessorMaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
 	TimerProcessorRedispatchInterval                  dynamicconfig.DurationPropertyFn
 	TimerProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+	TimerProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TimerProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
 	TimerProcessorMaxTimeShift                        dynamicconfig.DurationPropertyFn
 	TimerProcessorHistoryArchivalSizeLimit            dynamicconfig.IntPropertyFn
@@ -121,6 +122,7 @@ type Config struct {
 	TransferProcessorCompleteTransferInterval            dynamicconfig.DurationPropertyFn
 	TransferProcessorRedispatchInterval                  dynamicconfig.DurationPropertyFn
 	TransferProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+	TransferProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TransferProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
 	TransferProcessorVisibilityArchivalTimeLimit         dynamicconfig.DurationPropertyFn
 
@@ -135,6 +137,7 @@ type Config struct {
 	ReplicatorProcessorUpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
 	ReplicatorProcessorRedispatchInterval                  dynamicconfig.DurationPropertyFn
 	ReplicatorProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+	ReplicatorProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	ReplicatorProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
 	ReplicatorProcessorFetchTasksBatchSize                 dynamicconfig.IntPropertyFn
 
@@ -273,6 +276,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		TimerProcessorMaxPollIntervalJitterCoefficient:    dc.GetFloat64Property(dynamicconfig.TimerProcessorMaxPollIntervalJitterCoefficient, 0.15),
 		TimerProcessorRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.TimerProcessorRedispatchInterval, 1*time.Second),
 		TimerProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorRedispatchIntervalJitterCoefficient, 0.15),
+		TimerProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TimerProcessorMaxRedispatchQueueSize, 100000),
 		TimerProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TimerProcessorEnablePriorityTaskProcessor, false),
 		TimerProcessorMaxTimeShift:                        dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxTimeShift, 1*time.Second),
 		TimerProcessorHistoryArchivalSizeLimit:            dc.GetIntProperty(dynamicconfig.TimerProcessorHistoryArchivalSizeLimit, 500*1024),
@@ -291,6 +295,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		TransferProcessorCompleteTransferInterval:            dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 60*time.Second),
 		TransferProcessorRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorRedispatchInterval, 1*time.Second),
 		TransferProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorRedispatchIntervalJitterCoefficient, 0.15),
+		TransferProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 100000),
 		TransferProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TransferProcessorEnablePriorityTaskProcessor, false),
 		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 200*time.Millisecond),
 
@@ -304,6 +309,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		ReplicatorProcessorUpdateAckIntervalJitterCoefficient:  dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorUpdateAckIntervalJitterCoefficient, 0.15),
 		ReplicatorProcessorRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorRedispatchInterval, 5*time.Second),
 		ReplicatorProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorRedispatchIntervalJitterCoefficient, 0.15),
+		ReplicatorProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxRedispatchQueueSize, 100000),
 		ReplicatorProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.ReplicatorProcessorEnablePriorityTaskProcessor, false),
 		ReplicatorProcessorFetchTasksBatchSize:                 dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 25),
 
