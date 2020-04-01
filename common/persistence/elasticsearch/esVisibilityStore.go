@@ -83,6 +83,7 @@ type (
 		HistoryLength int64
 		Memo          []byte
 		Encoding      string
+		TaskList      string
 		Attr          map[string]interface{}
 	}
 )
@@ -122,6 +123,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRe
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.TaskList,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
@@ -141,6 +143,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRec
 		request.HistoryLength,
 		request.TaskID,
 		request.Memo.Data,
+		request.TaskList,
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
@@ -159,6 +162,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(request *p.InternalUpsertWor
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.TaskList,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
@@ -897,6 +901,7 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
 		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {
@@ -910,13 +915,14 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 
 func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string,
 	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
-	searchAttributes map[string][]byte) *indexer.Message {
+	taskList string, searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
 		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
+		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
@@ -939,7 +945,7 @@ func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName str
 
 func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, workflowTypeName string,
 	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64, memo []byte, encoding common.EncodingType,
+	historyLength int64, taskID int64, memo []byte, taskList string, encoding common.EncodingType,
 	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
@@ -950,6 +956,7 @@ func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, wor
 		es.CloseTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)},
 		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
+		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}

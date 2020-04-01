@@ -535,6 +535,7 @@ type (
 		Status           *workflow.WorkflowExecutionCloseStatus
 		HistoryLength    int64
 		Memo             *DataBlob
+		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
 
@@ -562,6 +563,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 
@@ -575,6 +577,7 @@ type (
 		ExecutionTimestamp int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
 		Status             workflow.WorkflowExecutionCloseStatus
@@ -593,6 +596,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 
