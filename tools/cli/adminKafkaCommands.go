@@ -858,9 +858,9 @@ func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err e
 		}
 
 		t := &replicator.ReplicationTask{}
-		err = json.Unmarshal([]byte(line), t)
+		err = json.Unmarshal(line, t)
 		if err != nil {
-			fmt.Printf("line %v cannot be deserialized to replicaiton task: %v.\n", idx, line)
+			fmt.Printf("line %v cannot be deserialized to replicaiton task: %v.\n", idx, string(line))
 			return nil, err
 		}
 		tasks = append(tasks, t)
