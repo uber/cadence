@@ -840,18 +840,25 @@ func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err e
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	reader := bufio.NewReader(file)
 	idx := 0
-	for scanner.Scan() {
+	for {
 		idx++
-		line := strings.TrimSpace(scanner.Text())
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			if err != io.EOF {
+				ErrorAndExit("Failed to read line", err)
+			}
+			break
+		}
+
 		if len(line) == 0 {
 			fmt.Printf("line %v is empty, skipped\n", idx)
 			continue
 		}
 
 		t := &replicator.ReplicationTask{}
-		err := json.Unmarshal([]byte(line), t)
+		err = json.Unmarshal([]byte(line), t)
 		if err != nil {
 			fmt.Printf("line %v cannot be deserialized to replicaiton task: %v.\n", idx, line)
 			return nil, err
@@ -859,9 +866,6 @@ func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err e
 		tasks = append(tasks, t)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
 	return tasks, nil
 }
 
