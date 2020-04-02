@@ -910,3 +910,61 @@ func newAdminDLQCommands() []cli.Command {
 		},
 	}
 }
+
+func newDBCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "scan",
+			Aliases: []string{"scan"},
+			Usage:   "scan all concrete executions in database and detect corruptions",
+			Flags: []cli.Flag{
+				// for persistence connection
+				// TODO need to support other database: https://github.com/uber/cadence/issues/2777
+				cli.StringFlag{
+					Name:  FlagDBAddress,
+					Usage: "persistence address(right now only cassandra is supported)",
+				},
+				cli.IntFlag{
+					Name:  FlagDBPort,
+					Value: 9042,
+					Usage: "persistence port",
+				},
+				cli.StringFlag{
+					Name:  FlagUsername,
+					Usage: "cassandra username",
+				},
+				cli.StringFlag{
+					Name:  FlagPassword,
+					Usage: "cassandra password",
+				},
+				cli.StringFlag{
+					Name:  FlagKeyspace,
+					Usage: "cassandra keyspace",
+				},
+				cli.BoolFlag{
+					Name:  FlagEnableTLS,
+					Usage: "enable TLS over cassandra connection",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Usage: "cassandra tls client cert path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Usage: "cassandra tls client key path (tls must be enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Usage: "cassandra tls client ca path (tls must be enabled)",
+				},
+				cli.BoolFlag{
+					Name:  FlagTLSEnableHostVerification,
+					Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminShowWorkflow(c)
+			},
+		},
+	}
+}
