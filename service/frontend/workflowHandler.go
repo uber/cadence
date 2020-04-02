@@ -163,7 +163,7 @@ func NewWorkflowHandler(
 				if monitor := resource.GetMembershipMonitor(); monitor != nil {
 					ringSize, err := monitor.GetMemberCountWithRole(common.FrontendServiceName)
 					if err == nil && ringSize > 0 {
-						avgQuota := config.GlobalDomainRPS(domain) / ringSize
+						avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/ringSize, 1)
 						return float64(common.MinInt(avgQuota, config.DomainRPS(domain)))
 					}
 				}
