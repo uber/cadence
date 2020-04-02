@@ -358,6 +358,7 @@ func (d *HandlerImpl) UpdateDomain(
 	info := getResponse.Info
 	config := getResponse.Config
 	replicationConfig := getResponse.ReplicationConfig
+	currentActiveCluster := replicationConfig.ActiveClusterName
 	configVersion := getResponse.ConfigVersion
 	failoverVersion := getResponse.FailoverVersion
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
@@ -509,6 +510,26 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 	}
 
+	failoverConfig := getResponse.FailoverConfig
+	//Graceful failover
+	if updateRequest.IsSetFailoverTimeout() {
+		if !activeClusterChanged || !isGlobalDomain {
+			return nil, errInvalidGracefulFailover
+		}
+
+		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
+			return nil, errCannotDoGracefulFailoverFromCluster
+		}
+
+		if failoverConfig != nil {
+			return nil, errOngoingGracefulFailover
+		}
+		failoverConfig = &persistence.DomainFailoverConfig{
+			StartTime: time.Now().UTC().UnixNano(),
+			Timeout:   updateRequest.GetFailoverTimeout(),
+		}
+	}
+
 	if configurationChanged && activeClusterChanged && isGlobalDomain {
 		return nil, errCannotDoDomainFailoverAndUpdate
 	} else if configurationChanged || activeClusterChanged {
@@ -521,6 +542,19 @@ func (d *HandlerImpl) UpdateDomain(
 			configVersion++
 		}
 		if activeClusterChanged && isGlobalDomain {
+			// Force failover cleans graceful failover state
+			if !updateRequest.IsSetFailoverTimeout() {
+				failoverConfig = nil
+
+				if currentActiveCluster == replicationConfig.ActiveClusterName && getResponse.FailoverConfig == nil {
+					response := &shared.UpdateDomainResponse{
+						IsGlobalDomain:  common.BoolPtr(isGlobalDomain),
+						FailoverVersion: common.Int64Ptr(failoverVersion),
+					}
+					response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(ctx, info, config, replicationConfig)
+					return response, nil
+				}
+			}
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
 				failoverVersion,
@@ -535,6 +569,7 @@ func (d *HandlerImpl) UpdateDomain(
 			ConfigVersion:               configVersion,
 			FailoverVersion:             failoverVersion,
 			FailoverNotificationVersion: failoverNotificationVersion,
+			FailoverConfig:              failoverConfig,
 			NotificationVersion:         notificationVersion,
 		}
 		err = d.metadataMgr.UpdateDomain(updateReq)
