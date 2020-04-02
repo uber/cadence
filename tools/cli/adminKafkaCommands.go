@@ -840,7 +840,7 @@ func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err e
 	}
 	defer file.Close()
 
-	reader := bufio.NewReaderSize(file, 1024*1024*500)
+	reader := bufio.NewReaderSize(file, 1024*1024*3)
 	idx := 0
 	for {
 		idx++
