@@ -358,29 +358,26 @@ func (d *HandlerImpl) UpdateDomain(
 	info := getResponse.Info
 	config := getResponse.Config
 	replicationConfig := getResponse.ReplicationConfig
-	currentActiveCluster := replicationConfig.ActiveClusterName
 	configVersion := getResponse.ConfigVersion
 	failoverVersion := getResponse.FailoverVersion
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 	isGlobalDomain := getResponse.IsGlobalDomain
 
-	currentHistoryArchivalState := &ArchivalState{
-		Status: config.HistoryArchivalStatus,
-		URI:    config.HistoryArchivalURI,
-	}
-	nextHistoryArchivalState := currentHistoryArchivalState
+	// whether history archival config changed
 	historyArchivalConfigChanged := false
-	clusterHistoryArchivalConfig := d.archivalMetadata.GetHistoryConfig()
-	if updateRequest.Configuration != nil && clusterHistoryArchivalConfig.ClusterConfiguredForArchival() {
-		cfg := updateRequest.GetConfiguration()
-		archivalEvent, err := d.toArchivalUpdateEvent(cfg.HistoryArchivalStatus, cfg.GetHistoryArchivalURI(), clusterHistoryArchivalConfig.GetDomainDefaultURI())
-		if err != nil {
-			return nil, err
-		}
-		nextHistoryArchivalState, historyArchivalConfigChanged, err = currentHistoryArchivalState.getNextState(archivalEvent, d.validateHistoryArchivalURI)
-		if err != nil {
-			return nil, err
-		}
+	// whether visibility archival config changed
+	visibilityArchivalConfigChanged := false
+	// whether active cluster is changed
+	activeClusterChanged := false
+	// whether anything other than active cluster is changed
+	configurationChanged := false
+
+	historyArchivalState, historyArchivalConfigChanged, err := d.getHistoryArchivalState(
+		config,
+		updateRequest.Configuration,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	currentVisibilityArchivalState := &ArchivalState{
@@ -388,7 +385,7 @@ func (d *HandlerImpl) UpdateDomain(
 		URI:    config.VisibilityArchivalURI,
 	}
 	nextVisibilityArchivalState := currentVisibilityArchivalState
-	visibilityArchivalConfigChanged := false
+
 	clusterVisibilityArchivalConfig := d.archivalMetadata.GetVisibilityConfig()
 	if updateRequest.Configuration != nil && clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
 		cfg := updateRequest.GetConfiguration()
@@ -401,11 +398,6 @@ func (d *HandlerImpl) UpdateDomain(
 			return nil, err
 		}
 	}
-
-	// whether active cluster is changed
-	activeClusterChanged := false
-	// whether anything other than active cluster is changed
-	configurationChanged := false
 
 	if updateRequest.UpdatedInfo != nil {
 		updatedInfo := updateRequest.UpdatedInfo
@@ -435,8 +427,8 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 		if historyArchivalConfigChanged {
 			configurationChanged = true
-			config.HistoryArchivalStatus = nextHistoryArchivalState.Status
-			config.HistoryArchivalURI = nextHistoryArchivalState.URI
+			config.HistoryArchivalStatus = historyArchivalState.Status
+			config.HistoryArchivalURI = historyArchivalState.URI
 		}
 		if visibilityArchivalConfigChanged {
 			configurationChanged = true
@@ -510,24 +502,20 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 	}
 
-	failoverConfig := getResponse.FailoverConfig
-	//Graceful failover
-	if updateRequest.IsSetFailoverTimeout() {
+	gracefulFailoverEndTime := getResponse.FailoverEndTime
+	//Graceful failover request
+	if updateRequest.IsSetFailoverTimeoutInSeconds() {
 		if !activeClusterChanged || !isGlobalDomain {
 			return nil, errInvalidGracefulFailover
 		}
-
 		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
 			return nil, errCannotDoGracefulFailoverFromCluster
 		}
-
-		if failoverConfig != nil {
+		if gracefulFailoverEndTime != nil {
 			return nil, errOngoingGracefulFailover
 		}
-		failoverConfig = &persistence.DomainFailoverConfig{
-			StartTime: time.Now().UTC().UnixNano(),
-			Timeout:   updateRequest.GetFailoverTimeout(),
-		}
+		endTime := time.Now().UTC().Add(time.Duration(updateRequest.GetFailoverTimeoutInSeconds()) * time.Second).UnixNano()
+		gracefulFailoverEndTime = &endTime
 	}
 
 	if configurationChanged && activeClusterChanged && isGlobalDomain {
@@ -543,17 +531,10 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 		if activeClusterChanged && isGlobalDomain {
 			// Force failover cleans graceful failover state
-			if !updateRequest.IsSetFailoverTimeout() {
-				failoverConfig = nil
-
-				if currentActiveCluster == replicationConfig.ActiveClusterName && getResponse.FailoverConfig == nil {
-					response := &shared.UpdateDomainResponse{
-						IsGlobalDomain:  common.BoolPtr(isGlobalDomain),
-						FailoverVersion: common.Int64Ptr(failoverVersion),
-					}
-					response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(ctx, info, config, replicationConfig)
-					return response, nil
-				}
+			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
+				// force failover cleanup graceful failover state
+				gracefulFailoverEndTime = nil
+				//TODO: failover state cleanup request dedup
 			}
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
@@ -569,7 +550,7 @@ func (d *HandlerImpl) UpdateDomain(
 			ConfigVersion:               configVersion,
 			FailoverVersion:             failoverVersion,
 			FailoverNotificationVersion: failoverNotificationVersion,
-			FailoverConfig:              failoverConfig,
+			FailoverEndTime:             gracefulFailoverEndTime,
 			NotificationVersion:         notificationVersion,
 		}
 		err = d.metadataMgr.UpdateDomain(updateReq)
@@ -583,6 +564,7 @@ func (d *HandlerImpl) UpdateDomain(
 	}
 
 	if isGlobalDomain {
+		// TODO: add failover endtime to replication task
 		err = d.domainReplicator.HandleTransmissionTask(replicator.DomainOperationUpdate,
 			info, config, replicationConfig, configVersion, failoverVersion, isGlobalDomain)
 		if err != nil {
@@ -784,6 +766,31 @@ func (d *HandlerImpl) validateVisibilityArchivalURI(URIString string) error {
 	}
 
 	return archiver.ValidateURI(URI)
+}
+
+func (d *HandlerImpl) getHistoryArchivalState(
+	config *persistence.DomainConfig,
+	requestedConfig *shared.DomainConfiguration,
+) (*ArchivalState, bool, error) {
+
+	currentHistoryArchivalState := &ArchivalState{
+		Status: config.HistoryArchivalStatus,
+		URI:    config.HistoryArchivalURI,
+	}
+	clusterHistoryArchivalConfig := d.archivalMetadata.GetHistoryConfig()
+
+	if requestedConfig != nil && clusterHistoryArchivalConfig.ClusterConfiguredForArchival() {
+		archivalEvent, err := d.toArchivalUpdateEvent(
+			requestedConfig.HistoryArchivalStatus,
+			requestedConfig.GetHistoryArchivalURI(),
+			clusterHistoryArchivalConfig.GetDomainDefaultURI(),
+		)
+		if err != nil {
+			return nil, false, err
+		}
+		return currentHistoryArchivalState.getNextState(archivalEvent, d.validateHistoryArchivalURI)
+	}
+	return currentHistoryArchivalState, false, nil
 }
 
 func getDomainStatus(info *persistence.DomainInfo) *shared.DomainStatus {
