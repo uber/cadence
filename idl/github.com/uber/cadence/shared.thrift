@@ -1507,6 +1507,7 @@ struct RemoveTaskRequest {
   10: optional i32                      shardID
   20: optional i32                      type
   30: optional i64 (js.type = "Long")   taskID
+  40: optional i64 (js.type = "Long")   visibilityTimestamp
 }
 
 struct CloseShardRequest {
