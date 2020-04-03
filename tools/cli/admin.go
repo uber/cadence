@@ -963,7 +963,7 @@ func newDBCommands() []cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) {
-				AdminShowWorkflow(c)
+				AdminDBScan(c)
 			},
 		},
 	}

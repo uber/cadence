@@ -787,6 +787,7 @@ func (m *executionManagerImpl) ListConcreteExecutions(
 	}
 	newResponse := &ListConcreteExecutionsResponse{
 		ExecutionInfos: make([]*WorkflowExecutionInfo, len(response.ExecutionInfos), len(response.ExecutionInfos)),
+		PageToken:      response.NextPageToken,
 	}
 	for i, info := range response.ExecutionInfos {
 		newResponse.ExecutionInfos[i], _, _ = m.DeserializeExecutionInfo(info)

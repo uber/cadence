@@ -2067,6 +2067,9 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 		}
 		result = make(map[string]interface{})
 	}
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
 	return response, nil
 }
 
