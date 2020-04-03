@@ -362,6 +362,7 @@ func (d *HandlerImpl) UpdateDomain(
 	failoverVersion := getResponse.FailoverVersion
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 	isGlobalDomain := getResponse.IsGlobalDomain
+	gracefulFailoverEndTime := getResponse.FailoverEndTime
 
 	// whether history archival config changed
 	historyArchivalConfigChanged := false
@@ -372,6 +373,7 @@ func (d *HandlerImpl) UpdateDomain(
 	// whether anything other than active cluster is changed
 	configurationChanged := false
 
+	// Update history archival state
 	historyArchivalState, historyArchivalConfigChanged, err := d.getHistoryArchivalState(
 		config,
 		updateRequest.Configuration,
@@ -379,111 +381,76 @@ func (d *HandlerImpl) UpdateDomain(
 	if err != nil {
 		return nil, err
 	}
-
-	currentVisibilityArchivalState := &ArchivalState{
-		Status: config.VisibilityArchivalStatus,
-		URI:    config.VisibilityArchivalURI,
-	}
-	nextVisibilityArchivalState := currentVisibilityArchivalState
-
-	clusterVisibilityArchivalConfig := d.archivalMetadata.GetVisibilityConfig()
-	if updateRequest.Configuration != nil && clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
-		cfg := updateRequest.GetConfiguration()
-		archivalEvent, err := d.toArchivalUpdateEvent(cfg.VisibilityArchivalStatus, cfg.GetVisibilityArchivalURI(), clusterVisibilityArchivalConfig.GetDomainDefaultURI())
-		if err != nil {
-			return nil, err
-		}
-		nextVisibilityArchivalState, visibilityArchivalConfigChanged, err = currentVisibilityArchivalState.getNextState(archivalEvent, d.validateVisibilityArchivalURI)
-		if err != nil {
-			return nil, err
-		}
+	if historyArchivalConfigChanged {
+		config.HistoryArchivalStatus = historyArchivalState.Status
+		config.HistoryArchivalURI = historyArchivalState.URI
 	}
 
-	if updateRequest.UpdatedInfo != nil {
-		updatedInfo := updateRequest.UpdatedInfo
-		if updatedInfo.Description != nil {
-			configurationChanged = true
-			info.Description = updatedInfo.GetDescription()
-		}
-		if updatedInfo.OwnerEmail != nil {
-			configurationChanged = true
-			info.OwnerEmail = updatedInfo.GetOwnerEmail()
-		}
-		if updatedInfo.Data != nil {
-			configurationChanged = true
-			// only do merging
-			info.Data = d.mergeDomainData(info.Data, updatedInfo.Data)
-		}
+	// Update visibility archival state
+	visibilityArchivalState, visibilityArchivalConfigChanged, err := d.getVisibilityArchivalState(
+		config,
+		updateRequest.Configuration,
+	)
+	if err != nil {
+		return nil, err
 	}
-	if updateRequest.Configuration != nil {
-		updatedConfig := updateRequest.Configuration
-		if updatedConfig.EmitMetric != nil {
-			configurationChanged = true
-			config.EmitMetric = updatedConfig.GetEmitMetric()
-		}
-		if updatedConfig.WorkflowExecutionRetentionPeriodInDays != nil {
-			configurationChanged = true
-			config.Retention = updatedConfig.GetWorkflowExecutionRetentionPeriodInDays()
-		}
-		if historyArchivalConfigChanged {
-			configurationChanged = true
-			config.HistoryArchivalStatus = historyArchivalState.Status
-			config.HistoryArchivalURI = historyArchivalState.URI
-		}
-		if visibilityArchivalConfigChanged {
-			configurationChanged = true
-			config.VisibilityArchivalStatus = nextVisibilityArchivalState.Status
-			config.VisibilityArchivalURI = nextVisibilityArchivalState.URI
-		}
-		if updatedConfig.BadBinaries != nil {
-			maxLength := d.maxBadBinaryCount(updateRequest.GetName())
-			// only do merging
-			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, updatedConfig.BadBinaries.Binaries, time.Now().UnixNano())
-			if len(config.BadBinaries.Binaries) > maxLength {
-				return nil, &shared.BadRequestError{
-					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
-				}
-			}
-		}
+	if visibilityArchivalConfigChanged {
+		config.VisibilityArchivalStatus = visibilityArchivalState.Status
+		config.VisibilityArchivalURI = visibilityArchivalState.URI
 	}
 
-	if updateRequest.DeleteBadBinary != nil {
-		binChecksum := updateRequest.GetDeleteBadBinary()
-		_, ok := config.BadBinaries.Binaries[binChecksum]
-		if !ok {
-			return nil, &shared.BadRequestError{
-				Message: fmt.Sprintf("Bad binary checksum %v doesn't exists.", binChecksum),
-			}
-		}
-		configurationChanged = true
-		delete(config.BadBinaries.Binaries, binChecksum)
+	// Update domain info
+	info, domainInfoChanged := d.updateDomainInfo(
+		updateRequest.UpdatedInfo,
+		info,
+	)
+	// Update domain config
+	config, domainConfigChanged, err := d.updateDomainConfiguration(
+		updateRequest.GetName(),
+		config,
+		updateRequest.Configuration,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	if updateRequest.ReplicationConfiguration != nil {
-		updateReplicationConfig := updateRequest.ReplicationConfiguration
-		if len(updateReplicationConfig.Clusters) != 0 {
-			configurationChanged = true
-			clustersNew := []*persistence.ClusterReplicationConfig{}
-			for _, clusterConfig := range updateReplicationConfig.Clusters {
-				clustersNew = append(clustersNew, &persistence.ClusterReplicationConfig{
-					ClusterName: clusterConfig.GetClusterName(),
-				})
-			}
-
-			if err := d.domainAttrValidator.validateDomainReplicationConfigClustersDoesNotRemove(
-				replicationConfig.Clusters,
-				clustersNew,
-			); err != nil {
-				return nil, err
-			}
-			replicationConfig.Clusters = clustersNew
-		}
-
-		if updateReplicationConfig.ActiveClusterName != nil {
-			activeClusterChanged = true
-			replicationConfig.ActiveClusterName = updateReplicationConfig.GetActiveClusterName()
-		}
+	// Update domain bad binary
+	config, deleteBinaryChanged, err := d.updateDeleteBadBinary(
+		config,
+		updateRequest.DeleteBadBinary,
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	//Update replication config
+	replicationConfig, replicationConfigChanged, activeClusterChanged, err := d.updateReplicationConfig(
+		replicationConfig,
+		updateRequest.ReplicationConfiguration,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle graceful failover request
+	if updateRequest.IsSetFailoverTimeoutInSeconds() {
+		// must update active cluster on a global domain
+		if !activeClusterChanged || !isGlobalDomain {
+			return nil, errInvalidGracefulFailover
+		}
+		// must start with the passive -> active cluster
+		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
+			return nil, errCannotDoGracefulFailoverFromCluster
+		}
+		// cannot have concurrent failover
+		if gracefulFailoverEndTime != nil {
+			return nil, errOngoingGracefulFailover
+		}
+		endTime := time.Now().UTC().Add(time.Duration(updateRequest.GetFailoverTimeoutInSeconds()) * time.Second).UnixNano()
+		gracefulFailoverEndTime = &endTime
+	}
+
+	configurationChanged = historyArchivalConfigChanged || visibilityArchivalConfigChanged || domainInfoChanged || domainConfigChanged || deleteBinaryChanged || replicationConfigChanged
 
 	if err := d.domainAttrValidator.validateDomainConfig(config); err != nil {
 		return nil, err
@@ -494,6 +461,14 @@ func (d *HandlerImpl) UpdateDomain(
 		); err != nil {
 			return nil, err
 		}
+
+		if configurationChanged && activeClusterChanged {
+			return nil, errCannotDoDomainFailoverAndUpdate
+		}
+
+		if !activeClusterChanged && !d.clusterMetadata.IsMasterCluster() {
+			return nil, errNotMasterCluster
+		}
 	} else {
 		if err := d.domainAttrValidator.validateDomainReplicationConfigForLocalDomain(
 			replicationConfig,
@@ -502,39 +477,18 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 	}
 
-	gracefulFailoverEndTime := getResponse.FailoverEndTime
-	//Graceful failover request
-	if updateRequest.IsSetFailoverTimeoutInSeconds() {
-		if !activeClusterChanged || !isGlobalDomain {
-			return nil, errInvalidGracefulFailover
-		}
-		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
-			return nil, errCannotDoGracefulFailoverFromCluster
-		}
-		if gracefulFailoverEndTime != nil {
-			return nil, errOngoingGracefulFailover
-		}
-		endTime := time.Now().UTC().Add(time.Duration(updateRequest.GetFailoverTimeoutInSeconds()) * time.Second).UnixNano()
-		gracefulFailoverEndTime = &endTime
-	}
-
-	if configurationChanged && activeClusterChanged && isGlobalDomain {
-		return nil, errCannotDoDomainFailoverAndUpdate
-	} else if configurationChanged || activeClusterChanged {
-		if configurationChanged && isGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
-			return nil, errNotMasterCluster
-		}
-
+	if configurationChanged || activeClusterChanged {
 		// set the versions
 		if configurationChanged {
 			configVersion++
 		}
+
 		if activeClusterChanged && isGlobalDomain {
 			// Force failover cleans graceful failover state
 			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
 				// force failover cleanup graceful failover state
 				gracefulFailoverEndTime = nil
-				//TODO: failover state cleanup request dedup
+				//TODO: failover state request dedup
 			}
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
@@ -557,10 +511,6 @@ func (d *HandlerImpl) UpdateDomain(
 		if err != nil {
 			return nil, err
 		}
-	} else if isGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
-		// although there is no attr updated, just prevent customer to use the non master cluster
-		// for update domain, ever (except if customer want to do a domain failover)
-		return nil, errNotMasterCluster
 	}
 
 	if isGlobalDomain {
@@ -786,11 +736,140 @@ func (d *HandlerImpl) getHistoryArchivalState(
 			clusterHistoryArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {
-			return nil, false, err
+			return currentHistoryArchivalState, false, err
 		}
 		return currentHistoryArchivalState.getNextState(archivalEvent, d.validateHistoryArchivalURI)
 	}
 	return currentHistoryArchivalState, false, nil
+}
+
+func (d *HandlerImpl) getVisibilityArchivalState(
+	config *persistence.DomainConfig,
+	requestedConfig *shared.DomainConfiguration,
+) (*ArchivalState, bool, error) {
+	currentVisibilityArchivalState := &ArchivalState{
+		Status: config.VisibilityArchivalStatus,
+		URI:    config.VisibilityArchivalURI,
+	}
+	clusterVisibilityArchivalConfig := d.archivalMetadata.GetVisibilityConfig()
+	if requestedConfig != nil && clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
+		archivalEvent, err := d.toArchivalUpdateEvent(
+			requestedConfig.VisibilityArchivalStatus,
+			requestedConfig.GetVisibilityArchivalURI(),
+			clusterVisibilityArchivalConfig.GetDomainDefaultURI(),
+		)
+		if err != nil {
+			return currentVisibilityArchivalState, false, err
+		}
+		return currentVisibilityArchivalState.getNextState(archivalEvent, d.validateVisibilityArchivalURI)
+	}
+	return currentVisibilityArchivalState, false, nil
+}
+
+func (d *HandlerImpl) updateDomainInfo(
+	updatedDomainInfo *shared.UpdateDomainInfo,
+	currentDomainInfo *persistence.DomainInfo,
+) (*persistence.DomainInfo, bool) {
+
+	isDomainUpdated := false
+	if updatedDomainInfo != nil {
+		if updatedDomainInfo.Description != nil {
+			isDomainUpdated = true
+			currentDomainInfo.Description = updatedDomainInfo.GetDescription()
+		}
+		if updatedDomainInfo.OwnerEmail != nil {
+			isDomainUpdated = true
+			currentDomainInfo.OwnerEmail = updatedDomainInfo.GetOwnerEmail()
+		}
+		if updatedDomainInfo.Data != nil {
+			isDomainUpdated = true
+			// only do merging
+			currentDomainInfo.Data = d.mergeDomainData(currentDomainInfo.Data, updatedDomainInfo.Data)
+		}
+	}
+	return currentDomainInfo, isDomainUpdated
+}
+
+func (d *HandlerImpl) updateDomainConfiguration(
+	domainName string,
+	config *persistence.DomainConfig,
+	domainConfig *shared.DomainConfiguration,
+) (*persistence.DomainConfig, bool, error) {
+
+	isConfigChanged := false
+	if domainConfig != nil {
+		if domainConfig.EmitMetric != nil {
+			isConfigChanged = true
+			config.EmitMetric = domainConfig.GetEmitMetric()
+		}
+		if domainConfig.WorkflowExecutionRetentionPeriodInDays != nil {
+			isConfigChanged = true
+			config.Retention = domainConfig.GetWorkflowExecutionRetentionPeriodInDays()
+		}
+		if domainConfig.BadBinaries != nil {
+			maxLength := d.maxBadBinaryCount(domainName)
+			// only do merging
+			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, domainConfig.BadBinaries.Binaries, time.Now().UnixNano())
+			if len(config.BadBinaries.Binaries) > maxLength {
+				return config, isConfigChanged, &shared.BadRequestError{
+					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
+				}
+			}
+		}
+	}
+	return config, isConfigChanged, nil
+}
+
+func (d *HandlerImpl) updateDeleteBadBinary(
+	config *persistence.DomainConfig,
+	deleteBadBinary *string,
+) (*persistence.DomainConfig, bool, error) {
+
+	if deleteBadBinary != nil {
+		_, ok := config.BadBinaries.Binaries[*deleteBadBinary]
+		if !ok {
+			return config, false, &shared.BadRequestError{
+				Message: fmt.Sprintf("Bad binary checksum %v doesn't exists.", *deleteBadBinary),
+			}
+		}
+		delete(config.BadBinaries.Binaries, *deleteBadBinary)
+		return config, true, nil
+	}
+	return config, false, nil
+}
+
+func (d *HandlerImpl) updateReplicationConfig(
+	config *persistence.DomainReplicationConfig,
+	replicationConfig *shared.DomainReplicationConfiguration,
+) (*persistence.DomainReplicationConfig, bool, bool, error) {
+
+	clusterUpdated := false
+	activeClusterUpdated := false
+	if replicationConfig != nil {
+		if len(replicationConfig.GetClusters()) != 0 {
+			clusterUpdated = true
+			clustersNew := []*persistence.ClusterReplicationConfig{}
+			for _, clusterConfig := range replicationConfig.Clusters {
+				clustersNew = append(clustersNew, &persistence.ClusterReplicationConfig{
+					ClusterName: clusterConfig.GetClusterName(),
+				})
+			}
+
+			if err := d.domainAttrValidator.validateDomainReplicationConfigClustersDoesNotRemove(
+				config.Clusters,
+				clustersNew,
+			); err != nil {
+				return config, clusterUpdated, activeClusterUpdated, err
+			}
+			config.Clusters = clustersNew
+		}
+
+		if replicationConfig.IsSetActiveClusterName() {
+			activeClusterUpdated = true
+			config.ActiveClusterName = replicationConfig.GetActiveClusterName()
+		}
+	}
+	return config, clusterUpdated, activeClusterUpdated, nil
 }
 
 func getDomainStatus(info *persistence.DomainInfo) *shared.DomainStatus {

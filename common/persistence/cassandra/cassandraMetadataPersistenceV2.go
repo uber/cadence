@@ -235,6 +235,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.Intern
 		request.FailoverVersion,
 		emptyFailoverEndTime,
 		p.InitialFailoverNotificationVersion,
+		emptyFailoverEndTime,
 		metadata.NotificationVersion,
 	)
 	m.updateMetadataBatch(batch, metadata.NotificationVersion)
