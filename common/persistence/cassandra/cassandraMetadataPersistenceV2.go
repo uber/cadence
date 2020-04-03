@@ -233,7 +233,6 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.Intern
 		request.IsGlobalDomain,
 		request.ConfigVersion,
 		request.FailoverVersion,
-		emptyFailoverEndTime,
 		p.InitialFailoverNotificationVersion,
 		emptyFailoverEndTime,
 		metadata.NotificationVersion,
