@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2020 Uber Technologies, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -53,6 +53,7 @@ type (
 		progressFile          *os.File
 	}
 
+	// ExecutionScanEntity is the execution entity which gets written to output file from scan
 	ExecutionScanEntity struct {
 		ShardID      int
 		DomainID     string
@@ -65,13 +66,16 @@ type (
 		ScanMetadata ExecutionScanEntityMetadata
 	}
 
+	// ExecutionScanEntityMetadata is the metadata from scanning the execution that gets written to output file
 	ExecutionScanEntityMetadata struct {
 		Message  string
 		ErrorMsg string
 	}
 
+	// ScanShardReport contains progress information about the scan, this struct is used
+	// both to report global progress and per shard reports.
 	ScanShardReport struct {
-		ShardId                     int
+		ShardID                     int
 		NumberOfExecutions          int
 		NumberOfCorruptedExecutions int
 		NumberOfFailedChecks        int
@@ -91,9 +95,9 @@ func AdminDBScan(c *cli.Context) {
 	shardReports := make(chan *ScanShardReport)
 	for i := 0; i < scanWorkerCount; i++ {
 		go func(workerIdx int) {
-			for shardId := 0; shardId < numberOfShards; shardId++ {
-				if shardId%scanWorkerCount == workerIdx {
-					shardReports <- scanShard(session, shardId, scanFiles)
+			for shardID := 0; shardID < numberOfShards; shardID++ {
+				if shardID%scanWorkerCount == workerIdx {
+					shardReports <- scanShard(session, shardID, scanFiles)
 				}
 			}
 		}(i)
@@ -107,8 +111,8 @@ func AdminDBScan(c *cli.Context) {
 	}
 }
 
-func scanShard(session *gocql.Session, shardId int, scanFiles *scanFiles) *ScanShardReport {
-	execStore, err := cassp.NewWorkflowExecutionPersistence(shardId, session, loggerimpl.NewNopLogger())
+func scanShard(session *gocql.Session, shardID int, scanFiles *scanFiles) *ScanShardReport {
+	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	if err != nil {
 		ErrorAndExit("failed to create execution persistence", err)
 	}
@@ -116,7 +120,7 @@ func scanShard(session *gocql.Session, shardId int, scanFiles *scanFiles) *ScanS
 	branchDecoder := codec.NewThriftRWEncoder()
 	var token []byte
 	scanShardReport := &ScanShardReport{
-		ShardId: shardId,
+		ShardID: shardID,
 	}
 	isFirstIteration := true
 	for isFirstIteration || len(token) != 0 {
@@ -147,7 +151,7 @@ func scanShard(session *gocql.Session, shardId int, scanFiles *scanFiles) *ScanS
 				BranchID:  branch.GetBranchID(),
 				MinNodeID: 1,
 				MaxNodeID: 20,
-				ShardID:   shardId,
+				ShardID:   shardID,
 				PageSize:  historyPageSize,
 			}
 			_, err = historyStore.ReadHistoryBranch(readHistoryBranchReq)
@@ -158,14 +162,14 @@ func scanShard(session *gocql.Session, shardId int, scanFiles *scanFiles) *ScanS
 						ErrorMsg: err.Error(),
 					}
 					scanShardReport.NumberOfCorruptedExecutions++
-					writeExecutionToFile(scanFiles.startEventCorruptFile, shardId, branch.GetTreeID(), branch.GetBranchID(), metadata, e)
+					writeExecutionToFile(scanFiles.startEventCorruptFile, shardID, branch.GetTreeID(), branch.GetBranchID(), metadata, e)
 				} else {
 					metadata := ExecutionScanEntityMetadata{
 						Message:  "Checking corruption based on start event failed",
 						ErrorMsg: err.Error(),
 					}
 					scanShardReport.NumberOfFailedChecks++
-					writeExecutionToFile(scanFiles.failedToRunCheckFile, shardId, branch.GetTreeID(), branch.GetBranchID(), metadata, e)
+					writeExecutionToFile(scanFiles.failedToRunCheckFile, shardID, branch.GetTreeID(), branch.GetBranchID(), metadata, e)
 				}
 			}
 		}
@@ -250,8 +254,8 @@ func createScanFiles() (*scanFiles, func()) {
 }
 
 func combineShardReport(report *ScanShardReport, combined *ScanShardReport) {
-	if combined.ShardId < report.ShardId {
-		combined.ShardId = report.ShardId
+	if combined.ShardID < report.ShardID {
+		combined.ShardID = report.ShardID
 	}
 	combined.FailedToListExecutions = combined.FailedToListExecutions || report.FailedToListExecutions
 	combined.NumberOfCorruptedExecutions = combined.NumberOfCorruptedExecutions + report.NumberOfCorruptedExecutions
