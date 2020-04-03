@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"sync/atomic"
 	"time"
 
@@ -161,9 +160,6 @@ func NewWorkflowHandler(
 				return float64(config.RPS())
 			},
 			func(domain string) float64 {
-				if config.GlobalDomainRPS(domain) == 0 {
-					return math.MaxFloat64
-				}
 				if monitor := resource.GetMembershipMonitor(); monitor != nil {
 					ringSize, err := monitor.GetMemberCount(common.FrontendServiceName)
 					if err == nil && ringSize > 0 {
