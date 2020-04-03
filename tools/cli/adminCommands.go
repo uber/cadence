@@ -293,9 +293,7 @@ func connectToCassandra(c *cli.Context) *gocql.Session {
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	fmt.Println("about to create session")
 	session, err := clusterCfg.CreateSession()
-	fmt.Println("created session")
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
