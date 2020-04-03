@@ -70,9 +70,9 @@ type (
 		RemoveListener(service string, name string) error
 		// GetReachableMembers returns addresses of all members of the ring
 		GetReachableMembers() ([]string, error)
-		// GetMemberCountWithRole returns the number of reachable members
+		// GetMemberCount returns the number of reachable members
 		// currently in this node's membership list for the given role
-		GetMemberCountWithRole(role string) (int, error)
+		GetMemberCount(role string) (int, error)
 	}
 
 	// ServiceResolver provides membership information for a specific cadence service.

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -160,14 +161,17 @@ func NewWorkflowHandler(
 				return float64(config.RPS())
 			},
 			func(domain string) float64 {
+				if config.GlobalDomainRPS(domain) == 0 {
+					return math.MaxFloat64
+				}
 				if monitor := resource.GetMembershipMonitor(); monitor != nil {
-					ringSize, err := monitor.GetMemberCountWithRole(common.FrontendServiceName)
+					ringSize, err := monitor.GetMemberCount(common.FrontendServiceName)
 					if err == nil && ringSize > 0 {
 						avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/ringSize, 1)
-						return float64(common.MinInt(avgQuota, config.DomainRPS(domain)))
+						return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))
 					}
 				}
-				return float64(config.DomainRPS(domain))
+				return float64(config.MaxDomainRPSPerInstance(domain))
 			},
 		),
 		versionChecker: client.NewVersionChecker(),

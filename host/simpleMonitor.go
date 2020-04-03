@@ -79,6 +79,6 @@ func (s *simpleMonitor) GetReachableMembers() ([]string, error) {
 	return nil, nil
 }
 
-func (s *simpleMonitor) GetMemberCountWithRole(role string) (int, error) {
+func (s *simpleMonitor) GetMemberCount(service string) (int, error) {
 	return 0, nil
 }

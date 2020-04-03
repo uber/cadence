@@ -182,19 +182,19 @@ func (mr *MockMonitorMockRecorder) GetReachableMembers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReachableMembers", reflect.TypeOf((*MockMonitor)(nil).GetReachableMembers))
 }
 
-// GetMemberCountWithRole mocks base method
-func (m *MockMonitor) GetMemberCountWithRole(role string) (int, error) {
+// GetMemberCount mocks base method
+func (m *MockMonitor) GetMemberCount(service string) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMemberCountWithRole", role)
+	ret := m.ctrl.Call(m, "GetMemberCount", service)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetMemberCountWithRole indicates an expected call of GetMemberCountWithRole
-func (mr *MockMonitorMockRecorder) GetMemberCountWithRole(role interface{}) *gomock.Call {
+// GetMemberCount indicates an expected call of GetMemberCount
+func (mr *MockMonitorMockRecorder) GetMemberCount(service interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMemberCountWithRole", reflect.TypeOf((*MockMonitor)(nil).GetMemberCountWithRole), role)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMemberCount", reflect.TypeOf((*MockMonitor)(nil).GetMemberCount), service)
 }
 
 // MockServiceResolver is a mock of ServiceResolver interface

@@ -117,7 +117,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockVisibilityArchiver = &archiver.VisibilityArchiverMock{}
 
 	mockMonitor := s.mockResource.MembershipMonitor
-	mockMonitor.EXPECT().GetMemberCountWithRole(common.FrontendServiceName).Return(5, nil).AnyTimes()
+	mockMonitor.EXPECT().GetMemberCount(common.FrontendServiceName).Return(5, nil).AnyTimes()
 
 }
 

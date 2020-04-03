@@ -155,8 +155,8 @@ func (rpo *ringpopMonitor) GetReachableMembers() ([]string, error) {
 	return rpo.rp.GetReachableMembers()
 }
 
-func (rpo *ringpopMonitor) GetMemberCountWithRole(role string) (int, error) {
-	ring, err := rpo.GetResolver(role)
+func (rpo *ringpopMonitor) GetMemberCount(service string) (int, error) {
+	ring, err := rpo.GetResolver(service)
 	if err != nil {
 		return 0, err
 	}
