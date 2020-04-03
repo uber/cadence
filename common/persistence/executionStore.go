@@ -778,6 +778,22 @@ func (m *executionManagerImpl) GetCurrentExecution(
 	return m.persistence.GetCurrentExecution(request)
 }
 
+func (m *executionManagerImpl) ListConcreteExecutions(
+	request *ListConcreteExecutionsRequest,
+) (*ListConcreteExecutionsResponse, error) {
+	response, err := m.persistence.ListConcreteExecutions(request)
+	if err != nil {
+		return nil, err
+	}
+	newResponse := &ListConcreteExecutionsResponse{
+		ExecutionInfos: make([]*WorkflowExecutionInfo, len(response.ExecutionInfos), len(response.ExecutionInfos)),
+	}
+	for i, info := range response.ExecutionInfos {
+		newResponse.ExecutionInfos[i], _, _ = m.DeserializeExecutionInfo(info)
+	}
+	return newResponse, nil
+}
+
 // Transfer task related methods
 func (m *executionManagerImpl) GetTransferTasks(
 	request *GetTransferTasksRequest,
