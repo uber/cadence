@@ -4383,9 +4383,9 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 		)}
 	}
 
-	lastWriteSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion) //DCA
-	currentVersionCluster := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)    //PHX
-	currentCluster := e.clusterMetadata.GetCurrentClusterName()                                 //DCA
+	lastWriteSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
+	currentVersionCluster := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
+	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	// there are 4 cases for version changes (based on version from domain cache)
 	// NOTE: domain cache version change may occur after seeing events with higher version
@@ -4428,27 +4428,23 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 		return false, err
 	}
 
-	if flushBufferVersion == lastWriteVersion {
-		if err := e.FlushBufferedEvents(); err != nil {
+	if e.HasBufferedEvents() {
+		// we have a decision with buffered events on the fly with a lower version, fail it
+		if err := failDecision(
+			e,
+			decision,
+			workflow.DecisionTaskFailedCauseFailoverCloseDecision,
+		); err != nil {
+			return false, err
+		}
+
+		err = scheduleDecision(e)
+		if err != nil {
 			return false, err
 		}
 		return true, nil
 	}
-
-	// we have a decision on the fly with a lower version, fail it
-	if err := failDecision(
-		e,
-		decision,
-		workflow.DecisionTaskFailedCauseFailoverCloseDecision,
-	); err != nil {
-		return false, err
-	}
-
-	err = scheduleDecision(e)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
+	return false, nil
 }
 
 func (e *mutableStateBuilder) closeTransactionWithPolicyCheck(
