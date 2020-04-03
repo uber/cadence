@@ -497,7 +497,7 @@ func (t *workflowReplicationTask) Ack() {
 	taskProcessLatency := t.timeSource.Now().Sub(t.startTime)
 	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, taskProcessLatency)
 
-	if taskProcessLatency > 10 * time.Minute {
+	if taskProcessLatency > 10*time.Minute {
 		t.logger.Warn("Processed task exceeded warning latency when ack.")
 	}
 
@@ -514,7 +514,7 @@ func (t *workflowReplicationTask) Nack() {
 	taskProcessLatency := t.timeSource.Now().Sub(t.startTime)
 	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, taskProcessLatency)
 
-	if taskProcessLatency > 10 * time.Minute {
+	if taskProcessLatency > 10*time.Minute {
 		t.logger.Warn("Processed task exceeded warning latency when nack.")
 	}
 	// the underlying implementation will not return anything other than nil
