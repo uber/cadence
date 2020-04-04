@@ -71,10 +71,11 @@ type (
 
 	// ProgressReport contains metadata about the scan for all shards which have been finished
 	ProgressReport struct {
-		NumberOfShardsFinished      int
-		NumberOfExecutions          int
-		NumberOfCorruptedExecutions int
-		NumberOfFailedChecks        int
+		NumberOfShardsFinished           int
+		NumberOfExecutions               int
+		NumberOfCorruptedExecutions      int
+		NumberOfFailedChecks             int
+		NumberOfShardsFailedToFinishScan int
 	}
 
 	// ShardReport contains metadata about the scan for a single shard
@@ -82,6 +83,7 @@ type (
 		NumberOfExecutions          int
 		NumberOfCorruptedExecutions int
 		NumberOfFailedChecks        int
+		FailedToFinishScan          bool
 	}
 )
 
@@ -149,6 +151,7 @@ func scanShard(
 		limiter.Wait(context.Background())
 		resp, err := execStore.ListConcreteExecutions(req)
 		if err != nil {
+			report.FailedToFinishScan = true
 			writeToFile(scanFiles.failedToRunCheckFile, fmt.Sprintf("call to ListConcreteExecutions failed: %v", err))
 			return report
 		}
@@ -222,7 +225,7 @@ func writeExecutionToFile(
 	}
 	data, err := json.Marshal(exec)
 	if err != nil {
-		ErrorAndExit("failed to marshal exeuction", err)
+		ErrorAndExit("failed to marshal execution", err)
 	}
 	writeToFile(file, string(data))
 }
@@ -252,6 +255,9 @@ func includeShardInProgressReport(report *ShardReport, progressReport *ProgressR
 	progressReport.NumberOfFailedChecks += report.NumberOfFailedChecks
 	progressReport.NumberOfExecutions += report.NumberOfExecutions
 	progressReport.NumberOfShardsFinished++
+	if report.FailedToFinishScan {
+		progressReport.NumberOfShardsFailedToFinishScan++
+	}
 }
 
 func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.DynamicRateLimiter {
