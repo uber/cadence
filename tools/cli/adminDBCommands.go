@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -36,21 +37,17 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/quotas"
 )
 
 const (
-	scanWorkerCount            = 40
-	numberOfShards             = 16384
-	delayBetweenExecutionPages = 50 * time.Millisecond
-	executionPageSize          = 100
-	historyPageSize            = 50
+	historyPageSize = 50
 )
 
 type (
 	scanFiles struct {
 		failedToRunCheckFile  *os.File
 		startEventCorruptFile *os.File
-		progressFile          *os.File
 	}
 
 	// ExecutionScanEntity is the execution entity which gets written to output file from scan
@@ -72,19 +69,33 @@ type (
 		ErrorMsg string
 	}
 
-	// ScanShardReport contains progress information about the scan, this struct is used
-	// both to report global progress and per shard reports.
-	ScanShardReport struct {
-		ShardID                     int
+	// ProgressReport contains metadata about the scan for all shards which have been finished
+	ProgressReport struct {
+		NumberOfShardsFinished      int
 		NumberOfExecutions          int
 		NumberOfCorruptedExecutions int
 		NumberOfFailedChecks        int
-		FailedToListExecutions      bool
+	}
+
+	// ShardReport contains metadata about the scan for a single shard
+	ShardReport struct {
+		NumberOfExecutions          int
+		NumberOfCorruptedExecutions int
+		NumberOfFailedChecks        int
 	}
 )
 
 // AdminDBScan is used to scan over all executions in database and detect corruptions
 func AdminDBScan(c *cli.Context) {
+	numShards := getRequiredIntOption(c, FlagNumberOfShards)
+	startingRPS := getRequiredIntOption(c, FlagStartingRPS)
+	targetRPS := getRequiredIntOption(c, FlagRPS)
+	scaleUpSeconds := getRequiredIntOption(c, FlagRPSScaleUpSeconds)
+	scanWorkerCount := getRequiredIntOption(c, FlagGoRoutineCount)
+	executionsPageSize := getRequiredIntOption(c, FlagPageSize)
+	scanReportRate := getRequiredIntOption(c, FlagScanReportRate)
+
+	rateLimiter := getRateLimiter(startingRPS, targetRPS, scaleUpSeconds)
 	scanFiles, deferFn := createScanFiles()
 	session := connectToCassandra(c)
 	defer func() {
@@ -92,26 +103,34 @@ func AdminDBScan(c *cli.Context) {
 		session.Close()
 	}()
 
-	shardReports := make(chan *ScanShardReport)
+	shardReports := make(chan *ShardReport)
 	for i := 0; i < scanWorkerCount; i++ {
 		go func(workerIdx int) {
-			for shardID := 0; shardID < numberOfShards; shardID++ {
+			for shardID := 0; shardID < numShards; shardID++ {
 				if shardID%scanWorkerCount == workerIdx {
-					shardReports <- scanShard(session, shardID, scanFiles)
+					shardReports <- scanShard(session, shardID, scanFiles, rateLimiter, executionsPageSize)
 				}
 			}
 		}(i)
 	}
 
-	combinedShardReport := &ScanShardReport{}
-	for i := 0; i < numberOfShards; i++ {
+	progressReport := &ProgressReport{}
+	for i := 0; i < numShards; i++ {
 		report := <-shardReports
-		combineShardReport(report, combinedShardReport)
-		writeScanReportToFile(scanFiles.progressFile, *report, *combinedShardReport)
+		includeShardInProgressReport(report, progressReport)
+		if i%scanReportRate == 0 {
+			fmt.Printf("%+v", progressReport)
+		}
 	}
 }
 
-func scanShard(session *gocql.Session, shardID int, scanFiles *scanFiles) *ScanShardReport {
+func scanShard(
+	session *gocql.Session,
+	shardID int,
+	scanFiles *scanFiles,
+	limiter *quotas.DynamicRateLimiter,
+	executionsPageSize int,
+) *ShardReport {
 	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	if err != nil {
 		ErrorAndExit("failed to create execution persistence", err)
@@ -119,30 +138,28 @@ func scanShard(session *gocql.Session, shardID int, scanFiles *scanFiles) *ScanS
 	historyStore := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 	branchDecoder := codec.NewThriftRWEncoder()
 	var token []byte
-	scanShardReport := &ScanShardReport{
-		ShardID: shardID,
-	}
+	report := &ShardReport{}
 	isFirstIteration := true
 	for isFirstIteration || len(token) != 0 {
 		isFirstIteration = false
 		req := &persistence.ListConcreteExecutionsRequest{
-			PageSize:  executionPageSize,
+			PageSize:  executionsPageSize,
 			PageToken: token,
 		}
+		limiter.Wait(context.Background())
 		resp, err := execStore.ListConcreteExecutions(req)
 		if err != nil {
 			writeToFile(scanFiles.failedToRunCheckFile, fmt.Sprintf("call to ListConcreteExecutions failed: %v", err))
-			scanShardReport.FailedToListExecutions = true
-			return scanShardReport
+			return report
 		}
 		token = resp.NextPageToken
 
 		for _, e := range resp.ExecutionInfos {
-			scanShardReport.NumberOfExecutions++
+			report.NumberOfExecutions++
 			var branch shared.HistoryBranch
 			err := branchDecoder.Decode(e.BranchToken, &branch)
 			if err != nil {
-				scanShardReport.NumberOfFailedChecks++
+				report.NumberOfFailedChecks++
 				writeToFile(scanFiles.failedToRunCheckFile, fmt.Sprintf("failed to decode branch token: %v", err))
 				continue
 			}
@@ -154,6 +171,7 @@ func scanShard(session *gocql.Session, shardID int, scanFiles *scanFiles) *ScanS
 				ShardID:   shardID,
 				PageSize:  historyPageSize,
 			}
+			limiter.Wait(context.Background())
 			_, err = historyStore.ReadHistoryBranch(readHistoryBranchReq)
 			if err != nil {
 				if err == gocql.ErrNotFound {
@@ -161,21 +179,20 @@ func scanShard(session *gocql.Session, shardID int, scanFiles *scanFiles) *ScanS
 						Message:  "Detected workflow was corrupted based on missing history",
 						ErrorMsg: err.Error(),
 					}
-					scanShardReport.NumberOfCorruptedExecutions++
+					report.NumberOfCorruptedExecutions++
 					writeExecutionToFile(scanFiles.startEventCorruptFile, shardID, branch.GetTreeID(), branch.GetBranchID(), metadata, e)
 				} else {
 					metadata := ExecutionScanEntityMetadata{
 						Message:  "Checking corruption based on start event failed",
 						ErrorMsg: err.Error(),
 					}
-					scanShardReport.NumberOfFailedChecks++
+					report.NumberOfFailedChecks++
 					writeExecutionToFile(scanFiles.failedToRunCheckFile, shardID, branch.GetTreeID(), branch.GetBranchID(), metadata, e)
 				}
 			}
 		}
-		time.Sleep(delayBetweenExecutionPages)
 	}
-	return scanShardReport
+	return report
 }
 
 func writeToFile(file *os.File, message string) {
@@ -210,23 +227,6 @@ func writeExecutionToFile(
 	writeToFile(file, string(data))
 }
 
-func writeScanReportToFile(
-	file *os.File,
-	report ScanShardReport,
-	combined ScanShardReport,
-) {
-	reportData, err := json.Marshal(report)
-	if err != nil {
-		ErrorAndExit("failed to marshal scanShardReport", err)
-	}
-	combinedData, err := json.Marshal(combined)
-	if err != nil {
-		ErrorAndExit("failed to marshal combined scanShardReport", err)
-	}
-	writeToFile(file, string(reportData))
-	writeToFile(file, string(combinedData))
-}
-
 func createScanFiles() (*scanFiles, func()) {
 	failedToRunCheckFile, err := os.Create(fmt.Sprintf("failedToRunCheck.json"))
 	if err != nil {
@@ -236,29 +236,36 @@ func createScanFiles() (*scanFiles, func()) {
 	if err != nil {
 		ErrorAndExit("failed to create file", err)
 	}
-	progressFile, err := os.Create(fmt.Sprintf("progressFile.json"))
-	if err != nil {
-		ErrorAndExit("failed to create file", err)
-	}
 	deferFn := func() {
 		failedToRunCheckFile.Close()
 		startEventCorruptFile.Close()
-		progressFile.Close()
 	}
 
 	return &scanFiles{
 		failedToRunCheckFile:  failedToRunCheckFile,
 		startEventCorruptFile: startEventCorruptFile,
-		progressFile:          progressFile,
 	}, deferFn
 }
 
-func combineShardReport(report *ScanShardReport, combined *ScanShardReport) {
-	if combined.ShardID < report.ShardID {
-		combined.ShardID = report.ShardID
+func includeShardInProgressReport(report *ShardReport, progressReport *ProgressReport) {
+	progressReport.NumberOfCorruptedExecutions += report.NumberOfCorruptedExecutions
+	progressReport.NumberOfFailedChecks += report.NumberOfFailedChecks
+	progressReport.NumberOfExecutions += report.NumberOfExecutions
+	progressReport.NumberOfShardsFinished++
+}
+
+func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.DynamicRateLimiter {
+	if startRPS >= targetRPS {
+		ErrorAndExit("startRPS is greater than target RPS", nil)
 	}
-	combined.FailedToListExecutions = combined.FailedToListExecutions || report.FailedToListExecutions
-	combined.NumberOfCorruptedExecutions = combined.NumberOfCorruptedExecutions + report.NumberOfCorruptedExecutions
-	combined.NumberOfFailedChecks = combined.NumberOfFailedChecks + report.NumberOfFailedChecks
-	combined.NumberOfExecutions = combined.NumberOfExecutions + report.NumberOfExecutions
+	rpsIncreasePerSecond := (targetRPS - startRPS) / scaleUpSeconds
+	startTime := time.Now()
+	rpsFn := func() float64 {
+		secondsPast := int(time.Now().Sub(startTime).Seconds())
+		if secondsPast >= scaleUpSeconds {
+			return float64(targetRPS)
+		}
+		return float64((rpsIncreasePerSecond * secondsPast) + startRPS)
+	}
+	return quotas.NewDynamicRateLimiter(rpsFn)
 }

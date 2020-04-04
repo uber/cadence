@@ -192,7 +192,9 @@ const (
 	FlagTaskID                            = "task_id"
 	FlagTaskType                          = "task_type"
 	FlagTaskVisibilityTimestamp           = "task_timestamp"
+	FlagStartingRPS                       = "starting_rps"
 	FlagRPS                               = "rps"
+	FlagRPSScaleUpSeconds                 = "rps_scale_up_seconds"
 	FlagJobID                             = "job_id"
 	FlagJobIDWithAlias                    = FlagJobID + ", jid"
 	FlagYes                               = "yes"
@@ -213,6 +215,8 @@ const (
 	FlagMaxMessageCountWithAlias          = FlagMaxMessageCount + ", mmc"
 	FlagLastMessageID                     = "last_message_id"
 	FlagLastMessageIDWithAlias            = FlagLastMessageID + ", lm"
+	FlagGoRoutineCount                    = "go_routine_count"
+	FlagScanReportRate                    = "scan_report_rate"
 )
 
 var flagsForExecution = []cli.Flag{
