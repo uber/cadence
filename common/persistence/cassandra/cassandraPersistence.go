@@ -2059,6 +2059,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	for iter.MapScan(result) {
 		runID := result["run_id"].(gocql.UUID).String()
 		if runID == permanentRunID {
+			result = make(map[string]interface{})
 			continue
 		}
 		if _, ok := result["execution"]; ok {

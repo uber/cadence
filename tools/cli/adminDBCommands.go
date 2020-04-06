@@ -65,6 +65,7 @@ type (
 		BranchID    string
 		CloseStatus int
 		Note        string
+		Details     string
 	}
 
 	// ScanFailure is a scan failure
@@ -213,6 +214,7 @@ func verifyExecution(
 				branch.GetTreeID(),
 				branch.GetBranchID(),
 				"got not found error",
+				"",
 				execution)
 		} else {
 			report.NumberOfFailedChecks++
@@ -221,19 +223,29 @@ func verifyExecution(
 	} else if history == nil || len(history.History) == 0 {
 		ErrorAndExit("got no error from fetching history but history is empty", nil)
 	} else {
-		firstEvent := history.History[0]
-		historyEvent, err := payloadSerializer.DeserializeEvent(firstEvent)
-		if err != nil {
+		firstBatch, err := payloadSerializer.DeserializeBatchEvents(history.History[0])
+		if err != nil || len(firstBatch) == 0 {
 			report.NumberOfFailedChecks++
-			recordScanFailure(scanFiles.failedToRunCheckFile, "got error decoding history event", err)
-		} else if historyEvent.GetEventId() != common.FirstEventID || historyEvent.GetEventType() != shared.EventTypeWorkflowExecutionStarted {
+			recordScanFailure(scanFiles.failedToRunCheckFile, "got error decoding history batch", err)
+		} else if firstBatch[0].GetEventId() != common.FirstEventID {
 			report.NumberOfCorruptedExecutions++
 			recordCorruptedWorkflow(
 				scanFiles.startEventCorruptedFile,
 				shardID,
 				branch.GetTreeID(),
 				branch.GetBranchID(),
-				"got workflow with incorrect first event",
+				"got workflow with incorrect first eventId",
+				fmt.Sprintf("expected: %v, actual: %v", common.FirstEventID, firstBatch[0].GetEventId()),
+				execution)
+		} else if firstBatch[0].GetEventType() != shared.EventTypeWorkflowExecutionStarted {
+			report.NumberOfCorruptedExecutions++
+			recordCorruptedWorkflow(
+				scanFiles.startEventCorruptedFile,
+				shardID,
+				branch.GetTreeID(),
+				branch.GetBranchID(),
+				"got workflow with incorrect first event type",
+				fmt.Sprintf("expected: %v, actual: %v", shared.EventTypeWorkflowExecutionStarted.String(), firstBatch[0].GetEventType().String()),
 				execution)
 		}
 	}
@@ -245,6 +257,7 @@ func recordCorruptedWorkflow(
 	treeID string,
 	branchID string,
 	note string,
+	details string,
 	info *persistence.InternalWorkflowExecutionInfo,
 ) {
 	cee := CorruptedExecutionEntity{
@@ -257,6 +270,7 @@ func recordCorruptedWorkflow(
 		BranchID:    branchID,
 		CloseStatus: info.CloseStatus,
 		Note:        note,
+		Details:     details,
 	}
 	data, err := json.Marshal(cee)
 	if err != nil {
