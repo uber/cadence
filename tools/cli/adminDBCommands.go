@@ -31,6 +31,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
+
 	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -42,33 +43,33 @@ import (
 )
 
 const (
-	historyPageSize = 50
-	failedToRunCheckFilename = "failedToRunCheck.json"
+	historyPageSize             = 50
+	failedToRunCheckFilename    = "failedToRunCheck.json"
 	startEventCorruptedFilename = "startEventCorrupted.json"
 )
 
 type (
 	scanFiles struct {
-		failedToRunCheckFile  *os.File
+		failedToRunCheckFile    *os.File
 		startEventCorruptedFile *os.File
 	}
 
 	// CorruptedExecutionEntity is a corrupted execution
 	CorruptedExecutionEntity struct {
-		ShardID      int
-		DomainID     string
-		WorkflowID   string
-		RunID        string
-		NextEventID  int64
-		TreeID       string
-		BranchID     string
-		CloseStatus  int
-		Note         string
+		ShardID     int
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		NextEventID int64
+		TreeID      string
+		BranchID    string
+		CloseStatus int
+		Note        string
 	}
 
 	// ScanFailure is a scan failure
 	ScanFailure struct {
-		Note string
+		Note    string
 		Details string
 	}
 
@@ -163,7 +164,7 @@ func scanShard(
 		resp, err := execStore.ListConcreteExecutions(req)
 		if err != nil {
 			report.FailedToFinishScan = true
-			writeToFile(scanFiles.failedToRunCheckFile, fmt.Sprintf("call to ListConcreteExecutions failed: %v", err))
+			recordScanFailure(scanFiles.failedToRunCheckFile, "call to ListConcreteExecutions failed", err)
 			return report
 		}
 		token = resp.NextPageToken
@@ -190,7 +191,7 @@ func verifyExecution(
 	err := branchDecoder.Decode(execution.BranchToken, &branch)
 	if err != nil {
 		report.NumberOfFailedChecks++
-		writeToFile(scanFiles.failedToRunCheckFile, fmt.Sprintf("failed to decode branch token: %v", err))
+		recordScanFailure(scanFiles.failedToRunCheckFile, "failed to decode branch token", err)
 		return
 	}
 	readHistoryBranchReq := &persistence.InternalReadHistoryBranchRequest{
@@ -247,15 +248,15 @@ func recordCorruptedWorkflow(
 	info *persistence.InternalWorkflowExecutionInfo,
 ) {
 	cee := CorruptedExecutionEntity{
-		ShardID:      shardID,
-		DomainID:     info.DomainID,
-		WorkflowID:   info.WorkflowID,
-		RunID:        info.RunID,
-		NextEventID:  info.NextEventID,
-		TreeID:       treeID,
-		BranchID:     branchID,
-		CloseStatus:  info.CloseStatus,
-		Note:         note,
+		ShardID:     shardID,
+		DomainID:    info.DomainID,
+		WorkflowID:  info.WorkflowID,
+		RunID:       info.RunID,
+		NextEventID: info.NextEventID,
+		TreeID:      treeID,
+		BranchID:    branchID,
+		CloseStatus: info.CloseStatus,
+		Note:        note,
 	}
 	data, err := json.Marshal(cee)
 	if err != nil {
@@ -299,7 +300,7 @@ func createScanFiles() (*scanFiles, func()) {
 	}
 
 	return &scanFiles{
-		failedToRunCheckFile:  failedToRunCheckFile,
+		failedToRunCheckFile:    failedToRunCheckFile,
 		startEventCorruptedFile: startEventCorruptedFile,
 	}, deferFn
 }
