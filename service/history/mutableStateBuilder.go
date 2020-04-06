@@ -4365,7 +4365,7 @@ func (e *mutableStateBuilder) validateNoEventsAfterWorkflowFinish(
 }
 
 func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
-	skipDecitionTaskFailed bool,
+	skipDecisionTaskFailed bool,
 ) (bool, error) {
 
 	if !e.IsWorkflowExecutionRunning() ||
@@ -4443,7 +4443,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 		return false, err
 	}
 
-	if skipDecitionTaskFailed {
+	if skipDecisionTaskFailed {
 		return false, nil
 	}
 
