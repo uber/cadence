@@ -32,9 +32,8 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
@@ -42,53 +41,100 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
+type (
+	CorruptionType     string
+	VerificationResult int
+)
+
 const (
-	historyPageSize             = 50
-	failedToRunCheckFilename    = "failedToRunCheck.json"
-	startEventCorruptedFilename = "startEventCorrupted.json"
+	HistoryMissing                       CorruptionType = "history_missing"
+	InvalidStartEvent                                   = "invalid_start_event"
+	OpenExecutionMissingCurrentExecution                = "open_execution_missing_current_execution"
+)
+
+const (
+	VerificationResultNoCorruption VerificationResult = iota
+	VerificationResultDetectedCorruption
+	VerificationResultCheckFailure
+)
+
+const (
+	historyPageSize = 50
 )
 
 type (
-	scanFiles struct {
-		failedToRunCheckFile    *os.File
-		startEventCorruptedFile *os.File
+	// ScanOutputDirectories are the directory paths for output of scan
+	ScanOutputDirectories struct {
+		ShardScanReportDirectoryPath       string
+		ExecutionCheckFailureDirectoryPath string
+		CorruptedExecutionDirectoryPath    string
 	}
 
-	// CorruptedExecutionEntity is a corrupted execution
-	CorruptedExecutionEntity struct {
-		ShardID     int
-		DomainID    string
-		WorkflowID  string
-		RunID       string
-		NextEventID int64
-		TreeID      string
-		BranchID    string
-		CloseStatus int
-		Note        string
-		Details     string
+	// ShardScanOutputFiles are the files each shard will create for its shard scan
+	ShardScanOutputFiles struct {
+		ShardScanReportFile       *os.File
+		ExecutionCheckFailureFile *os.File
+		CorruptedExecutionFile    *os.File
 	}
 
-	// ScanFailure is a scan failure
-	ScanFailure struct {
+	// CorruptedExecution is the type that gets written to CorruptedExecutionFile
+	CorruptedExecution struct {
+		ShardID                    int
+		DomainID                   string
+		WorkflowID                 string
+		RunID                      string
+		NextEventID                int64
+		TreeID                     string
+		BranchID                   string
+		CloseStatus                int
+		CorruptedExceptionMetadata CorruptedExceptionMetadata
+	}
+
+	// CorruptedExceptionMetadata is the metadata for a CorruptedExecution
+	CorruptedExceptionMetadata struct {
+		CorruptionType CorruptionType
+		Note           string
+		Details        string
+	}
+
+	// ExecutionCheckFailure is the type that gets written to ExecutionCheckFailureFile
+	ExecutionCheckFailure struct {
+		ShardID    int
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		Note       string
+		Details    string
+	}
+
+	// ShardScanReport is the type that gets written to ShardScanReportFile
+	ShardScanReport struct {
+		ShardID int
+		Scanned *ShardScanReportExecutionsScanned
+		Failure *ShardScanReportFailure
+	}
+
+	// ShardScanReportExecutionsScanned is the part of the ShardScanReport of executions which were scanned
+	ShardScanReportExecutionsScanned struct {
+		TotalExecutionsCount       int
+		CorruptedExecutionsCount   int
+		ExecutionCheckFailureCount int
+	}
+
+	// ShardScanReportFailure is the part of the ShardScanReport that indicates failure to scan all or part of the shard
+	ShardScanReportFailure struct {
 		Note    string
 		Details string
 	}
 
 	// ProgressReport contains metadata about the scan for all shards which have been finished
+	// This is periodically printed to stdout
 	ProgressReport struct {
-		NumberOfShardsFinished           int
-		NumberOfExecutions               int
-		NumberOfCorruptedExecutions      int
-		NumberOfFailedChecks             int
-		NumberOfShardsFailedToFinishScan int
-	}
-
-	// ShardReport contains metadata about the scan for a single shard
-	ShardReport struct {
-		NumberOfExecutions          int
-		NumberOfCorruptedExecutions int
-		NumberOfFailedChecks        int
-		FailedToFinishScan          bool
+		NumberOfShardsFinished     int
+		TotalExecutionsCount       int
+		CorruptedExecutionsCount   int
+		ExecutionCheckFailureCount int
+		NumberOfShardScanFailures  int
 	}
 )
 
@@ -104,21 +150,18 @@ func AdminDBScan(c *cli.Context) {
 
 	payloadSerializer := persistence.NewPayloadSerializer()
 	rateLimiter := getRateLimiter(startingRPS, targetRPS, scaleUpSeconds)
-	scanFiles, deferFn := createScanFiles()
 	session := connectToCassandra(c)
 	historyStore := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 	branchDecoder := codec.NewThriftRWEncoder()
-	defer func() {
-		deferFn()
-		session.Close()
-	}()
+	scanOutputDirectories := createScanOutputDirectories()
+	defer session.Close()
 
-	shardReports := make(chan *ShardReport)
+	reports := make(chan *ShardScanReport)
 	for i := 0; i < scanWorkerCount; i++ {
 		go func(workerIdx int) {
 			for shardID := 0; shardID < numShards; shardID++ {
 				if shardID%scanWorkerCount == workerIdx {
-					shardReports <- scanShard(session, shardID, scanFiles, rateLimiter, executionsPageSize, payloadSerializer, historyStore, branchDecoder)
+					reports <- scanShard(session, shardID, scanOutputDirectories, rateLimiter, executionsPageSize, payloadSerializer, historyStore, branchDecoder)
 				}
 			}
 		}(i)
@@ -126,7 +169,7 @@ func AdminDBScan(c *cli.Context) {
 
 	progressReport := &ProgressReport{}
 	for i := 0; i < numShards; i++ {
-		report := <-shardReports
+		report := <-reports
 		includeShardInProgressReport(report, progressReport)
 		if i%scanReportRate == 0 {
 			reportBytes, err := json.MarshalIndent(*progressReport, "", "\t")
@@ -141,19 +184,31 @@ func AdminDBScan(c *cli.Context) {
 func scanShard(
 	session *gocql.Session,
 	shardID int,
-	scanFiles *scanFiles,
+	scanOutputDirectories *ScanOutputDirectories,
 	limiter *quotas.DynamicRateLimiter,
 	executionsPageSize int,
 	payloadSerializer persistence.PayloadSerializer,
 	historyStore persistence.HistoryStore,
 	branchDecoder *codec.ThriftRWEncoder,
-) *ShardReport {
+) *ShardScanReport {
+	outputFiles, closeFn := createShardScanOutputFiles(shardID, scanOutputDirectories)
+	report := &ShardScanReport{
+		ShardID: shardID,
+	}
+	defer func() {
+		closeFn()
+		recordShardScanReport(outputFiles.ShardScanReportFile, report)
+	}()
 	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	if err != nil {
-		ErrorAndExit("failed to create execution persistence", err)
+		report.Failure = &ShardScanReportFailure{
+			Note:    "failed to create execution store",
+			Details: err.Error(),
+		}
+		return report
 	}
+
 	var token []byte
-	report := &ShardReport{}
 	isFirstIteration := true
 	for isFirstIteration || len(token) != 0 {
 		isFirstIteration = false
@@ -164,36 +219,83 @@ func scanShard(
 		limiter.Wait(context.Background())
 		resp, err := execStore.ListConcreteExecutions(req)
 		if err != nil {
-			report.FailedToFinishScan = true
-			recordScanFailure(scanFiles.failedToRunCheckFile, "call to ListConcreteExecutions failed", err)
+			report.Failure = &ShardScanReportFailure{
+				Note:    "failed to call ListConcreteExecutions",
+				Details: err.Error(),
+			}
 			return report
 		}
 		token = resp.NextPageToken
-
 		for _, e := range resp.ExecutionInfos {
-			verifyExecution(report, e, branchDecoder, scanFiles, shardID, limiter, historyStore, payloadSerializer)
+			if report.Scanned == nil {
+				report.Scanned = &ShardScanReportExecutionsScanned{}
+			}
+			report.Scanned.TotalExecutionsCount++
+			historyVerificationResult, history, historyBranch := verifyHistoryExists(
+				e,
+				branchDecoder,
+				outputFiles.CorruptedExecutionFile,
+				outputFiles.ExecutionCheckFailureFile,
+				shardID,
+				limiter,
+				historyStore)
+			switch historyVerificationResult {
+			case VerificationResultNoCorruption:
+				// nothing to do just keep checking other conditions
+			case VerificationResultDetectedCorruption:
+				report.Scanned.CorruptedExecutionsCount++
+				continue
+			case VerificationResultCheckFailure:
+				report.Scanned.ExecutionCheckFailureCount++
+				continue
+			}
+
+			firstHistoryEventVerificationResult := verifyFirstHistoryEvent(
+				e,
+				historyBranch,
+				outputFiles.CorruptedExecutionFile,
+				outputFiles.ExecutionCheckFailureFile,
+				shardID,
+				payloadSerializer,
+				history)
+			switch firstHistoryEventVerificationResult {
+			case VerificationResultNoCorruption:
+				// nothing to do just keep checking other conditions
+			case VerificationResultDetectedCorruption:
+				report.Scanned.CorruptedExecutionsCount++
+				continue
+			case VerificationResultCheckFailure:
+				report.Scanned.ExecutionCheckFailureCount++
+				continue
+			}
+
+			// TODO: add other checks in the same way here.
 		}
 	}
 	return report
 }
 
-func verifyExecution(
-	report *ShardReport,
+func verifyHistoryExists(
 	execution *persistence.InternalWorkflowExecutionInfo,
 	branchDecoder *codec.ThriftRWEncoder,
-	scanFiles *scanFiles,
+	corruptedExecutionFile *os.File,
+	executionCheckFailureFile *os.File,
 	shardID int,
 	limiter *quotas.DynamicRateLimiter,
 	historyStore persistence.HistoryStore,
-	payloadSerializer persistence.PayloadSerializer,
-) {
-	report.NumberOfExecutions++
+) (VerificationResult, *persistence.InternalReadHistoryBranchResponse, *shared.HistoryBranch) {
 	var branch shared.HistoryBranch
 	err := branchDecoder.Decode(execution.BranchToken, &branch)
 	if err != nil {
-		report.NumberOfFailedChecks++
-		recordScanFailure(scanFiles.failedToRunCheckFile, "failed to decode branch token", err)
-		return
+		recordExecutionCheckFailure(executionCheckFailureFile, &ExecutionCheckFailure{
+			ShardID:    shardID,
+			DomainID:   execution.DomainID,
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
+			Note:       "failed to decode branch token",
+			Details:    err.Error(),
+		})
+		return VerificationResultCheckFailure, nil, nil
 	}
 	readHistoryBranchReq := &persistence.InternalReadHistoryBranchRequest{
 		TreeID:    branch.GetTreeID(),
@@ -207,96 +309,176 @@ func verifyExecution(
 	history, err := historyStore.ReadHistoryBranch(readHistoryBranchReq)
 	if err != nil {
 		if err == gocql.ErrNotFound {
-			report.NumberOfCorruptedExecutions++
-			recordCorruptedWorkflow(
-				scanFiles.startEventCorruptedFile,
-				shardID,
-				branch.GetTreeID(),
-				branch.GetBranchID(),
-				"got not found error",
-				"",
-				execution)
+			recordCorruptedWorkflow(corruptedExecutionFile, &CorruptedExecution{
+				ShardID:     shardID,
+				DomainID:    execution.DomainID,
+				WorkflowID:  execution.WorkflowID,
+				RunID:       execution.RunID,
+				NextEventID: execution.NextEventID,
+				TreeID:      branch.GetTreeID(),
+				BranchID:    branch.GetBranchID(),
+				CloseStatus: execution.CloseStatus,
+				CorruptedExceptionMetadata: CorruptedExceptionMetadata{
+					CorruptionType: HistoryMissing,
+					Note:           "detected history missing based on gocql.ErrNotFound",
+					Details:        err.Error(),
+				},
+			})
+			return VerificationResultDetectedCorruption, nil, nil
 		} else {
-			report.NumberOfFailedChecks++
-			recordScanFailure(scanFiles.failedToRunCheckFile, "got error from read history other than not exists error", err)
+			recordExecutionCheckFailure(executionCheckFailureFile, &ExecutionCheckFailure{
+				ShardID:    shardID,
+				DomainID:   execution.DomainID,
+				WorkflowID: execution.WorkflowID,
+				RunID:      execution.RunID,
+				Note:       "failed to read history branch with error other than gocql.ErrNotFond",
+				Details:    err.Error(),
+			})
+			return VerificationResultCheckFailure, nil, nil
 		}
 	} else if history == nil || len(history.History) == 0 {
-		report.NumberOfCorruptedExecutions++
-		recordCorruptedWorkflow(
-			scanFiles.startEventCorruptedFile,
-			shardID,
-			branch.GetTreeID(),
-			branch.GetBranchID(),
-			"got no error but got empty history",
-			"",
-			execution)
-	} else {
-		firstBatch, err := payloadSerializer.DeserializeBatchEvents(history.History[0])
-		if err != nil || len(firstBatch) == 0 {
-			report.NumberOfFailedChecks++
-			recordScanFailure(scanFiles.failedToRunCheckFile, "got error decoding history batch", err)
-		} else if firstBatch[0].GetEventId() != common.FirstEventID {
-			report.NumberOfCorruptedExecutions++
-			recordCorruptedWorkflow(
-				scanFiles.startEventCorruptedFile,
-				shardID,
-				branch.GetTreeID(),
-				branch.GetBranchID(),
-				"got workflow with incorrect first eventId",
-				fmt.Sprintf("expected: %v, actual: %v", common.FirstEventID, firstBatch[0].GetEventId()),
-				execution)
-		} else if firstBatch[0].GetEventType() != shared.EventTypeWorkflowExecutionStarted {
-			report.NumberOfCorruptedExecutions++
-			recordCorruptedWorkflow(
-				scanFiles.startEventCorruptedFile,
-				shardID,
-				branch.GetTreeID(),
-				branch.GetBranchID(),
-				"got workflow with incorrect first event type",
-				fmt.Sprintf("expected: %v, actual: %v", shared.EventTypeWorkflowExecutionStarted.String(), firstBatch[0].GetEventType().String()),
-				execution)
-		}
+		recordCorruptedWorkflow(corruptedExecutionFile, &CorruptedExecution{
+			ShardID:     shardID,
+			DomainID:    execution.DomainID,
+			WorkflowID:  execution.WorkflowID,
+			RunID:       execution.RunID,
+			NextEventID: execution.NextEventID,
+			TreeID:      branch.GetTreeID(),
+			BranchID:    branch.GetBranchID(),
+			CloseStatus: execution.CloseStatus,
+			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
+				CorruptionType: HistoryMissing,
+				Note:           "got empty history",
+			},
+		})
+		return VerificationResultDetectedCorruption, nil, nil
 	}
+	return VerificationResultNoCorruption, history, &branch
 }
 
-func recordCorruptedWorkflow(
-	file *os.File,
+func verifyFirstHistoryEvent(
+	execution *persistence.InternalWorkflowExecutionInfo,
+	branch *shared.HistoryBranch,
+	corruptedExecutionFile *os.File,
+	executionCheckFailureFile *os.File,
 	shardID int,
-	treeID string,
-	branchID string,
-	note string,
-	details string,
-	info *persistence.InternalWorkflowExecutionInfo,
-) {
-	cee := CorruptedExecutionEntity{
-		ShardID:     shardID,
-		DomainID:    info.DomainID,
-		WorkflowID:  info.WorkflowID,
-		RunID:       info.RunID,
-		NextEventID: info.NextEventID,
-		TreeID:      treeID,
-		BranchID:    branchID,
-		CloseStatus: info.CloseStatus,
-		Note:        note,
-		Details:     details,
+	payloadSerializer persistence.PayloadSerializer,
+	history *persistence.InternalReadHistoryBranchResponse,
+) VerificationResult {
+	firstBatch, err := payloadSerializer.DeserializeBatchEvents(history.History[0])
+	if err != nil || len(firstBatch) == 0 {
+		recordExecutionCheckFailure(executionCheckFailureFile, &ExecutionCheckFailure{
+			ShardID:    shardID,
+			DomainID:   execution.DomainID,
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
+			Note:       "failed to deserialize batch events",
+			Details:    err.Error(),
+		})
+		return VerificationResultCheckFailure
+	} else if firstBatch[0].GetEventId() != common.FirstEventID {
+		recordCorruptedWorkflow(corruptedExecutionFile, &CorruptedExecution{
+			ShardID:     shardID,
+			DomainID:    execution.DomainID,
+			WorkflowID:  execution.WorkflowID,
+			RunID:       execution.RunID,
+			NextEventID: execution.NextEventID,
+			TreeID:      branch.GetTreeID(),
+			BranchID:    branch.GetBranchID(),
+			CloseStatus: execution.CloseStatus,
+			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
+				CorruptionType: InvalidStartEvent,
+				Note:           "got unexpected first eventID",
+				Details:        fmt.Sprintf("expected: %v but got %v", common.FirstEventID, firstBatch[0].GetEventId()),
+			},
+		})
+		return VerificationResultDetectedCorruption
+	} else if firstBatch[0].GetEventType() != shared.EventTypeWorkflowExecutionStarted {
+		recordCorruptedWorkflow(corruptedExecutionFile, &CorruptedExecution{
+			ShardID:     shardID,
+			DomainID:    execution.DomainID,
+			WorkflowID:  execution.WorkflowID,
+			RunID:       execution.RunID,
+			NextEventID: execution.NextEventID,
+			TreeID:      branch.GetTreeID(),
+			BranchID:    branch.GetBranchID(),
+			CloseStatus: execution.CloseStatus,
+			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
+				CorruptionType: InvalidStartEvent,
+				Note:           "got unexpected first eventType",
+				Details:        fmt.Sprintf("expected: %v but got %v", shared.EventTypeWorkflowExecutionStarted.String(), firstBatch[0].GetEventType().String()),
+			},
+		})
+		return VerificationResultDetectedCorruption
 	}
+	return VerificationResultNoCorruption
+}
+
+func createShardScanOutputFiles(shardID int, sod *ScanOutputDirectories) (*ShardScanOutputFiles, func()) {
+	executionCheckFailureFile, err := os.Create(fmt.Sprintf("%v/shard_%v.json", sod.ExecutionCheckFailureDirectoryPath, shardID))
+	if err != nil {
+		ErrorAndExit("failed to create executionCheckFailureFile", err)
+	}
+	shardScanReportFile, err := os.Create(fmt.Sprintf("%v/shard_%v.json", sod.ShardScanReportDirectoryPath, shardID))
+	if err != nil {
+		ErrorAndExit("failed to create ShardScanReportFile", err)
+	}
+	corruptedExecutionFile, err := os.Create(fmt.Sprintf("%v/shard_%v.json", sod.CorruptedExecutionDirectoryPath, shardID))
+	if err != nil {
+		ErrorAndExit("failed to create corruptedExecutionFile", err)
+	}
+
+	deferFn := func() {
+		executionCheckFailureFile.Close()
+		shardScanReportFile.Close()
+		corruptedExecutionFile.Close()
+	}
+	return &ShardScanOutputFiles{
+		ShardScanReportFile:       shardScanReportFile,
+		ExecutionCheckFailureFile: executionCheckFailureFile,
+		CorruptedExecutionFile:    corruptedExecutionFile,
+	}, deferFn
+}
+
+func createScanOutputDirectories() *ScanOutputDirectories {
+	now := time.Now().Unix()
+	sod := &ScanOutputDirectories{
+		ShardScanReportDirectoryPath:       fmt.Sprintf("./scan_%v/shard_scan_report", now),
+		ExecutionCheckFailureDirectoryPath: fmt.Sprintf("./scan_%v/execution_check_failure", now),
+		CorruptedExecutionDirectoryPath:    fmt.Sprintf("./scan_%v/corrupted_execution", now),
+	}
+	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0666); err != nil {
+		ErrorAndExit("failed to create ShardScanFailureDirectoryPath", err)
+	}
+	if err := os.MkdirAll(sod.ExecutionCheckFailureDirectoryPath, 0666); err != nil {
+		ErrorAndExit("failed to create ExecutionCheckFailureDirectoryPath", err)
+	}
+	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0666); err != nil {
+		ErrorAndExit("failed to create CorruptedExecutionDirectoryPath", err)
+	}
+	return sod
+}
+
+func recordCorruptedWorkflow(file *os.File, cee *CorruptedExecution) {
 	data, err := json.Marshal(cee)
 	if err != nil {
-		ErrorAndExit("failed to marshal CorruptedExecutionEntity", err)
+		ErrorAndExit("failed to marshal CorruptedExecution", err)
 	}
 	writeToFile(file, string(data))
 }
 
-func recordScanFailure(file *os.File, note string, err error) {
-	sf := ScanFailure{
-		Note: note,
-	}
+func recordExecutionCheckFailure(file *os.File, ecf *ExecutionCheckFailure) {
+	data, err := json.Marshal(ecf)
 	if err != nil {
-		sf.Details = err.Error()
+		ErrorAndExit("failed to marshal ExecutionCheckFailure", err)
 	}
-	data, marshalErr := json.Marshal(sf)
-	if marshalErr != nil {
-		ErrorAndExit("failed to marshal ScanFailure", marshalErr)
+	writeToFile(file, string(data))
+}
+
+func recordShardScanReport(file *os.File, ssr *ShardScanReport) {
+	data, err := json.Marshal(ssr)
+	if err != nil {
+		ErrorAndExit("failed to marshal ShardScanReport", err)
 	}
 	writeToFile(file, string(data))
 }
@@ -307,33 +489,15 @@ func writeToFile(file *os.File, message string) {
 	}
 }
 
-func createScanFiles() (*scanFiles, func()) {
-	failedToRunCheckFile, err := os.Create(fmt.Sprintf(failedToRunCheckFilename))
-	if err != nil {
-		ErrorAndExit("failed to create file", err)
-	}
-	startEventCorruptedFile, err := os.Create(fmt.Sprintf(startEventCorruptedFilename))
-	if err != nil {
-		ErrorAndExit("failed to create file", err)
-	}
-	deferFn := func() {
-		failedToRunCheckFile.Close()
-		startEventCorruptedFile.Close()
-	}
-
-	return &scanFiles{
-		failedToRunCheckFile:    failedToRunCheckFile,
-		startEventCorruptedFile: startEventCorruptedFile,
-	}, deferFn
-}
-
-func includeShardInProgressReport(report *ShardReport, progressReport *ProgressReport) {
-	progressReport.NumberOfCorruptedExecutions += report.NumberOfCorruptedExecutions
-	progressReport.NumberOfFailedChecks += report.NumberOfFailedChecks
-	progressReport.NumberOfExecutions += report.NumberOfExecutions
+func includeShardInProgressReport(report *ShardScanReport, progressReport *ProgressReport) {
 	progressReport.NumberOfShardsFinished++
-	if report.FailedToFinishScan {
-		progressReport.NumberOfShardsFailedToFinishScan++
+	if report.Failure != nil {
+		progressReport.NumberOfShardScanFailures++
+	}
+	if report.Scanned != nil {
+		progressReport.CorruptedExecutionsCount += report.Scanned.CorruptedExecutionsCount
+		progressReport.TotalExecutionsCount += report.Scanned.TotalExecutionsCount
+		progressReport.ExecutionCheckFailureCount += report.Scanned.ExecutionCheckFailureCount
 	}
 }
 
