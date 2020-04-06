@@ -221,7 +221,15 @@ func verifyExecution(
 			recordScanFailure(scanFiles.failedToRunCheckFile, "got error from read history other than not exists error", err)
 		}
 	} else if history == nil || len(history.History) == 0 {
-		ErrorAndExit("got no error from fetching history but history is empty", nil)
+		report.NumberOfCorruptedExecutions++
+		recordCorruptedWorkflow(
+			scanFiles.startEventCorruptedFile,
+			shardID,
+			branch.GetTreeID(),
+			branch.GetBranchID(),
+			"got no error but got empty history",
+			"",
+			execution)
 	} else {
 		firstBatch, err := payloadSerializer.DeserializeBatchEvents(history.History[0])
 		if err != nil || len(firstBatch) == 0 {
