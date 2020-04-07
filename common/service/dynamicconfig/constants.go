@@ -82,6 +82,7 @@ var keys = map[Key]string{
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:             "frontend.persistenceMaxQPS",
+	FrontendPersistenceGlobalMaxQPS:       "frontend.persistenceGlobalMaxQPS",
 	FrontendVisibilityMaxPageSize:         "frontend.visibilityMaxPageSize",
 	FrontendVisibilityListMaxQPS:          "frontend.visibilityListMaxQPS",
 	FrontendESVisibilityListMaxQPS:        "frontend.esVisibilityListMaxQPS",
@@ -108,6 +109,7 @@ var keys = map[Key]string{
 	// matching settings
 	MatchingRPS:                             "matching.rps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
+	MatchingPersistenceGlobalMaxQPS:         "matching.persistenceGlobalMaxQPS",
 	MatchingMinTaskThrottlingBurstSize:      "matching.minTaskThrottlingBurstSize",
 	MatchingGetTasksBatchSize:               "matching.getTasksBatchSize",
 	MatchingLongPollExpirationInterval:      "matching.longPollExpirationInterval",
@@ -130,6 +132,7 @@ var keys = map[Key]string{
 	// history settings
 	HistoryRPS:                                             "history.rps",
 	HistoryPersistenceMaxQPS:                               "history.persistenceMaxQPS",
+	HistoryPersistenceGlobalMaxQPS:                         "history.persistenceGlobalMaxQPS",
 	HistoryVisibilityOpenMaxQPS:                            "history.historyVisibilityOpenMaxQPS",
 	HistoryVisibilityClosedMaxQPS:                          "history.historyVisibilityClosedMaxQPS",
 	HistoryLongPollExpirationInterval:                      "history.longPollExpirationInterval",
@@ -166,6 +169,7 @@ var keys = map[Key]string{
 	TimerProcessorMaxPollIntervalJitterCoefficient:         "history.timerProcessorMaxPollIntervalJitterCoefficient",
 	TimerProcessorRedispatchInterval:                       "history.timerProcessorRedispatchInterval",
 	TimerProcessorRedispatchIntervalJitterCoefficient:      "history.timerProcessorRedispatchIntervalJitterCoefficient",
+	TimerProcessorMaxRedispatchQueueSize:                   "history.timerProcessorMaxRedispatchQueueSize",
 	TimerProcessorEnablePriorityTaskProcessor:              "history.timerProcessorEnablePriorityTaskProcessor",
 	TimerProcessorMaxTimeShift:                             "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                 "history.timerProcessorHistoryArchivalSizeLimit",
@@ -184,6 +188,7 @@ var keys = map[Key]string{
 	TransferProcessorCompleteTransferInterval:              "history.transferProcessorCompleteTransferInterval",
 	TransferProcessorRedispatchInterval:                    "history.transferProcessorRedispatchInterval",
 	TransferProcessorRedispatchIntervalJitterCoefficient:   "history.transferProcessorRedispatchIntervalJitterCoefficient",
+	TransferProcessorMaxRedispatchQueueSize:                "history.transferProcessorMaxRedispatchQueueSize",
 	TransferProcessorEnablePriorityTaskProcessor:           "history.transferProcessorEnablePriorityTaskProcessor",
 	TransferProcessorVisibilityArchivalTimeLimit:           "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                                "history.replicatorTaskBatchSize",
@@ -197,6 +202,7 @@ var keys = map[Key]string{
 	ReplicatorProcessorUpdateAckIntervalJitterCoefficient:  "history.replicatorProcessorUpdateAckIntervalJitterCoefficient",
 	ReplicatorProcessorRedispatchInterval:                  "history.replicatorProcessorRedispatchInterval",
 	ReplicatorProcessorRedispatchIntervalJitterCoefficient: "history.replicatorProcessorRedispatchIntervalJitterCoefficient",
+	ReplicatorProcessorMaxRedispatchQueueSize:              "history.replicatorProcessorMaxRedispatchQueueSize",
 	ReplicatorProcessorEnablePriorityTaskProcessor:         "history.replicatorProcessorEnablePriorityTaskProcessor",
 	ExecutionMgrNumConns:                                   "history.executionMgrNumConns",
 	HistoryMgrNumConns:                                     "history.historyMgrNumConns",
@@ -232,8 +238,10 @@ var keys = map[Key]string{
 	MutableStateChecksumGenProbability:                     "history.mutableStateChecksumGenProbability",
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
+	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
+	WorkerPersistenceGlobalMaxQPS:                   "worker.persistenceGlobalMaxQPS",
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
 	WorkerReplicatorTaskConcurrency:                 "worker.replicatorTaskConcurrency",
 	WorkerReplicatorMessageConcurrency:              "worker.replicatorMessageConcurrency",
@@ -341,6 +349,8 @@ const (
 
 	// FrontendPersistenceMaxQPS is the max qps frontend host can query DB
 	FrontendPersistenceMaxQPS
+	// FrontendPersistenceMaxGlobalQPS is the max qps frontend cluster can query DB
+	FrontendPersistenceGlobalMaxQPS
 	// FrontendVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
 	FrontendVisibilityMaxPageSize
 	// FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows
@@ -391,6 +401,8 @@ const (
 	MatchingRPS
 	// MatchingPersistenceMaxQPS is the max qps matching host can query DB
 	MatchingPersistenceMaxQPS
+	// MatchingPersistenceMaxQPS is the max qps matching cluster can query DB
+	MatchingPersistenceGlobalMaxQPS
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
 	// MatchingGetTasksBatchSize is the maximum batch size to fetch from the task buffer
@@ -434,6 +446,8 @@ const (
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB
 	HistoryPersistenceMaxQPS
+	// HistoryPersistenceGlobalMaxQPS is the max qps history cluster can query DB
+	HistoryPersistenceGlobalMaxQPS
 	// HistoryVisibilityOpenMaxQPS is max qps one history host can write visibility open_executions
 	HistoryVisibilityOpenMaxQPS
 	// HistoryVisibilityClosedMaxQPS is max qps one history host can write visibility closed_executions
@@ -506,6 +520,8 @@ const (
 	TimerProcessorRedispatchInterval
 	// TimerProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
 	TimerProcessorRedispatchIntervalJitterCoefficient
+	// TimerProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for timer processor
+	TimerProcessorMaxRedispatchQueueSize
 	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
 	TimerProcessorEnablePriorityTaskProcessor
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
@@ -542,6 +558,8 @@ const (
 	TransferProcessorRedispatchInterval
 	// TransferProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
 	TransferProcessorRedispatchIntervalJitterCoefficient
+	// TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor
+	TransferProcessorMaxRedispatchQueueSize
 	// TransferProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for transferQueueProcessor
 	TransferProcessorEnablePriorityTaskProcessor
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
@@ -568,6 +586,8 @@ const (
 	ReplicatorProcessorRedispatchInterval
 	// ReplicatorProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
 	ReplicatorProcessorRedispatchIntervalJitterCoefficient
+	// ReplicatorProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for ReplicatorProcessor
+	ReplicatorProcessorMaxRedispatchQueueSize
 	// ReplicatorProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for ReplicatorProcessor
 	ReplicatorProcessorEnablePriorityTaskProcessor
 	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
@@ -617,6 +637,8 @@ const (
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
+	// WorkerPersistenceGlobalMaxQPS is the max qps worker cluster can query DB
+	WorkerPersistenceGlobalMaxQPS
 	// WorkerReplicatorMetaTaskConcurrency is the number of coroutine handling metadata related tasks
 	WorkerReplicatorMetaTaskConcurrency
 	// WorkerReplicatorTaskConcurrency is the number of coroutine handling non metadata related tasks
@@ -708,6 +730,9 @@ const (
 	MutableStateChecksumVerifyProbability
 	// MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded
 	MutableStateChecksumInvalidateBefore
+
+	//ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
+	ReplicationEventsFromCurrentCluster
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
