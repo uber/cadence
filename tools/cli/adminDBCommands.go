@@ -502,7 +502,6 @@ func verifyCurrentExecution(
 			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
 				CorruptionType: OpenExecutionInvalidCurrentExecution,
 				Note:           "found open execution for which there exists current execution pointing at a different concrete execution",
-				Details:        err.Error(),
 			},
 		})
 		return VerificationResultDetectedCorruption
