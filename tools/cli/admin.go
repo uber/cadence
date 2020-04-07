@@ -782,6 +782,7 @@ func newDBCommands() []cli.Command {
 	}
 }
 
+// TODO need to support other database: https://github.com/uber/cadence/issues/2777
 func getDBFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{

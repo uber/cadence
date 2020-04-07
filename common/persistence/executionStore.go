@@ -790,7 +790,10 @@ func (m *executionManagerImpl) ListConcreteExecutions(
 		PageToken:      response.NextPageToken,
 	}
 	for i, info := range response.ExecutionInfos {
-		newResponse.ExecutionInfos[i], _, _ = m.DeserializeExecutionInfo(info)
+		newResponse.ExecutionInfos[i], _, err = m.DeserializeExecutionInfo(info)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return newResponse, nil
 }
