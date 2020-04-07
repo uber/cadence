@@ -69,7 +69,7 @@ const (
 )
 
 const (
-	historyPageSize = 10
+	historyPageSize = 1
 )
 
 type (
@@ -640,6 +640,9 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.DynamicRateLimiter {
 	if startRPS >= targetRPS {
 		ErrorAndExit("startRPS is greater than target RPS", nil)
+	}
+	if scaleUpSeconds == 0 {
+		return quotas.NewDynamicRateLimiter(func() float64 { return float64(targetRPS) })
 	}
 	rpsIncreasePerSecond := (targetRPS - startRPS) / scaleUpSeconds
 	startTime := time.Now()
