@@ -282,6 +282,7 @@ func (r *historyReplicator) ApplyEvents(
 		if r.shard.GetConfig().ReplicationEventsFromCurrentCluster(domainEntry.GetInfo().Name) {
 			// this branch is used when replicating events (generated from current cluster)from remote cluster to current cluster.
 			// this could happen when the events are lost in current cluster and plan to recover them from remote cluster.
+			// if the incoming version equals last write version, skip to fail in-flight decision.
 			mutableState, err = context.loadWorkflowExecutionForReplication(request.GetVersion())
 		} else {
 			mutableState, err = context.loadWorkflowExecution()
