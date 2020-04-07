@@ -54,28 +54,28 @@ func (fw *adminDBCommandFileWriterImpl) AddExecutionCheckFailure(ecf *ExecutionC
 func (fw *adminDBCommandFileWriterImpl) Flush() {
 	var checkFailureBuilder strings.Builder
 	for _, ecf := range fw.executionCheckFailures {
-		if err := fw.writeToBuffer(checkFailureBuilder, ecf); err != nil {
+		if err := fw.writeToBuilder(&checkFailureBuilder, ecf); err != nil {
 			ErrorAndExit("failed to marshal executionCheckFailures", err)
 		}
 	}
-	if err := fw.writeToFile(checkFailureBuilder, fw.executionCheckFailureFile); err != nil {
+	if err := fw.writeToFile(&checkFailureBuilder, fw.executionCheckFailureFile); err != nil {
 		ErrorAndExit("failed to write executionCheckFailureFile", err)
 	}
 	fw.executionCheckFailures = nil
 
 	var corruptedExecutionsBuilder strings.Builder
 	for _, ce := range fw.corruptedExecutions {
-		if err := fw.writeToBuffer(corruptedExecutionsBuilder, ce); err != nil {
+		if err := fw.writeToBuilder(&corruptedExecutionsBuilder, ce); err != nil {
 			ErrorAndExit("failed to marshal corruptedExecutionsBuilder", err)
 		}
 	}
-	if err := fw.writeToFile(corruptedExecutionsBuilder, fw.corruptedExecutionFile); err != nil {
+	if err := fw.writeToFile(&corruptedExecutionsBuilder, fw.corruptedExecutionFile); err != nil {
 		ErrorAndExit("failed to write corruptedExecutionFile", err)
 	}
 	fw.corruptedExecutions = nil
 }
 
-func (fw *adminDBCommandFileWriterImpl) writeToBuffer(builder strings.Builder, e interface{}) error {
+func (fw *adminDBCommandFileWriterImpl) writeToBuilder(builder *strings.Builder, e interface{}) error {
 	data, err := json.Marshal(e)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (fw *adminDBCommandFileWriterImpl) writeToBuffer(builder strings.Builder, e
 	return nil
 }
 
-func (fw *adminDBCommandFileWriterImpl) writeToFile(builder strings.Builder, f *os.File) error {
+func (fw *adminDBCommandFileWriterImpl) writeToFile(builder *strings.Builder, f *os.File) error {
 	_, err := f.WriteString(builder.String())
 	return err
 }
