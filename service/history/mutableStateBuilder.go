@@ -3846,12 +3846,25 @@ func (e *mutableStateBuilder) StartTransaction(
 		return false, err
 	}
 
-	flushBeforeReady, err := e.startTransactionHandleDecisionFailover()
+	flushBeforeReady, err := e.startTransactionHandleDecisionFailover(false)
 	if err != nil {
 		return false, err
 	}
 
 	return flushBeforeReady, nil
+}
+
+func (e *mutableStateBuilder) StartTransactionSkipDecisionFail(
+	domainEntry *cache.DomainCacheEntry,
+) error {
+
+	e.domainEntry = domainEntry
+	if err := e.UpdateCurrentVersion(domainEntry.GetFailoverVersion(), false); err != nil {
+		return err
+	}
+
+	_, err := e.startTransactionHandleDecisionFailover(true)
+	return err
 }
 
 func (e *mutableStateBuilder) CloseTransactionAsMutation(
@@ -4305,7 +4318,9 @@ func (e *mutableStateBuilder) validateNoEventsAfterWorkflowFinish(
 	}
 }
 
-func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, error) {
+func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
+	skipDecisionTaskFailed bool,
+) (bool, error) {
 
 	if !e.IsWorkflowExecutionRunning() ||
 		!e.canReplicateEvents() {
@@ -4382,7 +4397,11 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover() (bool, er
 		return false, err
 	}
 
-	// we have a decision on the fly with a lower version, fail it
+	if skipDecisionTaskFailed {
+		return false, nil
+	}
+
+	// we have a decision with buffered events on the fly with a lower version, fail it
 	if err := failDecision(
 		e,
 		decision,

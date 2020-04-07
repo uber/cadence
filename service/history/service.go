@@ -193,6 +193,9 @@ type Config struct {
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
 	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 	MaxBufferedQueryCount         dynamicconfig.IntPropertyFn
+
+	//Crocess DC Replication configuration
+	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 const (
@@ -313,6 +316,8 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		EnableConsistentQuery:         dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery, true),
 		EnableConsistentQueryByDomain: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, false),
 		MaxBufferedQueryCount:         dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount, 1),
+
+		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
 	}
 
 	return cfg

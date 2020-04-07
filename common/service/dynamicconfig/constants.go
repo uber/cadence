@@ -212,6 +212,7 @@ var keys = map[Key]string{
 	EnableConsistentQuery:                                 "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                         "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                 "history.MaxBufferedQueryCount",
+	ReplicationEventsFromCurrentCluster:                   "history.ReplicationEventsFromCurrentCluster",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
@@ -638,6 +639,9 @@ const (
 	EnableConsistentQueryByDomain
 	// MaxBufferedQueryCount indicates the maximum number of queries which can be buffered at a given time for a single workflow
 	MaxBufferedQueryCount
+
+	//ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
+	ReplicationEventsFromCurrentCluster
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
