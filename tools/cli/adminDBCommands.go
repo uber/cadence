@@ -49,7 +49,7 @@ type (
 const (
 	HistoryMissing                       CorruptionType = "history_missing"
 	InvalidStartEvent                                   = "invalid_start_event"
-	OpenExecutionInvalidCurrentExecution                = "open_execution_missing_current_execution"
+	OpenExecutionInvalidCurrentExecution                = "open_execution_invalid_current_execution"
 )
 
 const (
