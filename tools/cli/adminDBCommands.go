@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -135,18 +136,27 @@ type (
 		CorruptedExecutionsCount   int
 		ExecutionCheckFailureCount int
 		NumberOfShardScanFailures  int
+		PercentageCorrupted        float64
+		PercentageCheckFailure     float64
+		ShardsPerHour              float64
+		ExecutionsPerHour          float64
 	}
 )
 
 // AdminDBScan is used to scan over all executions in database and detect corruptions
 func AdminDBScan(c *cli.Context) {
-	numShards := c.Int(FlagNumberOfShards)
+	lowerShardBound := c.Int(FlagLowerShardBound)
+	upperShardBound := c.Int(FlagUpperShardBound)
+	numShards := upperShardBound - lowerShardBound
 	startingRPS := c.Int(FlagStartingRPS)
 	targetRPS := c.Int(FlagRPS)
 	scaleUpSeconds := c.Int(FlagRPSScaleUpSeconds)
-	scanWorkerCount := c.Int(FlagGoRoutineCount)
+	scanWorkerCount := c.Int(FlagConcurrency)
 	executionsPageSize := c.Int(FlagPageSize)
 	scanReportRate := c.Int(FlagScanReportRate)
+	if numShards < scanWorkerCount {
+		scanWorkerCount = numShards
+	}
 
 	payloadSerializer := persistence.NewPayloadSerializer()
 	rateLimiter := getRateLimiter(startingRPS, targetRPS, scaleUpSeconds)
@@ -159,7 +169,7 @@ func AdminDBScan(c *cli.Context) {
 	reports := make(chan *ShardScanReport)
 	for i := 0; i < scanWorkerCount; i++ {
 		go func(workerIdx int) {
-			for shardID := 0; shardID < numShards; shardID++ {
+			for shardID := lowerShardBound; shardID < upperShardBound; shardID++ {
 				if shardID%scanWorkerCount == workerIdx {
 					reports <- scanShard(
 						session,
@@ -175,10 +185,11 @@ func AdminDBScan(c *cli.Context) {
 		}(i)
 	}
 
+	startTime := time.Now()
 	progressReport := &ProgressReport{}
 	for i := 0; i < numShards; i++ {
 		report := <-reports
-		includeShardInProgressReport(report, progressReport)
+		includeShardInProgressReport(report, progressReport, startTime)
 		if i%scanReportRate == 0 {
 			reportBytes, err := json.MarshalIndent(*progressReport, "", "\t")
 			if err != nil {
@@ -449,7 +460,6 @@ func verifyCurrentExecution(
 	execStore persistence.ExecutionStore,
 	limiter *quotas.DynamicRateLimiter,
 ) VerificationResult {
-	// TODO: Yu is this correct even in 3 DC?
 	if execution.State != persistence.WorkflowStateCreated && execution.State != persistence.WorkflowStateRunning {
 		return VerificationResultNoCorruption
 	}
@@ -601,7 +611,7 @@ func writeToFile(file *os.File, message string) {
 	}
 }
 
-func includeShardInProgressReport(report *ShardScanReport, progressReport *ProgressReport) {
+func includeShardInProgressReport(report *ShardScanReport, progressReport *ProgressReport, startTime time.Time) {
 	progressReport.NumberOfShardsFinished++
 	if report.Failure != nil {
 		progressReport.NumberOfShardScanFailures++
@@ -611,6 +621,19 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 		progressReport.TotalExecutionsCount += report.Scanned.TotalExecutionsCount
 		progressReport.ExecutionCheckFailureCount += report.Scanned.ExecutionCheckFailureCount
 	}
+
+	round := func(x float64) float64 {
+		precision := 0.05
+		return math.Round(x/precision) * precision
+	}
+
+	progressReport.PercentageCorrupted = round((float64(progressReport.CorruptedExecutionsCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
+	progressReport.PercentageCheckFailure = round((float64(progressReport.ExecutionCheckFailureCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
+
+	pastTime := time.Now().Sub(startTime)
+	hoursPast := float64(pastTime) / float64(time.Hour)
+	progressReport.ShardsPerHour = round(float64(progressReport.NumberOfShardsFinished) / hoursPast)
+	progressReport.ExecutionsPerHour = round(float64(progressReport.TotalExecutionsCount) / hoursPast)
 }
 
 func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.DynamicRateLimiter {

@@ -736,8 +736,13 @@ func newDBCommands() []cli.Command {
 			Usage:   "scan all concrete executions in database and detect corruptions",
 			Flags: append(getDBFlags(),
 				cli.IntFlag{
-					Name:  FlagNumberOfShards,
-					Usage: "number of shards in cluster",
+					Name:  FlagLowerShardBound,
+					Usage: "lower bound of shard to scan (inclusive)",
+					Value: 0,
+				},
+				cli.IntFlag{
+					Name:  FlagUpperShardBound,
+					Usage: "upper bound of shard to scan (exclusive)",
 					Value: 16384,
 				},
 				cli.IntFlag{
@@ -753,17 +758,17 @@ func newDBCommands() []cli.Command {
 				cli.IntFlag{
 					Name:  FlagRPSScaleUpSeconds,
 					Usage: "number of seconds over which rps is scaled up to target",
-					Value: 3600,
+					Value: 1800,
 				},
 				cli.IntFlag{
 					Name:  FlagPageSize,
 					Usage: "page size used to query db executions table",
-					Value: 100,
+					Value: 500,
 				},
 				cli.IntFlag{
-					Name:  FlagGoRoutineCount,
-					Usage: "number of go routines to handle scan",
-					Value: 40,
+					Name:  FlagConcurrency,
+					Usage: "number of threads to handle scan",
+					Value: 1000,
 				},
 				cli.IntFlag{
 					Name:  FlagScanReportRate,

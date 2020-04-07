@@ -215,8 +215,10 @@ const (
 	FlagMaxMessageCountWithAlias          = FlagMaxMessageCount + ", mmc"
 	FlagLastMessageID                     = "last_message_id"
 	FlagLastMessageIDWithAlias            = FlagLastMessageID + ", lm"
-	FlagGoRoutineCount                    = "go_routine_count"
+	FlagConcurrency                       = "concurrency"
 	FlagScanReportRate                    = "scan_report_rate"
+	FlagLowerShardBound                   = "lower_shard_bound"
+	FlagUpperShardBound                   = "upper_shard_bound"
 )
 
 var flagsForExecution = []cli.Flag{
