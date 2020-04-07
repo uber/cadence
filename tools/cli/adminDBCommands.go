@@ -70,7 +70,7 @@ type (
 		CorruptedExecutionDirectoryPath    string
 	}
 
-	// ShardScanOutputFiles are the files each shard will create for its shard scan
+	// ShardScanOutputFiles are the files produced for a scan of a single shard
 	ShardScanOutputFiles struct {
 		ShardScanReportFile       *os.File
 		ExecutionCheckFailureFile *os.File
@@ -161,7 +161,15 @@ func AdminDBScan(c *cli.Context) {
 		go func(workerIdx int) {
 			for shardID := 0; shardID < numShards; shardID++ {
 				if shardID%scanWorkerCount == workerIdx {
-					reports <- scanShard(session, shardID, scanOutputDirectories, rateLimiter, executionsPageSize, payloadSerializer, historyStore, branchDecoder)
+					reports <- scanShard(
+						session,
+						shardID,
+						scanOutputDirectories,
+						rateLimiter,
+						executionsPageSize,
+						payloadSerializer,
+						historyStore,
+						branchDecoder)
 				}
 			}
 		}(i)
@@ -421,7 +429,7 @@ func createShardScanOutputFiles(shardID int, sod *ScanOutputDirectories) (*Shard
 	}
 	shardScanReportFile, err := os.Create(fmt.Sprintf("%v/shard_%v.json", sod.ShardScanReportDirectoryPath, shardID))
 	if err != nil {
-		ErrorAndExit("failed to create ShardScanReportFile", err)
+		ErrorAndExit("failed to create shardScanReportFile", err)
 	}
 	corruptedExecutionFile, err := os.Create(fmt.Sprintf("%v/shard_%v.json", sod.CorruptedExecutionDirectoryPath, shardID))
 	if err != nil {
