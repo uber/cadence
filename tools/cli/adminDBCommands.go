@@ -204,8 +204,9 @@ func scanShard(
 		ShardID: shardID,
 	}
 	defer func() {
-		closeFn()
 		recordShardScanReport(outputFiles.ShardScanReportFile, report)
+		deleteEmptyShardScanOutputFiles(outputFiles)
+		closeFn()
 	}()
 	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	if err != nil {
@@ -422,6 +423,26 @@ func verifyFirstHistoryEvent(
 	return VerificationResultNoCorruption
 }
 
+func verifyCurrentExecution() VerificationResult {
+	return VerificationResultNoCorruption
+}
+
+func deleteEmptyShardScanOutputFiles(outputFiles *ShardScanOutputFiles) {
+	shouldDelete := func(filepath string) bool {
+		fi, err := os.Stat(filepath)
+		return err == nil && fi.Size() == 0
+	}
+	if shouldDelete(outputFiles.ExecutionCheckFailureFile.Name()) {
+		os.Remove(outputFiles.ExecutionCheckFailureFile.Name())
+	}
+	if shouldDelete(outputFiles.CorruptedExecutionFile.Name()) {
+		os.Remove(outputFiles.CorruptedExecutionFile.Name())
+	}
+	if shouldDelete(outputFiles.ShardScanReportFile.Name()) {
+		os.Remove(outputFiles.ShardScanReportFile.Name())
+	}
+}
+
 func createShardScanOutputFiles(shardID int, sod *ScanOutputDirectories) (*ShardScanOutputFiles, func()) {
 	executionCheckFailureFile, err := os.Create(fmt.Sprintf("%v/shard_%v.json", sod.ExecutionCheckFailureDirectoryPath, shardID))
 	if err != nil {
@@ -455,15 +476,16 @@ func createScanOutputDirectories() *ScanOutputDirectories {
 		ExecutionCheckFailureDirectoryPath: fmt.Sprintf("./scan_%v/execution_check_failure", now),
 		CorruptedExecutionDirectoryPath:    fmt.Sprintf("./scan_%v/corrupted_execution", now),
 	}
-	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0666); err != nil {
+	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0766); err != nil {
 		ErrorAndExit("failed to create ShardScanFailureDirectoryPath", err)
 	}
-	if err := os.MkdirAll(sod.ExecutionCheckFailureDirectoryPath, 0666); err != nil {
+	if err := os.MkdirAll(sod.ExecutionCheckFailureDirectoryPath, 0766); err != nil {
 		ErrorAndExit("failed to create ExecutionCheckFailureDirectoryPath", err)
 	}
-	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0666); err != nil {
+	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0766); err != nil {
 		ErrorAndExit("failed to create CorruptedExecutionDirectoryPath", err)
 	}
+	fmt.Println("scan results located under: ", fmt.Sprintf("./scan_%v", now))
 	return sod
 }
 
