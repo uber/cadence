@@ -49,7 +49,7 @@ type (
 const (
 	HistoryMissing                       CorruptionType = "history_missing"
 	InvalidStartEvent                                   = "invalid_start_event"
-	OpenExecutionMissingCurrentExecution                = "open_execution_missing_current_execution"
+	OpenExecutionInvalidCurrentExecution                = "open_execution_missing_current_execution"
 )
 
 const (
@@ -278,7 +278,24 @@ func scanShard(
 				continue
 			}
 
-			// TODO: add other checks in the same way here.
+			currentExecutionVerificationResult := verifyCurrentExecution(
+				e,
+				outputFiles.CorruptedExecutionFile,
+				outputFiles.ExecutionCheckFailureFile,
+				shardID,
+				historyBranch,
+				execStore,
+				limiter)
+			switch currentExecutionVerificationResult {
+			case VerificationResultNoCorruption:
+				// nothing to do just keep checking other conditions
+			case VerificationResultDetectedCorruption:
+				report.Scanned.CorruptedExecutionsCount++
+				continue
+			case VerificationResultCheckFailure:
+				report.Scanned.ExecutionCheckFailureCount++
+				continue
+			}
 		}
 	}
 	return report
@@ -423,7 +440,73 @@ func verifyFirstHistoryEvent(
 	return VerificationResultNoCorruption
 }
 
-func verifyCurrentExecution() VerificationResult {
+func verifyCurrentExecution(
+	execution *persistence.InternalWorkflowExecutionInfo,
+	corruptedExecutionFile *os.File,
+	executionCheckFailureFile *os.File,
+	shardID int,
+	branch *shared.HistoryBranch,
+	execStore persistence.ExecutionStore,
+	limiter *quotas.DynamicRateLimiter,
+) VerificationResult {
+	// TODO: Yu is this correct even in 3 DC?
+	if execution.State != persistence.WorkflowStateCreated && execution.State != persistence.WorkflowStateRunning {
+		return VerificationResultNoCorruption
+	}
+	getCurrentExecutionRequest := &persistence.GetCurrentExecutionRequest{
+		DomainID:   execution.DomainID,
+		WorkflowID: execution.WorkflowID,
+	}
+	limiter.Wait(context.Background())
+	currentExecution, err := execStore.GetCurrentExecution(getCurrentExecutionRequest)
+	if err != nil {
+		switch err.(type) {
+		case *shared.EntityNotExistsError:
+			recordCorruptedWorkflow(corruptedExecutionFile, &CorruptedExecution{
+				ShardID:     shardID,
+				DomainID:    execution.DomainID,
+				WorkflowID:  execution.WorkflowID,
+				RunID:       execution.RunID,
+				NextEventID: execution.NextEventID,
+				TreeID:      branch.GetTreeID(),
+				BranchID:    branch.GetBranchID(),
+				CloseStatus: execution.CloseStatus,
+				CorruptedExceptionMetadata: CorruptedExceptionMetadata{
+					CorruptionType: OpenExecutionInvalidCurrentExecution,
+					Note:           "execution is open without having a current execution",
+					Details:        err.Error(),
+				},
+			})
+			return VerificationResultDetectedCorruption
+		default:
+			recordExecutionCheckFailure(executionCheckFailureFile, &ExecutionCheckFailure{
+				ShardID:    shardID,
+				DomainID:   execution.DomainID,
+				WorkflowID: execution.WorkflowID,
+				RunID:      execution.RunID,
+				Note:       "failed to access current execution but could not confirm that it does not exist",
+				Details:    err.Error(),
+			})
+			return VerificationResultCheckFailure
+		}
+	} else if currentExecution.RunID != execution.RunID {
+		recordCorruptedWorkflow(corruptedExecutionFile, &CorruptedExecution{
+			ShardID:     shardID,
+			DomainID:    execution.DomainID,
+			WorkflowID:  execution.WorkflowID,
+			RunID:       execution.RunID,
+			NextEventID: execution.NextEventID,
+			TreeID:      branch.GetTreeID(),
+			BranchID:    branch.GetBranchID(),
+			CloseStatus: execution.CloseStatus,
+			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
+				CorruptionType: OpenExecutionInvalidCurrentExecution,
+				Note:           "found open execution for which there exists current execution pointing at a different concrete execution",
+				Details:        err.Error(),
+			},
+		})
+		return VerificationResultDetectedCorruption
+	}
 	return VerificationResultNoCorruption
 }
 
