@@ -378,7 +378,7 @@ func verifyHistoryExists(
 		TreeID:    branch.GetTreeID(),
 		BranchID:  branch.GetBranchID(),
 		MinNodeID: common.FirstEventID,
-		MaxNodeID: common.FirstEventID + 1,
+		MaxNodeID: common.EndEventID,
 		ShardID:   shardID,
 		PageSize:  historyPageSize,
 	}
