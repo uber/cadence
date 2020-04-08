@@ -45,7 +45,6 @@ import (
 type (
 	// CorruptionType indicates the type of corruption that was found
 	CorruptionType string
-
 	// VerificationResult is the result of running a verification
 	VerificationResult int
 )
@@ -53,8 +52,8 @@ type (
 const (
 	// HistoryMissing is the CorruptionType indicating that history is missing
 	HistoryMissing CorruptionType = "history_missing"
-	// InvalidStartEvent is the CorruptionType indicating that the start event is invalid
-	InvalidStartEvent = "invalid_start_event"
+	// InvalidFirstEvent is the CorruptionType indicating that the first event is invalid
+	InvalidFirstEvent = "invalid_first_event"
 	// OpenExecutionInvalidCurrentExecution is the CorruptionType that indicates there is an orphan concrete execution
 	OpenExecutionInvalidCurrentExecution = "open_execution_invalid_current_execution"
 )
@@ -156,7 +155,7 @@ type (
 	// CorruptionTypeBreakdown breaks down counts and percentages of corruption types
 	CorruptionTypeBreakdown struct {
 		TotalHistoryMissing                            int64
-		TotalInvalidStartEvent                         int64
+		TotalInvalidFirstEvent                         int64
 		TotalOpenExecutionInvalidCurrentExecution      int64
 		PercentageHistoryMissing                       float64
 		PercentageInvalidStartEvent                    float64
@@ -318,7 +317,7 @@ func scanShard(
 			case VerificationResultNoCorruption:
 				// nothing to do just keep checking other conditions
 			case VerificationResultDetectedCorruption:
-				report.Scanned.CorruptionTypeBreakdown.TotalInvalidStartEvent++
+				report.Scanned.CorruptionTypeBreakdown.TotalInvalidFirstEvent++
 				report.Scanned.CorruptedExecutionsCount++
 				continue
 			case VerificationResultCheckFailure:
@@ -463,7 +462,7 @@ func verifyFirstHistoryEvent(
 			BranchID:    branch.GetBranchID(),
 			CloseStatus: execution.CloseStatus,
 			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
-				CorruptionType: InvalidStartEvent,
+				CorruptionType: InvalidFirstEvent,
 				Note:           "got unexpected first eventID",
 				Details:        fmt.Sprintf("expected: %v but got %v", common.FirstEventID, firstBatch[0].GetEventId()),
 			},
@@ -480,7 +479,7 @@ func verifyFirstHistoryEvent(
 			BranchID:    branch.GetBranchID(),
 			CloseStatus: execution.CloseStatus,
 			CorruptedExceptionMetadata: CorruptedExceptionMetadata{
-				CorruptionType: InvalidStartEvent,
+				CorruptionType: InvalidFirstEvent,
 				Note:           "got unexpected first eventType",
 				Details:        fmt.Sprintf("expected: %v but got %v", shared.EventTypeWorkflowExecutionStarted.String(), firstBatch[0].GetEventType().String()),
 			},
@@ -500,7 +499,7 @@ func verifyCurrentExecution(
 	limiter *quotas.DynamicRateLimiter,
 	totalDBRequests *int64,
 ) VerificationResult {
-	if execution.State != persistence.WorkflowStateCreated && execution.State != persistence.WorkflowStateRunning {
+	if !executionOpen(execution) {
 		return VerificationResultNoCorruption
 	}
 	getCurrentExecutionRequest := &persistence.GetCurrentExecutionRequest{
@@ -509,6 +508,16 @@ func verifyCurrentExecution(
 	}
 	preconditionForDBCall(totalDBRequests, limiter)
 	currentExecution, err := execStore.GetCurrentExecution(getCurrentExecutionRequest)
+
+	ecf, stillOpen := concreteExecutionStillOpen(execution, shardID, execStore, limiter, totalDBRequests)
+	if ecf != nil {
+		checkFailureWriter.Add(ecf)
+		return VerificationResultCheckFailure
+	}
+	if !stillOpen {
+		return VerificationResultNoCorruption
+	}
+
 	if err != nil {
 		switch err.(type) {
 		case *shared.EntityNotExistsError:
@@ -557,6 +566,36 @@ func verifyCurrentExecution(
 		return VerificationResultDetectedCorruption
 	}
 	return VerificationResultNoCorruption
+}
+
+func concreteExecutionStillOpen(
+	execution *persistence.InternalWorkflowExecutionInfo,
+	shardID int,
+	execStore persistence.ExecutionStore,
+	limiter *quotas.DynamicRateLimiter,
+	totalDBRequests *int64,
+) (*ExecutionCheckFailure, bool) {
+	getConcreteExecution := &persistence.GetWorkflowExecutionRequest{
+		DomainID:  execution.DomainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: &execution.WorkflowID,
+			RunId:      &execution.RunID,
+		},
+	}
+	preconditionForDBCall(totalDBRequests, limiter)
+	ce, err := execStore.GetWorkflowExecution(getConcreteExecution)
+	if err != nil {
+		return &ExecutionCheckFailure{
+			ShardID:    shardID,
+			DomainID:   execution.DomainID,
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
+			Note:       "failed to access concrete execution to verify it is still open",
+			Details:    err.Error(),
+		}, false
+	}
+
+	return nil, executionOpen(ce.State.ExecutionInfo)
 }
 
 func deleteEmptyFiles(files ...*os.File) {
@@ -648,14 +687,14 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 		progressReport.ExecutionCheckFailureCount += report.Scanned.ExecutionCheckFailureCount
 		progressReport.CorruptionTypeBreakdown.TotalHistoryMissing += report.Scanned.CorruptionTypeBreakdown.TotalHistoryMissing
 		progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution += report.Scanned.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution
-		progressReport.CorruptionTypeBreakdown.TotalInvalidStartEvent += report.Scanned.CorruptionTypeBreakdown.TotalInvalidStartEvent
+		progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent += report.Scanned.CorruptionTypeBreakdown.TotalInvalidFirstEvent
 	}
 
 	if progressReport.TotalExecutionsCount > 0 {
 		progressReport.PercentageCorrupted = math.Round((float64(progressReport.CorruptedExecutionsCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.PercentageCheckFailure = math.Round((float64(progressReport.ExecutionCheckFailureCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.CorruptionTypeBreakdown.PercentageHistoryMissing = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalHistoryMissing) * 100.0) / float64(progressReport.TotalExecutionsCount))
-		progressReport.CorruptionTypeBreakdown.PercentageInvalidStartEvent = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalInvalidStartEvent) * 100.0) / float64(progressReport.TotalExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageInvalidStartEvent = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.CorruptionTypeBreakdown.PercentageOpenExecutionInvalidCurrentExecution = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution) * 100.0) / float64(progressReport.TotalExecutionsCount))
 	}
 
@@ -690,4 +729,8 @@ func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.Dyn
 func preconditionForDBCall(totalDBRequests *int64, limiter *quotas.DynamicRateLimiter) {
 	*totalDBRequests = *totalDBRequests + 1
 	limiter.Wait(context.Background())
+}
+
+func executionOpen(execution *persistence.InternalWorkflowExecutionInfo) bool {
+	return execution.State == persistence.WorkflowStateCreated || execution.State == persistence.WorkflowStateRunning
 }
