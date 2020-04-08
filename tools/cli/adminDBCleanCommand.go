@@ -92,6 +92,7 @@ type (
 	}
 )
 
+// AdminDBClean is the command to clean up executions
 func AdminDBClean(c *cli.Context) {
 	lowerShardBound := c.Int(FlagLowerShardBound)
 	upperShardBound := c.Int(FlagUpperShardBound)
@@ -164,9 +165,11 @@ func cleanShard(
 	}()
 	shardCorruptedFile, err := getShardCorruptedFile(inputDirectory, shardID)
 	if err != nil {
-		report.Failure = &ShardCleanReportFailure{
-			Note:    "failed to get corruption file",
-			Details: err.Error(),
+		if !os.IsNotExist(err) {
+			report.Failure = &ShardCleanReportFailure{
+				Note:    "failed to get corruption file",
+				Details: err.Error(),
+			}
 		}
 		return report
 	}
@@ -184,6 +187,7 @@ func cleanShard(
 		if report.Handled == nil {
 			report.Handled = &ShardCleanReportHandled{}
 		}
+		report.Handled.TotalExecutionsCount++
 		line := scanner.Text()
 		if len(line) == 0 {
 			continue
