@@ -159,11 +159,11 @@ type (
 
 	// CorruptionTypeBreakdown breaks down counts and percentages of corruption types
 	CorruptionTypeBreakdown struct {
-		TotalHistoryMissing int64
-		TotalInvalidStartEvent int64
-		TotalOpenExecutionInvalidCurrentExecution int64
-		PercentageHistoryMissing float64
-		PercentageInvalidStartEvent float64
+		TotalHistoryMissing                            int64
+		TotalInvalidStartEvent                         int64
+		TotalOpenExecutionInvalidCurrentExecution      int64
+		PercentageHistoryMissing                       float64
+		PercentageInvalidStartEvent                    float64
 		PercentageOpenExecutionInvalidCurrentExecution float64
 	}
 )
@@ -215,7 +215,7 @@ func AdminDBScan(c *cli.Context) {
 	for i := 0; i < numShards; i++ {
 		report := <-reports
 		includeShardInProgressReport(report, progressReport, startTime)
-		if i%scanReportRate == 0 || i == numShards - 1 {
+		if i%scanReportRate == 0 || i == numShards-1 {
 			reportBytes, err := json.MarshalIndent(*progressReport, "", "\t")
 			if err != nil {
 				ErrorAndExit("failed to print progress", err)

@@ -154,8 +154,8 @@ func cleanShard(
 	report := &ShardCleanReport{
 		ShardID: shardID,
 	}
-	failedCleanWriter := NewAdminDBCorruptedExecutionBufferedWriter(outputFiles.FailedCleanedFile)
-	successfullyCleanWriter := NewAdminDBCorruptedExecutionBufferedWriter(outputFiles.SuccessfullyCleanedFile)
+	failedCleanWriter := NewBufferedWriter(outputFiles.FailedCleanedFile)
+	successfullyCleanWriter := NewBufferedWriter(outputFiles.SuccessfullyCleanedFile)
 	defer func() {
 		failedCleanWriter.Flush()
 		successfullyCleanWriter.Flush()
