@@ -749,11 +749,11 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 		progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent += report.Scanned.CorruptionTypeBreakdown.TotalInvalidFirstEvent
 		if progressReport.ShardExecutionCountsDistribution.MinExecutions == nil ||
 			*progressReport.ShardExecutionCountsDistribution.MinExecutions > report.Scanned.TotalExecutionsCount {
-			*progressReport.ShardExecutionCountsDistribution.MinExecutions = report.Scanned.TotalExecutionsCount
+			progressReport.ShardExecutionCountsDistribution.MinExecutions = &report.Scanned.TotalExecutionsCount
 		}
 		if progressReport.ShardExecutionCountsDistribution.MaxExecutions == nil ||
 			*progressReport.ShardExecutionCountsDistribution.MaxExecutions < report.Scanned.TotalExecutionsCount {
-			*progressReport.ShardExecutionCountsDistribution.MaxExecutions = report.Scanned.TotalExecutionsCount
+			progressReport.ShardExecutionCountsDistribution.MaxExecutions = &report.Scanned.TotalExecutionsCount
 		}
 		progressReport.ShardExecutionCountsDistribution.AverageExecutions = progressReport.TotalExecutionsCount / int64(progressReport.NumberOfShardsFinished)
 	}
