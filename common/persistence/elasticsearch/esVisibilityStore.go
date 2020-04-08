@@ -118,12 +118,12 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRe
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
+		request.TaskList,
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
-		request.TaskList,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
@@ -157,12 +157,12 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(request *p.InternalUpsertWor
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
+		request.TaskList,
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
-		request.TaskList,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
@@ -913,9 +913,9 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 	return record
 }
 
-func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string,
+func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string, taskList string,
 	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
-	taskList string, searchAttributes map[string][]byte) *indexer.Message {
+	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{

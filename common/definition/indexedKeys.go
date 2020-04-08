@@ -91,7 +91,7 @@ var systemIndexedKeys = map[string]interface{}{
 	CloseTime:     shared.IndexedValueTypeInt,
 	CloseStatus:   shared.IndexedValueTypeInt,
 	HistoryLength: shared.IndexedValueTypeInt,
-	TaskList:      shared.IndexedValueTypeString,
+	TaskList:      shared.IndexedValueTypeKeyword,
 }
 
 // IsSystemIndexedKey return true is key is system added
