@@ -130,6 +130,7 @@ type (
 		TotalExecutionsCount       int64
 		CorruptedExecutionsCount   int64
 		ExecutionCheckFailureCount int64
+		CorruptionTypeBreakdown    CorruptionTypeBreakdown
 	}
 
 	// ShardScanReportFailure is the part of the ShardScanReport that indicates failure to scan all or part of the shard
@@ -152,6 +153,18 @@ type (
 		ExecutionsPerHour          float64
 		TotalDBRequests            int64
 		DatabaseRPS                float64
+		TimeRunning                string
+		CorruptionTypeBreakdown    CorruptionTypeBreakdown
+	}
+
+	// CorruptionTypeBreakdown breaks down counts and percentages of corruption types
+	CorruptionTypeBreakdown struct {
+		TotalHistoryMissing int64
+		TotalInvalidStartEvent int64
+		TotalOpenExecutionInvalidCurrentExecution int64
+		PercentageHistoryMissing float64
+		PercentageInvalidStartEvent float64
+		PercentageOpenExecutionInvalidCurrentExecution float64
 	}
 )
 
@@ -202,7 +215,7 @@ func AdminDBScan(c *cli.Context) {
 	for i := 0; i < numShards; i++ {
 		report := <-reports
 		includeShardInProgressReport(report, progressReport, startTime)
-		if i%scanReportRate == 0 {
+		if i%scanReportRate == 0 || i == numShards - 1 {
 			reportBytes, err := json.MarshalIndent(*progressReport, "", "\t")
 			if err != nil {
 				ErrorAndExit("failed to print progress", err)
@@ -226,8 +239,8 @@ func scanShard(
 	report := &ShardScanReport{
 		ShardID: shardID,
 	}
-	checkFailureWriter := NewAdminDBCheckFailureBufferedWriter(outputFiles.ExecutionCheckFailureFile)
-	corruptedExecutionWriter := NewAdminDBCorruptedExecutionBufferedWriter(outputFiles.CorruptedExecutionFile)
+	checkFailureWriter := NewBufferedWriter(outputFiles.ExecutionCheckFailureFile)
+	corruptedExecutionWriter := NewBufferedWriter(outputFiles.CorruptedExecutionFile)
 	defer func() {
 		checkFailureWriter.Flush()
 		corruptedExecutionWriter.Flush()
@@ -281,6 +294,7 @@ func scanShard(
 				// nothing to do just keep checking other conditions
 			case VerificationResultDetectedCorruption:
 				report.Scanned.CorruptedExecutionsCount++
+				report.Scanned.CorruptionTypeBreakdown.TotalHistoryMissing++
 				continue
 			case VerificationResultCheckFailure:
 				report.Scanned.ExecutionCheckFailureCount++
@@ -299,6 +313,7 @@ func scanShard(
 			case VerificationResultNoCorruption:
 				// nothing to do just keep checking other conditions
 			case VerificationResultDetectedCorruption:
+				report.Scanned.CorruptionTypeBreakdown.TotalInvalidStartEvent++
 				report.Scanned.CorruptedExecutionsCount++
 				continue
 			case VerificationResultCheckFailure:
@@ -319,6 +334,7 @@ func scanShard(
 			case VerificationResultNoCorruption:
 				// nothing to do just keep checking other conditions
 			case VerificationResultDetectedCorruption:
+				report.Scanned.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution++
 				report.Scanned.CorruptedExecutionsCount++
 				continue
 			case VerificationResultCheckFailure:
@@ -333,8 +349,8 @@ func scanShard(
 func verifyHistoryExists(
 	execution *persistence.InternalWorkflowExecutionInfo,
 	branchDecoder *codec.ThriftRWEncoder,
-	corruptedExecutionWriter AdminDBCorruptedExecutionBufferedWriter,
-	checkFailureWriter AdminDBCheckFailureBufferedWriter,
+	corruptedExecutionWriter BufferedWriter,
+	checkFailureWriter BufferedWriter,
 	shardID int,
 	limiter *quotas.DynamicRateLimiter,
 	historyStore persistence.HistoryStore,
@@ -414,8 +430,8 @@ func verifyHistoryExists(
 func verifyFirstHistoryEvent(
 	execution *persistence.InternalWorkflowExecutionInfo,
 	branch *shared.HistoryBranch,
-	corruptedExecutionWriter AdminDBCorruptedExecutionBufferedWriter,
-	checkFailureWriter AdminDBCheckFailureBufferedWriter,
+	corruptedExecutionWriter BufferedWriter,
+	checkFailureWriter BufferedWriter,
 	shardID int,
 	payloadSerializer persistence.PayloadSerializer,
 	history *persistence.InternalReadHistoryBranchResponse,
@@ -471,8 +487,8 @@ func verifyFirstHistoryEvent(
 
 func verifyCurrentExecution(
 	execution *persistence.InternalWorkflowExecutionInfo,
-	corruptedExecutionWriter AdminDBCorruptedExecutionBufferedWriter,
-	checkFailureWriter AdminDBCheckFailureBufferedWriter,
+	corruptedExecutionWriter BufferedWriter,
+	checkFailureWriter BufferedWriter,
 	shardID int,
 	branch *shared.HistoryBranch,
 	execStore persistence.ExecutionStore,
@@ -617,6 +633,7 @@ func writeToFile(file *os.File, message string) {
 func includeShardInProgressReport(report *ShardScanReport, progressReport *ProgressReport, startTime time.Time) {
 	progressReport.NumberOfShardsFinished++
 	progressReport.TotalDBRequests += report.TotalDBRequests
+	progressReport.TimeRunning = time.Now().Sub(startTime).String()
 	if report.Failure != nil {
 		progressReport.NumberOfShardScanFailures++
 	}
@@ -624,11 +641,17 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 		progressReport.CorruptedExecutionsCount += report.Scanned.CorruptedExecutionsCount
 		progressReport.TotalExecutionsCount += report.Scanned.TotalExecutionsCount
 		progressReport.ExecutionCheckFailureCount += report.Scanned.ExecutionCheckFailureCount
+		progressReport.CorruptionTypeBreakdown.TotalHistoryMissing += report.Scanned.CorruptionTypeBreakdown.TotalHistoryMissing
+		progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution += report.Scanned.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution
+		progressReport.CorruptionTypeBreakdown.TotalInvalidStartEvent += report.Scanned.CorruptionTypeBreakdown.TotalInvalidStartEvent
 	}
 
 	if progressReport.TotalExecutionsCount > 0 {
 		progressReport.PercentageCorrupted = math.Round((float64(progressReport.CorruptedExecutionsCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.PercentageCheckFailure = math.Round((float64(progressReport.ExecutionCheckFailureCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageHistoryMissing = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalHistoryMissing) * 100.0) / float64(progressReport.TotalExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageInvalidStartEvent = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalInvalidStartEvent) * 100.0) / float64(progressReport.TotalExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageOpenExecutionInvalidCurrentExecution = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution) * 100.0) / float64(progressReport.TotalExecutionsCount))
 	}
 
 	pastTime := time.Now().Sub(startTime)

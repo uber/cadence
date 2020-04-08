@@ -33,88 +33,48 @@ const (
 )
 
 type (
-	// AdminDBCorruptedExecutionBufferedWriter is used to buffer writes to file for entities of type CorruptedExecution
-	AdminDBCorruptedExecutionBufferedWriter interface {
-		Add(*CorruptedExecution)
+	// BufferedWriter is used to buffer entities and write them to a file
+	BufferedWriter interface {
+		Add(interface{})
 		Flush()
 	}
 
-	adminDBCorruptedExecutionBufferedWriterImpl struct {
+	bufferedWriter struct {
 		f       *os.File
-		entries []*CorruptedExecution
-	}
-
-	// AdminDBCheckFailureBufferedWriter is used to buffer writes to file for entities of type ExecutionCheckFailure
-	AdminDBCheckFailureBufferedWriter interface {
-		Add(*ExecutionCheckFailure)
-		Flush()
-	}
-
-	adminDBCheckFailureBufferedWriterImpl struct {
-		f       *os.File
-		entries []*ExecutionCheckFailure
+		entries []interface{}
 	}
 )
 
-// NewAdminDBCorruptedExecutionBufferedWriter constructs a new AdminDBCorruptedExecutionBufferedWriter
-func NewAdminDBCorruptedExecutionBufferedWriter(f *os.File) AdminDBCorruptedExecutionBufferedWriter {
-	return &adminDBCorruptedExecutionBufferedWriterImpl{
-		f: f,
-	}
-}
-
-// NewAdminDBCheckFailureBufferedWriter constructs a new AdminDBCheckFailureBufferedWriter
-func NewAdminDBCheckFailureBufferedWriter(f *os.File) AdminDBCheckFailureBufferedWriter {
-	return &adminDBCheckFailureBufferedWriterImpl{
+// NewBufferedWriter constructs a new BufferedWriter
+func NewBufferedWriter(f *os.File) BufferedWriter {
+	return &bufferedWriter{
 		f: f,
 	}
 }
 
 // Add adds a new entity
-func (w *adminDBCorruptedExecutionBufferedWriterImpl) Add(e *CorruptedExecution) {
-	if len(w.entries) > flushThreshold {
-		w.Flush()
+func (bw *bufferedWriter) Add(e interface{}) {
+	if len(bw.entries) > flushThreshold {
+		bw.Flush()
 	}
-	w.entries = append(w.entries, e)
+	bw.entries = append(bw.entries, e)
 }
 
 // Flush flushes contents to file
-func (w *adminDBCorruptedExecutionBufferedWriterImpl) Flush() {
+func (bw *bufferedWriter) Flush() {
 	var builder strings.Builder
-	for _, e := range w.entries {
-		if err := writeToBuilder(&builder, e); err != nil {
-			ErrorAndExit("adminDBCorruptedExecutionBufferedWriterImpl failed to write to builder", err)
+	for _, e := range bw.entries {
+		if err := bw.writeToBuilder(&builder, e); err != nil {
+			ErrorAndExit("failed to write to builder", err)
 		}
 	}
-	if err := writeBuilderToFile(&builder, w.f); err != nil {
-		ErrorAndExit("adminDBCorruptedExecutionBufferedWriterImpl failed to write to file", err)
+	if err := bw.writeBuilderToFile(&builder, bw.f); err != nil {
+		ErrorAndExit("failed to write to file", err)
 	}
-	w.entries = nil
+	bw.entries = nil
 }
 
-// Add adds a new entity
-func (w *adminDBCheckFailureBufferedWriterImpl) Add(e *ExecutionCheckFailure) {
-	if len(w.entries) > flushThreshold {
-		w.Flush()
-	}
-	w.entries = append(w.entries, e)
-}
-
-// Flush flushes contents to file
-func (w *adminDBCheckFailureBufferedWriterImpl) Flush() {
-	var builder strings.Builder
-	for _, e := range w.entries {
-		if err := writeToBuilder(&builder, e); err != nil {
-			ErrorAndExit("adminDBCorruptedExecutionBufferedWriterImpl failed to write to builder", err)
-		}
-	}
-	if err := writeBuilderToFile(&builder, w.f); err != nil {
-		ErrorAndExit("adminDBCorruptedExecutionBufferedWriterImpl failed to write to file", err)
-	}
-	w.entries = nil
-}
-
-func writeToBuilder(builder *strings.Builder, e interface{}) error {
+func (bw *bufferedWriter) writeToBuilder(builder *strings.Builder, e interface{}) error {
 	data, err := json.Marshal(e)
 	if err != nil {
 		return err
@@ -124,7 +84,7 @@ func writeToBuilder(builder *strings.Builder, e interface{}) error {
 	return nil
 }
 
-func writeBuilderToFile(builder *strings.Builder, f *os.File) error {
+func (bw *bufferedWriter) writeBuilderToFile(builder *strings.Builder, f *os.File) error {
 	_, err := f.WriteString(builder.String())
 	return err
 }

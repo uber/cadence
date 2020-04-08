@@ -173,6 +173,7 @@ func cleanShard(
 		}
 		return report
 	}
+	defer shardCorruptedFile.Close()
 	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	if err != nil {
 		report.Failure = &ShardCleanReportFailure{
@@ -187,11 +188,11 @@ func cleanShard(
 		if report.Handled == nil {
 			report.Handled = &ShardCleanReportHandled{}
 		}
-		report.Handled.TotalExecutionsCount++
 		line := scanner.Text()
 		if len(line) == 0 {
 			continue
 		}
+		report.Handled.TotalExecutionsCount++
 		var ce CorruptedExecution
 		err := json.Unmarshal([]byte(line), &ce)
 		if err != nil {
@@ -221,6 +222,7 @@ func cleanShard(
 			}
 			// deleting current execution is best effort, the success or failure of the cleanup
 			// is determined above based on if the concrete execution could be deleted
+			preconditionForDBCall(&report.TotalDBRequests, limiter)
 			execStore.DeleteCurrentWorkflowExecution(deleteCurrentReq)
 		}
 		// TODO: we will want to also cleanup history for corrupted workflows, this will be punted on until this is converted to a workflow
