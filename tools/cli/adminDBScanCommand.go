@@ -576,7 +576,7 @@ func concreteExecutionStillOpen(
 	totalDBRequests *int64,
 ) (*ExecutionCheckFailure, bool) {
 	getConcreteExecution := &persistence.GetWorkflowExecutionRequest{
-		DomainID:  execution.DomainID,
+		DomainID: execution.DomainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: &execution.WorkflowID,
 			RunId:      &execution.RunID,
