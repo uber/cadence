@@ -1,1 +1,0 @@
-{"ShardID":2,"TotalDBRequests":3,"Scanned":{"TotalExecutionsCount":1,"CorruptedExecutionsCount":0,"ExecutionCheckFailureCount":0,"CorruptionTypeBreakdown":{"TotalHistoryMissing":0,"TotalInvalidStartEvent":0,"TotalOpenExecutionInvalidCurrentExecution":0,"PercentageHistoryMissing":0,"PercentageInvalidStartEvent":0,"PercentageOpenExecutionInvalidCurrentExecution":0}},"Failure":null}
