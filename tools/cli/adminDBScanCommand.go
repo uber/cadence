@@ -149,11 +149,7 @@ type (
 		NumberOfShardScanFailures  int64
 		PercentageCorrupted        float64
 		PercentageCheckFailure     float64
-		ShardsPerHour              float64
-		ExecutionsPerHour          float64
-		TotalDBRequests            int64
-		DatabaseRPS                float64
-		TimeRunning                string
+		Rates                      Rates
 		CorruptionTypeBreakdown    CorruptionTypeBreakdown
 	}
 
@@ -165,6 +161,15 @@ type (
 		PercentageHistoryMissing                       float64
 		PercentageInvalidStartEvent                    float64
 		PercentageOpenExecutionInvalidCurrentExecution float64
+	}
+
+	// Rates indicates the rates at which the scan is progressing
+	Rates struct {
+		TimeRunning       string
+		DatabaseRPS       float64
+		TotalDBRequests   int64
+		ShardsPerHour     float64
+		ExecutionsPerHour float64
 	}
 )
 
@@ -632,8 +637,8 @@ func writeToFile(file *os.File, message string) {
 
 func includeShardInProgressReport(report *ShardScanReport, progressReport *ProgressReport, startTime time.Time) {
 	progressReport.NumberOfShardsFinished++
-	progressReport.TotalDBRequests += report.TotalDBRequests
-	progressReport.TimeRunning = time.Now().Sub(startTime).String()
+	progressReport.Rates.TotalDBRequests += report.TotalDBRequests
+	progressReport.Rates.TimeRunning = time.Now().Sub(startTime).String()
 	if report.Failure != nil {
 		progressReport.NumberOfShardScanFailures++
 	}
@@ -656,11 +661,11 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 
 	pastTime := time.Now().Sub(startTime)
 	hoursPast := float64(pastTime) / float64(time.Hour)
-	progressReport.ShardsPerHour = math.Round(float64(progressReport.NumberOfShardsFinished) / hoursPast)
-	progressReport.ExecutionsPerHour = math.Round(float64(progressReport.TotalExecutionsCount) / hoursPast)
+	progressReport.Rates.ShardsPerHour = math.Round(float64(progressReport.NumberOfShardsFinished) / hoursPast)
+	progressReport.Rates.ExecutionsPerHour = math.Round(float64(progressReport.TotalExecutionsCount) / hoursPast)
 
 	secondsPast := float64(pastTime) / float64(time.Second)
-	progressReport.DatabaseRPS = math.Round(float64(progressReport.TotalDBRequests) / secondsPast)
+	progressReport.Rates.DatabaseRPS = math.Round(float64(progressReport.Rates.TotalDBRequests) / secondsPast)
 }
 
 func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.DynamicRateLimiter {
