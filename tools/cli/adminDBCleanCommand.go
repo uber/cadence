@@ -1,18 +1,42 @@
+// The MIT License (MIT)
+//
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package cli
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"math"
+	"os"
+	"time"
+
 	"github.com/gocql/gocql"
+	"github.com/urfave/cli"
+
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/urfave/cli"
-	"math"
-	"os"
-	"time"
 )
 
 type (
@@ -20,22 +44,22 @@ type (
 	ShardCleanReport struct {
 		ShardID         int
 		TotalDBRequests int64
-		Handled *ShardCleanReportHandled
-		Failure *ShardCleanReportFailure
+		Handled         *ShardCleanReportHandled
+		Failure         *ShardCleanReportFailure
 	}
 
 	// ShardCleanReportHandled is the part of ShardCleanReport of executions which were read from corruption file
 	// and were attempted to be deleted
 	ShardCleanReportHandled struct {
-		TotalExecutionsCount int64
+		TotalExecutionsCount     int64
 		SuccessfullyCleanedCount int64
-		FailedCleanedCount int64
+		FailedCleanedCount       int64
 	}
 
 	// ShardCleanReportFailure is the part of ShardCleanReport that indicates a failure to clean some or all
 	// of the executions found in corruption file
 	ShardCleanReportFailure struct {
-		Note string
+		Note    string
 		Details string
 	}
 
@@ -44,8 +68,8 @@ type (
 	CleanProgressReport struct {
 		NumberOfShardsFinished     int
 		TotalExecutionsCount       int64
-		SuccessfullyCleanedCount int64
-		FailedCleanedCount int64
+		SuccessfullyCleanedCount   int64
+		FailedCleanedCount         int64
 		TotalDBRequests            int64
 		DatabaseRPS                float64
 		NumberOfShardCleanFailures int64
@@ -55,99 +79,70 @@ type (
 
 	// CleanOutputDirectories are the directory paths for output of clean
 	CleanOutputDirectories struct {
-		ShardCleanReportDirectoryPath       string
-		SuccessfullyCleanedDirectoryPath    string
-		FailedCleanedDirectoryPath          string
+		ShardCleanReportDirectoryPath    string
+		SuccessfullyCleanedDirectoryPath string
+		FailedCleanedDirectoryPath       string
 	}
 
 	// ShardCleanOutputFiles are the files produced for a clean of a single shard
 	ShardCleanOutputFiles struct {
-		ShardCleanReportFile       *os.File
-		SuccessfullyCleanedFile    *os.File
-		FailedCleanedFile          *os.File
+		ShardCleanReportFile    *os.File
+		SuccessfullyCleanedFile *os.File
+		FailedCleanedFile       *os.File
 	}
 )
 
 func AdminDBClean(c *cli.Context) {
+	lowerShardBound := c.Int(FlagLowerShardBound)
+	upperShardBound := c.Int(FlagUpperShardBound)
+	numShards := upperShardBound - lowerShardBound
+	startingRPS := c.Int(FlagStartingRPS)
+	targetRPS := c.Int(FlagRPS)
+	scaleUpSeconds := c.Int(FlagRPSScaleUpSeconds)
+	scanWorkerCount := c.Int(FlagConcurrency)
+	scanReportRate := c.Int(FlagReportRate)
+	if numShards < scanWorkerCount {
+		scanWorkerCount = numShards
+	}
+	inputDirectory := getRequiredOption(c, FlagInputDirectory)
+
+	rateLimiter := getRateLimiter(startingRPS, targetRPS, scaleUpSeconds)
 	session := connectToCassandra(c)
-	execStore, err := cassp.NewWorkflowExecutionPersistence(0, session, loggerimpl.NewNopLogger())
-	if err != nil {
-		panic(err)
+	defer session.Close()
+	cleanOutputDirectories := createCleanOutputDirectories()
+
+	reports := make(chan *ShardCleanReport)
+	for i := 0; i < scanWorkerCount; i++ {
+		go func(workerIdx int) {
+			for shardID := lowerShardBound; shardID < upperShardBound; shardID++ {
+				if shardID%scanWorkerCount == workerIdx {
+					reports <- cleanShard(
+						rateLimiter,
+						session,
+						cleanOutputDirectories,
+						inputDirectory,
+						shardID)
+				}
+			}
+		}(i)
 	}
-	req := &persistence.DeleteWorkflowExecutionRequest{
-		DomainID: "foo",
-		WorkflowID: "bar",
-		RunID: "baz",
+
+	startTime := time.Now()
+	progressReport := &CleanProgressReport{}
+	for i := 0; i < numShards; i++ {
+		report := <-reports
+		includeShardCleanInProgressReport(report, progressReport, startTime)
+		if i%scanReportRate == 0 {
+			reportBytes, err := json.MarshalIndent(*progressReport, "", "\t")
+			if err != nil {
+				ErrorAndExit("failed to print progress", err)
+			}
+			fmt.Println(string(reportBytes))
+		}
 	}
-	err = execStore.DeleteWorkflowExecution(req)
-	fmt.Println("andrew got error from deleting workflow execution: ", err)
-
-
-
-	//lowerShardBound := c.Int(FlagLowerShardBound)
-	//upperShardBound := c.Int(FlagUpperShardBound)
-	//numShards := upperShardBound - lowerShardBound
-	//startingRPS := c.Int(FlagStartingRPS)
-	//targetRPS := c.Int(FlagRPS)
-	//scaleUpSeconds := c.Int(FlagRPSScaleUpSeconds)
-	//scanWorkerCount := c.Int(FlagConcurrency)
-	//scanReportRate := c.Int(FlagReportRate)
-	//if numShards < scanWorkerCount {
-	//	scanWorkerCount = numShards
-	//}
-	//inputDirectory := getRequiredOption(c, FlagInputDirectory)
-	//
-	//rateLimiter := getRateLimiter(startingRPS, targetRPS, scaleUpSeconds)
-	//session := connectToCassandra(c)
-	//defer session.Close()
-	//cleanOutputDirectories := createCleanOutputDirectories()
-
-	// start concurrency number of workers
-	// each worker will call handleShard
-		// handle shard will construct the file in question
-		// if the file does not exist return right away with a zero value ShardDeleteReport
-		// if the file exists then read it line by line
-		// for each line deserialize it into a CorruptExecution
-		// if there is an error doing this then increment delete failed count and move on to the next one
-		// if you successfully deserialize it then switch on the corruption type
-			// if the corruption if of type history missing or history start event invalid then delete current mutable state and concrete mutable state
-			// if the corruption is of type current execution error then delete concrete mutable state and move on
-		// return report
-	// in the main we will fetch these reports and we will always get numShards reports even if they are empty
-	// every X reports will will add this report into a sum progress report and emit it to stdout
-
-	//reports := make(chan *ShardCleanReport)
-	//for i := 0; i < scanWorkerCount; i++ {
-	//	go func(workerIdx int) {
-	//		for shardID := lowerShardBound; shardID < upperShardBound; shardID++ {
-	//			if shardID%scanWorkerCount == workerIdx {
-	//				reports <- handleCleanShard(
-	//					rateLimiter,
-	//					session,
-	//					cleanOutputDirectories,
-	//					inputDirectory,
-	//					shardID)
-	//			}
-	//		}
-	//	}(i)
-	//}
-	//
-	//startTime := time.Now()
-	//progressReport := &CleanProgressReport{}
-	//for i := 0; i < numShards; i++ {
-	//	report := <-reports
-	//	includeShardCleanInProgressReport(report, progressReport, startTime)
-	//	if i%scanReportRate == 0 {
-	//		reportBytes, err := json.MarshalIndent(*progressReport, "", "\t")
-	//		if err != nil {
-	//			ErrorAndExit("failed to print progress", err)
-	//		}
-	//		fmt.Println(string(reportBytes))
-	//	}
-	//}
 }
 
-func handleCleanShard(
+func cleanShard(
 	limiter *quotas.DynamicRateLimiter,
 	session *gocql.Session,
 	outputDirectories *CleanOutputDirectories,
@@ -175,7 +170,7 @@ func handleCleanShard(
 		}
 		return report
 	}
-	//execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
+	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	if err != nil {
 		report.Failure = &ShardCleanReportFailure{
 			Note:    "failed to create execution store",
@@ -200,17 +195,33 @@ func handleCleanShard(
 			continue
 		}
 
-		//deleteConcreteReq := &persistence.DeleteWorkflowExecutionRequest{
-		//	DomainID: ce.DomainID,
-		//	WorkflowID: ce.WorkflowID,
-		//	RunID: ce.RunID,
-		//}
-		//err := execStore.DeleteWorkflowExecution(deleteConcreteReq)
-		//if err != nil {
-		//
-		//}
+		deleteConcreteReq := &persistence.DeleteWorkflowExecutionRequest{
+			DomainID:   ce.DomainID,
+			WorkflowID: ce.WorkflowID,
+			RunID:      ce.RunID,
+		}
+		preconditionForDBCall(&report.TotalDBRequests, limiter)
+		err = execStore.DeleteWorkflowExecution(deleteConcreteReq)
+		if err != nil {
+			report.Handled.FailedCleanedCount++
+			failedCleanWriter.Add(&ce)
+			continue
+		}
+		report.Handled.SuccessfullyCleanedCount++
+		successfullyCleanWriter.Add(&ce)
+		if ce.CorruptedExceptionMetadata.CorruptionType != OpenExecutionInvalidCurrentExecution {
+			deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
+				DomainID:   ce.DomainID,
+				WorkflowID: ce.WorkflowID,
+				RunID:      ce.RunID,
+			}
+			// deleting current execution is best effort, the success or failure of the cleanup
+			// is determined above based on if the concrete execution could be deleted
+			execStore.DeleteCurrentWorkflowExecution(deleteCurrentReq)
+		}
+		// TODO: we will want to also cleanup history for corrupted workflows, this will be punted on until this is converted to a workflow
 	}
-	return nil
+	return report
 }
 
 func getShardCorruptedFile(inputDir string, shardID int) (*os.File, error) {
@@ -259,18 +270,18 @@ func createShardCleanOutputFiles(shardID int, cod *CleanOutputDirectories) (*Sha
 		failedCleanedFile.Close()
 	}
 	return &ShardCleanOutputFiles{
-		ShardCleanReportFile:       shardCleanReportFile,
+		ShardCleanReportFile:    shardCleanReportFile,
 		SuccessfullyCleanedFile: successfullyCleanedFile,
-		FailedCleanedFile:    failedCleanedFile,
+		FailedCleanedFile:       failedCleanedFile,
 	}, deferFn
 }
 
 func createCleanOutputDirectories() *CleanOutputDirectories {
 	now := time.Now().Unix()
 	cod := &CleanOutputDirectories{
-		ShardCleanReportDirectoryPath:       fmt.Sprintf("./clean_%v/shard_scan_report", now),
+		ShardCleanReportDirectoryPath:    fmt.Sprintf("./clean_%v/shard_clean_report", now),
 		SuccessfullyCleanedDirectoryPath: fmt.Sprintf("./clean_%v/successfully_cleaned", now),
-		FailedCleanedDirectoryPath:    fmt.Sprintf("./clean_%v/failed_cleaned", now),
+		FailedCleanedDirectoryPath:       fmt.Sprintf("./clean_%v/failed_cleaned", now),
 	}
 	if err := os.MkdirAll(cod.ShardCleanReportDirectoryPath, 0766); err != nil {
 		ErrorAndExit("failed to create ShardCleanReportDirectoryPath", err)

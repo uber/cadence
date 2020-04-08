@@ -785,7 +785,7 @@ func newDBCommands() []cli.Command {
 			Usage:   "clean up corrupted workflows",
 			Flags: append(getDBFlags(),
 				cli.StringFlag{
-					Name: FlagInputDirectory,
+					Name:  FlagInputDirectory,
 					Usage: "the directory which contains corrupted workflow execution files from scan",
 				},
 				cli.IntFlag{
@@ -824,7 +824,7 @@ func newDBCommands() []cli.Command {
 					Value: 10,
 				}),
 			Action: func(c *cli.Context) {
-				AdminDBDelete(c)
+				AdminDBClean(c)
 			},
 		},
 	}

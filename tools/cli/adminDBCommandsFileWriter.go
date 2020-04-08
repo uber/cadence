@@ -40,7 +40,7 @@ type (
 	}
 
 	adminDBCorruptedExecutionBufferedWriterImpl struct {
-		f *os.File
+		f       *os.File
 		entries []*CorruptedExecution
 	}
 
@@ -51,7 +51,7 @@ type (
 	}
 
 	adminDBCheckFailureBufferedWriterImpl struct {
-		f *os.File
+		f       *os.File
 		entries []*ExecutionCheckFailure
 	}
 )
@@ -59,14 +59,14 @@ type (
 // NewAdminDBCorruptedExecutionBufferedWriter constructs a new AdminDBCorruptedExecutionBufferedWriter
 func NewAdminDBCorruptedExecutionBufferedWriter(f *os.File) AdminDBCorruptedExecutionBufferedWriter {
 	return &adminDBCorruptedExecutionBufferedWriterImpl{
-		f:       f,
+		f: f,
 	}
 }
 
 // NewAdminDBCheckFailureBufferedWriter constructs a new AdminDBCheckFailureBufferedWriter
 func NewAdminDBCheckFailureBufferedWriter(f *os.File) AdminDBCheckFailureBufferedWriter {
 	return &adminDBCheckFailureBufferedWriterImpl{
-		f:       f,
+		f: f,
 	}
 }
 

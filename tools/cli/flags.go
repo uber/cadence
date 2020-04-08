@@ -216,7 +216,7 @@ const (
 	FlagLastMessageID                     = "last_message_id"
 	FlagLastMessageIDWithAlias            = FlagLastMessageID + ", lm"
 	FlagConcurrency                       = "concurrency"
-	FlagReportRate                    = "report_rate"
+	FlagReportRate                        = "report_rate"
 	FlagLowerShardBound                   = "lower_shard_bound"
 	FlagUpperShardBound                   = "upper_shard_bound"
 	FlagInputDirectory                    = "input_directory"
