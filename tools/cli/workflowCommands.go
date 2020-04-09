@@ -1086,7 +1086,7 @@ func appendWorkflowExecutionsToTable(
 			executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
 			closeTime = convertTime(e.GetCloseTime(), !printDateTime)
 		}
-		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), *e.TaskList, startTime, executionTime}
+		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), e.GetTaskList(), startTime, executionTime}
 		if !queryOpen {
 			row = append(row, closeTime)
 		}
