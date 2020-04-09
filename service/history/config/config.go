@@ -231,8 +231,8 @@ var (
 	}
 )
 
-// NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
+// New returns new service config with default values
+func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
 		EnableNDC:                            dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableNDC, false),

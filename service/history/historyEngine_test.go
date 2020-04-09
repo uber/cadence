@@ -163,7 +163,7 @@ var testGlobalChildDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 
 func NewDynamicConfigForTest() *config.Config {
 	dc := dynamicconfig.NewNopCollection()
-	config := config.NewConfig(dc, 1, cconfig.StoreTypeCassandra, false)
+	config := config.New(dc, 1, cconfig.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, true)
