@@ -29,13 +29,15 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/eventscache"
 )
 
 type shardContextTest struct {
 	*shardContextImpl
 
 	resource        *resource.Test
-	mockEventsCache *MockeventsCache
+	mockEventsCache *eventscache.MockEventsCache
 }
 
 var _ ShardContext = (*shardContextTest)(nil)
@@ -43,10 +45,10 @@ var _ ShardContext = (*shardContextTest)(nil)
 func newTestShardContext(
 	ctrl *gomock.Controller,
 	shardInfo *persistence.ShardInfo,
-	config *Config,
+	config *config.Config,
 ) *shardContextTest {
 	resource := resource.NewTest(ctrl, metrics.History)
-	eventsCache := NewMockeventsCache(ctrl)
+	eventsCache := eventscache.NewMockEventsCache(ctrl)
 	shard := &shardContextImpl{
 		Resource:                  resource,
 		shardID:                   shardInfo.ShardID,
