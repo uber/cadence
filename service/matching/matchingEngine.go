@@ -211,7 +211,10 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 }
 
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
-func (e *matchingEngineImpl) AddDecisionTask(hCtx *handlerContext, request *m.AddDecisionTaskRequest) (bool, error) {
+func (e *matchingEngineImpl) AddDecisionTask(
+	hCtx *handlerContext,
+	request *m.AddDecisionTaskRequest,
+) (bool, error) {
 	domainID := request.GetDomainUUID()
 	taskListName := request.TaskList.GetName()
 	taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())

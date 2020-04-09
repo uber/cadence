@@ -122,7 +122,10 @@ func (h *Handler) newHandlerContext(
 }
 
 // AddActivityTask - adds an activity task.
-func (h *Handler) AddActivityTask(ctx context.Context, request *m.AddActivityTaskRequest) (retError error) {
+func (h *Handler) AddActivityTask(
+	ctx context.Context,
+	request *m.AddActivityTaskRequest,
+) (retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	startT := time.Now()
 	hCtx := h.newHandlerContext(
