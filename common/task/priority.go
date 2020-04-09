@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	// HighPriorityClass is the priority subclass for high priority tasks
+	// HighPrioritySubclass is the priority subclass for high priority tasks
 	HighPrioritySubclass = iota
 	// DefaultPrioritySubclass is the priority subclass for high priority tasks
 	DefaultPrioritySubclass

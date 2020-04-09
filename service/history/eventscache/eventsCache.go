@@ -35,6 +35,7 @@ import (
 )
 
 type (
+	// EventsCache caches workflow history event
 	EventsCache interface {
 		GetEvent(
 			domainID string,
@@ -82,6 +83,7 @@ var (
 
 var _ EventsCache = (*eventsCacheImpl)(nil)
 
+// New creates a new EventsCache
 func New(
 	shardID int,
 	historyManager persistence.HistoryManager,

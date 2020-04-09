@@ -223,6 +223,7 @@ const (
 )
 
 var (
+	// DefaultTaskPriorityWeight is the default round robin weight used by task scheduler
 	DefaultTaskPriorityWeight = map[int]int{
 		task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass):    200,
 		task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass): 100,
