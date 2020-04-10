@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
@@ -277,8 +278,7 @@ func scanShard(
 			PageSize:  executionsPageSize,
 			PageToken: token,
 		}
-		preconditionForDBCall(&report.TotalDBRequests, limiter)
-		resp, err := execStore.ListConcreteExecutions(req)
+		resp, err := retryListConcreteExecutions(limiter, &report.TotalDBRequests, execStore, req)
 		if err != nil {
 			report.Failure = &ShardScanReportFailure{
 				Note:    "failed to call ListConcreteExecutions",
@@ -395,8 +395,7 @@ func verifyHistoryExists(
 		ShardID:   shardID,
 		PageSize:  historyPageSize,
 	}
-	preconditionForDBCall(totalDBRequests, limiter)
-	history, err := historyStore.ReadHistoryBranch(readHistoryBranchReq)
+	history, err := retryReadHistoryBranch(limiter, totalDBRequests, historyStore, readHistoryBranchReq)
 
 	ecf, stillExists := concreteExecutionStillExists(execution, shardID, execStore, limiter, totalDBRequests)
 	if ecf != nil {
@@ -530,8 +529,7 @@ func verifyCurrentExecution(
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 	}
-	preconditionForDBCall(totalDBRequests, limiter)
-	currentExecution, err := execStore.GetCurrentExecution(getCurrentExecutionRequest)
+	currentExecution, err := retryGetCurrentExecution(limiter, totalDBRequests, execStore, getCurrentExecutionRequest)
 
 	ecf, stillOpen := concreteExecutionStillOpen(execution, shardID, execStore, limiter, totalDBRequests)
 	if ecf != nil {
@@ -606,8 +604,7 @@ func concreteExecutionStillExists(
 			RunId:      &execution.RunID,
 		},
 	}
-	preconditionForDBCall(totalDBRequests, limiter)
-	_, err := execStore.GetWorkflowExecution(getConcreteExecution)
+	_, err := retryGetWorkflowExecution(limiter, totalDBRequests, execStore, getConcreteExecution)
 	if err == nil {
 		return nil, true
 	}
@@ -641,8 +638,7 @@ func concreteExecutionStillOpen(
 			RunId:      &execution.RunID,
 		},
 	}
-	preconditionForDBCall(totalDBRequests, limiter)
-	ce, err := execStore.GetWorkflowExecution(getConcreteExecution)
+	ce, err := retryGetWorkflowExecution(limiter, totalDBRequests, execStore, getConcreteExecution)
 	if err != nil {
 		return &ExecutionCheckFailure{
 			ShardID:    shardID,
@@ -761,6 +757,9 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 	if progressReport.TotalExecutionsCount > 0 {
 		progressReport.PercentageCorrupted = math.Round((float64(progressReport.CorruptedExecutionsCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.PercentageCheckFailure = math.Round((float64(progressReport.ExecutionCheckFailureCount) * 100.0) / float64(progressReport.TotalExecutionsCount))
+	}
+
+	if progressReport.CorruptedExecutionsCount > 0 {
 		progressReport.CorruptionTypeBreakdown.PercentageHistoryMissing = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalHistoryMissing) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.CorruptionTypeBreakdown.PercentageInvalidStartEvent = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent) * 100.0) / float64(progressReport.TotalExecutionsCount))
 		progressReport.CorruptionTypeBreakdown.PercentageOpenExecutionInvalidCurrentExecution = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution) * 100.0) / float64(progressReport.TotalExecutionsCount))
@@ -801,4 +800,88 @@ func preconditionForDBCall(totalDBRequests *int64, limiter *quotas.DynamicRateLi
 
 func executionOpen(execution *persistence.InternalWorkflowExecutionInfo) bool {
 	return execution.State == persistence.WorkflowStateCreated || execution.State == persistence.WorkflowStateRunning
+}
+
+func retryListConcreteExecutions(
+	limiter *quotas.DynamicRateLimiter,
+	totalDBRequests *int64,
+	execStore persistence.ExecutionStore,
+	req *persistence.ListConcreteExecutionsRequest,
+) (*persistence.InternalListConcreteExecutionsResponse, error) {
+	var resp *persistence.InternalListConcreteExecutionsResponse
+	op := func() error {
+		var err error
+		preconditionForDBCall(totalDBRequests, limiter)
+		resp, err = execStore.ListConcreteExecutions(req)
+		return err
+	}
+
+	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func retryGetWorkflowExecution(
+	limiter *quotas.DynamicRateLimiter,
+	totalDBRequests *int64,
+	execStore persistence.ExecutionStore,
+	req *persistence.GetWorkflowExecutionRequest,
+) (*persistence.InternalGetWorkflowExecutionResponse, error) {
+	var resp *persistence.InternalGetWorkflowExecutionResponse
+	op := func() error {
+		var err error
+		preconditionForDBCall(totalDBRequests, limiter)
+		resp, err = execStore.GetWorkflowExecution(req)
+		return err
+	}
+
+	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func retryGetCurrentExecution(
+	limiter *quotas.DynamicRateLimiter,
+	totalDBRequests *int64,
+	execStore persistence.ExecutionStore,
+	req *persistence.GetCurrentExecutionRequest,
+) (*persistence.GetCurrentExecutionResponse, error) {
+	var resp *persistence.GetCurrentExecutionResponse
+	op := func() error {
+		var err error
+		preconditionForDBCall(totalDBRequests, limiter)
+		resp, err = execStore.GetCurrentExecution(req)
+		return err
+	}
+
+	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func retryReadHistoryBranch(
+	limiter *quotas.DynamicRateLimiter,
+	totalDBRequests *int64,
+	historyStore persistence.HistoryStore,
+	req *persistence.InternalReadHistoryBranchRequest,
+) (*persistence.InternalReadHistoryBranchResponse, error) {
+	var resp *persistence.InternalReadHistoryBranchResponse
+	op := func() error {
+		var err error
+		preconditionForDBCall(totalDBRequests, limiter)
+		resp, err = historyStore.ReadHistoryBranch(req)
+		return err
+	}
+
+	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
