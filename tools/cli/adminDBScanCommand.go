@@ -146,7 +146,7 @@ type (
 	// ProgressReport contains metadata about the scan for all shards which have been finished
 	// This is periodically printed to stdout
 	ProgressReport struct {
-		NumberOfShardsFinished           int
+		NumberOfShardsFinished           int64
 		TotalExecutionsCount             int64
 		CorruptedExecutionsCount         int64
 		ExecutionCheckFailureCount       int64
@@ -748,15 +748,18 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 		progressReport.CorruptionTypeBreakdown.TotalHistoryMissing += report.Scanned.CorruptionTypeBreakdown.TotalHistoryMissing
 		progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution += report.Scanned.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution
 		progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent += report.Scanned.CorruptionTypeBreakdown.TotalInvalidFirstEvent
-		if progressReport.ShardExecutionCountsDistribution.MinExecutions == nil ||
-			*progressReport.ShardExecutionCountsDistribution.MinExecutions > report.Scanned.TotalExecutionsCount {
+		if report.Failure == nil && (progressReport.ShardExecutionCountsDistribution.MinExecutions == nil ||
+			*progressReport.ShardExecutionCountsDistribution.MinExecutions > report.Scanned.TotalExecutionsCount) {
 			progressReport.ShardExecutionCountsDistribution.MinExecutions = &report.Scanned.TotalExecutionsCount
 		}
-		if progressReport.ShardExecutionCountsDistribution.MaxExecutions == nil ||
-			*progressReport.ShardExecutionCountsDistribution.MaxExecutions < report.Scanned.TotalExecutionsCount {
+		if report.Failure == nil && (progressReport.ShardExecutionCountsDistribution.MaxExecutions == nil ||
+			*progressReport.ShardExecutionCountsDistribution.MaxExecutions < report.Scanned.TotalExecutionsCount) {
 			progressReport.ShardExecutionCountsDistribution.MaxExecutions = &report.Scanned.TotalExecutionsCount
 		}
-		progressReport.ShardExecutionCountsDistribution.AverageExecutions = progressReport.TotalExecutionsCount / int64(progressReport.NumberOfShardsFinished)
+		successfullyFinishedShards := progressReport.NumberOfShardsFinished - progressReport.NumberOfShardScanFailures
+		if successfullyFinishedShards > 0 {
+			progressReport.ShardExecutionCountsDistribution.AverageExecutions = progressReport.TotalExecutionsCount / successfullyFinishedShards
+		}
 	}
 
 	if progressReport.TotalExecutionsCount > 0 {
