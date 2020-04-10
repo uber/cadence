@@ -28,15 +28,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/task"
-	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
-	// EngineFactory is used to create an instance of sharded history engine
-	EngineFactory interface {
-		CreateEngine(context ShardContext) engine.Engine
-	}
-
 	queueProcessor interface {
 		common.Daemon
 		notifyNewTask()
@@ -79,7 +74,7 @@ type (
 		task.PriorityTask
 		queueTaskInfo
 		GetQueueType() queueType
-		GetShard() ShardContext
+		GetShard() shard.Context
 	}
 
 	queueTaskExecutor interface {
@@ -88,7 +83,7 @@ type (
 
 	queueTaskProcessor interface {
 		common.Daemon
-		StopShardProcessor(ShardContext)
+		StopShardProcessor(shard.Context)
 		Submit(queueTask) error
 		TrySubmit(queueTask) (bool, error)
 	}

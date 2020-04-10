@@ -56,6 +56,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -71,7 +72,7 @@ const (
 type (
 	historyEngineImpl struct {
 		currentClusterName        string
-		shard                     ShardContext
+		shard                     shard.Context
 		timeSource                clock.TimeSource
 		decisionHandler           decisionHandler
 		clusterMetadata           cluster.Metadata
@@ -134,8 +135,8 @@ var (
 	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "cancellation already requested for this workflow execution"}
 	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
 	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "exceeded workflow execution limit for signal events"}
-	// ErrEventsAterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
-	ErrEventsAterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
+	// ErrEventsAfterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
+	ErrEventsAfterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
 	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
 	ErrQueryEnteredInvalidState = &workflow.BadRequestError{Message: "query entered invalid state, this should be impossible"}
 	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
@@ -157,7 +158,7 @@ var (
 
 // NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(
-	shard ShardContext,
+	shard shard.Context,
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
 	historyClient hc.Client,
@@ -353,7 +354,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	// Domain change notification follows the following steps, order matters
 	// 1. lock all task processing.
 	// 2. domain changes visible to everyone (Note: lock of task processing prevents task processing logic seeing the domain changes).
-	// 3. failover min and max task levels are calaulated, then update to shard.
+	// 3. failover min and max task levels are calculated, then update to shard.
 	// 4. failover start & task processing unlock & shard domain version notification update. (order does not matter for this discussion)
 	//
 	// The above guarantees that task created during the failover will be processed.
@@ -385,7 +386,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 		},
 		func(prevDomains []*cache.DomainCacheEntry, nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
-				e.txProcessor.UnlockTaskPrrocessing()
+				e.txProcessor.UnlockTaskProcessing()
 				e.timerProcessor.UnlockTaskProcessing()
 			}()
 
@@ -2663,7 +2664,7 @@ func (e *historyEngineImpl) getActiveDomainEntry(
 }
 
 func getActiveDomainEntryFromShard(
-	shard ShardContext,
+	shard shard.Context,
 	domainUUID *string,
 ) (*cache.DomainCacheEntry, error) {
 

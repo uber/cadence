@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 const (
@@ -137,7 +138,7 @@ type (
 	workflowExecutionContextImpl struct {
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
-		shard             ShardContext
+		shard             shard.Context
 		engine            engine.Engine
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
@@ -160,7 +161,7 @@ var (
 func newWorkflowExecutionContext(
 	domainID string,
 	execution workflow.WorkflowExecution,
-	shard ShardContext,
+	shard shard.Context,
 	executionManager persistence.ExecutionManager,
 	logger log.Logger,
 ) *workflowExecutionContextImpl {
