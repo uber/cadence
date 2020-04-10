@@ -766,7 +766,7 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 		}
 		successfullyFinishedShards := progressReport.NumberOfShardsFinished - progressReport.NumberOfShardScanFailures
 		if successfullyFinishedShards > 0 {
-			progressReport.ShardExecutionCountsDistribution.AverageExecutions = progressReport.TotalExecutionsCount / successfullyFinishedShards
+			progressReport.ShardExecutionCountsDistribution.AverageExecutions = progressReport.TotalExecutionsCount / int64(successfullyFinishedShards)
 		}
 	}
 
