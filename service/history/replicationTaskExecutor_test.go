@@ -56,19 +56,20 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		currentCluster      string
-		mockResource        *resource.Test
-		mockShard           ShardContext
-		mockEngine          *engine.MockEngine
-		config              *config.Config
-		historyClient       *historyservicetest.MockClient
-		mockDomainCache     *cache.MockDomainCache
-		mockClientBean      *client.MockBean
-		adminClient         *adminservicetest.MockClient
-		clusterMetadata     *cluster.MockMetadata
-		executionManager    *mocks.ExecutionManager
-		nDCHistoryResender  *xdc.MockNDCHistoryResender
-		historyRereplicator *xdc.MockHistoryRereplicator
+		currentCluster         string
+		mockResource           *resource.Test
+		mockShard              ShardContext
+		mockEngine             *engine.MockEngine
+		config                 *config.Config
+		historyClient          *historyservicetest.MockClient
+		replicationTaskFetcher *MockReplicationTaskFetcher
+		mockDomainCache        *cache.MockDomainCache
+		mockClientBean         *client.MockBean
+		adminClient            *adminservicetest.MockClient
+		clusterMetadata        *cluster.MockMetadata
+		executionManager       *mocks.ExecutionManager
+		nDCHistoryResender     *xdc.MockNDCHistoryResender
+		historyRereplicator    *xdc.MockHistoryRereplicator
 
 		replicationTaskHandler *replicationTaskExecutorImpl
 	}
