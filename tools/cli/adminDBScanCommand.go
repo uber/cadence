@@ -147,11 +147,11 @@ type (
 	// ProgressReport contains metadata about the scan for all shards which have been finished
 	// This is periodically printed to stdout
 	ProgressReport struct {
-		NumberOfShardsFinished           int64
+		NumberOfShardsFinished           int
 		TotalExecutionsCount             int64
 		CorruptedExecutionsCount         int64
 		ExecutionCheckFailureCount       int64
-		NumberOfShardScanFailures        int64
+		NumberOfShardScanFailures        int
 		ShardsFailed                     []int
 		PercentageCorrupted              float64
 		PercentageCheckFailure           float64
