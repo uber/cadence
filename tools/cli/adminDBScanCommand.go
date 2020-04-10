@@ -152,6 +152,7 @@ type (
 		CorruptedExecutionsCount         int64
 		ExecutionCheckFailureCount       int64
 		NumberOfShardScanFailures        int64
+		ShardsFailed                     []int
 		PercentageCorrupted              float64
 		PercentageCheckFailure           float64
 		Rates                            Rates
@@ -747,6 +748,7 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 	progressReport.Rates.TimeRunning = time.Now().Sub(startTime).String()
 	if report.Failure != nil {
 		progressReport.NumberOfShardScanFailures++
+		progressReport.ShardsFailed = append(progressReport.ShardsFailed, report.ShardID)
 	}
 	if report.Scanned != nil {
 		progressReport.CorruptedExecutionsCount += report.Scanned.CorruptedExecutionsCount
