@@ -49,6 +49,9 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
@@ -59,7 +62,7 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
-		mockShard                *shardContextTest
+		mockShard                *shard.TestContext
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
@@ -131,8 +134,8 @@ func (s *transferQueueActiveTaskExecutorSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	config := NewDynamicConfigForTest()
-	s.mockShard = newTestShardContext(
+	config := config.NewForTest()
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
@@ -141,20 +144,26 @@ func (s *transferQueueActiveTaskExecutorSuite) SetupTest() {
 		},
 		config,
 	)
-	s.mockShard.eventsCache = newEventsCache(s.mockShard)
-	s.mockShard.resource.TimeSource = s.timeSource
+	s.mockShard.SetEventsCache(events.NewCache(
+		s.mockShard.GetShardID(),
+		s.mockShard.GetHistoryManager(),
+		s.mockShard.GetConfig(),
+		s.mockShard.GetLogger(),
+		s.mockShard.GetMetricsClient(),
+	))
+	s.mockShard.Resource.TimeSource = s.timeSource
 
 	s.mockParentClosePolicyClient = &parentclosepolicy.ClientMock{}
 	s.mockArchivalClient = &warchiver.ClientMock{}
-	s.mockMatchingClient = s.mockShard.resource.MatchingClient
-	s.mockHistoryClient = s.mockShard.resource.HistoryClient
-	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
-	s.mockVisibilityMgr = s.mockShard.resource.VisibilityMgr
-	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
-	s.mockArchivalMetadata = s.mockShard.resource.ArchivalMetadata
-	s.mockArchiverProvider = s.mockShard.resource.ArchiverProvider
-	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockMatchingClient = s.mockShard.Resource.MatchingClient
+	s.mockHistoryClient = s.mockShard.Resource.HistoryClient
+	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockVisibilityMgr = s.mockShard.Resource.VisibilityMgr
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
+	s.mockArchivalMetadata = s.mockShard.Resource.ArchivalMetadata
+	s.mockArchiverProvider = s.mockShard.Resource.ArchiverProvider
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testGlobalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(testDomainName).Return(testGlobalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(testTargetDomainID).Return(testGlobalTargetDomainEntry, nil).AnyTimes()
@@ -181,7 +190,7 @@ func (s *transferQueueActiveTaskExecutorSuite) SetupTest() {
 		logger:               s.logger,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		metricsClient:        s.mockShard.GetMetricsClient(),
-		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
+		historyEventNotifier: events.NewNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
@@ -783,7 +792,7 @@ func (s *transferQueueActiveTaskExecutorSuite) TestProcessCloseExecution_NoParen
 				},
 			},
 		},
-	}, defaultHistoryMaxAutoResetPoints)
+	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
 		WorkflowId: common.StringPtr("child workflow1"),
@@ -893,7 +902,7 @@ func (s *transferQueueActiveTaskExecutorSuite) TestProcessCloseExecution_NoParen
 		ExecutionContext: nil,
 		Identity:         common.StringPtr("some random identity"),
 		Decisions:        decisions,
-	}, defaultHistoryMaxAutoResetPoints)
+	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	for i := 0; i < 10; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
@@ -984,7 +993,7 @@ func (s *transferQueueActiveTaskExecutorSuite) TestProcessCloseExecution_NoParen
 		ExecutionContext: nil,
 		Identity:         common.StringPtr("some random identity"),
 		Decisions:        decisions,
-	}, defaultHistoryMaxAutoResetPoints)
+	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	for i := 0; i < 10; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{

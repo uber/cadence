@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
 
@@ -48,11 +50,11 @@ type (
 )
 
 func newTransferQueueActiveTaskExecutor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	config *Config,
+	config *config.Config,
 ) queueTaskExecutor {
 	return &transferQueueActiveTaskExecutor{
 		transferQueueTaskExecutorBase: newTransferQueueTaskExecutorBase(

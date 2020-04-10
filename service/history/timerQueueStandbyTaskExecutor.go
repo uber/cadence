@@ -32,6 +32,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -45,14 +47,14 @@ type (
 )
 
 func newTimerQueueStandbyTaskExecutor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	clusterName string,
-	config *Config,
+	config *config.Config,
 ) queueTaskExecutor {
 	return &timerQueueStandbyTaskExecutor{
 		timerQueueTaskExecutorBase: newTimerQueueTaskExecutorBase(

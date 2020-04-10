@@ -31,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 var (
@@ -50,11 +52,11 @@ type (
 	timerQueueAckMgrImpl struct {
 		scope               int
 		isFailover          bool
-		shard               ShardContext
+		shard               shard.Context
 		executionMgr        persistence.ExecutionManager
 		logger              log.Logger
 		metricsClient       metrics.Client
-		config              *Config
+		config              *config.Config
 		timeNow             timeNow
 		updateTimerAckLevel updateTimerAckLevel
 		timerQueueShutdown  timerQueueShutdown
@@ -117,7 +119,7 @@ func compareTimerIDLess(first *timerKey, second *timerKey) bool {
 
 func newTimerQueueAckMgr(
 	scope int,
-	shard ShardContext,
+	shard shard.Context,
 	metricsClient metrics.Client,
 	minLevel time.Time,
 	timeNow timeNow,
@@ -153,7 +155,7 @@ func newTimerQueueAckMgr(
 }
 
 func newTimerQueueFailoverAckMgr(
-	shard ShardContext,
+	shard shard.Context,
 	metricsClient metrics.Client,
 	minLevel time.Time,
 	maxLevel time.Time,
