@@ -70,6 +70,7 @@ const (
 
 const (
 	historyPageSize = 1
+	maxDBRetries = 10
 )
 
 var (
@@ -644,15 +645,21 @@ func concreteExecutionStillOpen(
 		},
 	}
 	ce, err := retryGetWorkflowExecution(limiter, totalDBRequests, execStore, getConcreteExecution)
+
 	if err != nil {
-		return &ExecutionCheckFailure{
-			ShardID:    shardID,
-			DomainID:   execution.DomainID,
-			WorkflowID: execution.WorkflowID,
-			RunID:      execution.RunID,
-			Note:       "failed to access concrete execution to verify it is still open",
-			Details:    err.Error(),
-		}, false
+		switch err.(type) {
+		case *shared.EntityNotExistsError:
+			return nil, false
+		default:
+			return &ExecutionCheckFailure{
+				ShardID:    shardID,
+				DomainID:   execution.DomainID,
+				WorkflowID: execution.WorkflowID,
+				RunID:      execution.RunID,
+				Note:       "failed to access concrete execution to verify it is still open",
+				Details:    err.Error(),
+			}, false
+		}
 	}
 
 	return nil, executionOpen(ce.State.ExecutionInfo)
@@ -824,11 +831,17 @@ func retryListConcreteExecutions(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return nil, err
+	var err error
+	// only  add this extra layer of retries for ListConcreteExecutions because a failure
+	// here will cause a scan over a full shard to stop while a failure on any other db will just
+	// result in one failed execution check
+	for i := 0; i < maxDBRetries; i++ {
+		err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+		if err == nil {
+			return resp, nil
+		}
 	}
-	return resp, nil
+	return nil, err
 }
 
 func retryGetWorkflowExecution(
