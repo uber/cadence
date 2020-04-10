@@ -56,6 +56,7 @@ import (
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -109,7 +110,7 @@ type (
 		MergeDLQMessages(ctx ctx.Context, messagesRequest *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
 		RefreshWorkflowTasks(ctx ctx.Context, domainUUID string, execution workflow.WorkflowExecution) error
 
-		NotifyNewHistoryEvent(event *historyEventNotification)
+		NotifyNewHistoryEvent(event *events.Notification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
 		NotifyNewReplicationTasks(tasks []persistence.Task)
 		NotifyNewTimerTasks(tasks []persistence.Task)
@@ -130,7 +131,7 @@ type (
 		nDCReplicator             nDCHistoryReplicator
 		nDCActivityReplicator     nDCActivityReplicator
 		replicatorProcessor       ReplicatorQueueProcessor
-		historyEventNotifier      historyEventNotifier
+		historyEventNotifier      events.Notifier
 		tokenSerializer           common.TaskTokenSerializer
 		historyCache              *historyCache
 		metricsClient             metrics.Client
@@ -208,7 +209,7 @@ func NewEngineWithShardContext(
 	matching matching.Client,
 	historyClient hc.Client,
 	publicClient workflowserviceclient.Interface,
-	historyEventNotifier historyEventNotifier,
+	historyEventNotifier events.Notifier,
 	publisher messaging.Producer,
 	config *config.Config,
 	replicationTaskFetchers ReplicationTaskFetchers,
@@ -790,16 +791,16 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		for {
 			select {
 			case event := <-channel:
-				response.LastFirstEventId = common.Int64Ptr(event.lastFirstEventID)
-				response.NextEventId = common.Int64Ptr(event.nextEventID)
-				response.IsWorkflowRunning = common.BoolPtr(event.workflowCloseState == persistence.WorkflowCloseStatusNone)
-				response.PreviousStartedEventId = common.Int64Ptr(event.previousStartedEventID)
-				response.WorkflowState = common.Int32Ptr(int32(event.workflowState))
-				response.WorkflowCloseState = common.Int32Ptr(int32(event.workflowCloseState))
-				if !bytes.Equal(request.CurrentBranchToken, event.currentBranchToken) {
+				response.LastFirstEventId = common.Int64Ptr(event.LastFirstEventID)
+				response.NextEventId = common.Int64Ptr(event.NextEventID)
+				response.IsWorkflowRunning = common.BoolPtr(event.WorkflowCloseState == persistence.WorkflowCloseStatusNone)
+				response.PreviousStartedEventId = common.Int64Ptr(event.PreviousStartedEventID)
+				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
+				response.WorkflowCloseState = common.Int32Ptr(int32(event.WorkflowCloseState))
+				if !bytes.Equal(request.CurrentBranchToken, event.CurrentBranchToken) {
 					return nil, &workflow.CurrentBranchChangedError{
 						Message:            "Current branch token and request branch token doesn't match.",
-						CurrentBranchToken: event.currentBranchToken}
+						CurrentBranchToken: event.CurrentBranchToken}
 				}
 				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
@@ -2594,7 +2595,7 @@ func (e *historyEngineImpl) failDecision(
 }
 
 func (e *historyEngineImpl) NotifyNewHistoryEvent(
-	event *historyEventNotification,
+	event *events.Notification,
 ) {
 
 	e.historyEventNotifier.NotifyNewHistoryEvent(event)

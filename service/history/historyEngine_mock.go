@@ -37,6 +37,7 @@ import (
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	persistence "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/events"
 )
 
 // MockEngine is a mock of Engine interface
@@ -594,7 +595,7 @@ func (mr *MockEngineMockRecorder) RefreshWorkflowTasks(ctx, domainUUID, executio
 }
 
 // NotifyNewHistoryEvent mocks base method
-func (m *MockEngine) NotifyNewHistoryEvent(event *historyEventNotification) {
+func (m *MockEngine) NotifyNewHistoryEvent(event *events.Notification) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "NotifyNewHistoryEvent", event)
 }

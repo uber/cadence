@@ -224,7 +224,7 @@ func (s *engineSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testLocalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(testDomainName).Return(testLocalDomainEntry, nil).AnyTimes()
 
-	historyEventNotifier := newHistoryEventNotifier(
+	historyEventNotifier := events.NewNotifier(
 		clock.NewRealTimeSource(),
 		s.mockShard.resource.MetricsClient,
 		func(workflowID string) int {
@@ -425,7 +425,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 			WorkflowId: execution.WorkflowId,
 			RunId:      execution.RunId,
 		}
-		s.mockHistoryEngine.historyEventNotifier.NotifyNewHistoryEvent(newHistoryEventNotification(
+		s.mockHistoryEngine.historyEventNotifier.NotifyNewHistoryEvent(events.NewNotification(
 			"testDomainID",
 			newExecution,
 			int64(1),

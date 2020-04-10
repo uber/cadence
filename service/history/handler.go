@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
 )
 
 // Handler - Thrift handler interface for history service
@@ -59,7 +60,7 @@ type (
 		tokenSerializer         common.TaskTokenSerializer
 		startWG                 sync.WaitGroup
 		config                  *config.Config
-		historyEventNotifier    historyEventNotifier
+		historyEventNotifier    events.Notifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers ReplicationTaskFetchers
@@ -179,7 +180,7 @@ func (h *Handler) Start() {
 		h,
 		h.config,
 	)
-	h.historyEventNotifier = newHistoryEventNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
+	h.historyEventNotifier = events.NewNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
