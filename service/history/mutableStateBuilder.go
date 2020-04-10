@@ -43,7 +43,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 const (
@@ -147,7 +147,7 @@ type (
 
 		shard           ShardContext
 		clusterMetadata cluster.Metadata
-		eventsCache     eventscache.EventsCache
+		eventsCache     events.Cache
 		config          *config.Config
 		timeSource      clock.TimeSource
 		logger          log.Logger
@@ -159,7 +159,7 @@ var _ mutableState = (*mutableStateBuilder)(nil)
 
 func newMutableStateBuilder(
 	shard ShardContext,
-	eventsCache eventscache.EventsCache,
+	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {
@@ -229,7 +229,7 @@ func newMutableStateBuilder(
 
 func newMutableStateBuilderWithReplicationState(
 	shard ShardContext,
-	eventsCache eventscache.EventsCache,
+	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {
@@ -246,7 +246,7 @@ func newMutableStateBuilderWithReplicationState(
 
 func newMutableStateBuilderWithVersionHistories(
 	shard ShardContext,
-	eventsCache eventscache.EventsCache,
+	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {

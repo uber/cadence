@@ -44,7 +44,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 type (
@@ -110,7 +110,7 @@ func (s *timerQueueActiveTaskExecutorSuite) SetupTest() {
 		},
 		config,
 	)
-	s.mockShard.eventsCache = eventscache.New(
+	s.mockShard.eventsCache = events.NewCache(
 		s.mockShard.GetShardID(),
 		s.mockShard.GetHistoryManager(),
 		s.mockShard.GetConfig(),

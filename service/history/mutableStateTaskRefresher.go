@@ -32,7 +32,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 var emptyTasks = []persistence.Task{}
@@ -45,7 +45,7 @@ type (
 	mutableStateTaskRefresherImpl struct {
 		config      *config.Config
 		domainCache cache.DomainCache
-		eventsCache eventscache.EventsCache
+		eventsCache events.Cache
 		logger      log.Logger
 	}
 )
@@ -53,7 +53,7 @@ type (
 func newMutableStateTaskRefresher(
 	config *config.Config,
 	domainCache cache.DomainCache,
-	eventsCache eventscache.EventsCache,
+	eventsCache events.Cache,
 	logger log.Logger,
 ) *mutableStateTaskRefresherImpl {
 

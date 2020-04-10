@@ -40,7 +40,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 type (
@@ -50,7 +50,7 @@ type (
 
 		controller      *gomock.Controller
 		mockShard       *shardContextTest
-		mockEventsCache *eventscache.MockEventsCache
+		mockEventsCache *events.MockCache
 
 		msBuilder *mutableStateBuilder
 		logger    log.Logger
@@ -75,7 +75,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockEventsCache = eventscache.NewMockEventsCache(s.controller)
+	s.mockEventsCache = events.NewMockCache(s.controller)
 
 	s.mockShard = newTestShardContext(
 		s.controller,

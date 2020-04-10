@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package eventscache
+package events
 
 import (
 	"errors"
@@ -46,7 +46,7 @@ type (
 		logger             log.Logger
 		mockHistoryManager *mocks.HistoryV2Manager
 
-		cache *eventsCacheImpl
+		cache *cacheImpl
 	}
 )
 
@@ -77,8 +77,8 @@ func (s *eventsCacheSuite) TearDownTest() {
 	s.mockHistoryManager.AssertExpectations(s.T())
 }
 
-func (s *eventsCacheSuite) newTestEventsCache() *eventsCacheImpl {
-	return newWithOption(16, 32, time.Minute, s.mockHistoryManager, false, s.logger,
+func (s *eventsCacheSuite) newTestEventsCache() *cacheImpl {
+	return newCacheWithOption(16, 32, time.Minute, s.mockHistoryManager, false, s.logger,
 		metrics.NewClient(tally.NoopScope, metrics.History), common.IntPtr(10))
 }
 

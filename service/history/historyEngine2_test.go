@@ -47,7 +47,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 type (
@@ -60,7 +60,7 @@ type (
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
-		mockEventsCache          *eventscache.MockEventsCache
+		mockEventsCache          *events.MockCache
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
 

@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination eventsCache_mock.go
+//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination cache_mock.go
 
-package eventscache
+package events
 
 import (
 	"time"
@@ -35,8 +35,8 @@ import (
 )
 
 type (
-	// EventsCache caches workflow history event
-	EventsCache interface {
+	// Cache caches workflow history event
+	Cache interface {
 		GetEvent(
 			domainID string,
 			workflowID string,
@@ -60,7 +60,7 @@ type (
 		)
 	}
 
-	eventsCacheImpl struct {
+	cacheImpl struct {
 		cache.Cache
 		historyManager persistence.HistoryManager
 		disabled       bool
@@ -81,17 +81,17 @@ var (
 	errEventNotFoundInBatch = &shared.InternalServiceError{Message: "History event not found within expected batch"}
 )
 
-var _ EventsCache = (*eventsCacheImpl)(nil)
+var _ Cache = (*cacheImpl)(nil)
 
-// New creates a new EventsCache
-func New(
+// NewCache creates a new events cache
+func NewCache(
 	shardID int,
 	historyManager persistence.HistoryManager,
 	config *config.Config,
 	logger log.Logger,
 	metricsClient metrics.Client,
-) EventsCache {
-	return newWithOption(
+) Cache {
+	return newCacheWithOption(
 		config.EventsCacheInitialSize(),
 		config.EventsCacheMaxSize(),
 		config.EventsCacheTTL(),
@@ -103,7 +103,7 @@ func New(
 	)
 }
 
-func newWithOption(
+func newCacheWithOption(
 	initialSize int,
 	maxSize int,
 	ttl time.Duration,
@@ -112,12 +112,12 @@ func newWithOption(
 	logger log.Logger,
 	metrics metrics.Client,
 	shardID *int,
-) *eventsCacheImpl {
+) *cacheImpl {
 	opts := &cache.Options{}
 	opts.InitialCapacity = initialSize
 	opts.TTL = ttl
 
-	return &eventsCacheImpl{
+	return &cacheImpl{
 		Cache:          cache.New(maxSize, opts),
 		historyManager: historyManager,
 		disabled:       disabled,
@@ -136,7 +136,7 @@ func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
 	}
 }
 
-func (e *eventsCacheImpl) GetEvent(domainID, workflowID, runID string, firstEventID, eventID int64,
+func (e *cacheImpl) GetEvent(domainID, workflowID, runID string, firstEventID, eventID int64,
 	branchToken []byte) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetEventScope, metrics.CacheLatency)
@@ -168,7 +168,7 @@ func (e *eventsCacheImpl) GetEvent(domainID, workflowID, runID string, firstEven
 	return event, nil
 }
 
-func (e *eventsCacheImpl) PutEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
+func (e *cacheImpl) PutEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
 	e.metricsClient.IncCounter(metrics.EventsCachePutEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCachePutEventScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -177,7 +177,7 @@ func (e *eventsCacheImpl) PutEvent(domainID, workflowID, runID string, eventID i
 	e.Put(key, event)
 }
 
-func (e *eventsCacheImpl) DeleteEvent(domainID, workflowID, runID string, eventID int64) {
+func (e *cacheImpl) DeleteEvent(domainID, workflowID, runID string, eventID int64) {
 	e.metricsClient.IncCounter(metrics.EventsCacheDeleteEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheDeleteEventScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -186,7 +186,7 @@ func (e *eventsCacheImpl) DeleteEvent(domainID, workflowID, runID string, eventI
 	e.Delete(key)
 }
 
-func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID string, firstEventID, eventID int64,
+func (e *cacheImpl) getHistoryEventFromStore(domainID, workflowID, runID string, firstEventID, eventID int64,
 	branchToken []byte) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetFromStoreScope, metrics.CacheLatency)

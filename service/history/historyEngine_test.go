@@ -54,7 +54,7 @@ import (
 	cconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 type (
@@ -77,7 +77,7 @@ type (
 		mockHistoryV2Mgr  *mocks.HistoryV2Manager
 		mockShardManager  *mocks.ShardManager
 
-		eventsCache eventscache.EventsCache
+		eventsCache events.Cache
 		config      *config.Config
 	}
 )
@@ -201,7 +201,7 @@ func (s *engineSuite) SetupTest() {
 		},
 		s.config,
 	)
-	s.eventsCache = eventscache.New(
+	s.eventsCache = events.NewCache(
 		s.mockShard.GetShardID(),
 		s.mockShard.GetHistoryManager(),
 		s.config,
@@ -5128,7 +5128,7 @@ func addFailWorkflowEvent(
 	return event
 }
 
-func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache eventscache.EventsCache,
+func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache events.Cache,
 	logger log.Logger, runID string) *mutableStateBuilder {
 
 	msBuilder := newMutableStateBuilder(shard, eventsCache, logger, testLocalDomainEntry)
@@ -5137,7 +5137,7 @@ func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache eventscac
 	return msBuilder
 }
 
-func newMutableStateBuilderWithReplicationStateWithEventV2(shard ShardContext, eventsCache eventscache.EventsCache,
+func newMutableStateBuilderWithReplicationStateWithEventV2(shard ShardContext, eventsCache events.Cache,
 	logger log.Logger, version int64, runID string) *mutableStateBuilder {
 
 	msBuilder := newMutableStateBuilderWithReplicationState(shard, eventsCache, logger, testGlobalDomainEntry)

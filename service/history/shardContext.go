@@ -40,7 +40,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 )
 
 type (
@@ -53,7 +53,7 @@ type (
 		GetDomainCache() cache.DomainCache
 		GetClusterMetadata() cluster.Metadata
 		GetConfig() *config.Config
-		GetEventsCache() eventscache.EventsCache
+		GetEventsCache() events.Cache
 		GetLogger() log.Logger
 		GetThrottledLogger() log.Logger
 		GetMetricsClient() metrics.Client
@@ -117,7 +117,7 @@ type (
 		shardID          int
 		rangeID          int64
 		executionManager persistence.ExecutionManager
-		eventsCache      eventscache.EventsCache
+		eventsCache      events.Cache
 		closeCallback    func(int, *historyShardsItem)
 		closed           int32
 		config           *config.Config
@@ -854,7 +854,7 @@ func (s *shardContextImpl) PreviousShardOwnerWasDifferent() bool {
 	return s.previousShardOwnerWasDifferent
 }
 
-func (s *shardContextImpl) GetEventsCache() eventscache.EventsCache {
+func (s *shardContextImpl) GetEventsCache() events.Cache {
 	return s.eventsCache
 }
 
@@ -1249,7 +1249,7 @@ func acquireShard(
 		throttledLogger:                shardItem.throttledLogger,
 		previousShardOwnerWasDifferent: ownershipChanged,
 	}
-	context.eventsCache = eventscache.New(
+	context.eventsCache = events.NewCache(
 		context.shardID,
 		context.Resource.GetHistoryManager(),
 		context.config,

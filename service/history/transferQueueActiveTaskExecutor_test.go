@@ -50,7 +50,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/eventscache"
+	"github.com/uber/cadence/service/history/events"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
@@ -143,7 +143,7 @@ func (s *transferQueueActiveTaskExecutorSuite) SetupTest() {
 		},
 		config,
 	)
-	s.mockShard.eventsCache = eventscache.New(
+	s.mockShard.eventsCache = events.NewCache(
 		s.mockShard.GetShardID(),
 		s.mockShard.GetHistoryManager(),
 		s.mockShard.GetConfig(),
