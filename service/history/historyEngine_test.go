@@ -63,7 +63,7 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
-		mockShard                *shard.ContextTest
+		mockShard                *shard.TestContext
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor

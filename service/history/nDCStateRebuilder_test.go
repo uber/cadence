@@ -50,7 +50,7 @@ type (
 		*require.Assertions
 
 		controller          *gomock.Controller
-		mockShard           *shard.ContextTest
+		mockShard           *shard.TestContext
 		mockEventsCache     *events.MockCache
 		mockTaskRefresher   *MockmutableStateTaskRefresher
 		mockDomainCache     *cache.MockDomainCache

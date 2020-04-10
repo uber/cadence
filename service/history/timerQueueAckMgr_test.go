@@ -45,7 +45,7 @@ type (
 		*require.Assertions
 
 		controller          *gomock.Controller
-		mockShard           *shard.ContextTest
+		mockShard           *shard.TestContext
 		mockClusterMetadata *cluster.MockMetadata
 
 		mockExecutionMgr *mocks.ExecutionManager
@@ -61,7 +61,7 @@ type (
 		*require.Assertions
 
 		controller          *gomock.Controller
-		mockShard           *shard.ContextTest
+		mockShard           *shard.TestContext
 		mockClusterMetadata *cluster.MockMetadata
 
 		mockExecutionMgr *mocks.ExecutionManager

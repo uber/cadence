@@ -54,7 +54,7 @@ type (
 		*require.Assertions
 
 		controller             *gomock.Controller
-		mockShard              *shard.ContextTest
+		mockShard              *shard.TestContext
 		mockDomainCache        *cache.MockDomainCache
 		mockClusterMetadata    *cluster.MockMetadata
 		mockNDCHistoryResender *xdc.MockNDCHistoryResender

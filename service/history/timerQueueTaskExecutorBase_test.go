@@ -47,7 +47,7 @@ type (
 		*require.Assertions
 
 		controller                   *gomock.Controller
-		mockShard                    *shard.ContextTest
+		mockShard                    *shard.TestContext
 		mockWorkflowExecutionContext *MockworkflowExecutionContext
 		mockMutableState             *MockmutableState
 

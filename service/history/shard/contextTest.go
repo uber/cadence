@@ -33,22 +33,22 @@ import (
 	"github.com/uber/cadence/service/history/events"
 )
 
-// ContextTest is a test implementation for shard Context interface
-type ContextTest struct {
+// TestContext is a test implementation for shard Context interface
+type TestContext struct {
 	*contextImpl
 
 	Resource        *resource.Test
 	MockEventsCache *events.MockCache
 }
 
-var _ Context = (*ContextTest)(nil)
+var _ Context = (*TestContext)(nil)
 
 // NewTestContext create a new shardContext for test
 func NewTestContext(
 	ctrl *gomock.Controller,
 	shardInfo *persistence.ShardInfo,
 	config *config.Config,
-) *ContextTest {
+) *TestContext {
 	resource := resource.NewTest(ctrl, metrics.History)
 	eventsCache := events.NewMockCache(ctrl)
 	shard := &contextImpl{
@@ -67,7 +67,7 @@ func NewTestContext(
 		remoteClusterCurrentTime:  make(map[string]time.Time),
 		eventsCache:               eventsCache,
 	}
-	return &ContextTest{
+	return &TestContext{
 		contextImpl:     shard,
 		Resource:        resource,
 		MockEventsCache: eventsCache,
@@ -75,12 +75,12 @@ func NewTestContext(
 }
 
 // ShardInfo is a test hook for getting shard info
-func (s *ContextTest) ShardInfo() *persistence.ShardInfo {
+func (s *TestContext) ShardInfo() *persistence.ShardInfo {
 	return s.shardInfo
 }
 
 // SetEventsCache is a test hook for setting events cache
-func (s *ContextTest) SetEventsCache(
+func (s *TestContext) SetEventsCache(
 	eventsCache events.Cache,
 ) {
 	s.eventsCache = eventsCache
@@ -88,7 +88,7 @@ func (s *ContextTest) SetEventsCache(
 }
 
 // Finish checks whether expectations are met
-func (s *ContextTest) Finish(
+func (s *TestContext) Finish(
 	t mock.TestingT,
 ) {
 	s.Resource.Finish(t)

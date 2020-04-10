@@ -44,7 +44,7 @@ type (
 		*require.Assertions
 
 		controller *gomock.Controller
-		mockShard  *shard.ContextTest
+		mockShard  *shard.TestContext
 
 		mockProcessor *MockProcessor
 
@@ -57,7 +57,7 @@ type (
 		*require.Assertions
 
 		controller *gomock.Controller
-		mockShard  *shard.ContextTest
+		mockShard  *shard.TestContext
 
 		mockProcessor *MockProcessor
 

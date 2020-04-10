@@ -55,7 +55,7 @@ type (
 		controller *gomock.Controller
 
 		currentCluster         string
-		mockShard              *shard.ContextTest
+		mockShard              *shard.TestContext
 		mockEngine             *engine.MockEngine
 		config                 *config.Config
 		historyClient          *historyservicetest.MockClient
