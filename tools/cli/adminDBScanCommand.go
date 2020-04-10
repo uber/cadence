@@ -48,6 +48,8 @@ type (
 	CorruptionType string
 	// VerificationResult is the result of running a verification
 	VerificationResult int
+	// ShardScanReportState indicates the state of the shard scan
+	ShardScanReportState string
 )
 
 const (
@@ -66,6 +68,13 @@ const (
 	VerificationResultDetectedCorruption
 	// VerificationResultCheckFailure indicates there was a failure to check corruption
 	VerificationResultCheckFailure
+)
+
+const (
+	// ShardScanReportStateRunning indicates the shard scan is running
+	ShardScanReportStateRunning ShardScanReportState = "running"
+	// ShardScanReportStateFinished indicates the shard scan is finished
+	ShardScanReportStateFinished = "finished"
 )
 
 const (
@@ -126,6 +135,7 @@ type (
 	ShardScanReport struct {
 		ShardID         int
 		TotalDBRequests int64
+		State           ShardScanReportState
 		Scanned         *ShardScanReportExecutionsScanned
 		Failure         *ShardScanReportFailure
 	}
@@ -257,12 +267,14 @@ func scanShard(
 	outputFiles, closeFn := createShardScanOutputFiles(shardID, scanOutputDirectories)
 	report := &ShardScanReport{
 		ShardID: shardID,
+		State:   ShardScanReportStateRunning,
 	}
 	checkFailureWriter := NewBufferedWriter(outputFiles.ExecutionCheckFailureFile)
 	corruptedExecutionWriter := NewBufferedWriter(outputFiles.CorruptedExecutionFile)
 	defer func() {
 		checkFailureWriter.Flush()
 		corruptedExecutionWriter.Flush()
+		report.State = ShardScanReportStateFinished
 		recordShardScanReport(outputFiles.ShardScanReportFile, report)
 		deleteEmptyFiles(outputFiles.CorruptedExecutionFile, outputFiles.ExecutionCheckFailureFile, outputFiles.ShardScanReportFile)
 		closeFn()
