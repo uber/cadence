@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 )
 
@@ -60,8 +61,8 @@ type (
 		GetTimeSource() clock.TimeSource
 		PreviousShardOwnerWasDifferent() bool
 
-		GetEngine() Engine
-		SetEngine(Engine)
+		GetEngine() engine.Engine
+		SetEngine(engine.Engine)
 
 		GenerateTransferTaskID() (int64, error)
 		GenerateTransferTaskIDs(number int) ([]int64, error)
@@ -123,7 +124,7 @@ type (
 		config           *config.Config
 		logger           log.Logger
 		throttledLogger  log.Logger
-		engine           Engine
+		engine           engine.Engine
 
 		sync.RWMutex
 		lastUpdated               time.Time
@@ -164,11 +165,11 @@ func (s *shardContextImpl) GetExecutionManager() persistence.ExecutionManager {
 	return s.executionManager
 }
 
-func (s *shardContextImpl) GetEngine() Engine {
+func (s *shardContextImpl) GetEngine() engine.Engine {
 	return s.engine
 }
 
-func (s *shardContextImpl) SetEngine(engine Engine) {
+func (s *shardContextImpl) SetEngine(engine engine.Engine) {
 	s.engine = engine
 }
 

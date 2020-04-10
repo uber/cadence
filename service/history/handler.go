@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 )
 
@@ -211,7 +212,7 @@ func (h *Handler) isShuttingDown() bool {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(
 	shardContext ShardContext,
-) Engine {
+) engine.Engine {
 	return NewEngineWithShardContext(
 		shardContext,
 		h.GetVisibilityManager(),

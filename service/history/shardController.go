@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 )
 
 const (
@@ -72,7 +73,7 @@ type (
 
 		sync.RWMutex
 		status historyShardsItemStatus
-		engine Engine
+		engine engine.Engine
 	}
 )
 
@@ -166,12 +167,12 @@ func (c *shardController) isShuttingDown() bool {
 	return atomic.LoadInt32(&c.shuttingDown) != 0
 }
 
-func (c *shardController) GetEngine(workflowID string) (Engine, error) {
+func (c *shardController) GetEngine(workflowID string) (engine.Engine, error) {
 	shardID := c.config.GetShardID(workflowID)
 	return c.getEngineForShard(shardID)
 }
 
-func (c *shardController) getEngineForShard(shardID int) (Engine, error) {
+func (c *shardController) getEngineForShard(shardID int) (engine.Engine, error) {
 	sw := c.metricsScope.StartTimer(metrics.GetEngineForShardLatency)
 	defer sw.Stop()
 	item, err := c.getOrCreateHistoryShardItem(shardID)
@@ -378,7 +379,7 @@ func (c *shardController) shardIDs() []int32 {
 
 func (i *historyShardsItem) getOrCreateEngine(
 	closeCallback func(int, *historyShardsItem),
-) (Engine, error) {
+) (engine.Engine, error) {
 	i.RLock()
 	if i.status == historyShardsItemStatusStarted {
 		defer i.RUnlock()

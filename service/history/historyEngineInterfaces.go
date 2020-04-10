@@ -28,12 +28,13 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/service/history/engine"
 )
 
 type (
 	// EngineFactory is used to create an instance of sharded history engine
 	EngineFactory interface {
-		CreateEngine(context ShardContext) Engine
+		CreateEngine(context ShardContext) engine.Engine
 	}
 
 	queueProcessor interface {

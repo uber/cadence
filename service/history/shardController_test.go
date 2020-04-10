@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 )
 
 type (
@@ -51,7 +52,7 @@ type (
 
 		controller          *gomock.Controller
 		mockResource        *resource.Test
-		mockHistoryEngine   *MockEngine
+		mockHistoryEngine   *engine.MockEngine
 		mockClusterMetadata *cluster.MockMetadata
 		mockServiceResolver *membership.MockServiceResolver
 
@@ -75,7 +76,7 @@ func (s *shardControllerSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.History)
-	s.mockHistoryEngine = NewMockEngine(s.controller)
+	s.mockHistoryEngine = engine.NewMockEngine(s.controller)
 
 	s.mockEngineFactory = &MockHistoryEngineFactory{}
 	s.mockShardManager = s.mockResource.ShardMgr
@@ -422,9 +423,9 @@ func (s *shardControllerSuite) TestHistoryEngineClosed() {
 	numShards := 4
 	s.config.NumberOfShards = numShards
 	s.shardController = newShardController(s.mockResource, s.mockEngineFactory, s.config)
-	historyEngines := make(map[int]*MockEngine)
+	historyEngines := make(map[int]*engine.MockEngine)
 	for shardID := 0; shardID < numShards; shardID++ {
-		mockEngine := NewMockEngine(s.controller)
+		mockEngine := engine.NewMockEngine(s.controller)
 		historyEngines[shardID] = mockEngine
 		s.setupMocksForAcquireShard(shardID, mockEngine, 5, 6)
 	}
@@ -510,9 +511,9 @@ func (s *shardControllerSuite) TestShardControllerClosed() {
 	numShards := 4
 	s.config.NumberOfShards = numShards
 	s.shardController = newShardController(s.mockResource, s.mockEngineFactory, s.config)
-	historyEngines := make(map[int]*MockEngine)
+	historyEngines := make(map[int]*engine.MockEngine)
 	for shardID := 0; shardID < numShards; shardID++ {
-		mockEngine := NewMockEngine(s.controller)
+		mockEngine := engine.NewMockEngine(s.controller)
 		historyEngines[shardID] = mockEngine
 		s.setupMocksForAcquireShard(shardID, mockEngine, 5, 6)
 	}
@@ -554,7 +555,7 @@ func (s *shardControllerSuite) TestShardControllerClosed() {
 	workerWG.Wait()
 }
 
-func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *MockEngine, currentRangeID,
+func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *engine.MockEngine, currentRangeID,
 	newRangeID int64) {
 
 	replicationAck := int64(201)

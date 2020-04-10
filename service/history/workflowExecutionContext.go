@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 )
 
@@ -137,7 +138,7 @@ type (
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
-		engine            Engine
+		engine            engine.Engine
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
 		metricsClient     metrics.Client

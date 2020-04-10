@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 )
 
 const (
@@ -64,7 +65,7 @@ type (
 		sourceCluster           string
 		status                  int32
 		shard                   ShardContext
-		historyEngine           Engine
+		historyEngine           engine.Engine
 		historySerializer       persistence.PayloadSerializer
 		config                  *config.Config
 		metricsClient           metrics.Client
@@ -97,7 +98,7 @@ type (
 // NewReplicationTaskProcessor creates a new replication task processor.
 func NewReplicationTaskProcessor(
 	shard ShardContext,
-	historyEngine Engine,
+	historyEngine engine.Engine,
 	config *config.Config,
 	metricsClient metrics.Client,
 	replicationTaskFetcher ReplicationTaskFetcher,

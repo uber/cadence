@@ -20,7 +20,11 @@
 
 package history
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/stretchr/testify/mock"
+
+	"github.com/uber/cadence/service/history/engine"
+)
 
 // MockHistoryEngineFactory is mock implementation for HistoryEngineFactory
 type MockHistoryEngineFactory struct {
@@ -28,15 +32,15 @@ type MockHistoryEngineFactory struct {
 }
 
 // CreateEngine is mock implementation for CreateEngine of HistoryEngineFactory
-func (_m *MockHistoryEngineFactory) CreateEngine(context ShardContext) Engine {
+func (_m *MockHistoryEngineFactory) CreateEngine(context ShardContext) engine.Engine {
 	ret := _m.Called(context)
 
-	var r0 Engine
-	if rf, ok := ret.Get(0).(func(ShardContext) Engine); ok {
+	var r0 engine.Engine
+	if rf, ok := ret.Get(0).(func(ShardContext) engine.Engine); ok {
 		r0 = rf(context)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Engine)
+			r0 = ret.Get(0).(engine.Engine)
 		}
 	}
 

@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 )
 
 type (
@@ -55,7 +56,7 @@ type (
 
 		mockResource            *resource.Test
 		mockShard               ShardContext
-		mockEngine              *MockEngine
+		mockEngine              *engine.MockEngine
 		config                  *config.Config
 		historyClient           *historyservicetest.MockClient
 		replicationTaskFetcher  *MockReplicationTaskFetcher
@@ -107,7 +108,7 @@ func (s *replicationTaskProcessorSuite) SetupTest() {
 		remoteClusterCurrentTime:  make(map[string]time.Time),
 		executionManager:          s.executionManager,
 	}
-	s.mockEngine = NewMockEngine(s.controller)
+	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.config = NewDynamicConfigForTest()
 	s.historyClient = historyservicetest.NewMockClient(s.controller)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
