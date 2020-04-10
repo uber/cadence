@@ -79,7 +79,7 @@ const (
 
 const (
 	historyPageSize = 1
-	maxDBRetries = 10
+	maxDBRetries    = 10
 )
 
 var (
