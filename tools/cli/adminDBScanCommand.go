@@ -72,6 +72,10 @@ const (
 	historyPageSize = 1
 )
 
+var (
+	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
+)
+
 type (
 	// ScanOutputDirectories are the directory paths for output of scan
 	ScanOutputDirectories struct {
@@ -761,9 +765,9 @@ func includeShardInProgressReport(report *ShardScanReport, progressReport *Progr
 	}
 
 	if progressReport.CorruptedExecutionsCount > 0 {
-		progressReport.CorruptionTypeBreakdown.PercentageHistoryMissing = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalHistoryMissing) * 100.0) / float64(progressReport.TotalExecutionsCount))
-		progressReport.CorruptionTypeBreakdown.PercentageInvalidStartEvent = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent) * 100.0) / float64(progressReport.TotalExecutionsCount))
-		progressReport.CorruptionTypeBreakdown.PercentageOpenExecutionInvalidCurrentExecution = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution) * 100.0) / float64(progressReport.TotalExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageHistoryMissing = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalHistoryMissing) * 100.0) / float64(progressReport.CorruptedExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageInvalidStartEvent = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalInvalidFirstEvent) * 100.0) / float64(progressReport.CorruptedExecutionsCount))
+		progressReport.CorruptionTypeBreakdown.PercentageOpenExecutionInvalidCurrentExecution = math.Round((float64(progressReport.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution) * 100.0) / float64(progressReport.CorruptedExecutionsCount))
 	}
 
 	pastTime := time.Now().Sub(startTime)
@@ -817,7 +821,7 @@ func retryListConcreteExecutions(
 		return err
 	}
 
-	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -838,7 +842,7 @@ func retryGetWorkflowExecution(
 		return err
 	}
 
-	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -859,7 +863,7 @@ func retryGetCurrentExecution(
 		return err
 	}
 
-	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -880,7 +884,7 @@ func retryReadHistoryBranch(
 		return err
 	}
 
-	err := backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return nil, err
 	}
