@@ -359,6 +359,7 @@ func scanShard(
 				continue
 			}
 		}
+		recordShardScanReport(outputFiles.ShardScanReportFile, report)
 	}
 	return report
 }
