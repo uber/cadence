@@ -289,13 +289,13 @@ func createCleanOutputDirectories() *CleanOutputDirectories {
 		SuccessfullyCleanedDirectoryPath: fmt.Sprintf("./clean_%v/successfully_cleaned", now),
 		FailedCleanedDirectoryPath:       fmt.Sprintf("./clean_%v/failed_cleaned", now),
 	}
-	if err := os.MkdirAll(cod.ShardCleanReportDirectoryPath, 0766); err != nil {
+	if err := os.MkdirAll(cod.ShardCleanReportDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create ShardCleanReportDirectoryPath", err)
 	}
-	if err := os.MkdirAll(cod.SuccessfullyCleanedDirectoryPath, 0766); err != nil {
+	if err := os.MkdirAll(cod.SuccessfullyCleanedDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create SuccessfullyCleanedDirectoryPath", err)
 	}
-	if err := os.MkdirAll(cod.FailedCleanedDirectoryPath, 0766); err != nil {
+	if err := os.MkdirAll(cod.FailedCleanedDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create FailedCleanedDirectoryPath", err)
 	}
 	fmt.Println("clean results located under: ", fmt.Sprintf("./clean_%v", now))

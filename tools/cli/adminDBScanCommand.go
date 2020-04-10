@@ -48,8 +48,6 @@ type (
 	CorruptionType string
 	// VerificationResult is the result of running a verification
 	VerificationResult int
-	// ShardScanReportState indicates the state of the shard scan
-	ShardScanReportState string
 )
 
 const (
@@ -68,13 +66,6 @@ const (
 	VerificationResultDetectedCorruption
 	// VerificationResultCheckFailure indicates there was a failure to check corruption
 	VerificationResultCheckFailure
-)
-
-const (
-	// ShardScanReportStateRunning indicates the shard scan is running
-	ShardScanReportStateRunning ShardScanReportState = "running"
-	// ShardScanReportStateFinished indicates the shard scan is finished
-	ShardScanReportStateFinished = "finished"
 )
 
 const (
@@ -135,7 +126,6 @@ type (
 	ShardScanReport struct {
 		ShardID         int
 		TotalDBRequests int64
-		State           ShardScanReportState
 		Scanned         *ShardScanReportExecutionsScanned
 		Failure         *ShardScanReportFailure
 	}
@@ -267,14 +257,12 @@ func scanShard(
 	outputFiles, closeFn := createShardScanOutputFiles(shardID, scanOutputDirectories)
 	report := &ShardScanReport{
 		ShardID: shardID,
-		State:   ShardScanReportStateRunning,
 	}
 	checkFailureWriter := NewBufferedWriter(outputFiles.ExecutionCheckFailureFile)
 	corruptedExecutionWriter := NewBufferedWriter(outputFiles.CorruptedExecutionFile)
 	defer func() {
 		checkFailureWriter.Flush()
 		corruptedExecutionWriter.Flush()
-		report.State = ShardScanReportStateFinished
 		recordShardScanReport(outputFiles.ShardScanReportFile, report)
 		deleteEmptyFiles(outputFiles.CorruptedExecutionFile, outputFiles.ExecutionCheckFailureFile, outputFiles.ShardScanReportFile)
 		closeFn()
@@ -377,7 +365,6 @@ func scanShard(
 				continue
 			}
 		}
-		recordShardScanReport(outputFiles.ShardScanReportFile, report)
 	}
 	return report
 }
@@ -727,13 +714,13 @@ func createScanOutputDirectories() *ScanOutputDirectories {
 		ExecutionCheckFailureDirectoryPath: fmt.Sprintf("./scan_%v/execution_check_failure", now),
 		CorruptedExecutionDirectoryPath:    fmt.Sprintf("./scan_%v/corrupted_execution", now),
 	}
-	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0766); err != nil {
+	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create ShardScanFailureDirectoryPath", err)
 	}
-	if err := os.MkdirAll(sod.ExecutionCheckFailureDirectoryPath, 0766); err != nil {
+	if err := os.MkdirAll(sod.ExecutionCheckFailureDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create ExecutionCheckFailureDirectoryPath", err)
 	}
-	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0766); err != nil {
+	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create CorruptedExecutionDirectoryPath", err)
 	}
 	fmt.Println("scan results located under: ", fmt.Sprintf("./scan_%v", now))
