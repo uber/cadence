@@ -24,14 +24,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -40,6 +36,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
