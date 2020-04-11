@@ -25,19 +25,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/client"
-
 	"go.uber.org/yarpc"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -55,8 +56,8 @@ type (
 
 	decisionHandlerImpl struct {
 		currentClusterName    string
-		config                *Config
-		shard                 ShardContext
+		config                *config.Config
+		shard                 shard.Context
 		timeSource            clock.TimeSource
 		historyEngine         *historyEngineImpl
 		domainCache           cache.DomainCache

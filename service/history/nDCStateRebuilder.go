@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -54,9 +55,8 @@ type (
 	}
 
 	nDCStateRebuilderImpl struct {
-		shard           ShardContext
+		shard           shard.Context
 		domainCache     cache.DomainCache
-		eventsCache     eventsCache
 		clusterMetadata cluster.Metadata
 		historyV2Mgr    persistence.HistoryManager
 		taskRefresher   mutableStateTaskRefresher
@@ -69,14 +69,13 @@ type (
 var _ nDCStateRebuilder = (*nDCStateRebuilderImpl)(nil)
 
 func newNDCStateRebuilder(
-	shard ShardContext,
+	shard shard.Context,
 	logger log.Logger,
 ) *nDCStateRebuilderImpl {
 
 	return &nDCStateRebuilderImpl{
 		shard:           shard,
 		domainCache:     shard.GetDomainCache(),
-		eventsCache:     shard.GetEventsCache(),
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		historyV2Mgr:    shard.GetHistoryManager(),
 		taskRefresher: newMutableStateTaskRefresher(

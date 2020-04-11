@@ -42,6 +42,9 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 const (
@@ -143,10 +146,10 @@ type (
 		decisionTaskManager mutableStateDecisionTaskManager
 		queryRegistry       queryRegistry
 
-		shard           ShardContext
+		shard           shard.Context
 		clusterMetadata cluster.Metadata
-		eventsCache     eventsCache
-		config          *Config
+		eventsCache     events.Cache
+		config          *config.Config
 		timeSource      clock.TimeSource
 		logger          log.Logger
 		metricsClient   metrics.Client
@@ -156,8 +159,8 @@ type (
 var _ mutableState = (*mutableStateBuilder)(nil)
 
 func newMutableStateBuilder(
-	shard ShardContext,
-	eventsCache eventsCache,
+	shard shard.Context,
+	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {
@@ -226,8 +229,8 @@ func newMutableStateBuilder(
 }
 
 func newMutableStateBuilderWithReplicationState(
-	shard ShardContext,
-	eventsCache eventsCache,
+	shard shard.Context,
+	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {
@@ -243,8 +246,8 @@ func newMutableStateBuilderWithReplicationState(
 }
 
 func newMutableStateBuilderWithVersionHistories(
-	shard ShardContext,
-	eventsCache eventsCache,
+	shard shard.Context,
+	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {
@@ -304,7 +307,7 @@ func (e *mutableStateBuilder) Load(
 
 	if len(state.Checksum.Value) > 0 {
 		switch {
-		case e.shouldInvalidateCheckum():
+		case e.shouldInvalidateChecksum():
 			e.checksum = checksum.Checksum{}
 			e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumInvalidated)
 		case e.shouldVerifyChecksum():
@@ -954,7 +957,7 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 	if err != nil {
 		return nil, err
 	}
-	scheduledEvent, err := e.eventsCache.getEvent(
+	scheduledEvent, err := e.eventsCache.GetEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
@@ -1021,7 +1024,7 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 	if err != nil {
 		return nil, err
 	}
-	initiatedEvent, err := e.eventsCache.getEvent(
+	initiatedEvent, err := e.eventsCache.GetEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
@@ -1121,7 +1124,7 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 	// Completion EventID is always one less than NextEventID after workflow is completed
 	completionEventID := e.executionInfo.NextEventID - 1
 	firstEventID := e.executionInfo.CompletionEventBatchID
-	completionEvent, err := e.eventsCache.getEvent(
+	completionEvent, err := e.eventsCache.GetEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
@@ -1147,7 +1150,7 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 		return nil, err
 	}
 
-	startEvent, err := e.eventsCache.getEvent(
+	startEvent, err := e.eventsCache.GetEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
@@ -1232,7 +1235,7 @@ func (e *mutableStateBuilder) writeEventToCache(
 	// load it from database
 	// For completion event: store it within events cache so we can communicate the result to parent execution
 	// during the processing of DeleteTransferTask without loading this event from database
-	e.eventsCache.putEvent(
+	e.eventsCache.PutEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
@@ -2109,7 +2112,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
 
 	// Write the event to cache only on active cluster for processing on activity started or retried
-	e.eventsCache.putEvent(
+	e.eventsCache.PutEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
@@ -2444,7 +2447,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCancelRequestedEvent(
 	ai.Version = event.GetVersion()
 
 	// - We have the activity dispatched to worker.
-	// - The activity might not be heartbeat'ing, but the activity can still call RecordActivityHeartBeat()
+	// - The activity might not be heartbeating, but the activity can still call RecordActivityHeartBeat()
 	//   to see cancellation while reporting progress of the activity.
 	ai.CancelRequested = true
 
@@ -3405,7 +3408,7 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 
 	event := e.hBuilder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, attributes)
 	// Write the event to cache only on active cluster
-	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
+	e.eventsCache.PutEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventId(), event)
 
 	ci, err := e.ReplicateStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, event, createRequestID)
@@ -4360,7 +4363,7 @@ func (e *mutableStateBuilder) validateNoEventsAfterWorkflowFinish(
 			tag.WorkflowID(executionInfo.WorkflowID),
 			tag.WorkflowRunID(executionInfo.RunID),
 		)
-		return ErrEventsAterWorkflowFinish
+		return ErrEventsAfterWorkflowFinish
 	}
 }
 
@@ -4623,7 +4626,7 @@ func (e *mutableStateBuilder) shouldVerifyChecksum() bool {
 	return rand.Intn(100) < e.config.MutableStateChecksumVerifyProbability(e.domainEntry.GetInfo().Name)
 }
 
-func (e *mutableStateBuilder) shouldInvalidateCheckum() bool {
+func (e *mutableStateBuilder) shouldInvalidateChecksum() bool {
 	invalidateBeforeEpochSecs := int64(e.config.MutableStateChecksumInvalidateBefore())
 	if invalidateBeforeEpochSecs > 0 {
 		invalidateBefore := time.Unix(invalidateBeforeEpochSecs, 0)

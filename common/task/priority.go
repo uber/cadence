@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,29 +18,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package task
 
-import "github.com/stretchr/testify/mock"
+const (
+	numBitsPerLevel = 3
+)
 
-// MockHistoryEngineFactory is mock implementation for HistoryEngineFactory
-type MockHistoryEngineFactory struct {
-	mock.Mock
+const (
+	// HighPriorityClass is the priority class for high priority tasks
+	HighPriorityClass = iota << numBitsPerLevel
+	// DefaultPriorityClass is the priority class for default priority tasks
+	DefaultPriorityClass
+	// LowPriorityClass is the priority class for low priority tasks
+	LowPriorityClass
+)
+
+const (
+	// HighPrioritySubclass is the priority subclass for high priority tasks
+	HighPrioritySubclass = iota
+	// DefaultPrioritySubclass is the priority subclass for high priority tasks
+	DefaultPrioritySubclass
+	// LowPrioritySubclass is the priority subclass for high priority tasks
+	LowPrioritySubclass
+)
+
+// GetTaskPriority returns priority given a task's priority class and subclass
+func GetTaskPriority(
+	class int,
+	subClass int,
+) int {
+	return class | subClass
 }
-
-// CreateEngine is mock implementation for CreateEngine of HistoryEngineFactory
-func (_m *MockHistoryEngineFactory) CreateEngine(context ShardContext) Engine {
-	ret := _m.Called(context)
-
-	var r0 Engine
-	if rf, ok := ret.Get(0).(func(ShardContext) Engine); ok {
-		r0 = rf(context)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Engine)
-		}
-	}
-
-	return r0
-}
-
-var _ EngineFactory = (*MockHistoryEngineFactory)(nil)

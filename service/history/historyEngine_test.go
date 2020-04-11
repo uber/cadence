@@ -51,8 +51,10 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
-	cconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -61,7 +63,7 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
-		mockShard                *shardContextTest
+		mockShard                *shard.TestContext
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
@@ -75,8 +77,8 @@ type (
 		mockHistoryV2Mgr  *mocks.HistoryV2Manager
 		mockShardManager  *mocks.ShardManager
 
-		eventsCache eventsCache
-		config      *Config
+		eventsCache events.Cache
+		config      *config.Config
 	}
 )
 
@@ -159,22 +161,13 @@ var testGlobalChildDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 	nil,
 )
 
-func NewDynamicConfigForTest() *Config {
-	dc := dynamicconfig.NewNopCollection()
-	config := NewConfig(dc, 1, cconfig.StoreTypeCassandra, false)
-	// reduce the duration of long poll to increase test speed
-	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
-	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, true)
-	return config
-}
-
 func TestEngineSuite(t *testing.T) {
 	s := new(engineSuite)
 	suite.Run(t, s)
 }
 
 func (s *engineSuite) SetupSuite() {
-	s.config = NewDynamicConfigForTest()
+	s.config = config.NewForTest()
 }
 
 func (s *engineSuite) TearDownSuite() {
@@ -191,7 +184,7 @@ func (s *engineSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockShard = newTestShardContext(
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,
@@ -199,16 +192,22 @@ func (s *engineSuite) SetupTest() {
 		},
 		s.config,
 	)
-	s.eventsCache = newEventsCache(s.mockShard)
-	s.mockShard.eventsCache = s.eventsCache
+	s.eventsCache = events.NewCache(
+		s.mockShard.GetShardID(),
+		s.mockShard.GetHistoryManager(),
+		s.config,
+		s.mockShard.GetLogger(),
+		s.mockShard.GetMetricsClient(),
+	)
+	s.mockShard.SetEventsCache(s.eventsCache)
 
-	s.mockMatchingClient = s.mockShard.resource.MatchingClient
-	s.mockHistoryClient = s.mockShard.resource.HistoryClient
-	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
-	s.mockShardManager = s.mockShard.resource.ShardMgr
-	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
-	s.mockDomainCache = s.mockShard.resource.DomainCache
+	s.mockMatchingClient = s.mockShard.Resource.MatchingClient
+	s.mockHistoryClient = s.mockShard.Resource.HistoryClient
+	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockShardManager = s.mockShard.Resource.ShardMgr
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestSingleDCClusterInfo).AnyTimes()
@@ -216,9 +215,9 @@ func (s *engineSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(testDomainID).Return(testLocalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(testDomainName).Return(testLocalDomainEntry, nil).AnyTimes()
 
-	historyEventNotifier := newHistoryEventNotifier(
+	historyEventNotifier := events.NewNotifier(
 		clock.NewRealTimeSource(),
-		s.mockShard.resource.MetricsClient,
+		s.mockShard.Resource.MetricsClient,
 		func(workflowID string) int {
 			return len(workflowID)
 		},
@@ -236,7 +235,7 @@ func (s *engineSuite) SetupTest() {
 		metricsClient:        s.mockShard.GetMetricsClient(),
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyEventNotifier: historyEventNotifier,
-		config:               NewDynamicConfigForTest(),
+		config:               config.NewForTest(),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
@@ -417,7 +416,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 			WorkflowId: execution.WorkflowId,
 			RunId:      execution.RunId,
 		}
-		s.mockHistoryEngine.historyEventNotifier.NotifyNewHistoryEvent(newHistoryEventNotification(
+		s.mockHistoryEngine.historyEventNotifier.NotifyNewHistoryEvent(events.NewNotification(
 			"testDomainID",
 			newExecution,
 			int64(1),
@@ -4917,7 +4916,7 @@ func addDecisionTaskCompletedEvent(builder mutableState, scheduleID, startedID i
 	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &workflow.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         common.StringPtr(identity),
-	}, defaultHistoryMaxAutoResetPoints)
+	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	builder.FlushBufferedEvents() //nolint:errcheck
 
@@ -5120,7 +5119,7 @@ func addFailWorkflowEvent(
 	return event
 }
 
-func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache eventsCache,
+func newMutableStateBuilderWithEventV2(shard shard.Context, eventsCache events.Cache,
 	logger log.Logger, runID string) *mutableStateBuilder {
 
 	msBuilder := newMutableStateBuilder(shard, eventsCache, logger, testLocalDomainEntry)
@@ -5129,7 +5128,7 @@ func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache eventsCac
 	return msBuilder
 }
 
-func newMutableStateBuilderWithReplicationStateWithEventV2(shard ShardContext, eventsCache eventsCache,
+func newMutableStateBuilderWithReplicationStateWithEventV2(shard shard.Context, eventsCache events.Cache,
 	logger log.Logger, version int64, runID string) *mutableStateBuilder {
 
 	msBuilder := newMutableStateBuilderWithReplicationState(shard, eventsCache, logger, testGlobalDomainEntry)

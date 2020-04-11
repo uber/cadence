@@ -46,6 +46,10 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 // Handler - Thrift handler interface for history service
@@ -54,11 +58,11 @@ type (
 		resource.Resource
 
 		shuttingDown            int32
-		controller              *shardController
+		controller              shard.Controller
 		tokenSerializer         common.TaskTokenSerializer
 		startWG                 sync.WaitGroup
-		config                  *Config
-		historyEventNotifier    historyEventNotifier
+		config                  *config.Config
+		historyEventNotifier    events.Notifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers ReplicationTaskFetchers
@@ -67,7 +71,7 @@ type (
 )
 
 var _ historyserviceserver.Interface = (*Handler)(nil)
-var _ EngineFactory = (*Handler)(nil)
+var _ shard.EngineFactory = (*Handler)(nil)
 
 var (
 	errDomainNotSet            = &gen.BadRequestError{Message: "Domain not set on request."}
@@ -86,7 +90,7 @@ var (
 // NewHandler creates a thrift handler for the history service
 func NewHandler(
 	resource resource.Resource,
-	config *Config,
+	config *config.Config,
 ) *Handler {
 	handler := &Handler{
 		Resource:        resource,
@@ -173,12 +177,12 @@ func (h *Handler) Start() {
 		h.queueTaskProcessor.Start()
 	}
 
-	h.controller = newShardController(
+	h.controller = shard.NewShardController(
 		h.Resource,
 		h,
 		h.config,
 	)
-	h.historyEventNotifier = newHistoryEventNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
+	h.historyEventNotifier = events.NewNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
@@ -208,8 +212,8 @@ func (h *Handler) isShuttingDown() bool {
 
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(
-	shardContext ShardContext,
-) Engine {
+	shardContext shard.Context,
+) engine.Engine {
 	return NewEngineWithShardContext(
 		shardContext,
 		h.GetVisibilityManager(),
@@ -695,7 +699,7 @@ func (h *Handler) DescribeHistoryHost(
 
 	numOfItemsInCacheByID, numOfItemsInCacheByName := h.GetDomainCache().GetCacheSize()
 	status := ""
-	switch atomic.LoadInt32(&h.controller.status) {
+	switch h.controller.Status() {
 	case common.DaemonStatusInitialized:
 		status = "initialized"
 	case common.DaemonStatusStarted:
@@ -705,8 +709,8 @@ func (h *Handler) DescribeHistoryHost(
 	}
 
 	resp = &gen.DescribeHistoryHostResponse{
-		NumberOfShards: common.Int32Ptr(int32(h.controller.numShards())),
-		ShardIDs:       h.controller.shardIDs(),
+		NumberOfShards: common.Int32Ptr(int32(h.controller.NumShards())),
+		ShardIDs:       h.controller.ShardIDs(),
 		DomainCache: &gen.DomainCacheInfo{
 			NumOfItemsInCacheByID:   &numOfItemsInCacheByID,
 			NumOfItemsInCacheByName: &numOfItemsInCacheByName,
@@ -751,7 +755,7 @@ func (h *Handler) CloseShard(
 	ctx context.Context,
 	request *gen.CloseShardRequest,
 ) (retError error) {
-	h.controller.removeEngineForShard(int(request.GetShardID()), nil)
+	h.controller.RemoveEngineForShard(int(request.GetShardID()))
 	return nil
 }
 
@@ -1509,7 +1513,7 @@ func (h *Handler) SyncShardStatus(
 	}
 
 	// shard ID is already provided in the request
-	engine, err := h.controller.getEngineForShard(int(syncShardStatusRequest.GetShardId()))
+	engine, err := h.controller.GetEngineForShard(int(syncShardStatusRequest.GetShardId()))
 	if err != nil {
 		return h.error(err, scope, "", "")
 	}
@@ -1598,7 +1602,7 @@ func (h *Handler) GetReplicationMessages(
 		go func(token *r.ReplicationToken) {
 			defer wg.Done()
 
-			engine, err := h.controller.getEngineForShard(int(token.GetShardID()))
+			engine, err := h.controller.GetEngineForShard(int(token.GetShardID()))
 			if err != nil {
 				h.GetLogger().Warn("History engine not found for shard", tag.Error(err))
 				return
@@ -1773,7 +1777,7 @@ func (h *Handler) ReadDLQMessages(
 		return nil, errShuttingDown
 	}
 
-	engine, err := h.controller.getEngineForShard(int(request.GetShardID()))
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
 		return nil, h.error(err, scope, "", "")
 	}
@@ -1799,7 +1803,7 @@ func (h *Handler) PurgeDLQMessages(
 		return errShuttingDown
 	}
 
-	engine, err := h.controller.getEngineForShard(int(request.GetShardID()))
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
 		return h.error(err, scope, "", "")
 	}
@@ -1825,7 +1829,7 @@ func (h *Handler) MergeDLQMessages(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	engine, err := h.controller.getEngineForShard(int(request.GetShardID()))
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
 		return nil, h.error(err, scope, "", "")
 	}
@@ -1880,9 +1884,9 @@ func (h *Handler) convertError(err error) error {
 		shardID := err.(*persistence.ShardOwnershipLostError).ShardID
 		info, err := h.GetHistoryServiceResolver().Lookup(string(shardID))
 		if err == nil {
-			return createShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
+			return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
 		}
-		return createShardOwnershipLostError(h.GetHostInfo().GetAddress(), "")
+		return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), "")
 	case *persistence.WorkflowExecutionAlreadyStartedError:
 		err := err.(*persistence.WorkflowExecutionAlreadyStartedError)
 		return &gen.InternalServiceError{Message: err.Msg}
@@ -1977,18 +1981,6 @@ func (h *Handler) getLoggerWithTags(
 	}
 
 	return logger
-}
-
-func createShardOwnershipLostError(
-	currentHost string,
-	ownerHost string,
-) *hist.ShardOwnershipLostError {
-
-	shardLostErr := &hist.ShardOwnershipLostError{}
-	shardLostErr.Message = common.StringPtr(fmt.Sprintf("Shard is not owned by host: %v", currentHost))
-	shardLostErr.Owner = common.StringPtr(ownerHost)
-
-	return shardLostErr
 }
 
 func validateTaskToken(token *common.TaskToken) error {
