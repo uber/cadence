@@ -25,11 +25,6 @@ import (
 
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/config"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -37,6 +32,11 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/query"
 )
 
 type (
@@ -47,7 +47,7 @@ type (
 		controller *gomock.Controller
 
 		decisionHandler  *decisionHandlerImpl
-		queryRegistry    queryRegistry
+		queryRegistry    query.Registry
 		mockMutableState *MockmutableState
 	}
 )
@@ -88,28 +88,28 @@ func (s *DecisionHandlerSuite) TestHandleBufferedQueries_ClientNotSupports() {
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_HeartbeatDecision() {
 	s.assertQueryCounts(s.queryRegistry, 10, 0, 0, 0)
-	queryResults := s.constructQueryResults(s.queryRegistry.getBufferedIDs()[0:5], 10)
+	queryResults := s.constructQueryResults(s.queryRegistry.GetBufferedIDs()[0:5], 10)
 	s.decisionHandler.handleBufferedQueries(s.mockMutableState, client.GoSDK, client.GoWorkerConsistentQueryVersion, queryResults, false, testGlobalDomainEntry, true)
 	s.assertQueryCounts(s.queryRegistry, 10, 0, 0, 0)
 }
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_NewDecisionTask() {
 	s.assertQueryCounts(s.queryRegistry, 10, 0, 0, 0)
-	queryResults := s.constructQueryResults(s.queryRegistry.getBufferedIDs()[0:5], 10)
+	queryResults := s.constructQueryResults(s.queryRegistry.GetBufferedIDs()[0:5], 10)
 	s.decisionHandler.handleBufferedQueries(s.mockMutableState, client.GoSDK, client.GoWorkerConsistentQueryVersion, queryResults, true, testGlobalDomainEntry, false)
 	s.assertQueryCounts(s.queryRegistry, 5, 5, 0, 0)
 }
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_NoNewDecisionTask() {
 	s.assertQueryCounts(s.queryRegistry, 10, 0, 0, 0)
-	queryResults := s.constructQueryResults(s.queryRegistry.getBufferedIDs()[0:5], 10)
+	queryResults := s.constructQueryResults(s.queryRegistry.GetBufferedIDs()[0:5], 10)
 	s.decisionHandler.handleBufferedQueries(s.mockMutableState, client.GoSDK, client.GoWorkerConsistentQueryVersion, queryResults, false, testGlobalDomainEntry, false)
 	s.assertQueryCounts(s.queryRegistry, 0, 5, 5, 0)
 }
 
 func (s *DecisionHandlerSuite) TestHandleBufferedQueries_QueryTooLarge() {
 	s.assertQueryCounts(s.queryRegistry, 10, 0, 0, 0)
-	bufferedIDs := s.queryRegistry.getBufferedIDs()
+	bufferedIDs := s.queryRegistry.GetBufferedIDs()
 	queryResults := s.constructQueryResults(bufferedIDs[0:5], 10)
 	largeQueryResults := s.constructQueryResults(bufferedIDs[5:10], 10*1024*1024)
 	for k, v := range largeQueryResults {
@@ -130,17 +130,17 @@ func (s *DecisionHandlerSuite) constructQueryResults(ids []string, resultSize in
 	return results
 }
 
-func (s *DecisionHandlerSuite) constructQueryRegistry(numQueries int) queryRegistry {
-	queryRegistry := newQueryRegistry()
+func (s *DecisionHandlerSuite) constructQueryRegistry(numQueries int) query.Registry {
+	queryRegistry := query.NewRegistry()
 	for i := 0; i < numQueries; i++ {
-		queryRegistry.bufferQuery(&shared.WorkflowQuery{})
+		queryRegistry.BufferQuery(&shared.WorkflowQuery{})
 	}
 	return queryRegistry
 }
 
-func (s *DecisionHandlerSuite) assertQueryCounts(queryRegistry queryRegistry, buffered, completed, unblocked, failed int) {
-	s.Len(queryRegistry.getBufferedIDs(), buffered)
-	s.Len(queryRegistry.getCompletedIDs(), completed)
-	s.Len(queryRegistry.getUnblockedIDs(), unblocked)
-	s.Len(queryRegistry.getFailedIDs(), failed)
+func (s *DecisionHandlerSuite) assertQueryCounts(queryRegistry query.Registry, buffered, completed, unblocked, failed int) {
+	s.Len(queryRegistry.GetBufferedIDs(), buffered)
+	s.Len(queryRegistry.GetCompletedIDs(), completed)
+	s.Len(queryRegistry.GetUnblockedIDs(), unblocked)
+	s.Len(queryRegistry.GetFailedIDs(), failed)
 }

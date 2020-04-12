@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -627,10 +628,10 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	response.BranchToken = currentBranchToken
 
 	qr := msBuilder.GetQueryRegistry()
-	buffered := qr.getBufferedIDs()
+	buffered := qr.GetBufferedIDs()
 	queries := make(map[string]*workflow.WorkflowQuery)
 	for _, id := range buffered {
-		input, err := qr.getQueryInput(id)
+		input, err := qr.GetQueryInput(id)
 		if err != nil {
 			continue
 		}
@@ -650,7 +651,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 	decisionHeartbeating bool,
 ) {
 	queryRegistry := msBuilder.GetQueryRegistry()
-	if !queryRegistry.hasBufferedQuery() {
+	if !queryRegistry.HasBufferedQuery() {
 		return
 	}
 
@@ -668,11 +669,11 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 	// buffered queries) but worker does not support consistent query then all buffered queries should be failed.
 	if versionErr := handler.versionChecker.SupportsConsistentQuery(clientImpl, clientFeatureVersion); versionErr != nil {
 		scope.IncCounter(metrics.WorkerNotSupportsConsistentQueryCount)
-		failedTerminationState := &queryTerminationState{
-			queryTerminationType: queryTerminationTypeFailed,
-			failure:              &workflow.BadRequestError{Message: versionErr.Error()},
+		failedTerminationState := &query.TerminationState{
+			TerminationType: query.TerminationTypeFailed,
+			Failure:         &workflow.BadRequestError{Message: versionErr.Error()},
 		}
-		buffered := queryRegistry.getBufferedIDs()
+		buffered := queryRegistry.GetBufferedIDs()
 		handler.logger.Info(
 			"failing query because worker does not support consistent query",
 			tag.WorkflowDomainName(domain),
@@ -680,7 +681,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 			tag.WorkflowRunID(runID),
 			tag.Error(versionErr))
 		for _, id := range buffered {
-			if err := queryRegistry.setTerminationState(id, failedTerminationState); err != nil {
+			if err := queryRegistry.SetTerminationState(id, failedTerminationState); err != nil {
 				handler.logger.Error(
 					"failed to set query termination state to failed",
 					tag.WorkflowDomainName(domain),
@@ -722,11 +723,11 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 				tag.WorkflowRunID(runID),
 				tag.QueryID(id),
 				tag.Error(err))
-			failedTerminationState := &queryTerminationState{
-				queryTerminationType: queryTerminationTypeFailed,
-				failure:              err,
+			failedTerminationState := &query.TerminationState{
+				TerminationType: query.TerminationTypeFailed,
+				Failure:         err,
 			}
-			if err := queryRegistry.setTerminationState(id, failedTerminationState); err != nil {
+			if err := queryRegistry.SetTerminationState(id, failedTerminationState); err != nil {
 				handler.logger.Error(
 					"failed to set query termination state to failed",
 					tag.WorkflowDomainName(domain),
@@ -737,11 +738,11 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			}
 		} else {
-			completedTerminationState := &queryTerminationState{
-				queryTerminationType: queryTerminationTypeCompleted,
-				queryResult:          result,
+			completedTerminationState := &query.TerminationState{
+				TerminationType: query.TerminationTypeCompleted,
+				QueryResult:     result,
 			}
-			if err := queryRegistry.setTerminationState(id, completedTerminationState); err != nil {
+			if err := queryRegistry.SetTerminationState(id, completedTerminationState); err != nil {
 				handler.logger.Error(
 					"failed to set query termination state to completed",
 					tag.WorkflowDomainName(domain),
@@ -757,12 +758,12 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 	// If no decision task was created then it means no buffered events came in during this decision task's handling.
 	// This means all unanswered buffered queries can be dispatched directly through matching at this point.
 	if !createNewDecisionTask {
-		buffered := queryRegistry.getBufferedIDs()
+		buffered := queryRegistry.GetBufferedIDs()
 		for _, id := range buffered {
-			unblockTerminationState := &queryTerminationState{
-				queryTerminationType: queryTerminationTypeUnblocked,
+			unblockTerminationState := &query.TerminationState{
+				TerminationType: query.TerminationTypeUnblocked,
 			}
-			if err := queryRegistry.setTerminationState(id, unblockTerminationState); err != nil {
+			if err := queryRegistry.SetTerminationState(id, unblockTerminationState); err != nil {
 				handler.logger.Error(
 					"failed to set query termination state to unblocked",
 					tag.WorkflowDomainName(domain),

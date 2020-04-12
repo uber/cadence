@@ -38,6 +38,7 @@ import (
 	cache "github.com/uber/cadence/common/cache"
 	definition "github.com/uber/cadence/common/definition"
 	persistence "github.com/uber/cadence/common/persistence"
+	query "github.com/uber/cadence/service/history/query"
 )
 
 // MockmutableState is a mock of mutableState interface
@@ -1415,10 +1416,10 @@ func (mr *MockmutableStateMockRecorder) GetWorkflowStateCloseStatus() *gomock.Ca
 }
 
 // GetQueryRegistry mocks base method
-func (m *MockmutableState) GetQueryRegistry() queryRegistry {
+func (m *MockmutableState) GetQueryRegistry() query.Registry {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetQueryRegistry")
-	ret0, _ := ret[0].(queryRegistry)
+	ret0, _ := ret[0].(query.Registry)
 	return ret0
 }
 

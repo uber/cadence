@@ -56,6 +56,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
@@ -872,23 +873,23 @@ func (e *historyEngineImpl) QueryWorkflow(
 	sw := scope.StartTimer(metrics.DecisionTaskQueryLatency)
 	defer sw.Stop()
 	queryReg := mutableState.GetQueryRegistry()
-	if len(queryReg.getBufferedIDs()) >= e.config.MaxBufferedQueryCount() {
+	if len(queryReg.GetBufferedIDs()) >= e.config.MaxBufferedQueryCount() {
 		scope.IncCounter(metrics.QueryBufferExceededCount)
 		return nil, ErrConsistentQueryBufferExceeded
 	}
-	queryID, termCh := queryReg.bufferQuery(req.GetQuery())
-	defer queryReg.removeQuery(queryID)
+	queryID, termCh := queryReg.BufferQuery(req.GetQuery())
+	defer queryReg.RemoveQuery(queryID)
 	release(nil)
 	select {
 	case <-termCh:
-		state, err := queryReg.getTerminationState(queryID)
+		state, err := queryReg.GetTerminationState(queryID)
 		if err != nil {
 			scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			return nil, err
 		}
-		switch state.queryTerminationType {
-		case queryTerminationTypeCompleted:
-			result := state.queryResult
+		switch state.TerminationType {
+		case query.TerminationTypeCompleted:
+			result := state.QueryResult
 			switch result.GetResultType() {
 			case workflow.QueryResultTypeAnswered:
 				return &h.QueryWorkflowResponse{
@@ -902,15 +903,15 @@ func (e *historyEngineImpl) QueryWorkflow(
 				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 				return nil, ErrQueryEnteredInvalidState
 			}
-		case queryTerminationTypeUnblocked:
+		case query.TerminationTypeUnblocked:
 			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
 			if err != nil {
 				return nil, err
 			}
 			req.Execution.RunId = msResp.Execution.RunId
 			return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req, scope)
-		case queryTerminationTypeFailed:
-			return nil, state.failure
+		case query.TerminationTypeFailed:
+			return nil, state.Failure
 		default:
 			scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 			return nil, ErrQueryEnteredInvalidState

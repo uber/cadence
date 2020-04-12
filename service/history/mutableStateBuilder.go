@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -144,7 +145,7 @@ type (
 
 		taskGenerator       mutableStateTaskGenerator
 		decisionTaskManager mutableStateDecisionTaskManager
-		queryRegistry       queryRegistry
+		queryRegistry       query.Registry
 
 		shard           shard.Context
 		clusterMetadata cluster.Metadata
@@ -199,7 +200,7 @@ func newMutableStateBuilder(
 		domainEntry:           domainEntry,
 		appliedEvents:         make(map[string]struct{}),
 
-		queryRegistry: newQueryRegistry(),
+		queryRegistry: query.NewRegistry(),
 
 		shard:           shard,
 		clusterMetadata: shard.GetClusterMetadata(),
@@ -935,7 +936,7 @@ func (e *mutableStateBuilder) GetWorkflowType() *workflow.WorkflowType {
 	return wType
 }
 
-func (e *mutableStateBuilder) GetQueryRegistry() queryRegistry {
+func (e *mutableStateBuilder) GetQueryRegistry() query.Registry {
 	return e.queryRegistry
 }
 

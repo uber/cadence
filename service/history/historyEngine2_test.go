@@ -48,6 +48,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -628,10 +629,10 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	s.NoError(err)
 	loadedMS, err := ctx.loadWorkflowExecution()
 	s.NoError(err)
-	qr := newQueryRegistry()
-	id1, _ := qr.bufferQuery(&workflow.WorkflowQuery{})
-	id2, _ := qr.bufferQuery(&workflow.WorkflowQuery{})
-	id3, _ := qr.bufferQuery(&workflow.WorkflowQuery{})
+	qr := query.NewRegistry()
+	id1, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
+	id2, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
+	id3, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
 	loadedMS.(*mutableStateBuilder).queryRegistry = qr
 	release(nil)
 

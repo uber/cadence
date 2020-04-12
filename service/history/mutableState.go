@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/query"
 )
 
 type (
@@ -147,7 +148,7 @@ type (
 		GetUserTimerInfo(string) (*persistence.TimerInfo, bool)
 		GetWorkflowType() *workflow.WorkflowType
 		GetWorkflowStateCloseStatus() (int, int)
-		GetQueryRegistry() queryRegistry
+		GetQueryRegistry() query.Registry
 		HasBufferedEvents() bool
 		HasInFlightDecision() bool
 		HasParentExecution() bool
