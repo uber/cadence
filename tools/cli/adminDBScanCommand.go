@@ -164,7 +164,7 @@ type (
 		AverageExecutions         int64
 	}
 
-	// ExecutionStats breaks own execution level stats
+	// ExecutionStats breaks down execution level stats
 	ExecutionStats struct {
 		TotalExecutionsCount int64
 		CorruptionStats      CorruptionStats
