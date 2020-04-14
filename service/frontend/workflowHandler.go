@@ -1964,7 +1964,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		token.IsWorkflowRunning = isWorkflowRunning
 		token.PersistenceToken = nil
 	}
-	rawHistoryQueryEnabled := wh.config.SendRawWorkflowHistory(getRequest.GetDomain())
+	rawHistoryQueryEnabled := wh.config.SendRawWorkflowHistory(getRequest.GetDomain()) && getRequest.GetRawHistorySupported()
 
 	history := &gen.History{}
 	history.Events = []*gen.HistoryEvent{}
