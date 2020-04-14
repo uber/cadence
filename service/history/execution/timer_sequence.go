@@ -33,8 +33,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-// TimerType indicates timer type
 type (
+	// TimerType indicates timer type
 	TimerType int32
 )
 
@@ -115,7 +115,7 @@ func (t *timerSequenceImpl) IsExpired(
 	TimerSequenceID TimerSequenceID,
 ) bool {
 
-	// Cassandra Timestamp resolution is in millisecond
+	// Cassandra timestamp resolution is in millisecond
 	// here we do the check in terms of second resolution.
 	return TimerSequenceID.Timestamp.Unix() <= referenceTime.Unix()
 }
@@ -435,9 +435,9 @@ func TimerTypeFromThrift(
 
 // TimerTypeToReason creates timeout reason based on the TimeType
 func TimerTypeToReason(
-	TimerType TimerType,
+	timerType TimerType,
 ) string {
-	return fmt.Sprintf("cadenceInternal:Timeout %v", TimerTypeToThrift(TimerType))
+	return fmt.Sprintf("cadenceInternal:Timeout %v", TimerTypeToThrift(timerType))
 }
 
 // Len implements sort.Interface

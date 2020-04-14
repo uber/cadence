@@ -45,11 +45,11 @@ type (
 		*require.Assertions
 		suite.Suite
 
-		controller *gomock.Controller
-
-		decisionHandler  *decisionHandlerImpl
-		queryRegistry    query.Registry
+		controller       *gomock.Controller
 		mockMutableState *execution.MockMutableState
+
+		decisionHandler *decisionHandlerImpl
+		queryRegistry   query.Registry
 	}
 )
 

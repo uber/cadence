@@ -197,18 +197,18 @@ func (s *QuerySuite) TestTerminationState_Unblocked() {
 	s.testSetTerminationState(unblockedTerminationState)
 }
 
-func (s *QuerySuite) testSetTerminationState(TerminationState *TerminationState) {
+func (s *QuerySuite) testSetTerminationState(terminationState *TerminationState) {
 	query := newQuery(nil)
 	ts, err := query.getTerminationState()
 	s.Equal(errQueryNotInTerminalState, err)
 	s.Nil(ts)
 	s.False(closed(query.getQueryTermCh()))
 	s.Equal(errTerminationStateInvalid, query.setTerminationState(nil))
-	s.NoError(query.setTerminationState(TerminationState))
+	s.NoError(query.setTerminationState(terminationState))
 	s.True(closed(query.getQueryTermCh()))
 	actualTerminationState, err := query.getTerminationState()
 	s.NoError(err)
-	s.assertTerminationStateEqual(TerminationState, actualTerminationState)
+	s.assertTerminationStateEqual(terminationState, actualTerminationState)
 }
 
 func (s *QuerySuite) assertTerminationStateEqual(expected *TerminationState, actual *TerminationState) {

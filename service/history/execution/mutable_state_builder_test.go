@@ -96,7 +96,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
 	s.logger = s.mockShard.GetLogger()
 
-	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry).(*mutableStateBuilder)
+	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
 }
 
 func (s *mutableStateSuite) TearDownTest() {

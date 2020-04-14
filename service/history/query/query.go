@@ -69,7 +69,7 @@ type (
 		queryInput *shared.WorkflowQuery
 		termCh     chan struct{}
 
-		TerminationState atomic.Value
+		terminationState atomic.Value
 	}
 )
 
@@ -94,38 +94,38 @@ func (q *queryImpl) getQueryInput() *shared.WorkflowQuery {
 }
 
 func (q *queryImpl) getTerminationState() (*TerminationState, error) {
-	ts := q.TerminationState.Load()
+	ts := q.terminationState.Load()
 	if ts == nil {
 		return nil, errQueryNotInTerminalState
 	}
 	return ts.(*TerminationState), nil
 }
 
-func (q *queryImpl) setTerminationState(TerminationState *TerminationState) error {
-	if err := q.validateTerminationState(TerminationState); err != nil {
+func (q *queryImpl) setTerminationState(terminationState *TerminationState) error {
+	if err := q.validateTerminationState(terminationState); err != nil {
 		return err
 	}
 	currTerminationState, _ := q.getTerminationState()
 	if currTerminationState != nil {
 		return errAlreadyInTerminalState
 	}
-	q.TerminationState.Store(TerminationState)
+	q.terminationState.Store(terminationState)
 	close(q.termCh)
 	return nil
 }
 
 func (q *queryImpl) validateTerminationState(
-	TerminationState *TerminationState,
+	terminationState *TerminationState,
 ) error {
-	if TerminationState == nil {
+	if terminationState == nil {
 		return errTerminationStateInvalid
 	}
-	switch TerminationState.TerminationType {
+	switch terminationState.TerminationType {
 	case TerminationTypeCompleted:
-		if TerminationState.QueryResult == nil || TerminationState.Failure != nil {
+		if terminationState.QueryResult == nil || terminationState.Failure != nil {
 			return errTerminationStateInvalid
 		}
-		queryResult := TerminationState.QueryResult
+		queryResult := terminationState.QueryResult
 		validAnswered := queryResult.GetResultType().Equals(shared.QueryResultTypeAnswered) &&
 			queryResult.Answer != nil &&
 			queryResult.ErrorMessage == nil
@@ -137,12 +137,12 @@ func (q *queryImpl) validateTerminationState(
 		}
 		return nil
 	case TerminationTypeUnblocked:
-		if TerminationState.QueryResult != nil || TerminationState.Failure != nil {
+		if terminationState.QueryResult != nil || terminationState.Failure != nil {
 			return errTerminationStateInvalid
 		}
 		return nil
 	case TerminationTypeFailed:
-		if TerminationState.QueryResult != nil || TerminationState.Failure == nil {
+		if terminationState.QueryResult != nil || terminationState.Failure == nil {
 			return errTerminationStateInvalid
 		}
 		return nil

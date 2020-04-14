@@ -166,6 +166,15 @@ func NewMutableStateBuilder(
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) MutableState {
+	return newMutableStateBuilder(shard, eventsCache, logger, domainEntry)
+}
+
+func newMutableStateBuilder(
+	shard shard.Context,
+	eventsCache events.Cache,
+	logger log.Logger,
+	domainEntry *cache.DomainCacheEntry,
+) *mutableStateBuilder {
 	s := &mutableStateBuilder{
 		updateActivityInfos:        make(map[*persistence.ActivityInfo]struct{}),
 		pendingActivityInfoIDs:     make(map[int64]*persistence.ActivityInfo),
@@ -237,7 +246,7 @@ func NewMutableStateBuilderWithReplicationState(
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
 ) MutableState {
-	s := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry).(*mutableStateBuilder)
+	s := newMutableStateBuilder(shard, eventsCache, logger, domainEntry)
 	s.replicationState = &persistence.ReplicationState{
 		StartVersion:        s.currentVersion,
 		CurrentVersion:      s.currentVersion,
@@ -256,7 +265,7 @@ func NewMutableStateBuilderWithVersionHistories(
 	domainEntry *cache.DomainCacheEntry,
 ) MutableState {
 
-	s := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry).(*mutableStateBuilder)
+	s := newMutableStateBuilder(shard, eventsCache, logger, domainEntry)
 	s.versionHistories = persistence.NewVersionHistories(&persistence.VersionHistory{})
 	return s
 }
@@ -3367,7 +3376,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 				e.domainEntry,
 			).(*mutableStateBuilder)
 		} else {
-			newStateBuilder = NewMutableStateBuilder(e.shard, e.eventsCache, e.logger, e.domainEntry).(*mutableStateBuilder)
+			newStateBuilder = newMutableStateBuilder(e.shard, e.eventsCache, e.logger, e.domainEntry)
 		}
 	}
 
@@ -4666,7 +4675,7 @@ func (e *mutableStateBuilder) generateChecksum() checksum.Checksum {
 	}
 	csum, err := generateMutableStateChecksum(e)
 	if err != nil {
-		e.logWarn("error generating MutableState checksum", tag.Error(err))
+		e.logWarn("error generating mutableState checksum", tag.Error(err))
 		return checksum.Checksum{}
 	}
 	return csum

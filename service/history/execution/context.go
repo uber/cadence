@@ -309,7 +309,7 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 		}
 		if flushBeforeReady {
 			return nil, &workflow.InternalServiceError{
-				Message: "Context counter flushBeforeReady status after loading mutable state from DB",
+				Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 			}
 		}
 	}
@@ -383,7 +383,7 @@ func (c *contextImpl) LoadWorkflowExecution() (MutableState, error) {
 	}
 	if flushBeforeReady {
 		return nil, &workflow.InternalServiceError{
-			Message: "Context counter flushBeforeReady status after loading mutable state from DB",
+			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
 
@@ -1291,7 +1291,7 @@ func (c *contextImpl) ReapplyEvents(
 		if events.DomainID != domainID ||
 			events.WorkflowID != workflowID {
 			return &workflow.InternalServiceError{
-				Message: "Context encounter mismatch domainID / workflowID in events reapplication.",
+				Message: "workflowExecutionContext encounter mismatch domainID / workflowID in events reapplication.",
 			}
 		}
 
