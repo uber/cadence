@@ -35,7 +35,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	definition "github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/service/history/execution"
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MocknDCStateRebuilder is a mock of nDCStateRebuilder interface

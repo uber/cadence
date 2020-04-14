@@ -35,7 +35,7 @@ import (
 
 	history "github.com/uber/cadence/.gen/go/history"
 	shared "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/service/history/execution"
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MockworkflowResetor is a mock of workflowResetor interface

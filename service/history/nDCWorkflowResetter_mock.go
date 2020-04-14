@@ -33,7 +33,8 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/uber/cadence/service/history/execution"
+
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MocknDCWorkflowResetter is a mock of nDCWorkflowResetter interface

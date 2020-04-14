@@ -33,7 +33,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	persistence "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/execution"
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MockconflictResolver is a mock of conflictResolver interface

@@ -31,7 +31,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/uber/cadence/service/history/execution"
+
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MocknDCWorkflow is a mock of nDCWorkflow interface

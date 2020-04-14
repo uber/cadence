@@ -34,7 +34,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	shared "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/service/history/execution"
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MocknDCEventsReapplier is a mock of nDCEventsReapplier interface

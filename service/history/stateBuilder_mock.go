@@ -33,7 +33,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	shared "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/service/history/execution"
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MockstateBuilder is a mock of stateBuilder interface
@@ -69,7 +69,7 @@ func (m *MockstateBuilder) applyEvents(domainID, requestID string, workflowExecu
 }
 
 // applyEvents indicates an expected call of applyEvents
-func (mr *MockstateBuilderMockRecorder) applyEvents(domainID, requestID, execution, history, newRunHistory, newRunNDC interface{}) *gomock.Call {
+func (mr *MockstateBuilderMockRecorder) applyEvents(domainID, requestID, workflowExecution, history, newRunHistory, newRunNDC interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "applyEvents", reflect.TypeOf((*MockstateBuilder)(nil).applyEvents), domainID, requestID, execution, history, newRunHistory, newRunNDC)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "applyEvents", reflect.TypeOf((*MockstateBuilder)(nil).applyEvents), domainID, requestID, workflowExecution, history, newRunHistory, newRunNDC)
 }

@@ -41,7 +41,7 @@ import (
 	query "github.com/uber/cadence/service/history/query"
 )
 
-// MockMutableState is a mock of mutableState interface
+// MockMutableState is a mock of MutableState interface
 type MockMutableState struct {
 	ctrl     *gomock.Controller
 	recorder *MockMutableStateMockRecorder
