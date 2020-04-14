@@ -822,6 +822,10 @@ func newDBCommands() []cli.Command {
 					Name:  FlagReportRate,
 					Usage: "the number of shards which get handled between each emitting of progress",
 					Value: 10,
+				},
+				cli.StringSliceFlag{
+					Name: FlagDBInvariantChecks,
+					Usage: ""
 				}),
 			Action: func(c *cli.Context) {
 				AdminDBClean(c)

@@ -309,39 +309,3 @@ func recordShardCleanReport(file *os.File, sdr *ShardCleanReport) {
 	}
 	writeToFile(file, string(data))
 }
-
-func retryDeleteWorkflowExecution(
-	limiter *quotas.DynamicRateLimiter,
-	totalDBRequests *int64,
-	execStore persistence.ExecutionStore,
-	req *persistence.DeleteWorkflowExecutionRequest,
-) error {
-	op := func() error {
-		preconditionForDBCall(totalDBRequests, limiter)
-		return execStore.DeleteWorkflowExecution(req)
-	}
-
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func retryDeleteCurrentWorkflowExecution(
-	limiter *quotas.DynamicRateLimiter,
-	totalDBRequests *int64,
-	execStore persistence.ExecutionStore,
-	req *persistence.DeleteCurrentWorkflowExecutionRequest,
-) error {
-	op := func() error {
-		preconditionForDBCall(totalDBRequests, limiter)
-		return execStore.DeleteCurrentWorkflowExecution(req)
-	}
-
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return err
-	}
-	return nil
-}
