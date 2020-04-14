@@ -121,7 +121,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentTerminated() {
 	currentReleaseCalled := false
 	currentContext := execution.NewMockContext(s.controller)
 	currentMutableState := execution.NewMockMutableState(s.controller)
-	var currentReleaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { currentReleaseCalled = true }
+	var currentReleaseFn execution.ReleaseFunc = func(error) { currentReleaseCalled = true }
 	currentWorkflow.EXPECT().getContext().Return(currentContext).AnyTimes()
 	currentWorkflow.EXPECT().getMutableState().Return(currentMutableState).AnyTimes()
 	currentWorkflow.EXPECT().getReleaseFn().Return(currentReleaseFn).AnyTimes()
@@ -130,7 +130,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentTerminated() {
 	resetReleaseCalled := false
 	resetContext := execution.NewMockContext(s.controller)
 	resetMutableState := execution.NewMockMutableState(s.controller)
-	var targetReleaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { resetReleaseCalled = true }
+	var targetReleaseFn execution.ReleaseFunc = func(error) { resetReleaseCalled = true }
 	resetWorkflow.EXPECT().getContext().Return(resetContext).AnyTimes()
 	resetWorkflow.EXPECT().getMutableState().Return(resetMutableState).AnyTimes()
 	resetWorkflow.EXPECT().getReleaseFn().Return(targetReleaseFn).AnyTimes()
@@ -156,7 +156,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 	currentReleaseCalled := false
 	currentContext := execution.NewMockContext(s.controller)
 	currentMutableState := execution.NewMockMutableState(s.controller)
-	var currentReleaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { currentReleaseCalled = true }
+	var currentReleaseFn execution.ReleaseFunc = func(error) { currentReleaseCalled = true }
 	currentWorkflow.EXPECT().getContext().Return(currentContext).AnyTimes()
 	currentWorkflow.EXPECT().getMutableState().Return(currentMutableState).AnyTimes()
 	currentWorkflow.EXPECT().getReleaseFn().Return(currentReleaseFn).AnyTimes()
@@ -170,7 +170,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 	resetReleaseCalled := false
 	resetContext := execution.NewMockContext(s.controller)
 	resetMutableState := execution.NewMockMutableState(s.controller)
-	var targetReleaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { resetReleaseCalled = true }
+	var targetReleaseFn execution.ReleaseFunc = func(error) { resetReleaseCalled = true }
 	resetWorkflow.EXPECT().getContext().Return(resetContext).AnyTimes()
 	resetWorkflow.EXPECT().getMutableState().Return(resetMutableState).AnyTimes()
 	resetWorkflow.EXPECT().getReleaseFn().Return(targetReleaseFn).AnyTimes()

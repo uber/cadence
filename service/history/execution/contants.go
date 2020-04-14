@@ -27,6 +27,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+// TODO: creates a separate package for all test constants
+
 var testVersion = int64(1234)
 var testDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
 var testDomainName = "some random domain name"

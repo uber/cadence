@@ -142,7 +142,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Ope
 	workflow := NewMocknDCWorkflow(s.controller)
 	context := execution.NewMockContext(s.controller)
 	mutableState := execution.NewMockMutableState(s.controller)
-	var releaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
+	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
 		Events: []*shared.HistoryEvent{{EventId: common.Int64Ptr(1)}},
@@ -190,7 +190,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Clo
 	workflow := NewMocknDCWorkflow(s.controller)
 	context := execution.NewMockContext(s.controller)
 	mutableState := execution.NewMockMutableState(s.controller)
-	var releaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
+	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{}
 
@@ -252,7 +252,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_Op
 	workflow := NewMocknDCWorkflow(s.controller)
 	context := execution.NewMockContext(s.controller)
 	mutableState := execution.NewMockMutableState(s.controller)
-	var releaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
+	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
 		Events: []*shared.HistoryEvent{{EventId: common.Int64Ptr(1)}},
@@ -291,7 +291,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_Cl
 	workflow := NewMocknDCWorkflow(s.controller)
 	context := execution.NewMockContext(s.controller)
 	mutableState := execution.NewMockMutableState(s.controller)
-	var releaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
+	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{}
 
@@ -340,7 +340,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active(
 	workflow := NewMocknDCWorkflow(s.controller)
 	context := execution.NewMockContext(s.controller)
 	mutableState := execution.NewMockMutableState(s.controller)
-	var releaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
+	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
 		Events: []*shared.HistoryEvent{{
@@ -394,7 +394,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passive
 	workflow := NewMocknDCWorkflow(s.controller)
 	context := execution.NewMockContext(s.controller)
 	mutableState := execution.NewMockMutableState(s.controller)
-	var releaseFn execution.ReleaseWorkflowExecutionFunc = func(error) { releaseCalled = true }
+	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
 		Events: []*shared.HistoryEvent{{

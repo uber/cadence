@@ -293,7 +293,7 @@ func (r *nDCHistoryReplicatorImpl) applyEvents(
 func (r *nDCHistoryReplicatorImpl) applyStartEvents(
 	ctx ctx.Context,
 	context execution.Context,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 	task nDCReplicationTask,
 ) (retError error) {
 
@@ -405,7 +405,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToCurrentBranch(
 	context execution.Context,
 	mutableState execution.MutableState,
 	isRebuilt bool,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 	task nDCReplicationTask,
 ) error {
 
@@ -483,7 +483,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToNoneCurrentBranch(
 	context execution.Context,
 	mutableState execution.MutableState,
 	branchIndex int,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 	task nDCReplicationTask,
 ) error {
 
@@ -511,7 +511,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithout
 	context execution.Context,
 	mutableState execution.MutableState,
 	branchIndex int,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 	task nDCReplicationTask,
 ) error {
 
@@ -559,7 +559,7 @@ func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithout
 func (r *nDCHistoryReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithContinueAsNew(
 	ctx ctx.Context,
 	context execution.Context,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 	task nDCReplicationTask,
 ) error {
 

@@ -40,8 +40,8 @@ import (
 )
 
 type (
-	// ReleaseWorkflowExecutionFunc releases workflow execution context
-	ReleaseWorkflowExecutionFunc func(err error)
+	// ReleaseFunc releases workflow execution context
+	ReleaseFunc func(err error)
 
 	// Cache caches workflow execution context
 	Cache struct {
@@ -56,8 +56,8 @@ type (
 )
 
 var (
-	// NoopReleaseFn is an no-op implementation for the ReleaseWorkflowExecutionFunc type
-	NoopReleaseFn ReleaseWorkflowExecutionFunc = func(err error) {}
+	// NoopReleaseFn is an no-op implementation for the ReleaseFunc type
+	NoopReleaseFn ReleaseFunc = func(err error) {}
 )
 
 const (
@@ -88,7 +88,7 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	workflowID string,
-) (Context, ReleaseWorkflowExecutionFunc, error) {
+) (Context, ReleaseFunc, error) {
 
 	scope := metrics.HistoryCacheGetOrCreateCurrentScope
 	c.metricsClient.IncCounter(scope, metrics.CacheRequests)
@@ -117,7 +117,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
-) (Context, Context, ReleaseWorkflowExecutionFunc, bool, error) {
+) (Context, Context, ReleaseFunc, bool, error) {
 
 	scope := metrics.HistoryCacheGetAndCreateScope
 	c.metricsClient.IncCounter(scope, metrics.CacheRequests)
@@ -157,7 +157,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 	domainID string,
 	execution workflow.WorkflowExecution,
-) (Context, ReleaseWorkflowExecutionFunc, error) {
+) (Context, ReleaseFunc, error) {
 
 	return c.GetOrCreateWorkflowExecution(context.Background(), domainID, execution)
 }
@@ -167,7 +167,7 @@ func (c *Cache) GetOrCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
-) (Context, ReleaseWorkflowExecutionFunc, error) {
+) (Context, ReleaseFunc, error) {
 
 	scope := metrics.HistoryCacheGetOrCreateScope
 	c.metricsClient.IncCounter(scope, metrics.CacheRequests)
@@ -194,7 +194,7 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 	execution workflow.WorkflowExecution,
 	scope int,
 	forceClearContext bool,
-) (Context, ReleaseWorkflowExecutionFunc, error) {
+) (Context, ReleaseFunc, error) {
 
 	// Test hook for disabling the cache
 	if c.disabled {

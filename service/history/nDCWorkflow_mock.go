@@ -87,10 +87,10 @@ func (mr *MocknDCWorkflowMockRecorder) getMutableState() *gomock.Call {
 }
 
 // getReleaseFn mocks base method
-func (m *MocknDCWorkflow) getReleaseFn() execution.ReleaseWorkflowExecutionFunc {
+func (m *MocknDCWorkflow) getReleaseFn() execution.ReleaseFunc {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "getReleaseFn")
-	ret0, _ := ret[0].(execution.ReleaseWorkflowExecutionFunc)
+	ret0, _ := ret[0].(execution.ReleaseFunc)
 	return ret0
 }
 

@@ -815,7 +815,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 		currMutableState = baseMutableState
 		currContext = baseContext
 	} else {
-		var currRelease execution.ReleaseWorkflowExecutionFunc
+		var currRelease execution.ReleaseFunc
 		currExecution := workflow.WorkflowExecution{
 			WorkflowId: baseExecution.WorkflowId,
 			RunId:      common.StringPtr(currentRunID),

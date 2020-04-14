@@ -885,7 +885,7 @@ func (r *historyReplicator) getCurrentWorkflowMutableState(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,
-) (execution.Context, execution.MutableState, execution.ReleaseWorkflowExecutionFunc, error) {
+) (execution.Context, execution.MutableState, execution.ReleaseFunc, error) {
 	// we need to check the current workflow execution
 	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(ctx,
 		domainID,

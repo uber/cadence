@@ -792,7 +792,7 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 
 	var baseContext execution.Context
 	var baseMutableState execution.MutableState
-	var baseRelease execution.ReleaseWorkflowExecutionFunc
+	var baseRelease execution.ReleaseFunc
 	if resetPoint.GetRunId() == executionInfo.RunID {
 		baseContext = currentContext
 		baseMutableState = currentMutableState

@@ -38,7 +38,7 @@ type (
 	nDCWorkflow interface {
 		getContext() execution.Context
 		getMutableState() execution.MutableState
-		getReleaseFn() execution.ReleaseWorkflowExecutionFunc
+		getReleaseFn() execution.ReleaseFunc
 		getVectorClock() (int64, int64, error)
 		happensAfter(that nDCWorkflow) (bool, error)
 		revive() error
@@ -53,7 +53,7 @@ type (
 		ctx          ctx.Context
 		context      execution.Context
 		mutableState execution.MutableState
-		releaseFn    execution.ReleaseWorkflowExecutionFunc
+		releaseFn    execution.ReleaseFunc
 	}
 )
 
@@ -63,7 +63,7 @@ func newNDCWorkflow(
 	clusterMetadata cluster.Metadata,
 	context execution.Context,
 	mutableState execution.MutableState,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 ) *nDCWorkflowImpl {
 
 	return &nDCWorkflowImpl{
@@ -85,7 +85,7 @@ func (r *nDCWorkflowImpl) getMutableState() execution.MutableState {
 	return r.mutableState
 }
 
-func (r *nDCWorkflowImpl) getReleaseFn() execution.ReleaseWorkflowExecutionFunc {
+func (r *nDCWorkflowImpl) getReleaseFn() execution.ReleaseFunc {
 	return r.releaseFn
 }
 

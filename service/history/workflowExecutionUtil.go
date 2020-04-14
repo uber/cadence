@@ -30,7 +30,7 @@ type workflowContext interface {
 	getContext() execution.Context
 	getMutableState() execution.MutableState
 	reloadMutableState() (execution.MutableState, error)
-	getReleaseFn() execution.ReleaseWorkflowExecutionFunc
+	getReleaseFn() execution.ReleaseFunc
 	getWorkflowID() string
 	getRunID() string
 }
@@ -38,7 +38,7 @@ type workflowContext interface {
 type workflowContextImpl struct {
 	context      execution.Context
 	mutableState execution.MutableState
-	releaseFn    execution.ReleaseWorkflowExecutionFunc
+	releaseFn    execution.ReleaseFunc
 }
 
 type updateWorkflowAction struct {
@@ -74,7 +74,7 @@ func (w *workflowContextImpl) reloadMutableState() (execution.MutableState, erro
 	return mutableState, nil
 }
 
-func (w *workflowContextImpl) getReleaseFn() execution.ReleaseWorkflowExecutionFunc {
+func (w *workflowContextImpl) getReleaseFn() execution.ReleaseFunc {
 	return w.releaseFn
 }
 
@@ -88,7 +88,7 @@ func (w *workflowContextImpl) getRunID() string {
 
 func newWorkflowContext(
 	context execution.Context,
-	releaseFn execution.ReleaseWorkflowExecutionFunc,
+	releaseFn execution.ReleaseFunc,
 	mutableState execution.MutableState,
 ) *workflowContextImpl {
 
