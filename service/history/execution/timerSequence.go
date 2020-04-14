@@ -20,7 +20,7 @@
 
 //go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination timerSequence_mock.go
 
-package history
+package execution
 
 import (
 	"fmt"
@@ -33,62 +33,62 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type timerType int32
+type TimerType int32
 
 const (
-	timerTypeStartToClose    = timerType(shared.TimeoutTypeStartToClose)
-	timerTypeScheduleToStart = timerType(shared.TimeoutTypeScheduleToStart)
-	timerTypeScheduleToClose = timerType(shared.TimeoutTypeScheduleToClose)
-	timerTypeHeartbeat       = timerType(shared.TimeoutTypeHeartbeat)
+	TimerTypeStartToClose    = TimerType(shared.TimeoutTypeStartToClose)
+	TimerTypeScheduleToStart = TimerType(shared.TimeoutTypeScheduleToStart)
+	TimerTypeScheduleToClose = TimerType(shared.TimeoutTypeScheduleToClose)
+	TimerTypeHeartbeat       = TimerType(shared.TimeoutTypeHeartbeat)
 )
 
 const (
 	// activity / user timer task not created
-	timerTaskStatusNone = iota
-	timerTaskStatusCreated
+	TimerTaskStatusNone = iota
+	TimerTaskStatusCreated
 )
 
 const (
 	// activity timer task status
-	timerTaskStatusCreatedStartToClose = 1 << iota
-	timerTaskStatusCreatedScheduleToStart
-	timerTaskStatusCreatedScheduleToClose
-	timerTaskStatusCreatedHeartbeat
+	TimerTaskStatusCreatedStartToClose = 1 << iota
+	TimerTaskStatusCreatedScheduleToStart
+	TimerTaskStatusCreatedScheduleToClose
+	TimerTaskStatusCreatedHeartbeat
 )
 
 type (
-	// timerSequenceID
-	timerSequenceID struct {
-		eventID      int64
-		timestamp    time.Time
-		timerType    timerType
-		timerCreated bool
-		attempt      int32
+	// TimerSequenceID
+	TimerSequenceID struct {
+		EventID      int64
+		Timestamp    time.Time
+		TimerType    TimerType
+		TimerCreated bool
+		Attempt      int32
 	}
 
-	timerSequenceIDs []timerSequenceID
+	TimerSequenceIDs []TimerSequenceID
 
-	timerSequence interface {
-		isExpired(referenceTime time.Time, timerSequenceID timerSequenceID) bool
+	TimerSequence interface {
+		IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) bool
 
-		createNextUserTimer() (bool, error)
-		createNextActivityTimer() (bool, error)
+		CreateNextUserTimer() (bool, error)
+		CreateNextActivityTimer() (bool, error)
 
-		loadAndSortUserTimers() []timerSequenceID
-		loadAndSortActivityTimers() []timerSequenceID
+		LoadAndSortUserTimers() []TimerSequenceID
+		LoadAndSortActivityTimers() []TimerSequenceID
 	}
 
 	timerSequenceImpl struct {
 		timeSource   clock.TimeSource
-		mutableState mutableState
+		mutableState MutableState
 	}
 )
 
-var _ timerSequence = (*timerSequenceImpl)(nil)
+var _ TimerSequence = (*timerSequenceImpl)(nil)
 
-func newTimerSequence(
+func NewTimerSequence(
 	timeSource clock.TimeSource,
-	mutableState mutableState,
+	mutableState MutableState,
 ) *timerSequenceImpl {
 	return &timerSequenceImpl{
 		timeSource:   timeSource,
@@ -96,19 +96,19 @@ func newTimerSequence(
 	}
 }
 
-func (t *timerSequenceImpl) isExpired(
+func (t *timerSequenceImpl) IsExpired(
 	referenceTime time.Time,
-	timerSequenceID timerSequenceID,
+	TimerSequenceID TimerSequenceID,
 ) bool {
 
-	// Cassandra timestamp resolution is in millisecond
+	// Cassandra Timestamp resolution is in millisecond
 	// here we do the check in terms of second resolution.
-	return timerSequenceID.timestamp.Unix() <= referenceTime.Unix()
+	return TimerSequenceID.Timestamp.Unix() <= referenceTime.Unix()
 }
 
-func (t *timerSequenceImpl) createNextUserTimer() (bool, error) {
+func (t *timerSequenceImpl) CreateNextUserTimer() (bool, error) {
 
-	sequenceIDs := t.loadAndSortUserTimers()
+	sequenceIDs := t.LoadAndSortUserTimers()
 	if len(sequenceIDs) == 0 {
 		return false, nil
 	}
@@ -116,34 +116,34 @@ func (t *timerSequenceImpl) createNextUserTimer() (bool, error) {
 	firstTimerTask := sequenceIDs[0]
 
 	// timer has already been created
-	if firstTimerTask.timerCreated {
+	if firstTimerTask.TimerCreated {
 		return false, nil
 	}
 
-	timerInfo, ok := t.mutableState.GetUserTimerInfoByEventID(firstTimerTask.eventID)
+	timerInfo, ok := t.mutableState.GetUserTimerInfoByEventID(firstTimerTask.EventID)
 	if !ok {
 		return false, &shared.InternalServiceError{
-			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.eventID),
+			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.EventID),
 		}
 	}
 	// mark timer task mask as indication that timer task is generated
 	// here TaskID is misleading attr, should be called timer created flag or something
-	timerInfo.TaskStatus = timerTaskStatusCreated
+	timerInfo.TaskStatus = TimerTaskStatusCreated
 	if err := t.mutableState.UpdateUserTimer(timerInfo); err != nil {
 		return false, err
 	}
 	t.mutableState.AddTimerTasks(&persistence.UserTimerTask{
 		// TaskID is set by shard
-		VisibilityTimestamp: firstTimerTask.timestamp,
-		EventID:             firstTimerTask.eventID,
+		VisibilityTimestamp: firstTimerTask.Timestamp,
+		EventID:             firstTimerTask.EventID,
 		Version:             t.mutableState.GetCurrentVersion(),
 	})
 	return true, nil
 }
 
-func (t *timerSequenceImpl) createNextActivityTimer() (bool, error) {
+func (t *timerSequenceImpl) CreateNextActivityTimer() (bool, error) {
 
-	sequenceIDs := t.loadAndSortActivityTimers()
+	sequenceIDs := t.LoadAndSortActivityTimers()
 	if len(sequenceIDs) == 0 {
 		return false, nil
 	}
@@ -151,39 +151,39 @@ func (t *timerSequenceImpl) createNextActivityTimer() (bool, error) {
 	firstTimerTask := sequenceIDs[0]
 
 	// timer has already been created
-	if firstTimerTask.timerCreated {
+	if firstTimerTask.TimerCreated {
 		return false, nil
 	}
 
-	activityInfo, ok := t.mutableState.GetActivityInfo(firstTimerTask.eventID)
+	activityInfo, ok := t.mutableState.GetActivityInfo(firstTimerTask.EventID)
 	if !ok {
 		return false, &shared.InternalServiceError{
-			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.eventID),
+			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.EventID),
 		}
 	}
 	// mark timer task mask as indication that timer task is generated
-	activityInfo.TimerTaskStatus |= timerTypeToTimerMask(firstTimerTask.timerType)
-	if firstTimerTask.timerType == timerTypeHeartbeat {
-		activityInfo.LastHeartbeatTimeoutVisibilityInSeconds = firstTimerTask.timestamp.Unix()
+	activityInfo.TimerTaskStatus |= TimerTypeToTimerMask(firstTimerTask.TimerType)
+	if firstTimerTask.TimerType == TimerTypeHeartbeat {
+		activityInfo.LastHeartbeatTimeoutVisibilityInSeconds = firstTimerTask.Timestamp.Unix()
 	}
 	if err := t.mutableState.UpdateActivity(activityInfo); err != nil {
 		return false, err
 	}
 	t.mutableState.AddTimerTasks(&persistence.ActivityTimeoutTask{
 		// TaskID is set by shard
-		VisibilityTimestamp: firstTimerTask.timestamp,
-		TimeoutType:         int(firstTimerTask.timerType),
-		EventID:             firstTimerTask.eventID,
-		Attempt:             int64(firstTimerTask.attempt),
+		VisibilityTimestamp: firstTimerTask.Timestamp,
+		TimeoutType:         int(firstTimerTask.TimerType),
+		EventID:             firstTimerTask.EventID,
+		Attempt:             int64(firstTimerTask.Attempt),
 		Version:             t.mutableState.GetCurrentVersion(),
 	})
 	return true, nil
 }
 
-func (t *timerSequenceImpl) loadAndSortUserTimers() []timerSequenceID {
+func (t *timerSequenceImpl) LoadAndSortUserTimers() []TimerSequenceID {
 
 	pendingTimers := t.mutableState.GetPendingTimerInfos()
-	timers := make(timerSequenceIDs, 0, len(pendingTimers))
+	timers := make(TimerSequenceIDs, 0, len(pendingTimers))
 
 	for _, timerInfo := range pendingTimers {
 
@@ -198,11 +198,11 @@ func (t *timerSequenceImpl) loadAndSortUserTimers() []timerSequenceID {
 	return timers
 }
 
-func (t *timerSequenceImpl) loadAndSortActivityTimers() []timerSequenceID {
+func (t *timerSequenceImpl) LoadAndSortActivityTimers() []TimerSequenceID {
 	// there can be 4 timer per activity
-	// see timerType
+	// see TimerType
 	pendingActivities := t.mutableState.GetPendingActivityInfos()
-	activityTimers := make(timerSequenceIDs, 0, len(pendingActivities)*4)
+	activityTimers := make(TimerSequenceIDs, 0, len(pendingActivities)*4)
 
 	for _, activityInfo := range pendingActivities {
 
@@ -237,20 +237,20 @@ func (t *timerSequenceImpl) loadAndSortActivityTimers() []timerSequenceID {
 
 func (t *timerSequenceImpl) getUserTimerTimeout(
 	timerInfo *persistence.TimerInfo,
-) *timerSequenceID {
+) *TimerSequenceID {
 
-	return &timerSequenceID{
-		eventID:      timerInfo.StartedID,
-		timestamp:    timerInfo.ExpiryTime,
-		timerType:    timerTypeStartToClose,
-		timerCreated: timerInfo.TaskStatus == timerTaskStatusCreated,
-		attempt:      0,
+	return &TimerSequenceID{
+		EventID:      timerInfo.StartedID,
+		Timestamp:    timerInfo.ExpiryTime,
+		TimerType:    TimerTypeStartToClose,
+		TimerCreated: timerInfo.TaskStatus == TimerTaskStatusCreated,
+		Attempt:      0,
 	}
 }
 
 func (t *timerSequenceImpl) getActivityScheduleToStartTimeout(
 	activityInfo *persistence.ActivityInfo,
-) *timerSequenceID {
+) *TimerSequenceID {
 
 	// activity is not scheduled yet, probably due to retry & backoff
 	if activityInfo.ScheduleID == common.EmptyEventID {
@@ -266,18 +266,18 @@ func (t *timerSequenceImpl) getActivityScheduleToStartTimeout(
 		time.Duration(activityInfo.ScheduleToStartTimeout) * time.Second,
 	)
 
-	return &timerSequenceID{
-		eventID:      activityInfo.ScheduleID,
-		timestamp:    startTimeout,
-		timerType:    timerTypeScheduleToStart,
-		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedScheduleToStart) > 0,
-		attempt:      activityInfo.Attempt,
+	return &TimerSequenceID{
+		EventID:      activityInfo.ScheduleID,
+		Timestamp:    startTimeout,
+		TimerType:    TimerTypeScheduleToStart,
+		TimerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedScheduleToStart) > 0,
+		Attempt:      activityInfo.Attempt,
 	}
 }
 
 func (t *timerSequenceImpl) getActivityScheduleToCloseTimeout(
 	activityInfo *persistence.ActivityInfo,
-) *timerSequenceID {
+) *TimerSequenceID {
 
 	// activity is not scheduled yet, probably due to retry & backoff
 	if activityInfo.ScheduleID == common.EmptyEventID {
@@ -288,18 +288,18 @@ func (t *timerSequenceImpl) getActivityScheduleToCloseTimeout(
 		time.Duration(activityInfo.ScheduleToCloseTimeout) * time.Second,
 	)
 
-	return &timerSequenceID{
-		eventID:      activityInfo.ScheduleID,
-		timestamp:    closeTimeout,
-		timerType:    timerTypeScheduleToClose,
-		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedScheduleToClose) > 0,
-		attempt:      activityInfo.Attempt,
+	return &TimerSequenceID{
+		EventID:      activityInfo.ScheduleID,
+		Timestamp:    closeTimeout,
+		TimerType:    TimerTypeScheduleToClose,
+		TimerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedScheduleToClose) > 0,
+		Attempt:      activityInfo.Attempt,
 	}
 }
 
 func (t *timerSequenceImpl) getActivityStartToCloseTimeout(
 	activityInfo *persistence.ActivityInfo,
-) *timerSequenceID {
+) *TimerSequenceID {
 
 	// activity is not scheduled yet, probably due to retry & backoff
 	if activityInfo.ScheduleID == common.EmptyEventID {
@@ -315,18 +315,18 @@ func (t *timerSequenceImpl) getActivityStartToCloseTimeout(
 		time.Duration(activityInfo.StartToCloseTimeout) * time.Second,
 	)
 
-	return &timerSequenceID{
-		eventID:      activityInfo.ScheduleID,
-		timestamp:    closeTimeout,
-		timerType:    timerTypeStartToClose,
-		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedStartToClose) > 0,
-		attempt:      activityInfo.Attempt,
+	return &TimerSequenceID{
+		EventID:      activityInfo.ScheduleID,
+		Timestamp:    closeTimeout,
+		TimerType:    TimerTypeStartToClose,
+		TimerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedStartToClose) > 0,
+		Attempt:      activityInfo.Attempt,
 	}
 }
 
 func (t *timerSequenceImpl) getActivityHeartbeatTimeout(
 	activityInfo *persistence.ActivityInfo,
-) *timerSequenceID {
+) *TimerSequenceID {
 
 	// activity is not scheduled yet, probably due to retry & backoff
 	if activityInfo.ScheduleID == common.EmptyEventID {
@@ -353,82 +353,82 @@ func (t *timerSequenceImpl) getActivityHeartbeatTimeout(
 		time.Duration(activityInfo.HeartbeatTimeout) * time.Second,
 	)
 
-	return &timerSequenceID{
-		eventID:      activityInfo.ScheduleID,
-		timestamp:    heartbeatTimeout,
-		timerType:    timerTypeHeartbeat,
-		timerCreated: (activityInfo.TimerTaskStatus & timerTaskStatusCreatedHeartbeat) > 0,
-		attempt:      activityInfo.Attempt,
+	return &TimerSequenceID{
+		EventID:      activityInfo.ScheduleID,
+		Timestamp:    heartbeatTimeout,
+		TimerType:    TimerTypeHeartbeat,
+		TimerCreated: (activityInfo.TimerTaskStatus & TimerTaskStatusCreatedHeartbeat) > 0,
+		Attempt:      activityInfo.Attempt,
 	}
 }
 
-func timerTypeToTimerMask(
-	timerType timerType,
+func TimerTypeToTimerMask(
+	TimerType TimerType,
 ) int32 {
 
-	switch timerType {
-	case timerTypeStartToClose:
-		return timerTaskStatusCreatedStartToClose
-	case timerTypeScheduleToStart:
-		return timerTaskStatusCreatedScheduleToStart
-	case timerTypeScheduleToClose:
-		return timerTaskStatusCreatedScheduleToClose
-	case timerTypeHeartbeat:
-		return timerTaskStatusCreatedHeartbeat
+	switch TimerType {
+	case TimerTypeStartToClose:
+		return TimerTaskStatusCreatedStartToClose
+	case TimerTypeScheduleToStart:
+		return TimerTaskStatusCreatedScheduleToStart
+	case TimerTypeScheduleToClose:
+		return TimerTaskStatusCreatedScheduleToClose
+	case TimerTypeHeartbeat:
+		return TimerTaskStatusCreatedHeartbeat
 	default:
 		panic("invalid timeout type")
 	}
 }
 
-func timerTypeToThrift(
-	timerType timerType,
+func TimerTypeToThrift(
+	TimerType TimerType,
 ) shared.TimeoutType {
 
-	switch timerType {
-	case timerTypeStartToClose:
+	switch TimerType {
+	case TimerTypeStartToClose:
 		return shared.TimeoutTypeStartToClose
-	case timerTypeScheduleToStart:
+	case TimerTypeScheduleToStart:
 		return shared.TimeoutTypeScheduleToStart
-	case timerTypeScheduleToClose:
+	case TimerTypeScheduleToClose:
 		return shared.TimeoutTypeScheduleToClose
-	case timerTypeHeartbeat:
+	case TimerTypeHeartbeat:
 		return shared.TimeoutTypeHeartbeat
 	default:
-		panic(fmt.Sprintf("invalid timer type: %v", timerType))
+		panic(fmt.Sprintf("invalid timer type: %v", TimerType))
 	}
 }
 
-func timerTypeFromThrift(
-	timerType shared.TimeoutType,
-) timerType {
+func TimerTypeFromThrift(
+	TimerType shared.TimeoutType,
+) TimerType {
 
-	switch timerType {
+	switch TimerType {
 	case shared.TimeoutTypeStartToClose:
-		return timerTypeStartToClose
+		return TimerTypeStartToClose
 	case shared.TimeoutTypeScheduleToStart:
-		return timerTypeScheduleToStart
+		return TimerTypeScheduleToStart
 	case shared.TimeoutTypeScheduleToClose:
-		return timerTypeScheduleToClose
+		return TimerTypeScheduleToClose
 	case shared.TimeoutTypeHeartbeat:
-		return timerTypeHeartbeat
+		return TimerTypeHeartbeat
 	default:
-		panic(fmt.Sprintf("invalid timeout type: %v", timerType))
+		panic(fmt.Sprintf("invalid timeout type: %v", TimerType))
 	}
 }
 
-func timerTypeToReason(
-	timerType timerType,
+func TimerTypeToReason(
+	TimerType TimerType,
 ) string {
-	return fmt.Sprintf("cadenceInternal:Timeout %v", timerTypeToThrift(timerType))
+	return fmt.Sprintf("cadenceInternal:Timeout %v", TimerTypeToThrift(TimerType))
 }
 
 // Len implements sort.Interface
-func (s timerSequenceIDs) Len() int {
+func (s TimerSequenceIDs) Len() int {
 	return len(s)
 }
 
 // Swap implements sort.Interface.
-func (s timerSequenceIDs) Swap(
+func (s TimerSequenceIDs) Swap(
 	this int,
 	that int,
 ) {
@@ -436,7 +436,7 @@ func (s timerSequenceIDs) Swap(
 }
 
 // Less implements sort.Interface
-func (s timerSequenceIDs) Less(
+func (s TimerSequenceIDs) Less(
 	this int,
 	that int,
 ) bool {
@@ -446,23 +446,23 @@ func (s timerSequenceIDs) Less(
 
 	// order: timeout time, event ID, timeout type
 
-	if thisSequenceID.timestamp.Before(thatSequenceID.timestamp) {
+	if thisSequenceID.Timestamp.Before(thatSequenceID.Timestamp) {
 		return true
-	} else if thisSequenceID.timestamp.After(thatSequenceID.timestamp) {
+	} else if thisSequenceID.Timestamp.After(thatSequenceID.Timestamp) {
 		return false
 	}
 
 	// timeout time are the same
-	if thisSequenceID.eventID < thatSequenceID.eventID {
+	if thisSequenceID.EventID < thatSequenceID.EventID {
 		return true
-	} else if thisSequenceID.eventID > thatSequenceID.eventID {
+	} else if thisSequenceID.EventID > thatSequenceID.EventID {
 		return false
 	}
 
 	// timeout time & event ID are the same
-	if thisSequenceID.timerType < thatSequenceID.timerType {
+	if thisSequenceID.TimerType < thatSequenceID.TimerType {
 		return true
-	} else if thisSequenceID.timerType > thatSequenceID.timerType {
+	} else if thisSequenceID.TimerType > thatSequenceID.TimerType {
 		return false
 	}
 

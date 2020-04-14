@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package execution
 
 import (
 	"testing"
@@ -51,7 +51,7 @@ type (
 
 		domainID    string
 		domainEntry *cache.DomainCacheEntry
-		msBuilder   mutableState
+		msBuilder   MutableState
 		builder     *historyBuilder
 		logger      log.Logger
 	}
@@ -88,9 +88,9 @@ func (s *historyBuilderSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(s.domainEntry, nil).AnyTimes()
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache,
+	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.mockEventsCache,
 		s.logger, testLocalDomainEntry)
-	s.builder = newHistoryBuilder(s.msBuilder, s.logger)
+	s.builder = NewHistoryBuilder(s.msBuilder, s.logger)
 }
 
 func (s *historyBuilderSuite) TearDownTest() {
@@ -800,7 +800,7 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.Workf
 	return event
 }
 
-func (s *historyBuilderSuite) addDecisionTaskScheduledEvent() *decisionInfo {
+func (s *historyBuilderSuite) addDecisionTaskScheduledEvent() *DecisionInfo {
 	di, err := s.msBuilder.AddDecisionTaskScheduledEvent(false)
 	s.Nil(err)
 	return di
@@ -947,7 +947,7 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *workf
 	s.Equal(identity, *attributes.Identity)
 }
 
-func (s *historyBuilderSuite) validateDecisionTaskScheduledEvent(di *decisionInfo, eventID int64,
+func (s *historyBuilderSuite) validateDecisionTaskScheduledEvent(di *DecisionInfo, eventID int64,
 	taskList string, timeout int32) {
 	s.NotNil(di)
 	s.Equal(eventID, di.ScheduleID)

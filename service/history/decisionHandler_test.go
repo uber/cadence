@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
 )
 
@@ -48,7 +49,7 @@ type (
 
 		decisionHandler  *decisionHandlerImpl
 		queryRegistry    query.Registry
-		mockMutableState *MockmutableState
+		mockMutableState *execution.MockMutableState
 	}
 )
 
@@ -67,7 +68,7 @@ func (s *DecisionHandlerSuite) SetupTest() {
 		logger:         loggerimpl.NewNopLogger(),
 	}
 	s.queryRegistry = s.constructQueryRegistry(10)
-	s.mockMutableState = NewMockmutableState(s.controller)
+	s.mockMutableState = execution.NewMockMutableState(s.controller)
 	s.mockMutableState.EXPECT().GetQueryRegistry().Return(s.queryRegistry)
 	workflowInfo := &persistence.WorkflowExecutionInfo{
 		WorkflowID: testWorkflowID,

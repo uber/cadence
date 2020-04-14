@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package execution
 
 import (
 	h "github.com/uber/cadence/.gen/go/history"
@@ -32,11 +32,11 @@ type (
 	historyBuilder struct {
 		transientHistory []*workflow.HistoryEvent
 		history          []*workflow.HistoryEvent
-		msBuilder        mutableState
+		msBuilder        MutableState
 	}
 )
 
-func newHistoryBuilder(msBuilder mutableState, logger log.Logger) *historyBuilder {
+func NewHistoryBuilder(msBuilder MutableState, logger log.Logger) *historyBuilder {
 	return &historyBuilder{
 		transientHistory: []*workflow.HistoryEvent{},
 		history:          []*workflow.HistoryEvent{},
@@ -44,7 +44,7 @@ func newHistoryBuilder(msBuilder mutableState, logger log.Logger) *historyBuilde
 	}
 }
 
-func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger log.Logger) *historyBuilder {
+func NewHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger log.Logger) *historyBuilder {
 	return &historyBuilder{
 		history: history,
 	}
@@ -1094,4 +1094,8 @@ func setDecisionTaskStartedEventInfo(historyEvent *workflow.HistoryEvent, schedu
 func (b *historyBuilder) GetHistory() *workflow.History {
 	history := workflow.History{Events: b.history}
 	return &history
+}
+
+func (b *historyBuilder) SetHistory(history *workflow.History) {
+	b.history = history.Events
 }

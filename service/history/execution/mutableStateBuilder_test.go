@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package execution
 
 import (
 	"testing"
@@ -96,7 +96,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
 	s.logger = s.mockShard.GetLogger()
 
-	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
+	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
 }
 
 func (s *mutableStateSuite) TearDownTest() {
@@ -107,12 +107,13 @@ func (s *mutableStateSuite) TearDownTest() {
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_ReplicateDecisionCompleted() {
 	version := int64(12)
 	runID := uuid.New()
-	s.msBuilder = newMutableStateBuilderWithReplicationStateWithEventV2(
+	s.msBuilder = NewMutableStateBuilderWithReplicationStateWithEventV2(
 		s.mockShard,
 		s.mockEventsCache,
 		s.logger,
 		version,
 		runID,
+		testGlobalDomainEntry,
 	)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
@@ -137,12 +138,13 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_FailoverDecisionTimeout() {
 	version := int64(12)
 	runID := uuid.New()
-	s.msBuilder = newMutableStateBuilderWithReplicationStateWithEventV2(
+	s.msBuilder = NewMutableStateBuilderWithReplicationStateWithEventV2(
 		s.mockShard,
 		s.mockEventsCache,
 		s.logger,
 		version,
 		runID,
+		testGlobalDomainEntry,
 	)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
@@ -156,12 +158,13 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_FailoverDecisionFailed() {
 	version := int64(12)
 	runID := uuid.New()
-	s.msBuilder = newMutableStateBuilderWithReplicationStateWithEventV2(
+	s.msBuilder = NewMutableStateBuilderWithReplicationStateWithEventV2(
 		s.mockShard,
 		s.mockEventsCache,
 		s.logger,
 		version,
 		runID,
+		testGlobalDomainEntry,
 	)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
@@ -360,7 +363,7 @@ func (s *mutableStateSuite) TestChecksum() {
 		{
 			name: "closeTransactionAsSnapshot",
 			closeTxFunc: func(ms *mutableStateBuilder) (checksum.Checksum, error) {
-				snapshot, _, err := ms.CloseTransactionAsSnapshot(time.Now(), transactionPolicyPassive)
+				snapshot, _, err := ms.CloseTransactionAsSnapshot(time.Now(), TransactionPolicyPassive)
 				if err != nil {
 					return checksum.Checksum{}, err
 				}
@@ -371,7 +374,7 @@ func (s *mutableStateSuite) TestChecksum() {
 			name:                 "closeTransactionAsMutation",
 			enableBufferedEvents: true,
 			closeTxFunc: func(ms *mutableStateBuilder) (checksum.Checksum, error) {
-				mutation, _, err := ms.CloseTransactionAsMutation(time.Now(), transactionPolicyPassive)
+				mutation, _, err := ms.CloseTransactionAsMutation(time.Now(), TransactionPolicyPassive)
 				if err != nil {
 					return checksum.Checksum{}, err
 				}

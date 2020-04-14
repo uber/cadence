@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination mutableStateTaskGenerator_mock.go
+//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination mutableStateTaskGenerator_mock.go
 
-package history
+package execution
 
 import (
 	"fmt"
@@ -34,61 +34,61 @@ import (
 )
 
 type (
-	mutableStateTaskGenerator interface {
-		generateWorkflowStartTasks(
+	MutableStateTaskGenerator interface {
+		GenerateWorkflowStartTasks(
 			now time.Time,
 			startEvent *shared.HistoryEvent,
 		) error
-		generateWorkflowCloseTasks(
+		GenerateWorkflowCloseTasks(
 			now time.Time,
 		) error
-		generateRecordWorkflowStartedTasks(
-			now time.Time,
-			startEvent *shared.HistoryEvent,
-		) error
-		generateDelayedDecisionTasks(
+		GenerateRecordWorkflowStartedTasks(
 			now time.Time,
 			startEvent *shared.HistoryEvent,
 		) error
-		generateDecisionScheduleTasks(
+		GenerateDelayedDecisionTasks(
+			now time.Time,
+			startEvent *shared.HistoryEvent,
+		) error
+		GenerateDecisionScheduleTasks(
 			now time.Time,
 			decisionScheduleID int64,
 		) error
-		generateDecisionStartTasks(
+		GenerateDecisionStartTasks(
 			now time.Time,
 			decisionScheduleID int64,
 		) error
-		generateActivityTransferTasks(
+		GenerateActivityTransferTasks(
 			now time.Time,
 			event *shared.HistoryEvent,
 		) error
-		generateActivityRetryTasks(
+		GenerateActivityRetryTasks(
 			activityScheduleID int64,
 		) error
-		generateChildWorkflowTasks(
+		GenerateChildWorkflowTasks(
 			now time.Time,
 			event *shared.HistoryEvent,
 		) error
-		generateRequestCancelExternalTasks(
+		GenerateRequestCancelExternalTasks(
 			now time.Time,
 			event *shared.HistoryEvent,
 		) error
-		generateSignalExternalTasks(
+		GenerateSignalExternalTasks(
 			now time.Time,
 			event *shared.HistoryEvent,
 		) error
-		generateWorkflowSearchAttrTasks(
+		GenerateWorkflowSearchAttrTasks(
 			now time.Time,
 		) error
-		generateWorkflowResetTasks(
+		GenerateWorkflowResetTasks(
 			now time.Time,
 		) error
 
 		// these 2 APIs should only be called when mutable state transaction is being closed
-		generateActivityTimerTasks(
+		GenerateActivityTimerTasks(
 			now time.Time,
 		) error
-		generateUserTimerTasks(
+		GenerateUserTimerTasks(
 			now time.Time,
 		) error
 	}
@@ -97,18 +97,18 @@ type (
 		domainCache cache.DomainCache
 		logger      log.Logger
 
-		mutableState mutableState
+		mutableState MutableState
 	}
 )
 
 const defaultWorkflowRetentionInDays int32 = 1
 
-var _ mutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
+var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
 
-func newMutableStateTaskGenerator(
+func NewMutableStateTaskGenerator(
 	domainCache cache.DomainCache,
 	logger log.Logger,
-	mutableState mutableState,
+	mutableState MutableState,
 ) *mutableStateTaskGeneratorImpl {
 
 	return &mutableStateTaskGeneratorImpl{
@@ -119,7 +119,7 @@ func newMutableStateTaskGenerator(
 	}
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 	now time.Time,
 	startEvent *shared.HistoryEvent,
 ) error {
@@ -145,7 +145,7 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateWorkflowCloseTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	now time.Time,
 ) error {
 
@@ -179,7 +179,7 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowCloseTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateDelayedDecisionTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateDelayedDecisionTasks(
 	now time.Time,
 	startEvent *shared.HistoryEvent,
 ) error {
@@ -221,7 +221,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDelayedDecisionTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateRecordWorkflowStartedTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateRecordWorkflowStartedTasks(
 	now time.Time,
 	startEvent *shared.HistoryEvent,
 ) error {
@@ -237,7 +237,7 @@ func (r *mutableStateTaskGeneratorImpl) generateRecordWorkflowStartedTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateDecisionScheduleTasks(
 	now time.Time,
 	decisionScheduleID int64,
 ) error {
@@ -270,7 +270,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
 		r.mutableState.AddTimerTasks(&persistence.DecisionTimeoutTask{
 			// TaskID is set by shard
 			VisibilityTimestamp: scheduledTime.Add(scheduleToStartTimeout),
-			TimeoutType:         int(timerTypeScheduleToStart),
+			TimeoutType:         int(TimerTypeScheduleToStart),
 			EventID:             decision.ScheduleID,
 			ScheduleAttempt:     decision.Attempt,
 			Version:             decision.Version,
@@ -280,7 +280,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateDecisionStartTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateDecisionStartTasks(
 	now time.Time,
 	decisionScheduleID int64,
 ) error {
@@ -302,7 +302,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionStartTasks(
 	r.mutableState.AddTimerTasks(&persistence.DecisionTimeoutTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: startedTime.Add(startToCloseTimeout),
-		TimeoutType:         int(timerTypeStartToClose),
+		TimeoutType:         int(TimerTypeStartToClose),
 		EventID:             decision.ScheduleID,
 		ScheduleAttempt:     decision.Attempt,
 		Version:             decision.Version,
@@ -311,7 +311,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionStartTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateActivityTransferTasks(
 	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
@@ -353,7 +353,7 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateActivityRetryTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateActivityRetryTasks(
 	activityScheduleID int64,
 ) error {
 
@@ -374,7 +374,7 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityRetryTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
@@ -407,7 +407,7 @@ func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateRequestCancelExternalTasks(
 	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
@@ -446,7 +446,7 @@ func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateSignalExternalTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateSignalExternalTasks(
 	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
@@ -485,7 +485,7 @@ func (r *mutableStateTaskGeneratorImpl) generateSignalExternalTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateWorkflowSearchAttrTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowSearchAttrTasks(
 	now time.Time,
 ) error {
 
@@ -500,7 +500,7 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowSearchAttrTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateWorkflowResetTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks(
 	now time.Time,
 ) error {
 
@@ -515,26 +515,26 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowResetTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateActivityTimerTasks(
 	now time.Time,
 ) error {
 
-	_, err := r.getTimerSequence(now).createNextActivityTimer()
+	_, err := r.getTimerSequence(now).CreateNextActivityTimer()
 	return err
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateUserTimerTasks(
+func (r *mutableStateTaskGeneratorImpl) GenerateUserTimerTasks(
 	now time.Time,
 ) error {
 
-	_, err := r.getTimerSequence(now).createNextUserTimer()
+	_, err := r.getTimerSequence(now).CreateNextUserTimer()
 	return err
 }
 
-func (r *mutableStateTaskGeneratorImpl) getTimerSequence(now time.Time) timerSequence {
+func (r *mutableStateTaskGeneratorImpl) getTimerSequence(now time.Time) TimerSequence {
 	timeSource := clock.NewEventTimeSource()
 	timeSource.Update(now)
-	return newTimerSequence(timeSource, r.mutableState)
+	return NewTimerSequence(timeSource, r.mutableState)
 }
 
 func (r *mutableStateTaskGeneratorImpl) getTargetDomainID(
