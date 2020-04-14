@@ -89,7 +89,7 @@ func (r *conflictResolverImpl) reset(
 	}
 
 	var nextPageToken []byte
-	var resetMutableStateBuilder execution.MutableState // *mutableStateBuilder
+	var resetMutableStateBuilder execution.MutableState
 	var sBuilder stateBuilder
 	var history []*shared.HistoryEvent
 	var totalSize int64
