@@ -67,7 +67,7 @@ func (s *timerSequenceSuite) SetupTest() {
 	s.mockMutableState = NewMockMutableState(s.controller)
 	s.mockEventTimeSource = clock.NewEventTimeSource()
 
-	s.timerSequence = NewTimerSequence(s.mockEventTimeSource, s.mockMutableState)
+	s.timerSequence = NewTimerSequence(s.mockEventTimeSource, s.mockMutableState).(*timerSequenceImpl)
 }
 
 func (s *timerSequenceSuite) TearDownTest() {

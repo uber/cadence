@@ -34,7 +34,7 @@ import (
 )
 
 type (
-	// TODO: This should be part of persistence layer
+	// DecisionInfo should be part of persistence layer
 	DecisionInfo struct {
 		Version         int64
 		ScheduleID      int64
@@ -55,6 +55,7 @@ type (
 		OriginalScheduledTimestamp int64
 	}
 
+	// MutableState contains the current workflow execution state
 	MutableState interface {
 		AddActivityTaskCancelRequestedEvent(int64, string, string) (*workflow.HistoryEvent, *persistence.ActivityInfo, error)
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) (*workflow.HistoryEvent, error)
@@ -126,7 +127,7 @@ type (
 		GetVersionHistories() *persistence.VersionHistories
 		GetCurrentVersion() int64
 		GetExecutionInfo() *persistence.WorkflowExecutionInfo
-		GetHistoryBuilder() *historyBuilder
+		GetHistoryBuilder() *HistoryBuilder
 		GetInFlightDecision() (*DecisionInfo, bool)
 		GetPendingDecision() (*DecisionInfo, bool)
 		GetLastFirstEventID() int64
@@ -205,7 +206,7 @@ type (
 		ReplicateWorkflowExecutionTerminatedEvent(int64, *workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionTimedoutEvent(int64, *workflow.HistoryEvent) error
 		SetCurrentBranchToken(branchToken []byte) error
-		SetHistoryBuilder(hBuilder *historyBuilder)
+		SetHistoryBuilder(hBuilder *HistoryBuilder)
 		SetHistoryTree(treeID string) error
 		SetVersionHistories(*persistence.VersionHistories) error
 		UpdateActivity(*persistence.ActivityInfo) error

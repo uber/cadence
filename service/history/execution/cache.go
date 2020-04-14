@@ -40,8 +40,10 @@ import (
 )
 
 type (
+	// ReleaseWorkflowExecutionFunc releases workflow execution context
 	ReleaseWorkflowExecutionFunc func(err error)
 
+	// Cache caches workflow execution context
 	Cache struct {
 		cache.Cache
 		shard            shard.Context
@@ -53,13 +55,17 @@ type (
 	}
 )
 
-var NoopReleaseFn ReleaseWorkflowExecutionFunc = func(err error) {}
+var (
+	// NoopReleaseFn is an no-op implementation for the ReleaseWorkflowExecutionFunc type
+	NoopReleaseFn ReleaseWorkflowExecutionFunc = func(err error) {}
+)
 
 const (
 	cacheNotReleased int32 = 0
 	cacheReleased    int32 = 1
 )
 
+// NewCache creates a new workflow execution context cache
 func NewCache(shard shard.Context) *Cache {
 	opts := &cache.Options{}
 	config := shard.GetConfig()
@@ -77,6 +83,7 @@ func NewCache(shard shard.Context) *Cache {
 	}
 }
 
+// GetOrCreateCurrentWorkflowExecution gets or creates workflow execution context for the current run
 func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 	ctx context.Context,
 	domainID string,
@@ -104,7 +111,8 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 	)
 }
 
-// For analyzing mutableState, we have to try get Context from cache and also load from database
+// GetAndCreateWorkflowExecution is for analyzing mutableState, it will try getting Context from cache
+// and also load from database
 func (c *Cache) GetAndCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
@@ -145,6 +153,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 	return contextFromCache, contextFromDB, releaseFunc, cacheHit, nil
 }
 
+// GetOrCreateWorkflowExecutionForBackground gets or creates workflow execution context with background context
 func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 	domainID string,
 	execution workflow.WorkflowExecution,
@@ -153,6 +162,7 @@ func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 	return c.GetOrCreateWorkflowExecution(context.Background(), domainID, execution)
 }
 
+// GetOrCreateWorkflowExecution gets or creates workflow execution context
 func (c *Cache) GetOrCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,

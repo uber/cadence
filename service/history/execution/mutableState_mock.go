@@ -1098,10 +1098,10 @@ func (mr *MockMutableStateMockRecorder) GetExecutionInfo() *gomock.Call {
 }
 
 // GetHistoryBuilder mocks base method
-func (m *MockMutableState) GetHistoryBuilder() *historyBuilder {
+func (m *MockMutableState) GetHistoryBuilder() *HistoryBuilder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHistoryBuilder")
-	ret0, _ := ret[0].(*historyBuilder)
+	ret0, _ := ret[0].(*HistoryBuilder)
 	return ret0
 }
 
@@ -2215,7 +2215,7 @@ func (mr *MockMutableStateMockRecorder) SetCurrentBranchToken(branchToken interf
 }
 
 // SetHistoryBuilder mocks base method
-func (m *MockMutableState) SetHistoryBuilder(hBuilder *historyBuilder) {
+func (m *MockMutableState) SetHistoryBuilder(hBuilder *HistoryBuilder) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetHistoryBuilder", hBuilder)
 }

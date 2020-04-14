@@ -115,7 +115,7 @@ type (
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
 		replicationState *persistence.ReplicationState
-		hBuilder         *historyBuilder
+		hBuilder         *HistoryBuilder
 
 		// in memory only attributes
 		// indicate the current version
@@ -160,12 +160,13 @@ type (
 
 var _ MutableState = (*mutableStateBuilder)(nil)
 
+// NewMutableStateBuilder creates a new workflow mutable state builder
 func NewMutableStateBuilder(
 	shard shard.Context,
 	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
-) *mutableStateBuilder {
+) MutableState {
 	s := &mutableStateBuilder{
 		updateActivityInfos:        make(map[*persistence.ActivityInfo]struct{}),
 		pendingActivityInfoIDs:     make(map[int64]*persistence.ActivityInfo),
@@ -230,13 +231,14 @@ func NewMutableStateBuilder(
 	return s
 }
 
+// NewMutableStateBuilderWithReplicationState creates mutable state builder with replication state initialized
 func NewMutableStateBuilderWithReplicationState(
 	shard shard.Context,
 	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
-) *mutableStateBuilder {
-	s := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry)
+) MutableState {
+	s := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry).(*mutableStateBuilder)
 	s.replicationState = &persistence.ReplicationState{
 		StartVersion:        s.currentVersion,
 		CurrentVersion:      s.currentVersion,
@@ -247,25 +249,27 @@ func NewMutableStateBuilderWithReplicationState(
 	return s
 }
 
+// NewMutableStateBuilderWithVersionHistories creates mutable state builder with version history initialized
 func NewMutableStateBuilderWithVersionHistories(
 	shard shard.Context,
 	eventsCache events.Cache,
 	logger log.Logger,
 	domainEntry *cache.DomainCacheEntry,
-) *mutableStateBuilder {
+) MutableState {
 
-	s := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry)
+	s := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry).(*mutableStateBuilder)
 	s.versionHistories = persistence.NewVersionHistories(&persistence.VersionHistory{})
 	return s
 }
 
+// NewMutableStateBuilderWithEventV2 is used only in test
 func NewMutableStateBuilderWithEventV2(
 	shard shard.Context,
 	eventsCache events.Cache,
 	logger log.Logger,
 	runID string,
 	domainEntry *cache.DomainCacheEntry,
-) *mutableStateBuilder {
+) MutableState {
 
 	msBuilder := NewMutableStateBuilder(shard, eventsCache, logger, domainEntry)
 	_ = msBuilder.SetHistoryTree(runID)
@@ -273,6 +277,7 @@ func NewMutableStateBuilderWithEventV2(
 	return msBuilder
 }
 
+// NewMutableStateBuilderWithReplicationStateWithEventV2 is used only in test
 func NewMutableStateBuilderWithReplicationStateWithEventV2(
 	shard shard.Context,
 	eventsCache events.Cache,
@@ -280,7 +285,7 @@ func NewMutableStateBuilderWithReplicationStateWithEventV2(
 	version int64,
 	runID string,
 	domainEntry *cache.DomainCacheEntry,
-) *mutableStateBuilder {
+) MutableState {
 
 	msBuilder := NewMutableStateBuilderWithReplicationState(shard, eventsCache, logger, domainEntry)
 	msBuilder.GetReplicationState().StartVersion = version
@@ -410,11 +415,11 @@ func (e *mutableStateBuilder) SetVersionHistories(
 	return nil
 }
 
-func (e *mutableStateBuilder) GetHistoryBuilder() *historyBuilder {
+func (e *mutableStateBuilder) GetHistoryBuilder() *HistoryBuilder {
 	return e.hBuilder
 }
 
-func (e *mutableStateBuilder) SetHistoryBuilder(hBuilder *historyBuilder) {
+func (e *mutableStateBuilder) SetHistoryBuilder(hBuilder *HistoryBuilder) {
 	e.hBuilder = hBuilder
 }
 
@@ -3350,7 +3355,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 			e.shard.GetEventsCache(),
 			e.logger,
 			e.domainEntry,
-		)
+		).(*mutableStateBuilder)
 	} else {
 		if e.domainEntry.IsGlobalDomain() {
 			// all workflows within a global domain should have replication state,
@@ -3361,9 +3366,9 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 				e.eventsCache,
 				e.logger,
 				e.domainEntry,
-			)
+			).(*mutableStateBuilder)
 		} else {
-			newStateBuilder = NewMutableStateBuilder(e.shard, e.eventsCache, e.logger, e.domainEntry)
+			newStateBuilder = NewMutableStateBuilder(e.shard, e.eventsCache, e.logger, e.domainEntry).(*mutableStateBuilder)
 		}
 	}
 

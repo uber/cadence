@@ -52,6 +52,7 @@ var (
 )
 
 type (
+	// Context is the processing context for all operations on workflow execution
 	Context interface {
 		GetDomainName() string
 		GetDomainID() string
@@ -143,7 +144,7 @@ type (
 )
 
 type (
-	workflowExecutionContextImpl struct {
+	contextImpl struct {
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
 		shard             shard.Context
@@ -160,20 +161,21 @@ type (
 	}
 )
 
-var _ Context = (*workflowExecutionContextImpl)(nil)
+var _ Context = (*contextImpl)(nil)
 
 var (
 	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
 )
 
+// NewContext creates a new workflow execution context
 func NewContext(
 	domainID string,
 	execution workflow.WorkflowExecution,
 	shard shard.Context,
 	executionManager persistence.ExecutionManager,
 	logger log.Logger,
-) *workflowExecutionContextImpl {
-	return &workflowExecutionContextImpl{
+) Context {
+	return &contextImpl{
 		domainID:          domainID,
 		workflowExecution: execution,
 		shard:             shard,
@@ -189,15 +191,15 @@ func NewContext(
 	}
 }
 
-func (c *workflowExecutionContextImpl) Lock(ctx context.Context) error {
+func (c *contextImpl) Lock(ctx context.Context) error {
 	return c.mutex.Lock(ctx)
 }
 
-func (c *workflowExecutionContextImpl) Unlock() {
+func (c *contextImpl) Unlock() {
 	c.mutex.Unlock()
 }
 
-func (c *workflowExecutionContextImpl) Clear() {
+func (c *contextImpl) Clear() {
 	c.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.WorkflowContextCleared)
 	c.mutableState = nil
 	c.stats = &persistence.ExecutionStats{
@@ -205,15 +207,15 @@ func (c *workflowExecutionContextImpl) Clear() {
 	}
 }
 
-func (c *workflowExecutionContextImpl) GetDomainID() string {
+func (c *contextImpl) GetDomainID() string {
 	return c.domainID
 }
 
-func (c *workflowExecutionContextImpl) GetExecution() *workflow.WorkflowExecution {
+func (c *contextImpl) GetExecution() *workflow.WorkflowExecution {
 	return &c.workflowExecution
 }
 
-func (c *workflowExecutionContextImpl) GetDomainName() string {
+func (c *contextImpl) GetDomainName() string {
 	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
 	if err != nil {
 		return ""
@@ -221,15 +223,15 @@ func (c *workflowExecutionContextImpl) GetDomainName() string {
 	return domainEntry.GetInfo().Name
 }
 
-func (c *workflowExecutionContextImpl) GetHistorySize() int64 {
+func (c *contextImpl) GetHistorySize() int64 {
 	return c.stats.HistorySize
 }
 
-func (c *workflowExecutionContextImpl) SetHistorySize(size int64) {
+func (c *contextImpl) SetHistorySize(size int64) {
 	c.stats.HistorySize = size
 }
 
-func (c *workflowExecutionContextImpl) LoadExecutionStats() (*persistence.ExecutionStats, error) {
+func (c *contextImpl) LoadExecutionStats() (*persistence.ExecutionStats, error) {
 	_, err := c.LoadWorkflowExecution()
 	if err != nil {
 		return nil, err
@@ -237,7 +239,7 @@ func (c *workflowExecutionContextImpl) LoadExecutionStats() (*persistence.Execut
 	return c.stats, nil
 }
 
-func (c *workflowExecutionContextImpl) LoadWorkflowExecutionForReplication(
+func (c *contextImpl) LoadWorkflowExecutionForReplication(
 	incomingVersion int64,
 ) (MutableState, error) {
 
@@ -315,16 +317,16 @@ func (c *workflowExecutionContextImpl) LoadWorkflowExecutionForReplication(
 }
 
 // GetWorkflowExecution should only be used in tests
-func (c *workflowExecutionContextImpl) GetWorkflowExecution() MutableState {
+func (c *contextImpl) GetWorkflowExecution() MutableState {
 	return c.mutableState
 }
 
 // SetWorkflowExecution should only be used in tests
-func (c *workflowExecutionContextImpl) SetWorkflowExecution(mutableState MutableState) {
+func (c *contextImpl) SetWorkflowExecution(mutableState MutableState) {
 	c.mutableState = mutableState
 }
 
-func (c *workflowExecutionContextImpl) LoadWorkflowExecution() (MutableState, error) {
+func (c *contextImpl) LoadWorkflowExecution() (MutableState, error) {
 
 	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
 	if err != nil {
@@ -388,7 +390,7 @@ func (c *workflowExecutionContextImpl) LoadWorkflowExecution() (MutableState, er
 	return c.mutableState, nil
 }
 
-func (c *workflowExecutionContextImpl) CreateWorkflowExecution(
+func (c *contextImpl) CreateWorkflowExecution(
 	newWorkflow *persistence.WorkflowSnapshot,
 	historySize int64,
 	now time.Time,
@@ -431,7 +433,7 @@ func (c *workflowExecutionContextImpl) CreateWorkflowExecution(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) ConflictResolveWorkflowExecution(
+func (c *contextImpl) ConflictResolveWorkflowExecution(
 	now time.Time,
 	conflictResolveMode persistence.ConflictResolveWorkflowMode,
 	resetMutableState MutableState,
@@ -597,7 +599,7 @@ func (c *workflowExecutionContextImpl) ConflictResolveWorkflowExecution(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionAsActive(
+func (c *contextImpl) UpdateWorkflowExecutionAsActive(
 	now time.Time,
 ) error {
 
@@ -611,7 +613,7 @@ func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionAsActive(
 	)
 }
 
-func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionWithNewAsActive(
+func (c *contextImpl) UpdateWorkflowExecutionWithNewAsActive(
 	now time.Time,
 	newContext Context,
 	newMutableState MutableState,
@@ -627,7 +629,7 @@ func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionWithNewAsActive(
 	)
 }
 
-func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionAsPassive(
+func (c *contextImpl) UpdateWorkflowExecutionAsPassive(
 	now time.Time,
 ) error {
 
@@ -641,7 +643,7 @@ func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionAsPassive(
 	)
 }
 
-func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionWithNewAsPassive(
+func (c *contextImpl) UpdateWorkflowExecutionWithNewAsPassive(
 	now time.Time,
 	newContext Context,
 	newMutableState MutableState,
@@ -657,7 +659,7 @@ func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionWithNewAsPassive(
 	)
 }
 
-func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionWithNew(
+func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	now time.Time,
 	updateMode persistence.UpdateWorkflowMode,
 	newContext Context,
@@ -810,7 +812,7 @@ func (c *workflowExecutionContextImpl) UpdateWorkflowExecutionWithNew(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) notifyTasks(
+func (c *contextImpl) notifyTasks(
 	transferTasks []persistence.Task,
 	replicationTasks []persistence.Task,
 	timerTasks []persistence.Task,
@@ -820,7 +822,7 @@ func (c *workflowExecutionContextImpl) notifyTasks(
 	c.engine.NotifyNewTimerTasks(timerTasks)
 }
 
-func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
+func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 	updateMode persistence.UpdateWorkflowMode,
 	currentWorkflowMutation *persistence.WorkflowMutation,
 	newWorkflowSnapshot *persistence.WorkflowSnapshot,
@@ -868,7 +870,7 @@ func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) PersistFirstWorkflowEvents(
+func (c *contextImpl) PersistFirstWorkflowEvents(
 	workflowEvents *persistence.WorkflowEvents,
 ) (int64, error) {
 
@@ -902,7 +904,7 @@ func (c *workflowExecutionContextImpl) PersistFirstWorkflowEvents(
 	return int64(size), err
 }
 
-func (c *workflowExecutionContextImpl) PersistNonFirstWorkflowEvents(
+func (c *contextImpl) PersistNonFirstWorkflowEvents(
 	workflowEvents *persistence.WorkflowEvents,
 ) (int64, error) {
 
@@ -931,7 +933,7 @@ func (c *workflowExecutionContextImpl) PersistNonFirstWorkflowEvents(
 	return int64(size), err
 }
 
-func (c *workflowExecutionContextImpl) appendHistoryV2EventsWithRetry(
+func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	domainID string,
 	execution workflow.WorkflowExecution,
 	request *persistence.AppendHistoryNodesRequest,
@@ -952,7 +954,7 @@ func (c *workflowExecutionContextImpl) appendHistoryV2EventsWithRetry(
 	return int64(resp), err
 }
 
-func (c *workflowExecutionContextImpl) createWorkflowExecutionWithRetry(
+func (c *contextImpl) createWorkflowExecutionWithRetry(
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
@@ -988,7 +990,7 @@ func (c *workflowExecutionContextImpl) createWorkflowExecutionWithRetry(
 	}
 }
 
-func (c *workflowExecutionContextImpl) getWorkflowExecutionWithRetry(
+func (c *contextImpl) getWorkflowExecutionWithRetry(
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
 
@@ -1024,7 +1026,7 @@ func (c *workflowExecutionContextImpl) getWorkflowExecutionWithRetry(
 	}
 }
 
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithRetry(
+func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
 
@@ -1064,7 +1066,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithRetry(
 // 1. append history to new run
 // 2. append history to current run if current run is not closed
 // 3. update MutableState(terminate current run if not closed) and create new run
-func (c *workflowExecutionContextImpl) ResetWorkflowExecution(
+func (c *contextImpl) ResetWorkflowExecution(
 	currMutableState MutableState,
 	updateCurr bool,
 	closeTask persistence.Task,
@@ -1238,7 +1240,7 @@ func (c *workflowExecutionContextImpl) ResetWorkflowExecution(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionEventReapply(
+func (c *contextImpl) updateWorkflowExecutionEventReapply(
 	updateMode persistence.UpdateWorkflowMode,
 	eventBatch1 []*persistence.WorkflowEvents,
 	eventBatch2 []*persistence.WorkflowEvents,
@@ -1254,7 +1256,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionEventReapply(
 	return c.ReapplyEvents(eventBatches)
 }
 
-func (c *workflowExecutionContextImpl) conflictResolveEventReapply(
+func (c *contextImpl) conflictResolveEventReapply(
 	conflictResolveMode persistence.ConflictResolveWorkflowMode,
 	eventBatch1 []*persistence.WorkflowEvents,
 	eventBatch2 []*persistence.WorkflowEvents,
@@ -1270,7 +1272,7 @@ func (c *workflowExecutionContextImpl) conflictResolveEventReapply(
 	return c.ReapplyEvents(eventBatches)
 }
 
-func (c *workflowExecutionContextImpl) ReapplyEvents(
+func (c *contextImpl) ReapplyEvents(
 	eventBatches []*persistence.WorkflowEvents,
 ) error {
 

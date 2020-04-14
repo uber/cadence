@@ -34,6 +34,7 @@ import (
 )
 
 type (
+	// MutableStateTaskGenerator generates workflow transfer and timer tasks
 	MutableStateTaskGenerator interface {
 		GenerateWorkflowStartTasks(
 			now time.Time,
@@ -105,11 +106,12 @@ const defaultWorkflowRetentionInDays int32 = 1
 
 var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
 
+// NewMutableStateTaskGenerator creates a new task generator for mutable state
 func NewMutableStateTaskGenerator(
 	domainCache cache.DomainCache,
 	logger log.Logger,
 	mutableState MutableState,
-) *mutableStateTaskGeneratorImpl {
+) MutableStateTaskGenerator {
 
 	return &mutableStateTaskGeneratorImpl{
 		domainCache: domainCache,

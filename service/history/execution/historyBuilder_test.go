@@ -52,7 +52,7 @@ type (
 		domainID    string
 		domainEntry *cache.DomainCacheEntry
 		msBuilder   MutableState
-		builder     *historyBuilder
+		builder     *HistoryBuilder
 		logger      log.Logger
 	}
 )

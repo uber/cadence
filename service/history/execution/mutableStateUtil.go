@@ -28,13 +28,19 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type TransactionPolicy int
+type (
+	// TransactionPolicy is the policy used for updating workflow execution
+	TransactionPolicy int
+)
 
 const (
-	TransactionPolicyActive  TransactionPolicy = 0
+	// TransactionPolicyActive updates workflow execution as active
+	TransactionPolicyActive TransactionPolicy = 0
+	// TransactionPolicyPassive updates workflow execution as passive
 	TransactionPolicyPassive TransactionPolicy = 1
 )
 
+// Ptr returns a pointer to the current transaction policy
 func (policy TransactionPolicy) Ptr() *TransactionPolicy {
 	return &policy
 }
@@ -203,7 +209,6 @@ func convertSignalRequestedIDs(
 	return outputs
 }
 
-// TODO refactor: move
 func setTaskInfo(
 	version int64,
 	timestamp time.Time,
@@ -220,7 +225,7 @@ func setTaskInfo(
 	}
 }
 
-// TODO refactor: move
+// FailDecision fails the current decision task
 func FailDecision(
 	mutableState MutableState,
 	decision *DecisionInfo,
@@ -245,7 +250,7 @@ func FailDecision(
 	return mutableState.FlushBufferedEvents()
 }
 
-// TODO refactor: move
+// ScheduleDecision schedules a new decision task
 func ScheduleDecision(
 	mutableState MutableState,
 ) error {
@@ -284,6 +289,7 @@ func FindAutoResetPoint(
 	return "", nil
 }
 
+// CreatePersistenceMutableState creates a persistence mutable state based on the its in-memory version
 func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutableState {
 	builder := ms.(*mutableStateBuilder)
 	builder.FlushBufferedEvents() //nolint:errcheck
@@ -336,6 +342,7 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 	}
 }
 
+// CopyWorkflowExecutionInfo copies WorkflowExecutionInfo
 func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
 	return &persistence.WorkflowExecutionInfo{
 		DomainID:                           sourceInfo.DomainID,
@@ -394,6 +401,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 	}
 }
 
+// CopyActivityInfo copies ActivityInfo
 func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
 	details := make([]byte, len(sourceInfo.Details))
 	copy(details, sourceInfo.Details)
@@ -462,6 +470,7 @@ func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 	}
 }
 
+// CopyTimerInfo copies TimerInfo
 func CopyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 	return &persistence.TimerInfo{
 		Version:    sourceInfo.Version,
@@ -472,6 +481,7 @@ func CopyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 	}
 }
 
+// CopyCancellationInfo copies RequestCancelInfo
 func CopyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistence.RequestCancelInfo {
 	return &persistence.RequestCancelInfo{
 		Version:         sourceInfo.Version,
@@ -480,6 +490,7 @@ func CopyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistenc
 	}
 }
 
+// CopySignalInfo copies SignalInfo
 func CopySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo {
 	result := &persistence.SignalInfo{
 		Version:         sourceInfo.Version,
@@ -494,6 +505,7 @@ func CopySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo 
 	return result
 }
 
+// CopyChildInfo copies ChildExecutionInfo
 func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
 	result := &persistence.ChildExecutionInfo{
 		Version:               sourceInfo.Version,
@@ -533,6 +545,7 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 	return result
 }
 
+// CopyReplicationState copies workflow ReplicationState
 func CopyReplicationState(source *persistence.ReplicationState) *persistence.ReplicationState {
 	var lastReplicationInfo map[string]*persistence.ReplicationInfo
 	if source.LastReplicationInfo != nil {

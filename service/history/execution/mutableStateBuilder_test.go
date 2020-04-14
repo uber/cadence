@@ -96,7 +96,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
 	s.logger = s.mockShard.GetLogger()
 
-	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
+	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry).(*mutableStateBuilder)
 }
 
 func (s *mutableStateSuite) TearDownTest() {
@@ -114,7 +114,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		version,
 		runID,
 		testGlobalDomainEntry,
-	)
+	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
@@ -145,7 +145,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		version,
 		runID,
 		testGlobalDomainEntry,
-	)
+	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
@@ -165,7 +165,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		version,
 		runID,
 		testGlobalDomainEntry,
-	)
+	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 

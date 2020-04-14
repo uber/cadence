@@ -38,6 +38,7 @@ import (
 var emptyTasks = []persistence.Task{}
 
 type (
+	// MutableStateTaskRefresher refreshes workflow transfer and timer tasks
 	MutableStateTaskRefresher interface {
 		RefreshTasks(now time.Time, mutableState MutableState) error
 	}
@@ -50,12 +51,13 @@ type (
 	}
 )
 
+// NewMutableStateTaskRefresher creates a new task refresher for mutable state
 func NewMutableStateTaskRefresher(
 	config *config.Config,
 	domainCache cache.DomainCache,
 	eventsCache events.Cache,
 	logger log.Logger,
-) *mutableStateTaskRefresherImpl {
+) MutableStateTaskRefresher {
 
 	return &mutableStateTaskRefresherImpl{
 		config:      config,

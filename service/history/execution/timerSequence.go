@@ -33,31 +33,42 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type TimerType int32
-
-const (
-	TimerTypeStartToClose    = TimerType(shared.TimeoutTypeStartToClose)
-	TimerTypeScheduleToStart = TimerType(shared.TimeoutTypeScheduleToStart)
-	TimerTypeScheduleToClose = TimerType(shared.TimeoutTypeScheduleToClose)
-	TimerTypeHeartbeat       = TimerType(shared.TimeoutTypeHeartbeat)
+// TimerType indicates timer type
+type (
+	TimerType int32
 )
 
 const (
-	// activity / user timer task not created
+	// TimerTypeStartToClose is the timer type for activity startToClose timer
+	TimerTypeStartToClose = TimerType(shared.TimeoutTypeStartToClose)
+	// TimerTypeScheduleToStart is the timer type for activity scheduleToStart timer
+	TimerTypeScheduleToStart = TimerType(shared.TimeoutTypeScheduleToStart)
+	// TimerTypeScheduleToClose is the timer type for activity scheduleToClose timer
+	TimerTypeScheduleToClose = TimerType(shared.TimeoutTypeScheduleToClose)
+	// TimerTypeHeartbeat is the timer type for activity heartbeat timer
+	TimerTypeHeartbeat = TimerType(shared.TimeoutTypeHeartbeat)
+)
+
+const (
+	// TimerTaskStatusNone indicates activity / user timer task has not been created
 	TimerTaskStatusNone = iota
+	// TimerTaskStatusCreated indicates user timer task has been created
 	TimerTaskStatusCreated
 )
 
 const (
-	// activity timer task status
+	// TimerTaskStatusCreatedStartToClose indicates activity startToClose timer has been created
 	TimerTaskStatusCreatedStartToClose = 1 << iota
+	// TimerTaskStatusCreatedScheduleToStart indicates activity scheduleToStart timer has been created
 	TimerTaskStatusCreatedScheduleToStart
+	// TimerTaskStatusCreatedScheduleToClose indicates activity scheduleToClose timer has been created
 	TimerTaskStatusCreatedScheduleToClose
+	// TimerTaskStatusCreatedHeartbeat indicates activity heartbeat timer has been created
 	TimerTaskStatusCreatedHeartbeat
 )
 
 type (
-	// TimerSequenceID
+	// TimerSequenceID describes user / activity timer and defines an order among timers
 	TimerSequenceID struct {
 		EventID      int64
 		Timestamp    time.Time
@@ -66,8 +77,10 @@ type (
 		Attempt      int32
 	}
 
+	// TimerSequenceIDs is a list of TimerSequenceID
 	TimerSequenceIDs []TimerSequenceID
 
+	// TimerSequence manages user / activity timer
 	TimerSequence interface {
 		IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) bool
 
@@ -86,10 +99,11 @@ type (
 
 var _ TimerSequence = (*timerSequenceImpl)(nil)
 
+// NewTimerSequence creates a new timer sequence
 func NewTimerSequence(
 	timeSource clock.TimeSource,
 	mutableState MutableState,
-) *timerSequenceImpl {
+) TimerSequence {
 	return &timerSequenceImpl{
 		timeSource:   timeSource,
 		mutableState: mutableState,
@@ -362,6 +376,7 @@ func (t *timerSequenceImpl) getActivityHeartbeatTimeout(
 	}
 }
 
+// TimerTypeToTimerMask converts TimerType into the TimerTaskStatus flag
 func TimerTypeToTimerMask(
 	TimerType TimerType,
 ) int32 {
@@ -380,6 +395,7 @@ func TimerTypeToTimerMask(
 	}
 }
 
+// TimerTypeToThrift converts TimeType to its thrift representation
 func TimerTypeToThrift(
 	TimerType TimerType,
 ) shared.TimeoutType {
@@ -398,6 +414,7 @@ func TimerTypeToThrift(
 	}
 }
 
+// TimerTypeFromThrift gets TimerType from its thrift representation
 func TimerTypeFromThrift(
 	TimerType shared.TimeoutType,
 ) TimerType {
@@ -416,6 +433,7 @@ func TimerTypeFromThrift(
 	}
 }
 
+// TimerTypeToReason creates timeout reason based on the TimeType
 func TimerTypeToReason(
 	TimerType TimerType,
 ) string {
