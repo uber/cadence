@@ -483,9 +483,6 @@ UpdateLoop:
 		}
 	}
 
-	// only update last refresh time when refresh succeeded
-	c.lastRefreshTime = now
-
 	// NOTE: READ REF BEFORE MODIFICATION
 	// ref: historyEngine.go registerDomainFailoverCallback function
 	c.callbackLock.Lock()
@@ -494,6 +491,10 @@ UpdateLoop:
 	c.cacheByID.Store(newCacheByID)
 	c.cacheNameToID.Store(newCacheNameToID)
 	c.triggerDomainChangeCallbackLocked(prevEntries, nextEntries)
+
+	// only update last refresh time when refresh succeeded
+	c.lastRefreshTime = now
+
 	return nil
 }
 
