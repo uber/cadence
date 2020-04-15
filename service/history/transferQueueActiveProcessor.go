@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 const (
@@ -81,7 +82,7 @@ func newTransferQueueActiveProcessor(
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithTags(tag.ClusterName(currentClusterName))
-	transferTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	transferTaskFilter := func(taskInfo task.Info) (bool, error) {
 		task, ok := taskInfo.(*persistence.TransferTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
@@ -132,7 +133,7 @@ func newTransferQueueActiveProcessor(
 
 	redispatchQueue := collection.NewConcurrentQueue()
 
-	transferQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
+	transferQueueTaskInitializer := func(taskInfo task.Info) task.Task {
 		return newTransferQueueTask(
 			shard,
 			taskInfo,
@@ -207,7 +208,7 @@ func newTransferQueueFailoverProcessor(
 		tag.FailoverMsg("from: "+standbyClusterName),
 	)
 
-	transferTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	transferTaskFilter := func(taskInfo task.Info) (bool, error) {
 		task, ok := taskInfo.(*persistence.TransferTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
@@ -267,7 +268,7 @@ func newTransferQueueFailoverProcessor(
 
 	redispatchQueue := collection.NewConcurrentQueue()
 
-	transferQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
+	transferQueueTaskInitializer := func(taskInfo task.Info) task.Task {
 		return newTransferQueueTask(
 			shard,
 			taskInfo,

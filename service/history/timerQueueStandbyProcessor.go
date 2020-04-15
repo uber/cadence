@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 const (
@@ -66,7 +67,7 @@ func newTimerQueueStandbyProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.VisibilityTimestamp)
 	}
 	logger = logger.WithTags(tag.ClusterName(clusterName))
-	timerTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	timerTaskFilter := func(taskInfo task.Info) (bool, error) {
 		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
@@ -107,7 +108,7 @@ func newTimerQueueStandbyProcessor(
 		),
 	}
 
-	timerQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
+	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
 		return newTimerQueueTask(
 			shard,
 			taskInfo,

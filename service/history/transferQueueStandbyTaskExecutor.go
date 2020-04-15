@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -70,7 +71,7 @@ func newTransferQueueStandbyTaskExecutor(
 }
 
 func (t *transferQueueStandbyTaskExecutor) execute(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	shouldProcessTask bool,
 ) error {
 
@@ -469,7 +470,7 @@ func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertH
 
 func (t *transferQueueStandbyTaskExecutor) processTransfer(
 	processTaskIfClosed bool,
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	actionFn standbyActionFn,
 	postActionFn standbyPostActionFn,
 ) (retError error) {
@@ -509,7 +510,7 @@ func (t *transferQueueStandbyTaskExecutor) processTransfer(
 }
 
 func (t *transferQueueStandbyTaskExecutor) pushActivity(
-	task queueTaskInfo,
+	task task.Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -527,7 +528,7 @@ func (t *transferQueueStandbyTaskExecutor) pushActivity(
 }
 
 func (t *transferQueueStandbyTaskExecutor) pushDecision(
-	task queueTaskInfo,
+	task task.Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -546,7 +547,7 @@ func (t *transferQueueStandbyTaskExecutor) pushDecision(
 }
 
 func (t *transferQueueStandbyTaskExecutor) fetchHistoryFromRemote(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	postActionInfo interface{},
 	log log.Logger,
 ) error {

@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 // verifyTaskVersion, will return true if failover version check is successful
@@ -155,7 +156,7 @@ func loadMutableStateForTimerTask(
 
 func initializeLoggerForTask(
 	shardID int,
-	task queueTaskInfo,
+	task task.Info,
 	logger log.Logger,
 ) log.Logger {
 

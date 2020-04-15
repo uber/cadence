@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 var (
@@ -370,7 +371,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 }
 
 func (t *timerQueueProcessorBase) submitTask(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 ) bool {
 	if !t.isPriorityTaskProcessorEnabled() {
 		return t.taskProcessor.addTask(

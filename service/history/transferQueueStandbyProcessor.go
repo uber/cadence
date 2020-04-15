@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -79,7 +80,7 @@ func newTransferQueueStandbyProcessor(
 	}
 	logger = logger.WithTags(tag.ClusterName(clusterName))
 
-	transferTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	transferTaskFilter := func(taskInfo task.Info) (bool, error) {
 		task, ok := taskInfo.(*persistence.TransferTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
@@ -133,7 +134,7 @@ func newTransferQueueStandbyProcessor(
 
 	redispatchQueue := collection.NewConcurrentQueue()
 
-	transferQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
+	transferQueueTaskInitializer := func(taskInfo task.Info) task.Task {
 		return newTransferQueueTask(
 			shard,
 			taskInfo,

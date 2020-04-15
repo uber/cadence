@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -47,7 +48,7 @@ type (
 	taskInfo struct {
 		// TODO: change to queueTaskExecutor
 		processor taskExecutor
-		task      queueTaskInfo
+		task      task.Info
 
 		attempt   int
 		startTime time.Time
@@ -79,7 +80,7 @@ type (
 
 func newTaskInfo(
 	processor taskExecutor,
-	task queueTaskInfo,
+	task task.Info,
 	logger log.Logger,
 ) *taskInfo {
 	return &taskInfo{

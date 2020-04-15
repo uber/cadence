@@ -33,17 +33,18 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/task"
+	ctask "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
 	queueTaskBase struct {
 		sync.Mutex
-		queueTaskInfo
+		task.Info
 
 		shard         shard.Context
-		state         task.State
+		state         ctask.State
 		priority      int
 		attempt       int
 		timeSource    clock.TimeSource
@@ -78,7 +79,7 @@ type (
 
 func newTimerQueueTask(
 	shard shard.Context,
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter taskFilter,
@@ -87,7 +88,7 @@ func newTimerQueueTask(
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 	ackMgr timerQueueAckMgr,
-) queueTask {
+) task.Task {
 	return &timerQueueTask{
 		queueTaskBase: newQueueTaskBase(
 			shard,
@@ -106,7 +107,7 @@ func newTimerQueueTask(
 
 func newTransferQueueTask(
 	shard shard.Context,
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter taskFilter,
@@ -115,7 +116,7 @@ func newTransferQueueTask(
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 	ackMgr queueAckMgr,
-) queueTask {
+) task.Task {
 	return &transferQueueTask{
 		queueTaskBase: newQueueTaskBase(
 			shard,
@@ -134,7 +135,7 @@ func newTransferQueueTask(
 
 func newQueueTaskBase(
 	shard shard.Context,
-	queueTaskInfo queueTaskInfo,
+	queueTaskInfo task.Info,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter taskFilter,
@@ -143,9 +144,9 @@ func newQueueTaskBase(
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) *queueTaskBase {
 	return &queueTaskBase{
-		queueTaskInfo: queueTaskInfo,
+		Info:          queueTaskInfo,
 		shard:         shard,
-		state:         task.TaskStatePending,
+		state:         ctask.TaskStatePending,
 		scope:         scope,
 		logger:        logger,
 		attempt:       0,
@@ -160,7 +161,7 @@ func newQueueTaskBase(
 func (t *timerQueueTask) Ack() {
 	t.queueTaskBase.Ack()
 
-	timerTask, ok := t.queueTaskInfo.(*persistence.TimerTaskInfo)
+	timerTask, ok := t.Info.(*persistence.TimerTaskInfo)
 	if !ok {
 		return
 	}
@@ -175,8 +176,8 @@ func (t *timerQueueTask) Nack() {
 	t.redispatchQueue.Add(t)
 }
 
-func (t *timerQueueTask) GetQueueType() queueType {
-	return timerQueueType
+func (t *timerQueueTask) GetQueueType() task.QueueType {
+	return task.QueueTypeTimer
 }
 
 func (t *transferQueueTask) Ack() {
@@ -193,8 +194,8 @@ func (t *transferQueueTask) Nack() {
 	t.redispatchQueue.Add(t)
 }
 
-func (t *transferQueueTask) GetQueueType() queueType {
-	return transferQueueType
+func (t *transferQueueTask) GetQueueType() task.QueueType {
+	return task.QueueTypeTransfer
 }
 
 func (t *queueTaskBase) Execute() error {
@@ -203,7 +204,7 @@ func (t *queueTaskBase) Execute() error {
 	// processed as active or standby and use the corresponding
 	// task executor.
 	var err error
-	t.shouldProcessTask, err = t.taskFilter(t.queueTaskInfo)
+	t.shouldProcessTask, err = t.taskFilter(t.Info)
 	if err != nil {
 		time.Sleep(loadDomainEntryForTimerTaskRetryDelay)
 		return err
@@ -218,7 +219,7 @@ func (t *queueTaskBase) Execute() error {
 		}
 	}()
 
-	return t.taskExecutor.execute(t.queueTaskInfo, t.shouldProcessTask)
+	return t.taskExecutor.execute(t.Info, t.shouldProcessTask)
 }
 
 func (t *queueTaskBase) HandleErr(
@@ -286,7 +287,7 @@ func (t *queueTaskBase) Ack() {
 	t.Lock()
 	defer t.Unlock()
 
-	t.state = task.TaskStateAcked
+	t.state = ctask.TaskStateAcked
 	if t.shouldProcessTask {
 		t.scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(t.attempt))
 		t.scope.RecordTimer(metrics.TaskLatency, time.Since(t.submitTime))
@@ -298,10 +299,10 @@ func (t *queueTaskBase) Nack() {
 	t.Lock()
 	defer t.Unlock()
 
-	t.state = task.TaskStateNacked
+	t.state = ctask.TaskStateNacked
 }
 
-func (t *queueTaskBase) State() task.State {
+func (t *queueTaskBase) State() ctask.State {
 	t.Lock()
 	defer t.Unlock()
 

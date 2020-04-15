@@ -31,13 +31,14 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/task"
+	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
 	taskPriorityAssigner interface {
-		Assign(queueTask) error
+		Assign(task.Task) error
 	}
 
 	taskPriorityAssignerImpl struct {
@@ -72,10 +73,10 @@ func newTaskPriorityAssigner(
 }
 
 func (a *taskPriorityAssignerImpl) Assign(
-	queueTask queueTask,
+	queueTask task.Task,
 ) error {
-	if queueTask.GetQueueType() == replicationQueueType {
-		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
+	if queueTask.GetQueueType() == task.QueueTypeReplication {
+		queueTask.SetPriority(t.GetTaskPriority(t.LowPriorityClass, t.DefaultPrioritySubclass))
 		return nil
 	}
 
@@ -86,14 +87,14 @@ func (a *taskPriorityAssignerImpl) Assign(
 	}
 
 	if !active {
-		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
+		queueTask.SetPriority(t.GetTaskPriority(t.LowPriorityClass, t.DefaultPrioritySubclass))
 		return nil
 	}
 
 	if !a.getRateLimiter(domainName).Allow() {
-		queueTask.SetPriority(task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass))
+		queueTask.SetPriority(t.GetTaskPriority(t.DefaultPriorityClass, t.DefaultPrioritySubclass))
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
-		if queueTask.GetQueueType() == transferQueueType {
+		if queueTask.GetQueueType() == task.QueueTypeTransfer {
 			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
 		} else {
 			taggedScope.IncCounter(metrics.TimerTaskThrottledCounter)
@@ -101,7 +102,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 		return nil
 	}
 
-	queueTask.SetPriority(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass))
+	queueTask.SetPriority(t.GetTaskPriority(t.HighPriorityClass, t.DefaultPrioritySubclass))
 	return nil
 }
 

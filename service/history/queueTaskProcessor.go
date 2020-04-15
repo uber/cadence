@@ -28,22 +28,23 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/task"
+	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
 	queueTaskProcessorOptions struct {
-		schedulerType        task.SchedulerType
-		fifoSchedulerOptions *task.FIFOTaskSchedulerOptions
-		wRRSchedulerOptions  *task.WeightedRoundRobinTaskSchedulerOptions
+		schedulerType        t.SchedulerType
+		fifoSchedulerOptions *t.FIFOTaskSchedulerOptions
+		wRRSchedulerOptions  *t.WeightedRoundRobinTaskSchedulerOptions
 	}
 
 	queueTaskProcessorImpl struct {
 		sync.RWMutex
 
 		priorityAssigner taskPriorityAssigner
-		schedulers       map[shard.Context]task.Scheduler
+		schedulers       map[shard.Context]t.Scheduler
 
 		status        int32
 		options       *queueTaskProcessorOptions
@@ -67,11 +68,11 @@ func newQueueTaskProcessor(
 	metricsClient metrics.Client,
 ) (queueTaskProcessor, error) {
 	switch options.schedulerType {
-	case task.SchedulerTypeFIFO:
+	case t.SchedulerTypeFIFO:
 		if options.fifoSchedulerOptions == nil {
 			return nil, errTaskSchedulerOptionsNotSpecified
 		}
-	case task.SchedulerTypeWRR:
+	case t.SchedulerTypeWRR:
 		if options.wRRSchedulerOptions == nil {
 			return nil, errTaskSchedulerOptionsNotSpecified
 		}
@@ -81,7 +82,7 @@ func newQueueTaskProcessor(
 
 	return &queueTaskProcessorImpl{
 		priorityAssigner: priorityAssigner,
-		schedulers:       make(map[shard.Context]task.Scheduler),
+		schedulers:       make(map[shard.Context]t.Scheduler),
 		status:           common.DaemonStatusInitialized,
 		options:          options,
 		logger:           logger,
@@ -131,7 +132,7 @@ func (p *queueTaskProcessorImpl) StopShardProcessor(
 }
 
 func (p *queueTaskProcessorImpl) Submit(
-	task queueTask,
+	task task.Task,
 ) error {
 	scheduler, err := p.prepareSubmit(task)
 	if err != nil {
@@ -141,7 +142,7 @@ func (p *queueTaskProcessorImpl) Submit(
 }
 
 func (p *queueTaskProcessorImpl) TrySubmit(
-	task queueTask,
+	task task.Task,
 ) (bool, error) {
 	scheduler, err := p.prepareSubmit(task)
 	if err != nil {
@@ -151,8 +152,8 @@ func (p *queueTaskProcessorImpl) TrySubmit(
 }
 
 func (p *queueTaskProcessorImpl) prepareSubmit(
-	task queueTask,
-) (task.Scheduler, error) {
+	task task.Task,
+) (t.Scheduler, error) {
 	if err := p.priorityAssigner.Assign(task); err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (p *queueTaskProcessorImpl) prepareSubmit(
 
 func (p *queueTaskProcessorImpl) getOrCreateTaskScheduler(
 	shard shard.Context,
-) (task.Scheduler, error) {
+) (t.Scheduler, error) {
 	p.RLock()
 	if scheduler, ok := p.schedulers[shard]; ok {
 		p.RUnlock()
@@ -181,17 +182,17 @@ func (p *queueTaskProcessorImpl) getOrCreateTaskScheduler(
 		return nil, errTaskProcessorNotRunning
 	}
 
-	var scheduler task.Scheduler
+	var scheduler t.Scheduler
 	var err error
 	switch p.options.schedulerType {
-	case task.SchedulerTypeFIFO:
-		scheduler = task.NewFIFOTaskScheduler(
+	case t.SchedulerTypeFIFO:
+		scheduler = t.NewFIFOTaskScheduler(
 			p.logger,
 			p.metricsClient,
 			p.options.fifoSchedulerOptions,
 		)
-	case task.SchedulerTypeWRR:
-		scheduler, err = task.NewWeightedRoundRobinTaskScheduler(
+	case t.SchedulerTypeWRR:
+		scheduler, err = t.NewWeightedRoundRobinTaskScheduler(
 			p.logger,
 			p.metricsClient,
 			p.options.wRRSchedulerOptions,

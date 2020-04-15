@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -58,7 +59,7 @@ type (
 		MetricScope                         int
 	}
 
-	queueTaskInitializer func(queueTaskInfo) queueTask
+	queueTaskInitializer func(task.Info) task.Task
 
 	queueProcessorBase struct {
 		clusterName          string
@@ -298,7 +299,7 @@ func (p *queueProcessorBase) processBatch() {
 }
 
 func (p *queueProcessorBase) submitTask(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 ) bool {
 	if !p.isPriorityTaskProcessorEnabled() {
 		return p.taskProcessor.addTask(
@@ -343,7 +344,7 @@ func (p *queueProcessorBase) retryTasks() {
 }
 
 func (p *queueProcessorBase) complete(
-	task queueTaskInfo,
+	task task.Info,
 ) {
 	p.ackMgr.completeQueueTask(task.GetTaskID())
 }
@@ -362,7 +363,7 @@ func redispatchQueueTasks(
 	queueLength := redispatchQueue.Len()
 	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
 	for i := 0; i != queueLength; i++ {
-		queueTask := redispatchQueue.Remove().(queueTask)
+		queueTask := redispatchQueue.Remove().(task.Task)
 		submitted, err := queueTaskProcessor.TrySubmit(queueTask)
 		if err != nil {
 			// the only reason error will be returned here is because

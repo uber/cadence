@@ -38,9 +38,10 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/task"
+	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -51,7 +52,7 @@ type (
 		controller            *gomock.Controller
 		mockShard             *shard.TestContext
 		mockQueueTaskExecutor *MockqueueTaskExecutor
-		mockQueueTaskInfo     *MockqueueTaskInfo
+		mockQueueTaskInfo     *task.MockInfo
 
 		scope         metrics.Scope
 		logger        log.Logger
@@ -78,7 +79,7 @@ func (s *queueTaskSuite) SetupTest() {
 		config.NewForTest(),
 	)
 	s.mockQueueTaskExecutor = NewMockqueueTaskExecutor(s.controller)
-	s.mockQueueTaskInfo = NewMockqueueTaskInfo(s.controller)
+	s.mockQueueTaskInfo = task.NewMockInfo(s.controller)
 
 	s.scope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
@@ -93,7 +94,7 @@ func (s *queueTaskSuite) TearDownTest() {
 
 func (s *queueTaskSuite) TestExecute_TaskFilterErr() {
 	taskFilterErr := errors.New("some random error")
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return false, taskFilterErr
 	})
 	err := queueTaskBase.Execute()
@@ -101,30 +102,30 @@ func (s *queueTaskSuite) TestExecute_TaskFilterErr() {
 }
 
 func (s *queueTaskSuite) TestExecute_ExecutionErr() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
 	executionErr := errors.New("some random error")
-	s.mockQueueTaskExecutor.EXPECT().execute(queueTaskBase.queueTaskInfo, true).Return(executionErr).Times(1)
+	s.mockQueueTaskExecutor.EXPECT().execute(queueTaskBase.Info, true).Return(executionErr).Times(1)
 
 	err := queueTaskBase.Execute()
 	s.Equal(executionErr, err)
 }
 
 func (s *queueTaskSuite) TestExecute_Success() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
-	s.mockQueueTaskExecutor.EXPECT().execute(queueTaskBase.queueTaskInfo, true).Return(nil).Times(1)
+	s.mockQueueTaskExecutor.EXPECT().execute(queueTaskBase.Info, true).Return(nil).Times(1)
 
 	err := queueTaskBase.Execute()
 	s.NoError(err)
 }
 
 func (s *queueTaskSuite) TestHandleErr_ErrEntityNotExists() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
@@ -133,7 +134,7 @@ func (s *queueTaskSuite) TestHandleErr_ErrEntityNotExists() {
 }
 
 func (s *queueTaskSuite) TestHandleErr_ErrTaskRetry() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
@@ -142,7 +143,7 @@ func (s *queueTaskSuite) TestHandleErr_ErrTaskRetry() {
 }
 
 func (s *queueTaskSuite) TestHandleErr_ErrTaskDiscarded() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
@@ -151,7 +152,7 @@ func (s *queueTaskSuite) TestHandleErr_ErrTaskDiscarded() {
 }
 
 func (s *queueTaskSuite) TestHandleErr_ErrDomainNotActive() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
@@ -165,7 +166,7 @@ func (s *queueTaskSuite) TestHandleErr_ErrDomainNotActive() {
 }
 
 func (s *queueTaskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
@@ -174,7 +175,7 @@ func (s *queueTaskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
 }
 
 func (s *queueTaskSuite) TestHandleErr_UnknownErr() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
@@ -183,21 +184,21 @@ func (s *queueTaskSuite) TestHandleErr_UnknownErr() {
 }
 
 func (s *queueTaskSuite) TestTaskState() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 
-	s.Equal(task.TaskStatePending, queueTaskBase.State())
+	s.Equal(t.TaskStatePending, queueTaskBase.State())
 
 	queueTaskBase.Ack()
-	s.Equal(task.TaskStateAcked, queueTaskBase.State())
+	s.Equal(t.TaskStateAcked, queueTaskBase.State())
 
 	queueTaskBase.Nack()
-	s.Equal(task.TaskStateNacked, queueTaskBase.State())
+	s.Equal(t.TaskStateNacked, queueTaskBase.State())
 }
 
 func (s *queueTaskSuite) TestTaskPriority() {
-	queueTaskBase := s.newTestQueueTaskBase(func(task queueTaskInfo) (bool, error) {
+	queueTaskBase := s.newTestQueueTaskBase(func(task task.Info) (bool, error) {
 		return true, nil
 	})
 

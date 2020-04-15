@@ -31,6 +31,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
+	task "github.com/uber/cadence/service/history/task"
 )
 
 // MocktaskPriorityAssigner is a mock of taskPriorityAssigner interface
@@ -57,7 +59,7 @@ func (m *MocktaskPriorityAssigner) EXPECT() *MocktaskPriorityAssignerMockRecorde
 }
 
 // Assign mocks base method
-func (m *MocktaskPriorityAssigner) Assign(arg0 queueTask) error {
+func (m *MocktaskPriorityAssigner) Assign(arg0 task.Task) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Assign", arg0)
 	ret0, _ := ret[0].(error)

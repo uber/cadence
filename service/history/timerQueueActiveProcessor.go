@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -64,7 +65,7 @@ func newTimerQueueActiveProcessor(
 		return shard.UpdateTimerClusterAckLevel(currentClusterName, ackLevel.VisibilityTimestamp)
 	}
 	logger = logger.WithTags(tag.ClusterName(currentClusterName))
-	timerTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	timerTaskFilter := func(taskInfo task.Info) (bool, error) {
 		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
@@ -103,7 +104,7 @@ func newTimerQueueActiveProcessor(
 		historyService.metricsClient,
 		shard.GetConfig(),
 	)
-	timerQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
+	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
 		return newTimerQueueTask(
 			shard,
 			taskInfo,
@@ -179,7 +180,7 @@ func newTimerQueueFailoverProcessor(
 		tag.WorkflowDomainIDs(domainIDs),
 		tag.FailoverMsg("from: "+standbyClusterName),
 	)
-	timerTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	timerTaskFilter := func(taskInfo task.Info) (bool, error) {
 		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
@@ -218,7 +219,7 @@ func newTimerQueueFailoverProcessor(
 		historyService.metricsClient,
 		shard.GetConfig(),
 	)
-	timerQueueTaskInitializer := func(taskInfo queueTaskInfo) queueTask {
+	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
 		return newTimerQueueTask(
 			shard,
 			taskInfo,

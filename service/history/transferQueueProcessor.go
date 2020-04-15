@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 var (
@@ -55,7 +56,7 @@ type (
 		UnlockTaskProcessing()
 	}
 
-	taskFilter func(task queueTaskInfo) (bool, error)
+	taskFilter func(task task.Info) (bool, error)
 
 	transferQueueProcessorImpl struct {
 		isGlobalDomainEnabled bool

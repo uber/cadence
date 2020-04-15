@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -72,7 +73,7 @@ func (s *queueProcessorSuite) TearDownTest() {
 func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 	numTasks := 5
 	for i := 0; i != numTasks; i++ {
-		mockTask := NewMockqueueTask(s.controller)
+		mockTask := task.NewMockTask(s.controller)
 		s.redispatchQueue.Add(mockTask)
 	}
 
@@ -102,7 +103,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 	var calls []*gomock.Call
 
 	for i := 0; i != numTasks; i++ {
-		mockTask := NewMockqueueTask(s.controller)
+		mockTask := task.NewMockTask(s.controller)
 		s.redispatchQueue.Add(mockTask)
 		submitted := false
 		if rand.Intn(2) == 0 {

@@ -29,17 +29,18 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
 	standbyActionFn     func(execution.Context, execution.MutableState) (interface{}, error)
-	standbyPostActionFn func(queueTaskInfo, interface{}, log.Logger) error
+	standbyPostActionFn func(task.Info, interface{}, log.Logger) error
 
 	standbyCurrentTimeFn func() time.Time
 )
 
 func standbyTaskPostActionNoOp(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -53,7 +54,7 @@ func standbyTaskPostActionNoOp(
 }
 
 func standbyTransferTaskPostActionTaskDiscarded(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -76,7 +77,7 @@ func standbyTransferTaskPostActionTaskDiscarded(
 }
 
 func standbyTimerTaskPostActionTaskDiscarded(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -180,7 +181,7 @@ func getHistoryResendInfo(
 }
 
 func getStandbyPostActionFn(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	standbyNow standbyCurrentTimeFn,
 	standbyTaskMissingEventsResendDelay time.Duration,
 	standbyTaskMissingEventsDiscardDelay time.Duration,

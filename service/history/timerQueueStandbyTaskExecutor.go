@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -72,7 +73,7 @@ func newTimerQueueStandbyTaskExecutor(
 }
 
 func (t *timerQueueStandbyTaskExecutor) execute(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	shouldProcessTask bool,
 ) error {
 
@@ -430,7 +431,7 @@ func (t *timerQueueStandbyTaskExecutor) processTimer(
 }
 
 func (t *timerQueueStandbyTaskExecutor) fetchHistoryFromRemote(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	postActionInfo interface{},
 	log log.Logger,
 ) error {

@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -96,12 +97,12 @@ func newQueueFailoverAckMgr(shard shard.Context, options *QueueProcessorOptions,
 	}
 }
 
-func (a *queueAckMgrImpl) readQueueTasks() ([]queueTaskInfo, bool, error) {
+func (a *queueAckMgrImpl) readQueueTasks() ([]task.Info, bool, error) {
 	a.RLock()
 	readLevel := a.readLevel
 	a.RUnlock()
 
-	var tasks []queueTaskInfo
+	var tasks []task.Info
 	var morePage bool
 	op := func() error {
 		var err error

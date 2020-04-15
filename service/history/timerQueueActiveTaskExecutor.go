@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -65,7 +66,7 @@ func newTimerQueueActiveTaskExecutor(
 }
 
 func (t *timerQueueActiveTaskExecutor) execute(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	shouldProcessTask bool,
 ) error {
 	timerTask, ok := taskInfo.(*persistence.TimerTaskInfo)

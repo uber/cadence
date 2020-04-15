@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
 
@@ -83,7 +84,7 @@ func newTransferQueueActiveTaskExecutor(
 }
 
 func (t *transferQueueActiveTaskExecutor) execute(
-	taskInfo queueTaskInfo,
+	taskInfo task.Info,
 	shouldProcessTask bool,
 ) error {
 
