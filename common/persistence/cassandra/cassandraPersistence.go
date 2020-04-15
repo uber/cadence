@@ -416,7 +416,7 @@ workflow_state = ? ` +
 
 	templateGetWorkflowExecutionQuery = `SELECT execution, replication_state, activity_map, timer_map, ` +
 		`child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list, ` +
-		`buffered_replication_tasks_map, version_histories, version_histories_encoding, checksum ` +
+		`buffered_replication_tasks_map, version_histories, version_histories_encoding ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -1373,9 +1373,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 		bufferedEventsBlobs = append(bufferedEventsBlobs, blob)
 	}
 	state.BufferedEvents = bufferedEventsBlobs
-
-	state.Checksum = createChecksum(result["checksum"].(map[string]interface{}))
-
+	
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
