@@ -55,7 +55,20 @@ type (
 		CorruptedExecutionFile    *os.File
 	}
 
-
+	// ExecutionToRecord is an execution which needs to be recorded
+	ExecutionToRecord struct {
+		ShardID           int
+		DomainID          string
+		WorkflowID        string
+		RunID             string
+		TreeID            string
+		BranchID          string
+		CloseStatus       int
+		State             int
+		CheckType         CheckType
+		CheckResultStatus CheckResultStatus
+		ErrorInfo         *ErrorInfo
+	}
 )
 
 // AdminDBScan is used to scan over all executions in database and detect corruptions
@@ -72,9 +85,7 @@ func AdminDBScan(c *cli.Context) {
 	if numShards < scanWorkerCount {
 		scanWorkerCount = numShards
 	}
-
-	// get a list of checkers here or an error if combination is not valid
-	var checkers []AdminDBCheck
+	skipHistoryChecks := c.Bool(FlagSkipHistoryChecks)
 
 	payloadSerializer := persistence.NewPayloadSerializer()
 	rateLimiter := getRateLimiter(startingRPS, targetRPS, scaleUpSeconds)
@@ -96,8 +107,9 @@ func AdminDBScan(c *cli.Context) {
 						rateLimiter,
 						executionsPageSize,
 						payloadSerializer,
-						historyStore,
-						branchDecoder)
+						branchDecoder,
+						skipHistoryChecks,
+						historyStore)
 				}
 			}
 		}(i)
@@ -125,8 +137,9 @@ func scanShard(
 	limiter *quotas.DynamicRateLimiter,
 	executionsPageSize int,
 	payloadSerializer persistence.PayloadSerializer,
-	historyStore persistence.HistoryStore,
 	branchDecoder *codec.ThriftRWEncoder,
+	skipHistoryChecks bool,
+	historyStore persistence.HistoryStore,
 ) *ShardScanReport {
 	outputFiles, closeFn := createShardScanOutputFiles(shardID, scanOutputDirectories)
 	report := &ShardScanReport{
@@ -150,6 +163,8 @@ func scanShard(
 		return report
 	}
 
+	checks := getChecks(skipHistoryChecks, limiter, execStore, payloadSerializer, historyStore)
+
 	var token []byte
 	isFirstIteration := true
 	for isFirstIteration || len(token) != 0 {
@@ -158,7 +173,7 @@ func scanShard(
 			PageSize:  executionsPageSize,
 			PageToken: token,
 		}
-		resp, err := (limiter, &report.TotalDBRequests, execStore, req)
+		resp, err := retryListConcreteExecutions(limiter, &report.TotalDBRequests, execStore, req)
 		if err != nil {
 			report.Failure = &ShardScanReportFailure{
 				Note:    "failed to call ListConcreteExecutions",
@@ -175,81 +190,68 @@ func scanShard(
 				report.Scanned = &ShardScanReportExecutionsScanned{}
 			}
 			report.Scanned.TotalExecutionsCount++
-			historyVerificationResult, history, historyBranch := verifyHistoryExists(
-				e,
-				branchDecoder,
-				corruptedExecutionWriter,
-				checkFailureWriter,
-				shardID,
-				limiter,
-				historyStore,
-				&report.TotalDBRequests,
-				execStore,
-				payloadSerializer)
-			switch historyVerificationResult {
-			case VerificationResultNoCorruption:
-				// nothing to do just keep checking other conditions
-			case VerificationResultDetectedCorruption:
-				report.Scanned.CorruptedExecutionsCount++
-				report.Scanned.CorruptionTypeBreakdown.TotalHistoryMissing++
-				if executionOpen(e.ExecutionInfo) {
-					report.Scanned.OpenCorruptions.TotalOpen++
-				}
-				continue
-			case VerificationResultCheckFailure:
+
+			cr, err := getCheckRequest(shardID, e, payloadSerializer, branchDecoder)
+			if err != nil {
 				report.Scanned.ExecutionCheckFailureCount++
+				checkFailureWriter.Add(&ExecutionToRecord{
+					ShardID:           shardID,
+					DomainID:          e.ExecutionInfo.DomainID,
+					WorkflowID:        e.ExecutionInfo.WorkflowID,
+					RunID:             e.ExecutionInfo.RunID,
+					CheckResultStatus: CheckResultFailed,
+					ErrorInfo: &ErrorInfo{
+						Note:    "failed to get check request",
+						Details: err.Error(),
+					},
+				})
 				continue
 			}
-
-			if history == nil || historyBranch == nil {
-				continue
-			}
-
-			firstHistoryEventVerificationResult := verifyFirstHistoryEvent(
-				e,
-				historyBranch,
-				corruptedExecutionWriter,
-				checkFailureWriter,
-				shardID,
-				payloadSerializer,
-				history)
-			switch firstHistoryEventVerificationResult {
-			case VerificationResultNoCorruption:
-				// nothing to do just keep checking other conditions
-			case VerificationResultDetectedCorruption:
-				report.Scanned.CorruptionTypeBreakdown.TotalInvalidFirstEvent++
-				report.Scanned.CorruptedExecutionsCount++
-				if executionOpen(e.ExecutionInfo) {
-					report.Scanned.OpenCorruptions.TotalOpen++
+		CheckerLoop:
+			for _, c := range checks {
+				if !c.ValidRequest(cr) {
+					continue
 				}
-				continue
-			case VerificationResultCheckFailure:
-				report.Scanned.ExecutionCheckFailureCount++
-				continue
-			}
+				result := c.Check(cr)
+				cr.PrerequisiteCheckPayload = result.Payload
 
-			currentExecutionVerificationResult := verifyCurrentExecution(
-				e,
-				corruptedExecutionWriter,
-				checkFailureWriter,
-				shardID,
-				historyBranch,
-				execStore,
-				limiter,
-				&report.TotalDBRequests)
-			switch currentExecutionVerificationResult {
-			case VerificationResultNoCorruption:
-				// nothing to do just keep checking other conditions
-			case VerificationResultDetectedCorruption:
-				report.Scanned.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution++
-				report.Scanned.CorruptedExecutionsCount++
-				if executionOpen(e.ExecutionInfo) {
-					report.Scanned.OpenCorruptions.TotalOpen++
+				etr := &ExecutionToRecord{
+					ShardID:           shardID,
+					DomainID:          e.ExecutionInfo.DomainID,
+					WorkflowID:        e.ExecutionInfo.WorkflowID,
+					RunID:             e.ExecutionInfo.RunID,
+					TreeID:            cr.TreeID,
+					BranchID:          cr.BranchID,
+					CloseStatus:       e.ExecutionInfo.CloseStatus,
+					State:             cr.State,
+					CheckType:         result.CheckType,
+					CheckResultStatus: result.CheckResultStatus,
+					ErrorInfo:         result.ErrorInfo,
 				}
-				continue
-			case VerificationResultCheckFailure:
-				report.Scanned.ExecutionCheckFailureCount++
-				continue
+
+				switch result.CheckResultStatus {
+				case CheckResultHealthy:
+					// nothing to do just keep checking other conditions
+				case CheckResultFailed:
+					report.Scanned.ExecutionCheckFailureCount++
+					checkFailureWriter.Add(etr)
+					break CheckerLoop
+				case CheckResultCorrupted:
+					report.Scanned.CorruptedExecutionsCount++
+					switch result.CheckType {
+					case CheckTypeOrphanExecution:
+						report.Scanned.CorruptionTypeBreakdown.TotalOpenExecutionInvalidCurrentExecution++
+					case CheckTypeValidFirstEvent:
+						report.Scanned.CorruptionTypeBreakdown.TotalInvalidFirstEvent++
+					case CheckTypeHistoryExists:
+						report.Scanned.CorruptionTypeBreakdown.TotalHistoryMissing++
+					}
+					if executionOpen(cr) {
+						report.Scanned.OpenCorruptions.TotalOpen++
+					}
+					corruptedExecutionWriter.Add(etr)
+					break CheckerLoop
+				}
 			}
 		}
 	}
@@ -351,6 +353,27 @@ func getRateLimiter(startRPS int, targetRPS int, scaleUpSeconds int) *quotas.Dyn
 	return quotas.NewDynamicRateLimiter(rpsFn)
 }
 
+func getCheckRequest(
+	shardID int,
+	e *persistence.InternalListConcreteExecutionsEntity,
+	payloadSerializer persistence.PayloadSerializer,
+	branchDecoder *codec.ThriftRWEncoder,
+) (*CheckRequest, error) {
+	hb, err := getHistoryBranch(e, payloadSerializer, branchDecoder)
+	if err != nil {
+		return nil, err
+	}
+	return &CheckRequest{
+		ShardID:    shardID,
+		DomainID:   e.ExecutionInfo.DomainID,
+		WorkflowID: e.ExecutionInfo.WorkflowID,
+		RunID:      e.ExecutionInfo.RunID,
+		TreeID:     hb.GetTreeID(),
+		BranchID:   hb.GetBranchID(),
+		State:      e.ExecutionInfo.State,
+	}, nil
+}
+
 func getHistoryBranch(
 	e *persistence.InternalListConcreteExecutionsEntity,
 	payloadSerializer persistence.PayloadSerializer,
@@ -372,4 +395,26 @@ func getHistoryBranch(
 		return nil, err
 	}
 	return &branch, nil
+}
+
+func getChecks(
+	skipHistoryChecks bool,
+	limiter *quotas.DynamicRateLimiter,
+	execStore persistence.ExecutionStore,
+	payloadSerializer persistence.PayloadSerializer,
+	historyStore persistence.HistoryStore,
+) []AdminDBCheck {
+	// the order in which checks are added to the list is important
+	// some checks depend on the output of other checks
+	var checks []AdminDBCheck
+	if skipHistoryChecks {
+		checks = []AdminDBCheck{NewOrphanExecutionCheck(limiter, execStore, payloadSerializer)}
+	} else {
+		checks = []AdminDBCheck{
+			NewHistoryExistsCheck(limiter, historyStore, execStore),
+			NewFirstHistoryEventCheck(payloadSerializer),
+			NewOrphanExecutionCheck(limiter, execStore, payloadSerializer),
+		}
+	}
+	return checks
 }

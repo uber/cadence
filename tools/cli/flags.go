@@ -220,7 +220,7 @@ const (
 	FlagLowerShardBound                   = "lower_shard_bound"
 	FlagUpperShardBound                   = "upper_shard_bound"
 	FlagInputDirectory                    = "input_directory"
-	FlagDBInvariantChecks                 = "db_invariant_checks"
+	FlagSkipHistoryChecks                 = "skip_history_checks"
 )
 
 var flagsForExecution = []cli.Flag{
