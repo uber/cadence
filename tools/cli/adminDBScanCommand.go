@@ -406,15 +406,12 @@ func getChecks(
 ) []AdminDBCheck {
 	// the order in which checks are added to the list is important
 	// some checks depend on the output of other checks
-	var checks []AdminDBCheck
 	if skipHistoryChecks {
-		checks = []AdminDBCheck{NewOrphanExecutionCheck(limiter, execStore, payloadSerializer)}
-	} else {
-		checks = []AdminDBCheck{
-			NewHistoryExistsCheck(limiter, historyStore, execStore),
-			NewFirstHistoryEventCheck(payloadSerializer),
-			NewOrphanExecutionCheck(limiter, execStore, payloadSerializer),
-		}
+		return []AdminDBCheck{NewOrphanExecutionCheck(limiter, execStore, payloadSerializer)}
 	}
-	return checks
+	return []AdminDBCheck{
+		NewHistoryExistsCheck(limiter, historyStore, execStore),
+		NewFirstHistoryEventCheck(payloadSerializer),
+		NewOrphanExecutionCheck(limiter, execStore, payloadSerializer),
+	}
 }

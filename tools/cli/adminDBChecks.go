@@ -256,17 +256,17 @@ func (c *firstHistoryEventCheck) Check(cr *CheckRequest) *CheckResult {
 
 // ValidRequest returns true if the request is valid, false otherwise
 func (c *firstHistoryEventCheck) ValidRequest(cr *CheckRequest) bool {
-	payloadValid := cr.PrerequisiteCheckPayload != nil
-	if payloadValid {
-		history, ok := cr.PrerequisiteCheckPayload.(*persistence.InternalReadHistoryBranchResponse)
-		if !ok {
-			payloadValid = false
-		}
-		if history.History == nil || len(history.History) == 0 {
-			payloadValid = false
-		}
+	if cr.PrerequisiteCheckPayload == nil {
+		return false
 	}
-	return payloadValid && validRequestHelper(cr)
+	history, ok := cr.PrerequisiteCheckPayload.(*persistence.InternalReadHistoryBranchResponse)
+	if !ok {
+		return false
+	}
+	if history.History == nil || len(history.History) == 0 {
+		return false
+	}
+	return validRequestHelper(cr)
 }
 
 func (c *orphanExecutionCheck) Check(cr *CheckRequest) *CheckResult {
