@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/service/history/processing
+//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/service/history/queue
 
-package processing
+package queue
 
 import (
 	"github.com/uber/cadence/common"
@@ -38,9 +38,12 @@ type (
 		ReverseMatch bool
 	}
 
-	// JobInfo indicates the scope of a Job and its progress
-	JobInfo interface {
-		QueueID() int
+	// ProcessingQueueStates is a list of ProcessingQueueState
+	ProcessingQueueStates []ProcessingQueueState
+
+	// ProcessingQueueState indicates the scope of a task processing queue and its current progress
+	ProcessingQueueState interface {
+		CollectionID() int
 		MinLevel() task.Key
 		MaxLevel() task.Key
 		AckLevel() task.Key
@@ -48,40 +51,43 @@ type (
 		DomainFilter() DomainFilter
 	}
 
-	// Job is responsible for keeping track of the state of tasks
+	// ProcessingQueues is a list of ProcessingQueue
+	ProcessingQueues []ProcessingQueue
+
+	// ProcessingQueue is responsible for keeping track of the state of tasks
 	// within the scope defined by its JobInfo; it can also be split
 	// into multiple Jobs with non-overlapping scope or be merged with
 	// another Job
-	Job interface {
-		Info() JobInfo
-		Split(JobSplitPolicy) []Job
-		Merge(Job) []Job
+	ProcessingQueue interface {
+		State() ProcessingQueueState
+		Split(ProcessingQueueSplitPolicy) ProcessingQueues
+		Merge(ProcessingQueue) ProcessingQueues
 		AddTasks(map[task.Key]task.Task)
 		UpdateAckLevel()
 		// TODO: add Offload() method
 	}
 
-	// JobSplitPolicy determins if a Job should be split
-	// into multiple Jobs
-	JobSplitPolicy interface {
-		Evaluate(Job) []JobInfo
+	// ProcessingQueueSplitPolicy determines if one ProcessingQueue should be split
+	// into multiple processing queues
+	ProcessingQueueSplitPolicy interface {
+		Evaluate(ProcessingQueue) []ProcessingQueueState
 	}
 
-	// JobQueue manages a list of non-overlapping Jobs
-	// and keep track of the current active Job
-	JobQueue interface {
-		Info() []JobInfo
-		Split(JobSplitPolicy) []Job
-		Merge([]Job)
+	// ProcessingQueueCollection manages a list of non-overlapping processing queues
+	// and keep track of the current active ProcessingQueue
+	ProcessingQueueCollection interface {
+		Queues() ProcessingQueues
+		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
+		Merge(ProcessingQueues)
 		AddTasks(map[task.Key]task.Task)
-		ActiveJob() Job
+		ActiveJob() ProcessingQueue
 		// TODO: add Offload() method
 	}
 
-	// JobQueueManager manages a set of JobQueue and
-	// controls the event loop for loading tasks, updating
-	// and persisting JobInfo, spliting/merging Jobs, etc.
-	JobQueueManager interface {
+	// ProcessingQueueManager manages a set of ProcessingQueueCollection and
+	// controls the event loop for loading tasks, updating and persisting
+	// ProcessingQueueStates, spliting/merging ProcessingQueue, etc.
+	ProcessingQueueManager interface {
 		common.Daemon
 
 		NotifyNewTasks([]persistence.Task)
