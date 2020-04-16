@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package task
 
 import (
 	"time"
@@ -33,12 +33,12 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
-	transferQueueStandbyTaskExecutor struct {
-		*transferQueueTaskExecutorBase
+	transferStandbyTaskExecutor struct {
+		*transferTaskExecutorBase
 
 		clusterName         string
 		historyRereplicator xdc.HistoryRereplicator
@@ -46,20 +46,22 @@ type (
 	}
 )
 
-func newTransferQueueStandbyTaskExecutor(
+func NewTransferStandbyTaskExecutor(
 	shard shard.Context,
-	historyService *historyEngineImpl,
+	archiverClient archiver.Client,
+	executionCache *execution.Cache,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	clusterName string,
 	config *config.Config,
-) queueTaskExecutor {
-	return &transferQueueStandbyTaskExecutor{
-		transferQueueTaskExecutorBase: newTransferQueueTaskExecutorBase(
+) Executor {
+	return &transferStandbyTaskExecutor{
+		transferTaskExecutorBase: newTransferTaskExecutorBase(
 			shard,
-			historyService,
+			archiverClient,
+			executionCache,
 			logger,
 			metricsClient,
 			config,
@@ -70,14 +72,14 @@ func newTransferQueueStandbyTaskExecutor(
 	}
 }
 
-func (t *transferQueueStandbyTaskExecutor) execute(
-	taskInfo task.Info,
+func (t *transferStandbyTaskExecutor) Execute(
+	taskInfo Info,
 	shouldProcessTask bool,
 ) error {
 
 	transferTask, ok := taskInfo.(*persistence.TransferTaskInfo)
 	if !ok {
-		return errUnexpectedQueueTask
+		return errUnexpectedTask
 	}
 
 	if !shouldProcessTask &&
@@ -112,7 +114,7 @@ func (t *transferQueueStandbyTaskExecutor) execute(
 	}
 }
 
-func (t *transferQueueStandbyTaskExecutor) processActivityTask(
+func (t *transferStandbyTaskExecutor) processActivityTask(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -153,7 +155,7 @@ func (t *transferQueueStandbyTaskExecutor) processActivityTask(
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processDecisionTask(
+func (t *transferStandbyTaskExecutor) processDecisionTask(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -199,7 +201,7 @@ func (t *transferQueueStandbyTaskExecutor) processDecisionTask(
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processCloseExecution(
+func (t *transferStandbyTaskExecutor) processCloseExecution(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -267,7 +269,7 @@ func (t *transferQueueStandbyTaskExecutor) processCloseExecution(
 	) // no op post action, since the entire workflow is finished
 }
 
-func (t *transferQueueStandbyTaskExecutor) processCancelExecution(
+func (t *transferStandbyTaskExecutor) processCancelExecution(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -302,7 +304,7 @@ func (t *transferQueueStandbyTaskExecutor) processCancelExecution(
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processSignalExecution(
+func (t *transferStandbyTaskExecutor) processSignalExecution(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -337,7 +339,7 @@ func (t *transferQueueStandbyTaskExecutor) processSignalExecution(
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processStartChildExecution(
+func (t *transferStandbyTaskExecutor) processStartChildExecution(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -376,7 +378,7 @@ func (t *transferQueueStandbyTaskExecutor) processStartChildExecution(
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStarted(
+func (t *transferStandbyTaskExecutor) processRecordWorkflowStarted(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -391,7 +393,7 @@ func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStarted(
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processUpsertWorkflowSearchAttributes(
+func (t *transferStandbyTaskExecutor) processUpsertWorkflowSearchAttributes(
 	transferTask *persistence.TransferTaskInfo,
 ) error {
 
@@ -406,7 +408,7 @@ func (t *transferQueueStandbyTaskExecutor) processUpsertWorkflowSearchAttributes
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
+func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	transferTask *persistence.TransferTaskInfo,
 	mutableState execution.MutableState,
 	isRecordStart bool,
@@ -468,15 +470,15 @@ func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertH
 
 }
 
-func (t *transferQueueStandbyTaskExecutor) processTransfer(
+func (t *transferStandbyTaskExecutor) processTransfer(
 	processTaskIfClosed bool,
-	taskInfo task.Info,
+	taskInfo Info,
 	actionFn standbyActionFn,
 	postActionFn standbyPostActionFn,
 ) (retError error) {
 
 	transferTask := taskInfo.(*persistence.TransferTaskInfo)
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(transferTask),
 	)
 	if err != nil {
@@ -509,8 +511,8 @@ func (t *transferQueueStandbyTaskExecutor) processTransfer(
 	return postActionFn(taskInfo, historyResendInfo, t.logger)
 }
 
-func (t *transferQueueStandbyTaskExecutor) pushActivity(
-	task task.Info,
+func (t *transferStandbyTaskExecutor) pushActivity(
+	task Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -521,14 +523,14 @@ func (t *transferQueueStandbyTaskExecutor) pushActivity(
 
 	pushActivityInfo := postActionInfo.(*pushActivityToMatchingInfo)
 	timeout := common.MinInt32(pushActivityInfo.activityScheduleToStartTimeout, common.MaxTaskTimeout)
-	return t.transferQueueTaskExecutorBase.pushActivity(
+	return t.transferTaskExecutorBase.pushActivity(
 		task.(*persistence.TransferTaskInfo),
 		timeout,
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) pushDecision(
-	task task.Info,
+func (t *transferStandbyTaskExecutor) pushDecision(
+	task Info,
 	postActionInfo interface{},
 	logger log.Logger,
 ) error {
@@ -539,15 +541,15 @@ func (t *transferQueueStandbyTaskExecutor) pushDecision(
 
 	pushDecisionInfo := postActionInfo.(*pushDecisionToMatchingInfo)
 	timeout := common.MinInt32(pushDecisionInfo.decisionScheduleToStartTimeout, common.MaxTaskTimeout)
-	return t.transferQueueTaskExecutorBase.pushDecision(
+	return t.transferTaskExecutorBase.pushDecision(
 		task.(*persistence.TransferTaskInfo),
 		&pushDecisionInfo.tasklist,
 		timeout,
 	)
 }
 
-func (t *transferQueueStandbyTaskExecutor) fetchHistoryFromRemote(
-	taskInfo task.Info,
+func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
+	taskInfo Info,
 	postActionInfo interface{},
 	log log.Logger,
 ) error {
@@ -602,6 +604,6 @@ func (t *transferQueueStandbyTaskExecutor) fetchHistoryFromRemote(
 	return ErrTaskRetry
 }
 
-func (t *transferQueueStandbyTaskExecutor) getCurrentTime() time.Time {
+func (t *transferStandbyTaskExecutor) getCurrentTime() time.Time {
 	return t.shard.GetCurrentTime(t.clusterName)
 }

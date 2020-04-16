@@ -38,12 +38,12 @@ import (
 type (
 	timerQueueActiveProcessorImpl struct {
 		shard                   shard.Context
-		timerTaskFilter         taskFilter
+		timerTaskFilter         task.Filter
 		now                     timeNow
 		logger                  log.Logger
 		metricsClient           metrics.Client
 		currentClusterName      string
-		taskExecutor            queueTaskExecutor
+		taskExecutor            task.Executor
 		timerQueueProcessorBase *timerQueueProcessorBase
 	}
 )
@@ -53,7 +53,7 @@ func newTimerQueueActiveProcessor(
 	historyService *historyEngineImpl,
 	matchingClient matching.Client,
 	taskAllocator taskAllocator,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) *timerQueueActiveProcessorImpl {
 
@@ -96,16 +96,17 @@ func newTimerQueueActiveProcessor(
 		metricsClient:      historyService.metricsClient,
 		currentClusterName: currentClusterName,
 	}
-	processor.taskExecutor = newTimerQueueActiveTaskExecutor(
+	processor.taskExecutor = task.NewTimerActiveTaskExecutor(
 		shard,
-		historyService,
+		historyService.archivalClient,
+		historyService.executionCache,
 		processor,
 		logger,
 		historyService.metricsClient,
 		shard.GetConfig(),
 	)
 	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
-		return newTimerQueueTask(
+		return task.NewTimerTask(
 			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
@@ -147,7 +148,7 @@ func newTimerQueueFailoverProcessor(
 	maxLevel time.Time,
 	matchingClient matching.Client,
 	taskAllocator taskAllocator,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) (func(ackLevel timerKey) error, *timerQueueActiveProcessorImpl) {
 
@@ -211,16 +212,17 @@ func newTimerQueueFailoverProcessor(
 		metricsClient:      historyService.metricsClient,
 		currentClusterName: currentClusterName,
 	}
-	processor.taskExecutor = newTimerQueueActiveTaskExecutor(
+	processor.taskExecutor = task.NewTimerActiveTaskExecutor(
 		shard,
-		historyService,
+		historyService.archivalClient,
+		historyService.executionCache,
 		processor,
 		logger,
 		historyService.metricsClient,
 		shard.GetConfig(),
 	)
 	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
-		return newTimerQueueTask(
+		return task.NewTimerTask(
 			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
@@ -261,7 +263,7 @@ func (t *timerQueueActiveProcessorImpl) Stop() {
 	t.timerQueueProcessorBase.Stop()
 }
 
-func (t *timerQueueActiveProcessorImpl) getTaskFilter() taskFilter {
+func (t *timerQueueActiveProcessorImpl) getTaskFilter() task.Filter {
 	return t.timerTaskFilter
 }
 
@@ -296,5 +298,5 @@ func (t *timerQueueActiveProcessorImpl) process(
 ) (int, error) {
 	// TODO: task metricScope should be determined when creating taskInfo
 	metricScope := getTimerTaskMetricScope(taskInfo.task.GetTaskType(), true)
-	return metricScope, t.taskExecutor.execute(taskInfo.task, taskInfo.shouldProcessTask)
+	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }

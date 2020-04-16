@@ -143,6 +143,12 @@ TaskFilterLoop:
 	return tasks, morePage, nil
 }
 
+// CompleteQueueTask implements the task.QueueAckMgr interface
+// TODO: this method should be removed. See the comments in task/task.go L81
+func (a *queueAckMgrImpl) CompleteQueueTask(taskID int64) {
+	a.completeQueueTask(taskID)
+}
+
 func (a *queueAckMgrImpl) completeQueueTask(taskID int64) {
 	a.Lock()
 	if _, ok := a.outstandingTasks[taskID]; ok {

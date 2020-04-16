@@ -58,15 +58,15 @@ func (_m *MockProcessor) complete(task *taskInfo) {
 }
 
 // getTaskFilter is mock implementation for process of Processor
-func (_m *MockProcessor) getTaskFilter() taskFilter {
+func (_m *MockProcessor) getTaskFilter() task.Filter {
 	ret := _m.Called()
 
-	var r0 taskFilter
-	if rf, ok := ret.Get(0).(func() taskFilter); ok {
+	var r0 task.Filter
+	if rf, ok := ret.Get(0).(func() task.Filter); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(taskFilter)
+			r0 = ret.Get(0).(task.Filter)
 		}
 	}
 

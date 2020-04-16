@@ -72,7 +72,7 @@ type (
 		rateLimiter          quotas.Limiter // Read rate limiter
 		ackMgr               queueAckMgr
 		taskProcessor        *taskProcessor // TODO: deprecate task processor, in favor of queueTaskProcessor
-		queueTaskProcessor   queueTaskProcessor
+		queueTaskProcessor   task.Processor
 		redispatchQueue      collection.Queue
 		queueTaskInitializer queueTaskInitializer
 
@@ -96,7 +96,7 @@ func newQueueProcessorBase(
 	shard shard.Context,
 	options *QueueProcessorOptions,
 	processor processor,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	queueAckMgr queueAckMgr,
 	redispatchQueue collection.Queue,
 	executionCache *execution.Cache,
@@ -355,7 +355,7 @@ func (p *queueProcessorBase) isPriorityTaskProcessorEnabled() bool {
 
 func redispatchQueueTasks(
 	redispatchQueue collection.Queue,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 	shutdownCh <-chan struct{},

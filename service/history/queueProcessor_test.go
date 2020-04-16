@@ -21,6 +21,7 @@
 package history
 
 import (
+	"errors"
 	"math/rand"
 	"testing"
 
@@ -82,7 +83,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 	for i := 0; i != successfullyRedispatched; i++ {
 		calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil))
 	}
-	calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errTaskProcessorNotRunning))
+	calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("processor shutdown")))
 	gomock.InOrder(calls...)
 
 	shutDownCh := make(chan struct{})

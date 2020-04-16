@@ -25,6 +25,7 @@ package task
 import (
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -52,6 +53,23 @@ type (
 	// Key identifies a Task and defines a total order among tasks
 	Key interface {
 		Less(Key) bool
+	}
+
+	Executor interface {
+		Execute(taskInfo Info, shouldProcessTask bool) error
+	}
+
+	Filter func(task Info) (bool, error)
+
+	PriorityAssigner interface {
+		Assign(Task) error
+	}
+
+	Processor interface {
+		common.Daemon
+		StopShardProcessor(shard.Context)
+		Submit(Task) error
+		TrySubmit(Task) (bool, error)
 	}
 
 	// QueueType is the type of task queue

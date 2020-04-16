@@ -45,7 +45,7 @@ type (
 		currentClusterName    string
 		shard                 shard.Context
 		executionCache        *execution.Cache
-		replicationTaskFilter taskFilter
+		replicationTaskFilter task.Filter
 		executionMgr          persistence.ExecutionManager
 		historyV2Mgr          persistence.HistoryManager
 		replicator            messaging.Producer
@@ -141,7 +141,7 @@ func newReplicatorQueueProcessor(
 	return processor
 }
 
-func (p *replicatorQueueProcessorImpl) getTaskFilter() taskFilter {
+func (p *replicatorQueueProcessorImpl) getTaskFilter() task.Filter {
 	return p.replicationTaskFilter
 }
 

@@ -18,9 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination taskPriorityAssigner_mock.go -self_package github.com/uber/cadence/service/history
-
-package history
+package task
 
 import (
 	"sync"
@@ -31,17 +29,12 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
-	t "github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/task"
 )
 
 type (
-	taskPriorityAssigner interface {
-		Assign(task.Task) error
-	}
-
-	taskPriorityAssignerImpl struct {
+	priorityAssignerImpl struct {
 		sync.RWMutex
 
 		currentClusterName string
@@ -53,16 +46,16 @@ type (
 	}
 )
 
-var _ taskPriorityAssigner = (*taskPriorityAssignerImpl)(nil)
+var _ PriorityAssigner = (*priorityAssignerImpl)(nil)
 
-func newTaskPriorityAssigner(
+func NewPriorityAssigner(
 	currentClusterName string,
 	domainCache cache.DomainCache,
 	logger log.Logger,
 	metricClient metrics.Client,
 	config *config.Config,
-) *taskPriorityAssignerImpl {
-	return &taskPriorityAssignerImpl{
+) *priorityAssignerImpl {
+	return &priorityAssignerImpl{
 		currentClusterName: currentClusterName,
 		domainCache:        domainCache,
 		config:             config,
@@ -72,11 +65,11 @@ func newTaskPriorityAssigner(
 	}
 }
 
-func (a *taskPriorityAssignerImpl) Assign(
-	queueTask task.Task,
+func (a *priorityAssignerImpl) Assign(
+	queueTask Task,
 ) error {
-	if queueTask.GetQueueType() == task.QueueTypeReplication {
-		queueTask.SetPriority(t.GetTaskPriority(t.LowPriorityClass, t.DefaultPrioritySubclass))
+	if queueTask.GetQueueType() == QueueTypeReplication {
+		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
 		return nil
 	}
 
@@ -87,14 +80,14 @@ func (a *taskPriorityAssignerImpl) Assign(
 	}
 
 	if !active {
-		queueTask.SetPriority(t.GetTaskPriority(t.LowPriorityClass, t.DefaultPrioritySubclass))
+		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
 		return nil
 	}
 
 	if !a.getRateLimiter(domainName).Allow() {
-		queueTask.SetPriority(t.GetTaskPriority(t.DefaultPriorityClass, t.DefaultPrioritySubclass))
+		queueTask.SetPriority(task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass))
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
-		if queueTask.GetQueueType() == task.QueueTypeTransfer {
+		if queueTask.GetQueueType() == QueueTypeTransfer {
 			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
 		} else {
 			taggedScope.IncCounter(metrics.TimerTaskThrottledCounter)
@@ -102,7 +95,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 		return nil
 	}
 
-	queueTask.SetPriority(t.GetTaskPriority(t.HighPriorityClass, t.DefaultPrioritySubclass))
+	queueTask.SetPriority(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass))
 	return nil
 }
 
@@ -110,7 +103,7 @@ func (a *taskPriorityAssignerImpl) Assign(
 //  1. domain name
 //  2. if domain is active
 //  3. error, if any
-func (a *taskPriorityAssignerImpl) getDomainInfo(
+func (a *priorityAssignerImpl) getDomainInfo(
 	domainID string,
 ) (string, bool, error) {
 	domainEntry, err := a.domainCache.GetDomainByID(domainID)
@@ -121,7 +114,7 @@ func (a *taskPriorityAssignerImpl) getDomainInfo(
 		}
 		// it is possible that the domain is deleted
 		// we should treat that domain as active
-		a.logger.Warn("Cannot find domain, treat as active task.", tag.WorkflowDomainID(domainID))
+		a.logger.Warn("Cannot find domain, treat as active ", tag.WorkflowDomainID(domainID))
 		return "", true, nil
 	}
 
@@ -131,7 +124,7 @@ func (a *taskPriorityAssignerImpl) getDomainInfo(
 	return domainEntry.GetInfo().Name, true, nil
 }
 
-func (a *taskPriorityAssignerImpl) getRateLimiter(
+func (a *priorityAssignerImpl) getRateLimiter(
 	domainName string,
 ) quotas.Limiter {
 	a.RLock()

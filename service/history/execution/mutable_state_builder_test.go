@@ -96,7 +96,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
 	s.logger = s.mockShard.GetLogger()
 
-	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, testLocalDomainEntry)
+	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache, s.logger, TestLocalDomainEntry)
 }
 
 func (s *mutableStateSuite) TearDownTest() {
@@ -113,7 +113,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		s.logger,
 		version,
 		runID,
-		testGlobalDomainEntry,
+		TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
@@ -144,7 +144,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		s.logger,
 		version,
 		runID,
-		testGlobalDomainEntry,
+		TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
@@ -164,7 +164,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		s.logger,
 		version,
 		runID,
-		testGlobalDomainEntry,
+		TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
@@ -259,10 +259,10 @@ OtherEventsLoop:
 }
 
 func (s *mutableStateSuite) TestReorderEvents() {
-	domainID := testDomainID
+	domainID := TestDomainID
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(testRunID),
+		RunId:      common.StringPtr(TestRunID),
 	}
 	tl := "testTaskList"
 	activityID := "activity_id"
@@ -549,7 +549,7 @@ func (s *mutableStateSuite) TestEventReapplied() {
 }
 
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*shared.HistoryEvent, *shared.HistoryEvent) {
-	domainID := testDomainID
+	domainID := TestDomainID
 	execution := shared.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
 		RunId:      common.StringPtr(runID),
@@ -716,10 +716,10 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 }
 
 func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMutableState {
-	domainID := testDomainID
+	domainID := TestDomainID
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(testRunID),
+		RunId:      common.StringPtr(TestRunID),
 	}
 	tl := "testTaskList"
 	failoverVersion := int64(300)
@@ -775,7 +775,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 			InitiatedEvent:        &shared.HistoryEvent{},
 			StartedID:             common.EmptyEventID,
 			CreateRequestID:       uuid.New(),
-			DomainName:            testDomainID,
+			DomainName:            TestDomainID,
 			WorkflowTypeName:      "code.uber.internal/test/foobar",
 		},
 	}

@@ -26,7 +26,6 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -59,23 +58,12 @@ type (
 		updateQueueAckLevel() error
 	}
 
-	queueTaskExecutor interface {
-		execute(taskInfo task.Info, shouldProcessTask bool) error
-	}
-
-	queueTaskProcessor interface {
-		common.Daemon
-		StopShardProcessor(shard.Context)
-		Submit(task.Task) error
-		TrySubmit(task.Task) (bool, error)
-	}
-
 	// TODO: deprecate this interface in favor of the task interface
 	// defined in common/task package
 	taskExecutor interface {
 		process(taskInfo *taskInfo) (int, error)
 		complete(taskInfo *taskInfo)
-		getTaskFilter() taskFilter
+		getTaskFilter() task.Filter
 	}
 
 	processor interface {

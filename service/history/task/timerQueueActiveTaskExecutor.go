@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package task
 
 import (
 	"fmt"
@@ -34,29 +34,31 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
-	timerQueueActiveTaskExecutor struct {
-		*timerQueueTaskExecutorBase
+	timerActiveTaskExecutor struct {
+		*timerTaskExecutorBase
 
-		queueProcessor *timerQueueActiveProcessorImpl
+		queueProcessor common.Daemon // TODO 04/15: add comments
 	}
 )
 
-func newTimerQueueActiveTaskExecutor(
+func NewTimerActiveTaskExecutor(
 	shard shard.Context,
-	historyService *historyEngineImpl,
-	queueProcessor *timerQueueActiveProcessorImpl,
+	archiverClient archiver.Client,
+	executionCache *execution.Cache,
+	queueProcessor common.Daemon,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	config *config.Config,
-) queueTaskExecutor {
-	return &timerQueueActiveTaskExecutor{
-		timerQueueTaskExecutorBase: newTimerQueueTaskExecutorBase(
+) Executor {
+	return &timerActiveTaskExecutor{
+		timerTaskExecutorBase: newTimerTaskExecutorBase(
 			shard,
-			historyService,
+			archiverClient,
+			executionCache,
 			logger,
 			metricsClient,
 			config,
@@ -65,13 +67,13 @@ func newTimerQueueActiveTaskExecutor(
 	}
 }
 
-func (t *timerQueueActiveTaskExecutor) execute(
-	taskInfo task.Info,
+func (t *timerActiveTaskExecutor) Execute(
+	taskInfo Info,
 	shouldProcessTask bool,
 ) error {
 	timerTask, ok := taskInfo.(*persistence.TimerTaskInfo)
 	if !ok {
-		return errUnexpectedQueueTask
+		return errUnexpectedTask
 	}
 
 	if !shouldProcessTask {
@@ -98,11 +100,11 @@ func (t *timerQueueActiveTaskExecutor) execute(
 	}
 }
 
-func (t *timerQueueActiveTaskExecutor) executeUserTimerTimeoutTask(
+func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -150,11 +152,11 @@ Loop:
 	return t.updateWorkflowExecution(context, mutableState, timerFired)
 }
 
-func (t *timerQueueActiveTaskExecutor) executeActivityTimeoutTask(
+func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -247,11 +249,11 @@ Loop:
 	return t.updateWorkflowExecution(context, mutableState, scheduleDecision)
 }
 
-func (t *timerQueueActiveTaskExecutor) executeDecisionTimeoutTask(
+func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -270,7 +272,7 @@ func (t *timerQueueActiveTaskExecutor) executeDecisionTimeoutTask(
 	scheduleID := task.EventID
 	decision, ok := mutableState.GetDecisionInfo(scheduleID)
 	if !ok {
-		t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
+		t.logger.Debug("Potentially duplicate ", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
 		return nil
 	}
 	ok, err = verifyTaskVersion(t.shard, t.logger, task.DomainID, decision.Version, task.Version, task)
@@ -319,11 +321,11 @@ func (t *timerQueueActiveTaskExecutor) executeDecisionTimeoutTask(
 	return t.updateWorkflowExecution(context, mutableState, scheduleDecision)
 }
 
-func (t *timerQueueActiveTaskExecutor) executeWorkflowBackoffTimerTask(
+func (t *timerActiveTaskExecutor) executeWorkflowBackoffTimerTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -354,11 +356,11 @@ func (t *timerQueueActiveTaskExecutor) executeWorkflowBackoffTimerTask(
 	return t.updateWorkflowExecution(context, mutableState, true)
 }
 
-func (t *timerQueueActiveTaskExecutor) executeActivityRetryTimerTask(
+func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -438,11 +440,11 @@ func (t *timerQueueActiveTaskExecutor) executeActivityRetryTimerTask(
 	})
 }
 
-func (t *timerQueueActiveTaskExecutor) executeWorkflowTimeoutTask(
+func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -539,7 +541,7 @@ func (t *timerQueueActiveTaskExecutor) executeWorkflowTimeoutTask(
 	)
 }
 
-func (t *timerQueueActiveTaskExecutor) getTimerSequence(
+func (t *timerActiveTaskExecutor) getTimerSequence(
 	mutableState execution.MutableState,
 ) execution.TimerSequence {
 
@@ -547,7 +549,7 @@ func (t *timerQueueActiveTaskExecutor) getTimerSequence(
 	return execution.NewTimerSequence(timeSource, mutableState)
 }
 
-func (t *timerQueueActiveTaskExecutor) updateWorkflowExecution(
+func (t *timerActiveTaskExecutor) updateWorkflowExecution(
 	context execution.Context,
 	mutableState execution.MutableState,
 	scheduleNewDecision bool,
@@ -576,7 +578,7 @@ func (t *timerQueueActiveTaskExecutor) updateWorkflowExecution(
 	return nil
 }
 
-func (t *timerQueueActiveTaskExecutor) emitTimeoutMetricScopeWithDomainTag(
+func (t *timerActiveTaskExecutor) emitTimeoutMetricScopeWithDomainTag(
 	domainID string,
 	scope int,
 	timerType execution.TimerType,
