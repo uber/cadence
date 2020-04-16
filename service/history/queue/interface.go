@@ -38,9 +38,6 @@ type (
 		ReverseMatch bool
 	}
 
-	// ProcessingQueueStates is a list of ProcessingQueueState
-	ProcessingQueueStates []ProcessingQueueState
-
 	// ProcessingQueueState indicates the scope of a task processing queue and its current progress
 	ProcessingQueueState interface {
 		CollectionID() int
@@ -51,17 +48,14 @@ type (
 		DomainFilter() DomainFilter
 	}
 
-	// ProcessingQueues is a list of ProcessingQueue
-	ProcessingQueues []ProcessingQueue
-
 	// ProcessingQueue is responsible for keeping track of the state of tasks
-	// within the scope defined by its JobInfo; it can also be split
-	// into multiple Jobs with non-overlapping scope or be merged with
-	// another Job
+	// within the scope defined by its state; it can also be split into multiple
+	// ProcessingQueues with non-overlapping scope or be merged with another
+	// ProcessingQueue
 	ProcessingQueue interface {
 		State() ProcessingQueueState
-		Split(ProcessingQueueSplitPolicy) ProcessingQueues
-		Merge(ProcessingQueue) ProcessingQueues
+		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
+		Merge(ProcessingQueue) []ProcessingQueue
 		AddTasks(map[task.Key]task.Task)
 		UpdateAckLevel()
 		// TODO: add Offload() method
@@ -73,14 +67,14 @@ type (
 		Evaluate(ProcessingQueue) []ProcessingQueueState
 	}
 
-	// ProcessingQueueCollection manages a list of non-overlapping processing queues
+	// ProcessingQueueCollection manages a list of non-overlapping ProcessingQueues
 	// and keep track of the current active ProcessingQueue
 	ProcessingQueueCollection interface {
-		Queues() ProcessingQueues
+		Queues() []ProcessingQueue
 		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
-		Merge(ProcessingQueues)
+		Merge([]ProcessingQueue)
 		AddTasks(map[task.Key]task.Task)
-		ActiveJob() ProcessingQueue
+		ActiveQueue() ProcessingQueue
 		// TODO: add Offload() method
 	}
 

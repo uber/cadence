@@ -28,12 +28,10 @@
 package queue
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	persistence "github.com/uber/cadence/common/persistence"
 	task "github.com/uber/cadence/service/history/task"
+	reflect "reflect"
 )
 
 // MockProcessingQueueState is a mock of ProcessingQueueState interface
@@ -181,10 +179,10 @@ func (mr *MockProcessingQueueMockRecorder) State() *gomock.Call {
 }
 
 // Split mocks base method
-func (m *MockProcessingQueue) Split(arg0 ProcessingQueueSplitPolicy) ProcessingQueues {
+func (m *MockProcessingQueue) Split(arg0 ProcessingQueueSplitPolicy) []ProcessingQueue {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Split", arg0)
-	ret0, _ := ret[0].(ProcessingQueues)
+	ret0, _ := ret[0].([]ProcessingQueue)
 	return ret0
 }
 
@@ -195,10 +193,10 @@ func (mr *MockProcessingQueueMockRecorder) Split(arg0 interface{}) *gomock.Call 
 }
 
 // Merge mocks base method
-func (m *MockProcessingQueue) Merge(arg0 ProcessingQueue) ProcessingQueues {
+func (m *MockProcessingQueue) Merge(arg0 ProcessingQueue) []ProcessingQueue {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Merge", arg0)
-	ret0, _ := ret[0].(ProcessingQueues)
+	ret0, _ := ret[0].([]ProcessingQueue)
 	return ret0
 }
 
@@ -293,10 +291,10 @@ func (m *MockProcessingQueueCollection) EXPECT() *MockProcessingQueueCollectionM
 }
 
 // Queues mocks base method
-func (m *MockProcessingQueueCollection) Queues() ProcessingQueues {
+func (m *MockProcessingQueueCollection) Queues() []ProcessingQueue {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Queues")
-	ret0, _ := ret[0].(ProcessingQueues)
+	ret0, _ := ret[0].([]ProcessingQueue)
 	return ret0
 }
 
@@ -321,7 +319,7 @@ func (mr *MockProcessingQueueCollectionMockRecorder) Split(arg0 interface{}) *go
 }
 
 // Merge mocks base method
-func (m *MockProcessingQueueCollection) Merge(arg0 ProcessingQueues) {
+func (m *MockProcessingQueueCollection) Merge(arg0 []ProcessingQueue) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Merge", arg0)
 }
@@ -344,18 +342,18 @@ func (mr *MockProcessingQueueCollectionMockRecorder) AddTasks(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).AddTasks), arg0)
 }
 
-// ActiveJob mocks base method
-func (m *MockProcessingQueueCollection) ActiveJob() ProcessingQueue {
+// ActiveQueue mocks base method
+func (m *MockProcessingQueueCollection) ActiveQueue() ProcessingQueue {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ActiveJob")
+	ret := m.ctrl.Call(m, "ActiveQueue")
 	ret0, _ := ret[0].(ProcessingQueue)
 	return ret0
 }
 
-// ActiveJob indicates an expected call of ActiveJob
-func (mr *MockProcessingQueueCollectionMockRecorder) ActiveJob() *gomock.Call {
+// ActiveQueue indicates an expected call of ActiveQueue
+func (mr *MockProcessingQueueCollectionMockRecorder) ActiveQueue() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveJob", reflect.TypeOf((*MockProcessingQueueCollection)(nil).ActiveJob))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveQueue", reflect.TypeOf((*MockProcessingQueueCollection)(nil).ActiveQueue))
 }
 
 // MockProcessingQueueManager is a mock of ProcessingQueueManager interface
