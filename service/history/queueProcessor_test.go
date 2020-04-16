@@ -43,7 +43,7 @@ type (
 		*require.Assertions
 
 		controller             *gomock.Controller
-		mockQueueTaskProcessor *MockqueueTaskProcessor
+		mockQueueTaskProcessor *task.MockProcessor
 
 		redispatchQueue collection.Queue
 		logger          log.Logger
@@ -60,7 +60,7 @@ func (s *queueProcessorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockQueueTaskProcessor = NewMockqueueTaskProcessor(s.controller)
+	s.mockQueueTaskProcessor = task.NewMockProcessor(s.controller)
 
 	s.redispatchQueue = collection.NewConcurrentQueue()
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)

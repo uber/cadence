@@ -34,7 +34,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	"github.com/uber/cadence/service/history/ndc"
+	ndc "github.com/uber/cadence/service/history/ndc"
 )
 
 // MocknDCTransactionMgrForNewWorkflow is a mock of nDCTransactionMgrForNewWorkflow interface

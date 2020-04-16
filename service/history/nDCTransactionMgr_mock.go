@@ -35,7 +35,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	persistence "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/ndc"
+	ndc "github.com/uber/cadence/service/history/ndc"
 )
 
 // MocknDCTransactionMgr is a mock of nDCTransactionMgr interface
