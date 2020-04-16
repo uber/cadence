@@ -58,8 +58,8 @@ const (
 	JavaWorkerRawHistoryQueryVersion = "1.3.0"
 	// GoWorkerSendRawWorkflowHistoryVersion indicates the minimum client version of the go worker which supports RawHistoryQuery
 	GoWorkerRawHistoryQueryVersion = "1.6.0"
-	// GoWorkerSendRawWorkflowHistoryVersion indicates the minimum CLI version of the go worker which supports RawHistoryQuery
-	// Note: cli it uses go client feature version
+	// CLIRawHistoryQueryVersion indicates the minimum CLI version of the go worker which supports RawHistoryQuery
+	// Note: cli uses go client feature version
 	CLIRawHistoryQueryVersion = "1.6.0"
 
 	stickyQuery     = "sticky-query"
@@ -95,7 +95,7 @@ func NewVersionChecker() VersionChecker {
 		GoSDK: {
 			stickyQuery:     mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerStickyQueryVersion)),
 			consistentQuery: mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerConsistentQueryVersion)),
-			rawHistoryQuery: mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerConsistentQueryVersion)),
+			rawHistoryQuery: mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerRawHistoryQueryVersion)),
 		},
 		JavaSDK: {
 			stickyQuery: mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerStickyQueryVersion)),

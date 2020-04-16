@@ -273,7 +273,7 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 		},
 		{
 			clientImpl:           "",
-			clientFeatureVersion: GoWorkerConsistentQueryVersion,
+			clientFeatureVersion: GoWorkerRawHistoryQueryVersion,
 			expectErr:            true,
 		},
 		{
@@ -297,7 +297,7 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 		},
 		{
 			clientImpl:           GoSDK,
-			clientFeatureVersion: GoWorkerConsistentQueryVersion,
+			clientFeatureVersion: GoWorkerRawHistoryQueryVersion,
 			expectErr:            false,
 		},
 		{
