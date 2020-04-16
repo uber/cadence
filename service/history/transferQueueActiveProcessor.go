@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 const (
@@ -43,7 +44,7 @@ type (
 		queueAckMgr
 
 		currentClusterName string
-		shard              ShardContext
+		shard              shard.Context
 		transferTaskFilter taskFilter
 		logger             log.Logger
 		metricsClient      metrics.Client
@@ -52,7 +53,7 @@ type (
 )
 
 func newTransferQueueActiveProcessor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	visibilityMgr persistence.VisibilityManager,
 	matchingClient matching.Client,
@@ -156,7 +157,7 @@ func newTransferQueueActiveProcessor(
 		queueTaskProcessor,
 		queueAckMgr,
 		redispatchQueue,
-		historyService.historyCache,
+		historyService.executionCache,
 		transferQueueTaskInitializer,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TransferActiveQueueProcessorScope),
@@ -168,7 +169,7 @@ func newTransferQueueActiveProcessor(
 }
 
 func newTransferQueueFailoverProcessor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	visibilityMgr persistence.VisibilityManager,
 	matchingClient matching.Client,
@@ -291,7 +292,7 @@ func newTransferQueueFailoverProcessor(
 		queueTaskProcessor,
 		queueAckMgr,
 		redispatchQueue,
-		historyService.historyCache,
+		historyService.executionCache,
 		transferQueueTaskInitializer,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TransferActiveQueueProcessorScope),

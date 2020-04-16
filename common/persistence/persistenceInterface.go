@@ -457,8 +457,14 @@ type (
 
 	// InternalListConcreteExecutionsResponse is the response to ListConcreteExecutions for Persistence Interface
 	InternalListConcreteExecutionsResponse struct {
-		ExecutionInfos []*InternalWorkflowExecutionInfo
-		NextPageToken  []byte
+		Executions    []*InternalListConcreteExecutionsEntity
+		NextPageToken []byte
+	}
+
+	// InternalListConcreteExecutionsEntity is a single entity in InternalListConcreteExecutionsResponse
+	InternalListConcreteExecutionsEntity struct {
+		ExecutionInfo    *InternalWorkflowExecutionInfo
+		VersionHistories *DataBlob
 	}
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch
@@ -544,6 +550,7 @@ type (
 		Status           *workflow.WorkflowExecutionCloseStatus
 		HistoryLength    int64
 		Memo             *DataBlob
+		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
 
@@ -571,6 +578,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 
@@ -584,6 +592,7 @@ type (
 		ExecutionTimestamp int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
 		Status             workflow.WorkflowExecutionCloseStatus
@@ -602,6 +611,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 

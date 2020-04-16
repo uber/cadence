@@ -36,6 +36,9 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 var (
@@ -48,14 +51,14 @@ var (
 type (
 	timerQueueProcessorBase struct {
 		scope                int
-		shard                ShardContext
+		shard                shard.Context
 		historyService       *historyEngineImpl
-		cache                *historyCache
+		cache                *execution.Cache
 		executionManager     persistence.ExecutionManager
 		status               int32
 		shutdownWG           sync.WaitGroup
 		shutdownCh           chan struct{}
-		config               *Config
+		config               *config.Config
 		logger               log.Logger
 		metricsClient        metrics.Client
 		metricsScope         metrics.Scope
@@ -81,7 +84,7 @@ type (
 
 func newTimerQueueProcessorBase(
 	scope int,
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	timerProcessor timerProcessor,
 	queueTaskProcessor queueTaskProcessor,
@@ -103,7 +106,7 @@ func newTimerQueueProcessorBase(
 			workerCount: config.TimerTaskWorkerCount(),
 			queueSize:   config.TimerTaskWorkerCount() * config.TimerTaskBatchSize(),
 		}
-		taskProcessor = newTaskProcessor(options, shard, historyService.historyCache, logger)
+		taskProcessor = newTaskProcessor(options, shard, historyService.executionCache, logger)
 	}
 
 	base := &timerQueueProcessorBase{
@@ -111,7 +114,7 @@ func newTimerQueueProcessorBase(
 		shard:                shard,
 		historyService:       historyService,
 		timerProcessor:       timerProcessor,
-		cache:                historyService.historyCache,
+		cache:                historyService.executionCache,
 		executionManager:     shard.GetExecutionManager(),
 		status:               common.DaemonStatusInitialized,
 		shutdownCh:           make(chan struct{}),
@@ -308,7 +311,7 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 				t.config.TimerProcessorUpdateAckInterval(),
 				t.config.TimerProcessorUpdateAckIntervalJitterCoefficient(),
 			))
-			if err := t.timerQueueAckMgr.updateAckLevel(); err == ErrShardClosed {
+			if err := t.timerQueueAckMgr.updateAckLevel(); err == shard.ErrShardClosed {
 				// shard is closed, shutdown timerQProcessor and bail out
 				go t.Stop()
 				return err

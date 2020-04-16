@@ -35,7 +35,17 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
+)
+
+var (
+	// ErrMissingRequestCancelInfo indicates missing request cancel info
+	ErrMissingRequestCancelInfo = &workflow.InternalServiceError{Message: "unable to get request cancel info"}
+	// ErrMissingSignalInfo indicates missing signal external
+	ErrMissingSignalInfo = &workflow.InternalServiceError{Message: "unable to get signal info"}
 )
 
 type (
@@ -48,11 +58,11 @@ type (
 )
 
 func newTransferQueueActiveTaskExecutor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	config *Config,
+	config *config.Config,
 ) queueTaskExecutor {
 	return &transferQueueActiveTaskExecutor{
 		transferQueueTaskExecutorBase: newTransferQueueTaskExecutorBase(
@@ -114,7 +124,7 @@ func (t *transferQueueActiveTaskExecutor) processActivityTask(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -151,7 +161,7 @@ func (t *transferQueueActiveTaskExecutor) processDecisionTask(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -206,7 +216,7 @@ func (t *transferQueueActiveTaskExecutor) processCloseExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -275,6 +285,7 @@ func (t *transferQueueActiveTaskExecutor) processCloseExecution(
 		workflowHistoryLength,
 		task.GetTaskID(),
 		visibilityMemo,
+		executionInfo.TaskList,
 		searchAttr,
 	)
 	if err != nil {
@@ -317,7 +328,7 @@ func (t *transferQueueActiveTaskExecutor) processCancelExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -402,7 +413,7 @@ func (t *transferQueueActiveTaskExecutor) processSignalExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -511,7 +522,7 @@ func (t *transferQueueActiveTaskExecutor) processStartChildExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -630,7 +641,7 @@ func (t *transferQueueActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHe
 	recordStart bool,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -685,6 +696,7 @@ func (t *transferQueueActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHe
 			executionTimestamp.UnixNano(),
 			workflowTimeout,
 			task.GetTaskID(),
+			executionInfo.TaskList,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -698,6 +710,7 @@ func (t *transferQueueActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHe
 		executionTimestamp.UnixNano(),
 		workflowTimeout,
 		task.GetTaskID(),
+		executionInfo.TaskList,
 		visibilityMemo,
 		searchAttr,
 	)
@@ -707,7 +720,7 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	currentContext, currentRelease, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	currentContext, currentRelease, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
@@ -766,7 +779,7 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 	}
 	logger = logger.WithTags(tag.WorkflowDomainName(domainEntry.GetInfo().Name))
 
-	reason, resetPoint := FindAutoResetPoint(t.shard.GetTimeSource(), &domainEntry.GetConfig().BadBinaries, executionInfo.AutoResetPoints)
+	reason, resetPoint := execution.FindAutoResetPoint(t.shard.GetTimeSource(), &domainEntry.GetConfig().BadBinaries, executionInfo.AutoResetPoints)
 	if resetPoint == nil {
 		logger.Warn("Auto-Reset is skipped, because reset point is not found.")
 		return nil
@@ -777,9 +790,9 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 		tag.WorkflowEventID(resetPoint.GetFirstDecisionCompletedId()),
 	)
 
-	var baseContext workflowExecutionContext
-	var baseMutableState mutableState
-	var baseRelease releaseWorkflowExecutionFunc
+	var baseContext execution.Context
+	var baseMutableState execution.MutableState
+	var baseRelease execution.ReleaseFunc
 	if resetPoint.GetRunId() == executionInfo.RunID {
 		baseContext = currentContext
 		baseMutableState = currentMutableState
@@ -789,7 +802,7 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 			WorkflowId: common.StringPtr(task.WorkflowID),
 			RunId:      common.StringPtr(resetPoint.GetRunId()),
 		}
-		baseContext, baseRelease, err = t.cache.getOrCreateWorkflowExecutionForBackground(task.DomainID, baseExecution)
+		baseContext, baseRelease, err = t.cache.GetOrCreateWorkflowExecutionForBackground(task.DomainID, baseExecution)
 		if err != nil {
 			return err
 		}
@@ -821,13 +834,13 @@ func (t *transferQueueActiveTaskExecutor) processResetWorkflow(
 
 func (t *transferQueueActiveTaskExecutor) recordChildExecutionStarted(
 	task *persistence.TransferTaskInfo,
-	context workflowExecutionContext,
+	context execution.Context,
 	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 	runID string,
 ) error {
 
 	return t.updateWorkflowExecution(context, true,
-		func(mutableState mutableState) error {
+		func(mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
@@ -856,12 +869,12 @@ func (t *transferQueueActiveTaskExecutor) recordChildExecutionStarted(
 
 func (t *transferQueueActiveTaskExecutor) recordStartChildExecutionFailed(
 	task *persistence.TransferTaskInfo,
-	context workflowExecutionContext,
+	context execution.Context,
 	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 ) error {
 
 	return t.updateWorkflowExecution(context, true,
-		func(mutableState mutableState) error {
+		func(mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
@@ -907,14 +920,14 @@ func (t *transferQueueActiveTaskExecutor) createFirstDecisionTask(
 
 func (t *transferQueueActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 	task *persistence.TransferTaskInfo,
-	context workflowExecutionContext,
+	context execution.Context,
 	targetDomain string,
 	targetWorkflowID string,
 	targetRunID string,
 ) error {
 
 	err := t.updateWorkflowExecution(context, true,
-		func(mutableState mutableState) error {
+		func(mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
@@ -944,7 +957,7 @@ func (t *transferQueueActiveTaskExecutor) requestCancelExternalExecutionComplete
 
 func (t *transferQueueActiveTaskExecutor) signalExternalExecutionCompleted(
 	task *persistence.TransferTaskInfo,
-	context workflowExecutionContext,
+	context execution.Context,
 	targetDomain string,
 	targetWorkflowID string,
 	targetRunID string,
@@ -952,7 +965,7 @@ func (t *transferQueueActiveTaskExecutor) signalExternalExecutionCompleted(
 ) error {
 
 	err := t.updateWorkflowExecution(context, true,
-		func(mutableState mutableState) error {
+		func(mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
@@ -983,14 +996,14 @@ func (t *transferQueueActiveTaskExecutor) signalExternalExecutionCompleted(
 
 func (t *transferQueueActiveTaskExecutor) requestCancelExternalExecutionFailed(
 	task *persistence.TransferTaskInfo,
-	context workflowExecutionContext,
+	context execution.Context,
 	targetDomain string,
 	targetWorkflowID string,
 	targetRunID string,
 ) error {
 
 	err := t.updateWorkflowExecution(context, true,
-		func(mutableState mutableState) error {
+		func(mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
@@ -1022,7 +1035,7 @@ func (t *transferQueueActiveTaskExecutor) requestCancelExternalExecutionFailed(
 
 func (t *transferQueueActiveTaskExecutor) signalExternalExecutionFailed(
 	task *persistence.TransferTaskInfo,
-	context workflowExecutionContext,
+	context execution.Context,
 	targetDomain string,
 	targetWorkflowID string,
 	targetRunID string,
@@ -1030,7 +1043,7 @@ func (t *transferQueueActiveTaskExecutor) signalExternalExecutionFailed(
 ) error {
 
 	err := t.updateWorkflowExecution(context, true,
-		func(mutableState mutableState) error {
+		func(mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow is not running."}
 			}
@@ -1062,12 +1075,12 @@ func (t *transferQueueActiveTaskExecutor) signalExternalExecutionFailed(
 }
 
 func (t *transferQueueActiveTaskExecutor) updateWorkflowExecution(
-	context workflowExecutionContext,
+	context execution.Context,
 	createDecisionTask bool,
-	action func(builder mutableState) error,
+	action func(builder execution.MutableState) error,
 ) error {
 
-	mutableState, err := context.loadWorkflowExecution()
+	mutableState, err := context.LoadWorkflowExecution()
 	if err != nil {
 		return err
 	}
@@ -1078,13 +1091,13 @@ func (t *transferQueueActiveTaskExecutor) updateWorkflowExecution(
 
 	if createDecisionTask {
 		// Create a transfer task to schedule a decision task
-		err := scheduleDecision(mutableState)
+		err := execution.ScheduleDecision(mutableState)
 		if err != nil {
 			return err
 		}
 	}
 
-	return context.updateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
+	return context.UpdateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
 }
 
 func (t *transferQueueActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
@@ -1234,10 +1247,10 @@ func (t *transferQueueActiveTaskExecutor) resetWorkflow(
 	domain string,
 	reason string,
 	resetPoint *workflow.ResetPointInfo,
-	baseContext workflowExecutionContext,
-	baseMutableState mutableState,
-	currentContext workflowExecutionContext,
-	currentMutableState mutableState,
+	baseContext execution.Context,
+	baseMutableState execution.MutableState,
+	currentContext execution.Context,
+	currentMutableState execution.MutableState,
 	logger log.Logger,
 ) error {
 
@@ -1303,7 +1316,7 @@ func (t *transferQueueActiveTaskExecutor) resetWorkflow(
 				t.shard.GetClusterMetadata(),
 				currentContext,
 				currentMutableState,
-				noopReleaseFn, // this is fine since caller will defer on release
+				execution.NoopReleaseFn, // this is fine since caller will defer on release
 			),
 			reason,
 			nil,

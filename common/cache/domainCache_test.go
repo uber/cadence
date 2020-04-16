@@ -23,6 +23,7 @@ package cache
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -31,12 +32,15 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -44,10 +48,12 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		logger          log.Logger
 		clusterMetadata *mocks.ClusterMetadata
 		metadataMgr     *mocks.MetadataManager
-		domainCache     *domainCache
+
+		domainCache *domainCache
+		logger      log.Logger
+		now         time.Time
 	}
 )
 
@@ -71,6 +77,9 @@ func (s *domainCacheSuite) SetupTest() {
 	s.metadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.domainCache = NewDomainCache(s.metadataMgr, s.clusterMetadata, metricsClient, s.logger).(*domainCache)
+
+	s.now = time.Now()
+	s.domainCache.timeSource = clock.NewEventTimeSource().Update(s.now)
 }
 
 func (s *domainCacheSuite) TearDownTest() {
@@ -476,6 +485,8 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		Domains:       []*persistence.GetDomainResponse{domainRecord1New, domainRecord2New},
 		NextPageToken: nil,
 	}, nil).Once()
+
+	s.domainCache.timeSource.(*clock.EventTimeSource).Update(s.now.Add(domainCacheMinRefreshInterval))
 	s.Nil(s.domainCache.refreshDomains())
 
 	// the order matters here: the record 2 got updated first, thus with a lower notification version
@@ -643,4 +654,40 @@ func Test_IsSampledForLongerRetention(t *testing.T) {
 
 	d.info.Data[SampleRateKey] = "invalid-value"
 	require.False(t, d.IsSampledForLongerRetention(wid))
+}
+
+func Test_DomainCacheEntry_GetDomainNotActiveErr(t *testing.T) {
+	clusterMetadata := cluster.NewMetadata(
+		loggerimpl.NewNopLogger(),
+		dynamicconfig.GetBoolPropertyFn(true),
+		int64(10),
+		cluster.TestCurrentClusterName,
+		cluster.TestCurrentClusterName,
+		cluster.TestAllClusterInfo,
+		&config.ReplicationConsumerConfig{
+			Type: config.ReplicationConsumerTypeRPC,
+		},
+	)
+	domainEntry := NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: "test-domain"},
+		nil,
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234,
+		clusterMetadata,
+	)
+
+	require.Nil(t, domainEntry.GetDomainNotActiveErr())
+
+	// update to become not active
+	domainEntry.replicationConfig.ActiveClusterName = cluster.TestAlternativeClusterName
+	err := domainEntry.GetDomainNotActiveErr()
+	require.NotNil(t, err)
+	_, ok := err.(*shared.DomainNotActiveError)
+	require.True(t, ok)
 }

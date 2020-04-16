@@ -30,6 +30,9 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -43,14 +46,14 @@ type (
 )
 
 func newTransferQueueStandbyTaskExecutor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	clusterName string,
-	config *Config,
+	config *config.Config,
 ) queueTaskExecutor {
 	return &transferQueueStandbyTaskExecutor{
 		transferQueueTaskExecutorBase: newTransferQueueTaskExecutorBase(
@@ -113,7 +116,7 @@ func (t *transferQueueStandbyTaskExecutor) processActivityTask(
 ) error {
 
 	processTaskIfClosed := false
-	actionFn := func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		activityInfo, ok := mutableState.GetActivityInfo(transferTask.ScheduleID)
 		if !ok {
@@ -154,7 +157,7 @@ func (t *transferQueueStandbyTaskExecutor) processDecisionTask(
 ) error {
 
 	processTaskIfClosed := false
-	actionFn := func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		decisionInfo, ok := mutableState.GetDecisionInfo(transferTask.ScheduleID)
 		if !ok {
@@ -200,7 +203,7 @@ func (t *transferQueueStandbyTaskExecutor) processCloseExecution(
 ) error {
 
 	processTaskIfClosed := true
-	actionFn := func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		if mutableState.IsWorkflowExecutionRunning() {
 			// this can happen if workflow is reset.
@@ -250,6 +253,7 @@ func (t *transferQueueStandbyTaskExecutor) processCloseExecution(
 			workflowHistoryLength,
 			transferTask.GetTaskID(),
 			visibilityMemo,
+			executionInfo.TaskList,
 			searchAttr,
 		)
 	}
@@ -267,7 +271,7 @@ func (t *transferQueueStandbyTaskExecutor) processCancelExecution(
 ) error {
 
 	processTaskIfClosed := false
-	actionFn := func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		requestCancelInfo, ok := mutableState.GetRequestCancelInfo(transferTask.ScheduleID)
 		if !ok {
@@ -302,7 +306,7 @@ func (t *transferQueueStandbyTaskExecutor) processSignalExecution(
 ) error {
 
 	processTaskIfClosed := false
-	actionFn := func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		signalInfo, ok := mutableState.GetSignalInfo(transferTask.ScheduleID)
 		if !ok {
@@ -337,7 +341,7 @@ func (t *transferQueueStandbyTaskExecutor) processStartChildExecution(
 ) error {
 
 	processTaskIfClosed := false
-	actionFn := func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		childWorkflowInfo, ok := mutableState.GetChildExecutionInfo(transferTask.ScheduleID)
 		if !ok {
@@ -379,7 +383,7 @@ func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStarted(
 	return t.processTransfer(
 		processTaskIfClosed,
 		transferTask,
-		func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+		func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 			return nil, t.processRecordWorkflowStartedOrUpsertHelper(transferTask, mutableState, true)
 		},
 		standbyTaskPostActionNoOp,
@@ -394,7 +398,7 @@ func (t *transferQueueStandbyTaskExecutor) processUpsertWorkflowSearchAttributes
 	return t.processTransfer(
 		processTaskIfClosed,
 		transferTask,
-		func(context workflowExecutionContext, mutableState mutableState) (interface{}, error) {
+		func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
 			return nil, t.processRecordWorkflowStartedOrUpsertHelper(transferTask, mutableState, false)
 		},
 		standbyTaskPostActionNoOp,
@@ -403,7 +407,7 @@ func (t *transferQueueStandbyTaskExecutor) processUpsertWorkflowSearchAttributes
 
 func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	transferTask *persistence.TransferTaskInfo,
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	isRecordStart bool,
 ) error {
 
@@ -442,6 +446,7 @@ func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertH
 			executionTimestamp.UnixNano(),
 			workflowTimeout,
 			transferTask.GetTaskID(),
+			executionInfo.TaskList,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -455,6 +460,7 @@ func (t *transferQueueStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertH
 		executionTimestamp.UnixNano(),
 		workflowTimeout,
 		transferTask.GetTaskID(),
+		executionInfo.TaskList,
 		visibilityMemo,
 		searchAttr,
 	)
@@ -469,7 +475,7 @@ func (t *transferQueueStandbyTaskExecutor) processTransfer(
 ) (retError error) {
 
 	transferTask := taskInfo.(*persistence.TransferTaskInfo)
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(
 		t.getDomainIDAndWorkflowExecution(transferTask),
 	)
 	if err != nil {

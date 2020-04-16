@@ -33,6 +33,8 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 const (
@@ -50,13 +52,13 @@ type (
 	}
 
 	nDCBranchMgrImpl struct {
-		shard           ShardContext
+		shard           shard.Context
 		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
 		historyV2Mgr    persistence.HistoryManager
 
-		context      workflowExecutionContext
-		mutableState mutableState
+		context      execution.Context
+		mutableState execution.MutableState
 		logger       log.Logger
 	}
 )
@@ -64,9 +66,9 @@ type (
 var _ nDCBranchMgr = (*nDCBranchMgrImpl)(nil)
 
 func newNDCBranchMgr(
-	shard ShardContext,
-	context workflowExecutionContext,
-	mutableState mutableState,
+	shard shard.Context,
+	context execution.Context,
+	mutableState execution.MutableState,
 	logger log.Logger,
 ) *nDCBranchMgrImpl {
 
@@ -169,13 +171,13 @@ func (r *nDCBranchMgrImpl) flushBufferedEvents(
 		r.clusterMetadata,
 		r.context,
 		r.mutableState,
-		noopReleaseFn,
+		execution.NoopReleaseFn,
 	)
 	if err := targetWorkflow.flushBufferedEvents(); err != nil {
 		return 0, nil, err
 	}
 	// the workflow must be updated as active, to send out replication tasks
-	if err := targetWorkflow.context.updateWorkflowExecutionAsActive(
+	if err := targetWorkflow.context.UpdateWorkflowExecutionAsActive(
 		r.shard.GetTimeSource().Now(),
 	); err != nil {
 		return 0, nil, err

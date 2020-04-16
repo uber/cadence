@@ -38,6 +38,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -46,9 +49,9 @@ type (
 		*require.Assertions
 
 		controller          *gomock.Controller
-		mockShard           *shardContextTest
+		mockShard           *shard.TestContext
 		mockDomainCache     *cache.MockDomainCache
-		mockMutableState    *MockmutableState
+		mockMutableState    *execution.MockMutableState
 		mockClusterMetadata *cluster.MockMetadata
 
 		mockExecutionMgr *mocks.ExecutionManager
@@ -78,31 +81,31 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockMutableState = NewMockmutableState(s.controller)
+	s.mockMutableState = execution.NewMockMutableState(s.controller)
 
-	s.mockShard = newTestShardContext(
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
-		NewDynamicConfigForTest(),
+		config.NewForTest(),
 	)
 
 	s.mockProducer = &mocks.KafkaProducer{}
-	s.mockDomainCache = s.mockShard.resource.DomainCache
-	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
-	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
+	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
-	historyCache := newHistoryCache(s.mockShard)
+	executionCache := execution.NewCache(s.mockShard)
 
 	s.replicatorQueueProcessor = newReplicatorQueueProcessor(
-		s.mockShard, historyCache, s.mockProducer, s.mockExecutionMgr, s.mockHistoryV2Mgr, s.logger,
+		s.mockShard, executionCache, s.mockProducer, s.mockExecutionMgr, s.mockHistoryV2Mgr, s.logger,
 	).(*replicatorQueueProcessorImpl)
 }
 
@@ -171,14 +174,15 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowCompleted() {
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 
-	context, release, _ := s.replicatorQueueProcessor.historyCache.getOrCreateWorkflowExecutionForBackground(
+	context, release, _ := s.replicatorQueueProcessor.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
 		shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
 	)
-	context.(*workflowExecutionContextImpl).mutableState = s.mockMutableState
+
+	context.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).Times(1)
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
@@ -218,7 +222,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 
-	context, release, _ := s.replicatorQueueProcessor.historyCache.getOrCreateWorkflowExecutionForBackground(
+	context, release, _ := s.replicatorQueueProcessor.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
 		shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -226,7 +230,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 		},
 	)
 
-	context.(*workflowExecutionContextImpl).mutableState = s.mockMutableState
+	context.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).Times(1)
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
@@ -267,7 +271,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 
-	context, release, _ := s.replicatorQueueProcessor.historyCache.getOrCreateWorkflowExecutionForBackground(
+	context, release, _ := s.replicatorQueueProcessor.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
 		shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -275,7 +279,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
 		},
 	)
 
-	context.(*workflowExecutionContextImpl).mutableState = s.mockMutableState
+	context.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
 	activityVersion := int64(333)
@@ -377,7 +381,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 
-	context, release, _ := s.replicatorQueueProcessor.historyCache.getOrCreateWorkflowExecutionForBackground(
+	context, release, _ := s.replicatorQueueProcessor.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
 		shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -385,7 +389,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 		},
 	)
 
-	context.(*workflowExecutionContextImpl).mutableState = s.mockMutableState
+	context.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
 	activityVersion := int64(333)

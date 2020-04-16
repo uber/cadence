@@ -35,13 +35,15 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
 	replicatorQueueProcessorImpl struct {
 		currentClusterName    string
-		shard                 ShardContext
-		historyCache          *historyCache
+		shard                 shard.Context
+		executionCache        *execution.Cache
 		replicationTaskFilter taskFilter
 		executionMgr          persistence.ExecutionManager
 		historyV2Mgr          persistence.HistoryManager
@@ -66,8 +68,8 @@ var (
 )
 
 func newReplicatorQueueProcessor(
-	shard ShardContext,
-	historyCache *historyCache,
+	shard shard.Context,
+	executionCache *execution.Cache,
 	replicator messaging.Producer,
 	executionMgr persistence.ExecutionManager,
 	historyV2Mgr persistence.HistoryManager,
@@ -106,7 +108,7 @@ func newReplicatorQueueProcessor(
 	processor := &replicatorQueueProcessorImpl{
 		currentClusterName:    currentClusterName,
 		shard:                 shard,
-		historyCache:          historyCache,
+		executionCache:        executionCache,
 		replicationTaskFilter: replicationTaskFilter,
 		executionMgr:          executionMgr,
 		historyV2Mgr:          historyV2Mgr,
@@ -127,7 +129,7 @@ func newReplicatorQueueProcessor(
 		nil, // replicator queue processor will soon be deprecated and won't use priority task processor
 		queueAckMgr,
 		nil, // replicator queue processor will soon be deprecated and won't use redispatch queue
-		historyCache,
+		executionCache,
 		nil, // there's no queueTask implementation for replication task
 		logger,
 		shard.GetMetricsClient().Scope(metrics.ReplicatorQueueProcessorScope),
@@ -584,7 +586,7 @@ func (p *replicatorQueueProcessorImpl) generateSyncActivityTask(
 		taskInfo.GetDomainID(),
 		taskInfo.GetWorkflowID(),
 		taskInfo.GetRunID(),
-		func(mutableState mutableState) (*replicator.ReplicationTask, error) {
+		func(mutableState execution.MutableState) (*replicator.ReplicationTask, error) {
 			activityInfo, ok := mutableState.GetActivityInfo(taskInfo.ScheduledID)
 			if !ok {
 				return nil, nil
@@ -645,7 +647,7 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 		task.GetDomainID(),
 		task.GetWorkflowID(),
 		task.GetRunID(),
-		func(mutableState mutableState) (*replicator.ReplicationTask, error) {
+		func(mutableState execution.MutableState) (*replicator.ReplicationTask, error) {
 
 			versionHistories := mutableState.GetVersionHistories()
 
@@ -778,7 +780,7 @@ func (p *replicatorQueueProcessorImpl) getEventsBlob(
 }
 
 func (p *replicatorQueueProcessorImpl) getVersionHistoryItems(
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	eventID int64,
 	version int64,
 ) ([]*shared.VersionHistoryItem, []byte, error) {
@@ -813,7 +815,7 @@ func (p *replicatorQueueProcessorImpl) processReplication(
 	domainID string,
 	workflowID string,
 	runID string,
-	action func(mutableState) (*replicator.ReplicationTask, error),
+	action func(execution.MutableState) (*replicator.ReplicationTask, error),
 ) (retReplicationTask *replicator.ReplicationTask, retError error) {
 
 	execution := shared.WorkflowExecution{
@@ -821,13 +823,13 @@ func (p *replicatorQueueProcessorImpl) processReplication(
 		RunId:      common.StringPtr(runID),
 	}
 
-	context, release, err := p.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
+	context, release, err := p.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { release(retError) }()
 
-	msBuilder, err := context.loadWorkflowExecution()
+	msBuilder, err := context.LoadWorkflowExecution()
 	switch err.(type) {
 	case nil:
 		if !processTaskIfClosed && !msBuilder.IsWorkflowExecutionRunning() {
@@ -849,7 +851,7 @@ func (p *replicatorQueueProcessorImpl) isNewRunNDCEnabled(
 	runID string,
 ) (isNDCWorkflow bool, retError error) {
 
-	context, release, err := p.historyCache.getOrCreateWorkflowExecution(
+	context, release, err := p.executionCache.GetOrCreateWorkflowExecution(
 		ctx,
 		domainID,
 		shared.WorkflowExecution{
@@ -862,7 +864,7 @@ func (p *replicatorQueueProcessorImpl) isNewRunNDCEnabled(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := context.loadWorkflowExecution()
+	mutableState, err := context.LoadWorkflowExecution()
 	if err != nil {
 		return false, err
 	}

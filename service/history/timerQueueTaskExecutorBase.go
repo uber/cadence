@@ -30,31 +30,34 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
 	timerQueueTaskExecutorBase struct {
-		shard          ShardContext
+		shard          shard.Context
 		historyService *historyEngineImpl
-		cache          *historyCache
+		cache          *execution.Cache
 		logger         log.Logger
 		metricsClient  metrics.Client
-		config         *Config
+		config         *config.Config
 	}
 )
 
 func newTimerQueueTaskExecutorBase(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	config *Config,
+	config *config.Config,
 ) *timerQueueTaskExecutorBase {
 	return &timerQueueTaskExecutorBase{
 		shard:          shard,
 		historyService: historyService,
-		cache:          historyService.historyCache,
+		cache:          historyService.executionCache,
 		logger:         logger,
 		metricsClient:  metricsClient,
 		config:         config,
@@ -65,7 +68,7 @@ func (t *timerQueueTaskExecutorBase) executeDeleteHistoryEventTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(t.getDomainIDAndWorkflowExecution(task))
+	context, release, err := t.cache.GetOrCreateWorkflowExecutionForBackground(t.getDomainIDAndWorkflowExecution(task))
 	if err != nil {
 		return err
 	}
@@ -108,8 +111,8 @@ func (t *timerQueueTaskExecutorBase) executeDeleteHistoryEventTask(
 
 func (t *timerQueueTaskExecutorBase) deleteWorkflow(
 	task *persistence.TimerTaskInfo,
-	context workflowExecutionContext,
-	msBuilder mutableState,
+	context execution.Context,
+	msBuilder execution.MutableState,
 ) error {
 
 	if err := t.deleteCurrentWorkflowExecution(task); err != nil {
@@ -129,14 +132,14 @@ func (t *timerQueueTaskExecutorBase) deleteWorkflow(
 	}
 	// calling clear here to force accesses of mutable state to read database
 	// if this is not called then callers will get mutable state even though its been removed from database
-	context.clear()
+	context.Clear()
 	return nil
 }
 
 func (t *timerQueueTaskExecutorBase) archiveWorkflow(
 	task *persistence.TimerTaskInfo,
-	workflowContext workflowExecutionContext,
-	msBuilder mutableState,
+	workflowContext execution.Context,
+	msBuilder execution.MutableState,
 	domainCacheEntry *cache.DomainCacheEntry,
 ) error {
 	branchToken, err := msBuilder.GetCurrentBranchToken()
@@ -164,7 +167,7 @@ func (t *timerQueueTaskExecutorBase) archiveWorkflow(
 		CallerService:        common.HistoryServiceName,
 		AttemptArchiveInline: false, // archive in workflow by default
 	}
-	executionStats, err := workflowContext.loadExecutionStats()
+	executionStats, err := workflowContext.LoadExecutionStats()
 	if err == nil && executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit()) {
 		req.AttemptArchiveInline = true
 	}
@@ -196,7 +199,7 @@ func (t *timerQueueTaskExecutorBase) archiveWorkflow(
 	}
 	// calling clear here to force accesses of mutable state to read database
 	// if this is not called then callers will get mutable state even though its been removed from database
-	workflowContext.clear()
+	workflowContext.Clear()
 	return nil
 }
 
@@ -230,7 +233,7 @@ func (t *timerQueueTaskExecutorBase) deleteCurrentWorkflowExecution(
 
 func (t *timerQueueTaskExecutorBase) deleteWorkflowHistory(
 	task *persistence.TimerTaskInfo,
-	msBuilder mutableState,
+	msBuilder execution.MutableState,
 ) error {
 
 	op := func() error {

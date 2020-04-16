@@ -36,6 +36,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -60,7 +62,7 @@ type (
 
 	queueProcessorBase struct {
 		clusterName          string
-		shard                ShardContext
+		shard                shard.Context
 		timeSource           clock.TimeSource
 		options              *QueueProcessorOptions
 		processor            processor
@@ -90,13 +92,13 @@ var (
 
 func newQueueProcessorBase(
 	clusterName string,
-	shard ShardContext,
+	shard shard.Context,
 	options *QueueProcessorOptions,
 	processor processor,
 	queueTaskProcessor queueTaskProcessor,
 	queueAckMgr queueAckMgr,
 	redispatchQueue collection.Queue,
-	historyCache *historyCache,
+	executionCache *execution.Cache,
 	queueTaskInitializer queueTaskInitializer,
 	logger log.Logger,
 	metricsScope metrics.Scope,
@@ -108,7 +110,7 @@ func newQueueProcessorBase(
 			queueSize:   options.BatchSize(),
 			workerCount: options.WorkerCount(),
 		}
-		taskProcessor = newTaskProcessor(taskProcessorOptions, shard, historyCache, logger)
+		taskProcessor = newTaskProcessor(taskProcessorOptions, shard, executionCache, logger)
 	}
 
 	p := &queueProcessorBase{
@@ -234,7 +236,7 @@ processorPumpLoop:
 				p.options.UpdateAckInterval(),
 				p.options.UpdateAckIntervalJitterCoefficient(),
 			))
-			if err := p.ackMgr.updateQueueAckLevel(); err == ErrShardClosed {
+			if err := p.ackMgr.updateQueueAckLevel(); err == shard.ErrShardClosed {
 				// shard is no longer owned by this instance, bail out
 				go p.Stop()
 				break processorPumpLoop
