@@ -40,12 +40,12 @@ const (
 type (
 	timerQueueStandbyProcessorImpl struct {
 		shard                   shard.Context
-		timerTaskFilter         taskFilter
+		timerTaskFilter         task.Filter
 		logger                  log.Logger
 		metricsClient           metrics.Client
 		timerGate               RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
-		taskExecutor            queueTaskExecutor
+		taskExecutor            task.Executor
 	}
 )
 
@@ -56,7 +56,7 @@ func newTimerQueueStandbyProcessor(
 	taskAllocator taskAllocator,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) *timerQueueStandbyProcessorImpl {
 
@@ -96,9 +96,10 @@ func newTimerQueueStandbyProcessor(
 		logger:          logger,
 		metricsClient:   historyService.metricsClient,
 		timerGate:       timerGate,
-		taskExecutor: newTimerQueueStandbyTaskExecutor(
+		taskExecutor: task.NewTimerStandbyTaskExecutor(
 			shard,
-			historyService,
+			historyService.archivalClient,
+			historyService.executionCache,
 			historyRereplicator,
 			nDCHistoryResender,
 			logger,
@@ -109,7 +110,7 @@ func newTimerQueueStandbyProcessor(
 	}
 
 	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
-		return newTimerQueueTask(
+		return task.NewTimerTask(
 			shard,
 			taskInfo,
 			historyService.metricsClient.Scope(
@@ -167,7 +168,7 @@ func (t *timerQueueStandbyProcessorImpl) retryTasks() {
 	t.timerQueueProcessorBase.retryTasks()
 }
 
-func (t *timerQueueStandbyProcessorImpl) getTaskFilter() taskFilter {
+func (t *timerQueueStandbyProcessorImpl) getTaskFilter() task.Filter {
 	return t.timerTaskFilter
 }
 
@@ -204,5 +205,5 @@ func (t *timerQueueStandbyProcessorImpl) process(
 ) (int, error) {
 	// TODO: task metricScope should be determined when creating taskInfo
 	metricScope := getTimerTaskMetricScope(taskInfo.task.GetTaskType(), false)
-	return metricScope, t.taskExecutor.execute(taskInfo.task, taskInfo.shouldProcessTask)
+	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }

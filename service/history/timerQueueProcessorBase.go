@@ -72,7 +72,7 @@ type (
 		retryPolicy          backoff.RetryPolicy
 		lastPollTime         time.Time
 		taskProcessor        *taskProcessor // TODO: deprecate task processor, in favor of queueTaskProcessor
-		queueTaskProcessor   queueTaskProcessor
+		queueTaskProcessor   task.Processor
 		redispatchQueue      collection.Queue
 		queueTaskInitializer queueTaskInitializer
 
@@ -88,7 +88,7 @@ func newTimerQueueProcessorBase(
 	shard shard.Context,
 	historyService *historyEngineImpl,
 	timerProcessor timerProcessor,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	timerQueueAckMgr timerQueueAckMgr,
 	redispatchQueue collection.Queue,
 	queueTaskInitializer queueTaskInitializer,

@@ -449,3 +449,165 @@ func (mr *MockKeyMockRecorder) Less(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Less", reflect.TypeOf((*MockKey)(nil).Less), arg0)
 }
+
+// MockExecutor is a mock of Executor interface
+type MockExecutor struct {
+	ctrl     *gomock.Controller
+	recorder *MockExecutorMockRecorder
+}
+
+// MockExecutorMockRecorder is the mock recorder for MockExecutor
+type MockExecutorMockRecorder struct {
+	mock *MockExecutor
+}
+
+// NewMockExecutor creates a new mock instance
+func NewMockExecutor(ctrl *gomock.Controller) *MockExecutor {
+	mock := &MockExecutor{ctrl: ctrl}
+	mock.recorder = &MockExecutorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
+	return m.recorder
+}
+
+// Execute mocks base method
+func (m *MockExecutor) Execute(taskInfo Info, shouldProcessTask bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute", taskInfo, shouldProcessTask)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Execute indicates an expected call of Execute
+func (mr *MockExecutorMockRecorder) Execute(taskInfo, shouldProcessTask interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), taskInfo, shouldProcessTask)
+}
+
+// MockPriorityAssigner is a mock of PriorityAssigner interface
+type MockPriorityAssigner struct {
+	ctrl     *gomock.Controller
+	recorder *MockPriorityAssignerMockRecorder
+}
+
+// MockPriorityAssignerMockRecorder is the mock recorder for MockPriorityAssigner
+type MockPriorityAssignerMockRecorder struct {
+	mock *MockPriorityAssigner
+}
+
+// NewMockPriorityAssigner creates a new mock instance
+func NewMockPriorityAssigner(ctrl *gomock.Controller) *MockPriorityAssigner {
+	mock := &MockPriorityAssigner{ctrl: ctrl}
+	mock.recorder = &MockPriorityAssignerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockPriorityAssigner) EXPECT() *MockPriorityAssignerMockRecorder {
+	return m.recorder
+}
+
+// Assign mocks base method
+func (m *MockPriorityAssigner) Assign(arg0 Task) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Assign", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Assign indicates an expected call of Assign
+func (mr *MockPriorityAssignerMockRecorder) Assign(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockPriorityAssigner)(nil).Assign), arg0)
+}
+
+// MockProcessor is a mock of Processor interface
+type MockProcessor struct {
+	ctrl     *gomock.Controller
+	recorder *MockProcessorMockRecorder
+}
+
+// MockProcessorMockRecorder is the mock recorder for MockProcessor
+type MockProcessorMockRecorder struct {
+	mock *MockProcessor
+}
+
+// NewMockProcessor creates a new mock instance
+func NewMockProcessor(ctrl *gomock.Controller) *MockProcessor {
+	mock := &MockProcessor{ctrl: ctrl}
+	mock.recorder = &MockProcessorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockProcessor) EXPECT() *MockProcessorMockRecorder {
+	return m.recorder
+}
+
+// Start mocks base method
+func (m *MockProcessor) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockProcessorMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockProcessor)(nil).Start))
+}
+
+// Stop mocks base method
+func (m *MockProcessor) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockProcessorMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockProcessor)(nil).Stop))
+}
+
+// StopShardProcessor mocks base method
+func (m *MockProcessor) StopShardProcessor(arg0 shard.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StopShardProcessor", arg0)
+}
+
+// StopShardProcessor indicates an expected call of StopShardProcessor
+func (mr *MockProcessorMockRecorder) StopShardProcessor(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopShardProcessor", reflect.TypeOf((*MockProcessor)(nil).StopShardProcessor), arg0)
+}
+
+// Submit mocks base method
+func (m *MockProcessor) Submit(arg0 Task) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Submit", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Submit indicates an expected call of Submit
+func (mr *MockProcessorMockRecorder) Submit(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Submit", reflect.TypeOf((*MockProcessor)(nil).Submit), arg0)
+}
+
+// TrySubmit mocks base method
+func (m *MockProcessor) TrySubmit(arg0 Task) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TrySubmit", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TrySubmit indicates an expected call of TrySubmit
+func (mr *MockProcessorMockRecorder) TrySubmit(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrySubmit", reflect.TypeOf((*MockProcessor)(nil).TrySubmit), arg0)
+}

@@ -21,8 +21,6 @@
 package history
 
 import (
-	"time"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -45,12 +43,6 @@ type (
 		transferQueueShutdown  transferQueueShutdown
 		logger                 log.Logger
 	}
-)
-
-const (
-	secondsInDay = int32(24 * time.Hour / time.Second)
-
-	defaultDomainName = "defaultDomainName"
 )
 
 func newTransferQueueProcessorBase(
