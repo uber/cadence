@@ -25,12 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/checksum"
-
 	"github.com/pborman/uuid"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/codec"
 )
 
@@ -785,6 +784,24 @@ type (
 		WorkflowID string
 	}
 
+	// ListConcreteExecutionsRequest is request to ListConcreteExecutions
+	ListConcreteExecutionsRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListConcreteExecutionsResponse is response to ListConcreteExecutions
+	ListConcreteExecutionsResponse struct {
+		Executions []*ListConcreteExecutionsEntity
+		PageToken  []byte
+	}
+
+	// ListConcreteExecutionsEntity is a single entity in ListConcreteExecutionsResponse
+	ListConcreteExecutionsEntity struct {
+		ExecutionInfo    *WorkflowExecutionInfo
+		VersionHistories *VersionHistories
+	}
+
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
 		StartRequestID   string
@@ -924,14 +941,6 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
-	}
-
-	// DeleteTaskRequest is used to detele a task that corrupted and need to be removed
-	// 	e.g. corrupted history event batch, eventID is not continouous
-	DeleteTaskRequest struct {
-		TaskID  int64
-		Type    int
-		ShardID int
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
@@ -1199,6 +1208,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
 
@@ -1210,6 +1220,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
 
@@ -1501,8 +1512,8 @@ type (
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
 
-		// Remove Task due to corrupted data
-		DeleteTask(request *DeleteTaskRequest) error
+		// Scan operations
+		ListConcreteExecutions(request *ListConcreteExecutionsRequest) (*ListConcreteExecutionsResponse, error)
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard

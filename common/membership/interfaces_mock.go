@@ -95,6 +95,20 @@ func (mr *MockMonitorMockRecorder) WhoAmI() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WhoAmI", reflect.TypeOf((*MockMonitor)(nil).WhoAmI))
 }
 
+// EvictSelf mocks base method
+func (m *MockMonitor) EvictSelf() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EvictSelf")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EvictSelf indicates an expected call of EvictSelf
+func (mr *MockMonitorMockRecorder) EvictSelf() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvictSelf", reflect.TypeOf((*MockMonitor)(nil).EvictSelf))
+}
+
 // Lookup mocks base method
 func (m *MockMonitor) Lookup(service, key string) (*HostInfo, error) {
 	m.ctrl.T.Helper()
@@ -166,6 +180,21 @@ func (m *MockMonitor) GetReachableMembers() ([]string, error) {
 func (mr *MockMonitorMockRecorder) GetReachableMembers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReachableMembers", reflect.TypeOf((*MockMonitor)(nil).GetReachableMembers))
+}
+
+// GetMemberCount mocks base method
+func (m *MockMonitor) GetMemberCount(role string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMemberCount", role)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMemberCount indicates an expected call of GetMemberCount
+func (mr *MockMonitorMockRecorder) GetMemberCount(role interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMemberCount", reflect.TypeOf((*MockMonitor)(nil).GetMemberCount), role)
 }
 
 // MockServiceResolver is a mock of ServiceResolver interface

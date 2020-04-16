@@ -25,12 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/cassandra"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
@@ -436,6 +435,11 @@ workflow_state = ? ` +
 		`and run_id = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
+
+	templateListWorkflowExecutionQuery = `SELECT run_id, execution, version_histories, version_histories_encoding ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ?`
 
 	templateCheckWorkflowExecutionQuery = `UPDATE executions ` +
 		`SET next_event_id = ? ` +
@@ -1307,10 +1311,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
 	state.ReplicationState = replicationState
 
-	state.VersionHistories = p.NewDataBlob(
-		result["version_histories"].([]byte),
-		common.EncodingType(result["version_histories_encoding"].(string)),
-	)
+	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
 
 	if state.VersionHistories != nil && state.ReplicationState != nil {
 		return nil, &workflow.InternalServiceError{
@@ -1942,53 +1943,6 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 	return nil
 }
 
-func (d *cassandraPersistence) DeleteTask(request *p.DeleteTaskRequest) error {
-	var domainID, workflowID, runID string
-	switch request.Type {
-	case rowTypeTransferTask:
-		domainID = rowTypeTransferDomainID
-		workflowID = rowTypeTransferWorkflowID
-		runID = rowTypeTransferRunID
-
-	case rowTypeTimerTask:
-		domainID = rowTypeTimerDomainID
-		workflowID = rowTypeTimerWorkflowID
-		runID = rowTypeTimerRunID
-
-	case rowTypeReplicationTask:
-		domainID = rowTypeReplicationDomainID
-		workflowID = rowTypeReplicationWorkflowID
-		runID = rowTypeReplicationRunID
-
-	default:
-		return fmt.Errorf("DeleteTask type id is not one of 2 (transfer task), 3 (timer task), 4 (replication task) ")
-
-	}
-
-	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
-		request.ShardID,
-		request.Type,
-		domainID,
-		workflowID,
-		runID,
-		defaultVisibilityTimestamp,
-		request.TaskID)
-
-	err := query.Exec()
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteTask operation failed. Error: %v", err),
-		}
-	}
-
-	return nil
-}
-
 func (d *cassandraPersistence) DeleteWorkflowExecution(request *p.DeleteWorkflowExecutionRequest) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
 		d.shardID,
@@ -2079,6 +2033,49 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 		CloseStatus:      executionInfo.CloseStatus,
 		LastWriteVersion: replicationState.LastWriteVersion,
 	}, nil
+}
+
+func (d *cassandraPersistence) ListConcreteExecutions(
+	request *p.ListConcreteExecutionsRequest,
+) (*p.InternalListConcreteExecutionsResponse, error) {
+	query := d.session.Query(
+		templateListWorkflowExecutionQuery,
+		d.shardID,
+		rowTypeExecution,
+	).PageSize(request.PageSize).PageState(request.PageToken)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "ListConcreteExecutions operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	response := &p.InternalListConcreteExecutionsResponse{}
+	result := make(map[string]interface{})
+	for iter.MapScan(result) {
+		runID := result["run_id"].(gocql.UUID).String()
+		if runID == permanentRunID {
+			result = make(map[string]interface{})
+			continue
+		}
+		response.Executions = append(response.Executions, &p.InternalListConcreteExecutionsEntity{
+			ExecutionInfo:    createWorkflowExecutionInfo(result["execution"].(map[string]interface{})),
+			VersionHistories: p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string))),
+		})
+		result = make(map[string]interface{})
+	}
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListConcreteExecutions operation failed. Error: %v", err),
+		}
+	}
+
+	return response, nil
 }
 
 func (d *cassandraPersistence) GetTransferTasks(request *p.GetTransferTasksRequest) (*p.GetTransferTasksResponse, error) {

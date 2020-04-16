@@ -30,6 +30,8 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -38,15 +40,15 @@ type (
 			ctx ctx.Context,
 			branchIndex int,
 			incomingVersion int64,
-		) (mutableState, bool, error)
+		) (execution.MutableState, bool, error)
 	}
 
 	nDCConflictResolverImpl struct {
-		shard          ShardContext
+		shard          shard.Context
 		stateRebuilder nDCStateRebuilder
 
-		context      workflowExecutionContext
-		mutableState mutableState
+		context      execution.Context
+		mutableState execution.MutableState
 		logger       log.Logger
 	}
 )
@@ -54,9 +56,9 @@ type (
 var _ nDCConflictResolver = (*nDCConflictResolverImpl)(nil)
 
 func newNDCConflictResolver(
-	shard ShardContext,
-	context workflowExecutionContext,
-	mutableState mutableState,
+	shard shard.Context,
+	context execution.Context,
+	mutableState execution.MutableState,
 	logger log.Logger,
 ) *nDCConflictResolverImpl {
 
@@ -74,7 +76,7 @@ func (r *nDCConflictResolverImpl) prepareMutableState(
 	ctx ctx.Context,
 	branchIndex int,
 	incomingVersion int64,
-) (mutableState, bool, error) {
+) (execution.MutableState, bool, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
 	currentVersionHistoryIndex := versionHistories.GetCurrentVersionHistoryIndex()
@@ -118,7 +120,7 @@ func (r *nDCConflictResolverImpl) rebuild(
 	ctx ctx.Context,
 	branchIndex int,
 	requestID string,
-) (mutableState, error) {
+) (execution.MutableState, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
 	replayVersionHistory, err := versionHistories.GetVersionHistory(branchIndex)
@@ -179,7 +181,7 @@ func (r *nDCConflictResolverImpl) rebuild(
 	// set the update condition from original mutable state
 	rebuildMutableState.SetUpdateCondition(r.mutableState.GetUpdateCondition())
 
-	r.context.clear()
-	r.context.setHistorySize(rebuiltHistorySize)
+	r.context.Clear()
+	r.context.SetHistorySize(rebuiltHistorySize)
 	return rebuildMutableState, nil
 }

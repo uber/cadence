@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -40,7 +41,7 @@ type (
 	// for the shard when all preceding tasks are acknowledged.
 	queueAckMgrImpl struct {
 		isFailover    bool
-		shard         ShardContext
+		shard         shard.Context
 		options       *QueueProcessorOptions
 		processor     processor
 		logger        log.Logger
@@ -59,7 +60,11 @@ const (
 	warnPendingTasks = 2000
 )
 
-func newQueueAckMgr(shard ShardContext, options *QueueProcessorOptions, processor processor, ackLevel int64, logger log.Logger) *queueAckMgrImpl {
+var (
+	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
+)
+
+func newQueueAckMgr(shard shard.Context, options *QueueProcessorOptions, processor processor, ackLevel int64, logger log.Logger) *queueAckMgrImpl {
 
 	return &queueAckMgrImpl{
 		isFailover:       false,
@@ -75,7 +80,7 @@ func newQueueAckMgr(shard ShardContext, options *QueueProcessorOptions, processo
 	}
 }
 
-func newQueueFailoverAckMgr(shard ShardContext, options *QueueProcessorOptions, processor processor, ackLevel int64, logger log.Logger) *queueAckMgrImpl {
+func newQueueFailoverAckMgr(shard shard.Context, options *QueueProcessorOptions, processor processor, ackLevel int64, logger log.Logger) *queueAckMgrImpl {
 
 	return &queueAckMgrImpl{
 		isFailover:       true,
@@ -161,7 +166,7 @@ func (a *queueAckMgrImpl) getFinishedChan() <-chan struct{} {
 	return a.finishedChan
 }
 
-func (a *queueAckMgrImpl) updateQueueAckLevel() {
+func (a *queueAckMgrImpl) updateQueueAckLevel() error {
 	a.metricsClient.IncCounter(a.options.MetricScope, metrics.AckLevelUpdateCounter)
 
 	a.Lock()
@@ -213,12 +218,14 @@ MoveAckLevelLoop:
 		if err != nil {
 			a.logger.Error("Error shutdown queue", tag.Error(err))
 		}
-		return
+		return nil
 	}
 
 	a.Unlock()
 	if err := a.processor.updateAckLevel(ackLevel); err != nil {
 		a.metricsClient.IncCounter(a.options.MetricScope, metrics.AckLevelUpdateFailedCounter)
 		a.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
+		return err
 	}
+	return nil
 }

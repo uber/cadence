@@ -26,17 +26,12 @@ import (
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
-	// EngineFactory is used to create an instance of sharded history engine
-	EngineFactory interface {
-		CreateEngine(context ShardContext) Engine
-	}
-
 	queueProcessor interface {
 		common.Daemon
 		notifyNewTask()
@@ -62,7 +57,7 @@ type (
 		completeQueueTask(taskID int64)
 		getQueueAckLevel() int64
 		getQueueReadLevel() int64
-		updateQueueAckLevel()
+		updateQueueAckLevel() error
 	}
 
 	queueTaskInfo interface {
@@ -79,7 +74,7 @@ type (
 		task.PriorityTask
 		queueTaskInfo
 		GetQueueType() queueType
-		GetShardID() int
+		GetShard() shard.Context
 	}
 
 	queueTaskExecutor interface {
@@ -88,7 +83,7 @@ type (
 
 	queueTaskProcessor interface {
 		common.Daemon
-		StopShardProcessor(int)
+		StopShardProcessor(shard.Context)
 		Submit(queueTask) error
 		TrySubmit(queueTask) (bool, error)
 	}
@@ -119,14 +114,7 @@ type (
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() timerKey
 		getReadLevel() timerKey
-		updateAckLevel()
-	}
-
-	historyEventNotifier interface {
-		common.Daemon
-		NotifyNewHistoryEvent(event *historyEventNotification)
-		WatchHistoryEvent(identifier definition.WorkflowIdentifier) (string, chan *historyEventNotification, error)
-		UnwatchHistoryEvent(identifier definition.WorkflowIdentifier, subscriberID string) error
+		updateAckLevel() error
 	}
 
 	queueType int

@@ -22,6 +22,7 @@ package matching
 
 import (
 	"sync/atomic"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -52,6 +53,7 @@ func NewService(
 		params,
 		common.MatchingServiceName,
 		serviceConfig.PersistenceMaxQPS,
+		serviceConfig.PersistenceGlobalMaxQPS,
 		serviceConfig.ThrottledLogRPS,
 		func(
 			persistenceBean persistenceClient.Bean,
@@ -98,6 +100,12 @@ func (s *Service) Stop() {
 	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
+
+	// remove self from membership ring and wait for traffic to drain
+	s.GetLogger().Info("ShutdownHandler: Evicting self from membership ring")
+	s.GetMembershipMonitor().EvictSelf()
+	s.GetLogger().Info("ShutdownHandler: Waiting for others to discover I am unhealthy")
+	time.Sleep(s.config.ShutdownDrainDuration())
 
 	close(s.stopC)
 

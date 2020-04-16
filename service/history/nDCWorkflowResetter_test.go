@@ -36,6 +36,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -44,9 +47,9 @@ type (
 		*require.Assertions
 
 		controller              *gomock.Controller
-		mockShard               *shardContextTest
-		mockBaseMutableState    *MockmutableState
-		mockRebuiltMutableState *MockmutableState
+		mockShard               *shard.TestContext
+		mockBaseMutableState    *execution.MockMutableState
+		mockRebuiltMutableState *execution.MockMutableState
 		mockTransactionMgr      *MocknDCTransactionMgr
 		mockStateBuilder        *MocknDCStateRebuilder
 
@@ -57,7 +60,7 @@ type (
 		domainName string
 		workflowID string
 		baseRunID  string
-		newContext workflowExecutionContext
+		newContext execution.Context
 		newRunID   string
 
 		nDCWorkflowResetter *nDCWorkflowResetterImpl
@@ -73,22 +76,22 @@ func (s *nDCWorkflowResetterSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockBaseMutableState = NewMockmutableState(s.controller)
-	s.mockRebuiltMutableState = NewMockmutableState(s.controller)
+	s.mockBaseMutableState = execution.NewMockMutableState(s.controller)
+	s.mockRebuiltMutableState = execution.NewMockMutableState(s.controller)
 	s.mockTransactionMgr = NewMocknDCTransactionMgr(s.controller)
 	s.mockStateBuilder = NewMocknDCStateRebuilder(s.controller)
 
-	s.mockShard = newTestShardContext(
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
-		NewDynamicConfigForTest(),
+		config.NewForTest(),
 	)
 
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
 
 	s.logger = s.mockShard.GetLogger()
 
@@ -96,7 +99,7 @@ func (s *nDCWorkflowResetterSuite) SetupTest() {
 	s.domainName = "some random domain name"
 	s.workflowID = "some random workflow ID"
 	s.baseRunID = uuid.New()
-	s.newContext = newWorkflowExecutionContext(
+	s.newContext = execution.NewContext(
 		s.domainID,
 		shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(s.workflowID),
@@ -194,7 +197,7 @@ func (s *nDCWorkflowResetterSuite) TestResetWorkflow_NoError() {
 	)
 	s.NoError(err)
 	s.Equal(s.mockRebuiltMutableState, rebuiltMutableState)
-	s.Equal(s.newContext.getHistorySize(), rebuiltHistorySize)
+	s.Equal(s.newContext.GetHistorySize(), rebuiltHistorySize)
 	s.True(mockBaseWorkflowReleaseFnCalled)
 }
 

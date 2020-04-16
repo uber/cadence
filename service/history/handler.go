@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -44,6 +45,11 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 // Handler - Thrift handler interface for history service
@@ -51,19 +57,21 @@ type (
 	Handler struct {
 		resource.Resource
 
-		controller              *shardController
+		shuttingDown            int32
+		controller              shard.Controller
 		tokenSerializer         common.TaskTokenSerializer
 		startWG                 sync.WaitGroup
-		config                  *Config
-		historyEventNotifier    historyEventNotifier
+		config                  *config.Config
+		historyEventNotifier    events.Notifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers ReplicationTaskFetchers
+		queueTaskProcessor      queueTaskProcessor
 	}
 )
 
 var _ historyserviceserver.Interface = (*Handler)(nil)
-var _ EngineFactory = (*Handler)(nil)
+var _ shard.EngineFactory = (*Handler)(nil)
 
 var (
 	errDomainNotSet            = &gen.BadRequestError{Message: "Domain not set on request."}
@@ -74,13 +82,15 @@ var (
 	errSourceClusterNotSet     = &gen.BadRequestError{Message: "Source Cluster not set on request."}
 	errShardIDNotSet           = &gen.BadRequestError{Message: "Shard ID not set on request."}
 	errTimestampNotSet         = &gen.BadRequestError{Message: "Timestamp not set on request."}
+	errInvalidTaskType         = &gen.BadRequestError{Message: "Invalid task type"}
 	errHistoryHostThrottle     = &gen.ServiceBusyError{Message: "History host rps exceeded"}
+	errShuttingDown            = &gen.InternalServiceError{Message: "Shutting down"}
 )
 
 // NewHandler creates a thrift handler for the history service
 func NewHandler(
 	resource resource.Resource,
-	config *Config,
+	config *config.Config,
 ) *Handler {
 	handler := &Handler{
 		Resource:        resource,
@@ -119,16 +129,60 @@ func (h *Handler) Start() {
 		h.config,
 		h.GetClusterMetadata().GetReplicationConsumerConfig(),
 		h.GetClusterMetadata(),
-		h.GetClientBean())
+		h.GetClientBean(),
+	)
 
 	h.replicationTaskFetchers.Start()
 
-	h.controller = newShardController(
+	if h.config.EnablePriorityTaskProcessor() {
+		var err error
+		taskPriorityAssigner := newTaskPriorityAssigner(
+			h.GetClusterMetadata().GetCurrentClusterName(),
+			h.GetDomainCache(),
+			h.GetLogger(),
+			h.GetMetricsClient(),
+			h.config,
+		)
+
+		schedulerType := task.SchedulerType(h.config.TaskSchedulerType())
+		queueTaskProcessorOptions := &queueTaskProcessorOptions{
+			schedulerType: schedulerType,
+		}
+		switch schedulerType {
+		case task.SchedulerTypeFIFO:
+			queueTaskProcessorOptions.fifoSchedulerOptions = &task.FIFOTaskSchedulerOptions{
+				QueueSize:   h.config.TaskSchedulerQueueSize(),
+				WorkerCount: h.config.TaskSchedulerWorkerCount(),
+				RetryPolicy: common.CreatePersistanceRetryPolicy(),
+			}
+		case task.SchedulerTypeWRR:
+			queueTaskProcessorOptions.wRRSchedulerOptions = &task.WeightedRoundRobinTaskSchedulerOptions{
+				Weights:     h.config.TaskSchedulerRoundRobinWeights,
+				QueueSize:   h.config.TaskSchedulerQueueSize(),
+				WorkerCount: h.config.TaskSchedulerWorkerCount(),
+				RetryPolicy: common.CreatePersistanceRetryPolicy(),
+			}
+		default:
+			h.GetLogger().Fatal("Unknown task scheduler type", tag.Value(schedulerType))
+		}
+		h.queueTaskProcessor, err = newQueueTaskProcessor(
+			taskPriorityAssigner,
+			queueTaskProcessorOptions,
+			h.GetLogger(),
+			h.GetMetricsClient(),
+		)
+		if err != nil {
+			h.GetLogger().Fatal("Creating priority task processor failed", tag.Error(err))
+		}
+		h.queueTaskProcessor.Start()
+	}
+
+	h.controller = shard.NewShardController(
 		h.Resource,
 		h,
 		h.config,
 	)
-	h.historyEventNotifier = newHistoryEventNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
+	h.historyEventNotifier = events.NewNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
@@ -138,15 +192,28 @@ func (h *Handler) Start() {
 
 // Stop stops the handler
 func (h *Handler) Stop() {
+	h.PrepareToStop()
 	h.replicationTaskFetchers.Stop()
+	if h.queueTaskProcessor != nil {
+		h.queueTaskProcessor.Stop()
+	}
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
 }
 
+// PrepareToStop starts graceful traffic drain in preparation for shutdown
+func (h *Handler) PrepareToStop() {
+	atomic.StoreInt32(&h.shuttingDown, 1)
+}
+
+func (h *Handler) isShuttingDown() bool {
+	return atomic.LoadInt32(&h.shuttingDown) != 0
+}
+
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(
-	shardContext ShardContext,
-) Engine {
+	shardContext shard.Context,
+) engine.Engine {
 	return NewEngineWithShardContext(
 		shardContext,
 		h.GetVisibilityManager(),
@@ -158,6 +225,7 @@ func (h *Handler) CreateEngine(
 		h.config,
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
+		h.queueTaskProcessor,
 	)
 }
 
@@ -165,7 +233,7 @@ func (h *Handler) CreateEngine(
 func (h *Handler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("History health check endpoint reached.")
-	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("history good")}
+	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("OK")}
 	return hs, nil
 }
 
@@ -631,7 +699,7 @@ func (h *Handler) DescribeHistoryHost(
 
 	numOfItemsInCacheByID, numOfItemsInCacheByName := h.GetDomainCache().GetCacheSize()
 	status := ""
-	switch atomic.LoadInt32(&h.controller.status) {
+	switch h.controller.Status() {
 	case common.DaemonStatusInitialized:
 		status = "initialized"
 	case common.DaemonStatusStarted:
@@ -641,8 +709,8 @@ func (h *Handler) DescribeHistoryHost(
 	}
 
 	resp = &gen.DescribeHistoryHostResponse{
-		NumberOfShards: common.Int32Ptr(int32(h.controller.numShards())),
-		ShardIDs:       h.controller.shardIDs(),
+		NumberOfShards: common.Int32Ptr(int32(h.controller.NumShards())),
+		ShardIDs:       h.controller.ShardIDs(),
 		DomainCache: &gen.DomainCacheInfo{
 			NumOfItemsInCacheByID:   &numOfItemsInCacheByID,
 			NumOfItemsInCacheByName: &numOfItemsInCacheByName,
@@ -662,21 +730,32 @@ func (h *Handler) RemoveTask(
 	if err != nil {
 		return err
 	}
-	deleteTaskRequest := &persistence.DeleteTaskRequest{
-		TaskID:  request.GetTaskID(),
-		Type:    int(request.GetType()),
-		ShardID: int(request.GetShardID()),
+
+	switch taskType := common.TaskType(request.GetType()); taskType {
+	case common.TaskTypeTransfer:
+		return executionMgr.CompleteTransferTask(&persistence.CompleteTransferTaskRequest{
+			TaskID: request.GetTaskID(),
+		})
+	case common.TaskTypeTimer:
+		return executionMgr.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
+			VisibilityTimestamp: time.Unix(0, request.GetVisibilityTimestamp()),
+			TaskID:              request.GetTaskID(),
+		})
+	case common.TaskTypeReplication:
+		return executionMgr.CompleteReplicationTask(&persistence.CompleteReplicationTaskRequest{
+			TaskID: request.GetTaskID(),
+		})
+	default:
+		return errInvalidTaskType
 	}
-	err = executionMgr.DeleteTask(deleteTaskRequest)
-	return err
 }
 
-// CloseShard returns information about the internal states of a history host
+// CloseShard closes a shard hosted by this instance
 func (h *Handler) CloseShard(
 	ctx context.Context,
 	request *gen.CloseShardRequest,
 ) (retError error) {
-	h.controller.removeEngineForShard(int(request.GetShardID()))
+	h.controller.RemoveEngineForShard(int(request.GetShardID()))
 	return nil
 }
 
@@ -838,6 +917,10 @@ func (h *Handler) RequestCancelWorkflowExecution(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	domainID := request.GetDomainUUID()
 	if domainID == "" || request.CancelRequest.GetDomain() == "" {
 		return h.error(errDomainNotSet, scope, domainID, "")
@@ -883,6 +966,10 @@ func (h *Handler) SignalWorkflowExecution(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
 		return h.error(errDomainNotSet, scope, domainID, "")
@@ -925,6 +1012,10 @@ func (h *Handler) SignalWithStartWorkflowExecution(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
 		return nil, h.error(errDomainNotSet, scope, domainID, "")
@@ -963,6 +1054,10 @@ func (h *Handler) RemoveSignalMutableState(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
@@ -1003,6 +1098,10 @@ func (h *Handler) TerminateWorkflowExecution(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
 		return h.error(errDomainNotSet, scope, domainID, "")
@@ -1042,6 +1141,10 @@ func (h *Handler) ResetWorkflowExecution(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
 		return nil, h.error(errDomainNotSet, scope, domainID, "")
@@ -1078,6 +1181,10 @@ func (h *Handler) QueryWorkflow(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
@@ -1118,6 +1225,10 @@ func (h *Handler) ScheduleDecisionTask(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
@@ -1161,6 +1272,10 @@ func (h *Handler) RecordChildExecutionCompleted(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
@@ -1210,6 +1325,10 @@ func (h *Handler) ResetStickyTaskList(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
 	domainID := resetRequest.GetDomainUUID()
 	if domainID == "" {
 		return nil, h.error(errDomainNotSet, scope, domainID, "")
@@ -1247,6 +1366,10 @@ func (h *Handler) ReplicateEvents(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	domainID := replicateRequest.GetDomainUUID()
 	if domainID == "" {
 		return h.error(errDomainNotSet, scope, domainID, "")
@@ -1279,6 +1402,10 @@ func (h *Handler) ReplicateRawEvents(
 
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
 
 	scope := metrics.HistoryReplicateRawEventsScope
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
@@ -1317,6 +1444,10 @@ func (h *Handler) ReplicateEventsV2(
 
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
 
 	scope := metrics.HistoryReplicateEventsV2Scope
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
@@ -1361,6 +1492,10 @@ func (h *Handler) SyncShardStatus(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	if ok := h.rateLimiter.Allow(); !ok {
 		return h.error(errHistoryHostThrottle, scope, "", "")
 	}
@@ -1378,7 +1513,7 @@ func (h *Handler) SyncShardStatus(
 	}
 
 	// shard ID is already provided in the request
-	engine, err := h.controller.getEngineForShard(int(syncShardStatusRequest.GetShardId()))
+	engine, err := h.controller.GetEngineForShard(int(syncShardStatusRequest.GetShardId()))
 	if err != nil {
 		return h.error(err, scope, "", "")
 	}
@@ -1404,6 +1539,10 @@ func (h *Handler) SyncActivity(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
 
 	domainID := syncActivityRequest.GetDomainId()
 	if syncActivityRequest.DomainId == nil || uuid.Parse(syncActivityRequest.GetDomainId()) == nil {
@@ -1451,6 +1590,10 @@ func (h *Handler) GetReplicationMessages(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
 	result := new(sync.Map)
@@ -1459,7 +1602,7 @@ func (h *Handler) GetReplicationMessages(
 		go func(token *r.ReplicationToken) {
 			defer wg.Done()
 
-			engine, err := h.controller.getEngineForShard(int(token.GetShardID()))
+			engine, err := h.controller.GetEngineForShard(int(token.GetShardID()))
 			if err != nil {
 				h.GetLogger().Warn("History engine not found for shard", tag.Error(err))
 				return
@@ -1505,6 +1648,10 @@ func (h *Handler) GetDLQReplicationMessages(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
 
 	taskInfoPerExecution := map[definition.WorkflowIdentifier][]*r.ReplicationTaskInfo{}
 	// do batch based on workflow ID and run ID
@@ -1580,6 +1727,10 @@ func (h *Handler) ReapplyEvents(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	domainID := request.GetDomainUUID()
 	workflowID := request.GetRequest().GetWorkflowExecution().GetWorkflowId()
 	engine, err := h.controller.GetEngine(workflowID)
@@ -1622,7 +1773,11 @@ func (h *Handler) ReadDLQMessages(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	engine, err := h.controller.getEngineForShard(int(request.GetShardID()))
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
 		return nil, h.error(err, scope, "", "")
 	}
@@ -1644,7 +1799,11 @@ func (h *Handler) PurgeDLQMessages(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	engine, err := h.controller.getEngineForShard(int(request.GetShardID()))
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
 		return h.error(err, scope, "", "")
 	}
@@ -1661,12 +1820,16 @@ func (h *Handler) MergeDLQMessages(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
 	scope := metrics.HistoryMergeDLQMessagesScope
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	engine, err := h.controller.getEngineForShard(int(request.GetShardID()))
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
 		return nil, h.error(err, scope, "", "")
 	}
@@ -1683,6 +1846,11 @@ func (h *Handler) RefreshWorkflowTasks(
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return errShuttingDown
+	}
+
 	domainID := request.GetDomainUIID()
 	execution := request.GetRequest().GetExecution()
 	workflowID := execution.GetWorkflowId()
@@ -1716,9 +1884,9 @@ func (h *Handler) convertError(err error) error {
 		shardID := err.(*persistence.ShardOwnershipLostError).ShardID
 		info, err := h.GetHistoryServiceResolver().Lookup(string(shardID))
 		if err == nil {
-			return createShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
+			return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
 		}
-		return createShardOwnershipLostError(h.GetHostInfo().GetAddress(), "")
+		return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), "")
 	case *persistence.WorkflowExecutionAlreadyStartedError:
 		err := err.(*persistence.WorkflowExecutionAlreadyStartedError)
 		return &gen.InternalServiceError{Message: err.Msg}
@@ -1813,18 +1981,6 @@ func (h *Handler) getLoggerWithTags(
 	}
 
 	return logger
-}
-
-func createShardOwnershipLostError(
-	currentHost string,
-	ownerHost string,
-) *hist.ShardOwnershipLostError {
-
-	shardLostErr := &hist.ShardOwnershipLostError{}
-	shardLostErr.Message = common.StringPtr(fmt.Sprintf("Shard is not owned by host: %v", currentHost))
-	shardLostErr.Owner = common.StringPtr(ownerHost)
-
-	return shardLostErr
 }
 
 func validateTaskToken(token *common.TaskToken) error {

@@ -41,6 +41,10 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -49,18 +53,18 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
-		mockShard                *shardContextTest
+		mockShard                *shard.TestContext
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
-		mockEventsCache          *MockeventsCache
+		mockEventsCache          *events.MockCache
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
 
 		logger           log.Logger
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
-		mockContext      *workflowExecutionContextImpl
+		mockContext      execution.Context
 
 		conflictResolver *conflictResolverImpl
 	}
@@ -89,37 +93,37 @@ func (s *conflictResolverSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockShard = newTestShardContext(
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
-		NewDynamicConfigForTest(),
+		config.NewForTest(),
 	)
 
-	s.mockDomainCache = s.mockShard.resource.DomainCache
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
-	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
-	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
-	s.mockEventsCache = s.mockShard.mockEventsCache
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
+	s.mockEventsCache = s.mockShard.MockEventsCache
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 
 	h := &historyEngineImpl{
 		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
-		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
+		historyEventNotifier: events.NewNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.mockShard.SetEngine(h)
 
-	s.mockContext = newWorkflowExecutionContext(testDomainID, shared.WorkflowExecution{
+	s.mockContext = execution.NewContext(testDomainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
 		RunId:      common.StringPtr(testRunID),
 	}, s.mockShard, s.mockExecutionMgr, s.logger)
@@ -133,7 +137,7 @@ func (s *conflictResolverSuite) TearDownTest() {
 }
 
 func (s *conflictResolverSuite) TestReset() {
-	s.mockShard.config.AdvancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual)
+	s.mockShard.GetConfig().AdvancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual)
 
 	prevRunID := uuid.New()
 	prevLastWriteVersion := int64(123)
@@ -143,8 +147,8 @@ func (s *conflictResolverSuite) TestReset() {
 	startTime := time.Now()
 	version := int64(12)
 
-	domainID := s.mockContext.domainID
-	execution := s.mockContext.workflowExecution
+	domainID := s.mockContext.GetDomainID()
+	workflowExecution := *s.mockContext.GetExecution()
 	nextEventID := int64(2)
 	branchToken := []byte("some random branch token")
 
@@ -180,13 +184,12 @@ func (s *conflictResolverSuite) TestReset() {
 		Size:             int(historySize),
 	}, nil)
 
-	s.mockContext.updateCondition = int64(59)
 	createRequestID := uuid.New()
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		DomainID:                    domainID,
-		WorkflowID:                  execution.GetWorkflowId(),
-		RunID:                       execution.GetRunId(),
+		WorkflowID:                  workflowExecution.GetWorkflowId(),
+		RunID:                       workflowExecution.GetRunId(),
 		ParentDomainID:              "",
 		ParentWorkflowID:            "",
 		ParentRunID:                 "",
@@ -205,7 +208,7 @@ func (s *conflictResolverSuite) TestReset() {
 		DecisionVersion:             common.EmptyVersion,
 		DecisionScheduleID:          common.EmptyEventID,
 		DecisionStartedID:           common.EmptyEventID,
-		DecisionRequestID:           emptyUUID,
+		DecisionRequestID:           common.EmptyUUID,
 		DecisionTimeout:             0,
 		DecisionAttempt:             0,
 		DecisionStartedTimestamp:    0,
@@ -224,7 +227,7 @@ func (s *conflictResolverSuite) TestReset() {
 		input.ResetWorkflowSnapshot.TransferTasks = nil
 
 		s.Equal(&persistence.ConflictResolveWorkflowExecutionRequest{
-			RangeID: s.mockShard.shardInfo.RangeID,
+			RangeID: s.mockShard.ShardInfo().RangeID,
 			CurrentWorkflowCAS: &persistence.CurrentWorkflowCAS{
 				PrevRunID:            prevRunID,
 				PrevLastWriteVersion: prevLastWriteVersion,
@@ -256,7 +259,6 @@ func (s *conflictResolverSuite) TestReset() {
 				TransferTasks:       nil,
 				ReplicationTasks:    nil,
 				TimerTasks:          nil,
-				Condition:           s.mockContext.updateCondition,
 			},
 			Encoding: common.EncodingType(s.mockShard.GetConfig().EventEncodingType(domainID)),
 		}, input)
@@ -264,19 +266,19 @@ func (s *conflictResolverSuite) TestReset() {
 	})).Return(nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: execution,
+		Execution: workflowExecution,
 	}).Return(&persistence.GetWorkflowExecutionResponse{
 		State: &persistence.WorkflowMutableState{
 			ExecutionInfo:  &persistence.WorkflowExecutionInfo{},
 			ExecutionStats: &persistence.ExecutionStats{},
 		},
-	}, nil).Once() // return empty resoonse since we are not testing the load
+	}, nil).Once() // return empty response since we are not testing the load
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(event1.GetVersion()).Return(sourceCluster).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{ID: domainID}, &persistence.DomainConfig{}, "", nil,
 	), nil).AnyTimes()
 
-	_, err := s.conflictResolver.reset(prevRunID, prevLastWriteVersion, prevState, createRequestID, nextEventID-1, executionInfo, s.mockContext.updateCondition)
+	_, err := s.conflictResolver.reset(prevRunID, prevLastWriteVersion, prevState, createRequestID, nextEventID-1, executionInfo, 0)
 	s.Nil(err)
 }

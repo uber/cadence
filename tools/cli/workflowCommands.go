@@ -47,7 +47,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/service/history"
+	"github.com/uber/cadence/service/history/execution"
 )
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
@@ -973,30 +973,11 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *shared.SearchAttr
 	indexedFields := searchAttributes.GetIndexedFields()
 	for k, v := range indexedFields {
 		valueType := validKeys[k]
-		switch valueType {
-		case shared.IndexedValueTypeString, shared.IndexedValueTypeKeyword:
-			var val string
-			json.Unmarshal(v, &val)
-			result[k] = val
-		case shared.IndexedValueTypeInt:
-			var val int64
-			json.Unmarshal(v, &val)
-			result[k] = val
-		case shared.IndexedValueTypeDouble:
-			var val float64
-			json.Unmarshal(v, &val)
-			result[k] = val
-		case shared.IndexedValueTypeBool:
-			var val bool
-			json.Unmarshal(v, &val)
-			result[k] = val
-		case shared.IndexedValueTypeDatetime:
-			var val time.Time
-			json.Unmarshal(v, &val)
-			result[k] = val
-		default:
-			ErrorAndExit(fmt.Sprintf("Error unknown index value type [%v]", valueType), nil)
+		deserializedValue, err := common.DeserializeSearchAttributeValue(v, valueType)
+		if err != nil {
+			ErrorAndExit("Error deserializing search attribute value", err)
 		}
+		result[k] = deserializedValue
 	}
 
 	return result
@@ -1006,8 +987,8 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Start Time", "Execution Time"}
-	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Task List", "Start Time", "Execution Time"}
+	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
 	if !queryOpen {
 		header = append(header, "End Time")
 		headerColor = append(headerColor, tableHeaderBlue)
@@ -1105,7 +1086,7 @@ func appendWorkflowExecutionsToTable(
 			executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
 			closeTime = convertTime(e.GetCloseTime(), !printDateTime)
 		}
-		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, executionTime}
+		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), e.GetTaskList(), startTime, executionTime}
 		if !queryOpen {
 			row = append(row, closeTime)
 		}
@@ -1827,7 +1808,7 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 		return "", 0, printErrorAndReturn("DescribeWorkflowExecution failed", err)
 	}
 
-	_, p := history.FindAutoResetPoint(clock.NewRealTimeSource(), &shared.BadBinaries{
+	_, p := execution.FindAutoResetPoint(clock.NewRealTimeSource(), &shared.BadBinaries{
 		Binaries: map[string]*shared.BadBinaryInfo{
 			binChecksum: {},
 		},

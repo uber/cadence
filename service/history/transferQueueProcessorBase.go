@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -35,7 +36,7 @@ type (
 	transferQueueShutdown  func() error
 
 	transferQueueProcessorBase struct {
-		shard                  ShardContext
+		shard                  shard.Context
 		options                *QueueProcessorOptions
 		executionManager       persistence.ExecutionManager
 		maxReadAckLevel        maxReadAckLevel
@@ -52,7 +53,7 @@ const (
 )
 
 func newTransferQueueProcessorBase(
-	shard ShardContext,
+	shard shard.Context,
 	options *QueueProcessorOptions,
 	maxReadAckLevel maxReadAckLevel,
 	updateTransferAckLevel updateTransferAckLevel,
@@ -104,7 +105,7 @@ func (t *transferQueueProcessorBase) queueShutdown() error {
 	return t.transferQueueShutdown()
 }
 
-func (t *transferQueueProcessorBase) getTransferTaskMetricsScope(
+func getTransferTaskMetricsScope(
 	taskType int,
 	isActive bool,
 ) int {

@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
 )
 
 type (
@@ -55,9 +57,9 @@ type (
 		historyCountLimitError int
 
 		completedID    int64
-		mutableState   mutableState
+		mutableState   execution.MutableState
 		executionStats *persistence.ExecutionStats
-		metricsClient  metrics.Client
+		metricsScope   metrics.Scope
 		logger         log.Logger
 	}
 )
@@ -68,7 +70,7 @@ const (
 
 func newDecisionAttrValidator(
 	domainCache cache.DomainCache,
-	config *Config,
+	config *config.Config,
 	logger log.Logger,
 ) *decisionAttrValidator {
 	return &decisionAttrValidator{
@@ -92,9 +94,9 @@ func newWorkflowSizeChecker(
 	historyCountLimitWarn int,
 	historyCountLimitError int,
 	completedID int64,
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	executionStats *persistence.ExecutionStats,
-	metricsClient metrics.Client,
+	metricsScope metrics.Scope,
 	logger log.Logger,
 ) *workflowSizeChecker {
 	return &workflowSizeChecker{
@@ -107,12 +109,13 @@ func newWorkflowSizeChecker(
 		completedID:            completedID,
 		mutableState:           mutableState,
 		executionStats:         executionStats,
-		metricsClient:          metricsClient,
+		metricsScope:           metricsScope,
 		logger:                 logger,
 	}
 }
 
 func (c *workflowSizeChecker) failWorkflowIfBlobSizeExceedsLimit(
+	decisionTypeTag metrics.Tag,
 	blob []byte,
 	message string,
 ) (bool, error) {
@@ -125,8 +128,9 @@ func (c *workflowSizeChecker) failWorkflowIfBlobSizeExceedsLimit(
 		executionInfo.DomainID,
 		executionInfo.WorkflowID,
 		executionInfo.RunID,
-		c.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope),
+		c.metricsScope.Tagged(decisionTypeTag),
 		c.logger,
+		tag.BlobSizeViolationOperation(decisionTypeTag.Value()),
 	)
 	if err == nil {
 		return false, nil

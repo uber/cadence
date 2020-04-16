@@ -33,6 +33,7 @@ const (
 	taskList      = "tasklist"
 	workflowType  = "workflowType"
 	activityType  = "activityType"
+	decisionType  = "decisionType"
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
@@ -51,6 +52,8 @@ type (
 
 	domainUnknownTag struct{}
 
+	taskListUnknownTag struct{}
+
 	instanceTag struct {
 		value string
 	}
@@ -68,6 +71,10 @@ type (
 	}
 
 	activityTypeTag struct {
+		value string
+	}
+
+	decisionTypeTag struct {
 		value string
 	}
 )
@@ -95,6 +102,21 @@ func (d domainTag) Value() string {
 // DomainUnknownTag returns a new domain:unknown tag-value
 func DomainUnknownTag() Tag {
 	return domainUnknownTag{}
+}
+
+// Key returns the key of the domain unknown tag
+func (d taskListUnknownTag) Key() string {
+	return domain
+}
+
+// Value returns the value of the domain unknown tag
+func (d taskListUnknownTag) Value() string {
+	return unknownValue
+}
+
+// TaskListUnknownTag returns a new tasklist:unknown tag-value
+func TaskListUnknownTag() Tag {
+	return taskListUnknownTag{}
 }
 
 // Key returns the key of the domain unknown tag
@@ -145,7 +167,7 @@ func TaskListTag(value string) Tag {
 	if len(value) == 0 {
 		value = unknownValue
 	}
-	return taskListTag{value}
+	return taskListTag{sanitizer.Value(value)}
 }
 
 // Key returns the key of the task list tag
@@ -191,5 +213,23 @@ func (d activityTypeTag) Key() string {
 
 // Value returns the value of the activity type tag
 func (d activityTypeTag) Value() string {
+	return d.value
+}
+
+// DecisionTypeTag returns a new decision type tag.
+func DecisionTypeTag(value string) Tag {
+	if len(value) == 0 {
+		value = unknownValue
+	}
+	return decisionTypeTag{value}
+}
+
+// Key returns the key of the decision type tag
+func (d decisionTypeTag) Key() string {
+	return decisionType
+}
+
+// Value returns the value of the decision type tag
+func (d decisionTypeTag) Value() string {
 	return d.value
 }

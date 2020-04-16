@@ -189,9 +189,12 @@ const (
 	FlagBatchTypeWithAlias                = FlagBatchType + ", bt"
 	FlagSignalName                        = "signal_name"
 	FlagSignalNameWithAlias               = FlagSignalName + ", sig"
-	FlagRemoveTaskID                      = "task_id"
-	FlagRemoveTypeID                      = "type_id"
+	FlagTaskID                            = "task_id"
+	FlagTaskType                          = "task_type"
+	FlagTaskVisibilityTimestamp           = "task_timestamp"
+	FlagStartingRPS                       = "starting_rps"
 	FlagRPS                               = "rps"
+	FlagRPSScaleUpSeconds                 = "rps_scale_up_seconds"
 	FlagJobID                             = "job_id"
 	FlagJobIDWithAlias                    = FlagJobID + ", jid"
 	FlagYes                               = "yes"
@@ -212,6 +215,12 @@ const (
 	FlagMaxMessageCountWithAlias          = FlagMaxMessageCount + ", mmc"
 	FlagLastMessageID                     = "last_message_id"
 	FlagLastMessageIDWithAlias            = FlagLastMessageID + ", lm"
+	FlagConcurrency                       = "concurrency"
+	FlagReportRate                        = "report_rate"
+	FlagLowerShardBound                   = "lower_shard_bound"
+	FlagUpperShardBound                   = "upper_shard_bound"
+	FlagInputDirectory                    = "input_directory"
+	FlagSkipHistoryChecks                 = "skip_history_checks"
 )
 
 var flagsForExecution = []cli.Flag{

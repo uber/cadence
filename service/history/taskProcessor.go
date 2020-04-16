@@ -33,6 +33,9 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -56,11 +59,11 @@ type (
 	}
 
 	taskProcessor struct {
-		shard         ShardContext
-		cache         *historyCache
+		shard         shard.Context
+		cache         *execution.Cache
 		shutdownCh    chan struct{}
 		tasksCh       chan *taskInfo
-		config        *Config
+		config        *config.Config
 		logger        log.Logger
 		metricsClient metrics.Client
 		timeSource    clock.TimeSource
@@ -91,8 +94,8 @@ func newTaskInfo(
 
 func newTaskProcessor(
 	options taskProcessorOptions,
-	shard ShardContext,
-	historyCache *historyCache,
+	shard shard.Context,
+	executionCache *execution.Cache,
 	logger log.Logger,
 ) *taskProcessor {
 
@@ -103,7 +106,7 @@ func newTaskProcessor(
 
 	base := &taskProcessor{
 		shard:                   shard,
-		cache:                   historyCache,
+		cache:                   executionCache,
 		shutdownCh:              make(chan struct{}),
 		tasksCh:                 make(chan *taskInfo, options.queueSize),
 		config:                  shard.GetConfig(),
@@ -169,9 +172,9 @@ func (t *taskProcessor) addTask(
 	select {
 	case t.tasksCh <- task:
 	case <-t.shutdownCh:
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
 func (t *taskProcessor) processTaskAndAck(

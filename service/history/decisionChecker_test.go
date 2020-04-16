@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
 )
 
 type (
@@ -70,7 +71,7 @@ func (s *decisionAttrValidatorSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	config := &Config{
+	config := &config.Config{
 		MaxIDLengthLimit:                  dynamicconfig.GetIntPropertyFn(1000),
 		ValidSearchAttributes:             dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		SearchAttributesNumberOfKeysLimit: dynamicconfig.GetIntPropertyFilteredByDomain(100),
@@ -148,7 +149,7 @@ func (s *decisionAttrValidatorSuite) TestValidateUpsertWorkflowSearchAttributes(
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
 	s.EqualError(err, "BadRequestError{Message: IndexedFields is empty on decision.}")
 
-	attributes.SearchAttributes.IndexedFields = map[string][]byte{"CustomKeywordField": []byte(`bytes`)}
+	attributes.SearchAttributes.IndexedFields = map[string][]byte{"CustomKeywordField": []byte(`"bytes"`)}
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
 	s.Nil(err)
 }

@@ -404,6 +404,7 @@ CREATE TABLE domains_by_name_v2 (
   config_version                bigint, -- indicating the version of domain config, excluding the failover / change of active cluster name
   failover_version              bigint, -- indicating the version of active domain only, used for domain failover
   failover_notification_version bigint, -- indicating the last change related to domain failover
+  failover_end_time             bigint, -- indicating domain failover state
   notification_version          bigint,
   PRIMARY KEY (domains_partition, name)
 )  WITH COMPACTION = {
@@ -452,7 +453,7 @@ INSERT INTO domains (
 
 CREATE TABLE queue (
   queue_type      int,
-  message_id      int,
+  message_id      bigint,
   message_payload blob,
   PRIMARY KEY  (queue_type, message_id)
 ) WITH COMPACTION = {

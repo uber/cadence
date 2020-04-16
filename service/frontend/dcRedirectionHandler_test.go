@@ -46,7 +46,7 @@ type (
 
 		controller               *gomock.Controller
 		mockResource             *resource.Test
-		mockFrontendHandler      *MockWorkflowHandler
+		mockFrontendHandler      *MockHandler
 		mockRemoteFrontendClient *workflowservicetest.MockClient
 		mockClusterMetadata      *cluster.MockMetadata
 
@@ -94,7 +94,7 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 	s.config = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), s.mockResource.GetLogger()), 0, false)
 	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, nil)
 
-	s.mockFrontendHandler = NewMockWorkflowHandler(s.controller)
+	s.mockFrontendHandler = NewMockHandler(s.controller)
 	s.handler = NewDCRedirectionHandler(frontendHandler, config.DCRedirectionPolicy{})
 	s.handler.frontendHandler = s.mockFrontendHandler
 	s.handler.redirectionPolicy = s.mockDCRedirectionPolicy
@@ -366,7 +366,8 @@ func (s *dcRedirectionHandlerSuite) TestQueryWorkflow() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &shared.QueryWorkflowRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain:                common.StringPtr(s.domainName),
+		QueryConsistencyLevel: shared.QueryConsistencyLevelStrong.Ptr(),
 	}
 	resp, err := s.handler.QueryWorkflow(context.Background(), req)
 	s.Nil(err)

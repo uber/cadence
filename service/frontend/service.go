@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"sync/atomic"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -45,6 +46,7 @@ import (
 type Config struct {
 	NumHistoryShards                int
 	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
+	PersistenceGlobalMaxQPS         dynamicconfig.IntPropertyFn
 	VisibilityMaxPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
@@ -54,11 +56,13 @@ type Config struct {
 	ESIndexMaxResultWindow          dynamicconfig.IntPropertyFn
 	HistoryMaxPageSize              dynamicconfig.IntPropertyFnWithDomainFilter
 	RPS                             dynamicconfig.IntPropertyFn
-	DomainRPS                       dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxDomainRPSPerInstance         dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
 	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	MinRetentionDays                dynamicconfig.IntPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
+	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -96,6 +100,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 	return &Config{
 		NumHistoryShards:                    numHistoryShards,
 		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
+		PersistenceGlobalMaxQPS:             dc.GetIntProperty(dynamicconfig.FrontendPersistenceGlobalMaxQPS, 0),
 		VisibilityMaxPageSize:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:            dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		EnableReadFromClosedExecutionV2:     dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
@@ -105,7 +110,8 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		ESIndexMaxResultWindow:              dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
 		HistoryMaxPageSize:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		RPS:                                 dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
-		DomainRPS:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDomainRPS, 1200),
+		MaxDomainRPSPerInstance:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainRPSPerInstance, 1200),
+		GlobalDomainRPS:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
 		MaxIDLengthLimit:                    dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		HistoryMgrNumConns:                  dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		MaxBadBinaries:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
@@ -115,6 +121,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		BlobSizeLimitError:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
 		BlobSizeLimitWarn:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1024),
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
+		ShutdownDrainDuration:               dc.GetDurationProperty(dynamicconfig.FrontendShutdownDrainDuration, 0),
 		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, true),
 		EnableClientVersionCheck:            dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, false),
 		ValidSearchAttributes:               dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
@@ -133,7 +140,7 @@ type Service struct {
 	resource.Resource
 
 	status       int32
-	handler      *AccessControlledWorkflowHandler
+	handler      Handler
 	adminHandler *AdminHandler
 	stopC        chan struct{}
 	config       *Config
@@ -185,6 +192,7 @@ func NewService(
 		params,
 		common.FrontendServiceName,
 		serviceConfig.PersistenceMaxQPS,
+		serviceConfig.PersistenceGlobalMaxQPS,
 		serviceConfig.ThrottledLogRPS,
 		visibilityManagerInitializer,
 	)
@@ -230,9 +238,10 @@ func (s *Service) Start() {
 	}
 
 	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink)
-	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, s.params.DCRedirectionPolicy)
-
-	s.handler = NewAccessControlledHandlerImpl(dcRedirectionHandler, s.params.Authorizer)
+	s.handler = NewDCRedirectionHandler(wfHandler, s.params.DCRedirectionPolicy)
+	if s.params.Authorizer != nil {
+		s.handler = NewAccessControlledHandlerImpl(s.handler, s.params.Authorizer)
+	}
 	s.handler.RegisterHandler()
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
@@ -256,11 +265,29 @@ func (s *Service) Stop() {
 		return
 	}
 
-	close(s.stopC)
+	// initiate graceful shutdown:
+	// 1. Fail rpc health check, this will cause client side load balancer to stop forwarding requests to this node
+	// 2. wait for failure detection time
+	// 3. stop taking new requests by returning InternalServiceError
+	// 4. Wait for a second
+	// 5. Stop everything forcefully and return
+
+	requestDrainTime := common.MinDuration(time.Second, s.config.ShutdownDrainDuration())
+	failureDetectionTime := common.MaxDuration(0, s.config.ShutdownDrainDuration()-requestDrainTime)
+
+	s.GetLogger().Info("ShutdownHandler: Updating rpc health status to ShuttingDown")
+	s.handler.UpdateHealthStatus(HealthStatusShuttingDown)
+
+	s.GetLogger().Info("ShutdownHandler: Waiting for others to discover I am unhealthy")
+	time.Sleep(failureDetectionTime)
 
 	s.handler.Stop()
 	s.adminHandler.Stop()
-	s.Resource.Stop()
 
+	s.GetLogger().Info("ShutdownHandler: Draining traffic")
+	time.Sleep(requestDrainTime)
+
+	close(s.stopC)
+	s.Resource.Stop()
 	s.params.Logger.Info("frontend stopped")
 }

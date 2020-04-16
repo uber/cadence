@@ -32,6 +32,8 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 const (
@@ -47,11 +49,11 @@ type (
 			baseLastEventVersion int64,
 			incomingFirstEventID int64,
 			incomingFirstEventVersion int64,
-		) (mutableState, error)
+		) (execution.MutableState, error)
 	}
 
 	nDCWorkflowResetterImpl struct {
-		shard          ShardContext
+		shard          shard.Context
 		transactionMgr nDCTransactionMgr
 		historyV2Mgr   persistence.HistoryManager
 		stateRebuilder nDCStateRebuilder
@@ -59,7 +61,7 @@ type (
 		domainID   string
 		workflowID string
 		baseRunID  string
-		newContext workflowExecutionContext
+		newContext execution.Context
 		newRunID   string
 
 		logger log.Logger
@@ -69,12 +71,12 @@ type (
 var _ nDCWorkflowResetter = (*nDCWorkflowResetterImpl)(nil)
 
 func newNDCWorkflowResetter(
-	shard ShardContext,
+	shard shard.Context,
 	transactionMgr nDCTransactionMgr,
 	domainID string,
 	workflowID string,
 	baseRunID string,
-	newContext workflowExecutionContext,
+	newContext execution.Context,
 	newRunID string,
 	logger log.Logger,
 ) *nDCWorkflowResetterImpl {
@@ -101,7 +103,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	baseLastEventVersion int64,
 	incomingFirstEventID int64,
 	incomingFirstEventVersion int64,
-) (mutableState, error) {
+) (execution.MutableState, error) {
 
 	baseBranchToken, err := r.getBaseBranchToken(
 		ctx,
@@ -141,8 +143,8 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		return nil, err
 	}
 
-	r.newContext.clear()
-	r.newContext.setHistorySize(rebuiltHistorySize)
+	r.newContext.Clear()
+	r.newContext.SetHistorySize(rebuiltHistorySize)
 	return rebuildMutableState, nil
 }
 

@@ -32,6 +32,9 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -41,28 +44,28 @@ const (
 
 type (
 	transferQueueTaskExecutorBase struct {
-		shard          ShardContext
+		shard          shard.Context
 		historyService *historyEngineImpl
-		cache          *historyCache
+		cache          *execution.Cache
 		logger         log.Logger
 		metricsClient  metrics.Client
 		matchingClient matching.Client
 		visibilityMgr  persistence.VisibilityManager
-		config         *Config
+		config         *config.Config
 	}
 )
 
 func newTransferQueueTaskExecutorBase(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	config *Config,
+	config *config.Config,
 ) *transferQueueTaskExecutorBase {
 	return &transferQueueTaskExecutorBase{
 		shard:          shard,
 		historyService: historyService,
-		cache:          historyService.historyCache,
+		cache:          historyService.executionCache,
 		logger:         logger,
 		metricsClient:  metricsClient,
 		matchingClient: shard.GetService().GetMatchingClient(),
@@ -143,6 +146,7 @@ func (t *transferQueueTaskExecutorBase) recordWorkflowStarted(
 	executionTimeUnixNano int64,
 	workflowTimeout int32,
 	taskID int64,
+	taskList string,
 	visibilityMemo *workflow.Memo,
 	searchAttributes map[string][]byte,
 ) error {
@@ -175,6 +179,7 @@ func (t *transferQueueTaskExecutorBase) recordWorkflowStarted(
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
 		Memo:               visibilityMemo,
+		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -190,6 +195,7 @@ func (t *transferQueueTaskExecutorBase) upsertWorkflowExecution(
 	executionTimeUnixNano int64,
 	workflowTimeout int32,
 	taskID int64,
+	taskList string,
 	visibilityMemo *workflow.Memo,
 	searchAttributes map[string][]byte,
 ) error {
@@ -217,6 +223,7 @@ func (t *transferQueueTaskExecutorBase) upsertWorkflowExecution(
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
 		Memo:               visibilityMemo,
+		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -235,6 +242,7 @@ func (t *transferQueueTaskExecutorBase) recordWorkflowClosed(
 	historyLength int64,
 	taskID int64,
 	visibilityMemo *workflow.Memo,
+	taskList string,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -281,6 +289,7 @@ func (t *transferQueueTaskExecutorBase) recordWorkflowClosed(
 			RetentionSeconds:   retentionSeconds,
 			TaskID:             taskID,
 			Memo:               visibilityMemo,
+			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
 		}); err != nil {
 			return err
@@ -318,7 +327,7 @@ func (t *transferQueueTaskExecutorBase) recordWorkflowClosed(
 
 // Argument startEvent is to save additional call of msBuilder.GetStartEvent
 func getWorkflowExecutionTimestamp(
-	msBuilder mutableState,
+	msBuilder execution.MutableState,
 	startEvent *workflow.HistoryEvent,
 ) time.Time {
 	// Use value 0 to represent workflows that don't need backoff. Since ES doesn't support

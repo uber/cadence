@@ -37,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 var (
@@ -58,9 +60,9 @@ type (
 	timerQueueProcessorImpl struct {
 		isGlobalDomainEnabled  bool
 		currentClusterName     string
-		shard                  ShardContext
+		shard                  shard.Context
 		taskAllocator          taskAllocator
-		config                 *Config
+		config                 *config.Config
 		metricsClient          metrics.Client
 		historyService         *historyEngineImpl
 		ackLevel               timerKey
@@ -69,15 +71,17 @@ type (
 		isStarted              int32
 		isStopped              int32
 		shutdownChan           chan struct{}
+		queueTaskProcessor     queueTaskProcessor
 		activeTimerProcessor   *timerQueueActiveProcessorImpl
 		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
 	}
 )
 
 func newTimerQueueProcessor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	matchingClient matching.Client,
+	queueTaskProcessor queueTaskProcessor,
 	logger log.Logger,
 ) timerQueueProcessor {
 
@@ -120,24 +124,33 @@ func newTimerQueueProcessor(
 				taskAllocator,
 				historyRereplicator,
 				nDCHistoryResender,
+				queueTaskProcessor,
 				logger,
 			)
 		}
 	}
 
 	return &timerQueueProcessorImpl{
-		isGlobalDomainEnabled:  shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled(),
-		currentClusterName:     currentClusterName,
-		shard:                  shard,
-		taskAllocator:          taskAllocator,
-		config:                 shard.GetConfig(),
-		metricsClient:          historyService.metricsClient,
-		historyService:         historyService,
-		ackLevel:               timerKey{VisibilityTimestamp: shard.GetTimerAckLevel()},
-		logger:                 logger,
-		matchingClient:         matchingClient,
-		shutdownChan:           make(chan struct{}),
-		activeTimerProcessor:   newTimerQueueActiveProcessor(shard, historyService, matchingClient, taskAllocator, logger),
+		isGlobalDomainEnabled: shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled(),
+		currentClusterName:    currentClusterName,
+		shard:                 shard,
+		taskAllocator:         taskAllocator,
+		config:                shard.GetConfig(),
+		metricsClient:         historyService.metricsClient,
+		historyService:        historyService,
+		ackLevel:              timerKey{VisibilityTimestamp: shard.GetTimerAckLevel()},
+		logger:                logger,
+		matchingClient:        matchingClient,
+		shutdownChan:          make(chan struct{}),
+		queueTaskProcessor:    queueTaskProcessor,
+		activeTimerProcessor: newTimerQueueActiveProcessor(
+			shard,
+			historyService,
+			matchingClient,
+			taskAllocator,
+			queueTaskProcessor,
+			logger,
+		),
 		standbyTimerProcessors: standbyTimerProcessors,
 	}
 }
@@ -222,6 +235,7 @@ func (t *timerQueueProcessorImpl) FailoverDomain(
 		maxLevel,
 		t.matchingClient,
 		t.taskAllocator,
+		t.queueTaskProcessor,
 		t.logger,
 	)
 
@@ -261,6 +275,11 @@ func (t *timerQueueProcessorImpl) completeTimersLoop() {
 				err := t.completeTimers()
 				if err != nil {
 					t.logger.Info("Failed to complete timers.", tag.Error(err))
+					if err == shard.ErrShardClosed {
+						// shard is unloaded, timer processor should quit as well
+						go t.Stop()
+						return
+					}
 					backoff := time.Duration(attempt * 100)
 					time.Sleep(backoff * time.Millisecond)
 				} else {
