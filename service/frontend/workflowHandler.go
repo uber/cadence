@@ -1972,13 +1972,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	var historyBlob []*gen.DataBlob
 
 	// helper function to just getHistory
-	getHistory := func(nextPageToken []byte) error {
+	getHistory := func(firstEventID, nextEventID int64, nextPageToken []byte) error {
 		if isRawHistoryEnabled {
 			historyBlob, token.PersistenceToken, err = wh.getRawHistory(
 				scope,
 				domainID,
 				*execution,
-				lastFirstEventID,
+				firstEventID,
 				nextEventID,
 				getRequest.GetMaximumPageSize(),
 				nextPageToken,
@@ -1990,7 +1990,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				scope,
 				domainID,
 				*execution,
-				lastFirstEventID,
+				firstEventID,
 				nextEventID,
 				getRequest.GetMaximumPageSize(),
 				nextPageToken,
@@ -2006,7 +2006,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 
 	if isCloseEventOnly {
 		if !isWorkflowRunning {
-			if err := getHistory(nil); err != nil {
+			if err := getHistory(lastFirstEventID, nextEventID, nil); err != nil {
 				return nil, wh.error(err, scope)
 			}
 			if isRawHistoryEnabled {
@@ -2032,7 +2032,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				token = nil
 			}
 		} else {
-			if err := getHistory(token.PersistenceToken); err != nil {
+			if err := getHistory(token.FirstEventID, token.NextEventID, token.PersistenceToken); err != nil {
 				return nil, wh.error(err, scope)
 			}
 			// here, for long pull on history events, we need to intercept the paging token from cassandra
