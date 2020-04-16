@@ -41,10 +41,11 @@ type (
 	timerActiveTaskExecutor struct {
 		*timerTaskExecutorBase
 
-		queueProcessor common.Daemon // TODO 04/15: add comments
+		queueProcessor common.Daemon // use common.Daemon here to avoid cycle dependency of history package
 	}
 )
 
+// NewTimerActiveTaskExecutor creates a new task executor for active timer task
 func NewTimerActiveTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,

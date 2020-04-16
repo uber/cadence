@@ -29,18 +29,18 @@ import (
 
 // TODO: creates a separate package for all test constants
 
-var TestVersion = int64(1234)
-var TestDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
-var TestDomainName = "some random domain name"
-var TestRunID = "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
-var TestLocalDomainEntry = cache.NewLocalDomainCacheEntryForTest(
-	&persistence.DomainInfo{ID: TestDomainID, Name: TestDomainName},
+var testVersion = int64(1234)
+var testDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
+var testDomainName = "some random domain name"
+var testRunID = "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
+var testLocalDomainEntry = cache.NewLocalDomainCacheEntryForTest(
+	&persistence.DomainInfo{ID: testDomainID, Name: testDomainName},
 	&persistence.DomainConfig{Retention: 1},
 	cluster.TestCurrentClusterName,
 	nil,
 )
-var TestGlobalDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
-	&persistence.DomainInfo{ID: TestDomainID, Name: TestDomainName},
+var testGlobalDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
+	&persistence.DomainInfo{ID: testDomainID, Name: testDomainName},
 	&persistence.DomainConfig{
 		Retention:                1,
 		VisibilityArchivalStatus: shared.ArchivalStatusEnabled,
@@ -53,6 +53,6 @@ var TestGlobalDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 			{ClusterName: cluster.TestAlternativeClusterName},
 		},
 	},
-	TestVersion,
+	testVersion,
 	nil,
 )

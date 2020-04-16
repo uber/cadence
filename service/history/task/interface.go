@@ -55,16 +55,20 @@ type (
 		Less(Key) bool
 	}
 
+	// Executor contains the execution logic for Task
 	Executor interface {
 		Execute(taskInfo Info, shouldProcessTask bool) error
 	}
 
+	// Filter filters Task
 	Filter func(task Info) (bool, error)
 
+	// PriorityAssigner assigns priority to Tasks
 	PriorityAssigner interface {
 		Assign(Task) error
 	}
 
+	// Processor is the worker pool for processing Tasks
 	Processor interface {
 		common.Daemon
 		StopShardProcessor(shard.Context)

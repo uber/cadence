@@ -46,6 +46,7 @@ type (
 	}
 )
 
+// NewTransferStandbyTaskExecutor creates a new task executor for standby transfer task
 func NewTransferStandbyTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,

@@ -35,13 +35,16 @@ import (
 )
 
 const (
-	WorkflowTerminationReason   = "Terminate Workflow Due To Version Conflict."
+	// WorkflowTerminationReason is the reason for terminating workflow due to version conflit
+	WorkflowTerminationReason = "Terminate Workflow Due To Version Conflict."
+	// WorkflowTerminationIdentity is the component which decides to terminate the workflow
 	WorkflowTerminationIdentity = "worker-service"
 
 	identityHistoryService = "history-service"
 )
 
 type (
+	// Workflow is the interface for NDC workflow
 	Workflow interface {
 		GetContext() execution.Context
 		GetMutableState() execution.MutableState
@@ -64,6 +67,7 @@ type (
 	}
 )
 
+// NewWorkflow creates a new NDC workflow
 func NewWorkflow(
 	ctx context.Context,
 	domainCache cache.DomainCache,

@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/execution"
+	test "github.com/uber/cadence/service/history/testing"
 )
 
 type (
@@ -75,7 +75,7 @@ func (s *taskPriorityAssignerSuite) SetupTest() {
 		log.NewNoop(),
 		metrics.NewClient(tally.NoopScope, metrics.History),
 		config,
-	)
+	).(*priorityAssignerImpl)
 }
 
 func (s *taskPriorityAssignerSuite) TearDownTest() {
@@ -83,55 +83,55 @@ func (s *taskPriorityAssignerSuite) TearDownTest() {
 }
 
 func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Active() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestGlobalDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.GlobalDomainEntry, nil)
 
-	domainName, isActive, err := s.priorityAssigner.getDomainInfo(execution.TestDomainID)
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(test.DomainID)
 	s.NoError(err)
-	s.Equal(execution.TestDomainName, domainName)
+	s.Equal(test.DomainName, domainName)
 	s.True(isActive)
 }
 
 func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Passive() {
-	execution.TestGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestAlternativeClusterName
+	test.GlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestAlternativeClusterName
 	defer func() {
-		execution.TestGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestCurrentClusterName
+		test.GlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestCurrentClusterName
 	}()
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestGlobalDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.GlobalDomainEntry, nil)
 
-	domainName, isActive, err := s.priorityAssigner.getDomainInfo(execution.TestDomainID)
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(test.DomainID)
 	s.NoError(err)
-	s.Equal(execution.TestDomainName, domainName)
+	s.Equal(test.DomainName, domainName)
 	s.False(isActive)
 }
 
 func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Local() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestLocalDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.LocalDomainEntry, nil)
 
-	domainName, isActive, err := s.priorityAssigner.getDomainInfo(execution.TestDomainID)
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(test.DomainID)
 	s.NoError(err)
-	s.Equal(execution.TestDomainName, domainName)
+	s.Equal(test.DomainName, domainName)
 	s.True(isActive)
 }
 
 func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_DomainNotExist() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(
 		nil,
 		&workflow.EntityNotExistsError{Message: "domain not exist"},
 	)
 
-	domainName, isActive, err := s.priorityAssigner.getDomainInfo(execution.TestDomainID)
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(test.DomainID)
 	s.NoError(err)
 	s.Empty(domainName)
 	s.True(isActive)
 }
 
 func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_UnknownError() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(
 		nil,
 		errors.New("some random error"),
 	)
 
-	domainName, isActive, err := s.priorityAssigner.getDomainInfo(execution.TestDomainID)
+	domainName, isActive, err := s.priorityAssigner.getDomainInfo(test.DomainID)
 	s.Error(err)
 	s.Empty(domainName)
 	s.False(isActive)
@@ -147,15 +147,15 @@ func (s *taskPriorityAssignerSuite) TestAssign_ReplicationTask() {
 }
 
 func (s *taskPriorityAssignerSuite) TestAssign_StandbyTask() {
-	execution.TestGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestAlternativeClusterName
+	test.GlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestAlternativeClusterName
 	defer func() {
-		execution.TestGlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestCurrentClusterName
+		test.GlobalDomainEntry.GetReplicationConfig().ActiveClusterName = cluster.TestCurrentClusterName
 	}()
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestGlobalDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.GlobalDomainEntry, nil)
 
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeTransfer).Times(1)
-	mockTask.EXPECT().GetDomainID().Return(execution.TestDomainID).Times(1)
+	mockTask.EXPECT().GetDomainID().Return(test.DomainID).Times(1)
 	mockTask.EXPECT().SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -163,11 +163,11 @@ func (s *taskPriorityAssignerSuite) TestAssign_StandbyTask() {
 }
 
 func (s *taskPriorityAssignerSuite) TestAssign_TransferTask() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestGlobalDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.GlobalDomainEntry, nil)
 
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeTransfer).AnyTimes()
-	mockTask.EXPECT().GetDomainID().Return(execution.TestDomainID).Times(1)
+	mockTask.EXPECT().GetDomainID().Return(test.DomainID).Times(1)
 	mockTask.EXPECT().SetPriority(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -175,11 +175,11 @@ func (s *taskPriorityAssignerSuite) TestAssign_TransferTask() {
 }
 
 func (s *taskPriorityAssignerSuite) TestAssign_TimerTask() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestGlobalDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.GlobalDomainEntry, nil)
 
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeTimer).AnyTimes()
-	mockTask.EXPECT().GetDomainID().Return(execution.TestDomainID).Times(1)
+	mockTask.EXPECT().GetDomainID().Return(test.DomainID).Times(1)
 	mockTask.EXPECT().SetPriority(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -187,12 +187,12 @@ func (s *taskPriorityAssignerSuite) TestAssign_TimerTask() {
 }
 
 func (s *taskPriorityAssignerSuite) TestAssign_ThrottledTask() {
-	s.mockDomainCache.EXPECT().GetDomainByID(execution.TestDomainID).Return(execution.TestGlobalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(test.DomainID).Return(test.GlobalDomainEntry, nil).AnyTimes()
 
 	for i := 0; i != s.testTaskProcessRPS*2; i++ {
 		mockTask := NewMockTask(s.controller)
 		mockTask.EXPECT().GetQueueType().Return(QueueTypeTimer).AnyTimes()
-		mockTask.EXPECT().GetDomainID().Return(execution.TestDomainID).Times(1)
+		mockTask.EXPECT().GetDomainID().Return(test.DomainID).Times(1)
 		if i < s.testTaskProcessRPS {
 			mockTask.EXPECT().SetPriority(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)).Times(1)
 		} else {

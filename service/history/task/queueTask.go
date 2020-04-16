@@ -50,10 +50,12 @@ var (
 )
 
 type (
+	// TimerQueueAckMgr is the interface for acking timer task
 	TimerQueueAckMgr interface {
 		CompleteTimerTask(timerTask *persistence.TimerTaskInfo)
 	}
 
+	// QueueAckMgr is the interface for acking transfer task
 	QueueAckMgr interface {
 		CompleteQueueTask(taskID int64)
 	}
@@ -96,6 +98,7 @@ type (
 	}
 )
 
+// NewTimerTask creates a new timer task
 func NewTimerTask(
 	shard shard.Context,
 	taskInfo Info,
@@ -124,6 +127,7 @@ func NewTimerTask(
 	}
 }
 
+// NewTransferTask creates a new transfer task
 func NewTransferTask(
 	shard shard.Context,
 	taskInfo Info,

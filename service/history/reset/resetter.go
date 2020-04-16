@@ -30,8 +30,8 @@ import (
 )
 
 type (
+	// WorkflowResetter is the new NDC compatible workflow reset component
 	WorkflowResetter interface {
-		// ResetWorkflow is the new NDC compatible workflow reset logic
 		ResetWorkflow(
 			ctx context.Context,
 			domainID string,

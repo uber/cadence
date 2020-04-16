@@ -79,7 +79,7 @@ func (s *historyBuilderSuite) SetupTest() {
 	s.logger = log.NewNoop()
 
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
-	s.domainID = TestDomainID
+	s.domainID = testDomainID
 	s.domainEntry = cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: s.domainID}, &persistence.DomainConfig{}, "", nil)
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
@@ -89,7 +89,7 @@ func (s *historyBuilderSuite) SetupTest() {
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.mockEventsCache,
-		s.logger, TestLocalDomainEntry)
+		s.logger, testLocalDomainEntry)
 	s.builder = NewHistoryBuilder(s.msBuilder, s.logger)
 }
 

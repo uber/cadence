@@ -33,6 +33,7 @@ import (
 )
 
 type (
+	// ProcessorOptions configs task processor
 	ProcessorOptions struct {
 		SchedulerType        task.SchedulerType
 		FifoSchedulerOptions *task.FIFOTaskSchedulerOptions
@@ -60,6 +61,7 @@ var (
 	errTaskProcessorNotRunning          = errors.New("queue task processor is not running")
 )
 
+// NewProcessor creates a new task processor
 func NewProcessor(
 	priorityAssigner PriorityAssigner,
 	options *ProcessorOptions,

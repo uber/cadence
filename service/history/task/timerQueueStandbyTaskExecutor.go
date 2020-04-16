@@ -54,6 +54,7 @@ type (
 	}
 )
 
+// NewTimerStandbyTaskExecutor creates a new task executor for standby timer task
 func NewTimerStandbyTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,

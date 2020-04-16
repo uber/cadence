@@ -71,6 +71,7 @@ type (
 	}
 )
 
+// NewTransferActiveTaskExecutor creates a new task executor for active transfer task
 func NewTransferActiveTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,

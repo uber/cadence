@@ -48,13 +48,14 @@ type (
 
 var _ PriorityAssigner = (*priorityAssignerImpl)(nil)
 
+// NewPriorityAssigner creates a new task priority assigner
 func NewPriorityAssigner(
 	currentClusterName string,
 	domainCache cache.DomainCache,
 	logger log.Logger,
 	metricClient metrics.Client,
 	config *config.Config,
-) *priorityAssignerImpl {
+) PriorityAssigner {
 	return &priorityAssignerImpl{
 		currentClusterName: currentClusterName,
 		domainCache:        domainCache,
