@@ -1964,7 +1964,12 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		token.IsWorkflowRunning = isWorkflowRunning
 		token.PersistenceToken = nil
 	}
-	rawHistoryQueryEnabled := wh.config.SendRawWorkflowHistory(getRequest.GetDomain())
+
+	call := yarpc.CallFromContext(ctx)
+	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
+	clientImpl := call.Header(common.ClientImplHeaderName)
+	supportsRawHistoryQuery := wh.versionChecker.SupportsRawHistoryQuery(clientImpl, clientFeatureVersion) == nil
+	rawHistoryQueryEnabled := wh.config.SendRawWorkflowHistory(getRequest.GetDomain()) && supportsRawHistoryQuery
 
 	history := &gen.History{}
 	history.Events = []*gen.HistoryEvent{}
