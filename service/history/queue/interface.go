@@ -62,7 +62,7 @@ type (
 	}
 
 	// ProcessingQueueSplitPolicy determines if one ProcessingQueue should be split
-	// into multiple processing queues
+	// into multiple ProcessingQueues
 	ProcessingQueueSplitPolicy interface {
 		Evaluate(ProcessingQueue) []ProcessingQueueState
 	}
