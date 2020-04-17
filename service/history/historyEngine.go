@@ -543,7 +543,8 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		return nil, err
 	}
 
-	// for signalWithStart
+	// for signalWithStart, WorkflowIDReusePolicy is default to WorkflowIDReusePolicyAllowDuplicate
+	// while for startWorkflow it is default to WorkflowIdReusePolicyAllowDuplicateFailedOnly.
 	isSignalWithStart := signalWithStartArg != nil
 	var prevMutableState execution.MutableState
 	if isSignalWithStart && signalWithStartArg.prevMutableState != nil {
