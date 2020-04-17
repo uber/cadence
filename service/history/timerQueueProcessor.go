@@ -24,7 +24,6 @@ package history
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -37,10 +36,9 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
-)
-
-var (
-	errUnknownTimerTask = errors.New("unknown timer task")
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -58,9 +56,9 @@ type (
 	timerQueueProcessorImpl struct {
 		isGlobalDomainEnabled  bool
 		currentClusterName     string
-		shard                  ShardContext
+		shard                  shard.Context
 		taskAllocator          taskAllocator
-		config                 *Config
+		config                 *config.Config
 		metricsClient          metrics.Client
 		historyService         *historyEngineImpl
 		ackLevel               timerKey
@@ -69,17 +67,17 @@ type (
 		isStarted              int32
 		isStopped              int32
 		shutdownChan           chan struct{}
-		queueTaskProcessor     queueTaskProcessor
+		queueTaskProcessor     task.Processor
 		activeTimerProcessor   *timerQueueActiveProcessorImpl
 		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
 	}
 )
 
 func newTimerQueueProcessor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	matchingClient matching.Client,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) timerQueueProcessor {
 
@@ -273,7 +271,7 @@ func (t *timerQueueProcessorImpl) completeTimersLoop() {
 				err := t.completeTimers()
 				if err != nil {
 					t.logger.Info("Failed to complete timers.", tag.Error(err))
-					if err == ErrShardClosed {
+					if err == shard.ErrShardClosed {
 						// shard is unloaded, timer processor should quit as well
 						go t.Stop()
 						return

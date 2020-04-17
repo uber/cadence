@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination workflowResetter_mock.go
+// TODO: move this file to reset package
 
 package history
 
@@ -34,46 +34,31 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/ndc"
+	"github.com/uber/cadence/service/history/reset"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
-	workflowResetter interface {
-		// resetWorkflow is the new NDC compatible workflow reset logic
-		resetWorkflow(
-			ctx ctx.Context,
-			domainID string,
-			workflowID string,
-			baseRunID string,
-			baseBranchToken []byte,
-			baseRebuildLastEventID int64,
-			baseRebuildLastEventVersion int64,
-			baseNextEventID int64,
-			resetRunID string,
-			resetRequestID string,
-			currentWorkflow nDCWorkflow,
-			resetReason string,
-			additionalReapplyEvents []*shared.HistoryEvent,
-		) error
-	}
-
 	nDCStateRebuilderProvider func() nDCStateRebuilder
 
 	workflowResetterImpl struct {
-		shard             ShardContext
+		shard             shard.Context
 		domainCache       cache.DomainCache
 		clusterMetadata   cluster.Metadata
 		historyV2Mgr      persistence.HistoryManager
-		historyCache      *historyCache
+		executionCache    *execution.Cache
 		newStateRebuilder nDCStateRebuilderProvider
 		logger            log.Logger
 	}
 )
 
-var _ workflowResetter = (*workflowResetterImpl)(nil)
+var _ reset.WorkflowResetter = (*workflowResetterImpl)(nil)
 
 func newWorkflowResetter(
-	shard ShardContext,
-	historyCache *historyCache,
+	shard shard.Context,
+	executionCache *execution.Cache,
 	logger log.Logger,
 ) *workflowResetterImpl {
 	return &workflowResetterImpl{
@@ -81,7 +66,7 @@ func newWorkflowResetter(
 		domainCache:     shard.GetDomainCache(),
 		clusterMetadata: shard.GetClusterMetadata(),
 		historyV2Mgr:    shard.GetHistoryManager(),
-		historyCache:    historyCache,
+		executionCache:  executionCache,
 		newStateRebuilder: func() nDCStateRebuilder {
 			return newNDCStateRebuilder(shard, logger)
 		},
@@ -89,7 +74,7 @@ func newWorkflowResetter(
 	}
 }
 
-func (r *workflowResetterImpl) resetWorkflow(
+func (r *workflowResetterImpl) ResetWorkflow(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,
@@ -100,7 +85,7 @@ func (r *workflowResetterImpl) resetWorkflow(
 	baseNextEventID int64,
 	resetRunID string,
 	resetRequestID string,
-	currentWorkflow nDCWorkflow,
+	currentWorkflow ndc.Workflow,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
 ) (retError error) {
@@ -111,7 +96,7 @@ func (r *workflowResetterImpl) resetWorkflow(
 	}
 	resetWorkflowVersion := domainEntry.GetFailoverVersion()
 
-	currentMutableState := currentWorkflow.getMutableState()
+	currentMutableState := currentWorkflow.GetMutableState()
 	currentWorkflowTerminated := false
 	if currentMutableState.IsWorkflowExecutionRunning() {
 		if err := r.terminateWorkflow(
@@ -142,7 +127,7 @@ func (r *workflowResetterImpl) resetWorkflow(
 	if err != nil {
 		return err
 	}
-	defer resetWorkflow.getReleaseFn()(retError)
+	defer resetWorkflow.GetReleaseFn()(retError)
 
 	return r.persistToDB(
 		currentWorkflowTerminated,
@@ -165,7 +150,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	resetWorkflowVersion int64,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
-) (nDCWorkflow, error) {
+) (ndc.Workflow, error) {
 
 	resetWorkflow, err := r.replayResetWorkflow(
 		ctx,
@@ -182,7 +167,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
-	resetMutableState := resetWorkflow.getMutableState()
+	resetMutableState := resetWorkflow.GetMutableState()
 
 	baseLastEventVersion := resetMutableState.GetCurrentVersion()
 	if baseLastEventVersion > resetWorkflowVersion {
@@ -246,7 +231,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
-	if err := scheduleDecision(resetMutableState); err != nil {
+	if err := execution.ScheduleDecision(resetMutableState); err != nil {
 		return nil, err
 	}
 
@@ -255,19 +240,19 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 
 func (r *workflowResetterImpl) persistToDB(
 	currentWorkflowTerminated bool,
-	currentWorkflow nDCWorkflow,
-	resetWorkflow nDCWorkflow,
+	currentWorkflow ndc.Workflow,
+	resetWorkflow ndc.Workflow,
 ) error {
 
 	if currentWorkflowTerminated {
-		return currentWorkflow.getContext().updateWorkflowExecutionWithNewAsActive(
+		return currentWorkflow.GetContext().UpdateWorkflowExecutionWithNewAsActive(
 			r.shard.GetTimeSource().Now(),
-			resetWorkflow.getContext(),
-			resetWorkflow.getMutableState(),
+			resetWorkflow.GetContext(),
+			resetWorkflow.GetMutableState(),
 		)
 	}
 
-	currentMutableState := currentWorkflow.getMutableState()
+	currentMutableState := currentWorkflow.GetMutableState()
 	currentRunID := currentMutableState.GetExecutionInfo().RunID
 	currentLastWriteVersion, err := currentMutableState.GetLastWriteVersion()
 	if err != nil {
@@ -275,19 +260,19 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	now := r.shard.GetTimeSource().Now()
-	resetWorkflowSnapshot, resetWorkflowEventsSeq, err := resetWorkflow.getMutableState().CloseTransactionAsSnapshot(
+	resetWorkflowSnapshot, resetWorkflowEventsSeq, err := resetWorkflow.GetMutableState().CloseTransactionAsSnapshot(
 		now,
-		transactionPolicyActive,
+		execution.TransactionPolicyActive,
 	)
 	if err != nil {
 		return err
 	}
-	resetHistorySize, err := resetWorkflow.getContext().persistFirstWorkflowEvents(resetWorkflowEventsSeq[0])
+	resetHistorySize, err := resetWorkflow.GetContext().PersistFirstWorkflowEvents(resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
 
-	return resetWorkflow.getContext().createWorkflowExecution(
+	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		resetWorkflowSnapshot,
 		resetHistorySize,
 		now,
@@ -307,7 +292,7 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 	baseRebuildLastEventVersion int64,
 	resetRunID string,
 	resetRequestID string,
-) (nDCWorkflow, error) {
+) (ndc.Workflow, error) {
 
 	resetBranchToken, err := r.generateBranchToken(
 		domainID,
@@ -320,7 +305,7 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 		return nil, err
 	}
 
-	resetContext := newWorkflowExecutionContext(
+	resetContext := execution.NewContext(
 		domainID,
 		shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -353,19 +338,19 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 		return nil, err
 	}
 
-	resetContext.setHistorySize(resetHistorySize)
-	return newNDCWorkflow(
+	resetContext.SetHistorySize(resetHistorySize)
+	return ndc.NewWorkflow(
 		ctx,
 		r.domainCache,
 		r.clusterMetadata,
 		resetContext,
 		resetMutableState,
-		noopReleaseFn,
+		execution.NoopReleaseFn,
 	), nil
 }
 
 func (r *workflowResetterImpl) failInflightActivity(
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	terminateReason string,
 ) error {
 
@@ -419,7 +404,7 @@ func (r *workflowResetterImpl) generateBranchToken(
 }
 
 func (r *workflowResetterImpl) terminateWorkflow(
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	terminateReason string,
 ) error {
 
@@ -435,7 +420,7 @@ func (r *workflowResetterImpl) terminateWorkflow(
 
 func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 	ctx ctx.Context,
-	resetMutableState mutableState,
+	resetMutableState execution.MutableState,
 	domainID string,
 	workflowID string,
 	baseRunID string,
@@ -461,7 +446,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 	}
 
 	getNextEventIDBranchToken := func(runID string) (nextEventID int64, branchToken []byte, retError error) {
-		context, release, err := r.historyCache.getOrCreateWorkflowExecution(
+		context, release, err := r.executionCache.GetOrCreateWorkflowExecution(
 			ctx,
 			domainID,
 			shared.WorkflowExecution{
@@ -474,7 +459,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 		}
 		defer func() { release(retError) }()
 
-		mutableState, err := context.loadWorkflowExecution()
+		mutableState, err := context.LoadWorkflowExecution()
 		if err != nil {
 			// no matter what error happen, we need to retry
 			return 0, nil, err
@@ -508,7 +493,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 }
 
 func (r *workflowResetterImpl) reapplyWorkflowEvents(
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -548,7 +533,7 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 }
 
 func (r *workflowResetterImpl) reapplyEvents(
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	events []*shared.HistoryEvent,
 ) error {
 

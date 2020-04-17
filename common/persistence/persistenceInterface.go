@@ -88,6 +88,9 @@ type (
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+
+		// Scan related methods
+		ListConcreteExecutions(request *ListConcreteExecutionsRequest) (*InternalListConcreteExecutionsResponse, error)
 	}
 
 	// HistoryStore is to manager workflow history events
@@ -447,9 +450,21 @@ type (
 		ShardID int
 	}
 
-	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
+	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecution for Persistence Interface
 	InternalGetWorkflowExecutionResponse struct {
 		State *InternalWorkflowMutableState
+	}
+
+	// InternalListConcreteExecutionsResponse is the response to ListConcreteExecutions for Persistence Interface
+	InternalListConcreteExecutionsResponse struct {
+		Executions    []*InternalListConcreteExecutionsEntity
+		NextPageToken []byte
+	}
+
+	// InternalListConcreteExecutionsEntity is a single entity in InternalListConcreteExecutionsResponse
+	InternalListConcreteExecutionsEntity struct {
+		ExecutionInfo    *InternalWorkflowExecutionInfo
+		VersionHistories *DataBlob
 	}
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch
@@ -535,6 +550,7 @@ type (
 		Status           *workflow.WorkflowExecutionCloseStatus
 		HistoryLength    int64
 		Memo             *DataBlob
+		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
 
@@ -562,6 +578,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 
@@ -575,6 +592,7 @@ type (
 		ExecutionTimestamp int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
 		Status             workflow.WorkflowExecutionCloseStatus
@@ -593,6 +611,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 

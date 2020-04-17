@@ -34,29 +34,31 @@ import (
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
-	taskGeneratorProvider func(mutableState) mutableStateTaskGenerator
+	taskGeneratorProvider func(execution.MutableState) execution.MutableStateTaskGenerator
 
 	stateBuilder interface {
 		applyEvents(
 			domainID string,
 			requestID string,
-			execution shared.WorkflowExecution,
+			workflowExecution shared.WorkflowExecution,
 			history []*shared.HistoryEvent,
 			newRunHistory []*shared.HistoryEvent,
 			newRunNDC bool,
-		) (mutableState, error)
+		) (execution.MutableState, error)
 	}
 
 	stateBuilderImpl struct {
-		shard           ShardContext
+		shard           shard.Context
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
 		logger          log.Logger
 
-		mutableState          mutableState
+		mutableState          execution.MutableState
 		taskGeneratorProvider taskGeneratorProvider
 	}
 )
@@ -69,9 +71,9 @@ const (
 var _ stateBuilder = (*stateBuilderImpl)(nil)
 
 func newStateBuilder(
-	shard ShardContext,
+	shard shard.Context,
 	logger log.Logger,
-	mutableState mutableState,
+	mutableState execution.MutableState,
 	taskGeneratorProvider taskGeneratorProvider,
 ) *stateBuilderImpl {
 
@@ -88,18 +90,18 @@ func newStateBuilder(
 func (b *stateBuilderImpl) applyEvents(
 	domainID string,
 	requestID string,
-	execution shared.WorkflowExecution,
+	workflowExecution shared.WorkflowExecution,
 	history []*shared.HistoryEvent,
 	newRunHistory []*shared.HistoryEvent,
 	newRunNDC bool,
-) (mutableState, error) {
+) (execution.MutableState, error) {
 
 	if len(history) == 0 {
 		return nil, errors.NewInternalFailureError(ErrMessageHistorySizeZero)
 	}
 	firstEvent := history[0]
 	lastEvent := history[len(history)-1]
-	var newRunMutableStateBuilder mutableState
+	var newRunMutableStateBuilder execution.MutableState
 
 	taskGenerator := b.taskGeneratorProvider(b.mutableState)
 
@@ -147,21 +149,21 @@ func (b *stateBuilderImpl) applyEvents(
 
 			if err := b.mutableState.ReplicateWorkflowExecutionStartedEvent(
 				parentDomainID,
-				execution,
+				workflowExecution,
 				requestID,
 				event,
 			); err != nil {
 				return nil, err
 			}
 
-			if err := taskGenerator.generateRecordWorkflowStartedTasks(
+			if err := taskGenerator.GenerateRecordWorkflowStartedTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowStartTasks(
+			if err := taskGenerator.GenerateWorkflowStartTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
@@ -169,7 +171,7 @@ func (b *stateBuilderImpl) applyEvents(
 			}
 
 			if attributes.GetFirstDecisionTaskBackoffSeconds() > 0 {
-				if err := taskGenerator.generateDelayedDecisionTasks(
+				if err := taskGenerator.GenerateDelayedDecisionTasks(
 					b.unixNanoToTime(event.GetTimestamp()),
 					event,
 				); err != nil {
@@ -178,7 +180,7 @@ func (b *stateBuilderImpl) applyEvents(
 			}
 
 			if err := b.mutableState.SetHistoryTree(
-				execution.GetRunId(),
+				workflowExecution.GetRunId(),
 			); err != nil {
 				return nil, err
 			}
@@ -207,7 +209,7 @@ func (b *stateBuilderImpl) applyEvents(
 			// since we do not use stickiness on the standby side
 			// there shall be no decision schedule to start timeout
 			// NOTE: at the beginning of the loop, stickyness is cleared
-			if err := taskGenerator.generateDecisionScheduleTasks(
+			if err := taskGenerator.GenerateDecisionScheduleTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				decision.ScheduleID,
 			); err != nil {
@@ -228,7 +230,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateDecisionStartTasks(
+			if err := taskGenerator.GenerateDecisionStartTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				decision.ScheduleID,
 			); err != nil {
@@ -259,7 +261,7 @@ func (b *stateBuilderImpl) applyEvents(
 				// since we do not use stickiness on the standby side
 				// there shall be no decision schedule to start timeout
 				// NOTE: at the beginning of the loop, stickyness is cleared
-				if err := taskGenerator.generateDecisionScheduleTasks(
+				if err := taskGenerator.GenerateDecisionScheduleTasks(
 					b.unixNanoToTime(event.GetTimestamp()),
 					decision.ScheduleID,
 				); err != nil {
@@ -282,7 +284,7 @@ func (b *stateBuilderImpl) applyEvents(
 				// since we do not use stickiness on the standby side
 				// there shall be no decision schedule to start timeout
 				// NOTE: at the beginning of the loop, stickyness is cleared
-				if err := taskGenerator.generateDecisionScheduleTasks(
+				if err := taskGenerator.GenerateDecisionScheduleTasks(
 					b.unixNanoToTime(event.GetTimestamp()),
 					decision.ScheduleID,
 				); err != nil {
@@ -298,7 +300,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateActivityTransferTasks(
+			if err := taskGenerator.GenerateActivityTransferTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
@@ -385,7 +387,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateChildWorkflowTasks(
+			if err := taskGenerator.GenerateChildWorkflowTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
@@ -452,7 +454,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateRequestCancelExternalTasks(
+			if err := taskGenerator.GenerateRequestCancelExternalTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
@@ -484,7 +486,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateSignalExternalTasks(
+			if err := taskGenerator.GenerateSignalExternalTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
@@ -524,7 +526,7 @@ func (b *stateBuilderImpl) applyEvents(
 
 		case shared.EventTypeUpsertWorkflowSearchAttributes:
 			b.mutableState.ReplicateUpsertWorkflowSearchAttributesEvent(event)
-			if err := taskGenerator.generateWorkflowSearchAttrTasks(
+			if err := taskGenerator.GenerateWorkflowSearchAttrTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -538,7 +540,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowCloseTasks(
+			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -552,7 +554,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowCloseTasks(
+			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -566,7 +568,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowCloseTasks(
+			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -580,7 +582,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowCloseTasks(
+			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -594,7 +596,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowCloseTasks(
+			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -605,14 +607,14 @@ func (b *stateBuilderImpl) applyEvents(
 			// The length of newRunHistory can be zero in resend case
 			if len(newRunHistory) != 0 {
 				if newRunNDC {
-					newRunMutableStateBuilder = newMutableStateBuilderWithVersionHistories(
+					newRunMutableStateBuilder = execution.NewMutableStateBuilderWithVersionHistories(
 						b.shard,
 						b.shard.GetEventsCache(),
 						b.logger,
 						b.mutableState.GetDomainEntry(),
 					)
 				} else {
-					newRunMutableStateBuilder = newMutableStateBuilderWithReplicationState(
+					newRunMutableStateBuilder = execution.NewMutableStateBuilderWithReplicationState(
 						b.shard,
 						b.shard.GetEventsCache(),
 						b.logger,
@@ -623,7 +625,7 @@ func (b *stateBuilderImpl) applyEvents(
 
 				newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
 				newExecution := shared.WorkflowExecution{
-					WorkflowId: execution.WorkflowId,
+					WorkflowId: workflowExecution.WorkflowId,
 					RunId:      common.StringPtr(newRunID),
 				}
 				_, err := newRunStateBuilder.applyEvents(
@@ -648,7 +650,7 @@ func (b *stateBuilderImpl) applyEvents(
 				return nil, err
 			}
 
-			if err := taskGenerator.generateWorkflowCloseTasks(
+			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
 			); err != nil {
 				return nil, err
@@ -660,12 +662,12 @@ func (b *stateBuilderImpl) applyEvents(
 	}
 
 	// must generate the activity timer / user timer at the very end
-	if err := taskGenerator.generateActivityTimerTasks(
+	if err := taskGenerator.GenerateActivityTimerTasks(
 		b.unixNanoToTime(lastEvent.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
-	if err := taskGenerator.generateUserTimerTasks(
+	if err := taskGenerator.GenerateUserTimerTasks(
 		b.unixNanoToTime(lastEvent.GetTimestamp()),
 	); err != nil {
 		return nil, err
@@ -674,7 +676,7 @@ func (b *stateBuilderImpl) applyEvents(
 	b.mutableState.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
 	b.mutableState.GetExecutionInfo().SetNextEventID(lastEvent.GetEventId() + 1)
 
-	b.mutableState.SetHistoryBuilder(newHistoryBuilderFromEvents(history, b.logger))
+	b.mutableState.SetHistoryBuilder(execution.NewHistoryBuilderFromEvents(history, b.logger))
 
 	return newRunMutableStateBuilder, nil
 }

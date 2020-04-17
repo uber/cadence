@@ -778,6 +778,34 @@ func (m *executionManagerImpl) GetCurrentExecution(
 	return m.persistence.GetCurrentExecution(request)
 }
 
+func (m *executionManagerImpl) ListConcreteExecutions(
+	request *ListConcreteExecutionsRequest,
+) (*ListConcreteExecutionsResponse, error) {
+	response, err := m.persistence.ListConcreteExecutions(request)
+	if err != nil {
+		return nil, err
+	}
+	newResponse := &ListConcreteExecutionsResponse{
+		Executions: make([]*ListConcreteExecutionsEntity, len(response.Executions), len(response.Executions)),
+		PageToken:  response.NextPageToken,
+	}
+	for i, e := range response.Executions {
+		info, _, err := m.DeserializeExecutionInfo(e.ExecutionInfo)
+		if err != nil {
+			return nil, err
+		}
+		vh, err := m.DeserializeVersionHistories(e.VersionHistories)
+		if err != nil {
+			return nil, err
+		}
+		newResponse.Executions[i] = &ListConcreteExecutionsEntity{
+			ExecutionInfo:    info,
+			VersionHistories: vh,
+		}
+	}
+	return newResponse, nil
+}
+
 // Transfer task related methods
 func (m *executionManagerImpl) GetTransferTasks(
 	request *GetTransferTasksRequest,

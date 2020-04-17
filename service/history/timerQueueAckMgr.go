@@ -31,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 var (
@@ -50,11 +52,11 @@ type (
 	timerQueueAckMgrImpl struct {
 		scope               int
 		isFailover          bool
-		shard               ShardContext
+		shard               shard.Context
 		executionMgr        persistence.ExecutionManager
 		logger              log.Logger
 		metricsClient       metrics.Client
-		config              *Config
+		config              *config.Config
 		timeNow             timeNow
 		updateTimerAckLevel updateTimerAckLevel
 		timerQueueShutdown  timerQueueShutdown
@@ -117,7 +119,7 @@ func compareTimerIDLess(first *timerKey, second *timerKey) bool {
 
 func newTimerQueueAckMgr(
 	scope int,
-	shard ShardContext,
+	shard shard.Context,
 	metricsClient metrics.Client,
 	minLevel time.Time,
 	timeNow timeNow,
@@ -153,7 +155,7 @@ func newTimerQueueAckMgr(
 }
 
 func newTimerQueueFailoverAckMgr(
-	shard ShardContext,
+	shard shard.Context,
 	metricsClient metrics.Client,
 	minLevel time.Time,
 	maxLevel time.Time,
@@ -295,6 +297,12 @@ func (t *timerQueueAckMgrImpl) readLookAheadTask() (*persistence.TimerTaskInfo, 
 		return tasks[0], nil
 	}
 	return nil, nil
+}
+
+// CompleteTimerTask implements the task.TimerQueueAckMgr interface
+// TODO: this method should be removed. See the comments in task/task.go L81
+func (t *timerQueueAckMgrImpl) CompleteTimerTask(timerTask *persistence.TimerTaskInfo) {
+	t.completeTimerTask(timerTask)
 }
 
 func (t *timerQueueAckMgrImpl) completeTimerTask(timerTask *persistence.TimerTaskInfo) {
