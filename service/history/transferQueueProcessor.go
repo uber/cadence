@@ -24,7 +24,6 @@ package history
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -38,10 +37,9 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
-)
-
-var (
-	errUnknownTransferTask = errors.New("Unknown transfer task")
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -50,17 +48,15 @@ type (
 		FailoverDomain(domainIDs map[string]struct{})
 		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
 		LockTaskProcessing()
-		UnlockTaskPrrocessing()
+		UnlockTaskProcessing()
 	}
-
-	taskFilter func(task queueTaskInfo) (bool, error)
 
 	transferQueueProcessorImpl struct {
 		isGlobalDomainEnabled bool
 		currentClusterName    string
-		shard                 ShardContext
+		shard                 shard.Context
 		taskAllocator         taskAllocator
-		config                *Config
+		config                *config.Config
 		metricsClient         metrics.Client
 		historyService        *historyEngineImpl
 		visibilityMgr         persistence.VisibilityManager
@@ -71,19 +67,19 @@ type (
 		isStarted             int32
 		isStopped             int32
 		shutdownChan          chan struct{}
-		queueTaskProcessor    queueTaskProcessor
+		queueTaskProcessor    task.Processor
 		activeTaskProcessor   *transferQueueActiveProcessorImpl
 		standbyTaskProcessors map[string]*transferQueueStandbyProcessorImpl
 	}
 )
 
 func newTransferQueueProcessor(
-	shard ShardContext,
+	shard shard.Context,
 	historyService *historyEngineImpl,
 	visibilityMgr persistence.VisibilityManager,
 	matchingClient matching.Client,
 	historyClient history.Client,
-	queueTaskProcessor queueTaskProcessor,
+	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) *transferQueueProcessorImpl {
 
@@ -269,7 +265,7 @@ func (t *transferQueueProcessorImpl) LockTaskProcessing() {
 	t.taskAllocator.lock()
 }
 
-func (t *transferQueueProcessorImpl) UnlockTaskPrrocessing() {
+func (t *transferQueueProcessorImpl) UnlockTaskProcessing() {
 	t.taskAllocator.unlock()
 }
 
@@ -292,7 +288,7 @@ func (t *transferQueueProcessorImpl) completeTransferLoop() {
 				err := t.completeTransfer()
 				if err != nil {
 					t.logger.Info("Failed to complete transfer task", tag.Error(err))
-					if err == ErrShardClosed {
+					if err == shard.ErrShardClosed {
 						// shard closed, trigger shutdown and bail out
 						t.Stop()
 						return

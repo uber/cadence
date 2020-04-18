@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// TODO: move this file to reset package
+
 package history
 
 import (
@@ -25,11 +27,9 @@ import (
 	"fmt"
 	"math"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -44,6 +44,12 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/reset"
+	"github.com/uber/cadence/service/history/shard"
+	test "github.com/uber/cadence/service/history/testing"
 )
 
 type (
@@ -52,23 +58,23 @@ type (
 		*require.Assertions
 
 		controller               *gomock.Controller
-		mockShard                *shardContextTest
+		mockShard                *shard.TestContext
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
-		mockEventsCache          *MockeventsCache
+		mockEventsCache          *events.MockCache
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
 
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
-		config  *Config
+		config  *config.Config
 		logger  log.Logger
 		shardID int
 
 		historyEngine *historyEngineImpl
-		resetor       workflowResetor
+		resetor       reset.WorkflowResetor
 	}
 )
 
@@ -78,7 +84,7 @@ func TestWorkflowResetorSuite(t *testing.T) {
 }
 
 func (s *resetorSuite) SetupSuite() {
-	s.config = NewDynamicConfigForTest()
+	s.config = config.NewForTest()
 }
 
 func (s *resetorSuite) TearDownSuite() {
@@ -98,7 +104,7 @@ func (s *resetorSuite) SetupTest() {
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockShard = newTestShardContext(
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&p.ShardInfo{
 			ShardID:          shardID,
@@ -108,31 +114,30 @@ func (s *resetorSuite) SetupTest() {
 		s.config,
 	)
 
-	s.mockExecutionMgr = s.mockShard.resource.ExecutionMgr
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
-	s.mockDomainCache = s.mockShard.resource.DomainCache
-	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
-	s.mockEventsCache = s.mockShard.mockEventsCache
+	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
+	s.mockEventsCache = s.mockShard.MockEventsCache
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 
-	historyCache := newHistoryCache(s.mockShard)
 	h := &historyEngineImpl{
 		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
 		clusterMetadata:      s.mockClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
-		historyCache:         historyCache,
+		executionCache:       execution.NewCache(s.mockShard),
 		logger:               s.logger,
 		metricsClient:        s.mockShard.GetMetricsClient(),
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		config:               s.config,
-		historyEventNotifier: newHistoryEventNotifier(clock.NewRealTimeSource(), s.mockShard.GetMetricsClient(), func(string) int { return 0 }),
+		historyEventNotifier: events.NewNotifier(clock.NewRealTimeSource(), s.mockShard.GetMetricsClient(), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
 		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
@@ -150,13 +155,13 @@ func (s *resetorSuite) TearDownTest() {
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: test.DomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
 	request := &h.ResetWorkflowExecutionRequest{}
-	domainID := testDomainID
+	domainID := test.DomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 
@@ -233,7 +238,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		DecisionScheduleID: common.EmptyEventID,
 		DecisionStartedID:  common.EmptyEventID,
 	}
-	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
+	compareCurrExeInfo := execution.CopyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:  currExeInfo,
 		ExecutionStats: &p.ExecutionStats{},
@@ -826,13 +831,13 @@ func (s *resetorSuite) assertActivityIDs(ids []string, timers []*p.ActivityInfo)
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCancel() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: testDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: test.DomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
 	request := &h.ResetWorkflowExecutionRequest{}
-	domainID := testDomainID
+	domainID := test.DomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 
@@ -1399,7 +1404,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return("active").AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: testDomainID},
+		&p.DomainInfo{ID: test.DomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: "active",
@@ -1419,7 +1424,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
 	request := &h.ResetWorkflowExecutionRequest{}
-	domainID := testDomainID
+	domainID := test.DomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 
@@ -1507,7 +1512,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		DecisionScheduleID: common.EmptyEventID,
 		DecisionStartedID:  common.EmptyEventID,
 	}
-	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
+	compareCurrExeInfo := execution.CopyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
 		ExecutionStats:   &p.ExecutionStats{},
@@ -2076,7 +2081,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(1, len(resetReq.CurrentWorkflowMutation.ReplicationTasks))
 	s.Equal(p.ReplicationTaskTypeHistory, resetReq.CurrentWorkflowMutation.ReplicationTasks[0].GetType())
 
-	compareRepState := copyReplicationState(forkRepState)
+	compareRepState := execution.CopyReplicationState(forkRepState)
 	compareRepState.StartVersion = beforeResetVersion
 	compareRepState.CurrentVersion = afterResetVersion
 	compareRepState.LastWriteEventID = 34
@@ -2104,7 +2109,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return("standby").AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: testDomainID},
+		&p.DomainInfo{ID: test.DomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: "active",
@@ -2124,7 +2129,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
 	request := &h.ResetWorkflowExecutionRequest{}
-	domainID := testDomainID
+	domainID := test.DomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 
@@ -2703,7 +2708,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return("active").AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: testDomainID},
+		&p.DomainInfo{ID: test.DomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: "active",
@@ -2723,7 +2728,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
 	request := &h.ResetWorkflowExecutionRequest{}
-	domainID := testDomainID
+	domainID := test.DomainID
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 
@@ -2812,7 +2817,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 		DecisionScheduleID: common.EmptyEventID,
 		DecisionStartedID:  common.EmptyEventID,
 	}
-	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
+	compareCurrExeInfo := execution.CopyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
 		ExecutionStats:   &p.ExecutionStats{},
@@ -3367,7 +3372,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(1, len(resetReq.NewWorkflowSnapshot.ReplicationTasks))
 	s.Equal(p.ReplicationTaskTypeHistory, resetReq.NewWorkflowSnapshot.ReplicationTasks[0].GetType())
 
-	compareRepState := copyReplicationState(forkRepState)
+	compareRepState := execution.CopyReplicationState(forkRepState)
 	compareRepState.StartVersion = beforeResetVersion
 	compareRepState.CurrentVersion = afterResetVersion
 	compareRepState.LastWriteEventID = 34
@@ -3388,14 +3393,14 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 }
 
 func (s *resetorSuite) TestApplyReset() {
-	domainID := testDomainID
+	domainID := test.DomainID
 	beforeResetVersion := int64(100)
 	afterResetVersion := int64(101)
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(beforeResetVersion).Return(cluster.TestAlternativeClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(afterResetVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	testDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: testDomainID},
+		&p.DomainInfo{ID: test.DomainID},
 		&p.DomainConfig{Retention: 1},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -3489,7 +3494,7 @@ func (s *resetorSuite) TestApplyReset() {
 		DecisionScheduleID: common.EmptyEventID,
 		DecisionStartedID:  common.EmptyEventID,
 	}
-	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
+	compareCurrExeInfo := execution.CopyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
 		ExecutionStats:   &p.ExecutionStats{},
@@ -4050,7 +4055,7 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Equal(2, len(resetReq.NewWorkflowSnapshot.ActivityInfos))
 	s.assertActivityIDs([]string{actIDRetry, actIDNotStarted}, resetReq.NewWorkflowSnapshot.ActivityInfos)
 
-	compareRepState := copyReplicationState(forkRepState)
+	compareRepState := execution.CopyReplicationState(forkRepState)
 	compareRepState.StartVersion = beforeResetVersion
 	compareRepState.CurrentVersion = afterResetVersion
 	compareRepState.LastWriteEventID = 34
@@ -4069,122 +4074,4 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Empty(resetReq.NewWorkflowSnapshot.SignalInfos)
 	s.Empty(resetReq.NewWorkflowSnapshot.SignalRequestedIDs)
 	s.Equal(0, len(resetReq.NewWorkflowSnapshot.RequestCancelInfos))
-}
-
-func TestFindAutoResetPoint(t *testing.T) {
-	timeSource := clock.NewRealTimeSource()
-
-	// case 1: nil
-	_, pt := FindAutoResetPoint(timeSource, nil, nil)
-	assert.Nil(t, pt)
-
-	// case 2: empty
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{}, &workflow.ResetPoints{})
-	assert.Nil(t, pt)
-
-	pt0 := &workflow.ResetPointInfo{
-		BinaryChecksum: common.StringPtr("abc"),
-		Resettable:     common.BoolPtr(true),
-	}
-	pt1 := &workflow.ResetPointInfo{
-		BinaryChecksum: common.StringPtr("def"),
-		Resettable:     common.BoolPtr(true),
-	}
-	pt3 := &workflow.ResetPointInfo{
-		BinaryChecksum: common.StringPtr("ghi"),
-		Resettable:     common.BoolPtr(false),
-	}
-
-	expiredNowNano := time.Now().UnixNano() - int64(time.Hour)
-	notExpiredNowNano := time.Now().UnixNano() + int64(time.Hour)
-	pt4 := &workflow.ResetPointInfo{
-		BinaryChecksum:   common.StringPtr("expired"),
-		Resettable:       common.BoolPtr(true),
-		ExpiringTimeNano: common.Int64Ptr(expiredNowNano),
-	}
-
-	pt5 := &workflow.ResetPointInfo{
-		BinaryChecksum:   common.StringPtr("notExpired"),
-		Resettable:       common.BoolPtr(true),
-		ExpiringTimeNano: common.Int64Ptr(notExpiredNowNano),
-	}
-
-	// case 3: two intersection
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
-			"abc": {},
-			"def": {},
-		},
-	}, &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			pt0, pt1, pt3,
-		},
-	})
-	assert.Equal(t, pt.String(), pt0.String())
-
-	// case 4: one intersection
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
-			"none":    {},
-			"def":     {},
-			"expired": {},
-		},
-	}, &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			pt4, pt0, pt1, pt3,
-		},
-	})
-	assert.Equal(t, pt.String(), pt1.String())
-
-	// case 4: no intersection
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
-			"none1": {},
-			"none2": {},
-		},
-	}, &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			pt0, pt1, pt3,
-		},
-	})
-	assert.Nil(t, pt)
-
-	// case 5: not resettable
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
-			"none1": {},
-			"ghi":   {},
-		},
-	}, &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			pt0, pt1, pt3,
-		},
-	})
-	assert.Nil(t, pt)
-
-	// case 6: one intersection of expired
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
-			"none":    {},
-			"expired": {},
-		},
-	}, &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			pt0, pt1, pt3, pt4, pt5,
-		},
-	})
-	assert.Nil(t, pt)
-
-	// case 7: one intersection of not expired
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
-			"none":       {},
-			"notExpired": {},
-		},
-	}, &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			pt0, pt1, pt3, pt4, pt5,
-		},
-	})
-	assert.Equal(t, pt.String(), pt5.String())
 }

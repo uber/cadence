@@ -33,6 +33,10 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -44,7 +48,7 @@ type (
 	taskInfo struct {
 		// TODO: change to queueTaskExecutor
 		processor taskExecutor
-		task      queueTaskInfo
+		task      task.Info
 
 		attempt   int
 		startTime time.Time
@@ -56,11 +60,11 @@ type (
 	}
 
 	taskProcessor struct {
-		shard         ShardContext
-		cache         *historyCache
+		shard         shard.Context
+		cache         *execution.Cache
 		shutdownCh    chan struct{}
 		tasksCh       chan *taskInfo
-		config        *Config
+		config        *config.Config
 		logger        log.Logger
 		metricsClient metrics.Client
 		timeSource    clock.TimeSource
@@ -76,7 +80,7 @@ type (
 
 func newTaskInfo(
 	processor taskExecutor,
-	task queueTaskInfo,
+	task task.Info,
 	logger log.Logger,
 ) *taskInfo {
 	return &taskInfo{
@@ -91,8 +95,8 @@ func newTaskInfo(
 
 func newTaskProcessor(
 	options taskProcessorOptions,
-	shard ShardContext,
-	historyCache *historyCache,
+	shard shard.Context,
+	executionCache *execution.Cache,
 	logger log.Logger,
 ) *taskProcessor {
 
@@ -103,7 +107,7 @@ func newTaskProcessor(
 
 	base := &taskProcessor{
 		shard:                   shard,
-		cache:                   historyCache,
+		cache:                   executionCache,
 		shutdownCh:              make(chan struct{}),
 		tasksCh:                 make(chan *taskInfo, options.queueSize),
 		config:                  shard.GetConfig(),
@@ -257,7 +261,7 @@ func (t *taskProcessor) processTaskOnce(
 
 func (t *taskProcessor) handleTaskError(
 	scope metrics.Scope,
-	task *taskInfo,
+	taskInfo *taskInfo,
 	notificationChan <-chan struct{},
 	err error,
 ) error {
@@ -271,13 +275,13 @@ func (t *taskProcessor) handleTaskError(
 	}
 
 	// this is a transient error
-	if err == ErrTaskRetry {
+	if err == task.ErrTaskRetry {
 		scope.IncCounter(metrics.TaskStandbyRetryCounter)
 		<-notificationChan
 		return err
 	}
 
-	if err == ErrTaskDiscarded {
+	if err == task.ErrTaskDiscarded {
 		scope.IncCounter(metrics.TaskDiscarded)
 		err = nil
 	}
@@ -286,7 +290,7 @@ func (t *taskProcessor) handleTaskError(
 	// TODO remove this error check special case
 	//  since the new task life cycle will not give up until task processed / verified
 	if _, ok := err.(*workflow.DomainNotActiveError); ok {
-		if t.timeSource.Now().Sub(task.startTime) > 2*cache.DomainCacheRefreshInterval {
+		if t.timeSource.Now().Sub(taskInfo.startTime) > 2*cache.DomainCacheRefreshInterval {
 			scope.IncCounter(metrics.TaskNotActiveCounter)
 			return nil
 		}
@@ -297,11 +301,11 @@ func (t *taskProcessor) handleTaskError(
 	scope.IncCounter(metrics.TaskFailures)
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
-		task.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
+		taskInfo.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return nil
 	}
 
-	task.logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
+	taskInfo.logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
 	return err
 }
 

@@ -21,16 +21,20 @@
 package history
 
 import (
+	"errors"
 	"math/rand"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -39,10 +43,11 @@ type (
 		*require.Assertions
 
 		controller             *gomock.Controller
-		mockQueueTaskProcessor *MockqueueTaskProcessor
+		mockQueueTaskProcessor *task.MockProcessor
 
 		redispatchQueue collection.Queue
 		logger          log.Logger
+		metricsScope    metrics.Scope
 	}
 )
 
@@ -55,10 +60,11 @@ func (s *queueProcessorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockQueueTaskProcessor = NewMockqueueTaskProcessor(s.controller)
+	s.mockQueueTaskProcessor = task.NewMockProcessor(s.controller)
 
 	s.redispatchQueue = collection.NewConcurrentQueue()
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(metrics.TransferQueueProcessorScope)
 }
 
 func (s *queueProcessorSuite) TearDownTest() {
@@ -68,7 +74,7 @@ func (s *queueProcessorSuite) TearDownTest() {
 func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 	numTasks := 5
 	for i := 0; i != numTasks; i++ {
-		mockTask := NewMockqueueTask(s.controller)
+		mockTask := task.NewMockTask(s.controller)
 		s.redispatchQueue.Add(mockTask)
 	}
 
@@ -77,7 +83,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 	for i := 0; i != successfullyRedispatched; i++ {
 		calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil))
 	}
-	calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errTaskProcessorNotRunning))
+	calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("processor shutdown")))
 	gomock.InOrder(calls...)
 
 	shutDownCh := make(chan struct{})
@@ -85,6 +91,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 		s.redispatchQueue,
 		s.mockQueueTaskProcessor,
 		s.logger,
+		s.metricsScope,
 		shutDownCh,
 	)
 
@@ -97,7 +104,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 	var calls []*gomock.Call
 
 	for i := 0; i != numTasks; i++ {
-		mockTask := NewMockqueueTask(s.controller)
+		mockTask := task.NewMockTask(s.controller)
 		s.redispatchQueue.Add(mockTask)
 		submitted := false
 		if rand.Intn(2) == 0 {
@@ -112,6 +119,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 		s.redispatchQueue,
 		s.mockQueueTaskProcessor,
 		s.logger,
+		s.metricsScope,
 		shutDownCh,
 	)
 

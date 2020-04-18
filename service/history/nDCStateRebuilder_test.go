@@ -39,6 +39,11 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
+	test "github.com/uber/cadence/service/history/testing"
 )
 
 type (
@@ -47,9 +52,9 @@ type (
 		*require.Assertions
 
 		controller          *gomock.Controller
-		mockShard           *shardContextTest
-		mockEventsCache     *MockeventsCache
-		mockTaskRefresher   *MockmutableStateTaskRefresher
+		mockShard           *shard.TestContext
+		mockEventsCache     *events.MockCache
+		mockTaskRefresher   *execution.MockMutableStateTaskRefresher
 		mockDomainCache     *cache.MockDomainCache
 		mockClusterMetadata *cluster.MockMetadata
 
@@ -73,24 +78,24 @@ func (s *nDCStateRebuilderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockTaskRefresher = NewMockmutableStateTaskRefresher(s.controller)
+	s.mockTaskRefresher = execution.NewMockMutableStateTaskRefresher(s.controller)
 
-	s.mockShard = newTestShardContext(
+	s.mockShard = shard.NewTestContext(
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
-		NewDynamicConfigForTest(),
+		config.NewForTest(),
 	)
 
-	s.mockHistoryV2Mgr = s.mockShard.resource.HistoryMgr
-	s.mockDomainCache = s.mockShard.resource.DomainCache
-	s.mockClusterMetadata = s.mockShard.resource.ClusterMetadata
-	s.mockEventsCache = s.mockShard.mockEventsCache
+	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
+	s.mockEventsCache = s.mockShard.MockEventsCache
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockEventsCache.EXPECT().putEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 
@@ -108,7 +113,7 @@ func (s *nDCStateRebuilderSuite) TearDownTest() {
 }
 
 func (s *nDCStateRebuilderSuite) TestInitializeBuilders() {
-	mutableState, stateBuilder := s.nDCStateRebuilder.initializeBuilders(testGlobalDomainEntry)
+	mutableState, stateBuilder := s.nDCStateRebuilder.initializeBuilders(test.GlobalDomainEntry)
 	s.NotNil(mutableState)
 	s.NotNil(stateBuilder)
 	s.NotNil(mutableState.GetVersionHistories())
@@ -300,7 +305,7 @@ func (s *nDCStateRebuilderSuite) TestRebuild() {
 		1234,
 		s.mockClusterMetadata,
 	), nil).AnyTimes()
-	s.mockTaskRefresher.EXPECT().refreshTasks(now, gomock.Any()).Return(nil).Times(1)
+	s.mockTaskRefresher.EXPECT().RefreshTasks(now, gomock.Any()).Return(nil).Times(1)
 
 	rebuildMutableState, rebuiltHistorySize, err := s.nDCStateRebuilder.rebuild(
 		ctx.Background(),

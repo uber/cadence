@@ -36,6 +36,10 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/ndc"
+	"github.com/uber/cadence/service/history/reset"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 // NOTE: terminology
@@ -107,19 +111,19 @@ type (
 		createWorkflow(
 			ctx ctx.Context,
 			now time.Time,
-			targetWorkflow nDCWorkflow,
+			targetWorkflow ndc.Workflow,
 		) error
 		updateWorkflow(
 			ctx ctx.Context,
 			now time.Time,
 			isWorkflowRebuilt bool,
-			targetWorkflow nDCWorkflow,
-			newWorkflow nDCWorkflow,
+			targetWorkflow ndc.Workflow,
+			newWorkflow ndc.Workflow,
 		) error
 		backfillWorkflow(
 			ctx ctx.Context,
 			now time.Time,
-			targetWorkflow nDCWorkflow,
+			targetWorkflow ndc.Workflow,
 			targetWorkflowEvents *persistence.WorkflowEvents,
 		) error
 
@@ -139,18 +143,18 @@ type (
 			domainID string,
 			workflowID string,
 			runID string,
-		) (nDCWorkflow, error)
+		) (ndc.Workflow, error)
 	}
 
 	nDCTransactionMgrImpl struct {
-		shard            ShardContext
+		shard            shard.Context
 		domainCache      cache.DomainCache
-		historyCache     *historyCache
+		executionCache   *execution.Cache
 		clusterMetadata  cluster.Metadata
 		historyV2Mgr     persistence.HistoryManager
 		serializer       persistence.PayloadSerializer
 		metricsClient    metrics.Client
-		workflowResetter workflowResetter
+		workflowResetter reset.WorkflowResetter
 		eventsReapplier  nDCEventsReapplier
 		logger           log.Logger
 
@@ -162,8 +166,8 @@ type (
 var _ nDCTransactionMgr = (*nDCTransactionMgrImpl)(nil)
 
 func newNDCTransactionMgr(
-	shard ShardContext,
-	historyCache *historyCache,
+	shard shard.Context,
+	executionCache *execution.Cache,
 	eventsReapplier nDCEventsReapplier,
 	logger log.Logger,
 ) *nDCTransactionMgrImpl {
@@ -171,14 +175,14 @@ func newNDCTransactionMgr(
 	transactionMgr := &nDCTransactionMgrImpl{
 		shard:           shard,
 		domainCache:     shard.GetDomainCache(),
-		historyCache:    historyCache,
+		executionCache:  executionCache,
 		clusterMetadata: shard.GetClusterMetadata(),
 		historyV2Mgr:    shard.GetHistoryManager(),
 		serializer:      shard.GetService().GetPayloadSerializer(),
 		metricsClient:   shard.GetMetricsClient(),
 		workflowResetter: newWorkflowResetter(
 			shard,
-			historyCache,
+			executionCache,
 			logger,
 		),
 		eventsReapplier: eventsReapplier,
@@ -195,7 +199,7 @@ func newNDCTransactionMgr(
 func (r *nDCTransactionMgrImpl) createWorkflow(
 	ctx ctx.Context,
 	now time.Time,
-	targetWorkflow nDCWorkflow,
+	targetWorkflow ndc.Workflow,
 ) error {
 
 	return r.createMgr.dispatchForNewWorkflow(
@@ -209,8 +213,8 @@ func (r *nDCTransactionMgrImpl) updateWorkflow(
 	ctx ctx.Context,
 	now time.Time,
 	isWorkflowRebuilt bool,
-	targetWorkflow nDCWorkflow,
-	newWorkflow nDCWorkflow,
+	targetWorkflow ndc.Workflow,
+	newWorkflow ndc.Workflow,
 ) error {
 
 	return r.updateMgr.dispatchForExistingWorkflow(
@@ -225,20 +229,20 @@ func (r *nDCTransactionMgrImpl) updateWorkflow(
 func (r *nDCTransactionMgrImpl) backfillWorkflow(
 	ctx ctx.Context,
 	now time.Time,
-	targetWorkflow nDCWorkflow,
+	targetWorkflow ndc.Workflow,
 	targetWorkflowEvents *persistence.WorkflowEvents,
 ) (retError error) {
 
 	defer func() {
 		if rec := recover(); rec != nil {
-			targetWorkflow.getReleaseFn()(errPanic)
+			targetWorkflow.GetReleaseFn()(errPanic)
 			panic(rec)
 		} else {
-			targetWorkflow.getReleaseFn()(retError)
+			targetWorkflow.GetReleaseFn()(retError)
 		}
 	}()
 
-	if _, err := targetWorkflow.getContext().persistNonFirstWorkflowEvents(
+	if _, err := targetWorkflow.GetContext().PersistNonFirstWorkflowEvents(
 		targetWorkflowEvents,
 	); err != nil {
 		return err
@@ -253,7 +257,7 @@ func (r *nDCTransactionMgrImpl) backfillWorkflow(
 		return err
 	}
 
-	return targetWorkflow.getContext().updateWorkflowExecutionWithNew(
+	return targetWorkflow.GetContext().UpdateWorkflowExecutionWithNew(
 		now,
 		updateMode,
 		nil,
@@ -265,17 +269,17 @@ func (r *nDCTransactionMgrImpl) backfillWorkflow(
 
 func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 	ctx ctx.Context,
-	targetWorkflow nDCWorkflow,
+	targetWorkflow ndc.Workflow,
 	targetWorkflowEvents *persistence.WorkflowEvents,
-) (persistence.UpdateWorkflowMode, transactionPolicy, error) {
+) (persistence.UpdateWorkflowMode, execution.TransactionPolicy, error) {
 
 	isCurrentWorkflow, err := r.isWorkflowCurrent(ctx, targetWorkflow)
 	if err != nil {
-		return 0, transactionPolicyActive, err
+		return 0, execution.TransactionPolicyActive, err
 	}
-	isWorkflowRunning := targetWorkflow.getMutableState().IsWorkflowExecutionRunning()
+	isWorkflowRunning := targetWorkflow.GetMutableState().IsWorkflowExecutionRunning()
 	targetWorkflowActiveCluster := r.clusterMetadata.ClusterNameForFailoverVersion(
-		targetWorkflow.getMutableState().GetDomainEntry().GetFailoverVersion(),
+		targetWorkflow.GetMutableState().GetDomainEntry().GetFailoverVersion(),
 	)
 	currentCluster := r.clusterMetadata.GetCurrentClusterName()
 	isActiveCluster := targetWorkflowActiveCluster == currentCluster
@@ -293,19 +297,19 @@ func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 		if isWorkflowRunning {
 			if _, err := r.eventsReapplier.reapplyEvents(
 				ctx,
-				targetWorkflow.getMutableState(),
+				targetWorkflow.GetMutableState(),
 				targetWorkflowEvents.Events,
-				targetWorkflow.getMutableState().GetExecutionInfo().RunID,
+				targetWorkflow.GetMutableState().GetExecutionInfo().RunID,
 			); err != nil {
-				return 0, transactionPolicyActive, err
+				return 0, execution.TransactionPolicyActive, err
 			}
-			return persistence.UpdateWorkflowModeUpdateCurrent, transactionPolicyActive, nil
+			return persistence.UpdateWorkflowModeUpdateCurrent, execution.TransactionPolicyActive, nil
 		}
 
 		// case 1.b
 		// need to reset target workflow (which is also the current workflow)
 		// to accept events to be reapplied
-		baseMutableState := targetWorkflow.getMutableState()
+		baseMutableState := targetWorkflow.GetMutableState()
 		domainID := baseMutableState.GetExecutionInfo().DomainID
 		workflowID := baseMutableState.GetExecutionInfo().WorkflowID
 		baseRunID := baseMutableState.GetExecutionInfo().RunID
@@ -320,22 +324,22 @@ func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 				tag.WorkflowID(workflowID),
 			)
 			r.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
-			return persistence.UpdateWorkflowModeBypassCurrent, transactionPolicyPassive, nil
+			return persistence.UpdateWorkflowModeBypassCurrent, execution.TransactionPolicyPassive, nil
 		}
 
 		baseVersionHistories := baseMutableState.GetVersionHistories()
 		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 		if err != nil {
-			return 0, transactionPolicyActive, err
+			return 0, execution.TransactionPolicyActive, err
 		}
 		baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
 		if err != nil {
-			return 0, transactionPolicyActive, err
+			return 0, execution.TransactionPolicyActive, err
 		}
 		baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
 		baseNextEventID := baseMutableState.GetNextEventID()
 
-		if err = r.workflowResetter.resetWorkflow(
+		if err = r.workflowResetter.ResetWorkflow(
 			ctx,
 			domainID,
 			workflowID,
@@ -350,25 +354,25 @@ func (r *nDCTransactionMgrImpl) backfillWorkflowEventsReapply(
 			eventsReapplicationResetWorkflowReason,
 			targetWorkflowEvents.Events,
 		); err != nil {
-			return 0, transactionPolicyActive, err
+			return 0, execution.TransactionPolicyActive, err
 		}
 		// after the reset of target workflow (current workflow) with additional events to be reapplied
 		// target workflow is no longer the current workflow
-		return persistence.UpdateWorkflowModeBypassCurrent, transactionPolicyPassive, nil
+		return persistence.UpdateWorkflowModeBypassCurrent, execution.TransactionPolicyPassive, nil
 	}
 
 	// case 2
 	//  find the current & active workflow to reapply
-	if err := targetWorkflow.getContext().reapplyEvents(
+	if err := targetWorkflow.GetContext().ReapplyEvents(
 		[]*persistence.WorkflowEvents{targetWorkflowEvents},
 	); err != nil {
-		return 0, transactionPolicyActive, err
+		return 0, execution.TransactionPolicyActive, err
 	}
 
 	if isCurrentWorkflow {
-		return persistence.UpdateWorkflowModeUpdateCurrent, transactionPolicyPassive, nil
+		return persistence.UpdateWorkflowModeUpdateCurrent, execution.TransactionPolicyPassive, nil
 	}
-	return persistence.UpdateWorkflowModeBypassCurrent, transactionPolicyPassive, nil
+	return persistence.UpdateWorkflowModeBypassCurrent, execution.TransactionPolicyPassive, nil
 }
 
 func (r *nDCTransactionMgrImpl) checkWorkflowExists(
@@ -426,10 +430,10 @@ func (r *nDCTransactionMgrImpl) loadNDCWorkflow(
 	domainID string,
 	workflowID string,
 	runID string,
-) (nDCWorkflow, error) {
+) (ndc.Workflow, error) {
 
 	// we need to check the current workflow execution
-	context, release, err := r.historyCache.getOrCreateWorkflowExecution(
+	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(
 		ctx,
 		domainID,
 		shared.WorkflowExecution{
@@ -441,28 +445,28 @@ func (r *nDCTransactionMgrImpl) loadNDCWorkflow(
 		return nil, err
 	}
 
-	msBuilder, err := context.loadWorkflowExecution()
+	msBuilder, err := context.LoadWorkflowExecution()
 	if err != nil {
 		// no matter what error happen, we need to retry
 		release(err)
 		return nil, err
 	}
-	return newNDCWorkflow(ctx, r.domainCache, r.clusterMetadata, context, msBuilder, release), nil
+	return ndc.NewWorkflow(ctx, r.domainCache, r.clusterMetadata, context, msBuilder, release), nil
 }
 
 func (r *nDCTransactionMgrImpl) isWorkflowCurrent(
 	ctx ctx.Context,
-	targetWorkflow nDCWorkflow,
+	targetWorkflow ndc.Workflow,
 ) (bool, error) {
 
 	// since we are not rebuilding the mutable state (when doing backfill) then we
 	// can trust the result from IsCurrentWorkflowGuaranteed
-	if targetWorkflow.getMutableState().IsCurrentWorkflowGuaranteed() {
+	if targetWorkflow.GetMutableState().IsCurrentWorkflowGuaranteed() {
 		return true, nil
 	}
 
 	// target workflow is not guaranteed to be current workflow, do additional check
-	executionInfo := targetWorkflow.getMutableState().GetExecutionInfo()
+	executionInfo := targetWorkflow.GetMutableState().GetExecutionInfo()
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
