@@ -18,12 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//TODO move this file to replication subfolder
+
 package history
 
 import (
 	ctx "context"
 	"errors"
 	"time"
+
+	"github.com/uber/cadence/service/history/replication"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -446,7 +450,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	lastReadTaskID int64,
 ) (*replicator.ReplicationMessages, error) {
 
-	if lastReadTaskID == emptyMessageID {
+	if lastReadTaskID == replication.EmptyMessageID {
 		lastReadTaskID = p.shard.GetClusterReplicationLevel(pollingCluster)
 	}
 

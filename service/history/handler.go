@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/history/replication"
+
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -66,7 +68,7 @@ type (
 		historyEventNotifier    events.Notifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
-		replicationTaskFetchers ReplicationTaskFetchers
+		replicationTaskFetchers replication.TaskFetchers
 		queueTaskProcessor      task.Processor
 	}
 )
@@ -125,7 +127,7 @@ func (h *Handler) Start() {
 		}
 	}
 
-	h.replicationTaskFetchers = NewReplicationTaskFetchers(
+	h.replicationTaskFetchers = replication.NewTaskFetchers(
 		h.GetLogger(),
 		h.config,
 		h.GetClusterMetadata().GetReplicationConsumerConfig(),
