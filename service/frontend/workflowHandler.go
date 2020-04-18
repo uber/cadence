@@ -24,6 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/client/frontend"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -366,6 +368,15 @@ func (wh *WorkflowHandler) UpdateDomain(
 	// don't require permission for failover request
 	if !isFailoverRequest(updateRequest) {
 		if err := checkPermission(wh.config, updateRequest.SecurityToken); err != nil {
+			return nil, err
+		}
+	}
+
+	if isGraceFailoverRequest(updateRequest) {
+		if err := wh.checkOngoingFailover(
+			ctx,
+			updateRequest.Name,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -3704,6 +3715,68 @@ func createServiceBusyError() *gen.ServiceBusyError {
 
 func isFailoverRequest(updateRequest *gen.UpdateDomainRequest) bool {
 	return updateRequest.ReplicationConfiguration != nil && updateRequest.ReplicationConfiguration.ActiveClusterName != nil
+}
+
+func isGraceFailoverRequest(updateRequest *gen.UpdateDomainRequest) bool {
+	return updateRequest.IsSetFailoverTimeoutInSeconds()
+}
+
+func (wh *WorkflowHandler) checkOngoingFailover(
+	ctx context.Context,
+	domainName *string,
+) error {
+
+	clusterMetadata := wh.GetClusterMetadata()
+	respChan := make(chan *gen.DescribeDomainResponse)
+	wg := &sync.WaitGroup{}
+
+	decribeDomain := func(
+		ctx context.Context,
+		client frontend.Client,
+		domainName *string,
+	) {
+		defer wg.Done()
+		resp, _ := client.DescribeDomain(
+			ctx,
+			&gen.DescribeDomainRequest{
+				Name: domainName,
+			},
+		)
+		respChan <- resp
+	}
+
+	for clusterName, cluster := range clusterMetadata.GetAllClusterInfo() {
+		if !cluster.Enabled {
+			continue
+		}
+		frontendClient := wh.GetRemoteFrontendClient(clusterName)
+		wg.Add(1)
+		go decribeDomain(
+			ctx,
+			frontendClient,
+			domainName,
+		)
+	}
+	wg.Wait()
+
+	var failoverVersion *int64
+	for resp := range respChan {
+		if resp == nil {
+			return &gen.InternalServiceError{
+				Message: "Failed to verify failover version from all clusters",
+			}
+		}
+		if failoverVersion == nil {
+			failoverVersion = resp.FailoverVersion
+		}
+		if failoverVersion != resp.FailoverVersion {
+			prevCluster := clusterMetadata.ClusterNameForFailoverVersion(*resp.FailoverVersion)
+			return &gen.BadRequestError{
+				Message: fmt.Sprintf("Concurrent failover is not allow. On-going failover in cluster %v", prevCluster),
+			}
+		}
+	}
+	return nil
 }
 
 func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.GetWorkflowExecutionHistoryRequest, domainID string) bool {
