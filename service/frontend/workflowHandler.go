@@ -3758,6 +3758,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 		)
 	}
 	wg.Wait()
+	close(respChan)
 
 	var failoverVersion *int64
 	for resp := range respChan {
