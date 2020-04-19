@@ -488,7 +488,6 @@ func (d *HandlerImpl) UpdateDomain(
 			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
 				// force failover cleanup graceful failover state
 				gracefulFailoverEndTime = nil
-				//TODO: failover state request dedup
 			}
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
