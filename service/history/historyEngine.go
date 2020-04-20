@@ -22,7 +22,7 @@ package history
 
 import (
 	"bytes"
-	ctx "context"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,7 +31,6 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -485,7 +484,7 @@ func (e *historyEngineImpl) generateFirstDecisionTask(
 
 // StartWorkflowExecution starts a workflow execution
 func (e *historyEngineImpl) StartWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	startRequest *h.StartWorkflowExecutionRequest,
 ) (resp *workflow.StartWorkflowExecutionResponse, retError error) {
 
@@ -508,7 +507,7 @@ type signalWithStartArg struct {
 }
 
 func (e *historyEngineImpl) startWorkflowHelper(
-	ctx ctx.Context,
+	ctx context.Context,
 	startRequest *h.StartWorkflowExecutionRequest,
 	domainEntry *cache.DomainCacheEntry,
 	metricsScope int,
@@ -606,7 +605,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		return nil, err
 	}
 
-	context := execution.NewContext(domainID, workflowExecution, e.shard, e.executionManager, e.logger)
+	wfContext := execution.NewContext(domainID, workflowExecution, e.shard, e.executionManager, e.logger)
 
 	now := e.timeSource.Now()
 	newWorkflow, newWorkflowEventsSeq, err := curMutableState.CloseTransactionAsSnapshot(
@@ -616,7 +615,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	if err != nil {
 		return nil, err
 	}
-	historySize, err := context.PersistFirstWorkflowEvents(newWorkflowEventsSeq[0])
+	historySize, err := wfContext.PersistFirstWorkflowEvents(newWorkflowEventsSeq[0])
 	if err != nil {
 		return nil, err
 	}
@@ -634,7 +633,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			return nil, err
 		}
 	}
-	err = context.CreateWorkflowExecution(
+	err = wfContext.CreateWorkflowExecution(
 		newWorkflow,
 		historySize,
 		now,
@@ -677,7 +676,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		); err != nil {
 			return nil, err
 		}
-		err = context.CreateWorkflowExecution(
+		err = wfContext.CreateWorkflowExecution(
 			newWorkflow,
 			historySize,
 			now,
@@ -697,7 +696,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 // GetMutableState retrieves the mutable state of the workflow execution
 func (e *historyEngineImpl) GetMutableState(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.GetMutableStateRequest,
 ) (*h.GetMutableStateResponse, error) {
 
@@ -706,7 +705,7 @@ func (e *historyEngineImpl) GetMutableState(
 
 // PollMutableState retrieves the mutable state of the workflow execution with long polling
 func (e *historyEngineImpl) PollMutableState(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.PollMutableStateRequest,
 ) (*h.PollMutableStateResponse, error) {
 
@@ -761,7 +760,7 @@ func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error
 }
 
 func (e *historyEngineImpl) getMutableStateOrPolling(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.GetMutableStateRequest,
 ) (*h.GetMutableStateResponse, error) {
 
@@ -852,7 +851,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 }
 
 func (e *historyEngineImpl) QueryWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.QueryWorkflowRequest,
 ) (retResp *h.QueryWorkflowResponse, retErr error) {
 
@@ -912,12 +911,12 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
-	context, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
 	if err != nil {
 		return nil, err
 	}
 	defer func() { release(retErr) }()
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := wfContext.LoadWorkflowExecution()
 	if err != nil {
 		return nil, err
 	}
@@ -1002,7 +1001,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 }
 
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
-	ctx ctx.Context,
+	ctx context.Context,
 	msResp *h.GetMutableStateResponse,
 	domainID string,
 	queryRequest *workflow.QueryWorkflowRequest,
@@ -1106,18 +1105,18 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 }
 
 func (e *historyEngineImpl) getMutableState(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
 ) (retResp *h.GetMutableStateResponse, retError error) {
 
-	context, release, retError := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
+	wfContext, release, retError := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
 	if retError != nil {
 		return
 	}
 	defer func() { release(retError) }()
 
-	mutableState, retError := context.LoadWorkflowExecution()
+	mutableState, retError := wfContext.LoadWorkflowExecution()
 	if retError != nil {
 		return
 	}
@@ -1128,7 +1127,7 @@ func (e *historyEngineImpl) getMutableState(
 	}
 
 	executionInfo := mutableState.GetExecutionInfo()
-	execution.RunId = context.GetExecution().RunId
+	execution.RunId = wfContext.GetExecution().RunId
 	workflowState, workflowCloseState := mutableState.GetWorkflowStateCloseStatus()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
@@ -1166,7 +1165,7 @@ func (e *historyEngineImpl) getMutableState(
 }
 
 func (e *historyEngineImpl) DescribeMutableState(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.DescribeMutableStateRequest,
 ) (response *h.DescribeMutableStateResponse, retError error) {
 
@@ -1227,7 +1226,7 @@ func (e *historyEngineImpl) toMutableStateJSON(msb execution.MutableState) (*str
 // 4. ClientFeatureVersion
 // 5. ClientImpl
 func (e *historyEngineImpl) ResetStickyTaskList(
-	ctx ctx.Context,
+	ctx context.Context,
 	resetRequest *h.ResetStickyTaskListRequest,
 ) (*h.ResetStickyTaskListResponse, error) {
 
@@ -1237,7 +1236,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 	}
 
 	err = e.updateWorkflowExecution(ctx, domainID, *resetRequest.Execution, false,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -1254,7 +1253,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (e *historyEngineImpl) DescribeWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.DescribeWorkflowExecutionRequest,
 ) (retResp *workflow.DescribeWorkflowExecutionResponse, retError error) {
 
@@ -1265,13 +1264,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	execution := *request.Request.Execution
 
-	context, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
+	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
 	if err0 != nil {
 		return nil, err0
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err1 := context.LoadWorkflowExecution()
+	mutableState, err1 := wfContext.LoadWorkflowExecution()
 	if err1 != nil {
 		return nil, err1
 	}
@@ -1388,7 +1387,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 }
 
 func (e *historyEngineImpl) RecordActivityTaskStarted(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.RecordActivityTaskStartedRequest,
 ) (*h.RecordActivityTaskStartedResponse, error) {
 
@@ -1409,7 +1408,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 
 	response := &h.RecordActivityTaskStartedResponse{}
 	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -1480,7 +1479,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 
 // ScheduleDecisionTask schedules a decision if no outstanding decision found
 func (e *historyEngineImpl) ScheduleDecisionTask(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.ScheduleDecisionTaskRequest,
 ) error {
 	return e.decisionHandler.handleDecisionTaskScheduled(ctx, req)
@@ -1488,7 +1487,7 @@ func (e *historyEngineImpl) ScheduleDecisionTask(
 
 // RecordDecisionTaskStarted starts a decision
 func (e *historyEngineImpl) RecordDecisionTaskStarted(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.RecordDecisionTaskStartedRequest,
 ) (*h.RecordDecisionTaskStartedResponse, error) {
 	return e.decisionHandler.handleDecisionTaskStarted(ctx, request)
@@ -1496,7 +1495,7 @@ func (e *historyEngineImpl) RecordDecisionTaskStarted(
 
 // RespondDecisionTaskCompleted completes a decision task
 func (e *historyEngineImpl) RespondDecisionTaskCompleted(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RespondDecisionTaskCompletedRequest,
 ) (*h.RespondDecisionTaskCompletedResponse, error) {
 	return e.decisionHandler.handleDecisionTaskCompleted(ctx, req)
@@ -1504,7 +1503,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(
 
 // RespondDecisionTaskFailed fails a decision
 func (e *historyEngineImpl) RespondDecisionTaskFailed(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RespondDecisionTaskFailedRequest,
 ) error {
 	return e.decisionHandler.handleDecisionTaskFailed(ctx, req)
@@ -1512,7 +1511,7 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(
 
 // RespondActivityTaskCompleted completes an activity task.
 func (e *historyEngineImpl) RespondActivityTaskCompleted(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RespondActivityTaskCompletedRequest,
 ) error {
 
@@ -1537,7 +1536,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	var activityStartedTime time.Time
 	var taskList string
 	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -1586,7 +1585,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 
 // RespondActivityTaskFailed completes an activity task failure.
 func (e *historyEngineImpl) RespondActivityTaskFailed(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RespondActivityTaskFailedRequest,
 ) error {
 
@@ -1611,7 +1610,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	var activityStartedTime time.Time
 	var taskList string
 	err = e.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
-		func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
@@ -1670,7 +1669,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 
 // RespondActivityTaskCanceled completes an activity task failure.
 func (e *historyEngineImpl) RespondActivityTaskCanceled(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RespondActivityTaskCanceledRequest,
 ) error {
 
@@ -1695,7 +1694,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	var activityStartedTime time.Time
 	var taskList string
 	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -1748,12 +1747,12 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	return err
 }
 
-// RecordActivityTaskHeartbeat records an hearbeat for a task.
+// RecordActivityTaskHeartbeat records an heartbeat for a task.
 // This method can be used for two purposes.
 // - For reporting liveness of the activity.
 // - For reporting progress of the activity, this can be done even if the liveness is not configured.
 func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RecordActivityTaskHeartbeatRequest,
 ) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
 
@@ -1776,7 +1775,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 
 	var cancelRequested bool
 	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				e.logger.Debug("Heartbeat failed")
 				return ErrWorkflowCompleted
@@ -1823,7 +1822,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 
 // RequestCancelWorkflowExecution records request cancellation event for workflow execution
 func (e *historyEngineImpl) RequestCancelWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	req *h.RequestCancelWorkflowExecutionRequest,
 ) error {
 
@@ -1842,7 +1841,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	}
 
 	return e.updateWorkflow(ctx, domainID, workflowExecution,
-		func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
@@ -1880,7 +1879,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 }
 
 func (e *historyEngineImpl) SignalWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	signalRequest *h.SignalWorkflowExecutionRequest,
 ) error {
 
@@ -1902,7 +1901,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		ctx,
 		domainID,
 		workflowExecution,
-		func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			executionInfo := mutableState.GetExecutionInfo()
 			createDecisionTask := true
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
@@ -1955,7 +1954,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 }
 
 func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest,
 ) (retResp *workflow.StartWorkflowExecutionResponse, retError error) {
 
@@ -1973,14 +1972,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	var prevMutableState execution.MutableState
 	attempt := 0
 
-	context, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
 
 	if err0 == nil {
 		defer func() { release(retError) }()
 	Just_Signal_Loop:
 		for ; attempt < conditionalRetryCount; attempt++ {
 			// workflow not exist, will create workflow then signal
-			mutableState, err1 := context.LoadWorkflowExecution()
+			mutableState, err1 := wfContext.LoadWorkflowExecution()
 			if err1 != nil {
 				if _, ok := err1.(*workflow.EntityNotExistsError); ok {
 					break
@@ -2020,13 +2019,13 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 			// the history and try the operation again.
-			if err := context.UpdateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now()); err != nil {
+			if err := wfContext.UpdateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now()); err != nil {
 				if err == execution.ErrConflict {
 					continue Just_Signal_Loop
 				}
 				return nil, err
 			}
-			return &workflow.StartWorkflowExecutionResponse{RunId: context.GetExecution().RunId}, nil
+			return &workflow.StartWorkflowExecutionResponse{RunId: wfContext.GetExecution().RunId}, nil
 		} // end for Just_Signal_Loop
 		if attempt == conditionalRetryCount {
 			return nil, ErrMaxAttemptsExceeded
@@ -2054,7 +2053,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
 func (e *historyEngineImpl) RemoveSignalMutableState(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.RemoveSignalMutableStateRequest,
 ) error {
 
@@ -2070,7 +2069,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	}
 
 	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -2082,7 +2081,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 }
 
 func (e *historyEngineImpl) TerminateWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	terminateRequest *h.TerminateWorkflowExecutionRequest,
 ) error {
 
@@ -2102,7 +2101,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		ctx,
 		domainID,
 		workflowExecution,
-		func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
@@ -2120,7 +2119,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 
 // RecordChildExecutionCompleted records the completion of child execution into parent execution history
 func (e *historyEngineImpl) RecordChildExecutionCompleted(
-	ctx ctx.Context,
+	ctx context.Context,
 	completionRequest *h.RecordChildExecutionCompletedRequest,
 ) error {
 
@@ -2136,7 +2135,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	}
 
 	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
-		func(context execution.Context, mutableState execution.MutableState) error {
+		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
 			}
@@ -2174,7 +2173,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 }
 
 func (e *historyEngineImpl) ReplicateEvents(
-	ctx ctx.Context,
+	ctx context.Context,
 	replicateRequest *h.ReplicateEventsRequest,
 ) error {
 
@@ -2182,7 +2181,7 @@ func (e *historyEngineImpl) ReplicateEvents(
 }
 
 func (e *historyEngineImpl) ReplicateRawEvents(
-	ctx ctx.Context,
+	ctx context.Context,
 	replicateRequest *h.ReplicateRawEventsRequest,
 ) error {
 
@@ -2190,7 +2189,7 @@ func (e *historyEngineImpl) ReplicateRawEvents(
 }
 
 func (e *historyEngineImpl) ReplicateEventsV2(
-	ctx ctx.Context,
+	ctx context.Context,
 	replicateRequest *h.ReplicateEventsV2Request,
 ) error {
 
@@ -2198,7 +2197,7 @@ func (e *historyEngineImpl) ReplicateEventsV2(
 }
 
 func (e *historyEngineImpl) SyncShardStatus(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.SyncShardStatusRequest,
 ) error {
 
@@ -2216,7 +2215,7 @@ func (e *historyEngineImpl) SyncShardStatus(
 }
 
 func (e *historyEngineImpl) SyncActivity(
-	ctx ctx.Context,
+	ctx context.Context,
 	request *h.SyncActivityRequest,
 ) (retError error) {
 
@@ -2224,7 +2223,7 @@ func (e *historyEngineImpl) SyncActivity(
 }
 
 func (e *historyEngineImpl) ResetWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	resetRequest *h.ResetWorkflowExecutionRequest,
 ) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 
@@ -2360,7 +2359,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 }
 
 func (e *historyEngineImpl) updateWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
 	action updateWorkflowActionFunc,
@@ -2376,7 +2375,7 @@ func (e *historyEngineImpl) updateWorkflow(
 }
 
 func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
 	action updateWorkflowActionFunc,
@@ -2398,11 +2397,11 @@ func (e *historyEngineImpl) updateWorkflowHelper(
 
 UpdateHistoryLoop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		context := workflowContext.getContext()
+		wfContext := workflowContext.getContext()
 		mutableState := workflowContext.getMutableState()
 
 		// conduct caller action
-		postActions, err := action(context, mutableState)
+		postActions, err := action(wfContext, mutableState)
 		if err != nil {
 			if err == ErrStaleState {
 				// Handler detected that cached workflow mutable could potentially be stale
@@ -2451,11 +2450,11 @@ UpdateHistoryLoop:
 
 // TODO: remove and use updateWorkflowExecutionWithAction
 func (e *historyEngineImpl) updateWorkflowExecution(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
 	createDecisionTask bool,
-	action func(context execution.Context, mutableState execution.MutableState) error,
+	action func(wfContext execution.Context, mutableState execution.MutableState) error,
 ) error {
 
 	return e.updateWorkflowExecutionWithAction(
@@ -2468,11 +2467,11 @@ func (e *historyEngineImpl) updateWorkflowExecution(
 
 func getUpdateWorkflowActionFunc(
 	createDecisionTask bool,
-	action func(context execution.Context, mutableState execution.MutableState) error,
+	action func(wfContext execution.Context, mutableState execution.MutableState) error,
 ) updateWorkflowActionFunc {
 
-	return func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
-		err := action(context, mutableState)
+	return func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		err := action(wfContext, mutableState)
 		if err != nil {
 			return nil, err
 		}
@@ -2484,7 +2483,7 @@ func getUpdateWorkflowActionFunc(
 }
 
 func (e *historyEngineImpl) failDecision(
-	context execution.Context,
+	wfContext execution.Context,
 	scheduleID int64,
 	startedID int64,
 	cause workflow.DecisionTaskFailedCause,
@@ -2493,10 +2492,10 @@ func (e *historyEngineImpl) failDecision(
 ) (execution.MutableState, error) {
 
 	// Clear any updates we have accumulated so far
-	context.Clear()
+	wfContext.Clear()
 
 	// Reload workflow execution so we can apply the decision task failure event
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := wfContext.LoadWorkflowExecution()
 	if err != nil {
 		return nil, err
 	}
@@ -2761,7 +2760,7 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 }
 
 func (e *historyEngineImpl) GetReplicationMessages(
-	ctx ctx.Context,
+	ctx context.Context,
 	pollingCluster string,
 	lastReadMessageID int64,
 ) (*r.ReplicationMessages, error) {
@@ -2789,7 +2788,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 }
 
 func (e *historyEngineImpl) GetDLQReplicationMessages(
-	ctx ctx.Context,
+	ctx context.Context,
 	taskInfos []*r.ReplicationTaskInfo,
 ) ([]*r.ReplicationTask, error) {
 
@@ -2811,7 +2810,7 @@ func (e *historyEngineImpl) GetDLQReplicationMessages(
 }
 
 func (e *historyEngineImpl) ReapplyEvents(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainUUID string,
 	workflowID string,
 	runID string,
@@ -2832,7 +2831,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		ctx,
 		domainID,
 		currentExecution,
-		func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			// Filter out reapply event from the same cluster
 			toReapplyEvents := make([]*workflow.HistoryEvent, len(reapplyEvents))
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()
@@ -2902,7 +2901,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 						ctx,
 						e.shard.GetDomainCache(),
 						e.shard.GetClusterMetadata(),
-						context,
+						wfContext,
 						mutableState,
 						execution.NoopReleaseFn,
 					),
@@ -2996,7 +2995,7 @@ func (e *historyEngineImpl) MergeDLQMessages(
 }
 
 func (e *historyEngineImpl) RefreshWorkflowTasks(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainUUID string,
 	workflowExecution workflow.WorkflowExecution,
 ) (retError error) {
@@ -3007,13 +3006,13 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	context, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
 	if err != nil {
 		return err
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := wfContext.LoadWorkflowExecution()
 	if err != nil {
 		return err
 	}
@@ -3036,7 +3035,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 
-	err = context.UpdateWorkflowExecutionAsActive(now)
+	err = wfContext.UpdateWorkflowExecutionAsActive(now)
 	if err != nil {
 		return err
 	}
@@ -3044,13 +3043,13 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 }
 
 func (e *historyEngineImpl) loadWorkflowOnce(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
 ) (workflowContext, error) {
 
-	context, release, err := e.executionCache.GetOrCreateWorkflowExecution(
+	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(
 		ctx,
 		domainID,
 		workflow.WorkflowExecution{
@@ -3062,17 +3061,17 @@ func (e *historyEngineImpl) loadWorkflowOnce(
 		return nil, err
 	}
 
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := wfContext.LoadWorkflowExecution()
 	if err != nil {
 		release(err)
 		return nil, err
 	}
 
-	return newWorkflowContext(context, release, mutableState), nil
+	return newWorkflowContext(wfContext, release, mutableState), nil
 }
 
 func (e *historyEngineImpl) loadWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
