@@ -59,6 +59,11 @@ var (
 )
 
 type (
+	// TaskProcessor is responsible for processing replication tasks for a shard.
+	TaskProcessor interface {
+		common.Daemon
+	}
+
 	// taskProcessorImpl is responsible for processing replication tasks for a shard.
 	taskProcessorImpl struct {
 		currentCluster    string
@@ -82,11 +87,6 @@ type (
 		requestChan   chan<- *request
 		syncShardChan chan *r.SyncShardStatus
 		done          chan struct{}
-	}
-
-	// TaskProcessor is responsible for processing replication tasks for a shard.
-	TaskProcessor interface {
-		common.Daemon
 	}
 
 	request struct {
