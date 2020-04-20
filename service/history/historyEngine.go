@@ -29,6 +29,9 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/yarpc/yarpcerrors"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	r "github.com/uber/cadence/.gen/go/replicator"
@@ -59,8 +62,6 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (
