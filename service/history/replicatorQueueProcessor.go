@@ -27,8 +27,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/service/history/replication"
-
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -450,7 +448,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	lastReadTaskID int64,
 ) (*replicator.ReplicationMessages, error) {
 
-	if lastReadTaskID == replication.EmptyMessageID {
+	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = p.shard.GetClusterReplicationLevel(pollingCluster)
 	}
 

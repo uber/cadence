@@ -45,17 +45,6 @@ const (
 )
 
 type (
-	// taskFetcherImpl is the implementation of fetching replication messages.
-	taskFetcherImpl struct {
-		status         int32
-		currentCluster string
-		sourceCluster  string
-		config         *config.Config
-		logger         log.Logger
-		remotePeer     admin.Client
-		requestChan    chan *request
-		done           chan struct{}
-	}
 	// TaskFetcher is responsible for fetching replication messages from remote DC.
 	TaskFetcher interface {
 		common.Daemon
@@ -69,6 +58,18 @@ type (
 		common.Daemon
 
 		GetFetchers() []TaskFetcher
+	}
+
+	// taskFetcherImpl is the implementation of fetching replication messages.
+	taskFetcherImpl struct {
+		status         int32
+		currentCluster string
+		sourceCluster  string
+		config         *config.Config
+		logger         log.Logger
+		remotePeer     admin.Client
+		requestChan    chan *request
+		done           chan struct{}
 	}
 
 	// taskFetchersImpl is a group of fetchers, one per source DC.

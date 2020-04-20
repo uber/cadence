@@ -51,8 +51,6 @@ const (
 	replicationTimeout               = 30 * time.Second
 	taskErrorRetryBackoffCoefficient = 1.2
 	dlqErrorRetryWait                = time.Second
-	// EmptyMessageID is the default start message ID
-	EmptyMessageID = -1
 )
 
 var (
@@ -135,8 +133,8 @@ func NewTaskProcessor(
 		requestChan:            taskFetcher.GetRequestChan(),
 		syncShardChan:          make(chan *r.SyncShardStatus),
 		done:                   make(chan struct{}),
-		lastProcessedMessageID: EmptyMessageID,
-		lastRetrievedMessageID: EmptyMessageID,
+		lastProcessedMessageID: common.EmptyMessageID,
+		lastRetrievedMessageID: common.EmptyMessageID,
 	}
 }
 
