@@ -23,6 +23,8 @@ package resource
 import (
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common/blobstore"
+
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	"github.com/uber/cadence/client"
@@ -65,6 +67,7 @@ type (
 		GetMetricsClient() metrics.Client
 		GetArchiverProvider() provider.ArchiverProvider
 		GetMessagingClient() messaging.Client
+		GetBlobstoreClient() blobstore.Client
 
 		// membership infos
 
