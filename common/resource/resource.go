@@ -23,8 +23,6 @@ package resource
 import (
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/common/blobstore"
-
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	"github.com/uber/cadence/client"
@@ -35,6 +33,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
