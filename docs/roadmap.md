@@ -9,7 +9,6 @@ Please contact [Cadence discussion group](https://groups.google.com/d/forum/cade
 * [Visibility on Elastic Search](https://github.com/uber/cadence/blob/master/docs/visibility-on-elasticsearch.md)
 * Scalable tasklist
 * MySQL support
-* [Visibility on ElasticSearch](https://github.com/uber/cadence/blob/master/docs/visibility-on-elasticsearch.md)
 
 ## Q4 2019
 
@@ -24,19 +23,18 @@ Please contact [Cadence discussion group](https://groups.google.com/d/forum/cade
 * Service availability and reliability improvements
 * [Domain level AuthN and AuthZ support](https://github.com/uber/cadence/issues/2833)
 * Graceful domain failover design
-* Multi-tenancy improvements and task processing redesign
 * UI bug fixes and performance improvements
 
 ## Q2 2020
 
 * Kafka deprecation for Cadence replication
 * Graceful domain failover
-* Multi-tanancy improvements and task processing
+* Multi-tenancy task prioritization and resource isolation
 * UI and CLI feature parity
-* GRPC support
 
 ## Q3 2020 and beyond
 
+* GRPC support
 * Parent-child affinity
 * Task priority
 * Reset 2.0 (more flexibility and handle child)
