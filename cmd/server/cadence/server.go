@@ -207,7 +207,7 @@ func (s *server) startService() common.Daemon {
 	params.ArchiverProvider = provider.NewArchiverProvider(s.cfg.Archival.History.Provider, s.cfg.Archival.Visibility.Provider)
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
 	params.Authorizer = authorization.NewNopAuthorizer()
-	params.BlobstoreClient, err = filestore.NewFilestoreClient(s.cfg.Blobstore.FileBlobstore)
+	params.BlobstoreClient, err = filestore.NewFilestoreClient(s.cfg.Blobstore.Filestore)
 	if err != nil {
 		log.Printf("failed to create file blobstore client, will continue startup without it: %v", err)
 		params.BlobstoreClient = nil
