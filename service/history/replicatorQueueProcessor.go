@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//TODO move this file to replication subfolder
+
 package history
 
 import (
@@ -37,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -44,7 +47,7 @@ type (
 		currentClusterName    string
 		shard                 shard.Context
 		executionCache        *execution.Cache
-		replicationTaskFilter taskFilter
+		replicationTaskFilter task.Filter
 		executionMgr          persistence.ExecutionManager
 		historyV2Mgr          persistence.HistoryManager
 		replicator            messaging.Producer
@@ -97,7 +100,7 @@ func newReplicatorQueueProcessor(
 
 	logger = logger.WithTags(tag.ComponentReplicatorQueue)
 
-	replicationTaskFilter := func(taskInfo queueTaskInfo) (bool, error) {
+	replicationTaskFilter := func(taskInfo task.Info) (bool, error) {
 		return true, nil
 	}
 
@@ -140,7 +143,7 @@ func newReplicatorQueueProcessor(
 	return processor
 }
 
-func (p *replicatorQueueProcessorImpl) getTaskFilter() taskFilter {
+func (p *replicatorQueueProcessorImpl) getTaskFilter() task.Filter {
 	return p.replicationTaskFilter
 }
 
@@ -296,7 +299,7 @@ func GenerateReplicationTask(
 	return ret, newRunID, nil
 }
 
-func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {
+func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]task.Info, bool, error) {
 	return p.readTasksWithBatchSize(readLevel, p.options.BatchSize())
 }
 
@@ -445,7 +448,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 	lastReadTaskID int64,
 ) (*replicator.ReplicationMessages, error) {
 
-	if lastReadTaskID == emptyMessageID {
+	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = p.shard.GetClusterReplicationLevel(pollingCluster)
 	}
 
@@ -528,7 +531,7 @@ func (p *replicatorQueueProcessorImpl) getTask(
 	return p.toReplicationTask(ctx, task)
 }
 
-func (p *replicatorQueueProcessorImpl) readTasksWithBatchSize(readLevel int64, batchSize int) ([]queueTaskInfo, bool, error) {
+func (p *replicatorQueueProcessorImpl) readTasksWithBatchSize(readLevel int64, batchSize int) ([]task.Info, bool, error) {
 	response, err := p.executionMgr.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
 		ReadLevel:    readLevel,
 		MaxReadLevel: p.shard.GetTransferMaxReadLevel(),
@@ -539,7 +542,7 @@ func (p *replicatorQueueProcessorImpl) readTasksWithBatchSize(readLevel int64, b
 		return nil, false, err
 	}
 
-	tasks := make([]queueTaskInfo, len(response.Tasks))
+	tasks := make([]task.Info, len(response.Tasks))
 	for i := range response.Tasks {
 		tasks[i] = response.Tasks[i]
 	}
@@ -549,7 +552,7 @@ func (p *replicatorQueueProcessorImpl) readTasksWithBatchSize(readLevel int64, b
 
 func (p *replicatorQueueProcessorImpl) toReplicationTask(
 	ctx ctx.Context,
-	qTask queueTaskInfo,
+	qTask task.Info,
 ) (*replicator.ReplicationTask, error) {
 
 	task, ok := qTask.(*persistence.ReplicationTaskInfo)

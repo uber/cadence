@@ -373,7 +373,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 	if updateRequest.GetName() == "" {
 		return nil, errDomainNotSet
 	}
-
+	// TODO: call remote clusters to verify domain data
 	resp, err := wh.domainHandler.UpdateDomain(ctx, updateRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
@@ -1965,7 +1965,12 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		token.IsWorkflowRunning = isWorkflowRunning
 		token.PersistenceToken = nil
 	}
-	isRawHistoryEnabled := wh.config.SendRawWorkflowHistory(domainName)
+
+	call := yarpc.CallFromContext(ctx)
+	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
+	clientImpl := call.Header(common.ClientImplHeaderName)
+	supportsRawHistoryQuery := wh.versionChecker.SupportsRawHistoryQuery(clientImpl, clientFeatureVersion) == nil
+	isRawHistoryEnabled := wh.config.SendRawWorkflowHistory(domainName) && supportsRawHistoryQuery
 
 	history := &gen.History{}
 	history.Events = []*gen.HistoryEvent{}

@@ -45,11 +45,13 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/task"
+	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 )
 
 // Handler - Thrift handler interface for history service
@@ -65,8 +67,8 @@ type (
 		historyEventNotifier    events.Notifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
-		replicationTaskFetchers ReplicationTaskFetchers
-		queueTaskProcessor      queueTaskProcessor
+		replicationTaskFetchers replication.TaskFetchers
+		queueTaskProcessor      task.Processor
 	}
 )
 
@@ -124,7 +126,7 @@ func (h *Handler) Start() {
 		}
 	}
 
-	h.replicationTaskFetchers = NewReplicationTaskFetchers(
+	h.replicationTaskFetchers = replication.NewTaskFetchers(
 		h.GetLogger(),
 		h.config,
 		h.GetClusterMetadata().GetReplicationConsumerConfig(),
@@ -136,7 +138,7 @@ func (h *Handler) Start() {
 
 	if h.config.EnablePriorityTaskProcessor() {
 		var err error
-		taskPriorityAssigner := newTaskPriorityAssigner(
+		taskPriorityAssigner := task.NewPriorityAssigner(
 			h.GetClusterMetadata().GetCurrentClusterName(),
 			h.GetDomainCache(),
 			h.GetLogger(),
@@ -144,19 +146,19 @@ func (h *Handler) Start() {
 			h.config,
 		)
 
-		schedulerType := task.SchedulerType(h.config.TaskSchedulerType())
-		queueTaskProcessorOptions := &queueTaskProcessorOptions{
-			schedulerType: schedulerType,
+		schedulerType := t.SchedulerType(h.config.TaskSchedulerType())
+		processorOptions := &task.ProcessorOptions{
+			SchedulerType: schedulerType,
 		}
 		switch schedulerType {
-		case task.SchedulerTypeFIFO:
-			queueTaskProcessorOptions.fifoSchedulerOptions = &task.FIFOTaskSchedulerOptions{
+		case t.SchedulerTypeFIFO:
+			processorOptions.FifoSchedulerOptions = &t.FIFOTaskSchedulerOptions{
 				QueueSize:   h.config.TaskSchedulerQueueSize(),
 				WorkerCount: h.config.TaskSchedulerWorkerCount(),
 				RetryPolicy: common.CreatePersistanceRetryPolicy(),
 			}
-		case task.SchedulerTypeWRR:
-			queueTaskProcessorOptions.wRRSchedulerOptions = &task.WeightedRoundRobinTaskSchedulerOptions{
+		case t.SchedulerTypeWRR:
+			processorOptions.WRRSchedulerOptions = &t.WeightedRoundRobinTaskSchedulerOptions{
 				Weights:     h.config.TaskSchedulerRoundRobinWeights,
 				QueueSize:   h.config.TaskSchedulerQueueSize(),
 				WorkerCount: h.config.TaskSchedulerWorkerCount(),
@@ -165,9 +167,9 @@ func (h *Handler) Start() {
 		default:
 			h.GetLogger().Fatal("Unknown task scheduler type", tag.Value(schedulerType))
 		}
-		h.queueTaskProcessor, err = newQueueTaskProcessor(
+		h.queueTaskProcessor, err = task.NewProcessor(
 			taskPriorityAssigner,
-			queueTaskProcessorOptions,
+			processorOptions,
 			h.GetLogger(),
 			h.GetMetricsClient(),
 		)
