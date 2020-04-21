@@ -21,8 +21,9 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/blobstore"
 	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/blobstore"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 

@@ -21,11 +21,12 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/blobstore"
 	"math/rand"
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/blobstore"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"

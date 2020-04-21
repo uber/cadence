@@ -21,9 +21,10 @@
 package cadence
 
 import (
-	"github.com/uber/cadence/common/blobstore/filestore"
 	"log"
 	"time"
+
+	"github.com/uber/cadence/common/blobstore/filestore"
 
 	"github.com/uber/cadence/common/authorization"
 

@@ -21,11 +21,12 @@
 package service
 
 import (
-	"github.com/uber/cadence/common/blobstore"
 	"math/rand"
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/blobstore"
 
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 

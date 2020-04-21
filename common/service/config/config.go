@@ -104,10 +104,12 @@ type (
 		LogLevel string `yaml:"logLevel"`
 	}
 
+	// Blobstore contains the config for blobstore
 	Blobstore struct {
-		FileBlobstore *FileBlobstore
+		Filestore *FileBlobstore `yaml:"filestore"`
 	}
 
+	// FileBlobstore contains the config for a file backed blobstore
 	FileBlobstore struct {
 		OutputDirectory string `yaml:"outputDirectory"`
 	}
