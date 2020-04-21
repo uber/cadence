@@ -24,6 +24,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/uber/cadence/common/blobstore/filestore"
+
 	"github.com/uber/cadence/common/authorization"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -203,10 +205,13 @@ func (s *server) startService() common.Daemon {
 	)
 
 	params.ArchiverProvider = provider.NewArchiverProvider(s.cfg.Archival.History.Provider, s.cfg.Archival.Visibility.Provider)
-
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
-
 	params.Authorizer = authorization.NewNopAuthorizer()
+	params.BlobstoreClient, err = filestore.NewFileBlobstore(s.cfg.Blobstore.FileBlobstore)
+	if err != nil {
+		log.Printf("failed to create blobstore client from file: %v", err)
+		params.BlobstoreClient = nil
+	}
 
 	params.Logger.Info("Starting service " + s.name)
 

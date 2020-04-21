@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/blobstore"
+
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 
 	"github.com/uber/cadence/common/authorization"
@@ -70,6 +72,7 @@ type (
 		ReplicatorConfig         config.Replicator
 		MetricsClient            metrics.Client
 		MessagingClient          messaging.Client
+		BlobstoreClient          blobstore.Client
 		ESClient                 es.Client
 		ESConfig                 *es.Config
 		DynamicConfig            dynamicconfig.Client
@@ -115,6 +118,7 @@ type (
 		archivalMetadata       archiver.ArchivalMetadata
 		archiverProvider       provider.ArchiverProvider
 		serializer             persistence.PayloadSerializer
+		blobstoreClient        blobstore.Client
 	}
 )
 
@@ -142,6 +146,7 @@ func New(params *BootstrapParams) Service {
 		archivalMetadata:      params.ArchivalMetadata,
 		archiverProvider:      params.ArchiverProvider,
 		serializer:            persistence.NewPayloadSerializer(),
+		blobstoreClient:       params.BlobstoreClient,
 	}
 
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.GetLogger(), params.InstanceID)

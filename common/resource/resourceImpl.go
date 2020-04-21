@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/blobstore"
+
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -84,6 +86,7 @@ type (
 		messagingClient   messaging.Client
 		archivalMetadata  archiver.ArchivalMetadata
 		archiverProvider  provider.ArchiverProvider
+		blobstoreClient   blobstore.Client
 
 		// membership infos
 
@@ -291,6 +294,7 @@ func New(
 		messagingClient:   params.MessagingClient,
 		archivalMetadata:  params.ArchivalMetadata,
 		archiverProvider:  params.ArchiverProvider,
+		blobstoreClient:   params.BlobstoreClient,
 
 		// membership infos
 
@@ -449,6 +453,10 @@ func (h *Impl) GetArchivalMetadata() archiver.ArchivalMetadata {
 // GetArchiverProvider return archival provider
 func (h *Impl) GetArchiverProvider() provider.ArchiverProvider {
 	return h.archiverProvider
+}
+
+func (h *Impl) GetBlobstoreClient() blobstore.Client {
+	return h.blobstoreClient
 }
 
 // membership infos

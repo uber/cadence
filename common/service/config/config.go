@@ -68,6 +68,8 @@ type (
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
+		// Blobstore is the config for blobstore
+		Blobstore Blobstore `yaml:"blobstore"`
 	}
 
 	// Service contains the service specific config items
@@ -315,6 +317,16 @@ type (
 		// If FlushBytes is unspecified, it defaults  to 1432 bytes, which is
 		// considered safe for local traffic.
 		FlushBytes int `yaml:"flushBytes"`
+	}
+
+	// Blobstore contains the config for blobstore
+	Blobstore struct {
+		FileBlobstore *FileBlobstore
+	}
+
+	// FileBlobstore contains the config for file blobstore
+	FileBlobstore struct {
+		OutputDirectory string `yaml:"outputDirectory"`
 	}
 
 	// Archival contains the config for archival
