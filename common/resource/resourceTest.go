@@ -24,6 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/blobstore"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
@@ -69,6 +70,7 @@ type (
 		MetricsClient     metrics.Client
 		ArchivalMetadata  *archiver.MockArchivalMetadata
 		ArchiverProvider  *provider.MockArchiverProvider
+		BlobstoreClient   blobstore.Client
 
 		// membership infos
 
@@ -272,6 +274,11 @@ func (s *Test) GetMetricsClient() metrics.Client {
 // GetMessagingClient for testing
 func (s *Test) GetMessagingClient() messaging.Client {
 	panic("user should implement this method for test")
+}
+
+// GetBlobstoreClient for testing
+func (s *Test) GetBlobstoreClient() blobstore.Client {
+	return s.BlobstoreClient
 }
 
 // GetArchivalMetadata for testing

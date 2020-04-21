@@ -21,6 +21,7 @@
 package service
 
 import (
+	"github.com/uber/cadence/common/blobstore"
 	"math/rand"
 	"os"
 	"sync/atomic"
@@ -70,6 +71,7 @@ type (
 		ReplicatorConfig         config.Replicator
 		MetricsClient            metrics.Client
 		MessagingClient          messaging.Client
+		BlobstoreClient          blobstore.Client
 		ESClient                 es.Client
 		ESConfig                 *es.Config
 		DynamicConfig            dynamicconfig.Client
@@ -110,6 +112,7 @@ type (
 		metricsClient          metrics.Client
 		clusterMetadata        cluster.Metadata
 		messagingClient        messaging.Client
+		blobstoreClient        blobstore.Client
 		dynamicCollection      *dynamicconfig.Collection
 		dispatcherProvider     client.DispatcherProvider
 		archivalMetadata       archiver.ArchivalMetadata
@@ -137,6 +140,7 @@ func New(params *BootstrapParams) Service {
 		clusterMetadata:       params.ClusterMetadata,
 		metricsClient:         params.MetricsClient,
 		messagingClient:       params.MessagingClient,
+		blobstoreClient:       params.BlobstoreClient,
 		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 		archivalMetadata:      params.ArchivalMetadata,
@@ -274,6 +278,10 @@ func (h *serviceImpl) GetClusterMetadata() cluster.Metadata {
 // GetMessagingClient returns the messaging client against Kafka
 func (h *serviceImpl) GetMessagingClient() messaging.Client {
 	return h.messagingClient
+}
+
+func (h *serviceImpl) GetBlobstoreClient() blobstore.Client {
+	return h.blobstoreClient
 }
 
 func (h *serviceImpl) GetArchivalMetadata() archiver.ArchivalMetadata {
