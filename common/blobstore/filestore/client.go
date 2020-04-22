@@ -86,7 +86,7 @@ func (c *client) Get(_ context.Context, request *blobstore.GetRequest) (*blobsto
 		return nil, err
 	}
 	return &blobstore.GetResponse{
-		Blob: *blob,
+		Blob: blob,
 	}, nil
 }
 
