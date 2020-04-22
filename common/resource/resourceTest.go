@@ -70,7 +70,7 @@ type (
 		MetricsClient     metrics.Client
 		ArchivalMetadata  *archiver.MockArchivalMetadata
 		ArchiverProvider  *provider.MockArchiverProvider
-		BlobstoreClient   blobstore.Client
+		BlobstoreClient   *blobstore.MockClient
 
 		// membership infos
 
