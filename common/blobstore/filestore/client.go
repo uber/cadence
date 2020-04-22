@@ -53,13 +53,10 @@ func NewFilestoreClient(cfg *config.FileBlobstore) (blobstore.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if exists {
-		return &client{
-			outputDirectory: outputDirectory,
-		}, nil
-	}
-	if err := common.MkdirAll(outputDirectory, os.FileMode(0766)); err != nil {
-		return nil, err
+	if !exists {
+		if err := common.MkdirAll(outputDirectory, os.FileMode(0766)); err != nil {
+			return nil, err
+		}
 	}
 	return &client{
 		outputDirectory: outputDirectory,
@@ -112,12 +109,12 @@ func (c *client) Delete(_ context.Context, request *blobstore.DeleteRequest) (*b
 	return &blobstore.DeleteResponse{}, nil
 }
 
-func (c *client) deserializeBlob(data []byte) (*blobstore.Blob, error) {
+func (c *client) deserializeBlob(data []byte) (blobstore.Blob, error) {
 	var blob blobstore.Blob
 	if err := json.Unmarshal(data, &blob); err != nil {
-		return nil, err
+		return blobstore.Blob{}, err
 	}
-	return &blob, nil
+	return blob, nil
 }
 
 func (c *client) serializeBlob(blob blobstore.Blob) ([]byte, error) {

@@ -156,3 +156,4 @@ publicClient:
 blobstore:
   filestore:
     outputDirectory: "/tmp/blobstore"
+    

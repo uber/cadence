@@ -69,7 +69,7 @@ type (
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
-		Blobstore Blobstore
+		Blobstore Blobstore `yaml:"blobstore"`
 	}
 
 	// Service contains the service specific config items
