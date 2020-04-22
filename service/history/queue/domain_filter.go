@@ -32,7 +32,7 @@ func NewDomainFilter(
 }
 
 // Filter returns true if domainID is in the domainID set specified by the filter
-func (f *DomainFilter) Filter(domainID string) bool {
+func (f DomainFilter) Filter(domainID string) bool {
 	_, ok := f.DomainIDs[domainID]
 	if f.ReverseMatch {
 		ok = !ok
@@ -41,7 +41,7 @@ func (f *DomainFilter) Filter(domainID string) bool {
 }
 
 // Include adds more domainIDs to the domainID set specified by the filter
-func (f *DomainFilter) Include(domainIDs map[string]struct{}) DomainFilter {
+func (f DomainFilter) Include(domainIDs map[string]struct{}) DomainFilter {
 	filter := f.copy()
 	for domainID := range domainIDs {
 		if !filter.ReverseMatch {
@@ -54,7 +54,7 @@ func (f *DomainFilter) Include(domainIDs map[string]struct{}) DomainFilter {
 }
 
 // Exclude removes domainIDs from the domainID set specified by the filter
-func (f *DomainFilter) Exclude(domainIDs map[string]struct{}) DomainFilter {
+func (f DomainFilter) Exclude(domainIDs map[string]struct{}) DomainFilter {
 	filter := f.copy()
 	for domainID := range domainIDs {
 		if !filter.ReverseMatch {
@@ -67,7 +67,7 @@ func (f *DomainFilter) Exclude(domainIDs map[string]struct{}) DomainFilter {
 }
 
 // Merge merges the domainID sets specified by two domain filters
-func (f *DomainFilter) Merge(f2 DomainFilter) DomainFilter {
+func (f DomainFilter) Merge(f2 DomainFilter) DomainFilter {
 	// case 1: ReverseMatch field is false for both filters
 	if !f.ReverseMatch && !f2.ReverseMatch {
 		// union the domainIDs field
@@ -113,7 +113,7 @@ func (f *DomainFilter) Merge(f2 DomainFilter) DomainFilter {
 	return filter
 }
 
-func (f *DomainFilter) copy() DomainFilter {
+func (f DomainFilter) copy() DomainFilter {
 	domainIDs := make(map[string]struct{})
 	for domainID := range f.DomainIDs {
 		domainIDs[domainID] = struct{}{}
