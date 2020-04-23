@@ -497,7 +497,7 @@ func (s *replicatorQueueProcessorSuite) TestPaginateHistoryWithShardID() {
 		Size:             1,
 		LastFirstEventID: nextEventID,
 	}, nil).Once()
-	hEvents, bEvents, token, size, err := PaginateHistory(s.mockHistoryV2Mgr, false, []byte("asd"),
+	hEvents, bEvents, token, size, err := persistence.PaginateHistory(s.mockHistoryV2Mgr, false, []byte("asd"),
 		firstEventID, nextEventID, []byte{}, pageSize, shardID)
 	s.NotNil(hEvents)
 	s.NotNil(bEvents)

@@ -28,12 +28,13 @@ import (
 	"math"
 	"testing"
 
+	test "github.com/uber/cadence/service/history/testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/cadence/.gen/go/shared"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -49,7 +50,6 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
-	test "github.com/uber/cadence/service/history/testing"
 )
 
 type (
@@ -2697,7 +2697,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.IsType(&shared.DomainNotActiveError{}, err)
+	s.IsType(&workflow.DomainNotActiveError{}, err)
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurrent() {
