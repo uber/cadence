@@ -319,7 +319,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 						Version:   common.Int64Ptr(common.EmptyVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
-							MarkerName:                   common.StringPtr("Version"),
+							MarkerName:                   common.StringPtr("TestVersion"),
 							Details:                      []byte("details"),
 							DecisionTaskCompletedEventId: common.Int64Ptr(4),
 						},
@@ -997,7 +997,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 						Version:   common.Int64Ptr(common.EmptyVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
-							MarkerName:                   common.StringPtr("Version"),
+							MarkerName:                   common.StringPtr("TestVersion"),
 							Details:                      []byte("details"),
 							DecisionTaskCompletedEventId: common.Int64Ptr(4),
 						},
@@ -1594,7 +1594,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
-							MarkerName:                   common.StringPtr("Version"),
+							MarkerName:                   common.StringPtr("TestVersion"),
 							Details:                      []byte("details"),
 							DecisionTaskCompletedEventId: common.Int64Ptr(4),
 						},
@@ -2298,7 +2298,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
-							MarkerName:                   common.StringPtr("Version"),
+							MarkerName:                   common.StringPtr("TestVersion"),
 							Details:                      []byte("details"),
 							DecisionTaskCompletedEventId: common.Int64Ptr(4),
 						},
@@ -2899,7 +2899,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
-							MarkerName:                   common.StringPtr("Version"),
+							MarkerName:                   common.StringPtr("TestVersion"),
 							Details:                      []byte("details"),
 							DecisionTaskCompletedEventId: common.Int64Ptr(4),
 						},
@@ -3573,7 +3573,7 @@ func (s *resetorSuite) TestApplyReset() {
 						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
-							MarkerName:                   common.StringPtr("Version"),
+							MarkerName:                   common.StringPtr("TestVersion"),
 							Details:                      []byte("details"),
 							DecisionTaskCompletedEventId: common.Int64Ptr(4),
 						},

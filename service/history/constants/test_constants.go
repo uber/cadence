@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	// Version is the workflow version for test
-	Version = int64(1234)
+	// TestVersion is the workflow version for test
+	TestVersion = int64(1234)
 	// TestDomainID is the domainID for test
 	TestDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
 	// TestDomainName is the domainName for test
@@ -74,7 +74,7 @@ var (
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		Version,
+		TestVersion,
 		nil,
 	)
 
@@ -89,7 +89,7 @@ var (
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		Version,
+		TestVersion,
 		nil,
 	)
 
@@ -104,7 +104,7 @@ var (
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		Version,
+		TestVersion,
 		nil,
 	)
 
@@ -119,7 +119,7 @@ var (
 				{ClusterName: cluster.TestAlternativeClusterName},
 			},
 		},
-		Version,
+		TestVersion,
 		nil,
 	)
 )
