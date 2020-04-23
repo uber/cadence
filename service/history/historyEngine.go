@@ -515,7 +515,6 @@ type signalWithStartArg struct {
 	prevMutableState       execution.MutableState
 }
 
-// TODO: may refactor it in more logic clean way, currently people confuse why startWF doesn't need prevMutableState
 func (e *historyEngineImpl) startWorkflowHelper(
 	ctx context.Context,
 	startRequest *h.StartWorkflowExecutionRequest,
