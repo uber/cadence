@@ -45,10 +45,12 @@ type (
 		outstandingTasks map[task.Key]task.Task
 
 		logger        log.Logger
-		metricsClient metrics.Client
+		metricsClient metrics.Client // TODO: emit metrics
 	}
 )
 
+// NewProcessingQueueState creates a new state instance for processing queue
+// readLevel will be set to the same value as ackLevel
 func NewProcessingQueueState(
 	level int,
 	ackLevel task.Key,
@@ -80,6 +82,7 @@ func newProcessingQueueState(
 	}
 }
 
+// NewProcessingQueue creates a new processing queue based on its state
 func NewProcessingQueue(
 	state ProcessingQueueState,
 	logger log.Logger,

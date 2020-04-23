@@ -28,10 +28,12 @@
 package queue
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
+
 	persistence "github.com/uber/cadence/common/persistence"
 	task "github.com/uber/cadence/service/history/task"
-	reflect "reflect"
 )
 
 // MockProcessingQueueState is a mock of ProcessingQueueState interface
