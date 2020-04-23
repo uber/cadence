@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	test "github.com/uber/cadence/service/history/testing"
 )
 
 type (
@@ -104,7 +103,7 @@ func (s *workflowResetterSuite) SetupTest() {
 		return s.mockStateRebuilder
 	}
 
-	s.domainID = test.DomainID
+	s.domainID = constants.DomainID
 	s.workflowID = "some random workflow ID"
 	s.baseRunID = uuid.New()
 	s.currentRunID = uuid.New()
