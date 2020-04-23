@@ -93,7 +93,7 @@ func NewTaskFetchers(
 ) TaskFetchers {
 
 	var fetchers []TaskFetcher
-	if consumerConfig.Type == serviceConfig.ReplicationConsumerTypeRPC {
+	if consumerConfig.Type == serviceConfig.ReplicationConsumerTypeRPC && config.EnableRpcReplication() {
 		for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
 			if !info.Enabled {
 				continue

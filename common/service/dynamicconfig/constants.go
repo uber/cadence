@@ -99,6 +99,7 @@ var keys = map[Key]string{
 	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
 	ValidSearchAttributes:                 "frontend.validSearchAttributes",
 	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
+	EnableRPCReplication:                  "frontend.rpcReplicationEnabled",
 	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
 	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
 	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
@@ -232,6 +233,8 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorNoTaskInitialWait:              "history.ReplicationTaskProcessorNoTaskInitialWait",
 	ReplicationTaskProcessorCleanupInterval:                "history.ReplicationTaskProcessorCleanupInterval",
 	ReplicationTaskProcessorCleanupJitterCoefficient:       "history.ReplicationTaskProcessorCleanupJitterCoefficient",
+	RPCReplicationEnabled:                                  "history.RPCReplicationEnabled",
+	KafkaReplicationEnabled:                                "history.KafkaReplicationEnabled",
 	EnableConsistentQuery:                                  "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                          "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                  "history.MaxBufferedQueryCount",
@@ -251,6 +254,7 @@ var keys = map[Key]string{
 	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
 	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
 	WorkerReReplicationContextTimeout:               "worker.workerReReplicationContextTimeout",
+	WorkerRPCReplicationEnabled:                     "worker.workerRPCReplicationEnabled",
 	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
@@ -382,6 +386,8 @@ const (
 	ValidSearchAttributes
 	// SendRawWorkflowHistory is whether to enable raw history retrieving
 	SendRawWorkflowHistory
+	// EnableRPCReplication is a feature flag for rpc replication
+	EnableRPCReplication
 	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
 	SearchAttributesNumberOfKeysLimit
 	// SearchAttributesSizeOfValueLimit is the size limit of each value
@@ -657,6 +663,8 @@ const (
 	WorkerReplicationTaskContextDuration
 	// WorkerReReplicationContextTimeout is the context timeout for end to end  re-replication process
 	WorkerReReplicationContextTimeout
+	// WorkerReReplicationContextTimeout is the feture floag for RPC replication
+	WorkerRPCReplicationEnabled
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
@@ -718,6 +726,10 @@ const (
 	ReplicationTaskProcessorCleanupInterval
 	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
 	ReplicationTaskProcessorCleanupJitterCoefficient
+	// RPCReplicationEnabled is the feature flag for RPC replication
+	RPCReplicationEnabled
+	// KafkaReplicationEnabled is the migration flag for Kafka replication
+	KafkaReplicationEnabled
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
