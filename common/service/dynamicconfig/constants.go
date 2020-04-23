@@ -663,7 +663,7 @@ const (
 	WorkerReplicationTaskContextDuration
 	// WorkerReReplicationContextTimeout is the context timeout for end to end  re-replication process
 	WorkerReReplicationContextTimeout
-	// WorkerReReplicationContextTimeout is the feture floag for RPC replication
+	// WorkerRPCReplicationEnabled is the feture floag for RPC replication
 	WorkerRPCReplicationEnabled
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
