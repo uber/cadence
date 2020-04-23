@@ -2125,7 +2125,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		},
 	})
 
-	s.EqualError(err, "BadRequestError{Message: TestRunID is not valid UUID.}")
+	s.EqualError(err, "BadRequestError{Message: RunID is not valid UUID.}")
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFailed_UnKnownDomain() {
