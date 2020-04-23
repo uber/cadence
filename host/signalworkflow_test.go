@@ -1553,4 +1553,6 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
 	s.NotEmpty(resp.GetRunId())
+
+	// policy WorkflowIdReusePolicyTerminateIfRunning is not on allowed and tested on frontend handler
 }

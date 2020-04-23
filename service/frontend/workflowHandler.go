@@ -2221,6 +2221,11 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
 
+	if signalWithStartRequest.GetWorkflowIdReusePolicy() == gen.WorkflowIdReusePolicyTerminateIfRunning {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: "SignalWithStart WorkflowIdReusePolicy cannot be TerminateIfRunning"}, scope)
+	}
+
 	if err := common.ValidateRetryPolicy(signalWithStartRequest.RetryPolicy); err != nil {
 		return nil, wh.error(err, scope)
 	}

@@ -72,6 +72,13 @@ const (
 	defaultQueryFirstDecisionTaskWaitTime     = time.Second
 	queryFirstDecisionTaskCheckInterval       = 200 * time.Millisecond
 	replicationTimeout                        = 30 * time.Second
+
+	// TerminateIfRunningReason reason for terminateIfRunning
+	TerminateIfRunningReason = "TerminateIfRunning Policy"
+	// TerminateIfRunningDetailsTemplate details template for terminateIfRunning
+	TerminateIfRunningDetailsTemplate = "New runID: %s"
+	// TerminateIfRunningIdentity identity for terminateIfRunning
+	TerminateIfRunningIdentity = "Cadence history"
 )
 
 type (
@@ -571,7 +578,13 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			policy = request.GetWorkflowIdReusePolicy()
 		}
 
-		err = e.applyWorkflowIDReusePolicyForSigWithStart(prevMutableState.GetExecutionInfo(), workflowExecution, policy)
+		err = e.applyWorkflowIDReusePolicyForSigWithStart(
+			ctx,
+			prevMutableState.GetExecutionInfo(),
+			workflowExecution,
+			policy,
+			domainID,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -670,12 +683,14 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		prevRunID = t.RunID
 		prevLastWriteVersion = t.LastWriteVersion
 		if err = e.applyWorkflowIDReusePolicyHelper(
+			ctx,
 			t.StartRequestID,
 			prevRunID,
 			t.State,
 			t.CloseStatus,
 			workflowExecution,
 			startRequest.StartRequest.GetWorkflowIdReusePolicy(),
+			domainID,
 		); err != nil {
 			return nil, err
 		}
@@ -2692,9 +2707,11 @@ func getStartRequest(
 
 // for startWorkflowExecution & signalWithStart to handle workflow reuse policy
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
+	ctx context.Context,
 	prevExecutionInfo *persistence.WorkflowExecutionInfo,
 	execution workflow.WorkflowExecution,
 	wfIDReusePolicy workflow.WorkflowIdReusePolicy,
+	domainID string,
 ) error {
 
 	prevStartRequestID := prevExecutionInfo.CreateRequestID
@@ -2703,23 +2720,52 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
 	prevCloseState := prevExecutionInfo.CloseStatus
 
 	return e.applyWorkflowIDReusePolicyHelper(
+		ctx,
 		prevStartRequestID,
 		prevRunID,
 		prevState,
 		prevCloseState,
 		execution,
 		wfIDReusePolicy,
+		domainID,
 	)
+}
 
+func (e *historyEngineImpl) requestTerminateWorkflow(
+	ctx context.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+	targetRunID string,
+) error {
+
+	termRequest := &h.TerminateWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
+			WorkflowExecution: &workflow.WorkflowExecution{
+				WorkflowId: execution.WorkflowId,
+				RunId:      common.StringPtr(targetRunID),
+			},
+			Reason:   common.StringPtr(TerminateIfRunningReason),
+			Details:  []byte(fmt.Sprintf(TerminateIfRunningDetailsTemplate, execution.GetRunId())),
+			Identity: common.StringPtr(TerminateIfRunningIdentity),
+		},
+	}
+	err := e.TerminateWorkflowExecution(ctx, termRequest)
+	if err != nil && err != ErrWorkflowCompleted {
+		return err
+	}
+	return nil
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
+	ctx context.Context,
 	prevStartRequestID,
 	prevRunID string,
 	prevState int,
 	prevCloseState int,
 	execution workflow.WorkflowExecution,
 	wfIDReusePolicy workflow.WorkflowIdReusePolicy,
+	domainID string,
 ) error {
 
 	// here we know some information about the prev workflow, i.e. either running right now
@@ -2727,6 +2773,13 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 	switch prevState {
 	case persistence.WorkflowStateCreated,
 		persistence.WorkflowStateRunning:
+		if wfIDReusePolicy == workflow.WorkflowIdReusePolicyTerminateIfRunning {
+			err := e.requestTerminateWorkflow(ctx, domainID, execution, prevRunID)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 		msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 	case persistence.WorkflowStateCompleted:
@@ -2742,7 +2795,8 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 			msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: allow duplicate workflow ID if last run failed."
 			return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 		}
-	case workflow.WorkflowIdReusePolicyAllowDuplicate:
+	case workflow.WorkflowIdReusePolicyAllowDuplicate,
+		workflow.WorkflowIdReusePolicyTerminateIfRunning:
 		// no check need here
 	case workflow.WorkflowIdReusePolicyRejectDuplicate:
 		msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: reject duplicate workflow ID."
