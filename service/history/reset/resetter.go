@@ -26,8 +26,6 @@ import (
 	ctx "context"
 	"fmt"
 
-	"golang.org/x/net/context"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -36,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -45,7 +42,7 @@ type (
 	// WorkflowResetter is the new NDC compatible workflow reset component
 	WorkflowResetter interface {
 		ResetWorkflow(
-			ctx context.Context,
+			ctx ctx.Context,
 			domainID string,
 			workflowID string,
 			baseRunID string,
@@ -220,7 +217,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		decision.ScheduleID,
 		decision.StartedID, shared.DecisionTaskFailedCauseResetWorkflow,
 		nil,
-		constants.IdentityHistoryService,
+		execution.IdentityHistoryService,
 		resetReason,
 		"",
 		baseRunID,
@@ -435,7 +432,7 @@ func (r *workflowResetterImpl) terminateWorkflow(
 		eventBatchFirstEventID,
 		terminateReason,
 		nil,
-		constants.IdentityHistoryService,
+		execution.IdentityHistoryService,
 	)
 }
 
@@ -591,7 +588,7 @@ func (r *workflowResetterImpl) getPaginationFn(
 			firstEventID,
 			nextEventID,
 			paginationToken,
-			constants.NDCDefaultPageSize,
+			execution.NDCDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()),
 		)
 		if err != nil {

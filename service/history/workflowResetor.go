@@ -36,8 +36,8 @@ import (
 	"github.com/uber/cadence/common/clock"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/errors"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/ndc"
 	"github.com/uber/cadence/service/history/reset"
 )
 
@@ -793,7 +793,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 	}
 	if baseMutableState.GetNextEventID() < decisionFinishEventID {
 		// re-replicate the whole new run
-		return errors.NewRetryTaskErrorWithHint(errors.ErrWorkflowNotFoundMsg, domainID, workflowID, resetAttr.GetNewRunId(), common.FirstEventID)
+		return ndc.NewRetryTaskErrorWithHint(errWorkflowNotFoundMsg, domainID, workflowID, resetAttr.GetNewRunId(), common.FirstEventID)
 	}
 
 	if currentRunID == resetAttr.GetBaseRunId() {
@@ -957,7 +957,7 @@ func (w *workflowResetorImpl) replicateResetEvent(
 	}
 	if lastEvent.GetEventId() != decisionFinishEventID-1 || lastEvent.GetVersion() != forkEventVersion {
 		// re-replicate the whole new run
-		retError = errors.NewRetryTaskErrorWithHint(errors.ErrWorkflowNotFoundMsg, domainID, workflowID, resetAttr.GetNewRunId(), common.FirstEventID)
+		retError = ndc.NewRetryTaskErrorWithHint(errWorkflowNotFoundMsg, domainID, workflowID, resetAttr.GetNewRunId(), common.FirstEventID)
 		return
 	}
 	startTime := time.Unix(0, firstEvent.GetTimestamp())

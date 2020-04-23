@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
@@ -100,6 +99,9 @@ const (
 	transactionPolicyConflictResolveAsZombie
 
 	transactionPolicySuppressCurrentAndUpdateAsCurrent
+
+	// EventsReapplicationResetWorkflowReason is the reason for reset workflow during reapplication
+	EventsReapplicationResetWorkflowReason = "events-reapplication"
 )
 
 type (
@@ -347,7 +349,7 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 			resetRunID,
 			uuid.New(),
 			targetWorkflow,
-			constants.EventsReapplicationResetWorkflowReason,
+			EventsReapplicationResetWorkflowReason,
 			targetWorkflowEvents.Events,
 		); err != nil {
 			return 0, execution.TransactionPolicyActive, err

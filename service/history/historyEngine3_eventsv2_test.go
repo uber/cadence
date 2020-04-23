@@ -151,22 +151,22 @@ func (s *engine3Suite) TearDownTest() {
 
 func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.DomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.RunID),
+		RunId:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	stickyTl := "stickyTaskList"
 	identity := "testIdentity"
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(s.historyEngine.shard, s.mockEventsCache,
-		loggerimpl.NewDevelopmentForTest(s.Suite), we.GetRunId(), constants.LocalDomainEntry)
+		loggerimpl.NewDevelopmentForTest(s.Suite), we.GetRunId(), constants.TestLocalDomainEntry)
 	executionInfo := msBuilder.GetExecutionInfo()
 	executionInfo.LastUpdatedTimestamp = time.Now()
 	executionInfo.StickyTaskList = stickyTl
@@ -226,12 +226,12 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.DomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "workflowID"
 	workflowType := "workflowType"
 	taskList := "testTaskList"
@@ -260,7 +260,7 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 
 func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.DomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
@@ -269,9 +269,9 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "wId"
-	runID := constants.RunID
+	runID := constants.TestRunID
 	identity := "testIdentity"
 	signalName := "my signal name"
 	input := []byte("test input")
@@ -287,7 +287,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	}
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(s.historyEngine.shard, s.mockEventsCache,
-		loggerimpl.NewDevelopmentForTest(s.Suite), runID, constants.LocalDomainEntry)
+		loggerimpl.NewDevelopmentForTest(s.Suite), runID, constants.TestLocalDomainEntry)
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
@@ -306,7 +306,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.DomainID}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID}, &p.DomainConfig{Retention: 1}, "", nil,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
@@ -315,7 +315,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "wId"
 	workflowType := "workflowType"
 	taskList := "testTaskList"

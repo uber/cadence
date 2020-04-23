@@ -56,7 +56,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 	event, _ := builder.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
-			DomainUUID:          common.StringPtr(constants.DomainID),
+			DomainUUID:          common.StringPtr(constants.TestDomainID),
 			StartRequest:        startRequest,
 			ParentExecutionInfo: parentInfo,
 		},
@@ -95,7 +95,7 @@ func AddDecisionTaskStartedEvent(
 	taskList string,
 	identity string,
 ) *workflow.HistoryEvent {
-	return AddDecisionTaskStartedEventWithRequestID(builder, scheduleID, constants.RunID, taskList, identity)
+	return AddDecisionTaskStartedEventWithRequestID(builder, scheduleID, constants.TestRunID, taskList, identity)
 }
 
 // AddDecisionTaskStartedEventWithRequestID adds DecisionTaskStarted event with requestID
@@ -198,7 +198,7 @@ func AddActivityTaskStartedEvent(
 	identity string,
 ) *workflow.HistoryEvent {
 	ai, _ := builder.GetActivityInfo(scheduleID)
-	event, _ := builder.AddActivityTaskStartedEvent(ai, scheduleID, constants.RunID, identity)
+	event, _ := builder.AddActivityTaskStartedEvent(ai, scheduleID, constants.TestRunID, identity)
 	return event
 }
 

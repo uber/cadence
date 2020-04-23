@@ -31,7 +31,15 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/constants"
+)
+
+const (
+	// IdentityHistoryService is the service role identity
+	IdentityHistoryService = "history-service"
+	// WorkflowTerminationIdentity is the component which decides to terminate the workflow
+	WorkflowTerminationIdentity = "worker-service"
+	// WorkflowTerminationReason is the reason for terminating workflow due to version conflit
+	WorkflowTerminationReason = "Terminate Workflow Due To Version Conflict."
 )
 
 type (
@@ -234,7 +242,7 @@ func (r *workflowImpl) failDecision(
 		decision.StartedID,
 		workflow.DecisionTaskFailedCauseFailoverCloseDecision,
 		nil,
-		constants.IdentityHistoryService,
+		IdentityHistoryService,
 		"",
 		"",
 		"",
@@ -264,9 +272,9 @@ func (r *workflowImpl) terminateWorkflow(
 
 	_, err := r.mutableState.AddWorkflowExecutionTerminatedEvent(
 		eventBatchFirstEventID,
-		constants.WorkflowTerminationReason,
+		WorkflowTerminationReason,
 		[]byte(fmt.Sprintf("terminated by version: %v", incomingLastWriteVersion)),
-		constants.WorkflowTerminationIdentity,
+		WorkflowTerminationIdentity,
 	)
 
 	return err

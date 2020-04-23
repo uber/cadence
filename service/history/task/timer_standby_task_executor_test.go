@@ -91,8 +91,8 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	config := config.NewForTest()
-	s.domainID = constants.DomainID
-	s.domainEntry = constants.GlobalDomainEntry
+	s.domainID = constants.TestDomainID
+	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
 	s.clusterName = cluster.TestAlternativeClusterName
 	s.now = time.Now()
@@ -133,7 +133,7 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
-	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.GlobalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
@@ -174,7 +174,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 		s.logger,
 		s.version,
 		workflowExecution.GetRunId(),
-		constants.GlobalDomainEntry,
+		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
@@ -248,7 +248,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -309,7 +309,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -374,7 +374,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -450,7 +450,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -515,7 +515,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -581,7 +581,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -693,7 +693,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -780,7 +780,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -829,7 +829,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending(
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	event, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -885,7 +885,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success(
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -929,7 +929,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -991,7 +991,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{
@@ -1040,7 +1040,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.GlobalDomainEntry)
+	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, workflowExecution.GetRunId(), constants.TestGlobalDomainEntry)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&history.StartWorkflowExecutionRequest{

@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/constants"
 )
 
 type (
@@ -273,7 +272,7 @@ func (s *workflowSuite) TestSuppressWorkflowBy_Terminate() {
 		inFlightDecision.StartedID,
 		shared.DecisionTaskFailedCauseFailoverCloseDecision,
 		[]byte(nil),
-		constants.IdentityHistoryService,
+		IdentityHistoryService,
 		"",
 		"",
 		"",
@@ -283,7 +282,7 @@ func (s *workflowSuite) TestSuppressWorkflowBy_Terminate() {
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
 
 	s.mockMutableState.EXPECT().AddWorkflowExecutionTerminatedEvent(
-		lastEventID+1, constants.WorkflowTerminationReason, gomock.Any(), constants.WorkflowTerminationIdentity,
+		lastEventID+1, WorkflowTerminationReason, gomock.Any(), WorkflowTerminationIdentity,
 	).Return(&shared.HistoryEvent{}, nil).Times(1)
 
 	// if workflow is in zombie or finished state, keep as is

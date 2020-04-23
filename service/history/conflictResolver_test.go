@@ -124,9 +124,9 @@ func (s *conflictResolverSuite) SetupTest() {
 	}
 	s.mockShard.SetEngine(h)
 
-	s.mockContext = execution.NewContext(constants.DomainID, shared.WorkflowExecution{
+	s.mockContext = execution.NewContext(constants.TestDomainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.RunID),
+		RunId:      common.StringPtr(constants.TestRunID),
 	}, s.mockShard, s.mockExecutionMgr, s.logger)
 	s.conflictResolver = newConflictResolver(s.mockShard, s.mockContext, s.mockHistoryV2Mgr, s.logger)
 

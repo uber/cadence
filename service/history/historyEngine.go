@@ -53,7 +53,6 @@ import (
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
@@ -2906,7 +2905,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 						mutableState,
 						execution.NoopReleaseFn,
 					),
-					constants.EventsReapplicationResetWorkflowReason,
+					ndc.EventsReapplicationResetWorkflowReason,
 					toReapplyEvents,
 				); err != nil {
 					return nil, err

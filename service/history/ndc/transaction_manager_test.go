@@ -95,7 +95,7 @@ func (s *transactionManagerSuite) SetupTest() {
 	s.mockExecutionManager = s.mockShard.Resource.ExecutionMgr
 
 	s.logger = s.mockShard.GetLogger()
-	s.domainEntry = constants.GlobalDomainEntry
+	s.domainEntry = constants.TestGlobalDomainEntry
 
 	s.transactionManager = newTransactionManager(s.mockShard, execution.NewCache(s.mockShard), s.mockEventsReapplier, s.logger)
 	s.transactionManager.createManager = s.mockCreateManager
@@ -228,7 +228,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		gomock.Any(),
 		gomock.Any(),
 		workflow,
-		constants.EventsReapplicationResetWorkflowReason,
+		EventsReapplicationResetWorkflowReason,
 		workflowEvents.Events,
 	).Return(nil).Times(1)
 

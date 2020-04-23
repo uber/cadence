@@ -112,7 +112,7 @@ func (s *stateRebuilderSuite) TearDownTest() {
 }
 
 func (s *stateRebuilderSuite) TestInitializeBuilders() {
-	mutableState, stateBuilder := s.nDCStateRebuilder.initializeBuilders(constants.GlobalDomainEntry)
+	mutableState, stateBuilder := s.nDCStateRebuilder.initializeBuilders(constants.TestGlobalDomainEntry)
 	s.NotNil(mutableState)
 	s.NotNil(stateBuilder)
 	s.NotNil(mutableState.GetVersionHistories())
@@ -188,7 +188,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -200,7 +200,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      NDCDefaultPageSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -270,7 +270,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -282,7 +282,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      NDCDefaultPageSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{

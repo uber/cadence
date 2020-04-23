@@ -103,7 +103,7 @@ func (s *workflowResetterSuite) SetupTest() {
 		return s.mockStateRebuilder
 	}
 
-	s.domainID = constants.DomainID
+	s.domainID = constants.TestDomainID
 	s.workflowID = "some random workflow ID"
 	s.baseRunID = uuid.New()
 	s.currentRunID = uuid.New()
@@ -337,7 +337,7 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 		decision.StartedID,
 		shared.DecisionTaskFailedCauseForceCloseDecision,
 		([]byte)(nil),
-		constants.IdentityHistoryService,
+		execution.IdentityHistoryService,
 		"",
 		"",
 		"",
@@ -349,7 +349,7 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 		nextEventID,
 		terminateReason,
 		([]byte)(nil),
-		constants.IdentityHistoryService,
+		execution.IdentityHistoryService,
 	).Return(&shared.HistoryEvent{}, nil).Times(1)
 
 	err := s.workflowResetter.terminateWorkflow(mutableState, terminateReason)
@@ -421,7 +421,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		BranchToken:   baseBranchToken,
 		MinEventID:    baseFirstEventID,
 		MaxEventID:    baseNextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -434,7 +434,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		BranchToken:   newBranchToken,
 		MinEventID:    newFirstEventID,
 		MaxEventID:    newNextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -505,7 +505,7 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -603,7 +603,7 @@ func (s *workflowResetterSuite) TestPagination() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
@@ -615,7 +615,7 @@ func (s *workflowResetterSuite) TestPagination() {
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      constants.NDCDefaultPageSize,
+		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{

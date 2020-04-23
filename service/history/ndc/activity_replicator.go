@@ -36,8 +36,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/constants"
-	"github.com/uber/cadence/service/history/errors"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -45,6 +43,7 @@ import (
 const (
 	resendMissingEventMessage  = "Resend missed sync activity events"
 	resendHigherVersionMessage = "Resend sync activity events due to a higher version received"
+	errRetrySyncActivityMsg    = "retry on applying sync activity"
 )
 
 type (
@@ -306,8 +305,8 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			}
 			// version >= last write version
 			// this can happen if out of order delivery happens
-			return false, errors.NewRetryTaskErrorWithHint(
-				constants.ErrRetrySyncActivityMsg,
+			return false, NewRetryTaskErrorWithHint(
+				errRetrySyncActivityMsg,
 				domainID,
 				workflowID,
 				runID,
@@ -319,4 +318,23 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 	}
 
 	return true, nil
+}
+
+// NewRetryTaskErrorWithHint returns a 2DC resend error
+// TODO: remove it after remove 2DC code
+func NewRetryTaskErrorWithHint(
+	msg string,
+	domainID string,
+	workflowID string,
+	runID string,
+	nextEventID int64,
+) *shared.RetryTaskError {
+
+	return &shared.RetryTaskError{
+		Message:     msg,
+		DomainId:    common.StringPtr(domainID),
+		WorkflowId:  common.StringPtr(workflowID),
+		RunId:       common.StringPtr(runID),
+		NextEventId: common.Int64Ptr(nextEventID),
+	}
 }

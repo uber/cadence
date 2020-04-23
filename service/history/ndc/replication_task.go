@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/errors"
 )
 
 type (
@@ -87,6 +86,8 @@ var (
 	ErrNoNewRunHistory = &shared.BadRequestError{Message: "no new run history events"}
 	// ErrLastEventIsNotContinueAsNew is returned if the last event is not continue as new
 	ErrLastEventIsNotContinueAsNew = &shared.BadRequestError{Message: "last event is not continue as new"}
+	// ErrEmptyHistoryRawEventBatch indicate that one single batch of history raw events is of size 0
+	ErrEmptyHistoryRawEventBatch = &shared.BadRequestError{Message: "encounter empty history batch"}
 )
 
 func newReplicationTask(
@@ -311,7 +312,7 @@ func validateReplicateEventsRequest(
 		return nil, nil, err
 	}
 	if len(events) == 0 {
-		return nil, nil, errors.ErrEmptyHistoryRawEventBatch
+		return nil, nil, ErrEmptyHistoryRawEventBatch
 	}
 
 	version, err := validateEvents(events)

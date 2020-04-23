@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -196,7 +195,7 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 		decisionInfo.StartedID,
 		shared.DecisionTaskFailedCauseFailoverCloseDecision,
 		[]byte(nil),
-		constants.IdentityHistoryService,
+		execution.IdentityHistoryService,
 		"",
 		"",
 		"",

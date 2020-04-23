@@ -36,8 +36,12 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
+)
+
+const (
+	// NDCDefaultPageSize is the default pagination size for ndc
+	NDCDefaultPageSize = 100
 )
 
 type (
@@ -239,7 +243,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 			firstEventID,
 			nextEventID,
 			paginationToken,
-			constants.NDCDefaultPageSize,
+			NDCDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()),
 		)
 		if err != nil {

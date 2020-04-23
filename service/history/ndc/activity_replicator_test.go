@@ -43,7 +43,6 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
-	e "github.com/uber/cadence/service/history/errors"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -129,7 +128,7 @@ func (s *activityReplicatorSuite) TearDownTest() {
 
 func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
@@ -168,7 +167,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 
 func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
@@ -212,7 +211,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 
 func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionSmaller() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(144)
@@ -264,7 +263,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 
 func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_IncomingVersionLarger() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(144)
@@ -311,12 +310,12 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 	).AnyTimes()
 
 	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(e.NewRetryTaskErrorWithHint(constants.ErrRetrySyncActivityMsg, domainID, workflowID, runID, nextEventID), err)
+	s.Equal(NewRetryTaskErrorWithHint(errRetrySyncActivityMsg, domainID, workflowID, runID, nextEventID), err)
 }
 
 func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVersionSmaller_DiscardTask() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(144)
@@ -394,7 +393,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 
 func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_IncomingVersionLarger_ReturnRetryError() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(144)
@@ -479,7 +478,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 
 func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingScheduleIDLarger_ReturnRetryError() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(99)
@@ -568,7 +567,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 
 func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameScheduleID() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(99)
@@ -645,7 +644,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 
 func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersionHistoryWin() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(99)
@@ -722,7 +721,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(144)
@@ -774,7 +773,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityVersionLarger() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	scheduleID := int64(144)
@@ -828,7 +827,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionSameAttempt() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
@@ -900,7 +899,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVersionLargerAttempt() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
@@ -972,7 +971,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerVersion() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
@@ -1044,7 +1043,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
@@ -1128,7 +1127,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 
 func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflow() {
 	domainName := "some random domain name"
-	domainID := constants.DomainID
+	domainID := constants.TestDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	version := int64(100)
