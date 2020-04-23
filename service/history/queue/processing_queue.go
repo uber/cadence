@@ -21,9 +21,11 @@
 package queue
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/task"
@@ -60,6 +62,22 @@ func NewProcessingQueueState(
 		maxLevel,
 		domainFilter,
 	)
+}
+
+func newProcessingQueueState(
+	level int,
+	ackLevel task.Key,
+	readLevel task.Key,
+	maxLevel task.Key,
+	domainFilter DomainFilter,
+) *processingQueueStateImpl {
+	return &processingQueueStateImpl{
+		level:        level,
+		ackLevel:     ackLevel,
+		readLevel:    readLevel,
+		maxLevel:     maxLevel,
+		domainFilter: domainFilter,
+	}
 }
 
 func NewProcessingQueue(
@@ -105,33 +123,7 @@ func newProcessingQueue(
 		)
 	}
 
-	// update ack level
-	queue.UpdateAckLevel()
-
-	// update read level
-	for key := range queue.outstandingTasks {
-		if queue.state.readLevel.Less(key) {
-			queue.state.readLevel = key
-		}
-	}
-
 	return queue
-}
-
-func newProcessingQueueState(
-	level int,
-	ackLevel task.Key,
-	readLevel task.Key,
-	maxLevel task.Key,
-	domainFilter DomainFilter,
-) *processingQueueStateImpl {
-	return &processingQueueStateImpl{
-		level:        level,
-		ackLevel:     ackLevel,
-		readLevel:    readLevel,
-		maxLevel:     maxLevel,
-		domainFilter: domainFilter,
-	}
 }
 
 func (s *processingQueueStateImpl) Level() int {
@@ -152,6 +144,12 @@ func (s *processingQueueStateImpl) ReadLevel() task.Key {
 
 func (s *processingQueueStateImpl) DomainFilter() DomainFilter {
 	return s.domainFilter
+}
+
+func (s *processingQueueStateImpl) String() string {
+	return fmt.Sprintf("&{level: %+v, ackLevel: %+v, readLevel: %+v, maxLevel: %+v, domainFilter: %+v}",
+		s.level, s.ackLevel, s.readLevel, s.maxLevel, s.domainFilter,
+	)
 }
 
 func (q *processingQueueImpl) State() ProcessingQueueState {
@@ -176,8 +174,11 @@ func (q *processingQueueImpl) Merge(
 	q1, q2 := q, queue.(*processingQueueImpl)
 
 	if q1.State().Level() != q2.State().Level() {
-		q.logger.Error("")
-		panic("")
+		errMsg := "Processing queue encountered a queue from different level during merge"
+		q.logger.Error(errMsg, tag.Error(
+			fmt.Errorf("current queue level: %v, incoming queue level: %v", q1.state.level, q2.state.level),
+		))
+		panic(errMsg)
 	}
 
 	if !q1.state.ackLevel.Less(q2.state.maxLevel) ||
@@ -194,10 +195,10 @@ func (q *processingQueueImpl) Merge(
 			q1, q2 = q2, q1
 		}
 
-		newQueueStates = append(newQueueStates, NewProcessingQueueState(
+		newQueueStates = append(newQueueStates, newProcessingQueueState(
 			q1.state.level,
 			q1.state.ackLevel,
-			// minTaskKey(q1.state.readLevel, q2.state.ackLevel),
+			minTaskKey(q1.state.readLevel, q2.state.ackLevel),
 			q2.state.ackLevel,
 			q1.state.domainFilter.copy(),
 		))
@@ -208,19 +209,19 @@ func (q *processingQueueImpl) Merge(
 			q1, q2 = q2, q1
 		}
 
-		newQueueStates = append(newQueueStates, NewProcessingQueueState(
+		newQueueStates = append(newQueueStates, newProcessingQueueState(
 			q1.state.level,
 			q2.state.maxLevel,
-			// maxTaskKey(q1.state.readLevel, q2.state.maxLevel),
+			maxTaskKey(q1.state.readLevel, q2.state.maxLevel),
 			q1.state.maxLevel,
 			q1.state.domainFilter.copy(),
 		))
 	}
 
-	newQueueStates = append(newQueueStates, NewProcessingQueueState(
+	newQueueStates = append(newQueueStates, newProcessingQueueState(
 		q1.state.level,
 		maxTaskKey(q1.state.ackLevel, q2.state.ackLevel),
-		// minTaskKey(q1.state.readLevel, q2.state.readLevel),
+		minTaskKey(q1.state.readLevel, q2.state.readLevel),
 		minTaskKey(q1.state.maxLevel, q2.state.maxLevel),
 		q1.state.domainFilter.Merge(q2.state.domainFilter),
 	))
@@ -233,18 +234,17 @@ func (q *processingQueueImpl) AddTasks(
 ) {
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
-			// q.logger.Debug(fmt.Sprintf("Skipping task: %v.", task.))
+			q.logger.Debug(fmt.Sprintf("Skipping task: %+v. DomainID: %v, WorkflowID: %v, RunID: %v, Type: %v",
+				key, task.GetDomainID(), task.GetWorkflowID(), task.GetRunID(), task.GetTaskType()))
 			continue
 		}
 
-		if !q.state.ackLevel.Less(key) {
-			q.logger.Error("")
-			panic("")
-		}
-
-		if q.state.maxLevel.Less(key) {
-			q.logger.Error("")
-			panic("")
+		if !taskBelongsToProcessQueue(q.state, key, task) {
+			errMsg := "Processing queue encountered a task doesn't belong to its scope"
+			q.logger.Error(errMsg, tag.Error(
+				fmt.Errorf("Processing queue state: %+v, task: %+v", q.state, key),
+			))
+			panic(errMsg)
 		}
 
 		q.outstandingTasks[key] = task
@@ -281,6 +281,9 @@ func splitProcessingQueue(
 	metricsClient metrics.Client,
 ) []ProcessingQueue {
 	newQueueTasks := make([]map[task.Key]task.Task, 0, len(newQueueStates))
+	for i := 0; i != len(newQueueStates); i++ {
+		newQueueTasks = append(newQueueTasks, make(map[task.Key]task.Task))
+	}
 
 	for _, queue := range queues {
 	SplitTaskLoop:
@@ -293,10 +296,18 @@ func splitProcessingQueue(
 			}
 
 			// if code reaches there it means the task doesn't belongs to any new queue.
-			// there's must be a bug in the split policy implementation.
-			// log error and skip the split
-			logger.Error("TODO")
-			return []ProcessingQueue{queue}
+			// there's must be a bug in the code for generating the newQueueStates
+			// log error, skip the split and return current queues as result
+			currentQueues := make([]ProcessingQueue, 0, len(newQueueStates))
+			currentQueueStates := make([]ProcessingQueueState, 0, len(newQueueStates))
+			for _, q := range queues {
+				currentQueues = append(currentQueues, q)
+				currentQueueStates = append(currentQueueStates, queue.State())
+			}
+			logger.Error("Processing queue encountered an error during split or merge.", tag.Error(
+				fmt.Errorf("current queue state: %+v, new queue state: %+v", currentQueueStates, newQueueStates),
+			))
+			return currentQueues
 		}
 	}
 
@@ -328,7 +339,7 @@ func taskKeyEquals(
 	key1 task.Key,
 	key2 task.Key,
 ) bool {
-	return key1.Less(key2) && key2.Less(key1)
+	return !key1.Less(key2) && !key2.Less(key1)
 }
 
 func minTaskKey(

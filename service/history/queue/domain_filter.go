@@ -25,6 +25,10 @@ func NewDomainFilter(
 	domainIDs map[string]struct{},
 	reverseMatch bool,
 ) DomainFilter {
+	if domainIDs == nil {
+		domainIDs = make(map[string]struct{})
+	}
+
 	return DomainFilter{
 		DomainIDs:    domainIDs,
 		ReverseMatch: reverseMatch,
