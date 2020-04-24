@@ -1177,40 +1177,6 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	s.NotNil(err)
 }
 
-func (s *workflowHandlerSuite) TestSignalWithStartWorkflowExecution_TerminateIfRunning() {
-	wh := s.getWorkflowHandler(s.newConfig())
-
-	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-
-	workflowID := "testWorkflowID"
-	workflowType := &shared.WorkflowType{Name: common.StringPtr("testWorkflowType")}
-	taskList := &shared.TaskList{Name: common.StringPtr("testTaskList")}
-	signalName := "my signal"
-	signalInput := []byte("my signal input.")
-	wfIDReusePolicy := shared.WorkflowIdReusePolicyTerminateIfRunning
-	identity := "unit test"
-	request := &shared.SignalWithStartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.testDomain),
-		WorkflowId:                          common.StringPtr(workflowID),
-		WorkflowType:                        workflowType,
-		TaskList:                            taskList,
-		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		SignalName:                          common.StringPtr(signalName),
-		SignalInput:                         signalInput,
-		Identity:                            common.StringPtr(identity),
-		WorkflowIdReusePolicy:               &wfIDReusePolicy,
-	}
-	ctx := context.Background()
-
-	resp, err := wh.SignalWithStartWorkflowExecution(ctx, request)
-	s.Error(err)
-	s.IsType(&shared.BadRequestError{}, err)
-	s.Nil(resp)
-}
-
 func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 	wh := s.getWorkflowHandler(s.newConfig())
 	m := map[string]interface{}{

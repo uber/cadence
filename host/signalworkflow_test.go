@@ -24,9 +24,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	cadencehistory "github.com/uber/cadence/service/history"
 
 	"github.com/pborman/uuid"
 
@@ -1537,16 +1540,19 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	s.NotEmpty(resp.GetRunId())
 
 	// Terminate workflow execution
-	err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-		},
-		Reason:   common.StringPtr("test WorkflowIdReusePolicyAllowDuplicateFailedOnly"),
-		Details:  nil,
-		Identity: common.StringPtr(identity),
-	})
-	s.Nil(err)
+	terminateWorkflow := func() {
+		err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+			Domain: common.StringPtr(s.domainName),
+			WorkflowExecution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+			},
+			Reason:   common.StringPtr("test WorkflowIdReusePolicyAllowDuplicateFailedOnly"),
+			Details:  nil,
+			Identity: common.StringPtr(identity),
+		})
+		s.Nil(err)
+	}
+	terminateWorkflow()
 
 	// test policy WorkflowIdReusePolicyAllowDuplicateFailedOnly success start
 	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly
@@ -1554,5 +1560,47 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	s.Nil(err)
 	s.NotEmpty(resp.GetRunId())
 
-	// policy WorkflowIdReusePolicyTerminateIfRunning is not on allowed and tested on frontend handler
+	// test policy WorkflowIdReusePolicyTerminateIfRunning
+	wfIDReusePolicy = workflow.WorkflowIdReusePolicyTerminateIfRunning
+	sRequest.RequestId = common.StringPtr(uuid.New())
+	resp1, err1 := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err1)
+	s.NotEmpty(resp1)
+	// verify terminate status
+	executionTerminated := false
+GetHistoryLoop:
+	for i := 0; i < 10; i++ {
+		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+				RunId:      resp.RunId,
+			},
+		})
+		s.Nil(err)
+		history := historyResponse.History
+
+		lastEvent := history.Events[len(history.Events)-1]
+		if lastEvent.GetEventType() != workflow.EventTypeWorkflowExecutionTerminated {
+			s.Logger.Warn("Execution not terminated yet.")
+			time.Sleep(100 * time.Millisecond)
+			continue GetHistoryLoop
+		}
+
+		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
+		s.Equal(cadencehistory.TerminateIfRunningReason, terminateEventAttributes.GetReason())
+		s.Equal(fmt.Sprintf(cadencehistory.TerminateIfRunningDetailsTemplate, resp1.GetRunId()), string(terminateEventAttributes.Details))
+		s.Equal(cadencehistory.TerminateIfRunningIdentity, terminateEventAttributes.GetIdentity())
+		executionTerminated = true
+		break GetHistoryLoop
+	}
+	s.True(executionTerminated)
+	// terminate current run
+	terminateWorkflow()
+	// test clean start with WorkflowIdReusePolicyTerminateIfRunning
+	sRequest.RequestId = common.StringPtr(uuid.New())
+	resp2, err2 := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err2)
+	s.NotEmpty(resp2)
+	s.NotEqual(resp1.GetRunId(), resp2.GetRunId())
 }
