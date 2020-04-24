@@ -134,7 +134,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		VisibilityArchivalQueryMaxPageSize:  dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisallowQuery, false),
 		SendRawWorkflowHistory:              dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.SendRawWorkflowHistory, false),
-		EnableRPCReplication:                dc.GetBoolProperty(dynamicconfig.EnableRPCReplication, false),
+		EnableRPCReplication:                dc.GetBoolProperty(dynamicconfig.FrontendEnableRPCReplication, false),
 	}
 }
 

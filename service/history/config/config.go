@@ -369,8 +369,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicationTaskProcessorNoTaskRetryWait:          dc.GetDurationProperty(dynamicconfig.ReplicationTaskProcessorNoTaskInitialWait, 2*time.Second),
 		ReplicationTaskProcessorCleanupInterval:          dc.GetDurationProperty(dynamicconfig.ReplicationTaskProcessorCleanupInterval, 1*time.Minute),
 		ReplicationTaskProcessorCleanupJitterCoefficient: dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorCleanupJitterCoefficient, 0.15),
-		EnableRPCReplication:                             dc.GetBoolProperty(dynamicconfig.RPCReplicationEnabled, false),
-		EnableKafkaReplication:                           dc.GetBoolProperty(dynamicconfig.KafkaReplicationEnabled, true),
+		EnableRPCReplication:                             dc.GetBoolProperty(dynamicconfig.HistoryEnableRPCReplication, false),
+		EnableKafkaReplication:                           dc.GetBoolProperty(dynamicconfig.HistoryEnableKafkaReplication, true),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery, true),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, false),
