@@ -429,13 +429,12 @@ func (t *historyMetadataReplicationTask) Execute() error {
 			t.version,
 			common.Int64Ptr(t.nextEventID),
 			t.version)
-	} else {
-		return t.historyRereplicator.SendMultiWorkflowHistory(
-			t.queueID.DomainID, t.queueID.WorkflowID,
-			t.queueID.RunID, t.firstEventID,
-			t.queueID.RunID, t.nextEventID,
-		)
 	}
+	return t.historyRereplicator.SendMultiWorkflowHistory(
+		t.queueID.DomainID, t.queueID.WorkflowID,
+		t.queueID.RunID, t.firstEventID,
+		t.queueID.RunID, t.nextEventID,
+	)
 }
 
 func (t *historyMetadataReplicationTask) HandleErr(
