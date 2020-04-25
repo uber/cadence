@@ -191,16 +191,29 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(
 	}
 
 	err = p.replicator.Publish(replicationTask)
-	if err == messaging.ErrMessageSizeLimit && replicationTask.HistoryTaskAttributes != nil {
+	if err == messaging.ErrMessageSizeLimit && (replicationTask.HistoryTaskAttributes != nil || replicationTask.HistoryTaskV2Attributes != nil) {
 		// message size exceeds the server messaging size limit
 		// for this specific case, just send out a metadata message and
 		// let receiver fetch from source (for the concrete history events)
-		err = p.replicator.Publish(p.generateHistoryMetadataTask(replicationTask.HistoryTaskAttributes.TargetClusters, task))
+		err = p.replicator.Publish(p.generateHistoryMetadataTask(
+			replicationTask.HistoryTaskAttributes.TargetClusters,
+			task,
+			replicationTask.HistoryTaskV2Attributes != nil,
+		))
 	}
 	return err
 }
 
-func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetClusters []string, task *persistence.ReplicationTaskInfo) *replicator.ReplicationTask {
+func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(
+	targetClusters []string,
+	task *persistence.ReplicationTaskInfo,
+	isHistoryV2Task bool) *replicator.ReplicationTask {
+
+	var version *int64
+	if isHistoryV2Task {
+		version = common.Int64Ptr(task.Version)
+	}
+
 	return &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskTypeHistoryMetadata.Ptr(),
 		HistoryMetadataTaskAttributes: &replicator.HistoryMetadataTaskAttributes{
@@ -210,6 +223,7 @@ func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetCluster
 			RunId:          common.StringPtr(task.RunID),
 			FirstEventId:   common.Int64Ptr(task.FirstEventID),
 			NextEventId:    common.Int64Ptr(task.NextEventID),
+			Version:        version,
 		},
 	}
 }
