@@ -666,6 +666,7 @@ func (s *historyMetadataReplicationTaskSuite) TestNewHistoryMetadataReplicationT
 			firstEventID:        replicationAttr.GetFirstEventId(),
 			nextEventID:         replicationAttr.GetNextEventId(),
 			historyRereplicator: s.mockRereplicator,
+			nDCHistoryResender:  s.mockNDCResender,
 		},
 		metadataTask,
 	)
