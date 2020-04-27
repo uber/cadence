@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type BufferedWriterSuite struct {
@@ -41,7 +42,7 @@ func (s *BufferedWriterSuite) TestConstructBlob() {
 	s.Equal(bw.currentBody.Bytes(), blob.Body)
 	s.Equal(bw.currentTags, blob.Tags)
 	blob.Body[0] = 0
-	blob.Tags["not_exsts_key"] = "not_exists_value"
+	blob.Tags["not_exists_key"] = "not_exists_value"
 	s.NotEqual(bw.currentBody.Bytes(), blob.Body)
 	s.NotEqual(bw.currentTags, blob.Tags)
 }
@@ -60,7 +61,7 @@ func (s *BufferedWriterSuite) TestAdvancePage() {
 
 func (s *BufferedWriterSuite) TestShouldFlush() {
 	bw := &bufferedWriter{
-		currentBody: bytes.NewBuffer([]byte{1, 2, 3}),
+		currentBody:    bytes.NewBuffer([]byte{1, 2, 3}),
 		flushThreshold: 10,
 	}
 	s.False(bw.shouldFlush())
@@ -70,7 +71,7 @@ func (s *BufferedWriterSuite) TestShouldFlush() {
 
 func (s *BufferedWriterSuite) TestWriteToBody() {
 	bw := &bufferedWriter{
-		currentBody: &bytes.Buffer{},
+		currentBody:    &bytes.Buffer{},
 		separatorToken: []byte("\r\n"),
 	}
 	s.Error(bw.writeToBody(make(chan struct{})))
@@ -129,7 +130,7 @@ func (s *BufferedWriterSuite) TestAddAndFlush() {
 		// this will add three bytes one for the 0 and two for the separator
 		flushed, err := bw.AddEntity(0)
 		s.NoError(err)
-		if (i + 1) % 4 == 0 {
+		if (i+1)%4 == 0 {
 			s.True(flushed)
 		} else {
 			s.False(flushed)

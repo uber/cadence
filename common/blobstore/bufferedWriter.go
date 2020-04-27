@@ -32,7 +32,7 @@ type (
 
 		flushThreshold int
 		separatorToken []byte
-		putFn PutFn
+		putFn          PutFn
 	}
 )
 
@@ -52,11 +52,12 @@ func NewBufferedWriter(
 
 		flushThreshold: flushThreshold,
 		separatorToken: separatorToken,
-		putFn: putFn,
+		putFn:          putFn,
 	}
 }
 
 // AddEntity will add entity to buffer for current blob and flush is threshold is exceeded.
+// Returns true if flush was triggered and occurred successfully false otherwise.
 func (bw *bufferedWriter) AddEntity(e interface{}) (bool, error) {
 	bw.Lock()
 	defer bw.Unlock()
