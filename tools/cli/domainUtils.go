@@ -168,7 +168,8 @@ var (
 		},
 		cli.IntFlag{
 			Name:  FlagFailoverTimeoutWithAlias,
-			Usage: "[Optional] Domain failover timeout in seconds. Default value: 60 seconds",
+			Value: defaultGracefulFailoverTimeoutInSeconds,
+			Usage: "[Optional] Domain failover timeout in seconds.",
 		},
 	}
 
