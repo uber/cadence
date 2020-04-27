@@ -3727,10 +3727,10 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 ) error {
 
 	clusterMetadata := wh.GetClusterMetadata()
-	respChan := make(chan *gen.DescribeDomainResponse)
+	respChan := make(chan *gen.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
 	wg := &sync.WaitGroup{}
 
-	decribeDomain := func(
+	describeDomain := func(
 		ctx context.Context,
 		client frontend.Client,
 		domainName *string,
@@ -3751,7 +3751,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 		}
 		frontendClient := wh.GetRemoteFrontendClient(clusterName)
 		wg.Add(1)
-		go decribeDomain(
+		go describeDomain(
 			ctx,
 			frontendClient,
 			domainName,
@@ -3771,9 +3771,8 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 			failoverVersion = resp.FailoverVersion
 		}
 		if failoverVersion != resp.FailoverVersion {
-			prevCluster := clusterMetadata.ClusterNameForFailoverVersion(*resp.FailoverVersion)
 			return &gen.BadRequestError{
-				Message: fmt.Sprintf("Concurrent failover is not allow. On-going failover in cluster %v", prevCluster),
+				Message: "Concurrent failover is not allow.",
 			}
 		}
 	}

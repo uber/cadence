@@ -442,6 +442,9 @@ func (d *HandlerImpl) UpdateDomain(
 		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
 			return nil, errCannotDoGracefulFailoverFromCluster
 		}
+		if replicationConfig.ActiveClusterName == getResponse.ReplicationConfig.ActiveClusterName {
+			return nil, errGracefulFailoverInActiveCluster
+		}
 		// cannot have concurrent failover
 		if gracefulFailoverEndTime != nil {
 			return nil, errOngoingGracefulFailover
