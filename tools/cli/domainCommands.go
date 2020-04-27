@@ -40,8 +40,7 @@ import (
 )
 
 var (
-	gracefulFailoverType   = "grace"
-	defaultFailoverTimeout = int32(60)
+	gracefulFailoverType = "grace"
 )
 
 type (
@@ -250,11 +249,8 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 
 		var failoverTimeout *int32
 		if c.String(FlagFailoverType) == gracefulFailoverType {
-			failoverTimeout = &defaultFailoverTimeout
-			if c.IsSet(FlagFailoverTimeout) {
-				timeout := int32(c.Int(FlagFailoverTimeout))
-				failoverTimeout = &timeout
-			}
+			timeout := int32(c.Int(FlagFailoverTimeout))
+			failoverTimeout = &timeout
 		}
 
 		updateInfo := &shared.UpdateDomainInfo{
@@ -263,7 +259,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			Data:        domainData,
 		}
 		updateConfig := &shared.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retentionDays),
 			EmitMetric:                             common.BoolPtr(emitMetric),
 			HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
 			HistoryArchivalURI:                     common.StringPtr(c.String(FlagHistoryArchivalURI)),
