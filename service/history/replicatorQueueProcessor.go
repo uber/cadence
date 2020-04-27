@@ -212,27 +212,51 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(
 	}
 
 	err = p.replicator.Publish(replicationTask)
-	if err == messaging.ErrMessageSizeLimit && replicationTask.HistoryTaskAttributes != nil {
+	if err == messaging.ErrMessageSizeLimit {
 		// message size exceeds the server messaging size limit
 		// for this specific case, just send out a metadata message and
 		// let receiver fetch from source (for the concrete history events)
-		err = p.replicator.Publish(p.generateHistoryMetadataTask(replicationTask.HistoryTaskAttributes.TargetClusters, task))
+		if metadataTask := p.generateHistoryMetadataTask(
+			task,
+			replicationTask,
+		); metadataTask != nil {
+			err = p.replicator.Publish(metadataTask)
+		}
 	}
 	return err
 }
 
-func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetClusters []string, task *persistence.ReplicationTaskInfo) *replicator.ReplicationTask {
-	return &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistoryMetadata.Ptr(),
-		HistoryMetadataTaskAttributes: &replicator.HistoryMetadataTaskAttributes{
-			TargetClusters: targetClusters,
-			DomainId:       common.StringPtr(task.DomainID),
-			WorkflowId:     common.StringPtr(task.WorkflowID),
-			RunId:          common.StringPtr(task.RunID),
-			FirstEventId:   common.Int64Ptr(task.FirstEventID),
-			NextEventId:    common.Int64Ptr(task.NextEventID),
-		},
+func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(
+	task *persistence.ReplicationTaskInfo,
+	replicationTask *replicator.ReplicationTask,
+) *replicator.ReplicationTask {
+
+	if replicationTask.HistoryTaskAttributes != nil {
+		return &replicator.ReplicationTask{
+			TaskType: replicator.ReplicationTaskTypeHistoryMetadata.Ptr(),
+			HistoryMetadataTaskAttributes: &replicator.HistoryMetadataTaskAttributes{
+				TargetClusters: replicationTask.HistoryTaskAttributes.TargetClusters,
+				DomainId:       common.StringPtr(task.DomainID),
+				WorkflowId:     common.StringPtr(task.WorkflowID),
+				RunId:          common.StringPtr(task.RunID),
+				FirstEventId:   common.Int64Ptr(task.FirstEventID),
+				NextEventId:    common.Int64Ptr(task.NextEventID),
+			},
+		}
+	} else if replicationTask.HistoryTaskV2Attributes != nil {
+		return &replicator.ReplicationTask{
+			TaskType: replicator.ReplicationTaskTypeHistoryMetadata.Ptr(),
+			HistoryMetadataTaskAttributes: &replicator.HistoryMetadataTaskAttributes{
+				DomainId:     common.StringPtr(task.DomainID),
+				WorkflowId:   common.StringPtr(task.WorkflowID),
+				RunId:        common.StringPtr(task.RunID),
+				FirstEventId: common.Int64Ptr(task.FirstEventID),
+				NextEventId:  common.Int64Ptr(task.NextEventID),
+				Version:      common.Int64Ptr(task.Version),
+			},
+		}
 	}
+	return nil
 }
 
 // GenerateReplicationTask generate replication task
@@ -350,7 +374,7 @@ func GetAllHistory(
 	var pageHistorySize int
 
 	for hasMore := true; hasMore; hasMore = len(pageToken) > 0 {
-		pageHistoryEvents, pageHistoryBatches, pageToken, pageHistorySize, err = PaginateHistory(
+		pageHistoryEvents, pageHistoryBatches, pageToken, pageHistorySize, err = persistence.PaginateHistory(
 			historyV2Mgr, byBatch,
 			branchToken, firstEventID, nextEventID,
 			pageToken, defaultHistoryPageSize, shardID,
@@ -373,57 +397,6 @@ func GetAllHistory(
 		Events: historyEvents,
 	}
 	return history, historyBatches, nil
-}
-
-// PaginateHistory return paged history
-func PaginateHistory(
-	historyV2Mgr persistence.HistoryManager,
-	byBatch bool,
-	branchToken []byte,
-	firstEventID int64,
-	nextEventID int64,
-	tokenIn []byte,
-	pageSize int,
-	shardID *int,
-) ([]*shared.HistoryEvent, []*shared.History, []byte, int, error) {
-
-	historyEvents := []*shared.HistoryEvent{}
-	historyBatches := []*shared.History{}
-	var tokenOut []byte
-	var historySize int
-
-	req := &persistence.ReadHistoryBranchRequest{
-		BranchToken:   branchToken,
-		MinEventID:    firstEventID,
-		MaxEventID:    nextEventID,
-		PageSize:      pageSize,
-		NextPageToken: tokenIn,
-		ShardID:       shardID,
-	}
-	if byBatch {
-		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
-		if err != nil {
-			return nil, nil, nil, 0, err
-		}
-
-		// Keep track of total history size
-		historySize += response.Size
-		historyBatches = append(historyBatches, response.History...)
-		tokenOut = response.NextPageToken
-
-	} else {
-		response, err := historyV2Mgr.ReadHistoryBranch(req)
-		if err != nil {
-			return nil, nil, nil, 0, err
-		}
-
-		// Keep track of total history size
-		historySize += response.Size
-		historyEvents = append(historyEvents, response.HistoryEvents...)
-		tokenOut = response.NextPageToken
-	}
-
-	return historyEvents, historyBatches, tokenOut, historySize, nil
 }
 
 // TODO deprecate when 3+DC is released
