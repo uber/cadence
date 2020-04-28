@@ -75,7 +75,7 @@ func NewIndexer(config *Config, client messaging.Client, esClient es.Client, esC
 }
 
 // Start indexer
-func (x Indexer) Start() error {
+func (x *Indexer) Start() error {
 	visibilityApp := common.VisibilityAppName
 	visConsumerName := getConsumerName(x.visibilityIndexName)
 	x.visibilityProcessor = newIndexProcessor(visibilityApp, visConsumerName, x.kafkaClient, x.esClient,
@@ -84,10 +84,8 @@ func (x Indexer) Start() error {
 }
 
 // Stop indexer
-func (x Indexer) Stop() {
-	if x.visibilityProcessor != nil {
+func (x *Indexer) Stop() {
 		x.visibilityProcessor.Stop()
-	}
 }
 
 func getConsumerName(topic string) string {
