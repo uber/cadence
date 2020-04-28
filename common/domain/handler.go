@@ -363,6 +363,7 @@ func (d *HandlerImpl) UpdateDomain(
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 	isGlobalDomain := getResponse.IsGlobalDomain
 	gracefulFailoverEndTime := getResponse.FailoverEndTime
+	currentActiveCluster := replicationConfig.ActiveClusterName
 
 	// whether history archival config changed
 	historyArchivalConfigChanged := false
@@ -442,7 +443,7 @@ func (d *HandlerImpl) UpdateDomain(
 		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
 			return nil, errCannotDoGracefulFailoverFromCluster
 		}
-		if replicationConfig.ActiveClusterName == getResponse.ReplicationConfig.ActiveClusterName {
+		if replicationConfig.ActiveClusterName == currentActiveCluster {
 			return nil, errGracefulFailoverInActiveCluster
 		}
 		// cannot have concurrent failover
