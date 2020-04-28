@@ -85,7 +85,9 @@ func (x Indexer) Start() error {
 
 // Stop indexer
 func (x Indexer) Stop() {
-	x.visibilityProcessor.Stop()
+	if x.visibilityProcessor != nil {
+		x.visibilityProcessor.Stop()
+	}
 }
 
 func getConsumerName(topic string) string {
