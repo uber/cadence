@@ -20,11 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package blobstore
+package util
 
 import (
 	"bytes"
 	"errors"
+	"github.com/uber/cadence/common/blobstore"
 	"sync"
 )
 
@@ -36,16 +37,18 @@ var (
 
 type (
 	// Iterator is used to iterate over entities (represented as byte slices) in a list of blobs.
-	// Iterator is thread safe.
-	// Iterator does not make deep copies of in or out data.
+	// Iterator is thread safe and makes deep copies of all in and out data.
+	// If iterator returns an error it is no longer valid for use.
+	// Iterator iterates over keys in the order they are provided.
+	// Iterator will skip over blobs which have an empty body and will skip over empty elements within blobs.
 	Iterator interface {
 		Next() ([]byte, bool, error)
 		HasNext() bool
-		Tags() map[string]string
+		Tags(string) map[string]string
 	}
 
 	// GetFn fetches blob with given key or error on failure.
-	GetFn func(string) (Blob, error)
+	GetFn func(string) (blobstore.Blob, error)
 
 	iterator struct {
 		sync.Mutex
@@ -71,11 +74,15 @@ func NewIterator(
 	getFn GetFn,
 	separatorToken []byte,
 ) Iterator {
+	keysCopy := make([]string, len(keys), len(keys))
+	separatorTokenCopy := make([]byte, len(separatorToken), len(separatorToken))
+	copy(keysCopy, keys)
+	copy(separatorTokenCopy, separatorToken)
 	itr := &iterator{
-		keys:      keys,
+		keys:      keysCopy,
 		keysIndex: -1,
 
-		separatorToken: separatorToken,
+		separatorToken: separatorTokenCopy,
 		getFn:          getFn,
 	}
 	itr.advance()
@@ -83,7 +90,7 @@ func NewIterator(
 }
 
 // Next returns the next element in the iterator. Returns an error if no elements exist
-// or if a non-retryable error occurred. Additionally returns true if a new blob was successfully fetched.
+// or if a fatal error occurred. Additionally returns true if a new blob was successfully fetched.
 // When a new blob is successfully fetched it means Tags will be updated to reflect tags for new blob.
 func (i *iterator) Next() ([]byte, bool, error) {
 	i.Lock()
@@ -92,8 +99,12 @@ func (i *iterator) Next() ([]byte, bool, error) {
 	result := i.nextResult
 	error := i.nextError
 	newTags := i.newTags
+
 	i.advance()
-	return result, newTags, error
+
+	copyResult := make([]byte, len(result), len(result))
+	copy(copyResult, result)
+	return copyResult, newTags, error
 }
 
 // HasNext returns true if there is a next element. If HasNext returns true
@@ -107,12 +118,19 @@ func (i *iterator) HasNext() bool {
 
 // Tags returns the tags for the current blob which is being iterated over.
 // Tags will be updated after any call to Next which returns true.
-func (i *iterator) Tags() map[string]string {
+func (i *iterator) Tags(key string) map[string]string {
 	i.Lock()
 	defer i.Unlock()
 
-	return i.tags
+	copyTags := make(map[string]string)
+	for k, v := range i.tags {
+		copyTags[k] = v
+	}
+	return copyTags
 }
+
+// the logic is you want to keep advancing until either you get a valid result or you get an error
+
 
 func (i *iterator) advance() {
 	shouldAdvance := i.advanceOnce()

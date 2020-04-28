@@ -23,6 +23,7 @@ package filestore
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/util"
 	"io/ioutil"
 	"os"
 	"path"
@@ -578,12 +579,12 @@ func (s *historyArchiverSuite) writeHistoryBatchesForGetTest(historyBatches []*s
 	data, err := encode(historyBatches)
 	s.Require().NoError(err)
 	filename := constructHistoryFilename(testDomainID, testWorkflowID, testRunID, version)
-	err = common.WriteFile(path.Join(s.testGetDirectory, filename), data, testFileMode)
+	err = util.WriteFile(path.Join(s.testGetDirectory, filename), data, testFileMode)
 	s.Require().NoError(err)
 }
 
 func (s *historyArchiverSuite) assertFileExists(filepath string) {
-	exists, err := common.FileExists(filepath)
+	exists, err := util.FileExists(filepath)
 	s.NoError(err)
 	s.True(exists)
 }
