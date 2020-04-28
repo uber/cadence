@@ -737,7 +737,7 @@ UpdateWorkflowLoop:
 			return nil, ErrWorkflowCompleted
 		}
 
-		if err := terminateWorkflow(
+		if err := execution.TerminateWorkflow(
 			runningMutableState,
 			runningMutableState.GetNextEventID(),
 			TerminateIfRunningReason,
