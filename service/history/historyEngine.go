@@ -431,7 +431,6 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 }
 
 func (e *historyEngineImpl) createMutableState(
-	clusterMetadata cluster.Metadata,
 	domainEntry *cache.DomainCacheEntry,
 	runID string,
 ) (execution.MutableState, error) {
@@ -507,13 +506,25 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 		startRequest,
 		domainEntry,
 		metrics.HistoryStartWorkflowExecutionScope,
-		nil,
 		nil)
 }
 
+// for startWorkflowHelper be reused by signalWithStart
 type signalWithStartArg struct {
-	signalWithStartRequest *workflow.SignalWithStartWorkflowExecutionRequest
+	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest
 	prevMutableState       execution.MutableState
+}
+
+func (e *historyEngineImpl) newDomainNotActiveError(
+	domainName string,
+	failoverVersion int64,
+) error {
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	return ce.NewDomainNotActiveError(
+		domainName,
+		clusterMetadata.GetCurrentClusterName(),
+		clusterMetadata.ClusterNameForFailoverVersion(failoverVersion),
+	)
 }
 
 func (e *historyEngineImpl) startWorkflowHelper(
@@ -522,7 +533,6 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	domainEntry *cache.DomainCacheEntry,
 	metricsScope int,
 	signalWithStartArg *signalWithStartArg,
-	newRunID *string,
 ) (resp *workflow.StartWorkflowExecutionResponse, retError error) {
 
 	request := startRequest.StartRequest
@@ -547,24 +557,20 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(uuid.New()),
 	}
-	if newRunID == nil {
-		workflowExecution.RunId = common.StringPtr(uuid.New())
-	} else {
-		workflowExecution.RunId = newRunID
-	}
-	clusterMetadata := e.shard.GetService().GetClusterMetadata()
-	curMutableState, err := e.createMutableState(clusterMetadata, domainEntry, workflowExecution.GetRunId())
+	curMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunId())
 	if err != nil {
 		return nil, err
 	}
 
-	// for signalWithStart, WorkflowIDReusePolicy is default to WorkflowIDReusePolicyAllowDuplicate
-	// while for startWorkflow it is default to WorkflowIdReusePolicyAllowDuplicateFailedOnly.
-	isSignalWithStart := signalWithStartArg != nil
+	// preprocess for signalWithStart
 	var prevMutableState execution.MutableState
-	if isSignalWithStart && signalWithStartArg.prevMutableState != nil {
+	var signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest
+	isSignalWithStart := signalWithStartArg != nil
+	if isSignalWithStart {
 		prevMutableState = signalWithStartArg.prevMutableState
+		signalWithStartRequest = signalWithStartArg.signalWithStartRequest
 	}
 	if prevMutableState != nil {
 		prevLastWriteVersion, err := prevMutableState.GetLastWriteVersion()
@@ -572,57 +578,35 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			return nil, err
 		}
 		if prevLastWriteVersion > curMutableState.GetCurrentVersion() {
-			return nil, ce.NewDomainNotActiveError(
+			return nil, e.newDomainNotActiveError(
 				domainEntry.GetInfo().Name,
-				clusterMetadata.GetCurrentClusterName(),
-				clusterMetadata.ClusterNameForFailoverVersion(prevLastWriteVersion),
+				prevLastWriteVersion,
 			)
 		}
+		// for signalWithStart, WorkflowIDReusePolicy is default to WorkflowIDReusePolicyAllowDuplicate
+		// while for startWorkflow it is default to WorkflowIdReusePolicyAllowDuplicateFailedOnly.
 		policy := workflow.WorkflowIdReusePolicyAllowDuplicate
 		if request.WorkflowIdReusePolicy != nil {
 			policy = request.GetWorkflowIdReusePolicy()
 		}
 
 		err = e.applyWorkflowIDReusePolicyForSigWithStart(
-			ctx,
 			prevMutableState.GetExecutionInfo(),
 			workflowExecution,
 			policy,
-			domainID,
 		)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// Add WF start event
-	startEvent, err := curMutableState.AddWorkflowExecutionStartedEvent(
+	err = e.addStartEventsAndTasks(
+		curMutableState,
 		workflowExecution,
 		startRequest,
+		signalWithStartRequest,
 	)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: "Failed to add workflow execution started event.",
-		}
-	}
-
-	if isSignalWithStart {
-		// Add signal event
-		sRequest := signalWithStartArg.signalWithStartRequest
-		if _, err := curMutableState.AddWorkflowExecutionSignaled(
-			sRequest.GetSignalName(),
-			sRequest.GetSignalInput(),
-			sRequest.GetIdentity()); err != nil {
-			return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
-		}
-	}
-
-	// Generate first decision task event if not child WF and no first decision task backoff
-	if err := e.generateFirstDecisionTask(
-		curMutableState,
-		startRequest.ParentExecutionInfo,
-		startEvent,
-	); err != nil {
 		return nil, err
 	}
 
@@ -645,7 +629,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
-
+	// overwrite in case of signalWithStart
 	if prevMutableState != nil {
 		createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 		prevRunID = prevMutableState.GetExecutionInfo().RunID
@@ -676,36 +660,48 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		}
 
 		if curMutableState.GetCurrentVersion() < t.LastWriteVersion {
-			return nil, ce.NewDomainNotActiveError(
-				request.GetDomain(),
-				clusterMetadata.GetCurrentClusterName(),
-				clusterMetadata.ClusterNameForFailoverVersion(t.LastWriteVersion),
+			return nil, e.newDomainNotActiveError(
+				domainEntry.GetInfo().Name,
+				t.LastWriteVersion,
 			)
 		}
 
-		// create as ID reuse
-		createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 		prevRunID = t.RunID
-		prevLastWriteVersion = t.LastWriteVersion
+		if shouldTerminateAndStart(startRequest, t.State) {
+			runningWFCtx, err := e.loadWorkflowOnce(ctx, domainID, workflowID, prevRunID)
+			if err != nil {
+				return nil, err
+			}
+			defer func() { runningWFCtx.getReleaseFn()(retError) }()
+
+			return e.terminateAndStartWorkflow(
+				runningWFCtx,
+				workflowExecution,
+				domainEntry,
+				domainID,
+				startRequest,
+				nil,
+			)
+		}
 		if err = e.applyWorkflowIDReusePolicyHelper(
-			ctx,
 			t.StartRequestID,
 			prevRunID,
 			t.State,
 			t.CloseStatus,
 			workflowExecution,
 			startRequest.StartRequest.GetWorkflowIdReusePolicy(),
-			domainID,
 		); err != nil {
 			return nil, err
 		}
+		// create as ID reuse
+		createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 		err = wfContext.CreateWorkflowExecution(
 			newWorkflow,
 			historySize,
 			now,
 			createMode,
 			prevRunID,
-			prevLastWriteVersion,
+			t.LastWriteVersion,
 		)
 	}
 	if err != nil {
@@ -715,6 +711,134 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	return &workflow.StartWorkflowExecutionResponse{
 		RunId: workflowExecution.RunId,
 	}, nil
+}
+
+func shouldTerminateAndStart(
+	startRequest *h.StartWorkflowExecutionRequest,
+	state int,
+) bool {
+	return startRequest.StartRequest.GetWorkflowIdReusePolicy() == workflow.WorkflowIdReusePolicyTerminateIfRunning &&
+		(state == persistence.WorkflowStateRunning || state == persistence.WorkflowStateCreated)
+}
+
+// terminate running workflow then start a new run in one transaction
+func (e *historyEngineImpl) terminateAndStartWorkflow(
+	runningWFCtx workflowContext,
+	workflowExecution workflow.WorkflowExecution,
+	domainEntry *cache.DomainCacheEntry,
+	domainID string,
+	startRequest *h.StartWorkflowExecutionRequest,
+	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest,
+) (*workflow.StartWorkflowExecutionResponse, error) {
+	runningMutableState := runningWFCtx.getMutableState()
+UpdateWorkflowLoop:
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		if !runningMutableState.IsWorkflowExecutionRunning() {
+			return nil, ErrWorkflowCompleted
+		}
+
+		if err := terminateWorkflow(
+			runningMutableState,
+			runningMutableState.GetNextEventID(),
+			TerminateIfRunningReason,
+			getTerminateIfRunningDetails(workflowExecution.GetRunId()),
+			TerminateIfRunningIdentity,
+		); err != nil {
+			if err == ErrStaleState {
+				// Handler detected that cached workflow mutable could potentially be stale
+				// Reload workflow execution history
+				runningWFCtx.getContext().Clear()
+				if attempt != conditionalRetryCount-1 {
+					_, err = runningWFCtx.reloadMutableState()
+					if err != nil {
+						return nil, err
+					}
+				}
+				continue UpdateWorkflowLoop
+			}
+			return nil, err
+		}
+
+		// new mutable state
+		newMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunId())
+		if err != nil {
+			return nil, err
+		}
+
+		if signalWithStartRequest != nil {
+			startRequest = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+		}
+
+		err = e.addStartEventsAndTasks(
+			newMutableState,
+			workflowExecution,
+			startRequest,
+			signalWithStartRequest,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		updateErr := runningWFCtx.getContext().UpdateWorkflowExecutionWithNewAsActive(
+			e.timeSource.Now(),
+			execution.NewContext(
+				domainID,
+				workflowExecution,
+				e.shard,
+				e.shard.GetExecutionManager(),
+				e.logger,
+			),
+			newMutableState,
+		)
+		if updateErr != nil {
+			if updateErr == execution.ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.ConcurrencyUpdateFailureCounter)
+				continue UpdateWorkflowLoop
+			}
+			return nil, updateErr
+		}
+		break UpdateWorkflowLoop
+	}
+	return &workflow.StartWorkflowExecutionResponse{
+		RunId: workflowExecution.RunId,
+	}, nil
+}
+
+func (e *historyEngineImpl) addStartEventsAndTasks(
+	mutableState execution.MutableState,
+	workflowExecution workflow.WorkflowExecution,
+	startRequest *h.StartWorkflowExecutionRequest,
+	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest,
+) error {
+	// Add WF start event
+	startEvent, err := mutableState.AddWorkflowExecutionStartedEvent(
+		workflowExecution,
+		startRequest,
+	)
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: "Failed to add workflow execution started event.",
+		}
+	}
+
+	if signalWithStartRequest != nil {
+		// Add signal event
+		sRequest := signalWithStartRequest.SignalWithStartRequest
+		_, err := mutableState.AddWorkflowExecutionSignaled(
+			sRequest.GetSignalName(),
+			sRequest.GetSignalInput(),
+			sRequest.GetIdentity())
+		if err != nil {
+			return &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
+		}
+	}
+
+	// Generate first decision task event if not child WF and no first decision task backoff
+	return e.generateFirstDecisionTask(
+		mutableState,
+		startRequest.ParentExecutionInfo,
+		startEvent,
+	)
 }
 
 // GetMutableState retrieves the mutable state of the workflow execution
@@ -1991,7 +2115,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: sRequest.WorkflowId,
 	}
-	var newRunID *string
 
 	var prevMutableState execution.MutableState
 	attempt := 0
@@ -2015,16 +2138,18 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				prevMutableState = mutableState
 				break
 			}
-			// if policy is TerminateIfRunning, terminate current run then signalwithstart
+			// workflow is running, if policy is TerminateIfRunning, terminate current run then signalWithStart
 			if sRequest.GetWorkflowIdReusePolicy() == workflow.WorkflowIdReusePolicyTerminateIfRunning {
-				workflowContext := newWorkflowContext(wfContext, release, mutableState)
-				newRunID = common.StringPtr(uuid.New())
-				err := e.requestTerminateWorkflowForSignalWithStart(workflowContext, newRunID)
-				if err != nil {
-					return nil, err
-				}
-				prevMutableState = mutableState
-				break
+				workflowExecution.RunId = common.StringPtr(uuid.New())
+				runningWFCtx := newWorkflowContext(wfContext, release, mutableState)
+				return e.terminateAndStartWorkflow(
+					runningWFCtx,
+					workflowExecution,
+					domainEntry,
+					domainID,
+					nil,
+					signalWithStartRequest,
+				)
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -2075,7 +2200,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	// Start workflow and signal
 	startRequest := getStartRequest(domainID, sRequest)
 	sigWithStartArg := &signalWithStartArg{
-		signalWithStartRequest: sRequest,
+		signalWithStartRequest: signalWithStartRequest,
 		prevMutableState:       prevMutableState,
 	}
 	return e.startWorkflowHelper(
@@ -2084,7 +2209,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		domainEntry,
 		metrics.HistorySignalWithStartWorkflowExecutionScope,
 		sigWithStartArg,
-		newRunID)
+	)
 }
 
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
@@ -2725,11 +2850,9 @@ func getStartRequest(
 
 // for startWorkflowExecution & signalWithStart to handle workflow reuse policy
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
-	ctx context.Context,
 	prevExecutionInfo *persistence.WorkflowExecutionInfo,
 	execution workflow.WorkflowExecution,
 	wfIDReusePolicy workflow.WorkflowIdReusePolicy,
-	domainID string,
 ) error {
 
 	prevStartRequestID := prevExecutionInfo.CreateRequestID
@@ -2738,14 +2861,12 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
 	prevCloseState := prevExecutionInfo.CloseStatus
 
 	return e.applyWorkflowIDReusePolicyHelper(
-		ctx,
 		prevStartRequestID,
 		prevRunID,
 		prevState,
 		prevCloseState,
 		execution,
 		wfIDReusePolicy,
-		domainID,
 	)
 }
 
@@ -2785,36 +2906,35 @@ func (e *historyEngineImpl) requestTerminateWorkflowForSignalWithStart(
 	workflowContext workflowContext,
 	newRunID *string,
 ) error {
-	action := func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
-		if !mutableState.IsWorkflowExecutionRunning() {
-			return nil, ErrWorkflowCompleted
-		}
 
-		return updateWorkflowWithoutDecision, terminateWorkflow(
-			mutableState,
-			mutableState.GetNextEventID(),
-			TerminateIfRunningReason,
-			getTerminateIfRunningDetails(*newRunID),
-			TerminateIfRunningIdentity,
-		)
-	}
-	// use updateWorkflowHelper since already locked
-	err := e.updateWorkflowHelper(workflowContext, action)
-	if err != nil {
-		return err
-	}
+	//action := func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+	//	if !mutableState.IsWorkflowExecutionRunning() {
+	//		return nil, ErrWorkflowCompleted
+	//	}
+	//
+	//	return updateWorkflowWithoutDecision, terminateWorkflow(
+	//		mutableState,
+	//		mutableState.GetNextEventID(),
+	//		TerminateIfRunningReason,
+	//		getTerminateIfRunningDetails(*newRunID),
+	//		TerminateIfRunningIdentity,
+	//	)
+	//}
+	//// use updateWorkflowHelper since already locked
+	//err := e.updateWorkflowHelper(workflowContext, action)
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
-	ctx context.Context,
 	prevStartRequestID,
 	prevRunID string,
 	prevState int,
 	prevCloseState int,
 	execution workflow.WorkflowExecution,
 	wfIDReusePolicy workflow.WorkflowIdReusePolicy,
-	domainID string,
 ) error {
 
 	// here we know some information about the prev workflow, i.e. either running right now
@@ -2822,13 +2942,6 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 	switch prevState {
 	case persistence.WorkflowStateCreated,
 		persistence.WorkflowStateRunning:
-		if wfIDReusePolicy == workflow.WorkflowIdReusePolicyTerminateIfRunning {
-			err := e.requestTerminateWorkflow(ctx, domainID, execution, prevRunID)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
 		msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 	case persistence.WorkflowStateCompleted:
