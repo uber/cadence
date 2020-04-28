@@ -841,6 +841,10 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 	)
 }
 
+func getTerminateIfRunningDetails(newRunID string) []byte {
+	return []byte(fmt.Sprintf(TerminateIfRunningDetailsTemplate, newRunID))
+}
+
 // GetMutableState retrieves the mutable state of the workflow execution
 func (e *historyEngineImpl) GetMutableState(
 	ctx context.Context,
@@ -2868,64 +2872,6 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
 		execution,
 		wfIDReusePolicy,
 	)
-}
-
-// This will be called with current execution lock,
-// but without concrete execution lock
-func (e *historyEngineImpl) requestTerminateWorkflow(
-	ctx context.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	targetRunID string,
-) error {
-
-	termRequest := &h.TerminateWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
-		TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: execution.WorkflowId,
-				RunId:      common.StringPtr(targetRunID),
-			},
-			Reason:   common.StringPtr(TerminateIfRunningReason),
-			Details:  getTerminateIfRunningDetails(execution.GetRunId()),
-			Identity: common.StringPtr(TerminateIfRunningIdentity),
-		},
-	}
-	err := e.TerminateWorkflowExecution(ctx, termRequest)
-	if err != nil && err != ErrWorkflowCompleted {
-		return err
-	}
-	return nil
-}
-
-func getTerminateIfRunningDetails(newRunID string) []byte {
-	return []byte(fmt.Sprintf(TerminateIfRunningDetailsTemplate, newRunID))
-}
-
-func (e *historyEngineImpl) requestTerminateWorkflowForSignalWithStart(
-	workflowContext workflowContext,
-	newRunID *string,
-) error {
-
-	//action := func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
-	//	if !mutableState.IsWorkflowExecutionRunning() {
-	//		return nil, ErrWorkflowCompleted
-	//	}
-	//
-	//	return updateWorkflowWithoutDecision, terminateWorkflow(
-	//		mutableState,
-	//		mutableState.GetNextEventID(),
-	//		TerminateIfRunningReason,
-	//		getTerminateIfRunningDetails(*newRunID),
-	//		TerminateIfRunningIdentity,
-	//	)
-	//}
-	//// use updateWorkflowHelper since already locked
-	//err := e.updateWorkflowHelper(workflowContext, action)
-	//if err != nil {
-	//	return err
-	//}
-	return nil
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
