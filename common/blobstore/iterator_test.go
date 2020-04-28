@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2020 Uber Technologies, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
 )
 
 var blobMap = map[string]Blob{
@@ -75,12 +74,7 @@ func (s *IteratorSuite) TestInitializedToEmpty() {
 		return Blob{}, nil
 	}
 	itr := NewIterator([]string{"key_1", "key_2", "key_3"}, getFn, []byte("\r\n"))
-	s.False(itr.HasNext())
-	s.Nil(itr.Tags())
-	next, newTags, err := itr.Next()
-	s.Nil(next)
-	s.False(newTags)
-	s.Error(err)
+	s.assertIteratorState(itr, false, nil, nil, false, true)
 }
 
 func (s *IteratorSuite) TestMultiBlobPagesNoErrors() {
@@ -92,14 +86,17 @@ func (s *IteratorSuite) TestMultiBlobPagesNoErrors() {
 		getFn,
 		[]byte("\r\n"))
 
-	s.True(itr.HasNext())
-	s.Equal(blobMap["blob_3"].Tags, itr.Tags())
-	next, newTags, err := itr.Next()
-	s.Equal([]byte("\"dog\""), next)
-	s.True(newTags)
-	s.NoError(err)
-
-
+	s.assertIteratorState(itr, true, blobMap["blob_3"].Tags, []byte("\"dog\""), true, false)
+	s.assertIteratorState(itr, true, blobMap["blob_3"].Tags, []byte("\"cat\""), false, false)
+	s.assertIteratorState(itr, true, blobMap["blob_3"].Tags, []byte("\"fish\""), false, false)
+	s.assertIteratorState(itr, true, blobMap["blob_2"].Tags, []byte("\"abc\""), true, false)
+	s.assertIteratorState(itr, true, blobMap["blob_2"].Tags, []byte("\"def\""), false, false)
+	s.assertIteratorState(itr, true, blobMap["blob_2"].Tags, []byte("\"ghi\""), false, false)
+	s.assertIteratorState(itr, true, blobMap["blob_1"].Tags, []byte("\"three\""), true, false)
+	s.assertIteratorState(itr, true, blobMap["blob_1"].Tags, []byte("\"four\""), false, false)
+	s.assertIteratorState(itr, true, blobMap["blob_1"].Tags, []byte("\"five\""), false, false)
+	s.assertIteratorState(itr, true, nil, []byte("\"one\""), true, false)
+	s.assertIteratorState(itr, true, nil, []byte("\"two\""), false, false)
 }
 
 func (s *IteratorSuite) assertIteratorState(

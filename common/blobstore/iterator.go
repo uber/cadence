@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2020 Uber Technologies, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,8 +33,9 @@ var (
 	// which has already reached the end of its input.
 	ErrIteratorFinished = errors.New("iterator has reached end")
 )
+
 type (
-	// Iterator is used to iterate over entities (represented as byte slices) in a collection of blobs.
+	// Iterator is used to iterate over entities (represented as byte slices) in a list of blobs.
 	// Iterator is thread safe.
 	// Iterator does not make deep copies of in or out data.
 	Iterator interface {
@@ -49,17 +50,18 @@ type (
 	iterator struct {
 		sync.Mutex
 
-		keys []string
-		keysIndex int
-		page [][]byte
-		pageIndex int
-		nextResult []byte
-		nextError error
-		tags map[string]string
-		newTags bool
+		keys        []string
+		keysIndex   int
+		page        [][]byte
+		pageIndex   int
+		nextResult  []byte
+		nextError   error
+		tags        map[string]string
+		newTags     bool
+		hasAdvanced bool
 
 		separatorToken []byte
-		getFn GetFn
+		getFn          GetFn
 	}
 )
 
@@ -70,11 +72,11 @@ func NewIterator(
 	separatorToken []byte,
 ) Iterator {
 	itr := &iterator{
-		keys: keys,
+		keys:      keys,
 		keysIndex: -1,
 
 		separatorToken: separatorToken,
-		getFn: getFn,
+		getFn:          getFn,
 	}
 	itr.advance()
 	return itr
@@ -90,9 +92,7 @@ func (i *iterator) Next() ([]byte, bool, error) {
 	result := i.nextResult
 	error := i.nextError
 	newTags := i.newTags
-	if i.hasNext() {
-		i.advance()
-	}
+	i.advance()
 	return result, newTags, error
 }
 
@@ -115,34 +115,34 @@ func (i *iterator) Tags() map[string]string {
 }
 
 func (i *iterator) advance() {
-	// if current page has unconsumed elements than first consume from current page
-	if i.pageIndex < len(i.page) {
-		i.nextResult = i.page[i.pageIndex]
-		i.nextError = nil
-		i.pageIndex = i.pageIndex + 1
-		i.newTags = false
-		return
+	shouldAdvance := i.advanceOnce()
+	for shouldAdvance {
+		shouldAdvance = i.advanceOnce()
 	}
+}
 
+func (i *iterator) advanceOnce() bool {
+	// if there is already no next result to be had then there is no way to advance.
+	if !i.hasNext() && i.hasAdvanced {
+		return false
+	}
+	i.hasAdvanced = true
+	// if current page has unconsumed elements then first consume from current page
+	if i.pageIndex < len(i.page) {
+		i.newTags = false
+		return i.consumeFromCurrentPage()
+	}
 	// if current page is finished and list of keys is
 	// finished then set iterator to finished state
-	if i.keysIndex >= len(i.keys) {
-		i.nextResult = nil
-		i.nextError = ErrIteratorFinished
-		i.newTags = false
-		return
+	if i.keysIndex >= len(i.keys)-1 {
+		return i.setIteratorToTerminalState(ErrIteratorFinished)
 	}
-
 	// otherwise try to fetch next blob
 	i.keysIndex = i.keysIndex + 1
 	blob, err := i.getFn(i.keys[i.keysIndex])
 	if err != nil {
-		i.nextResult = nil
-		i.nextError = err
-		i.newTags = false
-		return
+		return i.setIteratorToTerminalState(err)
 	}
-
 	// if current blob is empty and there are more blobs which can
 	// be fetched, continue to fetch until non-empty blob is fetched
 	if len(blob.Body) == 0 {
@@ -151,32 +151,36 @@ func (i *iterator) advance() {
 	for len(blob.Body) == 0 && i.keysIndex < len(i.keys) {
 		blob, err = i.getFn(i.keys[i.keysIndex])
 		if err != nil {
-			i.nextResult = nil
-			i.nextError = err
-			i.newTags = false
-			return
+			return i.setIteratorToTerminalState(err)
 		}
 		if len(blob.Body) != 0 {
 			break
 		}
 		i.keysIndex = i.keysIndex + 1
 	}
-
 	if len(blob.Body) == 0 {
-		i.nextError = nil
-		i.nextError = ErrIteratorFinished
-		i.newTags = false
-		return
+		return i.setIteratorToTerminalState(ErrIteratorFinished)
 	}
-
 	// at this point a new blob has been fetched
 	i.pageIndex = 0
 	i.tags = blob.Tags
 	i.newTags = true
 	i.page = bytes.Split(blob.Body, i.separatorToken)
+	return i.consumeFromCurrentPage()
+}
+
+func (i *iterator) consumeFromCurrentPage() bool {
 	i.nextResult = i.page[i.pageIndex]
 	i.nextError = nil
 	i.pageIndex = i.pageIndex + 1
+	return len(i.nextResult) == 0
+}
+
+func (i *iterator) setIteratorToTerminalState(err error) bool {
+	i.nextResult = nil
+	i.nextError = err
+	i.newTags = false
+	return false
 }
 
 func (i *iterator) hasNext() bool {

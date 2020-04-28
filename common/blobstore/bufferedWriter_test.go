@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2020 Uber Technologies, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,6 +24,7 @@ package blobstore
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -147,7 +148,7 @@ func (s *BufferedWriterSuite) TestAddAndFlush() {
 	putFn := func(blob Blob, page int) (string, error) {
 		return fmt.Sprintf("page_%v", page), nil
 	}
-	bw := NewBufferedWriter(putFn, 10, []byte("\r\n"), 0).(*bufferedWriter)
+	bw := NewBufferedWriter(putFn, 10, []byte("\r\n"), 0, json.Marshal).(*bufferedWriter)
 	for i := 0; i < 100; i++ {
 		// this will add three bytes one for the 0 and two for the separator
 		flushed, err := bw.AddEntity(0)

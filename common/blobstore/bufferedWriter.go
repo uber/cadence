@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2020 Uber Technologies, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,7 +24,6 @@ package blobstore
 
 import (
 	"bytes"
-	"encoding/json"
 	"sync"
 )
 
@@ -43,6 +42,9 @@ type (
 	// Returns key on success or error on failure.
 	PutFn func(Blob, int) (string, error)
 
+	// SerializeFn is used to serialize entities into the blob body.
+	SerializeFn func(interface{}) ([]byte, error)
+
 	bufferedWriter struct {
 		sync.Mutex
 
@@ -55,6 +57,7 @@ type (
 		flushThreshold int
 		separatorToken []byte
 		putFn          PutFn
+		serializeFn    SerializeFn
 	}
 )
 
@@ -64,6 +67,7 @@ func NewBufferedWriter(
 	flushThreshold int,
 	separatorToken []byte,
 	startingPage int,
+	serializeFn SerializeFn,
 ) BufferedWriter {
 	return &bufferedWriter{
 		currentBody: &bytes.Buffer{},
@@ -75,6 +79,7 @@ func NewBufferedWriter(
 		flushThreshold: flushThreshold,
 		separatorToken: separatorToken,
 		putFn:          putFn,
+		serializeFn:    serializeFn,
 	}
 }
 
@@ -134,7 +139,7 @@ func (bw *bufferedWriter) flush() error {
 }
 
 func (bw *bufferedWriter) writeToBody(e interface{}) error {
-	data, err := json.Marshal(e)
+	data, err := bw.serializeFn(e)
 	if err != nil {
 		return err
 	}
