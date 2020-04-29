@@ -23,38 +23,20 @@
 package util
 
 import (
-	"github.com/uber/cadence/common/blobstore"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-var blobMap = map[string]blobstore.Blob{
-	"empty": {
-		Body: nil,
-		Tags: nil,
-	},
-	"empty_body": {
-		Body: nil,
-		Tags: map[string]string{"key_1": "value_1"},
-	},
-	"empty_tags": {
-		Body: []byte("\"one\"\r\n\"two\"\r\n"),
-		Tags: nil,
-	},
-	"blob_1": {
-		Body: []byte("\"three\"\r\n\"four\"\r\n\"five\"\r\n"),
-		Tags: map[string]string{"key1": "value1"},
-	},
-	"blob_2": {
-		Body: []byte("\"abc\"\r\n\"def\"\r\n\"ghi\"\r\n"),
-		Tags: map[string]string{"key1": "value1", "key2": "value2"},
-	},
-	"blob_3": {
-		Body: []byte("\"dog\"\r\n\"cat\"\r\n\"fish\"\r\n"),
-		Tags: map[string]string{"key1": "value1", "key2": "value2"},
-	},
+var getMap = map[int][]byte{
+	0: nil,
+	1: {},
+	2: []byte("\r\n\r\n\r\n"),
+	3: []byte("\"one\"\r\n\"two\"\r\n"),
+	4: []byte("\"three\"\r\n\"four\"\r\n\r\n\"five\"\r\n"),
+	5: []byte("\r\n\"six\"\r\n\"seven\"\r\n\"eight\"\r\n"),
 }
 
 type IteratorSuite struct {
@@ -70,52 +52,53 @@ func (s *IteratorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
 
-//func (s *IteratorSuite) TestInitializedToEmpty() {
-//	getFn := func(key string) (blobstore.Blob, error) {
-//		return blobstore.Blob{}, nil
-//	}
-//	itr := NewIterator([]string{"key_1", "key_2", "key_3"}, getFn, []byte("\r\n"))
-//	s.assertIteratorState(itr, false, nil, nil, false, true)
-//}
+func (s *IteratorSuite) TestInitializedToEmpty() {
+	getFn := func(page int) ([]byte, error) {
+		return getMap[page], nil
+	}
+	itr := NewIterator(0, 2, getFn, []byte("\r\n"))
+	s.False(itr.HasNext())
+	_, err := itr.Next()
+	s.Error(err)
+}
 
-//func (s *IteratorSuite) TestMultiBlobPagesNoErrors() {
-//	getFn := func(key string) (blobstore.Blob, error) {
-//		return blobMap[key], nil
-//	}
-//	itr := NewIterator(
-//		[]string{"blob_3", "empty", "blob_2", "empty_body", "blob_1", "empty_tags"},
-//		getFn,
-//		[]byte("\r\n"))
-//
-//	s.assertIteratorState(itr, true, blobMap["blob_3"].Tags, []byte("\"dog\""), true, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_3"].Tags, []byte("\"cat\""), false, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_3"].Tags, []byte("\"fish\""), false, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_2"].Tags, []byte("\"abc\""), true, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_2"].Tags, []byte("\"def\""), false, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_2"].Tags, []byte("\"ghi\""), false, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_1"].Tags, []byte("\"three\""), true, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_1"].Tags, []byte("\"four\""), false, false)
-//	s.assertIteratorState(itr, true, blobMap["blob_1"].Tags, []byte("\"five\""), false, false)
-//	s.assertIteratorState(itr, true, nil, []byte("\"one\""), true, false)
-//	s.assertIteratorState(itr, true, nil, []byte("\"two\""), false, false)
-//}
+func (s *IteratorSuite) TestNonEmptyNoErrors() {
+	getFn := func(page int) ([]byte, error) {
+		return getMap[page], nil
+	}
+	itr := NewIterator(0, 5, getFn, []byte("\r\n"))
+	expectedResults := []string{"\"one\"", "\"two\"", "\"three\"", "\"four\"", "\"five\"", "\"six\"", "\"seven\"", "\"eight\""}
+	i := 0
+	for itr.HasNext() {
+		curr, err := itr.Next()
+		s.NoError(err)
+		expectedCurr := []byte(expectedResults[i])
+		s.Equal(expectedCurr, curr)
+		i++
+	}
+	s.False(itr.HasNext())
+	_, err := itr.Next()
+	s.Error(err)
+}
 
-//func (s *IteratorSuite) assertIteratorState(
-//	itr Iterator,
-//	expectedHasNext bool,
-//	expectedTags map[string]string,
-//	expectedValue []byte,
-//	expectNewTags bool,
-//	expectedError bool,
-//) {
-//	s.Equal(expectedHasNext, itr.HasNext())
-//	s.Equal(expectedTags, itr.Tags())
-//	value, newTags, err := itr.Next()
-//	s.Equal(expectedValue, value)
-//	s.Equal(expectNewTags, newTags)
-//	if expectedError {
-//		s.Error(err)
-//	} else {
-//		s.NoError(err)
-//	}
-//}
+func (s *IteratorSuite) TestNonEmptyWithErrors() {
+	getFn := func(page int) ([]byte, error) {
+		if page > 4 {
+			return nil, errors.New("error getting next page")
+		}
+		return getMap[page], nil
+	}
+	itr := NewIterator(0, 5, getFn, []byte("\r\n"))
+	expectedResults := []string{"\"one\"", "\"two\"", "\"three\"", "\"four\"", "\"five\""}
+	i := 0
+	for itr.HasNext() {
+		curr, err := itr.Next()
+		s.NoError(err)
+		expectedCurr := []byte(expectedResults[i])
+		s.Equal(expectedCurr, curr)
+		i++
+	}
+	s.False(itr.HasNext())
+	_, err := itr.Next()
+	s.Error(err)
+}

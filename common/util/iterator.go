@@ -25,90 +25,85 @@ package util
 import (
 	"bytes"
 	"errors"
-	"github.com/uber/cadence/common/blobstore"
 	"sync"
 )
 
 var (
-	// ErrIteratorFinished indicates that next was called on an iterator
+	// ErrIteratorFinished indicates that Next was called on an iterator
 	// which has already reached the end of its input.
 	ErrIteratorFinished = errors.New("iterator has reached end")
 )
 
 type (
-	// Iterator is used to iterate over entities (represented as byte slices) in a list of blobs.
+	// Iterator is used to iterate over entities.
+	// Each entity is represented as a byte slice.
+	// Iterator will fetch pages using the provided GetFn.
+	// Pages will be fetched starting from provided minPage and continuing until provided maxPage.
+	// Iterator will skip over any pages with empty input and will skip over any empty elements within a page.
 	// Iterator is thread safe and makes deep copies of all in and out data.
-	// If iterator returns an error it is no longer valid for use.
-	// Iterator iterates over keys in the order they are provided.
-	// Iterator will skip over blobs which have an empty body and will skip over empty elements within blobs.
+	// If Next returns an error all subsequent calls to Next will return the same error.
 	Iterator interface {
-		Next() ([]byte, bool, error)
+		Next() ([]byte, error)
 		HasNext() bool
-		Tags(string) map[string]string
 	}
 
-	// GetFn fetches blob with given key or error on failure.
-	GetFn func(string) (blobstore.Blob, error)
+	// GetFn fetches bytes for given page number. Returns error on failure.
+	GetFn func(int) ([]byte, error)
 
 	iterator struct {
 		sync.Mutex
 
-		keys        []string
-		keysIndex   int
+		currentPage int
 		page        [][]byte
 		pageIndex   int
 		nextResult  []byte
 		nextError   error
-		tags        map[string]string
-		newTags     bool
-		hasAdvanced bool
 
 		separatorToken []byte
 		getFn          GetFn
+		minPage     int
+		maxPage     int
 	}
 )
 
 // NewIterator constructs a new iterator.
 func NewIterator(
-	keys []string,
+	minPage int,
+	maxPage int,
 	getFn GetFn,
 	separatorToken []byte,
 ) Iterator {
-	keysCopy := make([]string, len(keys), len(keys))
 	separatorTokenCopy := make([]byte, len(separatorToken), len(separatorToken))
-	copy(keysCopy, keys)
 	copy(separatorTokenCopy, separatorToken)
 	itr := &iterator{
-		keys:      keysCopy,
-		keysIndex: -1,
+		currentPage: -1,
 
 		separatorToken: separatorTokenCopy,
-		getFn:          getFn,
+		getFn: getFn,
+		minPage: minPage,
+		maxPage: maxPage,
 	}
-	itr.advance()
+	itr.advance(true)
 	return itr
 }
 
-// Next returns the next element in the iterator. Returns an error if no elements exist
-// or if a fatal error occurred. Additionally returns true if a new blob was successfully fetched.
-// When a new blob is successfully fetched it means Tags will be updated to reflect tags for new blob.
-func (i *iterator) Next() ([]byte, bool, error) {
+// Next returns the next element in the iterator.
+// Returns an error if no elements are left or if a non-recoverable error occurred.
+func (i *iterator) Next() ([]byte, error) {
 	i.Lock()
 	defer i.Unlock()
 
 	result := i.nextResult
 	error := i.nextError
-	newTags := i.newTags
 
-	i.advance()
+	i.advance(false)
 
 	copyResult := make([]byte, len(result), len(result))
 	copy(copyResult, result)
-	return copyResult, newTags, error
+	return copyResult, error
 }
 
-// HasNext returns true if there is a next element. If HasNext returns true
-// it is guaranteed that Next will return a nil error and non-nil byte slice.
+// HasNext returns true if next invocation of Next will return on-empty byte blob and nil error, false otherwise.
 func (i *iterator) HasNext() bool {
 	i.Lock()
 	defer i.Unlock()
@@ -116,91 +111,55 @@ func (i *iterator) HasNext() bool {
 	return i.hasNext()
 }
 
-// Tags returns the tags for the current blob which is being iterated over.
-// Tags will be updated after any call to Next which returns true.
-func (i *iterator) Tags(key string) map[string]string {
-	i.Lock()
-	defer i.Unlock()
-
-	copyTags := make(map[string]string)
-	for k, v := range i.tags {
-		copyTags[k] = v
+func (i *iterator) advance(initialization bool) {
+	if !i.hasNext() && !initialization {
+		return
 	}
-	return copyTags
-}
-
-// the logic is you want to keep advancing until either you get a valid result or you get an error
-
-
-func (i *iterator) advance() {
-	shouldAdvance := i.advanceOnce()
-	for shouldAdvance {
-		shouldAdvance = i.advanceOnce()
+	i.advanceOnce()
+	for len(i.nextResult) == 0 && i.nextError == nil {
+		i.advanceOnce()
 	}
 }
 
-func (i *iterator) advanceOnce() bool {
-	// if there is already no next result to be had then there is no way to advance.
-	if !i.hasNext() && i.hasAdvanced {
-		return false
-	}
-	i.hasAdvanced = true
-	// if current page has unconsumed elements then first consume from current page
+func (i *iterator) advanceOnce() {
 	if i.pageIndex < len(i.page) {
-		i.newTags = false
-		return i.consumeFromCurrentPage()
+		i.consumeFromCurrentPage()
+		return
 	}
-	// if current page is finished and list of keys is
-	// finished then set iterator to finished state
-	if i.keysIndex >= len(i.keys)-1 {
-		return i.setIteratorToTerminalState(ErrIteratorFinished)
+	if i.currentPage >= i.maxPage {
+		i.setIteratorToTerminalState(ErrIteratorFinished)
+		return
 	}
-	// otherwise try to fetch next blob
-	i.keysIndex = i.keysIndex + 1
-	blob, err := i.getFn(i.keys[i.keysIndex])
-	if err != nil {
-		return i.setIteratorToTerminalState(err)
-	}
-	// if current blob is empty and there are more blobs which can
-	// be fetched, continue to fetch until non-empty blob is fetched
-	if len(blob.Body) == 0 {
-		i.keysIndex = i.keysIndex + 1
-	}
-	for len(blob.Body) == 0 && i.keysIndex < len(i.keys) {
-		blob, err = i.getFn(i.keys[i.keysIndex])
-		if err != nil {
-			return i.setIteratorToTerminalState(err)
-		}
-		if len(blob.Body) != 0 {
-			break
-		}
-		i.keysIndex = i.keysIndex + 1
-	}
-	if len(blob.Body) == 0 {
-		return i.setIteratorToTerminalState(ErrIteratorFinished)
-	}
-	// at this point a new blob has been fetched
+	i.page = nil
+	i.currentPage++
 	i.pageIndex = 0
-	i.tags = blob.Tags
-	i.newTags = true
-	i.page = bytes.Split(blob.Body, i.separatorToken)
-	return i.consumeFromCurrentPage()
+	data, err := i.getFn(i.currentPage)
+	if err != nil {
+		i.setIteratorToTerminalState(err)
+		return
+	}
+	if len(data) == 0 {
+		i.nextResult = nil
+		i.nextError = nil
+	} else {
+		copyData := make([]byte, len(data), len(data))
+		copy(copyData, data)
+		i.page = bytes.Split(copyData, i.separatorToken)
+		i.consumeFromCurrentPage()
+	}
 }
 
-func (i *iterator) consumeFromCurrentPage() bool {
+func (i *iterator) consumeFromCurrentPage() {
 	i.nextResult = i.page[i.pageIndex]
 	i.nextError = nil
 	i.pageIndex = i.pageIndex + 1
-	return len(i.nextResult) == 0
 }
 
-func (i *iterator) setIteratorToTerminalState(err error) bool {
+func (i *iterator) setIteratorToTerminalState(err error) {
 	i.nextResult = nil
 	i.nextError = err
-	i.newTags = false
-	return false
 }
 
 func (i *iterator) hasNext() bool {
-	return i.nextResult != nil && i.nextError == nil
+	return len(i.nextResult) > 0 && i.nextError == nil
 }
