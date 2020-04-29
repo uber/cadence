@@ -21,12 +21,13 @@
 package filestore
 
 import (
-	"github.com/uber/cadence/common/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

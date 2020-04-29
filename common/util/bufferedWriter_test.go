@@ -47,7 +47,7 @@ func (s *BufferedWriterSuite) SetupTest() {
 
 func (s *BufferedWriterSuite) TestShouldFlush() {
 	bw := &bufferedWriter{
-		buffer:    bytes.NewBuffer([]byte{1, 2, 3}),
+		buffer:         bytes.NewBuffer([]byte{1, 2, 3}),
 		flushThreshold: 10,
 	}
 	s.False(bw.shouldFlush())
@@ -57,9 +57,9 @@ func (s *BufferedWriterSuite) TestShouldFlush() {
 
 func (s *BufferedWriterSuite) TestWriteToBuffer() {
 	bw := &bufferedWriter{
-		buffer:    &bytes.Buffer{},
+		buffer:         &bytes.Buffer{},
 		separatorToken: []byte("\r\n"),
-		serializeFn: json.Marshal,
+		serializeFn:    json.Marshal,
 	}
 	s.Error(bw.writeToBuffer(make(chan struct{})))
 	s.Equal("", bw.buffer.String())
@@ -74,8 +74,8 @@ func (s *BufferedWriterSuite) TestFlush_HandleReturnsError() {
 		return errors.New("put function returns error")
 	}
 	bw := &bufferedWriter{
-		buffer: bytes.NewBuffer([]byte{1, 2, 3}),
-		page: 1,
+		buffer:   bytes.NewBuffer([]byte{1, 2, 3}),
+		page:     1,
 		handleFn: handleFn,
 	}
 	s.Error(bw.flush())
@@ -88,8 +88,8 @@ func (s *BufferedWriterSuite) TestFlush_Success() {
 		return nil
 	}
 	bw := &bufferedWriter{
-		buffer: bytes.NewBuffer([]byte{1, 2, 3}),
-		page: 1,
+		buffer:   bytes.NewBuffer([]byte{1, 2, 3}),
+		page:     1,
 		handleFn: handleFn,
 	}
 	s.NoError(bw.flush())
@@ -101,13 +101,11 @@ func (s *BufferedWriterSuite) TestAddAndFlush() {
 	handleFn := func(data []byte, page int) error {
 		return nil
 	}
-	bw := NewBufferedWriter(handleFn, json.Marshal,  10, []byte("\r\n")).(*bufferedWriter)
+	bw := NewBufferedWriter(handleFn, json.Marshal, 10, []byte("\r\n")).(*bufferedWriter)
 	expectedLastFlushedPage := -1
 	for i := 1; i <= 100; i++ {
-		// this will add three bytes one for the 0 and two for the separator
-		err := bw.Add(0)
-		s.NoError(err)
-		if i % 4 == 0 {
+		s.NoError(bw.Add(0))
+		if i%4 == 0 {
 			expectedLastFlushedPage++
 		}
 		s.Equal(expectedLastFlushedPage, bw.LastFlushedPage())

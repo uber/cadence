@@ -49,7 +49,7 @@ type (
 		sync.Mutex
 
 		buffer *bytes.Buffer
-		page int
+		page   int
 
 		flushThreshold int
 		separatorToken []byte
@@ -69,11 +69,11 @@ func NewBufferedWriter(
 	copy(separatorTokenCopy, separatorToken)
 	return &bufferedWriter{
 		buffer: &bytes.Buffer{},
-		page: 0,
+		page:   0,
 
 		flushThreshold: flushThreshold,
 		separatorToken: separatorTokenCopy,
-		handleFn:          handleFn,
+		handleFn:       handleFn,
 		serializeFn:    serializeFn,
 	}
 }

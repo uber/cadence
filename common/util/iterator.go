@@ -61,8 +61,8 @@ type (
 
 		separatorToken []byte
 		getFn          GetFn
-		minPage     int
-		maxPage     int
+		minPage        int
+		maxPage        int
 	}
 )
 
@@ -79,9 +79,9 @@ func NewIterator(
 		currentPage: -1,
 
 		separatorToken: separatorTokenCopy,
-		getFn: getFn,
-		minPage: minPage,
-		maxPage: maxPage,
+		getFn:          getFn,
+		minPage:        minPage,
+		maxPage:        maxPage,
 	}
 	itr.advance(true)
 	return itr

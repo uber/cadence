@@ -23,12 +23,13 @@ package filestore
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/util"
 	"os"
 	"path"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"

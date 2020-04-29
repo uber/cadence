@@ -25,10 +25,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/util"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/dgryski/go-farm"
 

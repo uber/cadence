@@ -27,8 +27,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/util"
 	"os"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/service/config"

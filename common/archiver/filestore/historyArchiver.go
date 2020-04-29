@@ -37,10 +37,11 @@ package filestore
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common/util"
 	"os"
 	"path"
 	"strconv"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"

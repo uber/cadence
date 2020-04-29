@@ -23,10 +23,11 @@
 package filestore
 
 import (
-	"github.com/uber/cadence/common/util"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"

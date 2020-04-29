@@ -24,12 +24,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/common/util"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/util"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
