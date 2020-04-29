@@ -70,14 +70,14 @@ func retryListConcreteExecutions(
 		}
 
 		fmt.Printf("retryListConcreteExecutions got no error: %v, %v\n", requestNum, i)
-		if len(resp.Executions) == 0 {
-			fmt.Printf("retryListConcreteExecutions got empty executions: %v, %v, %v\n", requestNum, i, len(resp.NextPageToken))
+		if len(resp.NextPageToken) == 0 {
+			fmt.Printf("retryListConcreteExecutions got empty next page token: %v, %v, %v\n", requestNum, i, len(resp.Executions))
 			continue
 		}
-		fmt.Printf("retryListConcreteExecutions got non-empty executions: %v, %v, %v\n", requestNum, i, len(resp.Executions))
+		fmt.Printf("retryListConcreteExecutions got non-empty next pageToken: %v, %v, %v\n", requestNum, i, len(resp.Executions))
 		return resp, nil
 	}
-	fmt.Printf("retryListConcreteExecutions failed all retriers: %v, %v\n", requestNum, err)
+	fmt.Printf("retryListConcreteExecutions failed all retries: %v, %v\n", requestNum, err)
 	return resp, err
 }
 
