@@ -46,6 +46,7 @@ type (
 		ShardScanReportDirectoryPath       string
 		ExecutionCheckFailureDirectoryPath string
 		CorruptedExecutionDirectoryPath    string
+		AllExecutionsDirectoryPath         string
 	}
 
 	// ShardScanOutputFiles are the files produced for a scan of a single shard
@@ -53,6 +54,7 @@ type (
 		ShardScanReportFile       *os.File
 		ExecutionCheckFailureFile *os.File
 		CorruptedExecutionFile    *os.File
+		AllExecutionsFile         *os.File
 	}
 
 	// ExecutionToRecord is an execution which needs to be recorded
@@ -147,11 +149,17 @@ func scanShard(
 	}
 	checkFailureWriter := NewBufferedWriter(outputFiles.ExecutionCheckFailureFile)
 	corruptedExecutionWriter := NewBufferedWriter(outputFiles.CorruptedExecutionFile)
+	allExecutionsWriter := NewBufferedWriter(outputFiles.AllExecutionsFile)
 	defer func() {
 		checkFailureWriter.Flush()
 		corruptedExecutionWriter.Flush()
+		allExecutionsWriter.Flush()
 		recordShardScanReport(outputFiles.ShardScanReportFile, report)
-		deleteEmptyFiles(outputFiles.CorruptedExecutionFile, outputFiles.ExecutionCheckFailureFile, outputFiles.ShardScanReportFile)
+		deleteEmptyFiles(
+			outputFiles.CorruptedExecutionFile,
+			outputFiles.ExecutionCheckFailureFile,
+			outputFiles.ShardScanReportFile,
+			outputFiles.AllExecutionsFile)
 		closeFn()
 	}()
 	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
@@ -167,13 +175,14 @@ func scanShard(
 
 	var token []byte
 	isFirstIteration := true
+	page := 0
 	for isFirstIteration || len(token) != 0 {
 		isFirstIteration = false
 		req := &persistence.ListConcreteExecutionsRequest{
 			PageSize:  executionsPageSize,
 			PageToken: token,
 		}
-		resp, err := retryListConcreteExecutions(limiter, &report.TotalDBRequests, execStore, req)
+		resp, err := retryListConcreteExecutions(limiter, &report.TotalDBRequests, execStore, req, page)
 		if err != nil {
 			report.Failure = &ShardScanReportFailure{
 				Note:    "failed to call ListConcreteExecutions",
@@ -181,6 +190,7 @@ func scanShard(
 			}
 			return report
 		}
+		page++
 		token = resp.NextPageToken
 		for _, e := range resp.Executions {
 			if e == nil || e.ExecutionInfo == nil {
@@ -190,6 +200,13 @@ func scanShard(
 				report.Scanned = &ShardScanReportExecutionsScanned{}
 			}
 			report.Scanned.TotalExecutionsCount++
+			allExecutionsWriter.Add(&ExecutionToRecord{
+				ShardID:     shardID,
+				DomainID:    e.ExecutionInfo.DomainID,
+				WorkflowID:  e.ExecutionInfo.WorkflowID,
+				RunID:       e.ExecutionInfo.RunID,
+				CloseStatus: e.ExecutionInfo.CloseStatus,
+			})
 
 			cr, err := getCheckRequest(shardID, e, payloadSerializer, branchDecoder)
 			if err != nil {
@@ -283,16 +300,22 @@ func createShardScanOutputFiles(shardID int, sod *ScanOutputDirectories) (*Shard
 	if err != nil {
 		ErrorAndExit("failed to create corruptedExecutionFile", err)
 	}
+	allExecutionsFile, err := os.Create(fmt.Sprintf("%v/%v", sod.AllExecutionsDirectoryPath, constructFileNameFromShard(shardID)))
+	if err != nil {
+		ErrorAndExit("failed to create allExecutionsFile", err)
+	}
 
 	deferFn := func() {
 		executionCheckFailureFile.Close()
 		shardScanReportFile.Close()
 		corruptedExecutionFile.Close()
+		allExecutionsFile.Close()
 	}
 	return &ShardScanOutputFiles{
 		ShardScanReportFile:       shardScanReportFile,
 		ExecutionCheckFailureFile: executionCheckFailureFile,
 		CorruptedExecutionFile:    corruptedExecutionFile,
+		AllExecutionsFile:         allExecutionsFile,
 	}, deferFn
 }
 
@@ -306,6 +329,7 @@ func createScanOutputDirectories() *ScanOutputDirectories {
 		ShardScanReportDirectoryPath:       fmt.Sprintf("./scan_%v/shard_scan_report", now),
 		ExecutionCheckFailureDirectoryPath: fmt.Sprintf("./scan_%v/execution_check_failure", now),
 		CorruptedExecutionDirectoryPath:    fmt.Sprintf("./scan_%v/corrupted_execution", now),
+		AllExecutionsDirectoryPath:         fmt.Sprintf("./scan_%v/all_executions", now),
 	}
 	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create ShardScanFailureDirectoryPath", err)
@@ -315,6 +339,9 @@ func createScanOutputDirectories() *ScanOutputDirectories {
 	}
 	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create CorruptedExecutionDirectoryPath", err)
+	}
+	if err := os.MkdirAll(sod.AllExecutionsDirectoryPath, 0777); err != nil {
+		ErrorAndExit("failed to create AllExecutionsDirectoryPath", err)
 	}
 	fmt.Println("scan results located under: ", fmt.Sprintf("./scan_%v", now))
 	return sod

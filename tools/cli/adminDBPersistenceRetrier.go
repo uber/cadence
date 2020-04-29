@@ -24,6 +24,8 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -42,7 +44,9 @@ func retryListConcreteExecutions(
 	totalDBRequests *int64,
 	execStore persistence.ExecutionStore,
 	req *persistence.ListConcreteExecutionsRequest,
+	requestNum int,
 ) (*persistence.InternalListConcreteExecutionsResponse, error) {
+	fmt.Printf("called retryListConcreteExecutions: %v, %+v\n", requestNum, *req)
 	var resp *persistence.InternalListConcreteExecutionsResponse
 	op := func() error {
 		var err error
@@ -52,16 +56,28 @@ func retryListConcreteExecutions(
 	}
 
 	var err error
-	// only  add this extra layer of retries for ListConcreteExecutions because a failure
-	// here will cause a scan over a full shard to stop while a failure on any other db will just
-	// result in one failed execution check
 	for i := 0; i < maxDBRetries; i++ {
+		<-time.After(time.Second)
+		fmt.Printf("retryListConcreteExecutions top of loop: %v, %v\n", requestNum, i)
 		err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-		// TODO: we have seen cases in which gocql iterator return empty result even when there are results, consider retrying more.
-		if err == nil {
-			return resp, nil
+		if err != nil {
+			fmt.Printf("retryListConcreteExecutions got error: %v, %v, %v\n", requestNum, i, err)
+			if !common.IsPersistenceTransientError(err) {
+				fmt.Printf("retryListConcreteExecutions got non-tranisent error: %v, %v, %v\n", requestNum, i, err)
+				return nil, err
+			}
+			continue
 		}
+
+		fmt.Printf("retryListConcreteExecutions got no error: %v, %v\n", requestNum, i)
+		if len(resp.Executions) == 0 {
+			fmt.Printf("retryListConcreteExecutions got empty executions: %v, %v, %v\n", requestNum, i, len(resp.NextPageToken))
+			continue
+		}
+		fmt.Printf("retryListConcreteExecutions got non-empty executions: %v, %v, %v\n", requestNum, i, len(resp.Executions))
+		return resp, nil
 	}
+	fmt.Printf("retryListConcreteExecutions failed all retriers: %v, %v\n", requestNum, err)
 	return nil, err
 }
 
