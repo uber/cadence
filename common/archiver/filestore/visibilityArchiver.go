@@ -29,13 +29,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/uber/cadence/common/util"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/util"
 )
 
 const (

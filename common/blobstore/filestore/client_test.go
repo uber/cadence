@@ -27,14 +27,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/uber/cadence/common/util"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/util"
 )
 
 type ClientSuite struct {

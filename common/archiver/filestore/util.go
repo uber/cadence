@@ -29,12 +29,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/uber/cadence/common/util"
-
 	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/util"
 )
 
 var (

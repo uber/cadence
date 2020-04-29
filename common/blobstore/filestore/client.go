@@ -29,10 +29,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/uber/cadence/common/util"
-
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/util"
 )
 
 type (
