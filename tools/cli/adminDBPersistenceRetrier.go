@@ -78,7 +78,7 @@ func retryListConcreteExecutions(
 		return resp, nil
 	}
 	fmt.Printf("retryListConcreteExecutions failed all retriers: %v, %v\n", requestNum, err)
-	return nil, err
+	return resp, err
 }
 
 func retryGetWorkflowExecution(
