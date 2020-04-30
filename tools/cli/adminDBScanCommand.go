@@ -46,6 +46,7 @@ type (
 		ShardScanReportDirectoryPath       string
 		ExecutionCheckFailureDirectoryPath string
 		CorruptedExecutionDirectoryPath    string
+		ZombieExecutionsPath               string
 	}
 
 	// ShardScanOutputFiles are the files produced for a scan of a single shard
@@ -53,6 +54,7 @@ type (
 		ShardScanReportFile       *os.File
 		ExecutionCheckFailureFile *os.File
 		CorruptedExecutionFile    *os.File
+		ZombieExecutionFile       *os.File
 	}
 
 	// ExecutionToRecord is an execution which needs to be recorded
@@ -147,9 +149,11 @@ func scanShard(
 	}
 	checkFailureWriter := NewBufferedWriter(outputFiles.ExecutionCheckFailureFile)
 	corruptedExecutionWriter := NewBufferedWriter(outputFiles.CorruptedExecutionFile)
+	zombieExecutionWriter := NewBufferedWriter(outputFiles.ZombieExecutionFile)
 	defer func() {
 		checkFailureWriter.Flush()
 		corruptedExecutionWriter.Flush()
+		zombieExecutionWriter.Flush()
 		recordShardScanReport(outputFiles.ShardScanReportFile, report)
 		deleteEmptyFiles(outputFiles.CorruptedExecutionFile, outputFiles.ExecutionCheckFailureFile, outputFiles.ShardScanReportFile)
 		closeFn()
@@ -190,6 +194,16 @@ func scanShard(
 				report.Scanned = &ShardScanReportExecutionsScanned{}
 			}
 			report.Scanned.TotalExecutionsCount++
+			if e.ExecutionInfo.State == persistence.WorkflowStateZombie {
+				zombieExecutionWriter.Add(&ExecutionToRecord{
+					ShardID: shardID,
+					DomainID: e.ExecutionInfo.DomainID,
+					WorkflowID: e.ExecutionInfo.WorkflowID,
+					RunID: e.ExecutionInfo.RunID,
+					State: e.ExecutionInfo.State,
+					CloseStatus: e.ExecutionInfo.CloseStatus,
+				})
+			}
 
 			cr, err := getCheckRequest(shardID, e, payloadSerializer, branchDecoder)
 			if err != nil {
@@ -283,16 +297,22 @@ func createShardScanOutputFiles(shardID int, sod *ScanOutputDirectories) (*Shard
 	if err != nil {
 		ErrorAndExit("failed to create corruptedExecutionFile", err)
 	}
+	zombieExecutionFile, err := os.Create(fmt.Sprintf("%v/%v", sod.ZombieExecutionsPath, constructFileNameFromShard(shardID)))
+	if err != nil {
+		ErrorAndExit("failed to create zombieExecutionFile", err)
+	}
 
 	deferFn := func() {
 		executionCheckFailureFile.Close()
 		shardScanReportFile.Close()
 		corruptedExecutionFile.Close()
+		zombieExecutionFile.Close()
 	}
 	return &ShardScanOutputFiles{
 		ShardScanReportFile:       shardScanReportFile,
 		ExecutionCheckFailureFile: executionCheckFailureFile,
 		CorruptedExecutionFile:    corruptedExecutionFile,
+		ZombieExecutionFile:       zombieExecutionFile,
 	}, deferFn
 }
 
@@ -306,6 +326,7 @@ func createScanOutputDirectories() *ScanOutputDirectories {
 		ShardScanReportDirectoryPath:       fmt.Sprintf("./scan_%v/shard_scan_report", now),
 		ExecutionCheckFailureDirectoryPath: fmt.Sprintf("./scan_%v/execution_check_failure", now),
 		CorruptedExecutionDirectoryPath:    fmt.Sprintf("./scan_%v/corrupted_execution", now),
+		ZombieExecutionsPath:               fmt.Sprintf("./scan_%v/zombie_execution", now),
 	}
 	if err := os.MkdirAll(sod.ShardScanReportDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create ShardScanFailureDirectoryPath", err)
@@ -315,6 +336,9 @@ func createScanOutputDirectories() *ScanOutputDirectories {
 	}
 	if err := os.MkdirAll(sod.CorruptedExecutionDirectoryPath, 0777); err != nil {
 		ErrorAndExit("failed to create CorruptedExecutionDirectoryPath", err)
+	}
+	if err := os.MkdirAll(sod.ZombieExecutionsPath, 0777); err != nil {
+		ErrorAndExit("failed to create ZombieExecutionsPath", err)
 	}
 	fmt.Println("scan results located under: ", fmt.Sprintf("./scan_%v", now))
 	return sod
