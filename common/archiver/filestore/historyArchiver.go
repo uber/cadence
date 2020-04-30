@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/util"
 )
 
 const (
@@ -168,13 +169,13 @@ func (h *historyArchiver) Archive(
 	}
 
 	dirPath := URI.Path()
-	if err = mkdirAll(dirPath, h.dirMode); err != nil {
+	if err = util.MkdirAll(dirPath, h.dirMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
 		return err
 	}
 
 	filename := constructHistoryFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
-	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches, h.fileMode); err != nil {
+	if err := util.WriteFile(path.Join(dirPath, filename), encodedHistoryBatches, h.fileMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return err
 	}
@@ -196,7 +197,7 @@ func (h *historyArchiver) Get(
 	}
 
 	dirPath := URI.Path()
-	exists, err := directoryExists(dirPath)
+	exists, err := util.DirectoryExists(dirPath)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
@@ -228,7 +229,7 @@ func (h *historyArchiver) Get(
 
 	filename := constructHistoryFilename(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion)
 	filepath := path.Join(dirPath, filename)
-	exists, err = fileExists(filepath)
+	exists, err = util.FileExists(filepath)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
@@ -236,7 +237,7 @@ func (h *historyArchiver) Get(
 		return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 	}
 
-	encodedHistoryBatches, err := readFile(filepath)
+	encodedHistoryBatches, err := util.ReadFile(filepath)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
@@ -298,7 +299,7 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 }
 
 func getHighestVersion(dirPath string, request *archiver.GetHistoryRequest) (*int64, error) {
-	filenames, err := listFilesByPrefix(dirPath, constructHistoryFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
+	filenames, err := util.ListFilesByPrefix(dirPath, constructHistoryFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
 	if err != nil {
 		return nil, err
 	}
