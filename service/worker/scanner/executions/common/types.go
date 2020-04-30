@@ -134,7 +134,7 @@ type (
 		Result  ShardFixResult
 	}
 
-	// ShardFixHandled indicates the executions which were successfully fixed by fix
+	// ShardFixHandled indicates the executions which were handled by fix.
 	ShardFixHandled struct {
 		ExecutionCount int64
 		FixedCount     int64
@@ -167,8 +167,7 @@ type (
 
 	// Keys indicate the keys which were uploaded during a scan or fix.
 	// Keys are constructed as uuid_page.extension. MinPage and MaxPage are
-	// both inclusive and pages are sequential. This means given MinPage and MaxPage
-	// all keys can be deterministically constructed.
+	// both inclusive and pages are sequential, meaning from this struct all pages can be deterministically constructed.
 	Keys struct {
 		UUID      string
 		MinPage   int
@@ -186,6 +185,7 @@ type (
 	}
 
 	// FixOutputEntity represents a single execution that should be durably recorded by fix.
+	// It contains the ScanOutputEntity that was given as input to fix.
 	FixOutputEntity struct {
 		ScanOutputEntity ScanOutputEntity
 		Result           FixResult
