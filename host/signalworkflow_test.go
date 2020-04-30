@@ -30,10 +30,12 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	cadencehistory "github.com/uber/cadence/service/history"
+	"github.com/uber/cadence/service/history/execution"
 )
 
 func (s *integrationSuite) TestSignalWorkflow() {
@@ -1588,7 +1590,7 @@ GetHistoryLoop:
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 		s.Equal(cadencehistory.TerminateIfRunningReason, terminateEventAttributes.GetReason())
 		s.Equal(fmt.Sprintf(cadencehistory.TerminateIfRunningDetailsTemplate, resp1.GetRunId()), string(terminateEventAttributes.Details))
-		s.Equal(cadencehistory.TerminateIfRunningIdentity, terminateEventAttributes.GetIdentity())
+		s.Equal(execution.IdentityHistoryService, terminateEventAttributes.GetIdentity())
 		executionTerminated = true
 		break GetHistoryLoop
 	}
