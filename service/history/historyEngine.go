@@ -77,8 +77,6 @@ const (
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
 	// TerminateIfRunningDetailsTemplate details template for terminateIfRunning
 	TerminateIfRunningDetailsTemplate = "New runID: %s"
-	// TerminateIfRunningIdentity identity for terminateIfRunning
-	TerminateIfRunningIdentity = "Cadence history"
 )
 
 type (
@@ -742,7 +740,7 @@ UpdateWorkflowLoop:
 			runningMutableState.GetNextEventID(),
 			TerminateIfRunningReason,
 			getTerminateIfRunningDetails(workflowExecution.GetRunId()),
-			TerminateIfRunningIdentity,
+			execution.IdentityHistoryService,
 		); err != nil {
 			if err == ErrStaleState {
 				// Handler detected that cached workflow mutable could potentially be stale

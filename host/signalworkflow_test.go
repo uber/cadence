@@ -29,13 +29,11 @@ import (
 	"strings"
 	"time"
 
-	cadencehistory "github.com/uber/cadence/service/history"
-
 	"github.com/pborman/uuid"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
+	cadencehistory "github.com/uber/cadence/service/history"
 )
 
 func (s *integrationSuite) TestSignalWorkflow() {
