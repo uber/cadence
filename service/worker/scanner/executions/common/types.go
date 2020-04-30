@@ -31,6 +31,8 @@ type (
 	CheckResultType string
 	// FixResultType is the result type of running an invariant fix
 	FixResultType string
+	// InvariantType is the type of an invariant
+	InvariantType string
 )
 
 const (
@@ -47,6 +49,13 @@ const (
 	FixResultTypeFixed = "fixed"
 	// FixResultTypeFailed indicates that fix attempted to fix an execution but failed to do so
 	FixResultTypeFailed = "failed"
+
+	// HistoryExistsInvariantType asserts that history must exist if concrete execution exists
+	HistoryExistsInvariantType InvariantType = "history_exists"
+	// ValidFirstEventInvariantType asserts that the first event in a history must be of a specific form
+	ValidFirstEventInvariantType = "valid_first_event"
+	// PairedWithCurrentInvariantType asserts that an open concrete execution must have a valid current execution
+	PairedWithCurrentInvariantType = "paired_with_current"
 )
 
 // The following are types related to Invariant.

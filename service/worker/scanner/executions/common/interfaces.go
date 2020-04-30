@@ -29,7 +29,7 @@ type (
 	InvariantManager interface {
 		RunChecks(Execution) CheckResult
 		RunFixes(Execution) FixResult
-		InvariantTypes() []string
+		InvariantTypes() []InvariantType
 	}
 
 	// Invariant represents an invariant of a single execution.
@@ -38,7 +38,7 @@ type (
 	Invariant interface {
 		Check(Execution, *InvariantResourceBag) CheckResult
 		Fix(Execution, *InvariantResourceBag) FixResult
-		InvariantType() string
+		InvariantType() InvariantType
 	}
 
 	// ExecutionIterator gets Executions from underlying store.
