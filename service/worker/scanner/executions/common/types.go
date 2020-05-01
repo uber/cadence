@@ -78,21 +78,15 @@ type (
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
-		Note            string
-		Details         string
+		Info            string
+		InfoDetails     string
 	}
 
 	// FixResult is the result of running Fix.
 	FixResult struct {
 		FixResultType FixResultType
-		Note          string
-		Details       string
-	}
-
-	// ExecutionIteratorResult is a result from ExecutionIterator.Next.
-	ExecutionIteratorResult struct {
-		Execution Execution
-		Error     error
+		Info          string
+		InfoDetails   string
 	}
 )
 
@@ -101,17 +95,17 @@ type (
 	// ShardScanReport is the report of running Scan on a single shard.
 	ShardScanReport struct {
 		ShardID int
-		Handled ShardScanHandled
+		Stats   ShardScanStats
 		Result  ShardScanResult
 	}
 
-	// ShardScanHandled indicates the executions which were handled by shard Scan.
-	ShardScanHandled struct {
-		ExecutionsCount  int64
-		CorruptedCount   int64
-		CheckFailedCount int64
-		CorruptionByType map[string]int64
-		CorruptOpenCount int64
+	// ShardScanStats indicates the stats of executions which were handled by shard Scan.
+	ShardScanStats struct {
+		ExecutionsCount             int64
+		CorruptedCount              int64
+		CheckFailedCount            int64
+		CorruptionByType            map[InvariantType]int64
+		CorruptedOpenExecutionCount int64
 	}
 
 	// ShardScanResult indicates the result of running scan on a shard.
@@ -161,8 +155,8 @@ type (
 	// if a check or fix fails, it is only a ControlFlowFailure if
 	// an error is encountered which makes even attempting to check or fix impossible.
 	ControlFlowFailure struct {
-		Note    string
-		Details string
+		Info        string
+		InfoDetails string
 	}
 
 	// Keys indicate the keys which were uploaded during a scan or fix.

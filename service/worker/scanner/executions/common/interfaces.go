@@ -43,9 +43,9 @@ type (
 
 	// ExecutionIterator gets Executions from underlying store.
 	ExecutionIterator interface {
-		// Next returns the current result and advances the iterator.
-		// An error is return if the iterator encounters a non-recoverable error or if iterator is already at the end.
-		Next() (*ExecutionIteratorResult, error)
+		// Next returns the next execution found. Any error reading from underlying store
+		// or converting store entry to Execution will result in an error after which iterator cannot be used.
+		Next() (*Execution, error)
 		// HasNext indicates if the iterator has a next element. If HasNext is true
 		// it is guaranteed that Next will return a nil error and a non-nil ExecutionIteratorResult.
 		HasNext() bool
