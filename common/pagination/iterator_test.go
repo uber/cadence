@@ -52,20 +52,27 @@ func (s *IteratorSuite) SetupTest() {
 }
 
 func (s *IteratorSuite) TestInitializedToEmpty() {
-	fetchFn := func(token PageToken) ([]Entity, error) {
-		return fetchMap[token], nil
+	fetchFn := func(token PageToken) ([]Entity, PageToken, error) {
+		if token.(int) == 2 {
+			return nil, nil, nil
+		}
+		return fetchMap[token], token.(int) + 1, nil
 	}
-	itr := NewIterator([]PageToken{0, 1}, fetchFn)
+	itr := NewIterator(0, fetchFn)
 	s.False(itr.HasNext())
 	_, err := itr.Next()
 	s.Equal(ErrIteratorFinished, err)
 }
 
 func (s *IteratorSuite) TestNonEmptyNoErrors() {
-	fetchFn := func(token PageToken) ([]Entity, error) {
-		return fetchMap[token], nil
+	fetchFn := func(token PageToken) ([]Entity, PageToken, error) {
+		nextPageToken := token.(int) + 1
+		if nextPageToken > 4 {
+			return nil, nil, nil
+		}
+		return fetchMap[token], nextPageToken, nil
 	}
-	itr := NewIterator([]PageToken{0, 1, 2, 3, 4}, fetchFn)
+	itr := NewIterator(0, fetchFn)
 	expectedResults := []string{"one", "two", "three", "four", "five", "six", "seven", "eight"}
 	i := 0
 	for itr.HasNext() {
@@ -80,13 +87,13 @@ func (s *IteratorSuite) TestNonEmptyNoErrors() {
 }
 
 func (s *IteratorSuite) TestNonEmptyWithErrors() {
-	fetchFn := func(token PageToken) ([]Entity, error) {
+	fetchFn := func(token PageToken) ([]Entity, PageToken, error) {
 		if token.(int) == 4 {
-			return nil, errors.New("got error")
+			return nil, nil, errors.New("got error")
 		}
-		return fetchMap[token], nil
+		return fetchMap[token], token.(int) + 1, nil
 	}
-	itr := NewIterator([]PageToken{0, 1, 2, 3, 4}, fetchFn)
+	itr := NewIterator(0, fetchFn)
 	expectedResults := []string{"one", "two", "three", "four", "five", "six", "seven"}
 	i := 0
 	for itr.HasNext() {

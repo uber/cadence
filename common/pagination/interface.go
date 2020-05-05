@@ -46,7 +46,7 @@ type (
 	// ShouldFlushFn returns true if given page should be flushed false otherwise.
 	ShouldFlushFn func(Page) bool
 	// FetchFn fetches the entities for the provided PageToken or error on failure.
-	FetchFn func(PageToken) ([]Entity, error)
+	FetchFn func(PageToken) ([]Entity, PageToken, error)
 )
 
 type (

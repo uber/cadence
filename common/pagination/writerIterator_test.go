@@ -53,22 +53,7 @@ func (s *WriterIteratorSuite) SetupTest() {
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
 	store := make(map[string][]byte)
-	fetchFn := func(token PageToken) ([]Entity, error) {
-		data := store[token.(string)]
-		dataBlobs := bytes.Split(data, separator)
-		var entities []Entity
-		for _, db := range dataBlobs {
-			if len(db) == 0 {
-				continue
-			}
-			var entity TestEntity
-			if err := json.Unmarshal(db, &entity); err != nil {
-				return nil, err
-			}
-			entities = append(entities, entity)
-		}
-		return entities, nil
-	}
+
 	shouldFlushFn := func(page Page) bool {
 		return len(page.Entities) == 10
 	}
@@ -100,7 +85,32 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 		expectedKey := fmt.Sprintf("key_%v", i)
 		s.Equal(expectedKey, flushedKeys[i].(string))
 	}
-	itr := NewIterator(flushedKeys, fetchFn)
+
+	fetchFn := func(token PageToken) ([]Entity, PageToken, error) {
+		if token.(int) >= len(flushedKeys) {
+			return nil, nil, nil
+		}
+		key := fmt.Sprintf("key_%v", token)
+		data, ok := store[key]
+		if !ok {
+			return nil, nil, nil
+		}
+		dataBlobs := bytes.Split(data, separator)
+		var entities []Entity
+		for _, db := range dataBlobs {
+			if len(db) == 0 {
+				continue
+			}
+			var entity TestEntity
+			if err := json.Unmarshal(db, &entity); err != nil {
+				return nil, nil, err
+			}
+			entities = append(entities, entity)
+		}
+		return entities, token.(int) + 1, nil
+	}
+
+	itr := NewIterator(0, fetchFn)
 	itrCount := 0
 	for itr.HasNext() {
 		val, err := itr.Next()

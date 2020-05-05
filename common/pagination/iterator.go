@@ -24,10 +24,9 @@ package pagination
 
 type (
 	iterator struct {
-		entities       []Entity
-		entityIndex    int
-		pageTokens     []PageToken
-		pageTokenIndex int
+		entities      []Entity
+		entityIndex   int
+		nextPageToken PageToken
 
 		nextEntity Entity
 		nextError  error
@@ -38,15 +37,14 @@ type (
 
 // NewIterator constructs a new Iterator
 func NewIterator(
-	pageTokens []PageToken,
+	startingPageToken PageToken,
 	fetchFn FetchFn,
 ) Iterator {
 	itr := &iterator{
-		entities:       nil,
-		entityIndex:    0,
-		pageTokens:     pageTokens,
-		pageTokenIndex: -1,
-		fetchFn:        fetchFn,
+		entities:      nil,
+		entityIndex:   0,
+		nextPageToken: startingPageToken,
+		fetchFn:       fetchFn,
 	}
 	itr.advance(true)
 	return itr
@@ -67,15 +65,14 @@ func (i *iterator) HasNext() bool {
 	return i.nextError == nil
 }
 
-func (i *iterator) advance(initialization bool) {
-	if !i.HasNext() && !initialization {
+func (i *iterator) advance(firstPage bool) {
+	if !i.HasNext() && !firstPage {
 		return
 	}
 	if i.entityIndex < len(i.entities) {
 		i.consume()
 	} else {
-		i.pageTokenIndex++
-		if err := i.advanceToNonEmptyPage(); err != nil {
+		if err := i.advanceToNonEmptyPage(firstPage); err != nil {
 			i.terminate(err)
 		} else {
 			i.consume()
@@ -83,21 +80,21 @@ func (i *iterator) advance(initialization bool) {
 	}
 }
 
-func (i *iterator) advanceToNonEmptyPage() error {
-	if i.pageTokenIndex >= len(i.pageTokens) {
+func (i *iterator) advanceToNonEmptyPage(firstPage bool) error {
+	if i.nextPageToken == nil && !firstPage {
 		return ErrIteratorFinished
 	}
-	entities, err := i.fetchFn(i.pageTokens[i.pageTokenIndex])
+	entities, nextPageToken, err := i.fetchFn(i.nextPageToken)
 	if err != nil {
 		return err
 	}
+	i.nextPageToken = nextPageToken
 	if len(entities) != 0 {
 		i.entities = entities
 		i.entityIndex = 0
 		return nil
 	}
-	i.pageTokenIndex++
-	return i.advanceToNonEmptyPage()
+	return i.advanceToNonEmptyPage(false)
 }
 
 func (i *iterator) consume() {
