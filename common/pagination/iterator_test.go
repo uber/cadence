@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-//
+// 
 // Copyright (c) 2020 Uber Technologies, Inc.
-//
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-//
+// 
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-//
+// 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package util
+package pagination
 
 import (
 	"errors"
@@ -30,13 +30,12 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var getMap = map[int][]byte{
+var fetchMap = map[PageToken][]Entity{
 	0: nil,
 	1: {},
-	2: []byte("\r\n\r\n\r\n"),
-	3: []byte("\"one\"\r\n\"two\"\r\n"),
-	4: []byte("\"three\"\r\n\"four\"\r\n\r\n\"five\"\r\n"),
-	5: []byte("\r\n\"six\"\r\n\"seven\"\r\n\"eight\"\r\n"),
+	2: {"one", "two", "three"},
+	3: {"four", "five", "six", "seven"},
+	4: {"eight"},
 }
 
 type IteratorSuite struct {
@@ -53,52 +52,51 @@ func (s *IteratorSuite) SetupTest() {
 }
 
 func (s *IteratorSuite) TestInitializedToEmpty() {
-	getFn := func(page int) ([]byte, error) {
-		return getMap[page], nil
+	fetchFn := func(token PageToken) ([]Entity, error) {
+		return fetchMap[token], nil
 	}
-	itr := NewIterator(0, 2, getFn, []byte("\r\n"))
+	itr := NewIterator([]PageToken{0, 1}, fetchFn)
 	s.False(itr.HasNext())
 	_, err := itr.Next()
-	s.Error(err)
+	s.Equal(ErrIteratorFinished, err)
 }
 
 func (s *IteratorSuite) TestNonEmptyNoErrors() {
-	getFn := func(page int) ([]byte, error) {
-		return getMap[page], nil
+	fetchFn := func(token PageToken) ([]Entity, error) {
+		return fetchMap[token], nil
 	}
-	itr := NewIterator(0, 5, getFn, []byte("\r\n"))
-	expectedResults := []string{"\"one\"", "\"two\"", "\"three\"", "\"four\"", "\"five\"", "\"six\"", "\"seven\"", "\"eight\""}
+	itr := NewIterator([]PageToken{0, 1, 2, 3, 4}, fetchFn)
+	expectedResults := []string{"one", "two", "three", "four", "five", "six", "seven", "eight"}
 	i := 0
 	for itr.HasNext() {
 		curr, err := itr.Next()
 		s.NoError(err)
-		expectedCurr := []byte(expectedResults[i])
-		s.Equal(expectedCurr, curr)
+		s.Equal(expectedResults[i], curr.(string))
 		i++
 	}
 	s.False(itr.HasNext())
 	_, err := itr.Next()
-	s.Error(err)
+	s.Equal(ErrIteratorFinished, err)
 }
 
 func (s *IteratorSuite) TestNonEmptyWithErrors() {
-	getFn := func(page int) ([]byte, error) {
-		if page > 4 {
-			return nil, errors.New("error getting next page")
+	fetchFn := func(token PageToken) ([]Entity, error) {
+		if token.(int) == 4 {
+			return nil, errors.New("got error")
 		}
-		return getMap[page], nil
+		return fetchMap[token], nil
 	}
-	itr := NewIterator(0, 5, getFn, []byte("\r\n"))
-	expectedResults := []string{"\"one\"", "\"two\"", "\"three\"", "\"four\"", "\"five\""}
+	itr := NewIterator([]PageToken{0, 1, 2, 3, 4}, fetchFn)
+	expectedResults := []string{"one", "two", "three", "four", "five", "six", "seven"}
 	i := 0
 	for itr.HasNext() {
 		curr, err := itr.Next()
 		s.NoError(err)
-		expectedCurr := []byte(expectedResults[i])
-		s.Equal(expectedCurr, curr)
+		s.Equal(expectedResults[i], curr.(string))
 		i++
 	}
 	s.False(itr.HasNext())
-	_, err := itr.Next()
-	s.Error(err)
+	curr, err := itr.Next()
+	s.Nil(curr)
+	s.Equal("got error", err.Error())
 }
