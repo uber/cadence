@@ -12,19 +12,18 @@ import (
         "errors"
         "testing"
 
-        "code.uber.internal/devexp/cadence-worker/activity"
-
         "github.com/stretchr/testify/mock"
         "github.com/stretchr/testify/suite"
 
         "go.uber.org/cadence"
+        "go.uber.org/cadence/testsuite"
 )
 
 type UnitTestSuite struct {
         suite.Suite
-        cadence.WorkflowTestSuite
+        testsuite.WorkflowTestSuite
 
-        env *cadence.TestWorkflowEnvironment
+        env *testsuite.TestWorkflowEnvironment
 }
 
 func (s *UnitTestSuite) SetupTest() {
@@ -62,8 +61,7 @@ func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
         s.True(s.env.IsWorkflowCompleted())
 
         s.NotNil(s.env.GetWorkflowError())
-        _, ok := s.env.GetWorkflowError().(*cadence.GenericError)
-        s.True(ok)
+        s.True(cadence.IsGenericError(s.env.GetWorkflowError()))
         s.Equal("SimpleActivityFailure", s.env.GetWorkflowError().Error())
 }
 
