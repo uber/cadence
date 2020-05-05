@@ -64,5 +64,7 @@ type (
 		Add(Entity) error
 		Flush() error
 		FlushedPages() []PageToken
+		FirstFlushedPage() PageToken
+		LastFlushedPage() PageToken
 	}
 )

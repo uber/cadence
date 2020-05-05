@@ -65,9 +65,9 @@ type (
 
 	// ExecutionWriter is used to write Executions to blobstore
 	ExecutionWriter interface {
-		Add(*Execution) error
+		Add(interface{}) error
 		Flush() error
-		FlushedKeys() []string
+		FlushedKeys() *Keys
 	}
 
 	// Scanner is used to scan over all executions in a shard. It is responsible for three things:

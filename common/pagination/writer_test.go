@@ -121,4 +121,7 @@ func (s *WriterSuite) TestMultiPageWrite() {
 	}
 	s.Equal(writeFnCalls, 20)
 	s.Equal(shouldFlushCalls, 100)
+	s.Equal("page_0", writer.FirstFlushedPage().(string))
+	s.Equal("page_19", writer.LastFlushedPage().(string))
+
 }

@@ -75,3 +75,19 @@ func (w *writer) Flush() error {
 func (w *writer) FlushedPages() []PageToken {
 	return w.flushedPages
 }
+
+// FirstFlushedPage returns the first page that was flushed or nil if no pages have been flushed.
+func (w *writer) FirstFlushedPage() PageToken {
+	if len(w.flushedPages) == 0 {
+		return nil
+	}
+	return w.flushedPages[0]
+}
+
+// LastFlushedPage returns the last page that was flushed or nil if no pages have been flushed
+func (w *writer) LastFlushedPage() PageToken {
+	if len(w.flushedPages) == 0 {
+		return nil
+	}
+	return w.flushedPages[len(w.flushedPages)-1]
+}
