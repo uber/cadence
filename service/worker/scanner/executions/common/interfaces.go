@@ -63,7 +63,7 @@ type (
 		HasNext() bool
 	}
 
-	// ExecutionWriter is used to write Executions to blobstore
+	// ExecutionWriter is used to write entities (FixOutputEntity or ScanOutputEntity) to blobstore
 	ExecutionWriter interface {
 		Add(interface{}) error
 		Flush() error

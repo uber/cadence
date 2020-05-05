@@ -45,13 +45,12 @@ type (
 	WriteFn func(Page) (PageToken, error)
 	// ShouldFlushFn returns true if given page should be flushed false otherwise.
 	ShouldFlushFn func(Page) bool
-	// FetchFn fetches the entities for the provided PageToken or error on failure.
+	// FetchFn fetches the entities and next PageToken for the provided PageToken or error on failure.
 	FetchFn func(PageToken) ([]Entity, PageToken, error)
 )
 
 type (
 	// Iterator is used to get entities from a collection of pages.
-	// Iterator returns entities in sorted order, first sorted by pages and then sorted by entities within a page.
 	// When HasNext returns true it is guaranteed that Next will not return an error.
 	// Once iterator returns an error it will never make progress again and will always return that same error.
 	// Iterator is not thread safe and does not make defensive in or out copies.

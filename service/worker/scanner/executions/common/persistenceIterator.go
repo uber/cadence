@@ -71,6 +71,7 @@ func getPersistenceFetchPageFn(
 		}
 		executions := make([]pagination.Entity, len(resp.Executions), len(resp.Executions))
 		for i, e := range resp.Executions {
+			// TODO: check with Yu that this is correct
 			branchToken := e.ExecutionInfo.BranchToken
 			if e.VersionHistories != nil {
 				branchToken = e.VersionHistories.Histories[e.VersionHistories.CurrentVersionHistoryIndex].BranchToken

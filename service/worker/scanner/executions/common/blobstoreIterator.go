@@ -40,10 +40,10 @@ type (
 // NewBlobstoreIterator constructs a new iterator backed by blobstore.
 func NewBlobstoreIterator(
 	client blobstore.Client,
-	keys []string,
+	keys Keys,
 ) ExecutionIterator {
 	return &blobstoreIterator{
-		itr: pagination.NewIterator(0, getBlobstoreFetchPageFn(client, keys)),
+		itr: pagination.NewIterator(keys.MinPage, getBlobstoreFetchPageFn(client, keys)),
 	}
 }
 
@@ -53,21 +53,21 @@ func (i *blobstoreIterator) Next() (*Execution, error) {
 	return exec.(*Execution), err
 }
 
-// HasNext retursn true if there is a next Execution false otherwise
+// HasNext returns true if there is a next Execution false otherwise
 func (i *blobstoreIterator) HasNext() bool {
 	return i.itr.HasNext()
 }
 
 func getBlobstoreFetchPageFn(
 	client blobstore.Client,
-	keys []string,
+	keys Keys,
 ) pagination.FetchFn {
 	return func(token pagination.PageToken) ([]pagination.Entity, pagination.PageToken, error) {
 		index := token.(int)
-		if index >= len(keys) {
+		if index > keys.MaxPage {
 			return nil, nil, nil
 		}
-		key := keys[index]
+		key := pageNumberToKey(keys.UUID, keys.Extension, index)
 		// TODO: add retries here
 		ctx, cancel := context.WithTimeout(context.Background(), BlobstoreTimeout)
 		defer cancel()
@@ -84,6 +84,7 @@ func getBlobstoreFetchPageFn(
 			if len(p) == 0 {
 				continue
 			}
+			// TODO: this iterator should be more generic then this, it should not assume this type
 			var soe ScanOutputEntity
 			if err := json.Unmarshal(p, &soe); err != nil {
 				return nil, nil, err
