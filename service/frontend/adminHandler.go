@@ -1004,7 +1004,7 @@ func (adh *AdminHandler) ResendReplicationTasks(
 	}
 	resender := xdc.NewNDCHistoryResender(
 		adh.GetDomainCache(),
-		adh.GetRemoteAdminClient(request.GetDomainID()),
+		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
 		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},

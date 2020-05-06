@@ -83,11 +83,12 @@ const (
 )
 
 const (
-	bufferSize                 = 8192
-	preambleVersion0      byte = 0x59
-	malformedMessage           = "Input was malformed"
-	chanBufferSize             = 10000
-	maxRereplicateEventID      = 999999
+	bufferSize                       = 8192
+	preambleVersion0            byte = 0x59
+	malformedMessage                 = "Input was malformed"
+	chanBufferSize                   = 10000
+	maxRereplicateEventID            = 999999
+	defaultResendContextTimeout      = 30 * time.Second
 )
 
 var (
@@ -489,13 +490,14 @@ type ClustersConfig struct {
 }
 
 func doRereplicate(
+	ctx ctx.Context,
 	shardID int,
 	domainID string,
 	wid string,
 	rid string,
 	minID int64,
 	maxID int64,
-	startVersion int64,
+	startVersion *int64,
 	targets []string,
 	producer messaging.Producer,
 	session *gocql.Session,
@@ -530,17 +532,17 @@ func doRereplicate(
 
 		versionHistories := resp.State.VersionHistories
 		if versionHistories != nil {
-			if startVersion < 0 {
+			if startVersion == nil {
 				ErrorAndExit("Use input file to resend NDC workflow is not support", nil)
 			}
 			if err := adminClient.ResendReplicationTasks(
-				ctx.Background(),
+				ctx,
 				&admin.ResendReplicationTasksRequest{
 					DomainID:      common.StringPtr(domainID),
 					WorkflowID:    common.StringPtr(wid),
 					RunID:         common.StringPtr(rid),
 					RemoteCluster: common.StringPtr(targets[0]),
-					StartVersion:  common.Int64Ptr(startVersion),
+					StartVersion:  startVersion,
 				},
 			); err != nil {
 				ErrorAndExit("Failed to resend ndc workflow", err)
@@ -634,9 +636,23 @@ func AdminRereplicate(c *cli.Context) {
 	target := getRequiredOption(c, FlagTargetCluster)
 	targets := []string{target}
 
-	producer := newKafkaProducer(c)
 	session := connectToCassandra(c)
 	adminClient := cFactory.ServerAdminClient(c)
+	var startVersion *int64
+	var producer messaging.Producer
+	if c.IsSet(FlagStartEventVersion) {
+		version := c.Int64(FlagStartEventVersion)
+		startVersion = &version
+	} else {
+		producer = newKafkaProducer(c)
+	}
+
+	contextTimeout := defaultResendContextTimeout
+	if c.GlobalIsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	ctx, cancel := ctx.WithTimeout(ctx.Background(), contextTimeout)
+	defer cancel()
 
 	if c.IsSet(FlagInputFile) {
 		inFile := c.String(FlagInputFile)
@@ -683,7 +699,7 @@ func AdminRereplicate(c *cli.Context) {
 			}
 
 			shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-			doRereplicate(shardID, domainID, wid, rid, minID, maxID, -1, targets, producer, session, adminClient)
+			doRereplicate(ctx, shardID, domainID, wid, rid, minID, maxID, startVersion, targets, producer, session, adminClient)
 			fmt.Printf("Done processing line %v ...\n", idx)
 		}
 		if err := scanner.Err(); err != nil {
@@ -695,10 +711,9 @@ func AdminRereplicate(c *cli.Context) {
 		rid := getRequiredOption(c, FlagRunID)
 		minID := c.Int64(FlagMinEventID)
 		maxID := c.Int64(FlagMaxEventID)
-		startVersion := c.Int64(FlagStartEventVersion)
-
 		shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-		doRereplicate(shardID, domainID, wid, rid, minID, maxID, startVersion, targets, producer, session, adminClient)
+
+		doRereplicate(ctx, shardID, domainID, wid, rid, minID, maxID, startVersion, targets, producer, session, adminClient)
 	}
 }
 
