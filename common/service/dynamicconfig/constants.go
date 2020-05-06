@@ -70,6 +70,7 @@ var keys = map[Key]string{
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
+	EnableAuthorization:                 "system.enableAuthorization",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -99,6 +100,7 @@ var keys = map[Key]string{
 	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
 	ValidSearchAttributes:                 "frontend.validSearchAttributes",
 	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
+	FrontendEnableRPCReplication:          "frontend.enableRPCReplication",
 	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
 	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
 	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
@@ -232,6 +234,8 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorNoTaskInitialWait:              "history.ReplicationTaskProcessorNoTaskInitialWait",
 	ReplicationTaskProcessorCleanupInterval:                "history.ReplicationTaskProcessorCleanupInterval",
 	ReplicationTaskProcessorCleanupJitterCoefficient:       "history.ReplicationTaskProcessorCleanupJitterCoefficient",
+	HistoryEnableRPCReplication:                            "history.EnableRPCReplication",
+	HistoryEnableKafkaReplication:                          "history.EnableKafkaReplication",
 	EnableConsistentQuery:                                  "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                          "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                  "history.MaxBufferedQueryCount",
@@ -251,6 +255,7 @@ var keys = map[Key]string{
 	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
 	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
 	WorkerReReplicationContextTimeout:               "worker.workerReReplicationContextTimeout",
+	WorkerEnableRPCReplication:                      "worker.enableWorkerRPCReplication",
 	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
@@ -327,6 +332,8 @@ const (
 	DisallowQuery
 	// EnablePriorityTaskProcessor is the key for enabling priority task processor
 	EnablePriorityTaskProcessor
+	// EnableAuthorization is the key to enable authorization for a domain
+	EnableAuthorization
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -382,6 +389,8 @@ const (
 	ValidSearchAttributes
 	// SendRawWorkflowHistory is whether to enable raw history retrieving
 	SendRawWorkflowHistory
+	// FrontendEnableRPCReplication is a feature flag for rpc replication
+	FrontendEnableRPCReplication
 	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
 	SearchAttributesNumberOfKeysLimit
 	// SearchAttributesSizeOfValueLimit is the size limit of each value
@@ -657,6 +666,8 @@ const (
 	WorkerReplicationTaskContextDuration
 	// WorkerReReplicationContextTimeout is the context timeout for end to end  re-replication process
 	WorkerReReplicationContextTimeout
+	// WorkerEnableRPCReplication is the feature flag for RPC replication
+	WorkerEnableRPCReplication
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
@@ -718,6 +729,10 @@ const (
 	ReplicationTaskProcessorCleanupInterval
 	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
 	ReplicationTaskProcessorCleanupJitterCoefficient
+	// HistoryEnableRPCReplication is the feature flag for RPC replication
+	HistoryEnableRPCReplication
+	// HistoryEnableKafkaReplication is the migration flag for Kafka replication
+	HistoryEnableKafkaReplication
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
