@@ -28,8 +28,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/common/xdc"
-
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 
@@ -51,6 +49,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/xdc"
 )
 
 var _ adminserviceserver.Interface = (*AdminHandler)(nil)

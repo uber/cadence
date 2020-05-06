@@ -23,17 +23,11 @@ package cli
 import (
 	"bufio"
 	"bytes"
-	ctx "context"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/uber/cadence/.gen/go/admin"
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-
-	"github.com/uber/cadence/common/auth"
-
 	"io"
 	"io/ioutil"
 	"os"
@@ -50,12 +44,15 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
+	"github.com/uber/cadence/.gen/go/admin"
+	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
@@ -490,7 +487,7 @@ type ClustersConfig struct {
 }
 
 func doRereplicate(
-	ctx ctx.Context,
+	ctx context.Context,
 	shardID int,
 	domainID string,
 	wid string,
@@ -600,10 +597,7 @@ func doRereplicate(
 			taskTemplate.Version = firstEvent.GetVersion()
 			taskTemplate.FirstEventID = firstEvent.GetEventId()
 			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
-			var err error
-			var task *replicator.ReplicationTask
-			task, _, err = history.GenerateReplicationTask(targets, taskTemplate, historyV2Mgr, nil, batch, common.IntPtr(shardID))
-
+			task, _, err := history.GenerateReplicationTask(targets, taskTemplate, historyV2Mgr, nil, batch, common.IntPtr(shardID))
 			if err != nil {
 				ErrorAndExit("GenerateReplicationTask error", err)
 			}
@@ -641,8 +635,7 @@ func AdminRereplicate(c *cli.Context) {
 	var startVersion *int64
 	var producer messaging.Producer
 	if c.IsSet(FlagStartEventVersion) {
-		version := c.Int64(FlagStartEventVersion)
-		startVersion = &version
+		startVersion = common.Int64Ptr(c.Int64(FlagStartEventVersion))
 	} else {
 		producer = newKafkaProducer(c)
 	}
@@ -651,7 +644,7 @@ func AdminRereplicate(c *cli.Context) {
 	if c.GlobalIsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), contextTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
 
 	if c.IsSet(FlagInputFile) {
