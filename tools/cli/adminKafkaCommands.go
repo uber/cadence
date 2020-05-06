@@ -23,10 +23,14 @@ package cli
 import (
 	"bufio"
 	"bytes"
+	ctx "context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/uber/cadence/.gen/go/admin"
+	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 
 	"github.com/uber/cadence/common/auth"
 
@@ -484,7 +488,20 @@ type ClustersConfig struct {
 	TLS      auth.TLS
 }
 
-func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, targets []string, producer messaging.Producer, session *gocql.Session) {
+func doRereplicate(
+	shardID int,
+	domainID string,
+	wid string,
+	rid string,
+	minID int64,
+	maxID int64,
+	startVersion int64,
+	targets []string,
+	producer messaging.Producer,
+	session *gocql.Session,
+	adminClient serverAdmin.Interface,
+) {
+
 	if minID <= 0 {
 		minID = 1
 	}
@@ -509,6 +526,26 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 		})
 		if err != nil {
 			ErrorAndExit("GetWorkflowExecution error", err)
+		}
+
+		versionHistories := resp.State.VersionHistories
+		if versionHistories != nil {
+			if startVersion < 0 {
+				ErrorAndExit("Use input file to resend NDC workflow is not support", nil)
+			}
+			if err := adminClient.ResendReplicationTasks(
+				ctx.Background(),
+				&admin.ResendReplicationTasksRequest{
+					DomainID:      common.StringPtr(domainID),
+					WorkflowID:    common.StringPtr(wid),
+					RunID:         common.StringPtr(rid),
+					RemoteCluster: common.StringPtr(targets[0]),
+					StartVersion:  common.Int64Ptr(startVersion),
+				},
+			); err != nil {
+				ErrorAndExit("Failed to resend ndc workflow", err)
+			}
+			return
 		}
 
 		currVersion := resp.State.ReplicationState.CurrentVersion
@@ -561,7 +598,10 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 			taskTemplate.Version = firstEvent.GetVersion()
 			taskTemplate.FirstEventID = firstEvent.GetEventId()
 			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
-			task, _, err := history.GenerateReplicationTask(targets, taskTemplate, historyV2Mgr, nil, batch, common.IntPtr(shardID))
+			var err error
+			var task *replicator.ReplicationTask
+			task, _, err = history.GenerateReplicationTask(targets, taskTemplate, historyV2Mgr, nil, batch, common.IntPtr(shardID))
+
 			if err != nil {
 				ErrorAndExit("GenerateReplicationTask error", err)
 			}
@@ -596,6 +636,7 @@ func AdminRereplicate(c *cli.Context) {
 
 	producer := newKafkaProducer(c)
 	session := connectToCassandra(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	if c.IsSet(FlagInputFile) {
 		inFile := c.String(FlagInputFile)
@@ -642,7 +683,7 @@ func AdminRereplicate(c *cli.Context) {
 			}
 
 			shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-			doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
+			doRereplicate(shardID, domainID, wid, rid, minID, maxID, -1, targets, producer, session, adminClient)
 			fmt.Printf("Done processing line %v ...\n", idx)
 		}
 		if err := scanner.Err(); err != nil {
@@ -654,9 +695,10 @@ func AdminRereplicate(c *cli.Context) {
 		rid := getRequiredOption(c, FlagRunID)
 		minID := c.Int64(FlagMinEventID)
 		maxID := c.Int64(FlagMaxEventID)
+		startVersion := c.Int64(FlagStartEventVersion)
 
 		shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-		doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
+		doRereplicate(shardID, domainID, wid, rid, minID, maxID, startVersion, targets, producer, session, adminClient)
 	}
 }
 

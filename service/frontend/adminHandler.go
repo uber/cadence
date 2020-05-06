@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/xdc"
+
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 
@@ -62,6 +64,7 @@ type (
 		params                *service.BootstrapParams
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
+		eventSerializder      persistence.PayloadSerializer
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -79,6 +82,7 @@ type (
 
 var (
 	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
+	resendStartEventID      = common.Int64Ptr(0)
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
@@ -102,6 +106,7 @@ func NewAdminHandler(
 			resource.GetDomainReplicationQueue(),
 			resource.GetLogger(),
 		),
+		eventSerializder: persistence.NewPayloadSerializer(),
 	}
 }
 
@@ -983,6 +988,38 @@ func (adh *AdminHandler) RefreshWorkflowTasks(
 		return adh.error(err, scope)
 	}
 	return nil
+}
+
+// ResendReplicationTasks requests replication task from remote cluster
+func (adh *AdminHandler) ResendReplicationTasks(
+	ctx context.Context,
+	request *admin.ResendReplicationTasksRequest,
+) (err error) {
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(metrics.AdminResendReplicationTasksScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return adh.error(errRequestNotSet, scope)
+	}
+	resender := xdc.NewNDCHistoryResender(
+		adh.GetDomainCache(),
+		adh.GetRemoteAdminClient(request.GetDomainID()),
+		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
+		},
+		adh.eventSerializder,
+		adh.GetLogger(),
+	)
+	return resender.SendSingleWorkflowHistory(
+		request.GetDomainID(),
+		request.GetWorkflowID(),
+		request.GetRunID(),
+		resendStartEventID,
+		request.StartVersion,
+		nil,
+		nil,
+	)
 }
 
 func (adh *AdminHandler) validateGetWorkflowExecutionRawHistoryV2Request(
