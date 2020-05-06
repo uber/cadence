@@ -53,6 +53,9 @@ func (s *WriterSuite) TestAddNoFlush() {
 	}
 	writer := NewWriter(writeFn, shouldFlushFn, nil)
 	s.NoError(writer.Add(1))
+	s.Empty(writer.FlushedPages())
+	s.Nil(writer.FirstFlushedPage())
+	s.Nil(writer.LastFlushedPage())
 }
 
 func (s *WriterSuite) TestAddAndFlush() {
@@ -67,6 +70,8 @@ func (s *WriterSuite) TestAddAndFlush() {
 	flushedPages := writer.FlushedPages()
 	s.Len(flushedPages, 1)
 	s.Equal("test_token", flushedPages[0].(string))
+	s.Equal("test_token", writer.FirstFlushedPage().(string))
+	s.Equal("test_token", writer.LastFlushedPage().(string))
 }
 
 func (s *WriterSuite) TestFlushErrorOnWrite() {
@@ -91,6 +96,8 @@ func (s *WriterSuite) TestFlushNoError() {
 	s.Len(writer.FlushedPages(), 0)
 	s.NoError(writer.Flush())
 	s.Equal("test_token", writer.FlushedPages()[0].(string))
+	s.Equal("test_token", writer.FirstFlushedPage().(string))
+	s.Equal("test_token", writer.LastFlushedPage().(string))
 }
 
 func (s *WriterSuite) TestMultiPageWrite() {

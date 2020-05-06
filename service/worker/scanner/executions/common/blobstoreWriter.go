@@ -52,6 +52,8 @@ func NewBlobstoreWriter(
 			getBlobstoreWriteFn(uuid, extension, client),
 			getBlobstoreShouldFlushFn(flushThreshold),
 			0),
+		uuid:      uuid,
+		extension: extension,
 	}
 }
 
@@ -85,7 +87,7 @@ func getBlobstoreWriteFn(
 	client blobstore.Client,
 ) pagination.WriteFn {
 	return func(page pagination.Page) (pagination.PageToken, error) {
-		blobIndex := page.PageToken.(int)
+		blobIndex := page.CurrentToken.(int)
 		key := pageNumberToKey(uuid, extension, blobIndex)
 		buffer := &bytes.Buffer{}
 		for _, e := range page.Entities {

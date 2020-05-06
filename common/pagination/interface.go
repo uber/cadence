@@ -28,10 +28,12 @@ import "errors"
 var ErrIteratorFinished = errors.New("iterator has reached end")
 
 type (
-	// Page contains a PageToken and a list of Entity
+	// Page contains a PageToken which identifies the current page,
+	// a PageToken which identifies the next page and a list of Entity.
 	Page struct {
-		PageToken PageToken
-		Entities  []Entity
+		NextToken    PageToken
+		CurrentToken PageToken
+		Entities     []Entity
 	}
 	// Entity is a generic type which can be operated on by Iterator and Writer
 	Entity interface{}
@@ -40,13 +42,15 @@ type (
 )
 
 type (
-	// WriteFn writes given page to underlying sink.
-	// Returns next PageToken or error
+	// WriteFn writes given Page to underlying sink.
+	// The Pages's NextToken will always be nil, its the responsibility of WriteFn to
+	// construct and return the next PageToken, or return an error on failure.
 	WriteFn func(Page) (PageToken, error)
 	// ShouldFlushFn returns true if given page should be flushed false otherwise.
 	ShouldFlushFn func(Page) bool
-	// FetchFn fetches the entities and next PageToken for the provided PageToken or error on failure.
-	FetchFn func(PageToken) ([]Entity, PageToken, error)
+	// FetchFn fetches Page from PageToken.
+	// Once a page with nil NextToken is returned no more pages will be fetched.
+	FetchFn func(PageToken) (Page, error)
 )
 
 type (

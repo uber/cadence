@@ -68,7 +68,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 			buffer.Write(data)
 			buffer.Write(separator)
 		}
-		store[page.PageToken.(string)] = buffer.Bytes()
+		store[page.CurrentToken.(string)] = buffer.Bytes()
 		pageNum++
 		return fmt.Sprintf("key_%v", pageNum), nil
 	}
@@ -86,15 +86,9 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 		s.Equal(expectedKey, flushedKeys[i].(string))
 	}
 
-	fetchFn := func(token PageToken) ([]Entity, PageToken, error) {
-		if token.(int) >= len(flushedKeys) {
-			return nil, nil, nil
-		}
-		key := fmt.Sprintf("key_%v", token)
-		data, ok := store[key]
-		if !ok {
-			return nil, nil, nil
-		}
+	fetchFn := func(token PageToken) (Page, error) {
+		key := flushedKeys[token.(int)]
+		data := store[key.(string)]
 		dataBlobs := bytes.Split(data, separator)
 		var entities []Entity
 		for _, db := range dataBlobs {
@@ -103,11 +97,19 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 			}
 			var entity TestEntity
 			if err := json.Unmarshal(db, &entity); err != nil {
-				return nil, nil, err
+				return Page{}, err
 			}
 			entities = append(entities, entity)
 		}
-		return entities, token.(int) + 1, nil
+		var nextPageToken interface{} = token.(int) + 1
+		if nextPageToken == len(flushedKeys) {
+			nextPageToken = nil
+		}
+		return Page{
+			CurrentToken: token,
+			NextToken:    nextPageToken,
+			Entities:     entities,
+		}, nil
 	}
 
 	itr := NewIterator(0, fetchFn)

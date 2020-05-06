@@ -27,7 +27,7 @@ type (
 		writeFn       WriteFn
 		shouldFlushFn ShouldFlushFn
 		flushedPages  []PageToken
-		currentPage   Page
+		page          Page
 	}
 )
 
@@ -41,17 +41,17 @@ func NewWriter(
 		writeFn:       writeFn,
 		shouldFlushFn: shouldFlushFn,
 		flushedPages:  nil,
-		currentPage: Page{
-			Entities:  nil,
-			PageToken: startingPage,
+		page: Page{
+			Entities:     nil,
+			CurrentToken: startingPage,
 		},
 	}
 }
 
 // Add adds entity to buffer and flushes if provided shouldFlushFn indicates the page should be flushed.
 func (w *writer) Add(e Entity) error {
-	w.currentPage.Entities = append(w.currentPage.Entities, e)
-	if !w.shouldFlushFn(w.currentPage) {
+	w.page.Entities = append(w.page.Entities, e)
+	if !w.shouldFlushFn(w.page) {
 		return nil
 	}
 	return w.Flush()
@@ -59,14 +59,14 @@ func (w *writer) Add(e Entity) error {
 
 // Flush flushes the buffer.
 func (w *writer) Flush() error {
-	nextPageToken, err := w.writeFn(w.currentPage)
+	nextPageToken, err := w.writeFn(w.page)
 	if err != nil {
 		return err
 	}
-	w.flushedPages = append(w.flushedPages, w.currentPage.PageToken)
-	w.currentPage = Page{
-		Entities:  nil,
-		PageToken: nextPageToken,
+	w.flushedPages = append(w.flushedPages, w.page.CurrentToken)
+	w.page = Page{
+		Entities:     nil,
+		CurrentToken: nextPageToken,
 	}
 	return nil
 }

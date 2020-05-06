@@ -47,7 +47,10 @@ func NewPersistenceIterator(
 // Next returns the next execution
 func (i *persistenceIterator) Next() (*Execution, error) {
 	exec, err := i.itr.Next()
-	return exec.(*Execution), err
+	if exec != nil {
+		return exec.(*Execution), err
+	}
+	return nil, err
 }
 
 // HasNext returns true if there is another execution, false otherwise.
@@ -60,21 +63,26 @@ func getPersistenceFetchPageFn(
 	pageSize int,
 	shardID int,
 ) pagination.FetchFn {
-	return func(token pagination.PageToken) ([]pagination.Entity, pagination.PageToken, error) {
+	return func(token pagination.PageToken) (pagination.Page, error) {
 		req := &persistence.ListConcreteExecutionsRequest{
-			PageSize:  pageSize,
-			PageToken: token.([]byte),
+			PageSize: pageSize,
+		}
+		if token != nil {
+			req.PageToken = token.([]byte)
 		}
 		resp, err := pr.ListConcreteExecutions(req)
 		if err != nil {
-			return nil, nil, err
+			return pagination.Page{}, err
 		}
 		executions := make([]pagination.Entity, len(resp.Executions), len(resp.Executions))
 		for i, e := range resp.Executions {
-			// TODO: check with Yu that this is correct
 			branchToken := e.ExecutionInfo.BranchToken
 			if e.VersionHistories != nil {
-				branchToken = e.VersionHistories.Histories[e.VersionHistories.CurrentVersionHistoryIndex].BranchToken
+				versionHistory, err := e.VersionHistories.GetCurrentVersionHistory()
+				if err != nil {
+					return pagination.Page{}, err
+				}
+				branchToken = versionHistory.GetBranchToken()
 			}
 			executions[i] = &Execution{
 				ShardID:     shardID,
@@ -85,6 +93,15 @@ func getPersistenceFetchPageFn(
 				State:       e.ExecutionInfo.State,
 			}
 		}
-		return executions, resp.PageToken, nil
+		var nextToken interface{} = resp.PageToken
+		if len(resp.PageToken) == 0 {
+			nextToken = nil
+		}
+		page := pagination.Page{
+			CurrentToken: token,
+			NextToken:    nextToken,
+			Entities:     executions,
+		}
+		return page, nil
 	}
 }
