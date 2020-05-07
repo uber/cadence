@@ -224,7 +224,7 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                 "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                  "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                   "history.ReplicationEventsFromCurrentCluster",
-	EnableDropStuckTaskByDomain:                           "history.DropStuckTaskByDomain",
+	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                   "worker.persistenceGlobalMaxQPS",
@@ -336,7 +336,7 @@ const (
 
 	// FrontendPersistenceMaxQPS is the max qps frontend host can query DB
 	FrontendPersistenceMaxQPS
-	// FrontendPersistenceMaxGlobalQPS is the max qps frontend cluster can query DB
+	// FrontendPersistenceGlobalMaxQPS is the max qps frontend cluster can query DB
 	FrontendPersistenceGlobalMaxQPS
 	// FrontendVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
 	FrontendVisibilityMaxPageSize
@@ -385,7 +385,7 @@ const (
 	MatchingRPS
 	// MatchingPersistenceMaxQPS is the max qps matching host can query DB
 	MatchingPersistenceMaxQPS
-	// MatchingPersistenceMaxQPS is the max qps matching cluster can query DB
+	// MatchingPersistenceGlobalMaxQPS is the max qps matching cluster can query DB
 	MatchingPersistenceGlobalMaxQPS
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
@@ -585,8 +585,8 @@ const (
 	// DecisionHeartbeatTimeout for decision heartbeat
 	DecisionHeartbeatTimeout
 
-	// DropStuckTaskByDomain is whether stuck timer/transfer task should be dropped for a domain
-	EnableDropStuckTaskByDomain
+	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
+	EnableDropStuckTaskByDomainID
 
 	// key for worker
 
@@ -741,6 +741,7 @@ func DomainFilter(name string) FilterOption {
 	}
 }
 
+// DomainIDFilter filters by domainID
 func DomainIDFilter(id string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[DomainID] = id

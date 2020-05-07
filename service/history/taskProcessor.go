@@ -273,8 +273,8 @@ func (t *taskProcessor) handleTaskError(
 	if transferTask, ok := task.task.(*persistence.TransferTaskInfo); ok &&
 		transferTask.TaskType == persistence.TransferTaskTypeCloseExecution &&
 		err == ErrMissingWorkflowStartEvent &&
-		t.config.EnableDropStuckTaskByDomain(task.task.GetDomainID()) { // use domainID here to avoid accessing domainCache
-		scope.IncCounter(metrics.StuckTaskDiscardedCounter)
+		t.config.EnableDropStuckTaskByDomainID(task.task.GetDomainID()) { // use domainID here to avoid accessing domainCache
+		scope.IncCounter(metrics.TransferTaskMissingEventCounter)
 		task.logger.Error("Drop close execution transfer task due to corrupted workflow history", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return nil
 	}
