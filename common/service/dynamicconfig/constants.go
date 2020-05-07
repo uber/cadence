@@ -769,6 +769,7 @@ var filters = []string{
 	"domainID",
 	"taskListName",
 	"taskType",
+	"shardID",
 }
 
 const (
