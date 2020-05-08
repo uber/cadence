@@ -24,6 +24,7 @@ package xdc
 
 import (
 	"context"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -67,6 +68,7 @@ type (
 		adminClient          adminClient.Client
 		historyReplicationFn nDCHistoryReplicationFn
 		serializer           persistence.PayloadSerializer
+		rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		logger               log.Logger
 	}
 
@@ -82,6 +84,7 @@ func NewNDCHistoryResender(
 	adminClient adminClient.Client,
 	historyReplicationFn nDCHistoryReplicationFn,
 	serializer persistence.PayloadSerializer,
+	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
 	logger log.Logger,
 ) *NDCHistoryResenderImpl {
 
@@ -90,6 +93,7 @@ func NewNDCHistoryResender(
 		adminClient:          adminClient,
 		historyReplicationFn: historyReplicationFn,
 		serializer:           serializer,
+		rereplicationTimeout: rereplicationTimeout,
 		logger:               logger,
 	}
 }
@@ -105,7 +109,16 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 	endEventVersion *int64,
 ) error {
 
+	ctx := context.Background()
+	var cancel context.CancelFunc
+	resendContextTimeout := n.rereplicationTimeout(domainID)
+	if resendContextTimeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, resendContextTimeout)
+		defer cancel()
+	}
+
 	historyIterator := collection.NewPagingIterator(n.getPaginationFn(
+		ctx,
 		domainID,
 		workflowID,
 		runID,
@@ -133,7 +146,7 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 			historyBatch.rawEventBatch,
 			historyBatch.versionHistory.GetItems())
 
-		err = n.sendReplicationRawRequest(replicationRequest)
+		err = n.sendReplicationRawRequest(ctx, replicationRequest)
 		if err != nil {
 			n.logger.Error("failed to replicate events",
 				tag.WorkflowDomainID(domainID),
@@ -147,6 +160,7 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 }
 
 func (n *NDCHistoryResenderImpl) getPaginationFn(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -159,6 +173,7 @@ func (n *NDCHistoryResenderImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		response, err := n.getHistory(
+			ctx,
 			domainID,
 			workflowID,
 			runID,
@@ -207,15 +222,17 @@ func (n *NDCHistoryResenderImpl) createReplicationRawRequest(
 }
 
 func (n *NDCHistoryResenderImpl) sendReplicationRawRequest(
+	ctx context.Context,
 	request *history.ReplicateEventsV2Request,
 ) error {
 
-	ctx, cancel := context.WithTimeout(context.Background(), resendContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
 	return n.historyReplicationFn(ctx, request)
 }
 
 func (n *NDCHistoryResenderImpl) getHistory(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -236,7 +253,7 @@ func (n *NDCHistoryResenderImpl) getHistory(
 	}
 	domainName := domainEntry.GetInfo().Name
 
-	ctx, cancel := context.WithTimeout(context.Background(), resendContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
 	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &admin.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(domainName),
