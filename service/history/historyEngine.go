@@ -2970,6 +2970,10 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyEvents []*workflow.HistoryEvent,
 ) error {
 
+	if e.config.SkipReapplicationByDomainId(domainUUID) {
+		return nil
+	}
+
 	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
 	if err != nil {
 		return err

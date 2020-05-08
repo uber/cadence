@@ -204,8 +204,8 @@ type Config struct {
 	ReplicationTaskProcessorCleanupInterval          dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorCleanupJitterCoefficient dynamicconfig.FloatPropertyFnWithShardIDFilter
 	// TODO: those two flags are for migration. Consider remove them after the migration complete
-	EnableRPCReplication   dynamicconfig.BoolPropertyFn
-	EnableKafkaReplication dynamicconfig.BoolPropertyFn
+	EnableRPCReplication         dynamicconfig.BoolPropertyFn
+	EnableKafkaReplication       dynamicconfig.BoolPropertyFn
 	EnableCleanupReplicationTask dynamicconfig.BoolPropertyFn
 
 	// The following are used by consistent query
@@ -220,6 +220,7 @@ type Config struct {
 
 	//Crocess DC Replication configuration
 	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
+	SkipReapplicationByDomainId         dynamicconfig.BoolPropertyFnWithDomainIDFilter
 }
 
 const (
@@ -382,6 +383,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		MutableStateChecksumInvalidateBefore:  dc.GetFloat64Property(dynamicconfig.MutableStateChecksumInvalidateBefore, 0),
 
 		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
+		SkipReapplicationByDomainId:         dc.GetBoolPropertyFnWithDomainIDFilter(dynamicconfig.SkipReapplicationByDomainId, false),
 	}
 
 	return cfg

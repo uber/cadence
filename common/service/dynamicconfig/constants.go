@@ -245,6 +245,7 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
+	SkipReapplicationByDomainId:                            "history.SkipReapplicationByDomainId",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                   "worker.persistenceGlobalMaxQPS",
@@ -645,6 +646,9 @@ const (
 	StickyTTL
 	// DecisionHeartbeatTimeout for decision heartbeat
 	DecisionHeartbeatTimeout
+
+	// SkipReapplicationByDomainId is whether skipping a event re-application for a domain
+	SkipReapplicationByDomainId
 
 	// key for worker
 
