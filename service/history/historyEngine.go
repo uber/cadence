@@ -258,6 +258,7 @@ func NewEngineWithShardContext(
 			return shard.GetService().GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
 		shard.GetService().GetPayloadSerializer(),
+		nil,
 		shard.GetLogger(),
 	)
 	historyRereplicator := xdc.NewHistoryRereplicator(
@@ -441,7 +442,6 @@ func (e *historyEngineImpl) createMutableState(
 		// version history applies to both local and global domain
 		newMutableState = execution.NewMutableStateBuilderWithVersionHistories(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
@@ -451,14 +451,12 @@ func (e *historyEngineImpl) createMutableState(
 		// no matter whether it will be replicated to multiple target clusters or not
 		newMutableState = execution.NewMutableStateBuilderWithReplicationState(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
 	} else {
 		newMutableState = execution.NewMutableStateBuilder(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
