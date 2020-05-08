@@ -24,7 +24,6 @@ package xdc
 
 import (
 	"context"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
