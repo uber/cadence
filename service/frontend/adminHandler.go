@@ -124,9 +124,7 @@ func (adh *AdminHandler) Start() {
 
 // Stop stops the handler
 func (adh *AdminHandler) Stop() {
-	if adh.config.EnableCleanupReplicationTask() {
-		adh.Resource.GetDomainReplicationQueue().Stop()
-	}
+	adh.Resource.GetDomainReplicationQueue().Stop()
 }
 
 // AddSearchAttribute add search attribute to whitelist

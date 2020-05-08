@@ -136,7 +136,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		DisallowQuery:                       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisallowQuery, false),
 		SendRawWorkflowHistory:              dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.SendRawWorkflowHistory, false),
 		EnableRPCReplication:                dc.GetBoolProperty(dynamicconfig.FrontendEnableRPCReplication, false),
-		EnableCleanupReplicationTask:        dc.GetBoolProperty(dynamicconfig.FrontendEnableCleanupReplicationTask, false),
+		EnableCleanupReplicationTask:        dc.GetBoolProperty(dynamicconfig.FrontendEnableCleanupReplicationTask, true),
 	}
 }
 
