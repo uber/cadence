@@ -258,6 +258,7 @@ func NewEngineWithShardContext(
 			return shard.GetService().GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
 		shard.GetService().GetPayloadSerializer(),
+		nil,
 		shard.GetLogger(),
 	)
 	historyRereplicator := xdc.NewHistoryRereplicator(
@@ -441,7 +442,6 @@ func (e *historyEngineImpl) createMutableState(
 		// version history applies to both local and global domain
 		newMutableState = execution.NewMutableStateBuilderWithVersionHistories(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
@@ -451,14 +451,12 @@ func (e *historyEngineImpl) createMutableState(
 		// no matter whether it will be replicated to multiple target clusters or not
 		newMutableState = execution.NewMutableStateBuilderWithReplicationState(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
 	} else {
 		newMutableState = execution.NewMutableStateBuilder(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
@@ -581,17 +579,10 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				prevLastWriteVersion,
 			)
 		}
-		// for signalWithStart, WorkflowIDReusePolicy is default to WorkflowIDReusePolicyAllowDuplicate
-		// while for startWorkflow it is default to WorkflowIdReusePolicyAllowDuplicateFailedOnly.
-		policy := workflow.WorkflowIdReusePolicyAllowDuplicate
-		if request.WorkflowIdReusePolicy != nil {
-			policy = request.GetWorkflowIdReusePolicy()
-		}
-
 		err = e.applyWorkflowIDReusePolicyForSigWithStart(
 			prevMutableState.GetExecutionInfo(),
 			workflowExecution,
-			policy,
+			request.GetWorkflowIdReusePolicy(),
 		)
 		if err != nil {
 			return nil, err
@@ -2695,7 +2686,7 @@ func (e *historyEngineImpl) NotifyNewReplicationTasks(
 	tasks []persistence.Task,
 ) {
 
-	if len(tasks) > 0 {
+	if len(tasks) > 0 && e.replicatorProcessor != nil {
 		e.replicatorProcessor.notifyNewTask()
 	}
 }
@@ -2850,7 +2841,6 @@ func getStartRequest(
 	return startRequest
 }
 
-// for startWorkflowExecution & signalWithStart to handle workflow reuse policy
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
 	prevExecutionInfo *persistence.WorkflowExecutionInfo,
 	execution workflow.WorkflowExecution,

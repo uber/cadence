@@ -70,6 +70,7 @@ var keys = map[Key]string{
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
+	EnableAuthorization:                 "system.enableAuthorization",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -100,6 +101,7 @@ var keys = map[Key]string{
 	ValidSearchAttributes:                 "frontend.validSearchAttributes",
 	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
 	FrontendEnableRPCReplication:          "frontend.enableRPCReplication",
+	FrontendEnableCleanupReplicationTask:  "frontend.enableCleanupReplicationTask",
 	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
 	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
 	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
@@ -235,6 +237,7 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorCleanupJitterCoefficient:       "history.ReplicationTaskProcessorCleanupJitterCoefficient",
 	HistoryEnableRPCReplication:                            "history.EnableRPCReplication",
 	HistoryEnableKafkaReplication:                          "history.EnableKafkaReplication",
+	HistoryEnableCleanupReplicationTask:                    "history.EnableCleanupReplicationTask",
 	EnableConsistentQuery:                                  "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                          "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                  "history.MaxBufferedQueryCount",
@@ -331,6 +334,8 @@ const (
 	DisallowQuery
 	// EnablePriorityTaskProcessor is the key for enabling priority task processor
 	EnablePriorityTaskProcessor
+	// EnableAuthorization is the key to enable authorization for a domain
+	EnableAuthorization
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -388,6 +393,8 @@ const (
 	SendRawWorkflowHistory
 	// FrontendEnableRPCReplication is a feature flag for rpc replication
 	FrontendEnableRPCReplication
+	// FrontendEnableCleanupReplicationTask is a feature flag for rpc replication cleanup
+	FrontendEnableCleanupReplicationTask
 	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
 	SearchAttributesNumberOfKeysLimit
 	// SearchAttributesSizeOfValueLimit is the size limit of each value
@@ -730,6 +737,8 @@ const (
 	HistoryEnableRPCReplication
 	// HistoryEnableKafkaReplication is the migration flag for Kafka replication
 	HistoryEnableKafkaReplication
+	// HistoryEnableCleanupReplicationTask is the migration flag for Kafka replication
+	HistoryEnableCleanupReplicationTask
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
@@ -766,6 +775,7 @@ var filters = []string{
 	"domainID",
 	"taskListName",
 	"taskType",
+	"shardID",
 }
 
 const (
@@ -778,6 +788,8 @@ const (
 	TaskListName
 	// TaskType is the task type (0:Decision, 1:Activity)
 	TaskType
+	// ShardID is the shard id
+	ShardID
 
 	// lastFilterTypeForTest must be the last one in this const group for testing purpose
 	lastFilterTypeForTest
@@ -811,5 +823,12 @@ func DomainIDFilter(domainID string) FilterOption {
 func TaskTypeFilter(taskType int) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[TaskType] = taskType
+	}
+}
+
+// ShardIDFilter filters by shard id
+func ShardIDFilter(shardID int) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[ShardID] = shardID
 	}
 }

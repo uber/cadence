@@ -22,7 +22,9 @@
 
 package blobstore
 
-import "context"
+import (
+	"context"
+)
 
 type (
 	// Client defines the interface to a blobstore client.
@@ -31,6 +33,7 @@ type (
 		Get(context.Context, *GetRequest) (*GetResponse, error)
 		Exists(context.Context, *ExistsRequest) (*ExistsResponse, error)
 		Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+		IsRetryableError(error) bool
 	}
 
 	// PutRequest is the request to Put
