@@ -111,10 +111,12 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 
 	ctx := context.Background()
 	var cancel context.CancelFunc
-	resendContextTimeout := n.rereplicationTimeout(domainID)
-	if resendContextTimeout > 0 {
-		ctx, cancel = context.WithTimeout(ctx, resendContextTimeout)
-		defer cancel()
+	if n.rereplicationTimeout != nil {
+		resendContextTimeout := n.rereplicationTimeout(domainID)
+		if resendContextTimeout > 0 {
+			ctx, cancel = context.WithTimeout(ctx, resendContextTimeout)
+			defer cancel()
+		}
 	}
 
 	historyIterator := collection.NewPagingIterator(n.getPaginationFn(
