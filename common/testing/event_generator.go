@@ -149,7 +149,7 @@ func (g EventGenerator) ListGeneratedVertices() []Vertex {
 	return g.previousVertices
 }
 
-// HasNextVertex invariants if there is accessible history event vertex
+// HasNextVertex checks if there is accessible history event vertex
 func (g *EventGenerator) HasNextVertex() bool {
 
 	for _, prev := range g.previousVertices {

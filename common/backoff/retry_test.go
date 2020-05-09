@@ -142,7 +142,7 @@ func (s *RetrySuite) TestConcurrentRetrier() {
 	policy.SetMaximumInterval(10 * time.Millisecond)
 	policy.SetMaximumAttempts(4)
 
-	// Basic invariants
+	// Basic checks
 	retrier := NewConcurrentRetrier(policy)
 	retrier.Failed()
 	s.Equal(int64(1), retrier.failureCount)

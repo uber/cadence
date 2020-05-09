@@ -440,7 +440,7 @@ func (s *Test) GetDispatcher() *yarpc.Dispatcher {
 	panic("user should implement this method for test")
 }
 
-// Finish invariants whether expectations are met
+// Finish checks whether expectations are met
 func (s *Test) Finish(
 	t mock.TestingT,
 ) {

@@ -90,7 +90,7 @@ func checkWFVersionCompatibility(ctx workflow.Context) error {
 }
 
 // beginWorkflow executes the common steps involved in all the workflow functions
-// It invariants for workflow task version compatibility and also records the execution
+// It checks for workflow task version compatibility and also records the execution
 // in m3. This function must be the first call in every workflow function
 // Returns metrics scope on success, error on failure
 func beginWorkflow(ctx workflow.Context, wfType string, scheduledTimeNanos int64) (*workflowMetricsProfile, error) {
