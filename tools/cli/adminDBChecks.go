@@ -100,7 +100,7 @@ type (
 		CheckType             CheckType
 		CheckResultStatus     CheckResultStatus
 		TotalDatabaseRequests int64
-		// Payload can be used to return additional data which can be used by later checks
+		// Payload can be used to return additional data which can be used by later invariants
 		Payload   interface{}
 		ErrorInfo *ErrorInfo
 	}
@@ -147,7 +147,7 @@ func NewOrphanExecutionCheck(
 	}
 }
 
-// Check checks that history exists
+// Check invariants that history exists
 func (c *historyExistsCheck) Check(cr *CheckRequest) *CheckResult {
 	result := &CheckResult{
 		CheckType: CheckTypeHistoryExists,
@@ -218,7 +218,7 @@ func (c *historyExistsCheck) ValidRequest(cr *CheckRequest) bool {
 	return validRequestHelper(cr)
 }
 
-// Check checks that first event in history is valid
+// Check invariants that first event in history is valid
 // CheckRequest must contain a payload of type *persistence.InternalReadHistoryBranchResponse
 func (c *firstHistoryEventCheck) Check(cr *CheckRequest) *CheckResult {
 	result := &CheckResult{

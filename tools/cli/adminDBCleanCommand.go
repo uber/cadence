@@ -214,7 +214,7 @@ func cleanShard(
 			continue
 		}
 
-		// run checks again to confirm that the execution is still corrupted
+		// run invariants again to confirm that the execution is still corrupted
 		cr := &CheckRequest{
 			ShardID:    etr.ShardID,
 			DomainID:   etr.DomainID,

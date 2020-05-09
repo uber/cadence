@@ -404,8 +404,8 @@ func getChecks(
 	payloadSerializer persistence.PayloadSerializer,
 	historyStore persistence.HistoryStore,
 ) []AdminDBCheck {
-	// the order in which checks are added to the list is important
-	// some checks depend on the output of other checks
+	// the order in which invariants are added to the list is important
+	// some invariants depend on the output of other invariants
 	if skipHistoryChecks {
 		return []AdminDBCheck{NewOrphanExecutionCheck(limiter, execStore, payloadSerializer)}
 	}

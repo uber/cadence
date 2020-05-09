@@ -76,6 +76,8 @@ type (
 		WorkflowID  string
 		RunID       string
 		BranchToken []byte
+		TreeID      string
+		BranchID    string
 		State       int
 	}
 
