@@ -69,6 +69,9 @@ func NewPriorityAssigner(
 func (a *priorityAssignerImpl) Assign(
 	queueTask Task,
 ) error {
+	sw := a.scope.StartTimer(metrics.TaskPriorityAssignmentLatency)
+	defer sw.Stop()
+
 	if queueTask.GetQueueType() == QueueTypeReplication {
 		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
 		return nil
@@ -107,6 +110,9 @@ func (a *priorityAssignerImpl) Assign(
 func (a *priorityAssignerImpl) getDomainInfo(
 	domainID string,
 ) (string, bool, error) {
+	sw := a.scope.StartTimer(metrics.TaskPriorityAssignmentDomainCacheLatency)
+	defer sw.Stop()
+
 	domainEntry, err := a.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
