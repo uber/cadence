@@ -284,7 +284,7 @@ func (v *VersionHistory) FindLCAItem(
 	}
 }
 
-// IsLCAAppendable invariants if a LCA version history item is appendable
+// IsLCAAppendable checks if a LCA version history item is appendable
 func (v *VersionHistory) IsLCAAppendable(
 	item *VersionHistoryItem,
 ) bool {
@@ -449,7 +449,7 @@ func (h *VersionHistories) GetVersionHistory(
 	branchIndex int,
 ) (*VersionHistory, error) {
 
-	if branchIndex < 0 || branchIndex >= len(h.Histories) {
+	if branchIndex < 0 || branchIndex > len(h.Histories) {
 		return nil, &shared.BadRequestError{Message: "invalid branch index."}
 	}
 
