@@ -36,6 +36,7 @@ type (
 // NewPersistenceIterator returns a new paginated iterator over persistence
 func NewPersistenceIterator(
 	pr PersistenceRetryer,
+	serializer persistence.PayloadSerializer,
 	pageSize int,
 	shardID int,
 ) ExecutionIterator {
@@ -48,7 +49,10 @@ func NewPersistenceIterator(
 func (i *persistenceIterator) Next() (*Execution, error) {
 	exec, err := i.itr.Next()
 	if exec != nil {
-		return exec.(*Execution), err
+		// TODO: make sure this always returns a valid execution
+		return exec.(*Execution), nil
+		// result := exec.(*Execution)
+
 	}
 	return nil, err
 }

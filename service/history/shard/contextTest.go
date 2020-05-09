@@ -87,7 +87,7 @@ func (s *TestContext) SetEventsCache(
 	s.MockEventsCache = nil
 }
 
-// Finish checks whether expectations are met
+// Finish invariants whether expectations are met
 func (s *TestContext) Finish(
 	t mock.TestingT,
 ) {

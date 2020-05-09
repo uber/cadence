@@ -176,7 +176,7 @@ func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// IsPersistenceTransientError checks if the error is a transient persistence error
+// IsPersistenceTransientError invariants if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
 	case *workflow.InternalServiceError, *workflow.ServiceBusyError:
@@ -191,12 +191,12 @@ func IsKafkaTransientError(err error) bool {
 	return true
 }
 
-// IsServiceTransientError checks if the error is a retryable error.
+// IsServiceTransientError invariants if the error is a retryable error.
 func IsServiceTransientError(err error) bool {
 	return !IsServiceNonRetryableError(err)
 }
 
-// IsServiceNonRetryableError checks if the error is a non retryable error.
+// IsServiceNonRetryableError invariants if the error is a non retryable error.
 func IsServiceNonRetryableError(err error) bool {
 	switch err := err.(type) {
 	case *workflow.EntityNotExistsError:
@@ -219,7 +219,7 @@ func IsServiceNonRetryableError(err error) bool {
 	return false
 }
 
-// IsWhitelistServiceTransientError checks if the error is a transient error.
+// IsWhitelistServiceTransientError invariants if the error is a transient error.
 func IsWhitelistServiceTransientError(err error) bool {
 	if err == context.DeadlineExceeded {
 		return true
@@ -267,7 +267,7 @@ func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
 	fmt.Println("******************************************")
 }
 
-// IsValidContext checks that the thrift context is not expired on cancelled.
+// IsValidContext invariants that the thrift context is not expired on cancelled.
 // Returns nil if the context is still valid. Otherwise, returns the result of
 // ctx.Err()
 func IsValidContext(ctx context.Context) error {
@@ -434,7 +434,7 @@ func CreateHistoryStartWorkflowRequest(
 	return histRequest
 }
 
-// CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
+// CheckEventBlobSizeLimit invariants if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
 // and return ErrBlobSizeExceedsLimit if it exceeds errorLimit.
 func CheckEventBlobSizeLimit(
 	actualSize int,
@@ -494,7 +494,7 @@ func ValidateLongPollContextTimeout(
 	return nil
 }
 
-// ValidateLongPollContextTimeoutIsSet checks if the context timeout is set for long poll requests.
+// ValidateLongPollContextTimeoutIsSet invariants if the context timeout is set for long poll requests.
 func ValidateLongPollContextTimeoutIsSet(
 	ctx context.Context,
 	handlerName string,

@@ -36,7 +36,7 @@ type (
 	}
 
 	// InvariantManager represents a manager of several invariants.
-	// It can be used to run a group of invariant checks or fixes.
+	// It can be used to run a group of invariant invariants or fixes.
 	// It is responsible for running invariants in their dependency order.
 	InvariantManager interface {
 		RunChecks(Execution) CheckResult
