@@ -18,7 +18,7 @@ type (
 
 func NewHistoryExists(
 	pr common.PersistenceRetryer,
-	) common.Invariant {
+) common.Invariant {
 	return &historyExists{
 		pr: pr,
 	}
@@ -26,19 +26,14 @@ func NewHistoryExists(
 
 func (h *historyExists) Check(execution common.Execution, _ *common.InvariantResourceBag) common.CheckResult {
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
-		BranchToken: execution.BranchToken,
-		MinEventID: c.FirstEventID,
-		MaxEventID: c.EndEventID,
-		PageSize: historyPageSize,
+		BranchToken:   execution.BranchToken,
+		MinEventID:    c.FirstEventID,
+		MaxEventID:    c.EndEventID,
+		PageSize:      historyPageSize,
 		NextPageToken: nil,
-		ShardID: c.IntPtr(execution.ShardID),
+		ShardID:       c.IntPtr(execution.ShardID),
 	}
 	readHistoryBranchResp, ReadHistoryBranchErr := h.pr.ReadHistoryBranch(readHistoryBranchReq)
-
-
-
-
-
 
 	return common.CheckResult{}
 }
@@ -65,4 +60,4 @@ Invariant interface {
 
 
 
- */
+*/

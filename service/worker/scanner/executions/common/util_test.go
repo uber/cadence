@@ -1,25 +1,27 @@
 package common
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/persistence"
-	"testing"
 )
 
 const (
-	domainID = "test-domain-id"
+	domainID   = "test-domain-id"
 	workflowID = "test-workflow-id"
-	runID = "test-run-id"
-	treeID = "test-tree-id"
-	branchID = "test-branch-id"
+	runID      = "test-run-id"
+	treeID     = "test-tree-id"
+	branchID   = "test-branch-id"
 )
 
 var (
-	validBranchToken = []byte{89, 11, 0, 10, 0, 0, 0, 12, 116, 101, 115, 116, 45, 116, 114, 101, 101, 45, 105, 100, 11, 0, 20, 0, 0, 0, 14, 116 ,101, 115, 116, 45, 98, 114, 97, 110, 99, 104, 45, 105, 100, 0}
+	validBranchToken   = []byte{89, 11, 0, 10, 0, 0, 0, 12, 116, 101, 115, 116, 45, 116, 114, 101, 101, 45, 105, 100, 11, 0, 20, 0, 0, 0, 14, 116, 101, 115, 116, 45, 98, 114, 97, 110, 99, 104, 45, 105, 100, 0}
 	invalidBranchToken = []byte("invalid")
 )
 
@@ -37,12 +39,12 @@ func (s *UtilSuite) SetupTest() {
 }
 
 func (s *UtilSuite) TestValidateExecution() {
-	testCases := []struct{
-		execution Execution
+	testCases := []struct {
+		execution   Execution
 		expectError bool
 	}{
 		{
-			execution: Execution{},
+			execution:   Execution{},
 			expectError: true,
 		},
 		{
@@ -59,85 +61,85 @@ func (s *UtilSuite) TestValidateExecution() {
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
+				ShardID:  0,
 				DomainID: domainID,
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
+				ShardID:    0,
+				DomainID:   domainID,
 				WorkflowID: workflowID,
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
+				ShardID:    0,
+				DomainID:   domainID,
 				WorkflowID: workflowID,
-				RunID: runID,
+				RunID:      runID,
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
-				WorkflowID: workflowID,
-				RunID: runID,
+				ShardID:     0,
+				DomainID:    domainID,
+				WorkflowID:  workflowID,
+				RunID:       runID,
 				BranchToken: []byte{1, 2, 3},
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
-				WorkflowID: workflowID,
-				RunID: runID,
+				ShardID:     0,
+				DomainID:    domainID,
+				WorkflowID:  workflowID,
+				RunID:       runID,
 				BranchToken: []byte{1, 2, 3},
-				TreeID: treeID,
+				TreeID:      treeID,
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
-				WorkflowID: workflowID,
-				RunID: runID,
+				ShardID:     0,
+				DomainID:    domainID,
+				WorkflowID:  workflowID,
+				RunID:       runID,
 				BranchToken: []byte{1, 2, 3},
-				TreeID: treeID,
-				BranchID: branchID,
-				State: persistence.WorkflowStateCreated - 1,
+				TreeID:      treeID,
+				BranchID:    branchID,
+				State:       persistence.WorkflowStateCreated - 1,
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
-				WorkflowID: workflowID,
-				RunID: runID,
+				ShardID:     0,
+				DomainID:    domainID,
+				WorkflowID:  workflowID,
+				RunID:       runID,
 				BranchToken: []byte{1, 2, 3},
-				TreeID: treeID,
-				BranchID: branchID,
-				State: persistence.WorkflowStateCorrupted + 1,
+				TreeID:      treeID,
+				BranchID:    branchID,
+				State:       persistence.WorkflowStateCorrupted + 1,
 			},
 			expectError: true,
 		},
 		{
 			execution: Execution{
-				ShardID: 0,
-				DomainID: domainID,
-				WorkflowID: workflowID,
-				RunID: runID,
+				ShardID:     0,
+				DomainID:    domainID,
+				WorkflowID:  workflowID,
+				RunID:       runID,
 				BranchToken: []byte{1, 2, 3},
-				TreeID: treeID,
-				BranchID: branchID,
-				State: persistence.WorkflowStateCreated,
+				TreeID:      treeID,
+				BranchID:    branchID,
+				State:       persistence.WorkflowStateCreated,
 			},
 			expectError: false,
 		},
@@ -155,12 +157,12 @@ func (s *UtilSuite) TestValidateExecution() {
 
 func (s *UtilSuite) TestGetBranchToken() {
 	encoder := codec.NewThriftRWEncoder()
-	testCases := []struct{
-		entity *persistence.ListConcreteExecutionsEntity
+	testCases := []struct {
+		entity      *persistence.ListConcreteExecutionsEntity
 		expectError bool
 		branchToken []byte
-		treeID string
-		branchID string
+		treeID      string
+		branchID    string
 	}{
 		{
 			entity: &persistence.ListConcreteExecutionsEntity{
@@ -170,8 +172,8 @@ func (s *UtilSuite) TestGetBranchToken() {
 			},
 			expectError: false,
 			branchToken: validBranchToken,
-			treeID: treeID,
-			branchID: branchID,
+			treeID:      treeID,
+			branchID:    branchID,
 		},
 		{
 			entity: &persistence.ListConcreteExecutionsEntity{
@@ -192,8 +194,8 @@ func (s *UtilSuite) TestGetBranchToken() {
 			},
 			expectError: false,
 			branchToken: validBranchToken,
-			treeID: treeID,
-			branchID: branchID,
+			treeID:      treeID,
+			branchID:    branchID,
 		},
 		{
 			entity: &persistence.ListConcreteExecutionsEntity{
@@ -221,7 +223,7 @@ func (s *UtilSuite) TestGetBranchToken() {
 				},
 				VersionHistories: &persistence.VersionHistories{
 					CurrentVersionHistoryIndex: 0,
-					Histories: []*persistence.VersionHistory{},
+					Histories:                  []*persistence.VersionHistory{},
 				},
 			},
 			expectError: true,
@@ -246,7 +248,7 @@ func (s *UtilSuite) TestGetBranchToken() {
 
 func (s *UtilSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {
 	hb := &shared.HistoryBranch{
-		TreeID: common.StringPtr(treeID),
+		TreeID:   common.StringPtr(treeID),
 		BranchID: common.StringPtr(branchID),
 	}
 	bytes, err := encoder.Encode(hb)
