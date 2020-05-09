@@ -10,7 +10,7 @@ import (
 )
 
 // ValidateExecution returns an error if Execution is not valid, nil otherwise.
-func ValidateExecution(execution Execution) error {
+func ValidateExecution(execution *Execution) error {
 	if execution.ShardID < 0 {
 		return fmt.Errorf("invalid ShardID: %v", execution.ShardID)
 	}
@@ -56,4 +56,60 @@ func GetBranchToken(
 		return nil, "", "", err
 	}
 	return branchToken, branch.GetTreeID(), branch.GetBranchID(), nil
+}
+
+// ExecutionStillOpen returns true if execution in persistence exists and is open, false otherwise.
+// Returns error on failure to confirm.
+// TODO: write unit tests for this method and methods below
+func ExecutionStillOpen(
+	exec *Execution,
+	pr PersistenceRetryer,
+) (bool, error) {
+	req := &persistence.GetWorkflowExecutionRequest{
+		DomainID: exec.DomainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: &exec.WorkflowID,
+			RunId:      &exec.RunID,
+		},
+	}
+	resp, err := pr.GetWorkflowExecution(req)
+	if err != nil {
+		switch err.(type) {
+		case *shared.EntityNotExistsError:
+			return false, nil
+		default:
+			return false, err
+		}
+	}
+	return Open(resp.State.ExecutionInfo.State), nil
+}
+
+// ExecutionStillExists returns true if execution still exists in persistence, false otherwise.
+// Returns error on failure to confirm.
+func ExecutionStillExists(
+	exec *Execution,
+	pr PersistenceRetryer,
+) (bool, error) {
+	req := &persistence.GetWorkflowExecutionRequest{
+		DomainID: exec.DomainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: &exec.WorkflowID,
+			RunId:      &exec.RunID,
+		},
+	}
+	_, err := pr.GetWorkflowExecution(req)
+	if err == nil {
+		return true, nil
+	}
+	switch err.(type) {
+	case *shared.EntityNotExistsError:
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
+// Open returns true if workflow state is open false if workflow is closed
+func Open(state int) bool {
+	return state == persistence.WorkflowStateCreated || state == persistence.WorkflowStateRunning
 }

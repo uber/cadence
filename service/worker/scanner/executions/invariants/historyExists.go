@@ -1,19 +1,45 @@
 package invariants
 
-import "github.com/uber/cadence/service/worker/scanner/executions/common"
+import (
+	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+)
+
+const (
+	historyPageSize = 1
+)
 
 type (
 	historyExists struct {
-		// add everything you need to do this check
-
+		pr common.PersistenceRetryer
 	}
 )
 
-func NewHistoryExists() common.Invariant {
-	return &historyExists{}
+func NewHistoryExists(
+	pr common.PersistenceRetryer,
+	) common.Invariant {
+	return &historyExists{
+		pr: pr,
+	}
 }
 
 func (h *historyExists) Check(execution common.Execution, _ *common.InvariantResourceBag) common.CheckResult {
+	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
+		BranchToken: execution.BranchToken,
+		MinEventID: c.FirstEventID,
+		MaxEventID: c.EndEventID,
+		PageSize: historyPageSize,
+		NextPageToken: nil,
+		ShardID: c.IntPtr(execution.ShardID),
+	}
+	readHistoryBranchResp, ReadHistoryBranchErr := h.pr.ReadHistoryBranch(readHistoryBranchReq)
+
+
+
+
+
+
 	return common.CheckResult{}
 }
 
@@ -34,4 +60,9 @@ Invariant interface {
 	Fix(Execution, *InvariantResourceBag) FixResult
 	InvariantType() InvariantType
 }
+
+
+
+
+
  */
