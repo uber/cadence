@@ -78,7 +78,7 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 }
 
 func (h *historyExists) Fix(execution common.Execution) common.FixResult {
-	return common.FixResult{}
+	return common.DeleteExecution(&execution, h.pr)
 }
 
 func (h *historyExists) InvariantType() common.InvariantType {
