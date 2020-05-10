@@ -52,9 +52,18 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
+	squashDir, err := ioutil.TempDir("", "update_schema_test_squash")
+	s.NoError(err)
+	defer os.RemoveAll(squashDir)
+
 	subDirs := []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0"}
 	for _, d := range subDirs {
 		s.NoError(os.Mkdir(tmpDir+"/"+d, os.FileMode(0444)))
+	}
+
+	squashDirs := []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0", "s0.5-10.2", "s1.5-3.5"}
+	for _, d := range squashDirs {
+		s.NoError(os.Mkdir(squashDir+"/"+d, os.FileMode(0444)))
 	}
 
 	_, err = readSchemaDir(tmpDir, "11.0", "11.2")
@@ -83,6 +92,16 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 	ans, err = readSchemaDir(tmpDir, "10.2", "")
 	s.NoError(err)
 	s.Equal(0, len(ans))
+
+	ans, err = readSchemaDir(squashDir, "0.4", "10.2")
+	s.Error(err)
+
+	ans, err = readSchemaDir(squashDir, "0.5", "3.5")
+	s.Error(err)
+
+	ans, err = readSchemaDir(squashDir, "10.2", "")
+	s.NoError(err)
+	s.Empty(ans)
 }
 
 func (s *UpdateTaskTestSuite) TestReadManifest() {
@@ -168,7 +187,8 @@ func (s *UpdateTaskTestSuite) TestFilterDirectories() {
 			if !tt.emptyDir {
 				dirs = subDirs
 			}
-			r, err := filterDirectories(dirs, tt.startVer, tt.endVer)
+			r, sq, err := filterDirectories(dirs, tt.startVer, tt.endVer)
+			s.Empty(sq)
 			if tt.wantErr != "" {
 				s.Empty(r)
 				s.EqualError(err, tt.wantErr)
@@ -176,6 +196,96 @@ func (s *UpdateTaskTestSuite) TestFilterDirectories() {
 				s.NoError(err)
 				s.Equal(tt.wantResult, r)
 			}
+		})
+	}
+}
+
+func (s *UpdateTaskTestSuite) TestFilterSquashDirectories() {
+	tests := []struct {
+		name       string
+		startVer   string
+		endVer     string
+		wantErr    string
+		wantResult []string
+		wantSq     []squashVersion
+		customDirs []string
+	}{
+		{name: "endVer highter", startVer: "11.0", endVer: "11.2", wantErr: "version dir not found for target version 11.2"},
+		{name: "both outside", startVer: "0.5", endVer: "10.3", wantErr: "version dir not found for target version 10.3"},
+		{name: "versions equal", startVer: "1.5", endVer: "1.5", wantErr: "startVer (1.5) must be less than endVer (1.5)"},
+		{name: "endVer < startVer", startVer: "1.5", endVer: "0.5", wantErr: "startVer (1.5) must be less than endVer (0.5)"},
+		{name: "startVer highter", startVer: "10.3", wantErr: "no subdirs found with version >= 10.3"},
+		{
+			name:       "backward version squash",
+			startVer:   "1.5",
+			wantErr:    "invalid squashed version \"s3.0-2.0\", 3.0 >= 2.0",
+			customDirs: []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0", "s0.5-10.2", "s1.5-3.5", "s3.0-2.0"},
+		},
+		{
+			name:       "equal version squash",
+			startVer:   "1.5",
+			wantErr:    "invalid squashed version \"s2.0-2.0\", 2.0 >= 2.0",
+			customDirs: []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0", "s0.5-10.2", "s1.5-3.5", "s2.0-2.0"},
+		},
+		{
+			name:       "all versions",
+			startVer:   "0.4",
+			endVer:     "10.2",
+			wantResult: []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2"},
+			wantSq: []squashVersion{
+				{prev: "1.5", ver: "3.5", dirName: "s1.5-3.5"},
+				{prev: "0.5", ver: "10.2", dirName: "s0.5-10.2"},
+			},
+		},
+		{
+			name:       "subset",
+			startVer:   "0.5",
+			endVer:     "3.5",
+			wantResult: []string{"v1.5", "v2.5", "v3.5"},
+			wantSq: []squashVersion{
+				{prev: "1.5", ver: "3.5", dirName: "s1.5-3.5"},
+			},
+		},
+		{name: "already at last version", startVer: "10.2"},
+	}
+	subDirs := []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0", "s0.5-10.2", "s1.5-3.5"}
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			dirs := subDirs
+			if len(tt.customDirs) > 0 {
+				dirs = tt.customDirs
+			}
+			r, sq, err := filterDirectories(dirs, tt.startVer, tt.endVer)
+			if tt.wantErr != "" {
+				s.Empty(r)
+				s.Empty(sq)
+				s.EqualError(err, tt.wantErr)
+			} else {
+				s.NoError(err)
+				s.Equal(tt.wantResult, r)
+				s.ElementsMatch(tt.wantSq, sq)
+			}
+		})
+	}
+}
+
+func (s *UpdateTaskTestSuite) TestSquashDirToVersion() {
+	tests := []struct {
+		source string
+		prev   string
+		ver    string
+	}{
+		{source: "s0.0-0.0", prev: "0.0", ver: "0.0"},
+		{source: "s1.0-0.0", prev: "1.0", ver: "0.0"},
+		{source: "s1.0-2", prev: "1.0", ver: "2"},
+		{source: "s1-2.1", prev: "1", ver: "2.1"},
+		{source: "s1-2", prev: "1", ver: "2"},
+	}
+	for _, tt := range tests {
+		s.Run(tt.source, func() {
+			prev, ver := squashDirToVersion(tt.source)
+			s.Equal(tt.prev, prev)
+			s.Equal(tt.ver, ver)
 		})
 	}
 }
