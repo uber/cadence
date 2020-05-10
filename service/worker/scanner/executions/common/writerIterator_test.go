@@ -60,7 +60,7 @@ func (s *WriterIteratorSuite) SetupTest() {
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
 	pr := NewPersistenceRetryer(getMockExecutionManager(10, 10), nil)
-	pItr := NewPersistenceIterator(pr, persistence.NewPayloadSerializer(), executionPageSize, testShardID)
+	pItr := NewPersistenceIterator(pr, executionPageSize, testShardID)
 	uuid := "uuid"
 	extension := "test"
 	outputDir, err := ioutil.TempDir("", "TestWriterIterator")
