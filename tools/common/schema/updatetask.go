@@ -312,23 +312,30 @@ func readSchemaDir(dir string, startVer string, endVer string) ([]string, error)
 		return nil, err
 	}
 
+	var dirNames []string
+	for _, dir := range subdirs {
+		if dir.IsDir() {
+			dirNames = append(dirNames, dir.Name())
+		}
+	}
+
+	return filterDirectories(dirNames, startVer, endVer)
+}
+
+// filterDirectories filters out the directories that are out of range
+// and performs basic sanity checks
+func filterDirectories(dirNames []string, startVer string, endVer string) ([]string, error) {
+	var endFound bool
+	var highestVer string
+	var result []string
+
 	hasEndVer := len(endVer) > 0
 
 	if hasEndVer && cmpVersion(startVer, endVer) >= 0 {
 		return nil, fmt.Errorf("startVer (%v) must be less than endVer (%v)", startVer, endVer)
 	}
 
-	var endFound bool
-	var highestVer string
-	var result []string
-
-	for _, dir := range subdirs {
-
-		if !dir.IsDir() {
-			continue
-		}
-
-		dirname := dir.Name()
+	for _, dirname := range dirNames {
 
 		if !versionStrRegex.MatchString(dirname) {
 			continue

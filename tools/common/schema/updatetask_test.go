@@ -141,6 +141,45 @@ func (s *UpdateTaskTestSuite) TestReadManifest() {
 	}
 }
 
+func (s *UpdateTaskTestSuite) TestFilterDirectories() {
+	tests := []struct {
+		name       string
+		startVer   string
+		endVer     string
+		wantErr    string
+		emptyDir   bool
+		wantResult []string
+	}{
+		{name: "endVer highter", startVer: "11.0", endVer: "11.2", wantErr: "version dir not found for target version 11.2"},
+		{name: "both outside", startVer: "0.5", endVer: "10.3", wantErr: "version dir not found for target version 10.3"},
+		{name: "versions equal", startVer: "1.5", endVer: "1.5", wantErr: "startVer (1.5) must be less than endVer (1.5)"},
+		{name: "endVer < startVer", startVer: "1.5", endVer: "0.5", wantErr: "startVer (1.5) must be less than endVer (0.5)"},
+		{name: "startVer highter", startVer: "10.3", wantErr: "no subdirs found with version >= 10.3"},
+		{name: "empty set 1", startVer: "11.0", wantErr: "no subdirs found with version >= 11.0", emptyDir: true},
+		{name: "empty set 2", startVer: "10.1", wantErr: "no subdirs found with version >= 10.1", emptyDir: true},
+		{name: "all versions", startVer: "0.4", endVer: "10.2", wantResult: []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2"}},
+		{name: "subset", startVer: "0.5", endVer: "3.5", wantResult: []string{"v1.5", "v2.5", "v3.5"}},
+		{name: "already at last version", startVer: "10.2"},
+	}
+	subDirs := []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0"}
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			var dirs []string
+			if !tt.emptyDir {
+				dirs = subDirs
+			}
+			r, err := filterDirectories(dirs, tt.startVer, tt.endVer)
+			if tt.wantErr != "" {
+				s.Empty(r)
+				s.EqualError(err, tt.wantErr)
+			} else {
+				s.NoError(err)
+				s.Equal(tt.wantResult, r)
+			}
+		})
+	}
+}
+
 func (s *UpdateTaskTestSuite) runReadManifestTest(dir, input, currVer, minVer, desc string,
 	files []string, isErr bool) {
 
