@@ -32,6 +32,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"time"
 )
 
 type (
@@ -121,8 +122,9 @@ func (task *UpdateTask) executeUpdates(currVer string, updates []changeSet) erro
 		log.Printf("found zero updates from current version %v", currVer)
 		return nil
 	}
-
+	updStart := time.Now()
 	for _, cs := range updates {
+		csStart := time.Now()
 
 		err := task.execCQLStmts(cs.version, cs.cqlStmts)
 		if err != nil {
@@ -133,9 +135,11 @@ func (task *UpdateTask) executeUpdates(currVer string, updates []changeSet) erro
 			return err
 		}
 
-		log.Printf("Schema updated from %v to %v\n", currVer, cs.version)
+		log.Printf("Schema updated from %v to %v, elapsed %v\n", currVer, cs.version, time.Since(csStart))
 		currVer = cs.version
 	}
+
+	log.Printf("All schema changes completed in %v\n", time.Since(updStart))
 
 	return nil
 }
