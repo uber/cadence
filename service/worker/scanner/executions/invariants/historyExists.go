@@ -77,7 +77,7 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	}
 }
 
-func (h *historyExists) Fix(execution common.Execution, _ *common.InvariantResourceBag) common.FixResult {
+func (h *historyExists) Fix(execution common.Execution) common.FixResult {
 	return common.FixResult{}
 }
 
