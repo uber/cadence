@@ -83,7 +83,7 @@ type (
 
 	// InvariantResourceBag is a union of resources used to pass results from one Invariant to another Invariant.
 	InvariantResourceBag struct {
-		History *persistence.InternalReadHistoryBranchResponse
+		History *persistence.ReadHistoryBranchResponse
 	}
 
 	// CheckResult is the result of running Check.

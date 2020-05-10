@@ -1,7 +1,12 @@
 package common
 
 import (
+	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
+
+	"github.com/uber/cadence/common/mocks"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -40,34 +45,34 @@ func (s *UtilSuite) SetupTest() {
 
 func (s *UtilSuite) TestValidateExecution() {
 	testCases := []struct {
-		execution   Execution
+		execution   *Execution
 		expectError bool
 	}{
 		{
-			execution:   Execution{},
+			execution:   &Execution{},
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID: -1,
 			},
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID: 0,
 			},
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:  0,
 				DomainID: domainID,
 			},
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:    0,
 				DomainID:   domainID,
 				WorkflowID: workflowID,
@@ -75,7 +80,7 @@ func (s *UtilSuite) TestValidateExecution() {
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:    0,
 				DomainID:   domainID,
 				WorkflowID: workflowID,
@@ -84,7 +89,7 @@ func (s *UtilSuite) TestValidateExecution() {
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:     0,
 				DomainID:    domainID,
 				WorkflowID:  workflowID,
@@ -94,7 +99,7 @@ func (s *UtilSuite) TestValidateExecution() {
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:     0,
 				DomainID:    domainID,
 				WorkflowID:  workflowID,
@@ -105,7 +110,7 @@ func (s *UtilSuite) TestValidateExecution() {
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:     0,
 				DomainID:    domainID,
 				WorkflowID:  workflowID,
@@ -118,7 +123,7 @@ func (s *UtilSuite) TestValidateExecution() {
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:     0,
 				DomainID:    domainID,
 				WorkflowID:  workflowID,
@@ -131,7 +136,7 @@ func (s *UtilSuite) TestValidateExecution() {
 			expectError: true,
 		},
 		{
-			execution: Execution{
+			execution: &Execution{
 				ShardID:     0,
 				DomainID:    domainID,
 				WorkflowID:  workflowID,
@@ -244,6 +249,116 @@ func (s *UtilSuite) TestGetBranchToken() {
 			s.Equal(tc.branchID, branchID)
 		}
 	}
+}
+
+func (s *UtilSuite) TestExecutionStillOpen_EntityNotExists() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	open, err := ExecutionStillOpen(exec, pr)
+	s.NoError(err)
+	s.False(open)
+}
+
+func (s *UtilSuite) TestExecutionStillOpen_AccessError() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, errors.New("got error accessing"))
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	open, err := ExecutionStillOpen(exec, pr)
+	s.Error(err)
+	s.False(open)
+}
+
+func (s *UtilSuite) TestExecutionStillOpen_NotOpen() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
+		State: &persistence.WorkflowMutableState{
+			ExecutionInfo: &persistence.WorkflowExecutionInfo{
+				State: persistence.WorkflowStateCompleted,
+			},
+		},
+	}, nil)
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	open, err := ExecutionStillOpen(exec, pr)
+	s.NoError(err)
+	s.False(open)
+}
+
+func (s *UtilSuite) TestExecutionStillOpen_Open() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
+		State: &persistence.WorkflowMutableState{
+			ExecutionInfo: &persistence.WorkflowExecutionInfo{
+				State: persistence.WorkflowStateCreated,
+			},
+		},
+	}, nil)
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	open, err := ExecutionStillOpen(exec, pr)
+	s.NoError(err)
+	s.True(open)
+}
+
+func (s *UtilSuite) TestExecutionStillExists_Exists() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{}, nil)
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	exists, err := ExecutionStillExists(exec, pr)
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *UtilSuite) TestExecutionStillExists_NotExists() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	exists, err := ExecutionStillExists(exec, pr)
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *UtilSuite) TestExecutionStillExists_Error() {
+	execManager := &mocks.ExecutionManager{}
+	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, errors.New("access error"))
+	pr := NewPersistenceRetryer(execManager, nil)
+	exec := &Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	exists, err := ExecutionStillExists(exec, pr)
+	s.Error(err)
+	s.False(exists)
 }
 
 func (s *UtilSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {

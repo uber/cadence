@@ -60,7 +60,6 @@ func GetBranchToken(
 
 // ExecutionStillOpen returns true if execution in persistence exists and is open, false otherwise.
 // Returns error on failure to confirm.
-// TODO: write unit tests for this method and methods below
 func ExecutionStillOpen(
 	exec *Execution,
 	pr PersistenceRetryer,
