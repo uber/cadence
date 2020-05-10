@@ -251,114 +251,153 @@ func (s *UtilSuite) TestGetBranchToken() {
 	}
 }
 
-func (s *UtilSuite) TestExecutionStillOpen_EntityNotExists() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
+func (s *UtilSuite) TestExecutionStillOpen() {
+	testCases := []struct {
+		getExecResp *persistence.GetWorkflowExecutionResponse
+		getExecErr  error
+		expectError bool
+		expectOpen  bool
+	}{
+		{
+			getExecResp: nil,
+			getExecErr:  &shared.EntityNotExistsError{},
+			expectError: false,
+			expectOpen:  false,
+		},
+		{
+			getExecResp: nil,
+			getExecErr:  errors.New("got error"),
+			expectError: true,
+			expectOpen:  false,
+		},
+		{
+			getExecResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			getExecErr:  nil,
+			expectError: false,
+			expectOpen:  false,
+		},
+		{
+			getExecResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+			},
+			getExecErr:  nil,
+			expectError: false,
+			expectOpen:  true,
+		},
 	}
-	open, err := ExecutionStillOpen(exec, pr)
-	s.NoError(err)
-	s.False(open)
+
+	for _, tc := range testCases {
+		execManager := &mocks.ExecutionManager{}
+		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
+		pr := NewPersistenceRetryer(execManager, nil)
+		open, err := ExecutionStillOpen(&Execution{}, pr)
+		if tc.expectError {
+			s.Error(err)
+		} else {
+			s.NoError(err)
+		}
+		if tc.expectOpen {
+			s.True(open)
+		} else {
+			s.False(open)
+		}
+	}
 }
 
-func (s *UtilSuite) TestExecutionStillOpen_AccessError() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, errors.New("got error accessing"))
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
+func (s *UtilSuite) TestExecutionStillExists() {
+	testCases := []struct {
+		getExecResp  *persistence.GetWorkflowExecutionResponse
+		getExecErr   error
+		expectError  bool
+		expectExists bool
+	}{
+		{
+			getExecResp:  &persistence.GetWorkflowExecutionResponse{},
+			getExecErr:   nil,
+			expectError:  false,
+			expectExists: true,
+		},
+		{
+			getExecResp:  nil,
+			getExecErr:   &shared.EntityNotExistsError{},
+			expectError:  false,
+			expectExists: false,
+		},
+		{
+			getExecResp:  nil,
+			getExecErr:   errors.New("got error"),
+			expectError:  true,
+			expectExists: false,
+		},
 	}
-	open, err := ExecutionStillOpen(exec, pr)
-	s.Error(err)
-	s.False(open)
+
+	for _, tc := range testCases {
+		execManager := &mocks.ExecutionManager{}
+		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
+		pr := NewPersistenceRetryer(execManager, nil)
+		exists, err := ExecutionStillExists(&Execution{}, pr)
+		if tc.expectError {
+			s.Error(err)
+		} else {
+			s.NoError(err)
+		}
+		if tc.expectExists {
+			s.True(exists)
+		} else {
+			s.False(exists)
+		}
+	}
 }
 
-func (s *UtilSuite) TestExecutionStillOpen_NotOpen() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
-		State: &persistence.WorkflowMutableState{
-			ExecutionInfo: &persistence.WorkflowExecutionInfo{
-				State: persistence.WorkflowStateCompleted,
+func (s *UtilSuite) TestDeleteExecution() {
+	testCases := []struct {
+		deleteConcreteErr error
+		deleteCurrentErr  error
+		expectedFixResult FixResult
+	}{
+		{
+			deleteConcreteErr: errors.New("error deleting concrete execution"),
+			expectedFixResult: FixResult{
+				FixResultType: FixResultTypeFailed,
+				Info:          "failed to delete concrete workflow execution",
+				InfoDetails:   "error deleting concrete execution",
 			},
 		},
-	}, nil)
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
-	open, err := ExecutionStillOpen(exec, pr)
-	s.NoError(err)
-	s.False(open)
-}
-
-func (s *UtilSuite) TestExecutionStillOpen_Open() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
-		State: &persistence.WorkflowMutableState{
-			ExecutionInfo: &persistence.WorkflowExecutionInfo{
-				State: persistence.WorkflowStateCreated,
+		{
+			deleteCurrentErr: errors.New("error deleting current execution"),
+			expectedFixResult: FixResult{
+				FixResultType: FixResultTypeFailed,
+				Info:          "failed to delete current workflow execution",
+				InfoDetails:   "error deleting current execution",
 			},
 		},
-	}, nil)
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
+		{
+			expectedFixResult: FixResult{
+				FixResultType: FixResultTypeFixed,
+			},
+		},
 	}
-	open, err := ExecutionStillOpen(exec, pr)
-	s.NoError(err)
-	s.True(open)
-}
 
-func (s *UtilSuite) TestExecutionStillExists_Exists() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{}, nil)
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
+	for _, tc := range testCases {
+		execManager := &mocks.ExecutionManager{}
+		execManager.On("DeleteWorkflowExecution", mock.Anything).Return(tc.deleteConcreteErr).Once()
+		if tc.deleteConcreteErr == nil {
+			execManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(tc.deleteCurrentErr).Once()
+		}
+		pr := NewPersistenceRetryer(execManager, nil)
+		result := DeleteExecution(&Execution{}, pr)
+		s.Equal(tc.expectedFixResult, result)
 	}
-	exists, err := ExecutionStillExists(exec, pr)
-	s.NoError(err)
-	s.True(exists)
-}
-
-func (s *UtilSuite) TestExecutionStillExists_NotExists() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
-	exists, err := ExecutionStillExists(exec, pr)
-	s.NoError(err)
-	s.False(exists)
-}
-
-func (s *UtilSuite) TestExecutionStillExists_Error() {
-	execManager := &mocks.ExecutionManager{}
-	execManager.On("GetWorkflowExecution", mock.Anything).Return(nil, errors.New("access error"))
-	pr := NewPersistenceRetryer(execManager, nil)
-	exec := &Execution{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
-	exists, err := ExecutionStillExists(exec, pr)
-	s.Error(err)
-	s.False(exists)
 }
 
 func (s *UtilSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {

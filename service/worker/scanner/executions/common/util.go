@@ -112,3 +112,36 @@ func ExecutionStillExists(
 func Open(state int) bool {
 	return state == persistence.WorkflowStateCreated || state == persistence.WorkflowStateRunning
 }
+
+// DeleteExecution deletes concrete execution and
+// current execution conditionally on matching runID.
+func DeleteExecution(
+	exec *Execution,
+	pr PersistenceRetryer,
+) FixResult {
+	if err := pr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   exec.DomainID,
+		WorkflowID: exec.WorkflowID,
+		RunID:      exec.RunID,
+	}); err != nil {
+		return FixResult{
+			FixResultType: FixResultTypeFailed,
+			Info:          "failed to delete concrete workflow execution",
+			InfoDetails:   err.Error(),
+		}
+	}
+	if err := pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   exec.DomainID,
+		WorkflowID: exec.WorkflowID,
+		RunID:      exec.RunID,
+	}); err != nil {
+		return FixResult{
+			FixResultType: FixResultTypeFailed,
+			Info:          "failed to delete current workflow execution",
+			InfoDetails:   err.Error(),
+		}
+	}
+	return FixResult{
+		FixResultType: FixResultTypeFixed,
+	}
+}
