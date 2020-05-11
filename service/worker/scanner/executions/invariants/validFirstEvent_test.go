@@ -21,3 +21,78 @@
 // SOFTWARE.
 
 package invariants
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+)
+
+type ValidFirstEventSuite struct {
+	*require.Assertions
+	suite.Suite
+}
+
+func TestValidFirstEventSuite(t *testing.T) {
+	suite.Run(t, new(ValidFirstEventSuite))
+}
+
+func (s *ValidFirstEventSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+}
+
+func (s *ValidFirstEventSuite) TestCheck() {
+	testCases := []struct {
+		firstEvent     *shared.HistoryEvent
+		expectedResult common.CheckResult
+	}{
+		{
+			firstEvent: &shared.HistoryEvent{
+				EventId: c.Int64Ptr(10),
+			},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeCorrupted,
+				Info:            "got unexpected first eventID",
+				InfoDetails:     "expected 1 but got 10",
+			},
+		},
+		{
+			firstEvent: &shared.HistoryEvent{
+				EventId:   c.Int64Ptr(1),
+				EventType: shared.EventTypeWorkflowExecutionCanceled.Ptr(),
+			},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeCorrupted,
+				Info:            "got unexpected first event type",
+				InfoDetails:     "expected WorkflowExecutionStarted but got WorkflowExecutionCanceled",
+			},
+		},
+		{
+			firstEvent: &shared.HistoryEvent{
+				EventId:   c.Int64Ptr(1),
+				EventType: shared.EventTypeWorkflowExecutionStarted.Ptr(),
+			},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		v := NewValidFirstEvent(nil)
+		result := v.Check(common.Execution{}, &common.InvariantResourceBag{
+			History: &persistence.ReadHistoryBranchResponse{
+				HistoryEvents: []*shared.HistoryEvent{
+					tc.firstEvent,
+				},
+			},
+		})
+		s.Equal(tc.expectedResult, result)
+	}
+}

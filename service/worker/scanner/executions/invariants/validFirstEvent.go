@@ -21,3 +21,55 @@
 // SOFTWARE.
 
 package invariants
+
+import (
+	"fmt"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+)
+
+type (
+	validFirstEvent struct {
+		pr common.PersistenceRetryer
+	}
+)
+
+// NewValidFirstEvent returns a new invariant for checking that first event of history is valid
+func NewValidFirstEvent(
+	pr common.PersistenceRetryer,
+) common.Invariant {
+	return &validFirstEvent{
+		pr: pr,
+	}
+}
+
+func (v *validFirstEvent) Check(_ common.Execution, resources *common.InvariantResourceBag) common.CheckResult {
+	firstEvent := resources.History.HistoryEvents[0]
+	if firstEvent.GetEventId() != c.FirstEventID {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeCorrupted,
+			Info:            "got unexpected first eventID",
+			InfoDetails:     fmt.Sprintf("expected %v but got %v", c.FirstEventID, firstEvent.GetEventId()),
+		}
+	}
+	if firstEvent.GetEventType() != shared.EventTypeWorkflowExecutionStarted {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeCorrupted,
+			Info:            "got unexpected first event type",
+			InfoDetails:     fmt.Sprintf("expected %v but got %v", shared.EventTypeWorkflowExecutionStarted, firstEvent.GetEventType()),
+		}
+	}
+	return common.CheckResult{
+		CheckResultType: common.CheckResultTypeHealthy,
+	}
+}
+
+func (v *validFirstEvent) Fix(execution common.Execution) common.FixResult {
+	return common.DeleteExecution(&execution, v.pr)
+}
+
+func (v *validFirstEvent) InvariantType() common.InvariantType {
+	return common.ValidFirstEventInvariantType
+}
