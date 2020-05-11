@@ -27,15 +27,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
-
-	"github.com/uber/cadence/common/mocks"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 )
 

@@ -489,7 +489,7 @@ func (i *historyShardsItem) logInvalidStatus() string {
 	return msg
 }
 
-// IsShardOwnershiptLostError invariants if a given error is shard ownership lost error
+// IsShardOwnershiptLostError checks if a given error is shard ownership lost error
 func IsShardOwnershiptLostError(err error) bool {
 	switch err.(type) {
 	case *persistence.ShardOwnershipLostError:
