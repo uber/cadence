@@ -2990,7 +2990,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		currentExecution,
 		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			// Filter out reapply event from the same cluster
-			toReapplyEvents := make([]*workflow.HistoryEvent, len(reapplyEvents))
+			var toReapplyEvents []*workflow.HistoryEvent
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()
 			if err != nil {
 				return nil, err
@@ -3008,6 +3008,21 @@ func (e *historyEngineImpl) ReapplyEvents(
 				toReapplyEvents = append(toReapplyEvents, event)
 			}
 			if len(toReapplyEvents) == 0 {
+				return &updateWorkflowAction{
+					noop: true,
+				}, nil
+			}
+
+			// Check if max signal count reaches
+			// Currently, we only re apply signal events
+			executionInfo := mutableState.GetExecutionInfo()
+			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+			if maxAllowedSignals > 0 && (int(executionInfo.SignalCount)+len(toReapplyEvents)) >= maxAllowedSignals {
+				e.logger.Info("Execution limit reached for maximum signals during signal re-application",
+					tag.WorkflowSignalCount(executionInfo.SignalCount),
+					tag.WorkflowID(workflowID),
+					tag.WorkflowRunID(runID),
+					tag.WorkflowDomainID(domainID))
 				return &updateWorkflowAction{
 					noop: true,
 				}, nil
