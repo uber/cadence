@@ -21,3 +21,85 @@
 // SOFTWARE.
 
 package invariants
+
+import (
+	"fmt"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+)
+
+type (
+	openCurrentExecution struct {
+		pr common.PersistenceRetryer
+	}
+)
+
+// NewOpenCurrentExecution returns a new invariant for checking open current execution
+func NewOpenCurrentExecution(
+	pr common.PersistenceRetryer,
+) common.Invariant {
+	return &openCurrentExecution{
+		pr: pr,
+	}
+}
+
+func (o *openCurrentExecution) Check(execution common.Execution, _ *common.InvariantResourceBag) common.CheckResult {
+	if !common.Open(execution.State) {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeHealthy,
+		}
+	}
+	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+		DomainID:   execution.DomainID,
+		WorkflowID: execution.WorkflowID,
+	})
+	stillOpen, stillOpenErr := common.ExecutionStillOpen(&execution, o.pr)
+	if stillOpenErr != nil {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeFailed,
+			Info:            "failed to check if concrete execution is still open",
+			InfoDetails:     stillOpenErr.Error(),
+		}
+	}
+	if !stillOpen {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeHealthy,
+		}
+	}
+	if currentExecErr != nil {
+		switch currentExecErr.(type) {
+		case *shared.EntityNotExistsError:
+			return common.CheckResult{
+				CheckResultType: common.CheckResultTypeCorrupted,
+				Info:            "execution is open without having current execution",
+				InfoDetails:     currentExecErr.Error(),
+			}
+		default:
+			return common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				Info:            "failed to check if current execution exists",
+				InfoDetails:     currentExecErr.Error(),
+			}
+		}
+	}
+	if currentExecResp.RunID != execution.RunID {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeCorrupted,
+			Info:            "execution is open but current points at a different execution",
+			InfoDetails:     fmt.Sprintf("current points at %v", currentExecResp.RunID),
+		}
+	}
+	return common.CheckResult{
+		CheckResultType: common.CheckResultTypeHealthy,
+	}
+}
+
+func (o *openCurrentExecution) Fix(execution common.Execution) common.FixResult {
+	return common.DeleteExecution(&execution, o.pr)
+}
+
+func (o *openCurrentExecution) InvariantType() common.InvariantType {
+	return common.OpenCurrentExecution
+}

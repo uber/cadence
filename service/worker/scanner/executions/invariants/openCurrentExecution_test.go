@@ -21,3 +21,152 @@
 // SOFTWARE.
 
 package invariants
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/mock"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+)
+
+type OpenCurrentExecutionSuite struct {
+	*require.Assertions
+	suite.Suite
+}
+
+func TestOpenCurrentExecutionSuite(t *testing.T) {
+	suite.Run(t, new(OpenCurrentExecutionSuite))
+}
+
+func (s *OpenCurrentExecutionSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+}
+
+func (s *OpenCurrentExecutionSuite) TestCheck() {
+	testCases := []struct {
+		execution       common.Execution
+		getCurrentResp  *persistence.GetCurrentExecutionResponse
+		getCurrentErr   error
+		getConcreteResp *persistence.GetWorkflowExecutionResponse
+		getConcreteErr  error
+		expectedResult  common.CheckResult
+	}{
+		{
+			execution: getClosedExecution(),
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+			},
+		},
+		{
+			execution:      getOpenExecution(),
+			getConcreteErr: errors.New("got error checking if concrete is open"),
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				Info:            "failed to check if concrete execution is still open",
+				InfoDetails:     "got error checking if concrete is open",
+			},
+		},
+		{
+			execution: getOpenExecution(),
+			getConcreteResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: closedState,
+					},
+				},
+			},
+			getConcreteErr: nil,
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+			},
+		},
+		{
+			execution: getOpenExecution(),
+			getConcreteResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: openState,
+					},
+				},
+			},
+			getConcreteErr: nil,
+			getCurrentErr:  &shared.EntityNotExistsError{},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeCorrupted,
+				Info:            "execution is open without having current execution",
+				InfoDetails:     "EntityNotExistsError{Message: }",
+			},
+		},
+		{
+			execution: getOpenExecution(),
+			getConcreteResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: openState,
+					},
+				},
+			},
+			getConcreteErr: nil,
+			getCurrentErr:  errors.New("error getting current execution"),
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				Info:            "failed to check if current execution exists",
+				InfoDetails:     "error getting current execution",
+			},
+		},
+		{
+			execution: getOpenExecution(),
+			getConcreteResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: openState,
+					},
+				},
+			},
+			getConcreteErr: nil,
+			getCurrentErr:  nil,
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: "not-equal",
+			},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeCorrupted,
+				Info:            "execution is open but current points at a different execution",
+				InfoDetails:     "current points at not-equal",
+			},
+		},
+		{
+			execution: getOpenExecution(),
+			getConcreteResp: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						State: openState,
+					},
+				},
+			},
+			getConcreteErr: nil,
+			getCurrentErr:  nil,
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: runID,
+			},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		execManager := &mocks.ExecutionManager{}
+		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
+		execManager.On("GetCurrentExecution", mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
+		o := NewOpenCurrentExecution(common.NewPersistenceRetryer(execManager, nil))
+		s.Equal(tc.expectedResult, o.Check(tc.execution, nil))
+	}
+}
