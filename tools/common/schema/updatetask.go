@@ -200,7 +200,13 @@ func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
 			return nil, fmt.Errorf("error processing manifest for version %v:%v", vd, e.Error())
 		}
 
-		if m.CurrVersion != dirToVersion(vd) {
+		if squashVersionStrRegex.MatchString(vd) {
+			_, v := squashDirToVersion(vd)
+			if m.CurrVersion != v {
+				return nil, fmt.Errorf("manifest version doesn't match with dirname, dir=%v,manifest.version=%v",
+					vd, m.CurrVersion)
+			}
+		} else if m.CurrVersion != dirToVersion(vd) {
 			return nil, fmt.Errorf("manifest version doesn't match with dirname, dir=%v,manifest.version=%v",
 				vd, m.CurrVersion)
 		}
@@ -328,18 +334,17 @@ func readSchemaDir(dir string, startVer string, endVer string) ([]string, error)
 	}
 
 	result, squashes, err := filterDirectories(dirNames, startVer, endVer)
-
 	if err != nil {
 		return nil, err
 	}
 
-	if len(squashes) == 0 {
+	if len(squashes) == 0 || len(result) == 0 {
 		// if no shortcuts are found between the versions,
 		// apply them one by one incrementally
 		return result, nil
 	}
 
-	return nil, fmt.Errorf("version squashing is not implemented")
+	return findShortestPath(startVer, dirToVersion(result[len(result)-1]), result, squashes)
 }
 
 func filterDirectories(dirNames []string, startVer string, endVer string) ([]string, []squashVersion, error) {

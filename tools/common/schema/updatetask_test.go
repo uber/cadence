@@ -94,10 +94,12 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 	s.Equal(0, len(ans))
 
 	ans, err = readSchemaDir(squashDir, "0.4", "10.2")
-	s.Error(err)
+	s.NoError(err)
+	s.Equal([]string{"v0.5", "s0.5-10.2"}, ans)
 
 	ans, err = readSchemaDir(squashDir, "0.5", "3.5")
-	s.Error(err)
+	s.NoError(err)
+	s.Equal([]string{"v1.5", "s1.5-3.5"}, ans)
 
 	ans, err = readSchemaDir(squashDir, "10.2", "")
 	s.NoError(err)
