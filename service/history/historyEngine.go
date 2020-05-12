@@ -3009,21 +3009,6 @@ func (e *historyEngineImpl) ReapplyEvents(
 				}, nil
 			}
 
-			// Check if max signal count reaches
-			// Currently, we only re apply signal events
-			executionInfo := mutableState.GetExecutionInfo()
-			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
-			if maxAllowedSignals > 0 && (int(executionInfo.SignalCount)+len(toReapplyEvents)) >= maxAllowedSignals {
-				e.logger.Info("Execution limit reached for maximum signals during signal re-application",
-					tag.WorkflowSignalCount(executionInfo.SignalCount),
-					tag.WorkflowID(workflowID),
-					tag.WorkflowRunID(runID),
-					tag.WorkflowDomainID(domainID))
-				return &updateWorkflowAction{
-					noop: true,
-				}, nil
-			}
-
 			if !mutableState.IsWorkflowExecutionRunning() {
 				// need to reset target workflow (which is also the current workflow)
 				// to accept events to be reapplied

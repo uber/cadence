@@ -1,4 +1,4 @@
-// Copyright (c) 2017 - 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -5096,43 +5096,6 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockEventsReapplier.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
-
-	err := s.mockHistoryEngine.ReapplyEvents(
-		context.Background(),
-		constants.TestDomainID,
-		*workflowExecution.WorkflowId,
-		*workflowExecution.RunId,
-		history,
-	)
-	s.NoError(err)
-}
-
-func (s *engineSuite) TestReapplyEvents_MaxSignalCountReached() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-reapply-max-signal-count"),
-		RunId:      common.StringPtr(constants.TestRunID),
-	}
-	history := []*workflow.HistoryEvent{
-		{
-			EventId:   common.Int64Ptr(1),
-			EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
-			Version:   common.Int64Ptr(1),
-		},
-	}
-	msBuilder := execution.NewMutableStateBuilderWithEventV2(
-		s.mockHistoryEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
-		constants.TestLocalDomainEntry,
-	)
-
-	ms := execution.CreatePersistenceMutableState(msBuilder)
-	ms.ExecutionInfo.SignalCount = 2
-	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
-	s.mockEventsReapplier.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 	err := s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
