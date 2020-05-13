@@ -221,19 +221,25 @@ func (q *processingQueueImpl) Merge(
 		))
 	}
 
-	newQueueStates = append(newQueueStates, newProcessingQueueState(
+	overlappingQueueState := newProcessingQueueState(
 		q1.state.level,
 		maxTaskKey(q1.state.ackLevel, q2.state.ackLevel),
 		minTaskKey(q1.state.readLevel, q2.state.readLevel),
 		minTaskKey(q1.state.maxLevel, q2.state.maxLevel),
 		q1.state.domainFilter.Merge(q2.state.domainFilter),
-	))
+	)
+	if overlappingQueueState.readLevel.Less(overlappingQueueState.ackLevel) {
+		overlappingQueueState.readLevel = overlappingQueueState.ackLevel
+	}
+
+	newQueueStates = append(newQueueStates, overlappingQueueState)
 
 	return splitProcessingQueue([]*processingQueueImpl{q1, q2}, newQueueStates, q.logger, q.metricsClient)
 }
 
 func (q *processingQueueImpl) AddTasks(
 	tasks map[task.Key]task.Task,
+	more bool,
 ) {
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
@@ -255,6 +261,10 @@ func (q *processingQueueImpl) AddTasks(
 			q.state.readLevel = key
 		}
 	}
+
+	if !more {
+		q.state.readLevel = q.state.maxLevel
+	}
 }
 
 func (q *processingQueueImpl) UpdateAckLevel() {
@@ -274,6 +284,10 @@ func (q *processingQueueImpl) UpdateAckLevel() {
 
 		q.state.ackLevel = key
 		delete(q.outstandingTasks, key)
+	}
+
+	if len(q.outstandingTasks) == 0 && q.state.readLevel == q.state.maxLevel {
+		q.state.ackLevel = q.state.maxLevel
 	}
 }
 

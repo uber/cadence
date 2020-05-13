@@ -99,12 +99,12 @@ func (s *processingQueueSuite) TestAddTasks() {
 		make(map[task.Key]task.Task),
 	)
 
-	queue.AddTasks(tasks)
+	queue.AddTasks(tasks, true)
 	s.Len(queue.outstandingTasks, len(taskKeys))
 	s.Equal(&testKey{ID: 10}, queue.state.readLevel)
 
 	// add the same set of tasks again, should have no effect
-	queue.AddTasks(tasks)
+	queue.AddTasks(tasks, true)
 	s.Len(queue.outstandingTasks, len(taskKeys))
 	s.Equal(&testKey{ID: 10}, queue.state.readLevel)
 }
@@ -704,15 +704,15 @@ func (s *processingQueueSuite) TestMerge() {
 			queue1: s.newTestProcessingQueue(
 				0,
 				&testKey{ID: 0},
-				&testKey{ID: 10},
+				&testKey{ID: 3},
 				&testKey{ID: 15},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain1": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 4}, &testKey{ID: 7}, &testKey{ID: 10}},
-					[]string{"testDomain1", "testDomain1", "testDomain1", "testDomain1"},
+					[]task.Key{&testKey{ID: 1}, &testKey{ID: 3}},
+					[]string{"testDomain1", "testDomain1"},
 				),
 			),
 			queue2: s.newTestProcessingQueue(
@@ -733,7 +733,7 @@ func (s *processingQueueSuite) TestMerge() {
 				s.newTestProcessingQueue(
 					0,
 					&testKey{ID: 0},
-					&testKey{ID: 5},
+					&testKey{ID: 3},
 					&testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
@@ -741,24 +741,22 @@ func (s *processingQueueSuite) TestMerge() {
 					},
 					map[task.Key]task.Task{
 						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 4}: task.NewMockTask(s.controller),
+						&testKey{ID: 3}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
 					&testKey{ID: 5},
-					&testKey{ID: 10},
+					&testKey{ID: 5},
 					&testKey{ID: 15},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}, "testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 6}:  task.NewMockTask(s.controller),
-						&testKey{ID: 7}:  task.NewMockTask(s.controller),
-						&testKey{ID: 8}:  task.NewMockTask(s.controller),
-						&testKey{ID: 9}:  task.NewMockTask(s.controller),
-						&testKey{ID: 10}: task.NewMockTask(s.controller),
+						&testKey{ID: 6}: task.NewMockTask(s.controller),
+						&testKey{ID: 8}: task.NewMockTask(s.controller),
+						&testKey{ID: 9}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
