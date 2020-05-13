@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -52,7 +51,7 @@ type (
 
 		controller      *gomock.Controller
 		mockShard       *shard.TestContext
-		mockEventsCache *events.MockCache
+		mockEventsCache *cache.MockCache
 
 		msBuilder *mutableStateBuilder
 		logger    log.Logger
@@ -91,7 +90,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.mockShard.GetConfig().MutableStateChecksumGenProbability = func(domain string) int { return 100 }
 	s.mockShard.GetConfig().MutableStateChecksumVerifyProbability = func(domain string) int { return 100 }
 
-	s.mockEventsCache = s.mockShard.GetEventsCache().(*events.MockCache)
+	s.mockEventsCache = s.mockShard.GetEventsCache().(*cache.MockCache)
 
 	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
 	s.logger = s.mockShard.GetLogger()

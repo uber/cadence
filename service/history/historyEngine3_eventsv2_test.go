@@ -61,7 +61,7 @@ type (
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
-		mockEventsCache          *events.MockCache
+		mockEventsCache          *cache.MockCache
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
 

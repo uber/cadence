@@ -23,14 +23,15 @@ package shard
 import (
 	"time"
 
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/resource"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/events"
 )
 
 // TestContext is a test implementation for shard Context interface

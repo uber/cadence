@@ -25,8 +25,11 @@ package events
 import (
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
+
+	"github.com/uber/cadence/common"
+
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -44,6 +47,7 @@ type (
 			firstEventID int64,
 			eventID int64,
 			branchToken []byte,
+			shardID int,
 		) (*shared.HistoryEvent, error)
 		PutEvent(
 			domainID string,
@@ -83,6 +87,28 @@ var (
 
 var _ Cache = (*cacheImpl)(nil)
 
+// NewCache creates a new global events cache
+func NewEventCache(
+	initialSize int,
+	maxSize int,
+	ttl time.Duration,
+	historyManager persistence.HistoryManager,
+	logger log.Logger,
+	metricsClient metrics.Client,
+) Cache {
+	return newCacheWithOption(
+		initialSize,
+		maxSize,
+		ttl,
+		historyManager,
+		false,
+		logger,
+		metricsClient,
+		nil,
+	)
+}
+
+// TODO remove once migrated to global event cache
 // NewCache creates a new events cache
 func NewCache(
 	shardID int,
@@ -140,6 +166,7 @@ func (e *cacheImpl) GetEvent(
 	domainID, workflowID, runID string,
 	firstEventID, eventID int64,
 	branchToken []byte,
+	shardID int,
 ) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetEventScope, metrics.CacheLatency)
@@ -155,7 +182,11 @@ func (e *cacheImpl) GetEvent(
 	}
 
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
-	event, err := e.getHistoryEventFromStore(firstEventID, eventID, branchToken)
+	// use local id to preserve old logic before full migration to global event cache
+	if e.shardID != nil {
+		shardID = *e.shardID
+	}
+	event, err := e.getHistoryEventFromStore(firstEventID, eventID, branchToken, shardID)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
 		e.logger.Error("EventsCache unable to retrieve event from store",
@@ -189,7 +220,7 @@ func (e *cacheImpl) DeleteEvent(domainID, workflowID, runID string, eventID int6
 	e.Delete(key)
 }
 
-func (e *cacheImpl) getHistoryEventFromStore(firstEventID, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
+func (e *cacheImpl) getHistoryEventFromStore(firstEventID, eventID int64, branchToken []byte, shardID int) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetFromStoreScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -202,7 +233,7 @@ func (e *cacheImpl) getHistoryEventFromStore(firstEventID, eventID int64, branch
 		MaxEventID:    eventID + 1,
 		PageSize:      1,
 		NextPageToken: nil,
-		ShardID:       e.shardID,
+		ShardID:       common.IntPtr(shardID),
 	})
 
 	if err != nil {

@@ -26,6 +26,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/uber/cadence/service/history/events"
+
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -43,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -1011,6 +1012,7 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 		ai.ScheduledEventBatchID,
 		ai.ScheduleID,
 		currentBranchToken,
+		e.shard.GetShardID(),
 	)
 	if err != nil {
 		// do not return the original error
@@ -1078,6 +1080,7 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 		ci.InitiatedEventBatchID,
 		ci.InitiatedID,
 		currentBranchToken,
+		e.shard.GetShardID(),
 	)
 	if err != nil {
 		// do not return the original error
@@ -1178,6 +1181,7 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 		firstEventID,
 		completionEventID,
 		currentBranchToken,
+		e.shard.GetShardID(),
 	)
 	if err != nil {
 		// do not return the original error
@@ -1204,6 +1208,7 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 		common.FirstEventID,
 		common.FirstEventID,
 		currentBranchToken,
+		e.shard.GetShardID(),
 	)
 	if err != nil {
 		// do not return the original error

@@ -25,6 +25,8 @@ package execution
 import (
 	"time"
 
+	"github.com/uber/cadence/service/history/events"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -32,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/events"
 )
 
 var emptyTasks = []persistence.Task{}
@@ -48,6 +49,7 @@ type (
 		domainCache cache.DomainCache
 		eventsCache events.Cache
 		logger      log.Logger
+		shardID     int
 	}
 )
 
@@ -57,6 +59,7 @@ func NewMutableStateTaskRefresher(
 	domainCache cache.DomainCache,
 	eventsCache events.Cache,
 	logger log.Logger,
+	shardID int,
 ) MutableStateTaskRefresher {
 
 	return &mutableStateTaskRefresherImpl{
@@ -64,6 +67,7 @@ func NewMutableStateTaskRefresher(
 		domainCache: domainCache,
 		eventsCache: eventsCache,
 		logger:      logger,
+		shardID:     shardID,
 	}
 }
 
@@ -302,6 +306,7 @@ Loop:
 			activityInfo.ScheduledEventBatchID,
 			activityInfo.ScheduleID,
 			currentBranchToken,
+			r.shardID,
 		)
 		if err != nil {
 			return err
@@ -382,6 +387,7 @@ Loop:
 			childWorkflowInfo.InitiatedEventBatchID,
 			childWorkflowInfo.InitiatedID,
 			currentBranchToken,
+			r.shardID,
 		)
 		if err != nil {
 			return err
@@ -420,6 +426,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 			requestCancelInfo.InitiatedEventBatchID,
 			requestCancelInfo.InitiatedID,
 			currentBranchToken,
+			r.shardID,
 		)
 		if err != nil {
 			return err
@@ -458,6 +465,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 			signalInfo.InitiatedEventBatchID,
 			signalInfo.InitiatedID,
 			currentBranchToken,
+			r.shardID,
 		)
 		if err != nil {
 			return err

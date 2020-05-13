@@ -65,7 +65,7 @@ type (
 		mockTxProcessor          *MocktransferQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
-		mockEventsCache          *events.MockCache
+		mockEventsCache          *cache.MockCache
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
 
@@ -737,7 +737,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 
 	s.mockEventsCache.EXPECT().GetEvent(
 		domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(),
-		decisionCompletedEvent.GetEventId(), scheduledEvent.GetEventId(), gomock.Any(),
+		decisionCompletedEvent.GetEventId(), scheduledEvent.GetEventId(), gomock.Any(), gomock.Any(),
 	).Return(scheduledEvent, nil)
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),

@@ -1,0 +1,88 @@
+Make event cache global
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Date:      Wed May 13 16:41:44 2020 -0700
+#
+# On branch events_cache
+# Your branch is ahead of 'origin/events_cache' by 1 commit.
+#   (use "git push" to publish your local commits)
+#
+# Changes to be committed:
+#	modified:   client/clientBean_mock.go
+#	modified:   common/archiver/filestore/queryParser_mock.go
+#	modified:   common/archiver/gcloud/queryParser_mock.go
+#	modified:   common/archiver/s3store/queryParser_mock.go
+#	modified:   common/authorization/authority_mock.go
+#	modified:   common/cache/domainCache_mock.go
+#	renamed:    service/history/events/cache.go -> common/cache/eventCache.go
+#	new file:   common/cache/eventCache_mock.go
+#	renamed:    service/history/events/cache_test.go -> common/cache/eventCache_test.go
+#	modified:   common/cluster/metadata_mock.go
+#	modified:   common/domain/dlqMessageHandler_mock.go
+#	modified:   common/domain/handler_mock.go
+#	modified:   common/domain/replicationTaskHandler_mock.go
+#	modified:   common/membership/interfaces_mock.go
+#	modified:   common/persistence/client/bean_mock.go
+#	modified:   common/persistence/domainReplicationQueue_mock.go
+#	modified:   common/resource/resource.go
+#	modified:   common/resource/resourceImpl.go
+#	modified:   common/resource/resourceTest.go
+#	modified:   common/service/dynamicconfig/clientInterface_mock.go
+#	modified:   common/service/dynamicconfig/constants.go
+#	modified:   common/task/interface_mock.go
+#	modified:   common/xdc/nDCHistoryResender_mock.go
+#	modified:   service/frontend/interface_mock.go
+#	modified:   service/history/config/config.go
+#	modified:   service/history/conflictResolver_mock.go
+#	modified:   service/history/conflictResolver_test.go
+#	modified:   service/history/engine/interface_mock.go
+#	deleted:    service/history/events/cache_mock.go
+#	modified:   service/history/execution/context_mock.go
+#	modified:   service/history/execution/history_builder_test.go
+#	modified:   service/history/execution/mutable_state_builder.go
+#	modified:   service/history/execution/mutable_state_builder_test.go
+#	modified:   service/history/execution/mutable_state_decision_task_manager_mock.go
+#	modified:   service/history/execution/mutable_state_mock.go
+#	modified:   service/history/execution/mutable_state_task_generator_mock.go
+#	modified:   service/history/execution/mutable_state_task_refresher.go
+#	modified:   service/history/execution/mutable_state_task_refresher_mock.go
+#	modified:   service/history/execution/state_builder_mock.go
+#	modified:   service/history/execution/state_builder_test.go
+#	modified:   service/history/execution/state_rebuilder.go
+#	modified:   service/history/execution/state_rebuilder_mock.go
+#	modified:   service/history/execution/state_rebuilder_test.go
+#	modified:   service/history/execution/timer_sequence_mock.go
+#	modified:   service/history/execution/workflow_mock.go
+#	modified:   service/history/historyEngine.go
+#	modified:   service/history/historyEngine2_test.go
+#	modified:   service/history/historyEngine3_eventsv2_test.go
+#	modified:   service/history/historyEngine_test.go
+#	modified:   service/history/ndc/activity_replicator_mock.go
+#	modified:   service/history/ndc/branch_manager_mock.go
+#	modified:   service/history/ndc/conflict_resolver_mock.go
+#	modified:   service/history/ndc/events_reapplier_mock.go
+#	modified:   service/history/ndc/existing_workflow_transaction_manager_mock.go
+#	modified:   service/history/ndc/new_workflow_transaction_mamanger_mock.go
+#	modified:   service/history/ndc/transaction_manager_mock.go
+#	modified:   service/history/ndc/workflow_resetter_mock.go
+#	modified:   service/history/queue/interface_mock.go
+#	modified:   service/history/replication/dlq_handler_mock.go
+#	modified:   service/history/replication/task_executor_mock.go
+#	modified:   service/history/replication/task_fetcher_mock.go
+#	modified:   service/history/replication/task_processor_mock.go
+#	modified:   service/history/reset/resetor_mock.go
+#	modified:   service/history/reset/resetter_mock.go
+#	modified:   service/history/shard/context.go
+#	modified:   service/history/shard/contextTest.go
+#	modified:   service/history/shard/controller_mock.go
+#	modified:   service/history/task/interface_mock.go
+#	modified:   service/history/task/timer_active_task_executor_test.go
+#	modified:   service/history/task/timer_standby_task_executor_test.go
+#	modified:   service/history/task/transfer_active_task_executor_test.go
+#	modified:   service/history/task/transfer_standby_task_executor_test.go
+#	modified:   service/history/timerQueueProcessor_mock.go
+#	modified:   service/history/transferQueueProcessor_mock.go
+#	modified:   service/history/workflowResetor_test.go
+#

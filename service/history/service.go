@@ -24,13 +24,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/history/resource"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
-	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -91,9 +92,7 @@ func NewService(
 	serviceResource, err := resource.New(
 		params,
 		common.HistoryServiceName,
-		serviceConfig.PersistenceMaxQPS,
-		serviceConfig.PersistenceGlobalMaxQPS,
-		serviceConfig.ThrottledLogRPS,
+		serviceConfig,
 		visibilityManagerInitializer,
 	)
 	if err != nil {

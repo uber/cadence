@@ -28,6 +28,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/history/events"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -38,10 +40,9 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
-	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/resource"
 )
 
 type (
@@ -863,7 +864,15 @@ func (s *contextImpl) PreviousShardOwnerWasDifferent() bool {
 }
 
 func (s *contextImpl) GetEventsCache() events.Cache {
-	return s.eventsCache
+	if s.isGlobalCacheEnabled() {
+		return s.GetEventCache()
+	} else {
+		return s.eventsCache
+	}
+}
+
+func (s *contextImpl) isGlobalCacheEnabled() bool {
+	return s.config.EventsCacheGlobalEnable() && s.config.EventsCacheGlobalInitialSize() > 0 && s.config.EventsCacheGlobalMaxSize() > 0
 }
 
 func (s *contextImpl) GetLogger() log.Logger {
@@ -1264,6 +1273,8 @@ func acquireShard(
 		context.logger,
 		context.Resource.GetMetricsClient(),
 	)
+
+	context.logger.Debug(fmt.Sprintf("Global event cache mode: %v", context.isGlobalCacheEnabled()))
 
 	err1 := context.renewRangeLocked(true)
 	if err1 != nil {
