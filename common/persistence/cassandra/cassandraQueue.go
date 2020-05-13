@@ -302,7 +302,6 @@ func (q *cassandraQueue) DeleteMessagesBefore(
 			Message: fmt.Sprintf("DeleteMessagesBefore operation failed. Error %v", err),
 		}
 	}
-
 	return nil
 }
 
