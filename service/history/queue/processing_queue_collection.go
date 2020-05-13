@@ -95,13 +95,12 @@ func (c *processingQueueCollection) Split(
 	for _, queue := range c.queues {
 		splitQueues := queue.Split(policy)
 		sortProcessingQueue(splitQueues)
-		for i, splitQueue := range splitQueues {
+		for _, splitQueue := range splitQueues {
 			if splitQueue.State().Level() != c.level {
-				nextLevelQueues = append(nextLevelQueues, splitQueues[i:]...)
-				break
+				nextLevelQueues = append(nextLevelQueues, splitQueue)
+			} else {
+				newQueues = append(newQueues, splitQueue)
 			}
-
-			newQueues = append(newQueues, splitQueue)
 		}
 	}
 
