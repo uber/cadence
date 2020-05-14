@@ -22,7 +22,19 @@
 
 package common
 
+import "github.com/uber/cadence/common/persistence"
+
 type (
+	// PersistenceRetryer is used to retry requests to persistence
+	PersistenceRetryer interface {
+		ListConcreteExecutions(*persistence.ListConcreteExecutionsRequest) (*persistence.ListConcreteExecutionsResponse, error)
+		GetWorkflowExecution(*persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
+		GetCurrentExecution(*persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse, error)
+		ReadHistoryBranch(*persistence.ReadHistoryBranchRequest) (*persistence.ReadHistoryBranchResponse, error)
+		DeleteWorkflowExecution(*persistence.DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(request *persistence.DeleteCurrentWorkflowExecutionRequest) error
+	}
+
 	// InvariantManager represents a manager of several invariants.
 	// It can be used to run a group of invariant checks or fixes.
 	// It is responsible for running invariants in their dependency order.
@@ -37,7 +49,7 @@ type (
 	// It can also be used to fix the invariant for an execution.
 	Invariant interface {
 		Check(Execution, *InvariantResourceBag) CheckResult
-		Fix(Execution, *InvariantResourceBag) FixResult
+		Fix(Execution) FixResult
 		InvariantType() InvariantType
 	}
 
@@ -49,6 +61,13 @@ type (
 		// HasNext indicates if the iterator has a next element. If HasNext is true
 		// it is guaranteed that Next will return a nil error and a non-nil ExecutionIteratorResult.
 		HasNext() bool
+	}
+
+	// ExecutionWriter is used to write entities (FixOutputEntity or ScanOutputEntity) to blobstore
+	ExecutionWriter interface {
+		Add(interface{}) error
+		Flush() error
+		FlushedKeys() *Keys
 	}
 
 	// Scanner is used to scan over all executions in a shard. It is responsible for three things:

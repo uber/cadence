@@ -258,6 +258,7 @@ func NewEngineWithShardContext(
 			return shard.GetService().GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
 		shard.GetService().GetPayloadSerializer(),
+		nil,
 		shard.GetLogger(),
 	)
 	historyRereplicator := xdc.NewHistoryRereplicator(
@@ -441,7 +442,6 @@ func (e *historyEngineImpl) createMutableState(
 		// version history applies to both local and global domain
 		newMutableState = execution.NewMutableStateBuilderWithVersionHistories(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
@@ -451,14 +451,12 @@ func (e *historyEngineImpl) createMutableState(
 		// no matter whether it will be replicated to multiple target clusters or not
 		newMutableState = execution.NewMutableStateBuilderWithReplicationState(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
 	} else {
 		newMutableState = execution.NewMutableStateBuilder(
 			e.shard,
-			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry,
 		)
@@ -581,17 +579,10 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				prevLastWriteVersion,
 			)
 		}
-		// for signalWithStart, WorkflowIDReusePolicy is default to WorkflowIDReusePolicyAllowDuplicate
-		// while for startWorkflow it is default to WorkflowIdReusePolicyAllowDuplicateFailedOnly.
-		policy := workflow.WorkflowIdReusePolicyAllowDuplicate
-		if request.WorkflowIdReusePolicy != nil {
-			policy = request.GetWorkflowIdReusePolicy()
-		}
-
 		err = e.applyWorkflowIDReusePolicyForSigWithStart(
 			prevMutableState.GetExecutionInfo(),
 			workflowExecution,
-			policy,
+			request.GetWorkflowIdReusePolicy(),
 		)
 		if err != nil {
 			return nil, err
@@ -1589,11 +1580,16 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.ScheduledEvent = scheduledEvent
 			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 
+			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
+			response.HeartbeatDetails = ai.Details
+
+			response.WorkflowType = mutableState.GetWorkflowType()
+			response.WorkflowDomain = common.StringPtr(domainName)
+
 			if ai.StartedID != common.EmptyEventID {
 				// If activity is started as part of the current request scope then return a positive response
 				if ai.RequestID == requestID {
 					response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
-					response.Attempt = common.Int64Ptr(int64(ai.Attempt))
 					return nil
 				}
 
@@ -1610,11 +1606,6 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			}
 
 			response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
-			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
-			response.HeartbeatDetails = ai.Details
-
-			response.WorkflowType = mutableState.GetWorkflowType()
-			response.WorkflowDomain = common.StringPtr(domainName)
 
 			return nil
 		})
@@ -2850,7 +2841,6 @@ func getStartRequest(
 	return startRequest
 }
 
-// for startWorkflowExecution & signalWithStart to handle workflow reuse policy
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
 	prevExecutionInfo *persistence.WorkflowExecutionInfo,
 	execution workflow.WorkflowExecution,
@@ -2996,7 +2986,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		currentExecution,
 		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			// Filter out reapply event from the same cluster
-			toReapplyEvents := make([]*workflow.HistoryEvent, len(reapplyEvents))
+			toReapplyEvents := make([]*workflow.HistoryEvent, 0, len(reapplyEvents))
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()
 			if err != nil {
 				return nil, err

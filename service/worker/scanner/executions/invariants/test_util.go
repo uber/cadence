@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package util
+package invariants
 
 import (
-	"encoding/json"
-	"fmt"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
 )
 
-func TestBufferedWriterWithIterator(t *testing.T) {
-	blobMap := make(map[string][]byte)
-	handleFn := func(data []byte, page int) error {
-		key := fmt.Sprintf("key_%v", page)
-		blobMap[key] = data
-		return nil
+const (
+	domainID    = "test-domain-id"
+	workflowID  = "test-workflow-id"
+	runID       = "test-run-id"
+	shardID     = 0
+	treeID      = "test-tree-id"
+	branchID    = "test-branch-id"
+	openState   = persistence.WorkflowStateCreated
+	closedState = persistence.WorkflowStateCompleted
+)
+
+var (
+	branchToken = []byte{1, 2, 3}
+)
+
+func getOpenExecution() common.Execution {
+	return common.Execution{
+		ShardID:     shardID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		BranchToken: branchToken,
+		TreeID:      treeID,
+		BranchID:    branchID,
+		State:       openState,
 	}
-	bw := NewBufferedWriter(handleFn, json.Marshal, 100, []byte("\r\n"))
-	for i := 0; i < 1000; i++ {
-		assert.NoError(t, bw.Add(i))
-	}
-	assert.NoError(t, bw.Flush())
-	lastFlushedPage := bw.LastFlushedPage()
-	getFn := func(page int) ([]byte, error) {
-		key := fmt.Sprintf("key_%v", page)
-		return blobMap[key], nil
-	}
-	itr := NewIterator(0, lastFlushedPage, getFn, []byte("\r\n"))
-	i := 0
-	for itr.HasNext() {
-		val, err := itr.Next()
-		assert.NoError(t, err)
-		expectedVal, err := json.Marshal(i)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedVal, val)
-		i++
+}
+
+func getClosedExecution() common.Execution {
+	return common.Execution{
+		ShardID:     shardID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		BranchToken: branchToken,
+		TreeID:      treeID,
+		BranchID:    branchID,
+		State:       closedState,
 	}
 }

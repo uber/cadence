@@ -23,7 +23,16 @@
 package common
 
 import (
+	"time"
+
 	"github.com/uber/cadence/common/persistence"
+)
+
+var (
+	// BlobstoreSeparatorToken is used to separate entries written to blobstore
+	BlobstoreSeparatorToken = []byte("\r\n")
+	// BlobstoreTimeout is the timeout used for blobstore requests
+	BlobstoreTimeout = time.Second * 10
 )
 
 type (
@@ -54,8 +63,8 @@ const (
 	HistoryExistsInvariantType InvariantType = "history_exists"
 	// ValidFirstEventInvariantType asserts that the first event in a history must be of a specific form
 	ValidFirstEventInvariantType = "valid_first_event"
-	// PairedWithCurrentInvariantType asserts that an open concrete execution must have a valid current execution
-	PairedWithCurrentInvariantType = "paired_with_current"
+	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
+	OpenCurrentExecution = "open_current_execution"
 )
 
 // The following are types related to Invariant.
@@ -67,12 +76,14 @@ type (
 		WorkflowID  string
 		RunID       string
 		BranchToken []byte
+		TreeID      string
+		BranchID    string
 		State       int
 	}
 
 	// InvariantResourceBag is a union of resources used to pass results from one Invariant to another Invariant.
 	InvariantResourceBag struct {
-		History *persistence.InternalReadHistoryBranchResponse
+		History *persistence.ReadHistoryBranchResponse
 	}
 
 	// CheckResult is the result of running Check.

@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 // 
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -131,6 +131,12 @@ type Interface interface {
 	RemoveTask(
 		ctx context.Context,
 		Request *shared.RemoveTaskRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	ResendReplicationTasks(
+		ctx context.Context,
+		Request *admin.ResendReplicationTasksRequest,
 		opts ...yarpc.CallOption,
 	) error
 }
@@ -523,5 +529,28 @@ func (c client) RemoveTask(
 	}
 
 	err = admin.AdminService_RemoveTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ResendReplicationTasks(
+	ctx context.Context,
+	_Request *admin.ResendReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_ResendReplicationTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ResendReplicationTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_ResendReplicationTasks_Helper.UnwrapResponse(&result)
 	return
 }
