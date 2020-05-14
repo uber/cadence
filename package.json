@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "docs:build": "vuepress build docs"
+    "build": "vuepress build"
   },
   "dependencies": {
     "@vuepress/plugin-back-to-top": "^1.4.1",
