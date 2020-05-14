@@ -42,6 +42,8 @@ type (
 	FixResultType string
 	// InvariantType is the type of an invariant
 	InvariantType string
+	// InvariantsPolicy is the type that indicates the set of invariants which will run
+	InvariantPolicy int
 )
 
 const (
@@ -65,6 +67,11 @@ const (
 	ValidFirstEventInvariantType = "valid_first_event"
 	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
 	OpenCurrentExecution = "open_current_execution"
+
+	// InvariantPolicyAll indicates that all invariants should be run
+	InvariantPolicyAll InvariantPolicy = iota
+	// InvariantPolicySkipHistory indicates that all checks except those relating to history should be run
+	InvariantPolicySkipHistory
 )
 
 // The following are types related to Invariant.
