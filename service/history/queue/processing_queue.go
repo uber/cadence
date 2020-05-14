@@ -221,18 +221,14 @@ func (q *processingQueueImpl) Merge(
 		))
 	}
 
-	overlappingQueueState := newProcessingQueueState(
+	overlappingQueueAckLevel := maxTaskKey(q1.state.ackLevel, q2.state.ackLevel)
+	newQueueStates = append(newQueueStates, newProcessingQueueState(
 		q1.state.level,
-		maxTaskKey(q1.state.ackLevel, q2.state.ackLevel),
-		minTaskKey(q1.state.readLevel, q2.state.readLevel),
+		overlappingQueueAckLevel,
+		maxTaskKey(minTaskKey(q1.state.readLevel, q2.state.readLevel), overlappingQueueAckLevel),
 		minTaskKey(q1.state.maxLevel, q2.state.maxLevel),
 		q1.state.domainFilter.Merge(q2.state.domainFilter),
-	)
-	if overlappingQueueState.readLevel.Less(overlappingQueueState.ackLevel) {
-		overlappingQueueState.readLevel = overlappingQueueState.ackLevel
-	}
-
-	newQueueStates = append(newQueueStates, overlappingQueueState)
+	))
 
 	return splitProcessingQueue([]*processingQueueImpl{q1, q2}, newQueueStates, q.logger, q.metricsClient)
 }
