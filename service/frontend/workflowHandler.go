@@ -3122,6 +3122,10 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 ) (resp *gen.DescribeWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	callContext := yarpc.CallFromContext(ctx)
+	caller := callContext.Caller()
+	wh.GetLogger().Info("vancexu auth caller", tag.Value(caller))
+
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendDescribeWorkflowExecutionScope, request)
 	defer sw.Stop()
 
