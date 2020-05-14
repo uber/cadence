@@ -43,6 +43,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/opentracing/opentracing-go v1.1.0
+	github.com/otiai10/copy v1.1.1
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/pierrec/lz4 v0.0.0-20190701081048-057d66e894a4 // indirect
 	github.com/prometheus/client_golang v1.2.1 // indirect
