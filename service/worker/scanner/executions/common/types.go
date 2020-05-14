@@ -206,13 +206,14 @@ type (
 	// ScanOutputEntity represents a single execution that should be durably recorded by Scan.
 	ScanOutputEntity struct {
 		Execution Execution
-		Result    CheckResult
+		Result    ManagerCheckResult
 	}
 
 	// FixOutputEntity represents a single execution that should be durably recorded by fix.
 	// It contains the ScanOutputEntity that was given as input to fix.
 	FixOutputEntity struct {
-		ScanOutputEntity ScanOutputEntity
-		Result           FixResult
+		Execution Execution
+		Input     ScanOutputEntity
+		Result    ManagerFixResult
 	}
 )
