@@ -103,8 +103,21 @@ type (
 	// FixResult is the result of running Fix.
 	FixResult struct {
 		FixResultType FixResultType
+		CheckResult   CheckResult
 		Info          string
 		InfoDetails   string
+	}
+
+	// ManagerCheckResult is the result of running a sorted list of checks
+	ManagerCheckResult struct {
+		CheckResultType CheckResultType
+		CheckResults    []CheckResult
+	}
+
+	// ManagerFixResult is the result of running a sorted list of fixes
+	ManagerFixResult struct {
+		FixResultType FixResultType
+		FixResults    []FixResult
 	}
 )
 

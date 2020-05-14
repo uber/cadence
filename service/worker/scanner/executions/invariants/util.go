@@ -20,4 +20,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package shard
+package invariants
+
+import (
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+)
+
+func checkBeforeFix(
+	invariant common.Invariant,
+	execution common.Execution,
+	resources *common.InvariantResourceBag,
+) (*common.FixResult, *common.CheckResult) {
+	checkResult := invariant.Check(execution, resources)
+	if checkResult.CheckResultType == common.CheckResultTypeHealthy {
+		return &common.FixResult{
+			FixResultType: common.FixResultTypeSkipped,
+			CheckResult:   checkResult,
+			Info:          "skipped fix because execution was healthy",
+		}, nil
+	}
+	if checkResult.CheckResultType == common.CheckResultTypeFailed {
+		return &common.FixResult{
+			FixResultType: common.FixResultTypeFailed,
+			CheckResult:   checkResult,
+			Info:          "failed fix because check failed",
+		}, nil
+	}
+	return nil, &checkResult
+}
