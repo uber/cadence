@@ -17,7 +17,6 @@ git add -A
 git commit -m 'deploy'
 
 # deploy to https://uber.github.io/cadence
-# will redirect to https://cadenceworkflow.io
-git push -f git@github.com:uber/cadence.git master:gh-pages
+git push -f git@github.com:just-at-uber/cadence.git master:gh-pages
 
 cd -
