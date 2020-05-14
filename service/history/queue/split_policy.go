@@ -103,14 +103,14 @@ func (p *pendingTaskSplitPolicy) Evaluate(
 ) []ProcessingQueueState {
 	queueImpl := queue.(*processingQueueImpl)
 
-	threshold, ok := p.pendingTaskThreshold[queueImpl.state.level]
-	if !ok {
-		// no threshold specified for the level, skip spliting
+	if queueImpl.state.level == p.maxNewQueueLevel {
+		// already reaches max level, skip splitting
 		return nil
 	}
 
-	if queueImpl.state.level == p.maxNewQueueLevel {
-		// already reaches max level, skip spliting
+	threshold, ok := p.pendingTaskThreshold[queueImpl.state.level]
+	if !ok {
+		// no threshold specified for the level, skip splitting
 		return nil
 	}
 
@@ -124,6 +124,10 @@ func (p *pendingTaskSplitPolicy) Evaluate(
 		if pendingTasks > threshold {
 			domainToSplit[domainID] = struct{}{}
 		}
+	}
+
+	if len(domainToSplit) == 0 {
+		return nil
 	}
 
 	newMaxLevel := p.lookAheadFunc(queueImpl.state.readLevel)
@@ -171,14 +175,14 @@ func (p *stuckTaskSplitPolicy) Evaluate(
 ) []ProcessingQueueState {
 	queueImpl := queue.(*processingQueueImpl)
 
-	threshold, ok := p.attemptThreshold[queueImpl.state.level]
-	if !ok {
-		// no threshold specified for the level, skip spliting
+	if queueImpl.state.level == p.maxNewQueueLevel {
+		// already reaches max level, skip splitting
 		return nil
 	}
 
-	if queueImpl.state.level == p.maxNewQueueLevel {
-		// already reaches max level, skip spliting
+	threshold, ok := p.attemptThreshold[queueImpl.state.level]
+	if !ok {
+		// no threshold specified for the level, skip splitting
 		return nil
 	}
 
@@ -189,6 +193,10 @@ func (p *stuckTaskSplitPolicy) Evaluate(
 		if attempt > threshold {
 			domainToSplit[domainID] = struct{}{}
 		}
+	}
+
+	if len(domainToSplit) == 0 {
+		return nil
 	}
 
 	newQueueStates := []ProcessingQueueState{
