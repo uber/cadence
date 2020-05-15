@@ -863,14 +863,10 @@ func (s *contextImpl) PreviousShardOwnerWasDifferent() bool {
 }
 
 func (s *contextImpl) GetEventsCache() events.Cache {
-	if s.isGlobalCacheEnabled() {
+	if s.config.EventsCacheGlobalEnable() {
 		return s.GetEventCache()
 	}
 	return s.eventsCache
-}
-
-func (s *contextImpl) isGlobalCacheEnabled() bool {
-	return s.config.EventsCacheGlobalEnable() && s.config.EventsCacheGlobalInitialSize() > 0 && s.config.EventsCacheGlobalMaxSize() > 0
 }
 
 func (s *contextImpl) GetLogger() log.Logger {
@@ -1274,7 +1270,7 @@ func acquireShard(
 		context.Resource.GetMetricsClient(),
 	)
 
-	context.logger.Debug(fmt.Sprintf("Global event cache mode: %v", context.isGlobalCacheEnabled()))
+	context.logger.Debug(fmt.Sprintf("Global event cache mode: %v", context.config.EventsCacheGlobalEnable()))
 
 	err1 := context.renewRangeLocked(true)
 	if err1 != nil {

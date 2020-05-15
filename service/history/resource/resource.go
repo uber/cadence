@@ -45,7 +45,7 @@ func (h *Impl) GetEventCache() events.Cache {
 	return h.eventCache
 }
 
-// New create a new resource containing common dependencies
+// New create a new resource containing common history dependencies
 func New(
 	params *service.BootstrapParams,
 	serviceName string,
