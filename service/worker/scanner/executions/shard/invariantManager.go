@@ -35,7 +35,7 @@ type (
 )
 
 // NewInvariantManager handles running a collection of invariants according to the policy provided.
-// InvariantManager takes care of ensuring invariants are run the their correct dependency order.
+// InvariantManager takes care of ensuring invariants are run in their correct dependency order.
 func NewInvariantManager(
 	policy common.InvariantPolicy,
 	pr common.PersistenceRetryer,
@@ -108,7 +108,10 @@ func getSortedInvariants(policy common.InvariantPolicy, pr common.PersistenceRet
 	var ivs []common.Invariant
 	switch policy {
 	case common.InvariantPolicyAll:
-		ivs = []common.Invariant{invariants.NewHistoryExists(pr), invariants.NewValidFirstEvent(pr), invariants.NewOpenCurrentExecution(pr)}
+		ivs = []common.Invariant{
+			invariants.NewHistoryExists(pr),
+			invariants.NewValidFirstEvent(pr),
+			invariants.NewOpenCurrentExecution(pr)}
 	case common.InvariantPolicySkipHistory:
 		ivs = []common.Invariant{invariants.NewOpenCurrentExecution(pr)}
 	default:
