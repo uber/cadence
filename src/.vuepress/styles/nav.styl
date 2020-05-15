@@ -1,0 +1,61 @@
+.navbar {
+  background-color: $navColor;
+  border-bottom: none;
+  box-shadow: 0px 3px 5px 0px rgba(0,0,0,0.75);
+
+  a.external:hover {
+    color: $uberBlue !important;
+  }
+
+  .links {
+    background-color: transparent !important;
+  }
+
+  .site-name.can-hide {
+    display: none;
+  }
+
+  .search-box {
+    input {
+      background-color: transparent !important;
+      color: white !important;
+
+      &:focus {
+        border-color: $uberBlue;
+      }
+    }
+
+
+    .suggestion {
+      &.focused a,
+      &:hover a {
+        color: $uberBlue;
+      }
+    }
+  }
+
+  .nav-dropdown {
+    background-color: $navColor !important;
+    border: 1px solid rgba(70,80,109,1) !important;
+  }
+
+  .nav-link {
+    color: white;
+  }
+
+  .dropdown-title {
+    color: white !important;
+  }
+}
+
+@media (min-width: 719px) {
+  .navbar {
+    .nav-item > a:not(.external) {
+      &:hover,
+      &.router-link-active {
+        color: white;
+        border-bottom: 2px solid $uberBlue;
+      }
+    }
+  }
+}
