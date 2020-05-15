@@ -34,14 +34,14 @@ type (
 	}
 )
 
-// NewInvariantManager handles running a collection of invariants according to the policy provided.
+// NewInvariantManager handles running a collection of invariants according to the invariant collection provided.
 // InvariantManager takes care of ensuring invariants are run in their correct dependency order.
 func NewInvariantManager(
-	policy common.InvariantPolicy,
+	invariantCollections []common.InvariantCollection,
 	pr common.PersistenceRetryer,
 ) common.InvariantManager {
 	manager := &invariantManager{}
-	manager.invariants, manager.types = getSortedInvariants(policy, pr)
+	manager.invariants, manager.types = getSortedInvariants(invariantCollections, pr)
 	return manager
 }
 
@@ -104,22 +104,30 @@ func (i *invariantManager) InvariantTypes() []common.InvariantType {
 	return i.types
 }
 
-func getSortedInvariants(policy common.InvariantPolicy, pr common.PersistenceRetryer) ([]common.Invariant, []common.InvariantType) {
+func getSortedInvariants(
+	collections []common.InvariantCollection,
+	pr common.PersistenceRetryer,
+) ([]common.Invariant, []common.InvariantType) {
 	var ivs []common.Invariant
-	switch policy {
-	case common.InvariantPolicyAll:
-		ivs = []common.Invariant{
-			invariants.NewHistoryExists(pr),
-			invariants.NewValidFirstEvent(pr),
-			invariants.NewOpenCurrentExecution(pr)}
-	case common.InvariantPolicySkipHistory:
-		ivs = []common.Invariant{invariants.NewOpenCurrentExecution(pr)}
-	default:
-		panic("unknown policy type")
+	for _, collection := range collections {
+		switch collection {
+		case common.InvariantCollectionHistory:
+			ivs = append(ivs, getHistoryCollection(pr)...)
+		case common.InvariantCollectionMutableState:
+			ivs = append(ivs, getMutableStateCollection(pr)...)
+		}
 	}
 	types := make([]common.InvariantType, len(ivs), len(ivs))
 	for i, iv := range ivs {
 		types[i] = iv.InvariantType()
 	}
 	return ivs, types
+}
+
+func getHistoryCollection(pr common.PersistenceRetryer) []common.Invariant {
+	return []common.Invariant{invariants.NewHistoryExists(pr), invariants.NewValidFirstEvent(pr)}
+}
+
+func getMutableStateCollection(pr common.PersistenceRetryer) []common.Invariant {
+	return []common.Invariant{invariants.NewOpenCurrentExecution(pr)}
 }
