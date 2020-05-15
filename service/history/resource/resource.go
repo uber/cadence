@@ -29,12 +29,13 @@ import (
 	"github.com/uber/cadence/service/history/events"
 )
 
+// Resource is the interface which expose common history resources
 type Resource interface {
 	c.Resource
 	GetEventCache() events.Cache
 }
 
-// ResourceImpl contains all common resources shared across history
+// Impl contains all common resources shared across history
 type Impl struct {
 	c.Resource
 	eventCache events.Cache

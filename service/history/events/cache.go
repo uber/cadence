@@ -87,7 +87,7 @@ var (
 
 var _ Cache = (*cacheImpl)(nil)
 
-// NewCache creates a new global events cache
+// NewEventCache creates a new global events cache
 func NewEventCache(
 	initialSize int,
 	maxSize int,
@@ -108,7 +108,6 @@ func NewEventCache(
 	)
 }
 
-// TODO remove once migrated to global event cache
 // NewCache creates a new events cache
 func NewCache(
 	shardID int,

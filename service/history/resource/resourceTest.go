@@ -48,6 +48,7 @@ func NewTest(
 	}
 }
 
+// GetEventCache for testing
 func (s *Test) GetEventCache() events.Cache {
 	return s.eventCache
 }

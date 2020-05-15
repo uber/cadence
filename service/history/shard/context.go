@@ -866,9 +866,8 @@ func (s *contextImpl) PreviousShardOwnerWasDifferent() bool {
 func (s *contextImpl) GetEventsCache() events.Cache {
 	if s.isGlobalCacheEnabled() {
 		return s.GetEventCache()
-	} else {
-		return s.eventsCache
 	}
+	return s.eventsCache
 }
 
 func (s *contextImpl) isGlobalCacheEnabled() bool {
@@ -1266,6 +1265,8 @@ func acquireShard(
 		throttledLogger:                shardItem.throttledLogger,
 		previousShardOwnerWasDifferent: ownershipChanged,
 	}
+
+	// TODO remove once migrated to global event cache
 	context.eventsCache = events.NewCache(
 		context.shardID,
 		context.Resource.GetHistoryManager(),
