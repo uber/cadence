@@ -73,7 +73,7 @@ func (tb *UpdateSchemaTestBase) RunDryrunTest(app *cli.App, db DB, dbNameFlag st
 	tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-v", "0.0"}))
 	tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "update-schema", "-d", dir}))
 	ver, err := db.ReadSchemaVersion()
-	tb.Nil(err)
+	tb.NoError(err)
 	// update the version to the latest
 	tb.Log.Info(ver)
 	tb.Equal(ver, endVersion)
@@ -83,7 +83,7 @@ func (tb *UpdateSchemaTestBase) RunDryrunTest(app *cli.App, db DB, dbNameFlag st
 // RunUpdateSchemaTest tests schema update
 func (tb *UpdateSchemaTestBase) RunUpdateSchemaTest(app *cli.App, db DB, dbNameFlag string, sqlFileContent string, expectedTables []string) {
 	tmpDir, err := ioutil.TempDir("", "update_schema_test")
-	tb.Nil(err)
+	tb.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
 	tb.makeSchemaVersionDirs(tmpDir, sqlFileContent)
@@ -91,24 +91,21 @@ func (tb *UpdateSchemaTestBase) RunUpdateSchemaTest(app *cli.App, db DB, dbNameF
 	tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-v", "0.0"}))
 	tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "update-schema", "-d", tmpDir, "-v", "2.0"}))
 
-	expected := getExpectedTables(true, expectedTables)
-	expected["domains"] = struct{}{}
+	expectedMap := getExpectedTables(true, expectedTables)
+	expectedMap["domains"] = struct{}{}
+	var expected []string
+	for t := range expectedMap {
+		expected = append(expected, t)
+	}
 
 	ver, err := db.ReadSchemaVersion()
-	tb.Nil(err)
+	tb.NoError(err)
 	tb.Equal("2.0", ver)
 
 	tables, err := db.ListTables()
-	tb.Nil(err)
-	tb.Equal(len(expected), len(tables))
+	tb.NoError(err)
+	tb.ElementsMatch(expected, tables)
 
-	for _, t := range tables {
-		_, ok := expected[t]
-		tb.True(ok)
-		delete(expected, t)
-	}
-
-	tb.Equal(0, len(expected))
 	tb.NoError(db.DropAllTables())
 }
 
@@ -123,9 +120,9 @@ func (tb *UpdateSchemaTestBase) makeSchemaVersionDirs(rootDir string, sqlFileCon
 	dir := rootDir + "/v1.0"
 	tb.NoError(os.Mkdir(rootDir+"/v1.0", os.FileMode(0700)))
 	err := ioutil.WriteFile(dir+"/manifest.json", []byte(mData), os.FileMode(0600))
-	tb.Nil(err)
+	tb.NoError(err)
 	err = ioutil.WriteFile(dir+"/base.sql", []byte(sqlFileContent), os.FileMode(0600))
-	tb.Nil(err)
+	tb.NoError(err)
 
 	mData = `{
 		"CurrVersion": "2.0",
@@ -142,7 +139,7 @@ func (tb *UpdateSchemaTestBase) makeSchemaVersionDirs(rootDir string, sqlFileCon
 	dir = rootDir + "/v2.0"
 	tb.NoError(os.Mkdir(rootDir+"/v2.0", os.FileMode(0700)))
 	err = ioutil.WriteFile(dir+"/manifest.json", []byte(mData), os.FileMode(0600))
-	tb.Nil(err)
+	tb.NoError(err)
 	err = ioutil.WriteFile(dir+"/domain.cql", []byte(domain), os.FileMode(0600))
-	tb.Nil(err)
+	tb.NoError(err)
 }
