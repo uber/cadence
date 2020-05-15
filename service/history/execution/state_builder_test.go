@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/service/history/events"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -48,7 +50,7 @@ type (
 
 		controller          *gomock.Controller
 		mockShard           *shard.TestContext
-		mockEventsCache     *cache.MockCache
+		mockEventsCache     *events.MockCache
 		mockDomainCache     *cache.MockDomainCache
 		mockTaskGenerator   *MockMutableStateTaskGenerator
 		mockMutableState    *MockMutableState
