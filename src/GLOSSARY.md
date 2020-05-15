@@ -1,4 +1,6 @@
 ---
+layout: default
+title: Glossary
 terms:
     activity: "A business-level function that implements your application logic such as calling a service or transcoding a media file. An activity usually implements a single
 well-defined action; it can be short or long running. An activity can be implemented
@@ -71,7 +73,6 @@ uniqueness of an ID within a domain. An attempt to start a workflow with a
 duplicate ID results in an already started error."
     workflow task: "Synonym of the decision task."
     workflow worker: "An object that is executed in the client application and receives decision task from an  decision task list it is subscribed to. Once task is received it is handled by a correponding workflow."
-
 ---
 
 # Glossary

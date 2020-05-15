@@ -13,7 +13,7 @@ The usual approach to building such applications is a hodgepodge of stateless se
 databases, cron jobs, and queuing systems. This negatively impacts the developer productivity as most of the code is
 dedicated to plumbing, obscuring the actual business logic behind a myriad of low-level details. Such systems frequently have availability problems as it is hard to keep all the components healthy.
 
-The Cadence solution is a [_fault-oblivious stateful_ programming model](03-concepts/01-workflows) that obscures most of the complexities of building scalable distributed applications. In essence, Cadence provides a durable virtual memory that is not
+The Cadence solution is a [_fault-oblivious stateful_ programming model](02-concepts/01-workflows) that obscures most of the complexities of building scalable distributed applications. In essence, Cadence provides a durable virtual memory that is not
 linked to a specific process, and preserves the full application state, including function stacks, with local variables across all sorts of host and software failures.
 This allows you to write code using the full power of a programming language while Cadence takes care of durability, availability, and scalability of the application.
 

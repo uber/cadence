@@ -7,7 +7,8 @@
     "prebuild": "npm run clean",
     "build": "vuepress build",
     "clean": "rm -rf ../assets ../docs ../img ../404.html ../GLOSSARY.html ../index.html",
-    "postbuild": "cp -r .vuepress/dist/. ../"
+    "postbuild": "cp -r .vuepress/dist/. ../",
+    "start": "vuepress dev"
   },
   "dependencies": {
     "@vuepress/plugin-back-to-top": "^1.4.1",
