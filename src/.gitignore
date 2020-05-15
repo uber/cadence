@@ -1,3 +1,4 @@
 .DS_Store
+.vuepress/dist
 node_modules
 yarn-error.log
