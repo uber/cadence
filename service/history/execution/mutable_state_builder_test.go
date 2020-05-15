@@ -24,8 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/service/history/events"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -43,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
 

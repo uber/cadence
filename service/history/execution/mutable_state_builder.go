@@ -26,8 +26,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/uber/cadence/service/history/events"
-
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -45,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
 )

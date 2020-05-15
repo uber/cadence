@@ -21,11 +21,10 @@
 package resource
 
 import (
-	"github.com/uber/cadence/service/history/config"
-
 	"github.com/uber/cadence/common/resource"
 	c "github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 )
 

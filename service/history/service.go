@@ -24,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/history/resource"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -36,6 +34,7 @@ import (
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/resource"
 )
 
 // Service represents the cadence-history service
