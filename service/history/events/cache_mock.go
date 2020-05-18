@@ -59,7 +59,7 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 }
 
 // GetEvent mocks base method
-func (m *MockCache) GetEvent(domainID, workflowID, runID string, firstEventID, eventID int64, branchToken []byte, shardID int) (*shared.HistoryEvent, error) {
+func (m *MockCache) GetEvent(shardID int, domainID string, workflowID string, runID string, firstEventID int64, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEvent", domainID, workflowID, runID, firstEventID, eventID, branchToken, shardID)
 	ret0, _ := ret[0].(*shared.HistoryEvent)

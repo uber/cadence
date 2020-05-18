@@ -31,7 +31,7 @@ type (
 	// Test is the test implementation used for testing
 	Test struct {
 		*c.Test
-		eventCache events.Cache
+		eventCache *events.MockCache
 	}
 )
 

@@ -39,13 +39,13 @@ type (
 	// Cache caches workflow history event
 	Cache interface {
 		GetEvent(
+			shardID int,
 			domainID string,
 			workflowID string,
 			runID string,
 			firstEventID int64,
 			eventID int64,
 			branchToken []byte,
-			shardID int,
 		) (*shared.HistoryEvent, error)
 		PutEvent(
 			domainID string,
@@ -85,8 +85,8 @@ var (
 
 var _ Cache = (*cacheImpl)(nil)
 
-// NewEventCache creates a new global events cache
-func NewEventCache(
+// NewGlobalCache creates a new global events cache
+func NewGlobalCache(
 	initialSize int,
 	maxSize int,
 	ttl time.Duration,
@@ -159,12 +159,7 @@ func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
 	}
 }
 
-func (e *cacheImpl) GetEvent(
-	domainID, workflowID, runID string,
-	firstEventID, eventID int64,
-	branchToken []byte,
-	shardID int,
-) (*shared.HistoryEvent, error) {
+func (e *cacheImpl) GetEvent(shardID int, domainID string, workflowID string, runID string, firstEventID int64, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetEventScope, metrics.CacheLatency)
 	defer sw.Stop()

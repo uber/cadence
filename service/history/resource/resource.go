@@ -66,7 +66,7 @@ func New(
 
 	impl = &Impl{
 		Resource: serviceResource,
-		eventCache: events.NewEventCache(
+		eventCache: events.NewGlobalCache(
 			config.EventsCacheGlobalInitialSize(),
 			config.EventsCacheGlobalMaxSize(),
 			config.EventsCacheTTL(),

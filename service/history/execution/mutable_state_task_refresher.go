@@ -298,15 +298,7 @@ Loop:
 			continue Loop
 		}
 
-		scheduleEvent, err := r.eventsCache.GetEvent(
-			executionInfo.DomainID,
-			executionInfo.WorkflowID,
-			executionInfo.RunID,
-			activityInfo.ScheduledEventBatchID,
-			activityInfo.ScheduleID,
-			currentBranchToken,
-			r.shardID,
-		)
+		scheduleEvent, err := r.eventsCache.GetEvent(r.shardID, executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, activityInfo.ScheduledEventBatchID, activityInfo.ScheduleID, currentBranchToken)
 		if err != nil {
 			return err
 		}
@@ -379,15 +371,7 @@ Loop:
 			continue Loop
 		}
 
-		scheduleEvent, err := r.eventsCache.GetEvent(
-			executionInfo.DomainID,
-			executionInfo.WorkflowID,
-			executionInfo.RunID,
-			childWorkflowInfo.InitiatedEventBatchID,
-			childWorkflowInfo.InitiatedID,
-			currentBranchToken,
-			r.shardID,
-		)
+		scheduleEvent, err := r.eventsCache.GetEvent(r.shardID, executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, childWorkflowInfo.InitiatedEventBatchID, childWorkflowInfo.InitiatedID, currentBranchToken)
 		if err != nil {
 			return err
 		}
@@ -418,15 +402,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 	}
 
 	for _, requestCancelInfo := range pendingRequestCancelInfos {
-		initiateEvent, err := r.eventsCache.GetEvent(
-			executionInfo.DomainID,
-			executionInfo.WorkflowID,
-			executionInfo.RunID,
-			requestCancelInfo.InitiatedEventBatchID,
-			requestCancelInfo.InitiatedID,
-			currentBranchToken,
-			r.shardID,
-		)
+		initiateEvent, err := r.eventsCache.GetEvent(r.shardID, executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, requestCancelInfo.InitiatedEventBatchID, requestCancelInfo.InitiatedID, currentBranchToken)
 		if err != nil {
 			return err
 		}
@@ -457,15 +433,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 	}
 
 	for _, signalInfo := range pendingSignalInfos {
-		initiateEvent, err := r.eventsCache.GetEvent(
-			executionInfo.DomainID,
-			executionInfo.WorkflowID,
-			executionInfo.RunID,
-			signalInfo.InitiatedEventBatchID,
-			signalInfo.InitiatedID,
-			currentBranchToken,
-			r.shardID,
-		)
+		initiateEvent, err := r.eventsCache.GetEvent(r.shardID, executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, signalInfo.InitiatedEventBatchID, signalInfo.InitiatedID, currentBranchToken)
 		if err != nil {
 			return err
 		}
