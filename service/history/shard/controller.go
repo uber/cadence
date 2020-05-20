@@ -306,9 +306,10 @@ func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsIte
 func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShardsItem) (*historyShardsItem, error) {
 	nShards := 0
 	c.Lock()
+	defer c.Unlock()
+
 	currentShardItem, ok := c.historyShards[shardID]
 	if !ok {
-		c.Unlock()
 		return nil, fmt.Errorf("No item found to remove for shard: %v", shardID)
 	}
 	if shardItem != nil && currentShardItem != shardItem {
@@ -319,7 +320,6 @@ func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShard
 
 	delete(c.historyShards, shardID)
 	nShards = len(c.historyShards)
-	c.Unlock()
 
 	c.metricsScope.IncCounter(metrics.ShardItemRemovedCounter)
 
