@@ -20,11 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package shard
+package invariants
 
 import (
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
-	"github.com/uber/cadence/service/worker/scanner/executions/invariants"
 )
 
 type (
@@ -125,9 +124,9 @@ func getSortedInvariants(
 }
 
 func getHistoryCollection(pr common.PersistenceRetryer) []common.Invariant {
-	return []common.Invariant{invariants.NewHistoryExists(pr), invariants.NewValidFirstEvent(pr)}
+	return []common.Invariant{NewHistoryExists(pr), NewValidFirstEvent(pr)}
 }
 
 func getMutableStateCollection(pr common.PersistenceRetryer) []common.Invariant {
-	return []common.Invariant{invariants.NewOpenCurrentExecution(pr)}
+	return []common.Invariant{NewOpenCurrentExecution(pr)}
 }
