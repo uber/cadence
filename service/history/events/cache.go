@@ -150,7 +150,12 @@ func newCacheWithOption(
 	}
 }
 
-func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
+func newEventKey(
+	domainID,
+	workflowID,
+	runID string,
+	eventID int64,
+) eventKey {
 	return eventKey{
 		domainID:   domainID,
 		workflowID: workflowID,
@@ -159,7 +164,14 @@ func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
 	}
 }
 
-func (e *cacheImpl) GetEvent(shardID int, domainID string, workflowID string, runID string, firstEventID int64, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
+func (e *cacheImpl) GetEvent(
+	shardID int,
+	domainID string,
+	workflowID string,
+	runID string, firstEventID int64,
+	eventID int64,
+	branchToken []byte,
+) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetEventScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -194,7 +206,12 @@ func (e *cacheImpl) GetEvent(shardID int, domainID string, workflowID string, ru
 	return event, nil
 }
 
-func (e *cacheImpl) PutEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
+func (e *cacheImpl) PutEvent(
+	domainID, workflowID,
+	runID string,
+	eventID int64,
+	event *shared.HistoryEvent,
+) {
 	e.metricsClient.IncCounter(metrics.EventsCachePutEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCachePutEventScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -203,7 +220,11 @@ func (e *cacheImpl) PutEvent(domainID, workflowID, runID string, eventID int64, 
 	e.Put(key, event)
 }
 
-func (e *cacheImpl) DeleteEvent(domainID, workflowID, runID string, eventID int64) {
+func (e *cacheImpl) DeleteEvent(
+	domainID, workflowID,
+	runID string,
+	eventID int64,
+) {
 	e.metricsClient.IncCounter(metrics.EventsCacheDeleteEventScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheDeleteEventScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -212,7 +233,12 @@ func (e *cacheImpl) DeleteEvent(domainID, workflowID, runID string, eventID int6
 	e.Delete(key)
 }
 
-func (e *cacheImpl) getHistoryEventFromStore(firstEventID, eventID int64, branchToken []byte, shardID int) (*shared.HistoryEvent, error) {
+func (e *cacheImpl) getHistoryEventFromStore(
+	firstEventID,
+	eventID int64,
+	branchToken []byte,
+	shardID int,
+) (*shared.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetFromStoreScope, metrics.CacheLatency)
 	defer sw.Stop()

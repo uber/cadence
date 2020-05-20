@@ -23,15 +23,15 @@ package resource
 import (
 	"github.com/golang/mock/gomock"
 	"github.com/uber/cadence/common/metrics"
-	c "github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/events"
 )
 
 type (
 	// Test is the test implementation used for testing
 	Test struct {
-		*c.Test
-		eventCache *events.MockCache
+		*resource.Test
+		EventCache *events.MockCache
 	}
 )
 
@@ -43,12 +43,12 @@ func NewTest(
 	serviceMetricsIndex metrics.ServiceIdx,
 ) *Test {
 	return &Test{
-		Test:       c.NewTest(controller, serviceMetricsIndex),
-		eventCache: events.NewMockCache(controller),
+		Test:       resource.NewTest(controller, serviceMetricsIndex),
+		EventCache: events.NewMockCache(controller),
 	}
 }
 
 // GetEventCache for testing
 func (s *Test) GetEventCache() events.Cache {
-	return s.eventCache
+	return s.EventCache
 }

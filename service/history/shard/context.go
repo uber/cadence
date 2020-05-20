@@ -863,6 +863,7 @@ func (s *contextImpl) PreviousShardOwnerWasDifferent() bool {
 }
 
 func (s *contextImpl) GetEventsCache() events.Cache {
+	// the shard needs to be restarted to release the shard cache once global mode is on.
 	if s.config.EventsCacheGlobalEnable() {
 		return s.GetEventCache()
 	}

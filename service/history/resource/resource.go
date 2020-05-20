@@ -22,7 +22,6 @@ package resource
 
 import (
 	"github.com/uber/cadence/common/resource"
-	c "github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
@@ -30,13 +29,13 @@ import (
 
 // Resource is the interface which expose common history resources
 type Resource interface {
-	c.Resource
+	resource.Resource
 	GetEventCache() events.Cache
 }
 
 // Impl contains all common resources shared across history
 type Impl struct {
-	c.Resource
+	resource.Resource
 	eventCache events.Cache
 }
 
@@ -50,7 +49,7 @@ func New(
 	params *service.BootstrapParams,
 	serviceName string,
 	config *config.Config,
-	visibilityManagerInitializer c.VisibilityManagerInitializer,
+	visibilityManagerInitializer resource.VisibilityManagerInitializer,
 ) (impl *Impl, retError error) {
 	serviceResource, err := resource.New(
 		params,

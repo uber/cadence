@@ -1004,7 +1004,15 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 	if err != nil {
 		return nil, err
 	}
-	scheduledEvent, err := e.eventsCache.GetEvent(e.shard.GetShardID(), e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID, ai.ScheduledEventBatchID, ai.ScheduleID, currentBranchToken)
+	scheduledEvent, err := e.eventsCache.GetEvent(
+		e.shard.GetShardID(),
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		ai.ScheduledEventBatchID,
+		ai.ScheduleID,
+		currentBranchToken,
+	)
 	if err != nil {
 		// do not return the original error
 		// since original error can be of type entity not exists
@@ -1064,7 +1072,15 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 	if err != nil {
 		return nil, err
 	}
-	initiatedEvent, err := e.eventsCache.GetEvent(e.shard.GetShardID(), e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID, ci.InitiatedEventBatchID, ci.InitiatedID, currentBranchToken)
+	initiatedEvent, err := e.eventsCache.GetEvent(
+		e.shard.GetShardID(),
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		ci.InitiatedEventBatchID,
+		ci.InitiatedID,
+		currentBranchToken,
+	)
 	if err != nil {
 		// do not return the original error
 		// since original error can be of type entity not exists
@@ -1157,7 +1173,15 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 	// Completion EventID is always one less than NextEventID after workflow is completed
 	completionEventID := e.executionInfo.NextEventID - 1
 	firstEventID := e.executionInfo.CompletionEventBatchID
-	completionEvent, err := e.eventsCache.GetEvent(e.shard.GetShardID(), e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID, firstEventID, completionEventID, currentBranchToken)
+	completionEvent, err := e.eventsCache.GetEvent(
+		e.shard.GetShardID(),
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		firstEventID,
+		completionEventID,
+		currentBranchToken,
+	)
 	if err != nil {
 		// do not return the original error
 		// since original error can be of type entity not exists
@@ -1176,7 +1200,15 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 		return nil, err
 	}
 
-	startEvent, err := e.eventsCache.GetEvent(e.shard.GetShardID(), e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID, common.FirstEventID, common.FirstEventID, currentBranchToken)
+	startEvent, err := e.eventsCache.GetEvent(
+		e.shard.GetShardID(),
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		common.FirstEventID,
+		common.FirstEventID,
+		currentBranchToken,
+	)
 	if err != nil {
 		// do not return the original error
 		// since original error can be of type entity not exists
