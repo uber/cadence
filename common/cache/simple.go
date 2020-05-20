@@ -143,7 +143,15 @@ func (c *simple) Put(key interface{}, value interface{}) interface{} {
 func (c *simple) PutIfNotExist(key interface{}, value interface{}) (interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
-	return c.putInternal(key, value, false)
+	existing, err := c.putInternal(key, value, false)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		// This is a new value
+		return value, nil
+	}
+	return existing, nil
 }
 
 // Delete deletes a key, value pair associated with a key
