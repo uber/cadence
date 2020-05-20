@@ -585,6 +585,7 @@ Update_Loop:
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
 				*shared.ServiceBusyError,
+				// timeout
 				*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
@@ -775,6 +776,7 @@ Reset_Loop:
 			case *persistence.ConditionFailedError,
 				*shared.ServiceBusyError,
 				*shared.LimitExceededError:
+				// timeout
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{

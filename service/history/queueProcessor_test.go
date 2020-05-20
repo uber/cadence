@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -87,7 +88,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 	gomock.InOrder(calls...)
 
 	shutDownCh := make(chan struct{})
-	redispatchQueueTasks(
+	queue.RedispatchTasks(
 		s.redispatchQueue,
 		s.mockQueueTaskProcessor,
 		s.logger,
@@ -115,7 +116,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 	}
 
 	shutDownCh := make(chan struct{})
-	redispatchQueueTasks(
+	queue.RedispatchTasks(
 		s.redispatchQueue,
 		s.mockQueueTaskProcessor,
 		s.logger,
