@@ -28,6 +28,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -1091,6 +1093,43 @@ func (m *sqlExecutionManager) RangeDeleteReplicationTaskFromDLQ(
 		SourceClusterName:      request.SourceClusterName,
 	}); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
+	request *p.CreateFailoverMarkersRequest,
+) error {
+
+	tx, err := m.db.BeginTx()
+	if err != nil {
+		return err
+	}
+
+	for _, task := range request.Markers {
+		t := []p.Task{task}
+		if err := createReplicationTasks(
+			tx,
+			t,
+			m.shardID,
+			sqlplugin.MustParseUUID(task.DomainID),
+			common.EmptyReplicationUUID,
+			sqlplugin.MustParseUUID(common.EmptyReplicationUUID),
+		); err != nil {
+			rollBackErr := tx.Rollback()
+			if rollBackErr != nil {
+				m.logger.Error("transaction rollback error", tag.Error(rollBackErr))
+			}
+
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("%v: %v", "CreateFailoverMarkerTasks", err),
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("%s operation failed. Failed to commit transaction. Error: %v", "CreateFailoverMarkerTasks", err),
+		}
 	}
 	return nil
 }

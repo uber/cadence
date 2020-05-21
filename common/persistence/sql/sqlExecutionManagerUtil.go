@@ -851,8 +851,8 @@ func createReplicationTasks(
 		nextEventID := common.EmptyEventID
 		version := common.EmptyVersion
 		activityScheduleID := common.EmptyEventID
-		var lastReplicationInfo map[string]*sqlblobs.ReplicationInfo
 
+		var lastReplicationInfo map[string]*sqlblobs.ReplicationInfo
 		var branchToken, newRunBranchToken []byte
 		var resetWorkflow bool
 
@@ -879,6 +879,11 @@ func createReplicationTasks(
 			version = task.GetVersion()
 			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
 			lastReplicationInfo = map[string]*sqlblobs.ReplicationInfo{}
+
+		case p.ReplicationTaskTypeFailoverMarker:
+			version = task.GetVersion()
+			// Failover marker uses firstEventID to store visibility timestamp
+			firstEventID = task.GetVisibilityTimestamp().UnixNano()
 
 		default:
 			return &workflow.InternalServiceError{

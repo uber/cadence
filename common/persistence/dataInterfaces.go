@@ -609,9 +609,8 @@ type (
 	// FailoverMarkerTask is the marker for graceful failover
 	FailoverMarkerTask struct {
 		TaskID              int64
-		VisibilityTimestamp time.Time
+		VisibilityTimestamp time.Time  // Visibility timestamp stores in the field scheduleEventID
 		Version             int64
-		SourceCluster       string
 		DomainID            string
 	}
 
@@ -1474,6 +1473,11 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
+	// CreateFailoverMarkersRequest is request to create failover markers
+	CreateFailoverMarkersRequest struct {
+		Markers []*FailoverMarkerTask
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1516,6 +1520,7 @@ type (
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
+		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)

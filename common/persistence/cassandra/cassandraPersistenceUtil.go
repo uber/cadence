@@ -1086,6 +1086,11 @@ func createReplicationTasks(
 			// cassandra does not like null
 			lastReplicationInfo = make(map[string]map[string]interface{})
 
+		case p.ReplicationTaskTypeFailoverMarker:
+			version = task.GetVersion()
+			// Failover marker uses firstEventID to store visibility timestamp
+			firstEventID = task.GetVisibilityTimestamp().UnixNano()
+
 		default:
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),

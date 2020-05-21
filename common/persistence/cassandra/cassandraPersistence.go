@@ -2892,3 +2892,25 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 	}
 	return nil
 }
+
+func (d *cassandraPersistence) CreateFailoverMarkerTasks(
+	request *p.CreateFailoverMarkersRequest,
+) error {
+
+	batch := d.session.NewBatch(gocql.LoggedBatch)
+	for _, task := range request.Markers {
+		t := []p.Task{task}
+		if err := createReplicationTasks(
+			batch,
+			t,
+			d.shardID,
+			task.DomainID,
+			rowTypeReplicationWorkflowID,
+			rowTypeReplicationRunID,
+		); err != nil {
+			return err
+		}
+	}
+
+	return d.session.ExecuteBatch(batch)
+}
