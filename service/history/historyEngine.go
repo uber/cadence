@@ -317,7 +317,7 @@ func (e *historyEngineImpl) Start() {
 	clusterMetadata := e.shard.GetClusterMetadata()
 	if e.replicatorProcessor != nil &&
 		(clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC ||
-		e.config.EnableKafkaReplication()) {
+			e.config.EnableKafkaReplication()) {
 		e.replicatorProcessor.Start()
 	}
 
@@ -3179,6 +3179,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
 		e.shard.GetLogger(),
+		e.shard.GetShardID(),
 	)
 
 	now := e.shard.GetTimeSource().Now()
