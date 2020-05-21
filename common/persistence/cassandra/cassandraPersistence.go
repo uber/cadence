@@ -214,7 +214,8 @@ const (
 		`branch_token: ?, ` +
 		`reset_workflow: ?, ` +
 		`new_run_event_store_version: ?, ` +
-		`new_run_branch_token: ? ` +
+		`new_run_branch_token: ?, ` +
+		`created_time: ? ` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -2801,6 +2802,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(request *p.PutReplication
 		p.EventStoreVersion,
 		task.NewRunBranchToken,
 		defaultVisibilityTimestamp,
+		defaultVisibilityTimestamp,
 		task.GetTaskID())
 
 	err := query.Exec()
@@ -2907,6 +2909,7 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 			task.DomainID,
 			rowTypeReplicationWorkflowID,
 			rowTypeReplicationRunID,
+			task.GetVisibilityTimestamp().UnixNano(),
 		); err != nil {
 			return err
 		}

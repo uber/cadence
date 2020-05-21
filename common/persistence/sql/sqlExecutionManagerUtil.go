@@ -92,7 +92,8 @@ func applyWorkflowMutationTx(
 		runID,
 		workflowMutation.TransferTasks,
 		workflowMutation.ReplicationTasks,
-		workflowMutation.TimerTasks); err != nil {
+		workflowMutation.TimerTasks,
+		executionInfo.LastUpdatedTimestamp.UnixNano()); err != nil {
 		return err
 	}
 
@@ -252,7 +253,8 @@ func applyWorkflowSnapshotTxAsReset(
 		runID,
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
-		workflowSnapshot.TimerTasks); err != nil {
+		workflowSnapshot.TimerTasks,
+		executionInfo.LastUpdatedTimestamp.UnixNano()); err != nil {
 		return err
 	}
 
@@ -440,7 +442,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		runID,
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
-		workflowSnapshot.TimerTasks); err != nil {
+		workflowSnapshot.TimerTasks,
+		executionInfo.LastUpdatedTimestamp.UnixNano()); err != nil {
 		return err
 	}
 
@@ -528,6 +531,7 @@ func applyTasks(
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
+	creationTime int64,
 ) error {
 
 	if err := createTransferTasks(tx,
@@ -546,7 +550,8 @@ func applyTasks(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		creationTime); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create replication tasks. Error: %v", err),
 		}
@@ -838,6 +843,7 @@ func createReplicationTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	creationTime int64,
 ) error {
 
 	if len(replicationTasks) == 0 {
@@ -883,7 +889,7 @@ func createReplicationTasks(
 		case p.ReplicationTaskTypeFailoverMarker:
 			version = task.GetVersion()
 			// Failover marker uses firstEventID to store visibility timestamp
-			firstEventID = task.GetVisibilityTimestamp().UnixNano()
+			creationTime = task.GetVisibilityTimestamp().UnixNano()
 
 		default:
 			return &workflow.InternalServiceError{
@@ -906,6 +912,7 @@ func createReplicationTasks(
 			BranchToken:             branchToken,
 			NewRunBranchToken:       newRunBranchToken,
 			ResetWorkflow:           &resetWorkflow,
+			CreationTime:            common.Int64Ptr(creationTime),
 		})
 		if err != nil {
 			return err

@@ -985,6 +985,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 			BranchToken:         info.GetBranchToken(),
 			NewRunBranchToken:   info.GetNewRunBranchToken(),
 			ResetWorkflow:       info.GetResetWorkflow(),
+			CreationTime:        info.GetCreationTime(),
 		}
 	}
 	var nextPageToken []byte
@@ -1115,6 +1116,7 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 			sqlplugin.MustParseUUID(task.DomainID),
 			common.EmptyReplicationUUID,
 			sqlplugin.MustParseUUID(common.EmptyReplicationUUID),
+			task.GetVisibilityTimestamp().UnixNano(),
 		); err != nil {
 			rollBackErr := tx.Rollback()
 			if rollBackErr != nil {

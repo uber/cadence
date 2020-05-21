@@ -384,6 +384,7 @@ type (
 		BranchToken       []byte
 		NewRunBranchToken []byte
 		ResetWorkflow     bool
+		CreationTime      int64
 
 		// TODO deprecate when NDC is fully released && migrated
 		LastReplicationInfo map[string]*ReplicationInfo
@@ -609,7 +610,7 @@ type (
 	// FailoverMarkerTask is the marker for graceful failover
 	FailoverMarkerTask struct {
 		TaskID              int64
-		VisibilityTimestamp time.Time  // Visibility timestamp stores in the field scheduleEventID
+		VisibilityTimestamp time.Time // Visibility timestamp stores in the field scheduleEventID
 		Version             int64
 		DomainID            string
 	}
