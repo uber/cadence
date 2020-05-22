@@ -287,6 +287,8 @@ func (t *transferQueueProcessorBase) processBatch() {
 	cancel()
 
 	t.lastPollTime = t.shard.GetTimeSource().Now()
+
+	// TODO: create a feedback loop to slow down loading for non-default queues (queues with level > 0)
 	for _, queueCollection := range t.processingQueueCollections {
 		activeQueue := queueCollection.ActiveQueue()
 		if activeQueue == nil {
@@ -326,9 +328,9 @@ func (t *transferQueueProcessorBase) processBatch() {
 }
 
 func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
-	// only for now, find the min ack level across all processing queues
+	// TODO: only for now, find the min ack level across all processing queues
 	// and update DB with that value.
-	// TODO: once persistence layer is updated, we need to persist all queue stats
+	// Once persistence layer is updated, we need to persist all queue states
 	// instead of only the min ack level
 	var minAckLevel task.Key
 	for _, queueCollection := range t.processingQueueCollections {
