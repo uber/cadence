@@ -55,13 +55,11 @@ type (
 
 	queueProcessorOptions struct {
 		BatchSize                           dynamicconfig.IntPropertyFn
-		WorkerCount                         dynamicconfig.IntPropertyFn
 		MaxPollRPS                          dynamicconfig.IntPropertyFn
 		MaxPollInterval                     dynamicconfig.DurationPropertyFn
 		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
 		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
 		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		MaxRetryCount                       dynamicconfig.IntPropertyFn
 		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
 		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 		QueueSplitPolicy                    ProcessingQueueSplitPolicy
@@ -294,7 +292,7 @@ func (t *transferQueueProcessorBase) processBatch() {
 		if activeQueue == nil {
 			continue
 		}
-		taskInfos, more, partialRead, err := t.readTasks(
+		transferTaskInfos, more, partialRead, err := t.readTasks(
 			activeQueue.State().ReadLevel(),
 			activeQueue.State().MaxLevel(),
 		)
@@ -305,7 +303,12 @@ func (t *transferQueueProcessorBase) processBatch() {
 		}
 
 		tasks := make(map[task.Key]task.Task)
-		for _, taskInfo := range taskInfos {
+		domainFilter := activeQueue.State().DomainFilter()
+		for _, taskInfo := range transferTaskInfos {
+			if !domainFilter.Filter(taskInfo.GetDomainID()) {
+				continue
+			}
+
 			task := t.taskInitializer(taskInfo)
 			tasks[newTransferTaskKey(taskInfo.GetTaskID())] = task
 			if submitted := t.submitTask(task); !submitted {
@@ -346,9 +349,11 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 	}
 
 	if minAckLevel == nil {
+		// note that only failover processor will meet this condition
 		err := t.transferQueueShutdown()
 		if err != nil {
 			t.logger.Error("Error shutdown queue", tag.Error(err))
+			// return error so that shutdown callback can be retried
 			return false, err
 		}
 		return true, nil
@@ -369,7 +374,8 @@ func (t *transferQueueProcessorBase) splitQueue() {
 	newQueuesMap := make(map[int][]ProcessingQueue)
 	for _, queueCollection := range t.processingQueueCollections {
 		newQueues := queueCollection.Split(t.options.QueueSplitPolicy)
-		for newQueueLevel, newQueue := range newQueues {
+		for _, newQueue := range newQueues {
+			newQueueLevel := newQueue.State().Level()
 			newQueuesMap[newQueueLevel] = append(newQueuesMap[newQueueLevel], newQueue)
 		}
 
@@ -394,7 +400,7 @@ func (t *transferQueueProcessorBase) splitQueue() {
 func (t *transferQueueProcessorBase) readTasks(
 	readLevel task.Key,
 	maxReadLevel task.Key,
-) ([]task.Task, bool, bool, error) {
+) ([]*persistence.TransferTaskInfo, bool, bool, error) {
 	shardMaxReadLevel := t.maxReadLevel()
 	partialRead := false
 	if shardMaxReadLevel.Less(maxReadLevel) {
@@ -412,12 +418,7 @@ func (t *transferQueueProcessorBase) readTasks(
 		return nil, false, false, err
 	}
 
-	tasks := make([]task.Task, len(response.Tasks))
-	for i := range response.Tasks {
-		tasks[i] = t.taskInitializer(response.Tasks[i])
-	}
-
-	return tasks, len(response.NextPageToken) != 0, partialRead, nil
+	return response.Tasks, len(response.NextPageToken) != 0, partialRead, nil
 }
 
 func (t *transferQueueProcessorBase) submitTask(
