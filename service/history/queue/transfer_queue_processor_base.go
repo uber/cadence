@@ -41,8 +41,7 @@ import (
 )
 
 var (
-	maxTransferTaskID               int64 = 1<<63 - 1
-	loadQueueTaskThrottleRetryDelay       = 5 * time.Second
+	loadQueueTaskThrottleRetryDelay = 5 * time.Second
 )
 
 type (
