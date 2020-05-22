@@ -165,7 +165,7 @@ func (s *Service) Start() {
 	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
-
+	s.GetFrontendClient()
 	logger := s.GetLogger()
 	logger.Info("worker starting", tag.ComponentWorker)
 

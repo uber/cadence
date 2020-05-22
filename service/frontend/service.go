@@ -82,6 +82,9 @@ type Config struct {
 
 	// Domain specific config
 	EnableDomainNotActiveAutoForwarding dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableGracefulFailover              dynamicconfig.BoolPropertyFn
+	DomainFailoverRefreshInterval       dynamicconfig.DurationPropertyFn
+	DomainFailoverRefreshJitter         dynamicconfig.FloatPropertyFn
 
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes             dynamicconfig.MapPropertyFn
@@ -126,6 +129,9 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		ShutdownDrainDuration:               dc.GetDurationProperty(dynamicconfig.FrontendShutdownDrainDuration, 0),
 		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, true),
+		EnableGracefulFailover:              dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
+		DomainFailoverRefreshInterval:       dc.GetDurationProperty(dynamicconfig.DomainFailoverRefreshInterval, 10*time.Second),
+		DomainFailoverRefreshJitter:         dc.GetFloat64Property(dynamicconfig.DomainFailoverRefreshJitter, 0.1),
 		EnableClientVersionCheck:            dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, false),
 		ValidSearchAttributes:               dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
 		SearchAttributesNumberOfKeysLimit:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 100),

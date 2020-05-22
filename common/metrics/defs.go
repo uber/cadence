@@ -638,6 +638,9 @@ const (
 	// BlobstoreClientDirectoryExistsScope tracks DirectoryExists calls to blobstore
 	BlobstoreClientDirectoryExistsScope
 
+	// DomainFailoverScope is used in domain failover processor
+	DomainFailoverScope
+
 	NumCommonScopes
 )
 
@@ -1302,6 +1305,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientExistsScope:          {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+
+		DomainFailoverScope: {operation: "DomainFailover"},
 	},
 	// Frontend Scope Names
 	Frontend: {
