@@ -60,8 +60,6 @@ type (
 		MetricScope                         int
 	}
 
-	queueTaskInitializer func(task.Info) task.Task
-
 	queueProcessorBase struct {
 		shard                shard.Context
 		timeSource           clock.TimeSource
@@ -74,7 +72,7 @@ type (
 		taskProcessor        *taskProcessor // TODO: deprecate task processor, in favor of queueTaskProcessor
 		queueTaskProcessor   task.Processor
 		redispatchQueue      collection.Queue
-		queueTaskInitializer queueTaskInitializer
+		queueTaskInitializer task.Initializer
 
 		lastPollTime time.Time
 
@@ -100,7 +98,7 @@ func newQueueProcessorBase(
 	queueAckMgr queueAckMgr,
 	redispatchQueue collection.Queue,
 	executionCache *execution.Cache,
-	queueTaskInitializer queueTaskInitializer,
+	queueTaskInitializer task.Initializer,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 ) *queueProcessorBase {

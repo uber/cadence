@@ -75,7 +75,7 @@ type (
 		taskProcessor        *taskProcessor // TODO: deprecate task processor, in favor of queueTaskProcessor
 		queueTaskProcessor   task.Processor
 		redispatchQueue      collection.Queue
-		queueTaskInitializer queueTaskInitializer
+		queueTaskInitializer task.Initializer
 
 		// timer notification
 		newTimerCh  chan struct{}
@@ -92,7 +92,7 @@ func newTimerQueueProcessorBase(
 	queueTaskProcessor task.Processor,
 	timerQueueAckMgr timerQueueAckMgr,
 	redispatchQueue collection.Queue,
-	queueTaskInitializer queueTaskInitializer,
+	queueTaskInitializer task.Initializer,
 	timerGate TimerGate,
 	maxPollRPS dynamicconfig.IntPropertyFn,
 	logger log.Logger,
