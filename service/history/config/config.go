@@ -122,6 +122,7 @@ type Config struct {
 	TransferProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TransferProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
+	TransferProcessorEnableMultiCurosrProcessor          dynamicconfig.BoolPropertyFn
 	TransferProcessorVisibilityArchivalTimeLimit         dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
@@ -272,7 +273,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay, 25*time.Minute),
 
 		TaskProcessRPS:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
-		EnablePriorityTaskProcessor:    dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, false),
+		EnablePriorityTaskProcessor:    dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, true),
 		TaskSchedulerType:              dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
 		TaskSchedulerWorkerCount:       dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 20),
 		TaskSchedulerQueueSize:         dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 2000),
@@ -317,6 +318,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		TransferProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 10000),
 		TransferProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TransferProcessorEnablePriorityTaskProcessor, false),
+		TransferProcessorEnableMultiCurosrProcessor:          dc.GetBoolProperty(dynamicconfig.TransferProcessorEnableMultiCurosrProcessor, true),
 		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 200*time.Millisecond),
 
 		ReplicatorTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),

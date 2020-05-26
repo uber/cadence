@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package queue
 
 import (
 	"sync"
@@ -31,12 +31,13 @@ import (
 )
 
 type (
-	taskAllocator interface {
-		verifyActiveTask(taskDomainID string, task interface{}) (bool, error)
-		verifyFailoverActiveTask(targetDomainIDs map[string]struct{}, taskDomainID string, task interface{}) (bool, error)
-		verifyStandbyTask(standbyCluster string, taskDomainID string, task interface{}) (bool, error)
-		lock()
-		unlock()
+	// TaskAllocator verifies if a task should be processed or not
+	TaskAllocator interface {
+		VerifyActiveTask(taskDomainID string, task interface{}) (bool, error)
+		VerifyFailoverActiveTask(targetDomainIDs map[string]struct{}, taskDomainID string, task interface{}) (bool, error)
+		VerifyStandbyTask(standbyCluster string, taskDomainID string, task interface{}) (bool, error)
+		Lock()
+		Unlock()
 	}
 
 	taskAllocatorImpl struct {
@@ -49,8 +50,8 @@ type (
 	}
 )
 
-// newTaskAllocator create a new task allocator
-func newTaskAllocator(shard shard.Context) taskAllocator {
+// NewTaskAllocator create a new task allocator
+func NewTaskAllocator(shard shard.Context) TaskAllocator {
 	return &taskAllocatorImpl{
 		currentClusterName: shard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              shard,
@@ -59,8 +60,8 @@ func newTaskAllocator(shard shard.Context) taskAllocator {
 	}
 }
 
-// verifyActiveTask, will return true if task activeness check is successful
-func (t *taskAllocatorImpl) verifyActiveTask(taskDomainID string, task interface{}) (bool, error) {
+// VerifyActiveTask, will return true if task activeness check is successful
+func (t *taskAllocatorImpl) VerifyActiveTask(taskDomainID string, task interface{}) (bool, error) {
 	t.locker.RLock()
 	defer t.locker.RUnlock()
 
@@ -84,8 +85,8 @@ func (t *taskAllocatorImpl) verifyActiveTask(taskDomainID string, task interface
 	return true, nil
 }
 
-// verifyFailoverActiveTask, will return true if task activeness check is successful
-func (t *taskAllocatorImpl) verifyFailoverActiveTask(targetDomainIDs map[string]struct{}, taskDomainID string, task interface{}) (bool, error) {
+// VerifyFailoverActiveTask, will return true if task activeness check is successful
+func (t *taskAllocatorImpl) VerifyFailoverActiveTask(targetDomainIDs map[string]struct{}, taskDomainID string, task interface{}) (bool, error) {
 	_, ok := targetDomainIDs[taskDomainID]
 	if ok {
 		t.logger.Debug("Failover Domain is active, process task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
@@ -95,8 +96,8 @@ func (t *taskAllocatorImpl) verifyFailoverActiveTask(targetDomainIDs map[string]
 	return false, nil
 }
 
-// verifyStandbyTask, will return true if task standbyness check is successful
-func (t *taskAllocatorImpl) verifyStandbyTask(standbyCluster string, taskDomainID string, task interface{}) (bool, error) {
+// VerifyStandbyTask, will return true if task standbyness check is successful
+func (t *taskAllocatorImpl) VerifyStandbyTask(standbyCluster string, taskDomainID string, task interface{}) (bool, error) {
 	t.locker.RLock()
 	defer t.locker.RUnlock()
 
@@ -124,12 +125,12 @@ func (t *taskAllocatorImpl) verifyStandbyTask(standbyCluster string, taskDomainI
 	return true, nil
 }
 
-// lock block all task allocation
-func (t *taskAllocatorImpl) lock() {
+// Lock block all task allocation
+func (t *taskAllocatorImpl) Lock() {
 	t.locker.Lock()
 }
 
-// unlock resume the task allocator
-func (t *taskAllocatorImpl) unlock() {
+// Unlock resume the task allocator
+func (t *taskAllocatorImpl) Unlock() {
 	t.locker.Unlock()
 }
