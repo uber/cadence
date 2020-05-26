@@ -54,13 +54,13 @@ type Cache interface {
 // Options control the behavior of the cache
 type Options struct {
 	// TTL controls the time-to-live for a given cache entry.  Cache entries that
-	// are older than the TTL will not be returned
+	// are older than the TTL will not be returned.
 	TTL time.Duration
 
 	// InitialCapacity controls the initial capacity of the cache
 	InitialCapacity int
 
-	// Pin prevents in-use objects from getting evicted
+	// Pin prevents in-use objects from getting evicted.
 	Pin bool
 
 	// RemovedFunc is an optional function called when an element
@@ -74,6 +74,16 @@ type Options struct {
 	// MaxSizeInBytes is an optional and must be set along with GetCacheItemSizeInBytesFunc
 	// to control the max capacity(in bytes) of the cache
 	MaxSizeInBytes uint64
+}
+
+// SimpleOptions provides options that can be used to configure SimpleCache
+type SimpleOptions struct {
+	// InitialCapacity controls the initial capacity of the cache
+	InitialCapacity int
+
+	// RemovedFunc is an optional function called when an element
+	// is scheduled for deletion
+	RemovedFunc RemovedFunc
 }
 
 // RemovedFunc is a type for notifying applications when an item is
