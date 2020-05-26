@@ -165,7 +165,7 @@ func NewDomainCache(
 }
 
 func newDomainCache() Cache {
-	return NewSimple(domainCacheMaxSize, &SimpleOptions{
+	return NewSimple(&SimpleOptions{
 		InitialCapacity: domainCacheInitialSize,
 	})
 }

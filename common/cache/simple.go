@@ -24,17 +24,13 @@ package cache
 
 import (
 	"container/list"
-	"errors"
 	"sync"
 	"time"
 )
 
 var (
-	// SimpleCacheFull is the error that is returned from PutIfNotExists if cache is full
-	SimpleCacheFull = errors.New("simple cache is full")
-
 	// DummyCreateTime is the create time used by all entries in the cache.
-	DummyCreateTime = time.Now()
+	DummyCreateTime = time.Time{}
 )
 
 type (
@@ -42,7 +38,6 @@ type (
 		sync.RWMutex
 		accessMap   map[interface{}]*list.Element
 		iterateList *list.List
-		maxSize     int
 		rmFunc      RemovedFunc
 	}
 
@@ -103,14 +98,13 @@ func (e *simpleEntry) CreateTime() time.Time {
 // The RWMutex makes simple cache readable by many threads without introducing lock contention.
 // The maxSize provided to simple cache should be larger than the possible largest size because
 // simple cache will simply panic if max size is exceeded.
-func NewSimple(maxSize int, opts *SimpleOptions) Cache {
+func NewSimple(opts *SimpleOptions) Cache {
 	if opts == nil {
 		opts = &SimpleOptions{}
 	}
 	return &simple{
 		iterateList: list.New(),
 		accessMap:   make(map[interface{}]*list.Element, opts.InitialCapacity),
-		maxSize:     maxSize,
 		rmFunc:      opts.RemovedFunc,
 	}
 }
@@ -132,10 +126,7 @@ func (c *simple) Get(key interface{}) interface{} {
 func (c *simple) Put(key interface{}, value interface{}) interface{} {
 	c.Lock()
 	defer c.Unlock()
-	existing, err := c.putInternal(key, value, true)
-	if err != nil {
-		panic(err)
-	}
+	existing := c.putInternal(key, value, true)
 	return existing
 }
 
@@ -143,10 +134,7 @@ func (c *simple) Put(key interface{}, value interface{}) interface{} {
 func (c *simple) PutIfNotExist(key interface{}, value interface{}) (interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
-	existing, err := c.putInternal(key, value, false)
-	if err != nil {
-		return nil, err
-	}
+	existing := c.putInternal(key, value, false)
 	if existing == nil {
 		// This is a new value
 		return value, nil
@@ -190,7 +178,7 @@ func (c *simple) Iterator() Iterator {
 	return iterator
 }
 
-func (c *simple) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
+func (c *simple) putInternal(key interface{}, value interface{}, allowUpdate bool) interface{} {
 	elt := c.accessMap[key]
 	if elt != nil {
 		entry := elt.Value.(*simpleEntry)
@@ -198,15 +186,12 @@ func (c *simple) putInternal(key interface{}, value interface{}, allowUpdate boo
 		if allowUpdate {
 			entry.value = value
 		}
-		return existing, nil
-	}
-	if len(c.accessMap) >= c.maxSize {
-		return nil, SimpleCacheFull
+		return existing
 	}
 	entry := &simpleEntry{
 		key:   key,
 		value: value,
 	}
 	c.accessMap[key] = c.iterateList.PushFront(entry)
-	return nil, nil
+	return nil
 }

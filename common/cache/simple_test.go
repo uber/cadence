@@ -31,7 +31,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	cache := NewSimple(5, nil)
+	cache := NewSimple(nil)
 
 	cache.Put("A", "Foo")
 	assert.Equal(t, "Foo", cache.Get("A"))
@@ -65,7 +65,7 @@ func TestSimpleGenerics(t *testing.T) {
 	}
 	value := "some random value"
 
-	cache := NewSimple(5, nil)
+	cache := NewSimple(nil)
 	cache.Put(key, value)
 
 	assert.Equal(t, value, cache.Get(key))
@@ -80,7 +80,7 @@ func TestSimpleGenerics(t *testing.T) {
 }
 
 func TestSimpleCacheConcurrentAccess(t *testing.T) {
-	cache := NewSimple(5, nil)
+	cache := NewSimple(nil)
 	values := map[string]string{
 		"A": "foo",
 		"B": "bar",
@@ -134,7 +134,7 @@ func TestSimpleCacheConcurrentAccess(t *testing.T) {
 
 func TestSimpleRemoveFunc(t *testing.T) {
 	ch := make(chan bool)
-	cache := NewSimple(5, &SimpleOptions{
+	cache := NewSimple(&SimpleOptions{
 		RemovedFunc: func(i interface{}) {
 			_, ok := i.(*testing.T)
 			assert.True(t, ok)
@@ -163,7 +163,7 @@ func TestSimpleIterator(t *testing.T) {
 		"D": "Delta",
 	}
 
-	cache := NewSimple(5, nil)
+	cache := NewSimple(nil)
 
 	for k, v := range expected {
 		cache.Put(k, v)
