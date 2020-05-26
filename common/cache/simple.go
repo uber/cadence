@@ -96,8 +96,6 @@ func (e *simpleEntry) CreateTime() time.Time {
 // Simple cache also does not have the concept of pinning that LRU cache has.
 // Internally simple cache uses a RWMutex instead of the exclusive Mutex that LRU cache uses.
 // The RWMutex makes simple cache readable by many threads without introducing lock contention.
-// The maxSize provided to simple cache should be larger than the possible largest size because
-// simple cache will simply panic if max size is exceeded.
 func NewSimple(opts *SimpleOptions) Cache {
 	if opts == nil {
 		opts = &SimpleOptions{}
@@ -122,7 +120,6 @@ func (c *simple) Get(key interface{}) interface{} {
 }
 
 // Put puts a new value associated with a given key, returning the existing value (if present).
-// If Put is called on a cache which is already full it will panic.
 func (c *simple) Put(key interface{}, value interface{}) interface{} {
 	c.Lock()
 	defer c.Unlock()
