@@ -2915,5 +2915,16 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 		}
 	}
 
-	return d.session.ExecuteBatch(batch)
+	err := d.session.ExecuteBatch(batch)
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
+		}
+	}
+	return nil
 }

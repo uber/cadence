@@ -52,8 +52,6 @@ const (
 const (
 	// EmptyUUID is the placeholder for UUID when it's empty
 	EmptyUUID = "emptyUuid"
-	// EmptyReplicationUUID is the placeholder for replication task UUID when it's empty
-	EmptyReplicationUUID = "30000000-5000-f000-f000-000000000000"
 )
 
 const (

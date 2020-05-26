@@ -888,7 +888,6 @@ func createReplicationTasks(
 
 		case p.ReplicationTaskTypeFailoverMarker:
 			version = task.GetVersion()
-			// Failover marker uses firstEventID to store visibility timestamp
 			creationTime = task.GetVisibilityTimestamp().UnixNano()
 
 		default:

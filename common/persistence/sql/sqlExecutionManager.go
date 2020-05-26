@@ -28,15 +28,19 @@ import (
 	"math"
 	"time"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+)
+
+const (
+	emptyWorkflowID       string = ""
+	emptyReplicationRunID string = "30000000-5000-f000-f000-000000000000"
 )
 
 type sqlExecutionManager struct {
@@ -1114,8 +1118,8 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 			t,
 			m.shardID,
 			sqlplugin.MustParseUUID(task.DomainID),
-			common.EmptyReplicationUUID,
-			sqlplugin.MustParseUUID(common.EmptyReplicationUUID),
+			emptyWorkflowID,
+			sqlplugin.MustParseUUID(emptyReplicationRunID),
 			task.GetVisibilityTimestamp().UnixNano(),
 		); err != nil {
 			rollBackErr := tx.Rollback()

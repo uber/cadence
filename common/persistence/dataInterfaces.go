@@ -610,7 +610,7 @@ type (
 	// FailoverMarkerTask is the marker for graceful failover
 	FailoverMarkerTask struct {
 		TaskID              int64
-		VisibilityTimestamp time.Time // Visibility timestamp stores in the field scheduleEventID
+		VisibilityTimestamp time.Time
 		Version             int64
 		DomainID            string
 	}
