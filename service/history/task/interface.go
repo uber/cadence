@@ -64,6 +64,9 @@ type (
 	// Filter filters Task
 	Filter func(task Info) (bool, error)
 
+	// Initializer initializes a Task based on the Info
+	Initializer func(Info) Task
+
 	// PriorityAssigner assigns priority to Tasks
 	PriorityAssigner interface {
 		Assign(Task) error
@@ -82,10 +85,14 @@ type (
 )
 
 const (
-	// QueueTypeTransfer is the queue type for transfer queue
-	QueueTypeTransfer QueueType = iota + 1
-	// QueueTypeTimer is the queue type for timer queue
-	QueueTypeTimer
-	// QueueTypeReplication is the queue type for replication queue
+	// QueueTypeActiveTransfer is the queue type for active transfer queue processor
+	QueueTypeActiveTransfer QueueType = iota + 1
+	// QueueTypeStandbyTransfer is the queue type for standby transfer queue processor
+	QueueTypeStandbyTransfer
+	// QueueTypeActiveTimer is the queue type for active timer queue processor
+	QueueTypeActiveTimer
+	// QueueTypeStandbyTimer is the queue type for standby timer queue processor
+	QueueTypeStandbyTimer
+	// QueueTypeReplication is the queue type for replication queue processor
 	QueueTypeReplication
 )
