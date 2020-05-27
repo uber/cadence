@@ -3192,6 +3192,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
 		e.shard.GetLogger(),
+		e.shard.GetShardID(),
 	)
 
 	now := e.shard.GetTimeSource().Now()

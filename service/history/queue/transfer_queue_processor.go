@@ -451,6 +451,7 @@ func newTransferQueueActiveProcessor(
 		return task.NewTransferTask(
 			shard,
 			taskInfo,
+			task.QueueTypeActiveTransfer,
 			shard.GetMetricsClient().Scope(
 				task.GetTransferTaskMetricsScope(taskInfo.GetTaskType(), true),
 			),
@@ -547,6 +548,7 @@ func newTransferQueueStandbyProcessor(
 		return task.NewTransferTask(
 			shard,
 			taskInfo,
+			task.QueueTypeStandbyTransfer,
 			shard.GetMetricsClient().Scope(
 				task.GetTransferTaskMetricsScope(taskInfo.GetTaskType(), false),
 			),
@@ -659,6 +661,7 @@ func newTransferQueueFailoverProcessor(
 		return task.NewTransferTask(
 			shard,
 			taskInfo,
+			task.QueueTypeActiveTransfer,
 			shard.GetMetricsClient().Scope(
 				task.GetTransferTaskMetricsScope(taskInfo.GetTaskType(), true),
 			),
