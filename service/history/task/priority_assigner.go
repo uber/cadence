@@ -69,18 +69,24 @@ func NewPriorityAssigner(
 func (a *priorityAssignerImpl) Assign(
 	queueTask Task,
 ) error {
-	if queueTask.GetQueueType() == QueueTypeReplication {
+	queueType := queueTask.GetQueueType()
+
+	if queueType == QueueTypeReplication {
 		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
 		return nil
 	}
 
-	// timer of transfer task, first check if domain is active or not
+	// timer or transfer task, first check if task is active or not and if domain is active or not
+	isActiveTask := queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer
 	domainName, active, err := a.getDomainInfo(queueTask.GetDomainID())
 	if err != nil {
 		return err
 	}
 
-	if !active {
+	if !isActiveTask && !active {
+		// only assign low priority to tasks submitted by standby processor for standby domains
+		// for all other three cases, the task will either be a no-op or is an active task we need to process,
+		// so assign them high priority
 		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
 		return nil
 	}
@@ -88,7 +94,7 @@ func (a *priorityAssignerImpl) Assign(
 	if !a.getRateLimiter(domainName).Allow() {
 		queueTask.SetPriority(task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass))
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
-		if queueTask.GetQueueType() == QueueTypeTransfer {
+		if queueType == QueueTypeActiveTransfer || queueType == QueueTypeStandbyTransfer {
 			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
 		} else {
 			taggedScope.IncCounter(metrics.TimerTaskThrottledCounter)
