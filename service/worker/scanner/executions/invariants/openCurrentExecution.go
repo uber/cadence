@@ -115,5 +115,5 @@ func (o *openCurrentExecution) Fix(execution common.Execution, resources *common
 }
 
 func (o *openCurrentExecution) InvariantType() common.InvariantType {
-	return common.OpenCurrentExecution
+	return common.OpenCurrentExecutionInvariantType
 }

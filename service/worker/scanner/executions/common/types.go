@@ -67,8 +67,8 @@ const (
 	HistoryExistsInvariantType InvariantType = "history_exists"
 	// ValidFirstEventInvariantType asserts that the first event in a history must be of a specific form
 	ValidFirstEventInvariantType = "valid_first_event"
-	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
-	OpenCurrentExecution = "open_current_execution"
+	// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
+	OpenCurrentExecutionInvariantType = "open_current_execution"
 
 	// InvariantCollectionMutableState is the collection of invariants relating to mutable state
 	InvariantCollectionMutableState InvariantCollection = iota
