@@ -141,9 +141,9 @@ func newTransferQueueStandbyProcessor(
 			taskInfo,
 			task.QueueTypeStandbyTransfer,
 			historyService.metricsClient.Scope(
-				getTransferTaskMetricsScope(taskInfo.GetTaskType(), false),
+				task.GetTransferTaskMetricsScope(taskInfo.GetTaskType(), false),
 			),
-			initializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			transferTaskFilter,
 			processor.taskExecutor,
 			redispatchQueue,
@@ -192,6 +192,6 @@ func (t *transferQueueStandbyProcessorImpl) process(
 	taskInfo *taskInfo,
 ) (int, error) {
 	// TODO: task metricScope should be determined when creating taskInfo
-	metricScope := getTransferTaskMetricsScope(taskInfo.task.GetTaskType(), false)
+	metricScope := task.GetTransferTaskMetricsScope(taskInfo.task.GetTaskType(), false)
 	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }
