@@ -28,7 +28,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/service/history/shard"
-	ctask "github.com/uber/cadence/service/history/task"
+	htask "github.com/uber/cadence/service/history/task"
 )
 
 type (
@@ -85,7 +85,7 @@ func (t *taskAllocatorImpl) verifyActiveTask(taskDomainID string, task interface
 	if domainEntry.IsGlobalDomain() && domainEntry.GetFailoverEndTime() != nil {
 		// the domain is pending active, pause on processing this task
 		t.logger.Debug("Domain is not in pending active, skip task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
-		return false, ctask.ErrTaskRedispatch
+		return false, htask.ErrTaskRedispatch
 	}
 
 	if err := t.checkDomainPendingActive(
