@@ -2,7 +2,9 @@ package shard
 
 import (
 	"fmt"
+
 	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"github.com/uber/cadence/service/worker/scanner/executions/invariants"
@@ -10,10 +12,10 @@ import (
 
 type (
 	scanner struct {
-		shardID int
-		itr common.ExecutionIterator
-		failedWriter common.ExecutionWriter
-		corruptedWriter common.ExecutionWriter
+		shardID          int
+		itr              common.ExecutionIterator
+		failedWriter     common.ExecutionWriter
+		corruptedWriter  common.ExecutionWriter
 		invariantManager common.InvariantManager
 	}
 )
@@ -29,10 +31,10 @@ func NewScanner(
 ) common.Scanner {
 	id := uuid.New()
 	return &scanner{
-		shardID: shardID,
-		itr: common.NewPersistenceIterator(pr, persistencePageSize, shardID),
-		failedWriter: common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
-		corruptedWriter: common.NewBlobstoreWriter(id, common.CorruptedExtension, blobstoreClient, blobstoreFlushThreshold),
+		shardID:          shardID,
+		itr:              common.NewPersistenceIterator(pr, persistencePageSize, shardID),
+		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
+		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, blobstoreClient, blobstoreFlushThreshold),
 		invariantManager: invariants.NewInvariantManager(invariantCollections, pr),
 	}
 }
@@ -50,7 +52,7 @@ func (s *scanner) Scan() common.ShardScanReport {
 		exec, err := s.itr.Next()
 		if err != nil {
 			result.Result.ControlFlowFailure = &common.ControlFlowFailure{
-				Info: "persistence iterator returned error",
+				Info:        "persistence iterator returned error",
 				InfoDetails: err.Error(),
 			}
 			return result
@@ -63,16 +65,16 @@ func (s *scanner) Scan() common.ShardScanReport {
 		case common.CheckResultTypeCorrupted:
 			if err := s.corruptedWriter.Add(common.ScanOutputEntity{
 				Execution: *exec,
-				Result: checkResult,
+				Result:    checkResult,
 			}); err != nil {
 				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
-					Info: "blobstore add failed for corrupted execution check",
+					Info:        "blobstore add failed for corrupted execution check",
 					InfoDetails: err.Error(),
 				}
 				return result
 			}
 			result.Stats.CorruptedCount++
-			lastInvariant := checkResult.CheckResults[len(checkResult.CheckResults) - 1]
+			lastInvariant := checkResult.CheckResults[len(checkResult.CheckResults)-1]
 			result.Stats.CorruptionByType[lastInvariant.InvariantType]++
 			if common.Open(exec.State) {
 				result.Stats.CorruptedOpenExecutionCount++
@@ -80,10 +82,10 @@ func (s *scanner) Scan() common.ShardScanReport {
 		case common.CheckResultTypeFailed:
 			if err := s.failedWriter.Add(common.ScanOutputEntity{
 				Execution: *exec,
-				Result: checkResult,
+				Result:    checkResult,
 			}); err != nil {
 				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
-					Info: "blobstore add failed for failed execution check",
+					Info:        "blobstore add failed for failed execution check",
 					InfoDetails: err.Error(),
 				}
 				return result
@@ -96,14 +98,14 @@ func (s *scanner) Scan() common.ShardScanReport {
 
 	if err := s.failedWriter.Flush(); err != nil {
 		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
-			Info: "failed to flush for failed execution checks",
+			Info:        "failed to flush for failed execution checks",
 			InfoDetails: err.Error(),
 		}
 		return result
 	}
 	if err := s.corruptedWriter.Flush(); err != nil {
 		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
-			Info: "failed to flush for corrupted execution checks",
+			Info:        "failed to flush for corrupted execution checks",
 			InfoDetails: err.Error(),
 		}
 		return result
@@ -111,7 +113,7 @@ func (s *scanner) Scan() common.ShardScanReport {
 
 	result.Result.ShardScanKeys = &common.ShardScanKeys{
 		Corrupt: s.corruptedWriter.FlushedKeys(),
-		Failed: s.failedWriter.FlushedKeys(),
+		Failed:  s.failedWriter.FlushedKeys(),
 	}
 	return result
 }

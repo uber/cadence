@@ -63,7 +63,7 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	if existsCheckError != nil {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
-			InvariantType: h.InvariantType(),
+			InvariantType:   h.InvariantType(),
 			Info:            "failed to check if concrete execution still exists",
 			InfoDetails:     existsCheckError.Error(),
 		}
@@ -71,7 +71,7 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	if !stillExists {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeHealthy,
-			InvariantType: h.InvariantType(),
+			InvariantType:   h.InvariantType(),
 			Info:            "determined execution was healthy because concrete execution no longer exists",
 		}
 	}
@@ -79,14 +79,14 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 		if readHistoryBranchErr == gocql.ErrNotFound {
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType: h.InvariantType(),
+				InvariantType:   h.InvariantType(),
 				Info:            "concrete execution exists but history does not exist",
 				InfoDetails:     readHistoryBranchErr.Error(),
 			}
 		}
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
-			InvariantType: h.InvariantType(),
+			InvariantType:   h.InvariantType(),
 			Info:            "failed to verify if history exists",
 			InfoDetails:     readHistoryBranchErr.Error(),
 		}
@@ -94,14 +94,14 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	if readHistoryBranchResp == nil || len(readHistoryBranchResp.HistoryEvents) == 0 {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeCorrupted,
-			InvariantType: h.InvariantType(),
+			InvariantType:   h.InvariantType(),
 			Info:            "concrete execution exists but got empty history",
 		}
 	}
 	resources.History = readHistoryBranchResp
 	return common.CheckResult{
 		CheckResultType: common.CheckResultTypeHealthy,
-		InvariantType: h.InvariantType(),
+		InvariantType:   h.InvariantType(),
 	}
 }
 

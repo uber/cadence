@@ -107,7 +107,7 @@ type (
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
-		InvariantType InvariantType
+		InvariantType   InvariantType
 		Info            string
 		InfoDetails     string
 	}
@@ -169,7 +169,7 @@ type (
 	// ShardFixReport is the report of running Fix on a single shard
 	ShardFixReport struct {
 		ShardID int
-		Stats ShardFixStats
+		Stats   ShardFixStats
 		Result  ShardFixResult
 	}
 
