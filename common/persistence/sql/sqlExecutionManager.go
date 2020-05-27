@@ -1120,7 +1120,6 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 			sqlplugin.MustParseUUID(task.DomainID),
 			emptyWorkflowID,
 			sqlplugin.MustParseUUID(emptyReplicationRunID),
-			task.GetVisibilityTimestamp().UnixNano(),
 		); err != nil {
 			rollBackErr := tx.Rollback()
 			if rollBackErr != nil {

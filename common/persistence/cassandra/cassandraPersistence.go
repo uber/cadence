@@ -2909,7 +2909,6 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 			task.DomainID,
 			rowTypeReplicationWorkflowID,
 			rowTypeReplicationRunID,
-			task.GetVisibilityTimestamp().UnixNano(),
 		); err != nil {
 			return err
 		}

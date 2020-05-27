@@ -145,7 +145,6 @@ func applyWorkflowMutationBatch(
 		workflowMutation.TransferTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
-		cqlNowTimestampMillis,
 	)
 }
 
@@ -254,7 +253,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
-		cqlNowTimestampMillis,
 	)
 }
 
@@ -359,7 +357,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
-		cqlNowTimestampMillis,
 	)
 }
 
@@ -922,7 +919,6 @@ func applyTasks(
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
-	creationTime int64,
 ) error {
 
 	if err := createTransferTasks(
@@ -943,7 +939,6 @@ func applyTasks(
 		domainID,
 		workflowID,
 		runID,
-		creationTime,
 	); err != nil {
 		return err
 	}
@@ -1059,7 +1054,6 @@ func createReplicationTasks(
 	domainID string,
 	workflowID string,
 	runID string,
-	creationTime int64,
 ) error {
 
 	for _, task := range replicationTasks {
@@ -1094,7 +1088,6 @@ func createReplicationTasks(
 
 		case p.ReplicationTaskTypeFailoverMarker:
 			version = task.GetVersion()
-			creationTime = task.GetVisibilityTimestamp().UnixNano()
 
 		default:
 			return &workflow.InternalServiceError{
@@ -1123,7 +1116,7 @@ func createReplicationTasks(
 			resetWorkflow,
 			p.EventStoreVersion,
 			newRunBranchToken,
-			creationTime,
+			task.GetVisibilityTimestamp().UnixNano(),
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}

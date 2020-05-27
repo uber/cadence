@@ -93,7 +93,7 @@ func applyWorkflowMutationTx(
 		workflowMutation.TransferTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
-		executionInfo.LastUpdatedTimestamp.UnixNano()); err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -254,7 +254,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
-		executionInfo.LastUpdatedTimestamp.UnixNano()); err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -443,7 +443,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
-		executionInfo.LastUpdatedTimestamp.UnixNano()); err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -531,7 +531,6 @@ func applyTasks(
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
-	creationTime int64,
 ) error {
 
 	if err := createTransferTasks(tx,
@@ -551,7 +550,7 @@ func applyTasks(
 		domainID,
 		workflowID,
 		runID,
-		creationTime); err != nil {
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create replication tasks. Error: %v", err),
 		}
@@ -843,7 +842,6 @@ func createReplicationTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
-	creationTime int64,
 ) error {
 
 	if len(replicationTasks) == 0 {
@@ -888,7 +886,6 @@ func createReplicationTasks(
 
 		case p.ReplicationTaskTypeFailoverMarker:
 			version = task.GetVersion()
-			creationTime = task.GetVisibilityTimestamp().UnixNano()
 
 		default:
 			return &workflow.InternalServiceError{
@@ -911,7 +908,7 @@ func createReplicationTasks(
 			BranchToken:             branchToken,
 			NewRunBranchToken:       newRunBranchToken,
 			ResetWorkflow:           &resetWorkflow,
-			CreationTime:            common.Int64Ptr(creationTime),
+			CreationTime:            common.Int64Ptr(task.GetVisibilityTimestamp().UnixNano()),
 		})
 		if err != nil {
 			return err
