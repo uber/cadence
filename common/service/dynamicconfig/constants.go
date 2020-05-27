@@ -174,6 +174,8 @@ var keys = map[Key]string{
 	TimerProcessorMaxPollRPS:                               "history.timerProcessorMaxPollRPS",
 	TimerProcessorMaxPollInterval:                          "history.timerProcessorMaxPollInterval",
 	TimerProcessorMaxPollIntervalJitterCoefficient:         "history.timerProcessorMaxPollIntervalJitterCoefficient",
+	TimerProcessorSplitQueueInterval:                       "history.timerProcessorSplitQueueInterval",
+	TimerProcessorSplitQueueIntervalJitterCoefficient:      "history.timerProcessorSplitQueueIntervalJitterCoefficient",
 	TimerProcessorRedispatchInterval:                       "history.timerProcessorRedispatchInterval",
 	TimerProcessorRedispatchIntervalJitterCoefficient:      "history.timerProcessorRedispatchIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                   "history.timerProcessorMaxRedispatchQueueSize",
@@ -190,6 +192,8 @@ var keys = map[Key]string{
 	TransferProcessorUpdateShardTaskCount:                  "history.transferProcessorUpdateShardTaskCount",
 	TransferProcessorMaxPollInterval:                       "history.transferProcessorMaxPollInterval",
 	TransferProcessorMaxPollIntervalJitterCoefficient:      "history.transferProcessorMaxPollIntervalJitterCoefficient",
+	TransferProcessorSplitQueueInterval:                    "history.transferProcessorSplitQueueInterval",
+	TransferProcessorSplitQueueIntervalJitterCoefficient:   "history.transferProcessorSplitQueueIntervalJitterCoefficient",
 	TransferProcessorUpdateAckInterval:                     "history.transferProcessorUpdateAckInterval",
 	TransferProcessorUpdateAckIntervalJitterCoefficient:    "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 	TransferProcessorCompleteTransferInterval:              "history.transferProcessorCompleteTransferInterval",
@@ -541,6 +545,10 @@ const (
 	TimerProcessorMaxPollInterval
 	// TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
 	TimerProcessorMaxPollIntervalJitterCoefficient
+	// TimerProcessorSplitQueueInterval is the split processing queue interval for timer processor
+	TimerProcessorSplitQueueInterval
+	// TimerProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
+	TimerProcessorSplitQueueIntervalJitterCoefficient
 	// TimerProcessorRedispatchInterval is the redispatch interval for timer processor
 	TimerProcessorRedispatchInterval
 	// TimerProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
@@ -573,6 +581,10 @@ const (
 	TransferProcessorMaxPollInterval
 	// TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
 	TransferProcessorMaxPollIntervalJitterCoefficient
+	// TransferProcessorSplitQueueInterval is the split processing queue interval for transferQueueProcessor
+	TransferProcessorSplitQueueInterval
+	// TransferProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
+	TransferProcessorSplitQueueIntervalJitterCoefficient
 	// TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor
 	TransferProcessorUpdateAckInterval
 	// TransferProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
