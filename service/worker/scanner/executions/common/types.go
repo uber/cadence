@@ -44,6 +44,8 @@ type (
 	InvariantType string
 	// InvariantCollection is a type which indicates a sorted collection of invariants
 	InvariantCollection int
+	// Extension is the type which indicates the file extension type
+	Extension string
 )
 
 const (
@@ -72,6 +74,15 @@ const (
 	InvariantCollectionMutableState InvariantCollection = iota
 	// InvariantCollectionHistory is the collection  of invariants relating to history
 	InvariantCollectionHistory
+
+	// SkippedExtension is the extension for files which contain skips
+	SkippedExtension Extension = "skipped"
+	// FailedExtension is the extension for files which contain failures
+	FailedExtension = "failed"
+	// FixedExtension is the extension for files which contain fixes
+	FixedExtension = "fixed"
+	// CorruptedExtension is the extension for files which contain corruptions
+	CorruptedExtension = "corrupted"
 )
 
 // The following are types related to Invariant.
@@ -96,6 +107,7 @@ type (
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
+		InvariantType InvariantType
 		Info            string
 		InfoDetails     string
 	}
@@ -103,6 +115,7 @@ type (
 	// FixResult is the result of running Fix.
 	FixResult struct {
 		FixResultType FixResultType
+		InvariantType InvariantType
 		CheckResult   CheckResult
 		Info          string
 		InfoDetails   string
@@ -147,20 +160,21 @@ type (
 	}
 
 	// ShardScanKeys are the keys to the blobs that were uploaded during scan.
+	// Keys can be nil if there were no uploads.
 	ShardScanKeys struct {
-		Corrupt Keys
-		Failed  Keys
+		Corrupt *Keys
+		Failed  *Keys
 	}
 
 	// ShardFixReport is the report of running Fix on a single shard
 	ShardFixReport struct {
 		ShardID int
-		Handled ShardFixHandled
+		Stats ShardFixStats
 		Result  ShardFixResult
 	}
 
-	// ShardFixHandled indicates the executions which were handled by fix.
-	ShardFixHandled struct {
+	// ShardFixStats indicates the stats of executions where where handled by shard Fix.
+	ShardFixStats struct {
 		ExecutionCount int64
 		FixedCount     int64
 		SkippedCount   int64
@@ -175,10 +189,11 @@ type (
 	}
 
 	// ShardFixKeys are the keys to the blobs that were uploaded during fix.
+	// Keys can be nil if there were no uploads.
 	ShardFixKeys struct {
-		Skipped Keys
-		Failed  Keys
-		Fixed   Keys
+		Skipped *Keys
+		Failed  *Keys
+		Fixed   *Keys
 	}
 
 	// ControlFlowFailure indicates an error occurred which makes it impossible to
