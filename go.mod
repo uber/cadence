@@ -43,6 +43,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/opentracing/opentracing-go v1.1.0
+	github.com/otiai10/copy v1.1.1
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/pierrec/lz4 v0.0.0-20190701081048-057d66e894a4 // indirect
 	github.com/prometheus/client_golang v1.2.1 // indirect
@@ -60,17 +61,16 @@ require (
 	go.opencensus.io v0.22.2 // indirect
 	go.uber.org/atomic v1.5.1
 	go.uber.org/cadence v0.11.3-0.20200408211929-2e8992a5ef2d
-	go.uber.org/fx v1.9.0
 	go.uber.org/multierr v1.3.0
 	go.uber.org/net/metrics v1.2.0 // indirect
 	go.uber.org/thriftrw v1.20.2
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/tools v0.0.0-20200127195909-ed30b9180dd3
+	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.14.0
 	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
