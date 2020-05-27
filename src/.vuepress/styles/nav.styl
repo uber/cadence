@@ -25,10 +25,22 @@
       }
     }
 
+    .suggestions {
+      width: 280px;
+    }
 
     .suggestion {
       &.focused a,
       &:hover a {
+        // color: $uberBlue;
+        color: #2c3e50;
+      }
+
+      a {
+        color: #2c3e50;
+      }
+
+      .text--primary {
         color: $uberBlue;
       }
     }
@@ -55,6 +67,12 @@
       &.router-link-active {
         color: white;
         border-bottom: 2px solid $uberBlue;
+      }
+    }
+
+    .search-box {
+      .suggestions {
+        width: 600px;
       }
     }
   }

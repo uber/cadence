@@ -11,7 +11,7 @@ actionLink: /docs/java-client/quick-start/
     <h1>Easy to use</h1>
     <div class="grid">
       <div class="grid-col-4 text-align-center">
-        <img src="img/workflow-abc.svg" width="200px" />
+        <img src="img/arrow_divert_filled.svg" width="200px" />
       </div>
       <div class="grid-col-8">
         <p>Workflows provide primitives to allow application developers to express complex business logic as code.</p>
@@ -30,7 +30,7 @@ actionLink: /docs/java-client/quick-start/
         <p>Cadence preserves complete multithreaded application state including thread stacks with local variables across hardware and software failures.</p>
       </div>
       <div class="grid-col-4 text-align-center">
-        <img src="img/cogs.svg" width="200px" />
+        <img src="img/gears_outlined.svg" width="200px" />
       </div>
     </div>
   </div>
@@ -41,7 +41,7 @@ actionLink: /docs/java-client/quick-start/
     <h1>Scalable & Reliable</h1>
     <div class="grid">
       <div class="grid-col-4 text-align-center">
-        <img src="img/globe.svg" width="200px" />
+        <img src="img/chart_bar_ascending_filled.svg" width="200px" />
       </div>
       <div class="grid-col-8">
         <p>Cadence is designed to scale out horizontally to handle millions of concurrent workflows.</p>

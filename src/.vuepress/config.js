@@ -171,7 +171,6 @@ module.exports = {
           children: [
             '07-about/',
             '07-about/01-license',
-            '07-about/02-attributions',
           ],
         },
       ],
