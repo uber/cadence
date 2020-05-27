@@ -39,7 +39,6 @@ type (
 	timerQueueActiveProcessorImpl struct {
 		shard                   shard.Context
 		timerTaskFilter         task.Filter
-		redispatchTaskFilter    task.Filter
 		now                     timeNow
 		logger                  log.Logger
 		metricsClient           metrics.Client
@@ -73,13 +72,6 @@ func newTimerQueueActiveProcessor(
 		}
 		return taskAllocator.verifyActiveTask(timer.DomainID, timer)
 	}
-	redispatchTaskFilter := func(taskInfo task.Info) (bool, error) {
-		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
-		if !ok {
-			return false, errUnexpectedQueueTask
-		}
-		return taskAllocator.verifyPendingActiveTask(timer.DomainID, timer)
-	}
 
 	timerQueueAckMgr := newTimerQueueAckMgr(
 		metrics.TimerActiveQueueProcessorScope,
@@ -97,13 +89,12 @@ func newTimerQueueActiveProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	processor := &timerQueueActiveProcessorImpl{
-		shard:                shard,
-		timerTaskFilter:      timerTaskFilter,
-		redispatchTaskFilter: redispatchTaskFilter,
-		now:                  timeNow,
-		logger:               logger,
-		metricsClient:        historyService.metricsClient,
-		currentClusterName:   currentClusterName,
+		shard:              shard,
+		timerTaskFilter:    timerTaskFilter,
+		now:                timeNow,
+		logger:             logger,
+		metricsClient:      historyService.metricsClient,
+		currentClusterName: currentClusterName,
 	}
 	processor.taskExecutor = task.NewTimerActiveTaskExecutor(
 		shard,
@@ -197,13 +188,6 @@ func newTimerQueueFailoverProcessor(
 		}
 		return taskAllocator.verifyFailoverActiveTask(domainIDs, timer.DomainID, timer)
 	}
-	redispatchTaskFilter := func(taskInfo task.Info) (bool, error) {
-		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
-		if !ok {
-			return false, errUnexpectedQueueTask
-		}
-		return taskAllocator.verifyPendingActiveTask(timer.DomainID, timer)
-	}
 
 	timerQueueAckMgr := newTimerQueueFailoverAckMgr(
 		shard,
@@ -221,13 +205,12 @@ func newTimerQueueFailoverProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	processor := &timerQueueActiveProcessorImpl{
-		shard:                shard,
-		timerTaskFilter:      timerTaskFilter,
-		redispatchTaskFilter: redispatchTaskFilter,
-		now:                  timeNow,
-		logger:               logger,
-		metricsClient:        historyService.metricsClient,
-		currentClusterName:   currentClusterName,
+		shard:              shard,
+		timerTaskFilter:    timerTaskFilter,
+		now:                timeNow,
+		logger:             logger,
+		metricsClient:      historyService.metricsClient,
+		currentClusterName: currentClusterName,
 	}
 	processor.taskExecutor = task.NewTimerActiveTaskExecutor(
 		shard,
@@ -316,12 +299,5 @@ func (t *timerQueueActiveProcessorImpl) process(
 	// TODO: task metricScope should be determined when creating taskInfo
 	metricScope := getTimerTaskMetricScope(taskInfo.task.GetTaskType(), true)
 
-	redispatch, err := t.redispatchTaskFilter(taskInfo.task)
-	if err != nil {
-		return metricScope, err
-	}
-	if redispatch {
-		return metricScope, task.ErrTaskRetry
-	}
 	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }

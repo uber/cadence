@@ -44,13 +44,12 @@ type (
 		*queueProcessorBase
 		queueAckMgr
 
-		currentClusterName   string
-		shard                shard.Context
-		transferTaskFilter   task.Filter
-		redispatchTaskFilter task.Filter
-		logger               log.Logger
-		metricsClient        metrics.Client
-		taskExecutor         task.Executor
+		currentClusterName string
+		shard              shard.Context
+		transferTaskFilter task.Filter
+		logger             log.Logger
+		metricsClient      metrics.Client
+		taskExecutor       task.Executor
 	}
 )
 
@@ -90,13 +89,6 @@ func newTransferQueueActiveProcessor(
 		}
 		return taskAllocator.verifyActiveTask(task.DomainID, task)
 	}
-	redispatchTaskFilter := func(taskInfo task.Info) (bool, error) {
-		task, ok := taskInfo.(*persistence.TransferTaskInfo)
-		if !ok {
-			return false, errUnexpectedQueueTask
-		}
-		return taskAllocator.verifyPendingActiveTask(task.DomainID, task)
-	}
 
 	maxReadAckLevel := func() int64 {
 		return shard.GetTransferMaxReadLevel()
@@ -110,12 +102,11 @@ func newTransferQueueActiveProcessor(
 	}
 
 	processor := &transferQueueActiveProcessorImpl{
-		currentClusterName:   currentClusterName,
-		shard:                shard,
-		logger:               logger,
-		metricsClient:        historyService.metricsClient,
-		transferTaskFilter:   transferTaskFilter,
-		redispatchTaskFilter: redispatchTaskFilter,
+		currentClusterName: currentClusterName,
+		shard:              shard,
+		logger:             logger,
+		metricsClient:      historyService.metricsClient,
+		transferTaskFilter: transferTaskFilter,
 		taskExecutor: task.NewTransferActiveTaskExecutor(
 			shard,
 			historyService.archivalClient,
@@ -228,13 +219,6 @@ func newTransferQueueFailoverProcessor(
 		}
 		return taskAllocator.verifyFailoverActiveTask(domainIDs, task.DomainID, task)
 	}
-	redispatchTaskFilter := func(taskInfo task.Info) (bool, error) {
-		task, ok := taskInfo.(*persistence.TransferTaskInfo)
-		if !ok {
-			return false, errUnexpectedQueueTask
-		}
-		return taskAllocator.verifyPendingActiveTask(task.DomainID, task)
-	}
 
 	maxReadAckLevel := func() int64 {
 		return maxLevel // this is a const
@@ -257,12 +241,11 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	processor := &transferQueueActiveProcessorImpl{
-		currentClusterName:   currentClusterName,
-		shard:                shard,
-		logger:               logger,
-		metricsClient:        historyService.metricsClient,
-		transferTaskFilter:   transferTaskFilter,
-		redispatchTaskFilter: redispatchTaskFilter,
+		currentClusterName: currentClusterName,
+		shard:              shard,
+		logger:             logger,
+		metricsClient:      historyService.metricsClient,
+		transferTaskFilter: transferTaskFilter,
 		taskExecutor: task.NewTransferActiveTaskExecutor(
 			shard,
 			historyService.archivalClient,
@@ -349,12 +332,5 @@ func (t *transferQueueActiveProcessorImpl) process(
 	// TODO: task metricScope should be determined when creating taskInfo
 	metricScope := getTransferTaskMetricsScope(taskInfo.task.GetTaskType(), true)
 
-	redispatch, err := t.redispatchTaskFilter(taskInfo.task)
-	if err != nil {
-		return metricScope, err
-	}
-	if redispatch {
-		return metricScope, task.ErrTaskRetry
-	}
 	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }

@@ -28,12 +28,12 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/service/history/shard"
+	ctask "github.com/uber/cadence/service/history/task"
 )
 
 type (
 	taskAllocator interface {
 		verifyActiveTask(taskDomainID string, task interface{}) (bool, error)
-		verifyPendingActiveTask(taskDomainID string, task interface{}) (bool, error)
 		verifyFailoverActiveTask(targetDomainIDs map[string]struct{}, taskDomainID string, task interface{}) (bool, error)
 		verifyStandbyTask(standbyCluster string, taskDomainID string, task interface{}) (bool, error)
 		lock()
@@ -81,33 +81,15 @@ func (t *taskAllocatorImpl) verifyActiveTask(taskDomainID string, task interface
 		t.logger.Debug("Domain is not active, skip task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
 		return false, nil
 	}
+
+	if domainEntry.IsGlobalDomain() && domainEntry.GetFailoverEndTime() != nil {
+		// the domain is pending active, pause on processing this task
+		t.logger.Debug("Domain is not in pending active, skip task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
+		return false, ctask.ErrTaskRedispatch
+	}
+
 	t.logger.Debug("Domain is active, process task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
 	return true, nil
-}
-
-// verifyPendingActiveTask, will return true if task pending active check is successful
-func (t *taskAllocatorImpl) verifyPendingActiveTask(taskDomainID string, task interface{}) (bool, error) {
-	t.locker.RLock()
-	defer t.locker.RUnlock()
-
-	domainEntry, err := t.domainCache.GetDomainByID(taskDomainID)
-	if err != nil {
-		// it is possible that the domain is deleted
-		// we should treat that domain as not active
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
-			t.logger.Warn("Cannot find domain", tag.WorkflowDomainID(taskDomainID))
-			return false, err
-		}
-		t.logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
-		return false, nil
-	}
-	if domainEntry.IsGlobalDomain() && domainEntry.GetFailoverEndTime() != nil {
-		// timer task does not belong to cluster name
-		t.logger.Debug("Domain is not in pending active, skip task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
-		return true, nil
-	}
-	t.logger.Debug("Domain is pending active, process task.", tag.WorkflowDomainID(taskDomainID), tag.Value(task))
-	return false, nil
 }
 
 // verifyFailoverActiveTask, will return true if task activeness check is successful
