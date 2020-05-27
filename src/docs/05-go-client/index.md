@@ -14,7 +14,7 @@ Cadence requires determinism of the :workflow: code. It supports deterministic e
 
 For example, instead of native Go channels, :workflow: code must use the `workflow.Channel` interface. Instead of `select`, the `workflow.Selector` interface must be used.
 
-For more information, see [Creating Workflows](create-workflows/).
+For more information, see [Creating Workflows](02-create-workflows/).
 
 ## Links
 

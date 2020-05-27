@@ -15,7 +15,7 @@ Note that both types of :worker:workers: as well as external clients are roles a
 
 ## Cadence Service
 
-![Cadence Service](img/overview.png)
+![Cadence Service](/cadence/img/overview.png)
 
 At the core of Cadence is a highly scalable multitentant service. The service exposes all its functionality through a strongly typed [Thrift API](https://github.com/uber/cadence/blob/11448bb7729857022b9f382b356b61e8a9aa77f1/idl/github.com/uber/cadence/cadence.thrift#L33).
 
@@ -25,7 +25,7 @@ Cadence service is responsible for keeping :workflow: state and associated durab
 
 Cadence service is multitentant. Therefore it is expected that multiple pools of :worker:workers: implementing different use cases connect to the same service instance. For example, at Uber a single service is used by more than a hundred applications. At the same time some external customers deploy an instance of Cadence service per application. For local development, a local Cadence service instance configured through docker-compose is used.
 
-![Cadence Overview](img/cadence-overview.svg)
+![Cadence Overview](/cadence/img/cadence-overview.svg)
 
 ## Workflow Worker
 
