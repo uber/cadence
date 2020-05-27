@@ -113,10 +113,11 @@ func newTimerQueueStandbyProcessor(
 		return task.NewTimerTask(
 			shard,
 			taskInfo,
+			task.QueueTypeStandbyTimer,
 			historyService.metricsClient.Scope(
-				getTimerTaskMetricScope(taskInfo.GetTaskType(), false),
+				task.GetTimerTaskMetricScope(taskInfo.GetTaskType(), false),
 			),
-			initializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			timerTaskFilter,
 			processor.taskExecutor,
 			redispatchQueue,
@@ -204,6 +205,6 @@ func (t *timerQueueStandbyProcessorImpl) process(
 	taskInfo *taskInfo,
 ) (int, error) {
 	// TODO: task metricScope should be determined when creating taskInfo
-	metricScope := getTimerTaskMetricScope(taskInfo.task.GetTaskType(), false)
+	metricScope := task.GetTimerTaskMetricScope(taskInfo.task.GetTaskType(), false)
 	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }

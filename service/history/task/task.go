@@ -77,8 +77,9 @@ type (
 		taskExecutor  Executor
 		maxRetryCount dynamicconfig.IntPropertyFn
 
-		// TODO: following two fields should be removed after new task lifecycle is implemented
+		// TODO: following three fields should be removed after new task lifecycle is implemented
 		taskFilter        Filter
+		queueType         QueueType
 		shouldProcessTask bool
 	}
 
@@ -104,6 +105,7 @@ type (
 func NewTimerTask(
 	shard shard.Context,
 	taskInfo Info,
+	queueType QueueType,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter Filter,
@@ -117,6 +119,7 @@ func NewTimerTask(
 		taskBase: newQueueTaskBase(
 			shard,
 			taskInfo,
+			queueType,
 			scope,
 			logger,
 			taskFilter,
@@ -133,6 +136,7 @@ func NewTimerTask(
 func NewTransferTask(
 	shard shard.Context,
 	taskInfo Info,
+	queueType QueueType,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter Filter,
@@ -146,6 +150,7 @@ func NewTransferTask(
 		taskBase: newQueueTaskBase(
 			shard,
 			taskInfo,
+			queueType,
 			scope,
 			logger,
 			taskFilter,
@@ -161,6 +166,7 @@ func NewTransferTask(
 func newQueueTaskBase(
 	shard shard.Context,
 	queueTaskInfo Info,
+	queueType QueueType,
 	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter Filter,
@@ -172,6 +178,7 @@ func newQueueTaskBase(
 		Info:          queueTaskInfo,
 		shard:         shard,
 		state:         ctask.TaskStatePending,
+		queueType:     queueType,
 		scope:         scope,
 		logger:        logger,
 		attempt:       0,
@@ -201,10 +208,6 @@ func (t *timerTask) Nack() {
 	t.redispatchQueue.Add(t)
 }
 
-func (t *timerTask) GetQueueType() QueueType {
-	return QueueTypeTimer
-}
-
 func (t *transferTask) Ack() {
 	t.taskBase.Ack()
 
@@ -217,10 +220,6 @@ func (t *transferTask) Nack() {
 	// don't move redispatchQueue to taskBase as we need to
 	// redispatch transferTask, not taskBase
 	t.redispatchQueue.Add(t)
-}
-
-func (t *transferTask) GetQueueType() QueueType {
-	return QueueTypeTransfer
 }
 
 func (t *taskBase) Execute() error {
@@ -366,4 +365,8 @@ func (t *taskBase) GetAttempt() int {
 	defer t.Unlock()
 
 	return t.attempt
+}
+
+func (t *taskBase) GetQueueType() QueueType {
+	return t.queueType
 }
