@@ -145,7 +145,6 @@ func (p *failoverProcessorImpl) handleFailoverTimeout(
 	if failoverEndTime != nil && p.timeSource.Now().After(time.Unix(0, *failoverEndTime)) {
 		domainName := domain.GetInfo().Name
 		// force failover the domain without setting the failover timeout
-		//TODO: update domain handler to do CAS domain update
 		if err := p.cleanPendingActiveDomain(
 			domainName,
 			domain.GetFailoverVersion(),
