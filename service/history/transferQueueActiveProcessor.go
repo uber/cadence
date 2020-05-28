@@ -90,6 +90,7 @@ func newTransferQueueActiveProcessor(
 		}
 		return taskAllocator.VerifyActiveTask(task.DomainID, task)
 	}
+
 	maxReadAckLevel := func() int64 {
 		return shard.GetTransferMaxReadLevel()
 	}
@@ -220,6 +221,7 @@ func newTransferQueueFailoverProcessor(
 		}
 		return taskAllocator.VerifyFailoverActiveTask(domainIDs, task.DomainID, task)
 	}
+
 	maxReadAckLevel := func() int64 {
 		return maxLevel // this is a const
 	}
