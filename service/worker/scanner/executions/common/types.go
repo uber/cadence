@@ -42,6 +42,10 @@ type (
 	FixResultType string
 	// InvariantType is the type of an invariant
 	InvariantType string
+	// InvariantCollection is a type which indicates a sorted collection of invariants
+	InvariantCollection int
+	// Extension is the type which indicates the file extension type
+	Extension string
 )
 
 const (
@@ -63,8 +67,22 @@ const (
 	HistoryExistsInvariantType InvariantType = "history_exists"
 	// ValidFirstEventInvariantType asserts that the first event in a history must be of a specific form
 	ValidFirstEventInvariantType = "valid_first_event"
-	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
-	OpenCurrentExecution = "open_current_execution"
+	// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
+	OpenCurrentExecutionInvariantType = "open_current_execution"
+
+	// InvariantCollectionMutableState is the collection of invariants relating to mutable state
+	InvariantCollectionMutableState InvariantCollection = iota
+	// InvariantCollectionHistory is the collection  of invariants relating to history
+	InvariantCollectionHistory
+
+	// SkippedExtension is the extension for files which contain skips
+	SkippedExtension Extension = "skipped"
+	// FailedExtension is the extension for files which contain failures
+	FailedExtension = "failed"
+	// FixedExtension is the extension for files which contain fixes
+	FixedExtension = "fixed"
+	// CorruptedExtension is the extension for files which contain corruptions
+	CorruptedExtension = "corrupted"
 )
 
 // The following are types related to Invariant.
@@ -89,6 +107,7 @@ type (
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
+		InvariantType   InvariantType
 		Info            string
 		InfoDetails     string
 	}
@@ -96,8 +115,22 @@ type (
 	// FixResult is the result of running Fix.
 	FixResult struct {
 		FixResultType FixResultType
+		InvariantType InvariantType
+		CheckResult   CheckResult
 		Info          string
 		InfoDetails   string
+	}
+
+	// ManagerCheckResult is the result of running a sorted list of checks
+	ManagerCheckResult struct {
+		CheckResultType CheckResultType
+		CheckResults    []CheckResult
+	}
+
+	// ManagerFixResult is the result of running a sorted list of fixes
+	ManagerFixResult struct {
+		FixResultType FixResultType
+		FixResults    []FixResult
 	}
 )
 
@@ -127,20 +160,21 @@ type (
 	}
 
 	// ShardScanKeys are the keys to the blobs that were uploaded during scan.
+	// Keys can be nil if there were no uploads.
 	ShardScanKeys struct {
-		Corrupt Keys
-		Failed  Keys
+		Corrupt *Keys
+		Failed  *Keys
 	}
 
 	// ShardFixReport is the report of running Fix on a single shard
 	ShardFixReport struct {
 		ShardID int
-		Handled ShardFixHandled
+		Stats   ShardFixStats
 		Result  ShardFixResult
 	}
 
-	// ShardFixHandled indicates the executions which were handled by fix.
-	ShardFixHandled struct {
+	// ShardFixStats indicates the stats of executions that were handled by shard Fix.
+	ShardFixStats struct {
 		ExecutionCount int64
 		FixedCount     int64
 		SkippedCount   int64
@@ -155,10 +189,11 @@ type (
 	}
 
 	// ShardFixKeys are the keys to the blobs that were uploaded during fix.
+	// Keys can be nil if there were no uploads.
 	ShardFixKeys struct {
-		Skipped Keys
-		Failed  Keys
-		Fixed   Keys
+		Skipped *Keys
+		Failed  *Keys
+		Fixed   *Keys
 	}
 
 	// ControlFlowFailure indicates an error occurred which makes it impossible to
@@ -186,13 +221,14 @@ type (
 	// ScanOutputEntity represents a single execution that should be durably recorded by Scan.
 	ScanOutputEntity struct {
 		Execution Execution
-		Result    CheckResult
+		Result    ManagerCheckResult
 	}
 
 	// FixOutputEntity represents a single execution that should be durably recorded by fix.
 	// It contains the ScanOutputEntity that was given as input to fix.
 	FixOutputEntity struct {
-		ScanOutputEntity ScanOutputEntity
-		Result           FixResult
+		Execution Execution
+		Input     ScanOutputEntity
+		Result    ManagerFixResult
 	}
 )

@@ -165,10 +165,9 @@ func NewDomainCache(
 }
 
 func newDomainCache() Cache {
-	opts := &Options{}
-	opts.InitialCapacity = domainCacheInitialSize
-	opts.TTL = domainCacheTTL
-	return New(domainCacheMaxSize, opts)
+	return NewSimple(&SimpleOptions{
+		InitialCapacity: domainCacheInitialSize,
+	})
 }
 
 func newDomainCacheEntry(
@@ -772,6 +771,11 @@ func (entry *DomainCacheEntry) GetFailoverNotificationVersion() int64 {
 // GetNotificationVersion return the global notification version of when domain changed
 func (entry *DomainCacheEntry) GetNotificationVersion() int64 {
 	return entry.notificationVersion
+}
+
+// GetFailoverEndTime return the failover end time
+func (entry *DomainCacheEntry) GetFailoverEndTime() *int64 {
+	return entry.failoverEndTime
 }
 
 // IsDomainActive return whether the domain is active, i.e. non global domain or global domain which active cluster is the current cluster
