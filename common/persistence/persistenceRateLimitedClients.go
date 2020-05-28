@@ -366,12 +366,12 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeDeleteReplicationTa
 	return p.persistence.RangeDeleteReplicationTaskFromDLQ(request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) CreateFailoverMarkerTask(request *CreateFailoverMarkerRequest) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CreateFailoverMarkerTasks(request)
+	err := p.persistence.CreateFailoverMarkerTask(request)
 	return err
 }
 

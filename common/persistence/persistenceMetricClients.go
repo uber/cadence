@@ -492,15 +492,15 @@ func (p *workflowExecutionPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
 	return nil
 }
 
-func (p *workflowExecutionPersistenceClient) CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error {
-	p.metricClient.IncCounter(metrics.PersistenceCreateFailoverMakerTasksScope, metrics.PersistenceRequests)
+func (p *workflowExecutionPersistenceClient) CreateFailoverMarkerTask(request *CreateFailoverMarkerRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceCreateFailoverMakerTaskScope, metrics.PersistenceRequests)
 
-	sw := p.metricClient.StartTimer(metrics.PersistenceCreateFailoverMakerTasksScope, metrics.PersistenceLatency)
-	err := p.persistence.CreateFailoverMarkerTasks(request)
+	sw := p.metricClient.StartTimer(metrics.PersistenceCreateFailoverMakerTaskScope, metrics.PersistenceLatency)
+	err := p.persistence.CreateFailoverMarkerTask(request)
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceCreateFailoverMakerTasksScope, metrics.PersistenceFailures)
+		p.metricClient.IncCounter(metrics.PersistenceCreateFailoverMakerTaskScope, metrics.PersistenceFailures)
 	}
 
 	return err

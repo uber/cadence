@@ -381,6 +381,28 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 		}
 	}
 
+	failoverMarkerInsertion := func(
+		shardNotificationVersion int64,
+		prevDomain *cache.DomainCacheEntry,
+		nextDomain *cache.DomainCacheEntry,
+	) error {
+
+		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
+		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
+
+		if prevDomain != nil {
+			previousActiveCluster := prevDomain.GetReplicationConfig().ActiveClusterName
+			if prevDomain.IsGlobalDomain() &&
+				nextDomain.IsGlobalDomain() &&
+				domainFailoverNotificationVersion >= shardNotificationVersion &&
+				previousActiveCluster != domainActiveCluster &&
+				previousActiveCluster == e.currentClusterName {
+				return e.shard.InsertFailoverMarker(nextDomain.GetInfo().ID, nextDomain.GetFailoverVersion())
+			}
+		}
+		return nil
+	}
+
 	// first set the failover callback
 	e.shard.GetDomainCache().RegisterDomainChangeCallback(
 		e.shard.GetShardID(),
@@ -402,10 +424,24 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			shardNotificationVersion := e.shard.GetDomainNotificationVersion()
 			failoverDomainIDs := map[string]struct{}{}
 
-			for _, nextDomain := range nextDomains {
+			for idx, nextDomain := range nextDomains {
 				failoverPredicate(shardNotificationVersion, nextDomain, func() {
 					failoverDomainIDs[nextDomain.GetInfo().ID] = struct{}{}
 				})
+
+				// handle graceful failover on active to passive
+				if err := failoverMarkerInsertion(
+					shardNotificationVersion,
+					prevDomains[idx],
+					nextDomain,
+				); err != nil {
+					e.logger.Error("Failed to insert failover marker to replication queue.",
+						tag.Error(err),
+						tag.WorkflowDomainName(nextDomain.GetInfo().Name))
+					e.metricsClient.IncCounter(metrics.HistoryFailoverMarkerScope, metrics.HistroyFailoverMarkerInsertFailure)
+					// fail this failover callback and it retries on next domain cache refresh
+					return
+				}
 			}
 
 			if len(failoverDomainIDs) > 0 {

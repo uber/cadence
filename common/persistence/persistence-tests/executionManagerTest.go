@@ -5280,18 +5280,16 @@ func (s *ExecutionManagerSuite) TestReplicationDLQ() {
 	s.Len(resp.Tasks, 0)
 }
 
-// TestCreateFailoverMarkerTasks test
-func (s *ExecutionManagerSuite) TestCreateFailoverMarkerTasks() {
+// TestCreateFailoverMarkerTask test
+func (s *ExecutionManagerSuite) TestCreateFailoverMarkerTask() {
 	domainID := uuid.New()
-	markers := []*p.FailoverMarkerTask{
-		{
-			TaskID:              1,
-			VisibilityTimestamp: time.Now(),
-			DomainID:            domainID,
-			Version:             1,
-		},
+	marker := &p.FailoverMarkerTask{
+		TaskID:              1,
+		VisibilityTimestamp: time.Now(),
+		DomainID:            domainID,
+		Version:             1,
 	}
-	err := s.CreateFailoverMarkers(markers)
+	err := s.CreateFailoverMarker(marker)
 	s.NoError(err)
 
 	tasks, err := s.GetReplicationTasks(1, true)
