@@ -240,10 +240,6 @@ func (s *transferQueueProcessorBaseSuite) TestSplitQueue() {
 func (s *transferQueueProcessorBaseSuite) TestReadTasks_PartialRead_NoNextPage() {
 	readLevel := newTransferTaskKey(3)
 	maxReadLevel := newTransferTaskKey(100)
-	shardMaxReadLevel := newTransferTaskKey(10)
-	shardMaxReadLevelFn := func() task.Key {
-		return shardMaxReadLevel
-	}
 
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	getTransferTaskResponse := &persistence.GetTransferTasksResponse{
@@ -252,32 +248,27 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_PartialRead_NoNextPage()
 	}
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
 		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: shardMaxReadLevel.(*transferTaskKey).taskID,
+		MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
 	processorBase := s.newTestTransferQueueProcessBase(
 		nil,
-		shardMaxReadLevelFn,
+		nil,
 		nil,
 		nil,
 		nil,
 	)
 
-	tasks, more, partialRead, err := processorBase.readTasks(readLevel, maxReadLevel)
+	tasks, more, err := processorBase.readTasks(readLevel, maxReadLevel)
 	s.NoError(err)
 	s.Len(tasks, len(getTransferTaskResponse.Tasks))
 	s.False(more)
-	s.True(partialRead)
 }
 
 func (s *transferQueueProcessorBaseSuite) TestReadTasks_FullRead_WithNextPage() {
 	readLevel := newTransferTaskKey(3)
 	maxReadLevel := newTransferTaskKey(10)
-	shardMaxReadLevel := newTransferTaskKey(100)
-	shardMaxReadLevelFn := func() task.Key {
-		return shardMaxReadLevel
-	}
 
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	getTransferTaskResponse := &persistence.GetTransferTasksResponse{
@@ -292,17 +283,16 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_FullRead_WithNextPage() 
 
 	processorBase := s.newTestTransferQueueProcessBase(
 		nil,
-		shardMaxReadLevelFn,
+		nil,
 		nil,
 		nil,
 		nil,
 	)
 
-	tasks, more, partialRead, err := processorBase.readTasks(readLevel, maxReadLevel)
+	tasks, more, err := processorBase.readTasks(readLevel, maxReadLevel)
 	s.NoError(err)
 	s.Len(tasks, len(getTransferTaskResponse.Tasks))
 	s.True(more)
-	s.False(partialRead)
 }
 
 func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_ProcessorShutDown() {
@@ -359,6 +349,8 @@ func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_Random() {
 
 	s.Equal(numTasks-dispatched, s.redispatchQueue.Len())
 }
+
+// TODO: add test for processBatch()
 
 func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessBase(
 	processingQueueStates []ProcessingQueueState,

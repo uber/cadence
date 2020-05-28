@@ -235,7 +235,7 @@ func (q *processingQueueImpl) Merge(
 
 func (q *processingQueueImpl) AddTasks(
 	tasks map[task.Key]task.Task,
-	more bool,
+	newReadLevel task.Key,
 ) {
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
@@ -253,14 +253,9 @@ func (q *processingQueueImpl) AddTasks(
 		}
 
 		q.outstandingTasks[key] = task
-		if q.state.readLevel.Less(key) {
-			q.state.readLevel = key
-		}
 	}
 
-	if !more {
-		q.state.readLevel = q.state.maxLevel
-	}
+	q.state.readLevel = newReadLevel
 }
 
 func (q *processingQueueImpl) UpdateAckLevel() {
@@ -282,8 +277,8 @@ func (q *processingQueueImpl) UpdateAckLevel() {
 		delete(q.outstandingTasks, key)
 	}
 
-	if len(q.outstandingTasks) == 0 && q.state.readLevel == q.state.maxLevel {
-		q.state.ackLevel = q.state.maxLevel
+	if len(q.outstandingTasks) == 0 {
+		q.state.ackLevel = q.state.readLevel
 	}
 }
 

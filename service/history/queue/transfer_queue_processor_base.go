@@ -42,6 +42,8 @@ import (
 
 var (
 	loadQueueTaskThrottleRetryDelay = 5 * time.Second
+
+	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
 )
 
 type (
@@ -292,10 +294,15 @@ func (t *transferQueueProcessorBase) processBatch() {
 		if activeQueue == nil {
 			continue
 		}
-		transferTaskInfos, more, partialRead, err := t.readTasks(
-			activeQueue.State().ReadLevel(),
-			activeQueue.State().MaxLevel(),
-		)
+
+		readLevel := activeQueue.State().ReadLevel()
+		maxReadLevel := activeQueue.State().MaxLevel()
+		shardMaxReadLevel := t.maxReadLevel()
+		if shardMaxReadLevel.Less(maxReadLevel) {
+			maxReadLevel = shardMaxReadLevel
+		}
+
+		transferTaskInfos, more, err := t.readTasks(readLevel, maxReadLevel)
 		if err != nil {
 			t.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
 			t.notifyNewTask() // re-enqueue the event
@@ -322,7 +329,13 @@ func (t *transferQueueProcessorBase) processBatch() {
 			}
 		}
 
-		queueCollection.AddTasks(tasks, more || partialRead)
+		var newReadLevel task.Key
+		if !more {
+			newReadLevel = maxReadLevel
+		} else {
+			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
+		}
+		queueCollection.AddTasks(tasks, newReadLevel)
 
 		if more {
 			t.notifyNewTask()
@@ -400,25 +413,25 @@ func (t *transferQueueProcessorBase) splitQueue() {
 func (t *transferQueueProcessorBase) readTasks(
 	readLevel task.Key,
 	maxReadLevel task.Key,
-) ([]*persistence.TransferTaskInfo, bool, bool, error) {
-	shardMaxReadLevel := t.maxReadLevel()
-	partialRead := false
-	if shardMaxReadLevel.Less(maxReadLevel) {
-		partialRead = true
-		maxReadLevel = shardMaxReadLevel
+) ([]*persistence.TransferTaskInfo, bool, error) {
+
+	var response *persistence.GetTransferTasksResponse
+	op := func() error {
+		var err error
+		response, err = t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
+			ReadLevel:    readLevel.(*transferTaskKey).taskID,
+			MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
+			BatchSize:    t.options.BatchSize(),
+		})
+		return err
 	}
 
-	response, err := t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
-		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
-		BatchSize:    t.options.BatchSize(),
-	})
-
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
-		return nil, false, false, err
+		return nil, false, err
 	}
 
-	return response.Tasks, len(response.NextPageToken) != 0, partialRead, nil
+	return response.Tasks, len(response.NextPageToken) != 0, nil
 }
 
 func (t *transferQueueProcessorBase) submitTask(

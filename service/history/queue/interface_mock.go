@@ -195,7 +195,7 @@ func (mr *MockProcessingQueueMockRecorder) Merge(arg0 interface{}) *gomock.Call 
 }
 
 // AddTasks mocks base method
-func (m *MockProcessingQueue) AddTasks(arg0 map[task.Key]task.Task, arg1 bool) {
+func (m *MockProcessingQueue) AddTasks(arg0 map[task.Key]task.Task, arg1 task.Key) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddTasks", arg0, arg1)
 }
@@ -306,6 +306,44 @@ func (mr *MockProcessingQueueCollectionMockRecorder) Queues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Queues", reflect.TypeOf((*MockProcessingQueueCollection)(nil).Queues))
 }
 
+// ActiveQueue mocks base method
+func (m *MockProcessingQueueCollection) ActiveQueue() ProcessingQueue {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ActiveQueue")
+	ret0, _ := ret[0].(ProcessingQueue)
+	return ret0
+}
+
+// ActiveQueue indicates an expected call of ActiveQueue
+func (mr *MockProcessingQueueCollectionMockRecorder) ActiveQueue() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveQueue", reflect.TypeOf((*MockProcessingQueueCollection)(nil).ActiveQueue))
+}
+
+// AddTasks mocks base method
+func (m *MockProcessingQueueCollection) AddTasks(arg0 map[task.Key]task.Task, arg1 task.Key) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddTasks", arg0, arg1)
+}
+
+// AddTasks indicates an expected call of AddTasks
+func (mr *MockProcessingQueueCollectionMockRecorder) AddTasks(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).AddTasks), arg0, arg1)
+}
+
+// UpdateAckLevels mocks base method
+func (m *MockProcessingQueueCollection) UpdateAckLevels() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateAckLevels")
+}
+
+// UpdateAckLevels indicates an expected call of UpdateAckLevels
+func (mr *MockProcessingQueueCollectionMockRecorder) UpdateAckLevels() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAckLevels", reflect.TypeOf((*MockProcessingQueueCollection)(nil).UpdateAckLevels))
+}
+
 // Split mocks base method
 func (m *MockProcessingQueueCollection) Split(arg0 ProcessingQueueSplitPolicy) []ProcessingQueue {
 	m.ctrl.T.Helper()
@@ -330,32 +368,6 @@ func (m *MockProcessingQueueCollection) Merge(arg0 []ProcessingQueue) {
 func (mr *MockProcessingQueueCollectionMockRecorder) Merge(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Merge", reflect.TypeOf((*MockProcessingQueueCollection)(nil).Merge), arg0)
-}
-
-// AddTasks mocks base method
-func (m *MockProcessingQueueCollection) AddTasks(arg0 map[task.Key]task.Task, arg1 bool) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddTasks", arg0, arg1)
-}
-
-// AddTasks indicates an expected call of AddTasks
-func (mr *MockProcessingQueueCollectionMockRecorder) AddTasks(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).AddTasks), arg0, arg1)
-}
-
-// ActiveQueue mocks base method
-func (m *MockProcessingQueueCollection) ActiveQueue() ProcessingQueue {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ActiveQueue")
-	ret0, _ := ret[0].(ProcessingQueue)
-	return ret0
-}
-
-// ActiveQueue indicates an expected call of ActiveQueue
-func (mr *MockProcessingQueueCollectionMockRecorder) ActiveQueue() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveQueue", reflect.TypeOf((*MockProcessingQueueCollection)(nil).ActiveQueue))
 }
 
 // MockProcessingQueueManager is a mock of ProcessingQueueManager interface
