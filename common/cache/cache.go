@@ -66,6 +66,14 @@ type Options struct {
 	// RemovedFunc is an optional function called when an element
 	// is scheduled for deletion
 	RemovedFunc RemovedFunc
+
+	// GetCacheItemSizeInBytesFunc is an optional function called upon adding the item to update the cache size.
+	// It returns 0 by default, assuming the cache is just count based
+	GetCacheItemSizeInBytesFunc GetCacheItemSizeInBytesFunc
+
+	// MaxSizeInBytes is an optional and must be set along with GetCacheItemSizeInBytesFunc
+	// to control the max capacity(in bytes) of the cache
+	MaxSizeInBytes uint64
 }
 
 // RemovedFunc is a type for notifying applications when an item is
@@ -94,3 +102,6 @@ type Entry interface {
 	// CreateTime represents the time when the entry is created
 	CreateTime() time.Time
 }
+
+// GetCacheItemSizeInBytesFunc returns the cache item size in bytes
+type GetCacheItemSizeInBytesFunc func(interface{}) uint32

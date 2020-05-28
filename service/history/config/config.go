@@ -61,6 +61,7 @@ type Config struct {
 	// Change of these configs require shard restart
 	EventsCacheInitialSize       dynamicconfig.IntPropertyFn
 	EventsCacheMaxSize           dynamicconfig.IntPropertyFn
+	EventsCacheMaxSizeInKb       dynamicconfig.IntPropertyFn
 	EventsCacheTTL               dynamicconfig.DurationPropertyFn
 	EventsCacheGlobalEnable      dynamicconfig.BoolPropertyFn
 	EventsCacheGlobalInitialSize dynamicconfig.IntPropertyFn
@@ -262,6 +263,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		HistoryCacheTTL:                      dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
 		EventsCacheInitialSize:               dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 128),
 		EventsCacheMaxSize:                   dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 512),
+		EventsCacheMaxSizeInKb:               dc.GetIntProperty(dynamicconfig.EventsCacheMaxSizeInBytes, 0),
 		EventsCacheTTL:                       dc.GetDurationProperty(dynamicconfig.EventsCacheTTL, time.Hour),
 		EventsCacheGlobalEnable:              dc.GetBoolProperty(dynamicconfig.EventsCacheGlobalEnable, false),
 		EventsCacheGlobalInitialSize:         dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 4096),

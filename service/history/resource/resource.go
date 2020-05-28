@@ -72,6 +72,7 @@ func New(
 			serviceResource.GetHistoryManager(),
 			params.Logger,
 			params.MetricsClient,
+			uint(config.EventsCacheMaxSizeInKb()),
 		),
 	}
 	return impl, nil

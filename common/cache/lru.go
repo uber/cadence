@@ -35,13 +35,18 @@ var (
 // lru is a concurrent fixed size cache that evicts elements in lru order
 type (
 	lru struct {
-		mut      sync.Mutex
-		byAccess *list.List
-		byKey    map[interface{}]*list.Element
-		maxSize  int
-		ttl      time.Duration
-		pin      bool
-		rmFunc   RemovedFunc
+		mut              sync.Mutex
+		byAccess         *list.List
+		byKey            map[interface{}]*list.Element
+		maxSize          int
+		ttl              time.Duration
+		pin              bool
+		rmFunc           RemovedFunc
+		sizeFunc         GetCacheItemSizeInBytesFunc
+		maxSizeInBytes   uint64
+		currSizeInBytes  uint64
+		sizeByKey        map[interface{}]uint32
+		checkSizeInBytes bool
 	}
 
 	iteratorImpl struct {
@@ -131,7 +136,7 @@ func New(maxSize int, opts *Options) Cache {
 		opts = &Options{}
 	}
 
-	return &lru{
+	cache := &lru{
 		byAccess: list.New(),
 		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
 		ttl:      opts.TTL,
@@ -139,6 +144,20 @@ func New(maxSize int, opts *Options) Cache {
 		pin:      opts.Pin,
 		rmFunc:   opts.RemovedFunc,
 	}
+
+	cache.checkSizeInBytes = opts.GetCacheItemSizeInBytesFunc != nil && opts.MaxSizeInBytes > 0
+
+	if cache.checkSizeInBytes {
+		cache.sizeFunc = opts.GetCacheItemSizeInBytesFunc
+		cache.maxSizeInBytes = opts.MaxSizeInBytes
+		cache.sizeByKey = make(map[interface{}]uint32, opts.InitialCapacity)
+	} else {
+		// consider cache is just count based
+		cache.sizeFunc = func(interface{}) uint32 {
+			return 0
+		}
+	}
+	return cache
 }
 
 // NewLRU creates a new LRU cache of the given size, setting initial capacity
@@ -239,6 +258,7 @@ func (c *lru) Size() int {
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
+	valueSizeInBytes := c.sizeFunc(value)
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -279,7 +299,8 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
-	if len(c.byKey) == c.maxSize {
+	c.updateSizeInBytesOnAdd(key, valueSizeInBytes)
+	for len(c.byKey) == c.maxSize || !c.checkSizeBytes() {
 		oldest := c.byAccess.Back().Value.(*entryImpl)
 
 		if oldest.refCount > 0 {
@@ -301,8 +322,28 @@ func (c *lru) deleteInternal(element *list.Element) {
 		go c.rmFunc(entry.value)
 	}
 	delete(c.byKey, entry.key)
+	c.updateSizeInBytesOnDelete(entry.key)
 }
 
 func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
 	return entry.refCount == 0 && !entry.createTime.IsZero() && currentTime.After(entry.createTime.Add(c.ttl))
+}
+
+func (c *lru) checkSizeBytes() bool {
+	return !c.checkSizeInBytes || c.currSizeInBytes <= c.maxSizeInBytes
+}
+
+func (c *lru) updateSizeInBytesOnAdd(key interface{}, valueSizeInBytes uint32) {
+	if c.checkSizeInBytes {
+		c.sizeByKey[key] = valueSizeInBytes
+		// the int overflow should not happen here
+		c.currSizeInBytes += uint64(valueSizeInBytes)
+	}
+}
+
+func (c *lru) updateSizeInBytesOnDelete(key interface{}) {
+	if c.checkSizeInBytes {
+		c.currSizeInBytes -= uint64(c.sizeByKey[key])
+		delete(c.sizeByKey, key)
+	}
 }

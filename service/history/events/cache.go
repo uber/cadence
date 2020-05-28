@@ -93,8 +93,10 @@ func NewGlobalCache(
 	historyManager persistence.HistoryManager,
 	logger log.Logger,
 	metricsClient metrics.Client,
+	maxSizeInKb uint,
 ) Cache {
 	return newCacheWithOption(
+		nil,
 		initialSize,
 		maxSize,
 		ttl,
@@ -102,7 +104,7 @@ func NewGlobalCache(
 		false,
 		logger,
 		metricsClient,
-		nil,
+		uint64(maxSizeInKb*1024),
 	)
 }
 
@@ -115,6 +117,7 @@ func NewCache(
 	metricsClient metrics.Client,
 ) Cache {
 	return newCacheWithOption(
+		&shardID,
 		config.EventsCacheInitialSize(),
 		config.EventsCacheMaxSize(),
 		config.EventsCacheTTL(),
@@ -122,11 +125,12 @@ func NewCache(
 		false,
 		logger,
 		metricsClient,
-		&shardID,
+		0,
 	)
 }
 
 func newCacheWithOption(
+	shardID *int,
 	initialSize int,
 	maxSize int,
 	ttl time.Duration,
@@ -134,11 +138,18 @@ func newCacheWithOption(
 	disabled bool,
 	logger log.Logger,
 	metrics metrics.Client,
-	shardID *int,
+	maxSizeInBytes uint64,
 ) *cacheImpl {
 	opts := &cache.Options{}
 	opts.InitialCapacity = initialSize
 	opts.TTL = ttl
+
+	if maxSizeInBytes > 0 {
+		opts.MaxSizeInBytes = maxSizeInBytes
+		opts.GetCacheItemSizeInBytesFunc = func(event interface{}) uint32 {
+			return common.GetSizeOfHistoryEvent(event.(*shared.HistoryEvent))
+		}
+	}
 
 	return &cacheImpl{
 		Cache:          cache.New(maxSize, opts),

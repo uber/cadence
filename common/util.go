@@ -35,6 +35,7 @@ import (
 
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
+	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -522,6 +523,77 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 		res += len(k) + len(v)
 	}
 	return res + golandMapReserverNumberOfBytes
+}
+
+// GetSizeOfMapStringToByteArray get size of map[string][]byte
+func GetSizeOfHistoryEvent(event *shared.HistoryEvent) uint32 {
+	if event == nil {
+		return 0
+	}
+
+	res := 0
+	switch *event.EventType {
+	case shared.EventTypeWorkflowExecutionStarted:
+		if event.WorkflowExecutionStartedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionStartedEventAttributes.Input)
+		res += len(event.WorkflowExecutionStartedEventAttributes.ContinuedFailureDetails)
+		res += len(event.WorkflowExecutionStartedEventAttributes.LastCompletionResult)
+		if event.WorkflowExecutionStartedEventAttributes.Memo != nil {
+			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionStartedEventAttributes.Memo.Fields)
+		}
+		if event.WorkflowExecutionStartedEventAttributes.Header != nil {
+			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionStartedEventAttributes.Header.Fields)
+		}
+	case shared.EventTypeWorkflowExecutionCompleted:
+		if event.WorkflowExecutionCompletedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionCompletedEventAttributes.Result)
+	case shared.EventTypeWorkflowExecutionFailed:
+	case shared.EventTypeWorkflowExecutionTimedOut:
+	case shared.EventTypeDecisionTaskScheduled:
+	case shared.EventTypeDecisionTaskStarted:
+	case shared.EventTypeDecisionTaskCompleted:
+	case shared.EventTypeDecisionTaskTimedOut:
+	case shared.EventTypeDecisionTaskFailed:
+	case shared.EventTypeActivityTaskScheduled:
+	case shared.EventTypeActivityTaskStarted:
+	case shared.EventTypeActivityTaskCompleted:
+	case shared.EventTypeActivityTaskFailed:
+	case shared.EventTypeActivityTaskTimedOut:
+	case shared.EventTypeActivityTaskCancelRequested:
+	case shared.EventTypeRequestCancelActivityTaskFailed:
+	case shared.EventTypeActivityTaskCanceled:
+	case shared.EventTypeTimerStarted:
+	case shared.EventTypeTimerFired:
+	case shared.EventTypeCancelTimerFailed:
+	case shared.EventTypeTimerCanceled:
+	case shared.EventTypeWorkflowExecutionCancelRequested:
+	case shared.EventTypeWorkflowExecutionCanceled:
+	case shared.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
+	case shared.EventTypeRequestCancelExternalWorkflowExecutionFailed:
+	case shared.EventTypeExternalWorkflowExecutionCancelRequested:
+	case shared.EventTypeMarkerRecorded:
+	case shared.EventTypeWorkflowExecutionSignaled:
+	case shared.EventTypeWorkflowExecutionTerminated:
+	case shared.EventTypeWorkflowExecutionContinuedAsNew:
+	case shared.EventTypeStartChildWorkflowExecutionInitiated:
+	case shared.EventTypeStartChildWorkflowExecutionFailed:
+	case shared.EventTypeChildWorkflowExecutionStarted:
+	case shared.EventTypeChildWorkflowExecutionCompleted:
+	case shared.EventTypeChildWorkflowExecutionFailed:
+	case shared.EventTypeChildWorkflowExecutionCanceled:
+	case shared.EventTypeChildWorkflowExecutionTimedOut:
+	case shared.EventTypeChildWorkflowExecutionTerminated:
+	case shared.EventTypeSignalExternalWorkflowExecutionInitiated:
+	case shared.EventTypeSignalExternalWorkflowExecutionFailed:
+	case shared.EventTypeExternalWorkflowExecutionSignaled:
+	case shared.EventTypeUpsertWorkflowSearchAttributes:
+	}
+
+	return uint32(res)
 }
 
 // IsJustOrderByClause return true is query start with order by
