@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -43,7 +44,7 @@ type (
 		timerTaskFilter         task.Filter
 		logger                  log.Logger
 		metricsClient           metrics.Client
-		timerGate               RemoteTimerGate
+		timerGate               queue.RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		taskExecutor            task.Executor
 	}
@@ -75,7 +76,7 @@ func newTimerQueueStandbyProcessor(
 		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
-	timerGate := NewRemoteTimerGate()
+	timerGate := queue.NewRemoteTimerGate()
 	timerGate.SetCurrentTime(shard.GetCurrentTime(clusterName))
 	timerQueueAckMgr := newTimerQueueAckMgr(
 		metrics.TimerStandbyQueueProcessorScope,

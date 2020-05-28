@@ -21,8 +21,6 @@
 package queue
 
 import (
-	"errors"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -165,78 +163,6 @@ func (s *transferQueueProcessorBaseSuite) TestUpdateAckLevel_ProcessNotFinished(
 	s.Equal(int64(2), updateAckLevel)
 }
 
-func (s *transferQueueProcessorBaseSuite) TestSplitQueue() {
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			0,
-			newTransferTaskKey(0),
-			newTransferTaskKey(100),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, true),
-		),
-		NewProcessingQueueState(
-			1,
-			newTransferTaskKey(0),
-			newTransferTaskKey(100),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
-		),
-		NewProcessingQueueState(
-			0,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{}, true),
-		),
-	}
-	s.mockQueueSplitPolicy.EXPECT().Evaluate(NewProcessingQueue(processingQueueStates[0], s.logger, s.metricsClient)).Return(nil).Times(1)
-	s.mockQueueSplitPolicy.EXPECT().Evaluate(NewProcessingQueue(processingQueueStates[1], s.logger, s.metricsClient)).Return([]ProcessingQueueState{
-		NewProcessingQueueState(
-			2,
-			newTransferTaskKey(0),
-			newTransferTaskKey(100),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
-		),
-	}).Times(1)
-	s.mockQueueSplitPolicy.EXPECT().Evaluate(NewProcessingQueue(processingQueueStates[2], s.logger, s.metricsClient)).Return([]ProcessingQueueState{
-		NewProcessingQueueState(
-			0,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}, "testDomain2": {}, "testDomain3": {}}, false),
-		),
-		NewProcessingQueueState(
-			1,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{"testDomain2": {}}, false),
-		),
-		NewProcessingQueueState(
-			2,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{"testDomain3": {}}, false),
-		),
-	}).Times(1)
-
-	processorBase := s.newTestTransferQueueProcessBase(
-		processingQueueStates,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
-
-	processorBase.splitQueue()
-	s.Len(processorBase.processingQueueCollections, 3)
-	s.Len(processorBase.processingQueueCollections[0].Queues(), 2)
-	s.Len(processorBase.processingQueueCollections[1].Queues(), 1)
-	s.Len(processorBase.processingQueueCollections[2].Queues(), 2)
-	for idx := 1; idx != len(processorBase.processingQueueCollections)-1; idx++ {
-		s.Less(
-			processorBase.processingQueueCollections[idx-1].Level(),
-			processorBase.processingQueueCollections[idx].Level(),
-		)
-	}
-}
-
 func (s *transferQueueProcessorBaseSuite) TestReadTasks_PartialRead_NoNextPage() {
 	readLevel := newTransferTaskKey(3)
 	maxReadLevel := newTransferTaskKey(100)
@@ -293,61 +219,6 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_FullRead_WithNextPage() 
 	s.NoError(err)
 	s.Len(tasks, len(getTransferTaskResponse.Tasks))
 	s.True(more)
-}
-
-func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_ProcessorShutDown() {
-	numTasks := 5
-	for i := 0; i != numTasks; i++ {
-		mockTask := task.NewMockTask(s.controller)
-		s.redispatchQueue.Add(mockTask)
-	}
-
-	successfullyRedispatched := 3
-	var calls []*gomock.Call
-	for i := 0; i != successfullyRedispatched; i++ {
-		calls = append(calls, s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil))
-	}
-	calls = append(calls, s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("processor shutdown")))
-	gomock.InOrder(calls...)
-
-	shutDownCh := make(chan struct{})
-	RedispatchTasks(
-		s.redispatchQueue,
-		s.mockTaskProcessor,
-		s.logger,
-		s.metricsScope,
-		shutDownCh,
-	)
-
-	s.Equal(numTasks-successfullyRedispatched-1, s.redispatchQueue.Len())
-}
-
-func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_Random() {
-	numTasks := 10
-	dispatched := 0
-	var calls []*gomock.Call
-
-	for i := 0; i != numTasks; i++ {
-		mockTask := task.NewMockTask(s.controller)
-		s.redispatchQueue.Add(mockTask)
-		submitted := false
-		if rand.Intn(2) == 0 {
-			submitted = true
-			dispatched++
-		}
-		calls = append(calls, s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(submitted, nil))
-	}
-
-	shutDownCh := make(chan struct{})
-	RedispatchTasks(
-		s.redispatchQueue,
-		s.mockTaskProcessor,
-		s.logger,
-		s.metricsScope,
-		shutDownCh,
-	)
-
-	s.Equal(numTasks-dispatched, s.redispatchQueue.Len())
 }
 
 // TODO: add test for processBatch()

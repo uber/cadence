@@ -22,7 +22,6 @@ package queue
 
 import (
 	"context"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -109,35 +108,17 @@ func newTransferQueueProcessorBase(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *transferQueueProcessorBase {
-	processingQueuesMap := make(map[int][]ProcessingQueue) // level -> state
-	for _, queueState := range processingQueueStates {
-		processingQueuesMap[queueState.Level()] = append(processingQueuesMap[queueState.Level()], NewProcessingQueue(
-			queueState,
-			logger,
-			metricsClient,
-		))
-	}
-	processingQueueCollections := make([]ProcessingQueueCollection, 0, len(processingQueuesMap))
-	for level, queues := range processingQueuesMap {
-		processingQueueCollections = append(processingQueueCollections, NewProcessingQueueCollection(
-			level,
-			queues,
-		))
-	}
-	sort.Slice(processingQueueCollections, func(i, j int) bool {
-		return processingQueueCollections[i].Level() < processingQueueCollections[j].Level()
-	})
 
 	return &transferQueueProcessorBase{
-		shard:                      shard,
-		taskProcessor:              taskProcessor,
-		redispatchQueue:            redispatchQueue,
-		processingQueueCollections: processingQueueCollections,
-		options:                    options,
-		maxReadLevel:               maxReadLevel,
-		updateTransferAckLevel:     updateTransferAckLevel,
-		transferQueueShutdown:      transferQueueShutdown,
-		taskInitializer:            taskInitializer,
+		shard:           shard,
+		taskProcessor:   taskProcessor,
+		redispatchQueue: redispatchQueue,
+
+		options:                options,
+		maxReadLevel:           maxReadLevel,
+		updateTransferAckLevel: updateTransferAckLevel,
+		transferQueueShutdown:  transferQueueShutdown,
+		taskInitializer:        taskInitializer,
 
 		logger:        logger.WithTags(tag.ComponentTransferQueue),
 		metricsClient: metricsClient,
@@ -152,6 +133,12 @@ func newTransferQueueProcessorBase(
 		notifyCh:     make(chan struct{}, 1),
 		status:       common.DaemonStatusInitialized,
 		shutdownCh:   make(chan struct{}),
+
+		processingQueueCollections: newProcessingQueueCollections(
+			processingQueueStates,
+			logger,
+			metricsClient,
+		),
 	}
 }
 
@@ -163,8 +150,9 @@ func (t *transferQueueProcessorBase) Start() {
 	t.logger.Info("", tag.LifeCycleStarting)
 	defer t.logger.Info("", tag.LifeCycleStarted)
 
-	t.shutdownWG.Add(1)
 	t.notifyNewTask()
+
+	t.shutdownWG.Add(1)
 	go t.processorPump()
 }
 
@@ -225,6 +213,7 @@ processorPumpLoop:
 		case <-t.notifyCh:
 			if t.redispatchQueue.Len() <= t.options.MaxRedispatchQueueSize() {
 				t.processBatch()
+				continue
 			}
 
 			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
@@ -384,30 +373,10 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 }
 
 func (t *transferQueueProcessorBase) splitQueue() {
-	newQueuesMap := make(map[int][]ProcessingQueue)
-	for _, queueCollection := range t.processingQueueCollections {
-		newQueues := queueCollection.Split(t.options.QueueSplitPolicy)
-		for _, newQueue := range newQueues {
-			newQueueLevel := newQueue.State().Level()
-			newQueuesMap[newQueueLevel] = append(newQueuesMap[newQueueLevel], newQueue)
-		}
-
-		if queuesToMerge, ok := newQueuesMap[queueCollection.Level()]; ok {
-			queueCollection.Merge(queuesToMerge)
-			delete(newQueuesMap, queueCollection.Level())
-		}
-	}
-
-	for level, newQueues := range newQueuesMap {
-		t.processingQueueCollections = append(t.processingQueueCollections, NewProcessingQueueCollection(
-			level,
-			newQueues,
-		))
-	}
-
-	sort.Slice(t.processingQueueCollections, func(i, j int) bool {
-		return t.processingQueueCollections[i].Level() < t.processingQueueCollections[j].Level()
-	})
+	t.processingQueueCollections = splitProcessingQueueCollection(
+		t.processingQueueCollections,
+		t.options.QueueSplitPolicy,
+	)
 }
 
 func (t *transferQueueProcessorBase) readTasks(
@@ -446,39 +415,6 @@ func (t *transferQueueProcessorBase) submitTask(
 	}
 
 	return true
-}
-
-// RedispatchTasks should be un-exported after the queue processing logic
-// in history package is deprecated.
-func RedispatchTasks(
-	redispatchQueue collection.Queue,
-	queueTaskProcessor task.Processor,
-	logger log.Logger,
-	metricsScope metrics.Scope,
-	shutdownCh <-chan struct{},
-) {
-	queueLength := redispatchQueue.Len()
-	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
-	for i := 0; i != queueLength; i++ {
-		queueTask := redispatchQueue.Remove().(task.Task)
-		submitted, err := queueTaskProcessor.TrySubmit(queueTask)
-		if err != nil {
-			// the only reason error will be returned here is because
-			// task processor has already shutdown. Just return in this case.
-			logger.Error("failed to redispatch task", tag.Error(err))
-			return
-		}
-		if !submitted {
-			// failed to submit, enqueue again
-			redispatchQueue.Add(queueTask)
-		}
-
-		select {
-		case <-shutdownCh:
-			return
-		default:
-		}
-	}
 }
 
 func newTransferTaskKey(

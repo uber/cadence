@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -84,7 +85,7 @@ func newTimerQueueActiveProcessor(
 		currentClusterName,
 	)
 
-	timerGate := NewLocalTimerGate(shard.GetTimeSource())
+	timerGate := queue.NewLocalTimerGate(shard.GetTimeSource())
 
 	redispatchQueue := collection.NewConcurrentQueue()
 
@@ -201,7 +202,7 @@ func newTimerQueueFailoverProcessor(
 		logger,
 	)
 
-	timerGate := NewLocalTimerGate(shard.GetTimeSource())
+	timerGate := queue.NewLocalTimerGate(shard.GetTimeSource())
 
 	redispatchQueue := collection.NewConcurrentQueue()
 
