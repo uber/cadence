@@ -83,34 +83,34 @@ var keys = map[Key]string{
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:             "frontend.persistenceMaxQPS",
-	FrontendPersistenceGlobalMaxQPS:       "frontend.persistenceGlobalMaxQPS",
-	FrontendVisibilityMaxPageSize:         "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:          "frontend.visibilityListMaxQPS",
-	FrontendESVisibilityListMaxQPS:        "frontend.esVisibilityListMaxQPS",
-	FrontendMaxBadBinaries:                "frontend.maxBadBinaries",
-	FrontendESIndexMaxResultWindow:        "frontend.esIndexMaxResultWindow",
-	FrontendHistoryMaxPageSize:            "frontend.historyMaxPageSize",
-	FrontendRPS:                           "frontend.rps",
-	FrontendMaxDomainRPSPerInstance:       "frontend.domainrps",
-	FrontendGlobalDomainRPS:               "frontend.globalDomainrps",
-	FrontendHistoryMgrNumConns:            "frontend.historyMgrNumConns",
-	FrontendShutdownDrainDuration:         "frontend.shutdownDrainDuration",
-	DisableListVisibilityByFilter:         "frontend.disableListVisibilityByFilter",
-	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
-	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
-	ValidSearchAttributes:                 "frontend.validSearchAttributes",
-	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
-	FrontendEnableRPCReplication:          "frontend.enableRPCReplication",
-	FrontendEnableCleanupReplicationTask:  "frontend.enableCleanupReplicationTask",
-	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
-	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
-	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
-	VisibilityArchivalQueryMaxPageSize:    "frontend.visibilityArchivalQueryMaxPageSize",
-	VisibilityArchivalQueryMaxRangeInDays: "frontend.visibilityArchivalQueryMaxRangeInDays",
-	VisibilityArchivalQueryMaxQPS:         "frontend.visibilityArchivalQueryMaxQPS",
-	DomainFailoverRefreshInterval:         "frontend.domainFailoverRefreshInterval",
-	DomainFailoverRefreshJitter:           "frontend.domainFailoverRefreshJitter",
+	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
+	FrontendPersistenceGlobalMaxQPS:             "frontend.persistenceGlobalMaxQPS",
+	FrontendVisibilityMaxPageSize:               "frontend.visibilityMaxPageSize",
+	FrontendVisibilityListMaxQPS:                "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS:              "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:                      "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow:              "frontend.esIndexMaxResultWindow",
+	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
+	FrontendRPS:                                 "frontend.rps",
+	FrontendMaxDomainRPSPerInstance:             "frontend.domainrps",
+	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
+	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
+	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
+	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:                     "frontend.throttledLogRPS",
+	EnableClientVersionCheck:                    "frontend.enableClientVersionCheck",
+	ValidSearchAttributes:                       "frontend.validSearchAttributes",
+	SendRawWorkflowHistory:                      "frontend.sendRawWorkflowHistory",
+	FrontendEnableRPCReplication:                "frontend.enableRPCReplication",
+	FrontendEnableCleanupReplicationTask:        "frontend.enableCleanupReplicationTask",
+	SearchAttributesNumberOfKeysLimit:           "frontend.searchAttributesNumberOfKeysLimit",
+	SearchAttributesSizeOfValueLimit:            "frontend.searchAttributesSizeOfValueLimit",
+	SearchAttributesTotalSizeLimit:              "frontend.searchAttributesTotalSizeLimit",
+	VisibilityArchivalQueryMaxPageSize:          "frontend.visibilityArchivalQueryMaxPageSize",
+	VisibilityArchivalQueryMaxRangeInDays:       "frontend.visibilityArchivalQueryMaxRangeInDays",
+	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
+	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
+	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshJitter",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -418,8 +418,8 @@ const (
 
 	// DomainFailoverRefreshInterval is the domain failover refresh timer
 	DomainFailoverRefreshInterval
-	// DomainFailoverRefreshJitter is the jitter for domain failover refresh timer jitter
-	DomainFailoverRefreshJitter
+	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
+	DomainFailoverRefreshTimerJitterCoefficient
 
 	// key for matching
 

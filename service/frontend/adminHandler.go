@@ -110,7 +110,7 @@ func NewAdminHandler(
 			resource.GetDomainCache(),
 			resource.GetFrontendClient(),
 			config.DomainFailoverRefreshInterval,
-			config.DomainFailoverRefreshJitter,
+			config.DomainFailoverRefreshTimerJitterCoefficient,
 			resource.GetMetricsClient(),
 			resource.GetLogger(),
 		),

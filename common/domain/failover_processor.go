@@ -120,6 +120,13 @@ func (p *failoverProcessorImpl) refreshDomainLoop() {
 			domains := p.domainCache.GetAllDomain()
 			for _, domain := range domains {
 				p.handleFailoverTimeout(domain)
+				select {
+				case <-p.shutdownChan:
+					timer.Stop()
+					return
+				default:
+					p.logger.Debug("Stop refresh domain as the processing is stopping.")
+				}
 			}
 
 			timer.Reset(backoff.JitDuration(
@@ -141,6 +148,7 @@ func (p *failoverProcessorImpl) handleFailoverTimeout(
 	if failoverEndTime != nil && p.timeSource.Now().After(time.Unix(0, *failoverEndTime)) {
 		domainName := domain.GetInfo().Name
 		// force failover the domain without setting the failover timeout
+		//TODO: update domain handler to do CAS domain update
 		if _, err := p.frontendClient.UpdateDomain(
 			ctx,
 			&shared.UpdateDomainRequest{
@@ -150,7 +158,7 @@ func (p *failoverProcessorImpl) handleFailoverTimeout(
 				},
 			},
 		); err != nil {
-			p.metrics.IncCounter(metrics.DomainFailoverScope, 1)
+			p.metrics.IncCounter(metrics.DomainFailoverScope, metrics.CadenceFailures)
 			p.logger.Error("Failed to update pending-active domain to active.", tag.WorkflowDomainID(domainName), tag.Error(err))
 		}
 	}
