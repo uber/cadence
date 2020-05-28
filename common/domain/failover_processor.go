@@ -21,11 +21,9 @@
 package domain
 
 import (
-	"context"
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -34,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -53,6 +52,7 @@ type (
 		refreshInterval dynamicconfig.DurationPropertyFn
 		refreshJitter   dynamicconfig.FloatPropertyFn
 
+		metadataMgr    persistence.MetadataManager
 		domainCache    cache.DomainCache
 		frontendClient frontend.Client
 		timeSource     clock.TimeSource
@@ -142,24 +142,64 @@ func (p *failoverProcessorImpl) handleFailoverTimeout(
 ) {
 
 	failoverEndTime := domain.GetDomainFailoverEndTime()
-	ctx, cancel := context.WithTimeout(context.Background(), updateDomainTimeout)
-	defer cancel()
-
 	if failoverEndTime != nil && p.timeSource.Now().After(time.Unix(0, *failoverEndTime)) {
 		domainName := domain.GetInfo().Name
 		// force failover the domain without setting the failover timeout
 		//TODO: update domain handler to do CAS domain update
-		if _, err := p.frontendClient.UpdateDomain(
-			ctx,
-			&shared.UpdateDomainRequest{
-				Name: common.StringPtr(domainName),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr(domain.GetReplicationConfig().ActiveClusterName),
-				},
-			},
+		if err := p.cleanPendingActiveDomain(
+			domainName,
+			domain.GetFailoverVersion(),
 		); err != nil {
 			p.metrics.IncCounter(metrics.DomainFailoverScope, metrics.CadenceFailures)
 			p.logger.Error("Failed to update pending-active domain to active.", tag.WorkflowDomainID(domainName), tag.Error(err))
 		}
 	}
+}
+
+func (p *failoverProcessorImpl) cleanPendingActiveDomain(
+	domainName string,
+	failoverVersion int64,
+) error {
+
+	// must get the metadata (notificationVersion) first
+	// this version can be regarded as the lock on the v2 domain table
+	// and since we do not know which table will return the domain afterwards
+	// this call has to be made
+	metadata, err := p.metadataMgr.GetMetadata()
+	if err != nil {
+		return err
+	}
+	notificationVersion := metadata.NotificationVersion
+	getResponse, err := p.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: domainName})
+	if err != nil {
+		return err
+	}
+
+	info := getResponse.Info
+	config := getResponse.Config
+	replicationConfig := getResponse.ReplicationConfig
+	configVersion := getResponse.ConfigVersion
+	localFailoverVersion := getResponse.FailoverVersion
+	failoverNotificationVersion := getResponse.FailoverNotificationVersion
+	isGlobalDomain := getResponse.IsGlobalDomain
+	gracefulFailoverEndTime := getResponse.FailoverEndTime
+
+	if isGlobalDomain && gracefulFailoverEndTime != nil && failoverVersion == localFailoverVersion {
+		// if the domain is still pending active and the failover versions are the same, clean the state
+		updateReq := &persistence.UpdateDomainRequest{
+			Info:                        info,
+			Config:                      config,
+			ReplicationConfig:           replicationConfig,
+			ConfigVersion:               configVersion,
+			FailoverVersion:             failoverVersion,
+			FailoverNotificationVersion: failoverNotificationVersion,
+			FailoverEndTime:             gracefulFailoverEndTime,
+			NotificationVersion:         notificationVersion,
+		}
+		err = p.metadataMgr.UpdateDomain(updateReq)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
