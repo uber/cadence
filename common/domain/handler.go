@@ -488,17 +488,6 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 
 		if activeClusterChanged && isGlobalDomain {
-			if currentActiveCluster == replicationConfig.ActiveClusterName {
-				d.logger.Info("Ignore domain failover as the active clusters are the same.",
-					tag.WorkflowDomainName(info.Name),
-					tag.WorkflowDomainID(info.ID))
-				response := &shared.UpdateDomainResponse{
-					IsGlobalDomain:  common.BoolPtr(isGlobalDomain),
-					FailoverVersion: common.Int64Ptr(failoverVersion),
-				}
-				response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(info, config, replicationConfig)
-				return response, nil
-			}
 			// Force failover cleans graceful failover state
 			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
 				// force failover cleanup graceful failover state
