@@ -173,7 +173,7 @@ type (
 		Result  ShardFixResult
 	}
 
-	// ShardFixStats indicates the stats of executions where where handled by shard Fix.
+	// ShardFixStats indicates the stats of executions that were handled by shard Fix.
 	ShardFixStats struct {
 		ExecutionCount int64
 		FixedCount     int64
