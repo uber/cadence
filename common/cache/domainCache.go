@@ -228,6 +228,7 @@ func NewDomainCacheEntryForTest(
 	isGlobalDomain bool,
 	repConfig *persistence.DomainReplicationConfig,
 	failoverVersion int64,
+	failoverEndtime *int64,
 	clusterMetadata cluster.Metadata,
 ) *DomainCacheEntry {
 
@@ -237,6 +238,7 @@ func NewDomainCacheEntryForTest(
 		isGlobalDomain:    isGlobalDomain,
 		replicationConfig: repConfig,
 		failoverVersion:   failoverVersion,
+		failoverEndTime:   failoverEndtime,
 		clusterMetadata:   clusterMetadata,
 	}
 }

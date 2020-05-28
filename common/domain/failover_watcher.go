@@ -18,13 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination failover_watcher_mock.go
+
 package domain
 
 import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -36,56 +37,53 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
-const (
-	updateDomainTimeout = 5 * time.Second
-)
-
 type (
-	// FailoverProcessor handles failover operation on domain entities
-	FailoverProcessor interface {
+	// FailoverWatcher handles failover operation on domain entities
+	FailoverWatcher interface {
 		common.Daemon
 	}
 
-	failoverProcessorImpl struct {
+	failoverWatcherImpl struct {
 		status          int32
 		shutdownChan    chan struct{}
 		refreshInterval dynamicconfig.DurationPropertyFn
 		refreshJitter   dynamicconfig.FloatPropertyFn
 
-		metadataMgr    persistence.MetadataManager
-		domainCache    cache.DomainCache
-		frontendClient frontend.Client
-		timeSource     clock.TimeSource
-		metrics        metrics.Client
-		logger         log.Logger
+		metadataMgr persistence.MetadataManager
+		domainCache cache.DomainCache
+		timeSource  clock.TimeSource
+		metrics     metrics.Client
+		logger      log.Logger
 	}
 )
 
-var _ FailoverProcessor = (*failoverProcessorImpl)(nil)
+var _ FailoverWatcher = (*failoverWatcherImpl)(nil)
 
-// NewFailoverProcessor initializes domain failover processor
-func NewFailoverProcessor(
+// NewFailoverWatcher initializes domain failover processor
+func NewFailoverWatcher(
 	domainCache cache.DomainCache,
-	frontendClient frontend.Client,
+	metadataMgr persistence.MetadataManager,
+	timeSource clock.TimeSource,
 	refreshInterval dynamicconfig.DurationPropertyFn,
 	refreshJitter dynamicconfig.FloatPropertyFn,
 	metrics metrics.Client,
 	logger log.Logger,
-) FailoverProcessor {
+) FailoverWatcher {
 
-	return &failoverProcessorImpl{
+	return &failoverWatcherImpl{
 		status:          common.DaemonStatusInitialized,
 		shutdownChan:    make(chan struct{}),
 		refreshInterval: refreshInterval,
 		refreshJitter:   refreshJitter,
 		domainCache:     domainCache,
-		frontendClient:  frontendClient,
+		metadataMgr:     metadataMgr,
+		timeSource:      timeSource,
 		metrics:         metrics,
 		logger:          logger,
 	}
 }
 
-func (p *failoverProcessorImpl) Start() {
+func (p *failoverWatcherImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
@@ -95,7 +93,7 @@ func (p *failoverProcessorImpl) Start() {
 	p.logger.Info("Domain failover processor started.")
 }
 
-func (p *failoverProcessorImpl) Stop() {
+func (p *failoverWatcherImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
@@ -104,7 +102,7 @@ func (p *failoverProcessorImpl) Stop() {
 	p.logger.Info("Domain failover processor stop.")
 }
 
-func (p *failoverProcessorImpl) refreshDomainLoop() {
+func (p *failoverWatcherImpl) refreshDomainLoop() {
 
 	timer := time.NewTimer(backoff.JitDuration(
 		p.refreshInterval(),
@@ -137,7 +135,7 @@ func (p *failoverProcessorImpl) refreshDomainLoop() {
 	}
 }
 
-func (p *failoverProcessorImpl) handleFailoverTimeout(
+func (p *failoverWatcherImpl) handleFailoverTimeout(
 	domain *cache.DomainCacheEntry,
 ) {
 
@@ -145,7 +143,7 @@ func (p *failoverProcessorImpl) handleFailoverTimeout(
 	if failoverEndTime != nil && p.timeSource.Now().After(time.Unix(0, *failoverEndTime)) {
 		domainName := domain.GetInfo().Name
 		// force failover the domain without setting the failover timeout
-		if err := p.cleanPendingActiveDomain(
+		if err := p.cleanPendingActiveState(
 			domainName,
 			domain.GetFailoverVersion(),
 		); err != nil {
@@ -155,7 +153,7 @@ func (p *failoverProcessorImpl) handleFailoverTimeout(
 	}
 }
 
-func (p *failoverProcessorImpl) cleanPendingActiveDomain(
+func (p *failoverWatcherImpl) cleanPendingActiveState(
 	domainName string,
 	failoverVersion int64,
 ) error {
@@ -192,7 +190,7 @@ func (p *failoverProcessorImpl) cleanPendingActiveDomain(
 			ConfigVersion:               configVersion,
 			FailoverVersion:             failoverVersion,
 			FailoverNotificationVersion: failoverNotificationVersion,
-			FailoverEndTime:             gracefulFailoverEndTime,
+			FailoverEndTime:             nil,
 			NotificationVersion:         notificationVersion,
 		}
 		err = p.metadataMgr.UpdateDomain(updateReq)

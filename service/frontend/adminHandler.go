@@ -59,12 +59,12 @@ type (
 	AdminHandler struct {
 		resource.Resource
 
-		numberOfHistoryShards   int
-		params                  *service.BootstrapParams
-		config                  *Config
-		domainDLQHandler        domain.DLQMessageHandler
-		domainFailoverProcessor domain.FailoverProcessor
-		eventSerializder        persistence.PayloadSerializer
+		numberOfHistoryShards int
+		params                *service.BootstrapParams
+		config                *Config
+		domainDLQHandler      domain.DLQMessageHandler
+		domainFailoverWatcher domain.FailoverWatcher
+		eventSerializder      persistence.PayloadSerializer
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -106,9 +106,10 @@ func NewAdminHandler(
 			resource.GetDomainReplicationQueue(),
 			resource.GetLogger(),
 		),
-		domainFailoverProcessor: domain.NewFailoverProcessor(
+		domainFailoverWatcher: domain.NewFailoverWatcher(
 			resource.GetDomainCache(),
-			resource.GetFrontendClient(),
+			resource.GetMetadataManager(),
+			resource.GetTimeSource(),
 			config.DomainFailoverRefreshInterval,
 			config.DomainFailoverRefreshTimerJitterCoefficient,
 			resource.GetMetricsClient(),
@@ -132,7 +133,7 @@ func (adh *AdminHandler) Start() {
 	}
 
 	if adh.config.EnableGracefulFailover() {
-		adh.domainFailoverProcessor.Start()
+		adh.domainFailoverWatcher.Start()
 	}
 }
 
@@ -140,7 +141,7 @@ func (adh *AdminHandler) Start() {
 func (adh *AdminHandler) Stop() {
 	// Calling stop if the queue does not start is ok
 	adh.Resource.GetDomainReplicationQueue().Stop()
-	adh.domainFailoverProcessor.Stop()
+	adh.domainFailoverWatcher.Stop()
 }
 
 // AddSearchAttribute add search attribute to whitelist
