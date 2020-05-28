@@ -225,8 +225,12 @@ type Config struct {
 	MutableStateChecksumVerifyProbability dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFn
 
-	//Crocess DC Replication configuration
+	//Cross DC Replication configuration
 	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	//Failover marker heartbeat
+	FailoverMarkerHeartbeatInterval               dynamicconfig.DurationPropertyFn
+	FailoverMarkerHeartbeatTimerJitterCoefficient dynamicconfig.FloatPropertyFn
 }
 
 const (
@@ -396,6 +400,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		MutableStateChecksumInvalidateBefore:  dc.GetFloat64Property(dynamicconfig.MutableStateChecksumInvalidateBefore, 0),
 
 		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
+
+		FailoverMarkerHeartbeatInterval:               dc.GetDurationProperty(dynamicconfig.FailoverMarkerHeartbeatInterval, 5*time.Second),
+		FailoverMarkerHeartbeatTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.FailoverMarkerHeartbeatTimerJitterCoefficient, 0.15),
 	}
 
 	return cfg
