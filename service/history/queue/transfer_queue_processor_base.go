@@ -72,10 +72,9 @@ type (
 	}
 
 	transferQueueProcessorBase struct {
-		shard                      shard.Context
-		processingQueueCollections []ProcessingQueueCollection
-		taskProcessor              task.Processor
-		redispatchQueue            collection.Queue
+		shard           shard.Context
+		taskProcessor   task.Processor
+		redispatchQueue collection.Queue
 
 		options                *queueProcessorOptions
 		maxReadLevel           maxReadLevel
@@ -93,6 +92,9 @@ type (
 		status       int32
 		shutdownWG   sync.WaitGroup
 		shutdownCh   chan struct{}
+
+		queueCollectionsLock       sync.RWMutex
+		processingQueueCollections []ProcessingQueueCollection
 	}
 )
 
@@ -225,6 +227,7 @@ processorPumpLoop:
 		case <-t.notifyCh:
 			if t.redispatchQueue.Len() <= t.options.MaxRedispatchQueueSize() {
 				t.processBatch()
+				continue
 			}
 
 			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
@@ -288,15 +291,23 @@ func (t *transferQueueProcessorBase) processBatch() {
 
 	t.lastPollTime = t.shard.GetTimeSource().Now()
 
+	t.queueCollectionsLock.RLock()
+	processingQueueCollections := t.processingQueueCollections
+	t.queueCollectionsLock.RUnlock()
+
 	// TODO: create a feedback loop to slow down loading for non-default queues (queues with level > 0)
-	for _, queueCollection := range t.processingQueueCollections {
+	for _, queueCollection := range processingQueueCollections {
+		t.queueCollectionsLock.RLock()
 		activeQueue := queueCollection.ActiveQueue()
 		if activeQueue == nil {
+			t.queueCollectionsLock.RUnlock()
 			continue
 		}
 
 		readLevel := activeQueue.State().ReadLevel()
 		maxReadLevel := activeQueue.State().MaxLevel()
+		t.queueCollectionsLock.RUnlock()
+
 		shardMaxReadLevel := t.maxReadLevel()
 		if shardMaxReadLevel.Less(maxReadLevel) {
 			maxReadLevel = shardMaxReadLevel
@@ -335,7 +346,9 @@ func (t *transferQueueProcessorBase) processBatch() {
 		} else {
 			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
 		}
+		t.queueCollectionsLock.Lock()
 		queueCollection.AddTasks(tasks, newReadLevel)
+		t.queueCollectionsLock.Unlock()
 
 		if more {
 			t.notifyNewTask()
@@ -348,6 +361,7 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 	// and update DB with that value.
 	// Once persistence layer is updated, we need to persist all queue states
 	// instead of only the min ack level
+	t.queueCollectionsLock.Lock()
 	var minAckLevel task.Key
 	for _, queueCollection := range t.processingQueueCollections {
 		queueCollection.UpdateAckLevels()
@@ -360,6 +374,7 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 			}
 		}
 	}
+	t.queueCollectionsLock.Unlock()
 
 	if minAckLevel == nil {
 		// note that only failover processor will meet this condition
@@ -384,6 +399,13 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 }
 
 func (t *transferQueueProcessorBase) splitQueue() {
+	if t.options.QueueSplitPolicy == nil {
+		return
+	}
+
+	t.queueCollectionsLock.Lock()
+	defer t.queueCollectionsLock.Unlock()
+
 	newQueuesMap := make(map[int][]ProcessingQueue)
 	for _, queueCollection := range t.processingQueueCollections {
 		newQueues := queueCollection.Split(t.options.QueueSplitPolicy)
@@ -408,6 +430,20 @@ func (t *transferQueueProcessorBase) splitQueue() {
 	sort.Slice(t.processingQueueCollections, func(i, j int) bool {
 		return t.processingQueueCollections[i].Level() < t.processingQueueCollections[j].Level()
 	})
+}
+
+func (t *transferQueueProcessorBase) getProcessingQueueStates() []ProcessingQueueState {
+	t.queueCollectionsLock.RLock()
+	defer t.queueCollectionsLock.RUnlock()
+
+	var queueStates []ProcessingQueueState
+	for _, queueCollection := range t.processingQueueCollections {
+		for _, queue := range queueCollection.Queues() {
+			queueStates = append(queueStates, copyQueueState(queue.State()))
+		}
+	}
+
+	return queueStates
 }
 
 func (t *transferQueueProcessorBase) readTasks(
