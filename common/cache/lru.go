@@ -301,7 +301,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	c.byKey[key] = c.byAccess.PushFront(entry)
 	c.updateSizeInBytesOnAdd(key, valueSizeInBytes)
 	// keep the count check to prevent infinite growing.
-	// if the value size is greater than maxSizeInBytes(should never happen) then the item will be still cached
+	// if the value size is greater than maxSizeInBytes(should never happen) then the item wont be cached
 	for len(c.byKey) == c.maxSize || !c.checkSizeBytes() {
 		oldest := c.byAccess.Back().Value.(*entryImpl)
 
