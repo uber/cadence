@@ -1,5 +1,4 @@
 module.exports = {
-  base: '/cadence/', // TODO - remove when going to production
   lang: 'en-US',
   title: 'Cadence',
   patterns: [
