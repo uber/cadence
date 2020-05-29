@@ -28,7 +28,30 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/task"
+)
+
+type (
+	updateMaxReadLevelFn    func() task.Key
+	updateClusterAckLevelFn func(task.Key) error
+	queueShutdownFn         func() error
+
+	queueProcessorOptions struct {
+		BatchSize                           dynamicconfig.IntPropertyFn
+		MaxPollRPS                          dynamicconfig.IntPropertyFn
+		MaxPollInterval                     dynamicconfig.DurationPropertyFn
+		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
+		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
+		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
+		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
+		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+		QueueSplitPolicy                    ProcessingQueueSplitPolicy
+		RedispatchInterval                  dynamicconfig.DurationPropertyFn
+		RedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+		MaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
+		MetricScope                         int
+	}
 )
 
 func newProcessingQueueCollections(

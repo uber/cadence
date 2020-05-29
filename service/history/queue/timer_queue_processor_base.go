@@ -21,6 +21,8 @@
 package queue
 
 import (
+	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,6 +39,13 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
+var (
+	maximumTimerTaskKey = newTimerTaskKey(
+		time.Unix(0, math.MaxInt64),
+		0,
+	)
+)
+
 type (
 	timerTaskKey struct {
 		visibilityTimeStamp time.Time
@@ -51,16 +60,17 @@ type (
 	}
 
 	timerQueueProcessorBase struct {
+		clusterName     string
 		shard           shard.Context
 		taskProcessor   task.Processor
 		redispatchQueue collection.Queue
 		timerGate       TimerGate
 
-		options                *queueProcessorOptions
-		maxReadLevel           maxReadLevel
-		updateTransferAckLevel updateTransferAckLevel
-		transferQueueShutdown  transferQueueShutdown
-		taskInitializer        task.Initializer
+		options               *queueProcessorOptions
+		updateMaxReadLevel    updateMaxReadLevelFn
+		updateClusterAckLevel updateClusterAckLevelFn
+		queueShutdown         queueShutdownFn
+		taskInitializer       task.Initializer
 
 		logger        log.Logger
 		metricsClient metrics.Client
@@ -84,30 +94,32 @@ type (
 )
 
 func newTimeQueueProcessorBase(
+	clusterName string,
 	shard shard.Context,
 	processingQueueStates []ProcessingQueueState,
 	taskProcessor task.Processor,
 	redispatchQueue collection.Queue,
 	timerGate TimerGate,
 	options *queueProcessorOptions,
-	maxReadLevel maxReadLevel,
-	updateTransferAckLevel updateTransferAckLevel,
-	transferQueueShutdown transferQueueShutdown,
+	updateMaxReadLevel updateMaxReadLevelFn,
+	updateClusterAckLevel updateClusterAckLevelFn,
+	queueShutdown queueShutdownFn,
 	taskInitializer task.Initializer,
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *timerQueueProcessorBase {
 	return &timerQueueProcessorBase{
+		clusterName:     clusterName,
 		shard:           shard,
 		taskProcessor:   taskProcessor,
 		redispatchQueue: redispatchQueue,
 		timerGate:       timerGate,
 
-		options:                options,
-		maxReadLevel:           maxReadLevel,
-		updateTransferAckLevel: updateTransferAckLevel,
-		transferQueueShutdown:  transferQueueShutdown,
-		taskInitializer:        taskInitializer,
+		options:               options,
+		updateMaxReadLevel:    updateMaxReadLevel,
+		updateClusterAckLevel: updateClusterAckLevel,
+		queueShutdown:         queueShutdown,
+		taskInitializer:       taskInitializer,
 
 		logger:        logger.WithTags(tag.ComponentTimerQueue),
 		metricsClient: metricsClient,
@@ -196,9 +208,7 @@ processorPumpLoop:
 			break processorPumpLoop
 		case <-t.timerGate.FireChan():
 			if t.redispatchQueue.Len() <= t.options.MaxRedispatchQueueSize() {
-				if lookAheadTimer, _ := t.processBatch(); lookAheadTimer != nil {
-					t.timerGate.Update(lookAheadTimer.VisibilityTimestamp)
-				}
+				t.processBatch()
 				continue
 			}
 
@@ -216,9 +226,7 @@ processorPumpLoop:
 				t.options.MaxPollIntervalJitterCoefficient(),
 			))
 			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
-				if lookAheadTimer, _ := t.processBatch(); lookAheadTimer != nil {
-					t.timerGate.Update(lookAheadTimer.VisibilityTimestamp)
-				}
+				t.processBatch()
 			}
 		case <-updateAckTimer.C:
 			updateAckTimer.Reset(backoff.JitDuration(
@@ -261,16 +269,138 @@ processorPumpLoop:
 	}
 }
 
-func (t *timerQueueProcessorBase) processBatch() (*persistence.TimerTaskInfo, error) {
-	// TODO
-	return nil, nil
+func (t *timerQueueProcessorBase) processBatch() {
+	ctx, cancel := context.WithTimeout(context.Background(), loadQueueTaskThrottleRetryDelay)
+	if err := t.rateLimiter.Wait(ctx); err != nil {
+		cancel()
+		t.notifyNewTimer(time.Time{}) // re-enqueue the event
+		return
+	}
+	cancel()
+
+	t.lastPollTime = t.shard.GetTimeSource().Now()
+
+	t.queueCollectionsLock.RLock()
+	queueCollections := t.processingQueueCollections
+	t.queueCollectionsLock.RUnlock()
+
+	for level, queueCollection := range queueCollections {
+		t.queueCollectionsLock.RLock()
+		activeQueue := queueCollection.ActiveQueue()
+		if activeQueue == nil {
+			t.queueCollectionsLock.RUnlock()
+			continue
+		}
+
+		var nextPageToken []byte
+		readLevel := activeQueue.State().ReadLevel()
+		maxReadLevel := activeQueue.State().MaxLevel()
+		domainFilter := activeQueue.State().DomainFilter()
+		t.queueCollectionsLock.RUnlock()
+
+		shardMaxReadLevel := t.updateMaxReadLevel()
+		if shardMaxReadLevel.Less(maxReadLevel) {
+			maxReadLevel = shardMaxReadLevel
+		}
+		if progress, ok := t.processingQueueReadProgress[level]; ok {
+			if progress.currentQueue == activeQueue {
+				readLevel = progress.readLevel
+				maxReadLevel = progress.maxReadLevel
+				nextPageToken = progress.nextPageToken
+			}
+			delete(t.processingQueueReadProgress, level)
+		}
+
+		timerTaskInfos, lookAheadTask, nextPageToken, err := t.readAndFilterTasks(readLevel, maxReadLevel, nextPageToken)
+		if err != nil {
+			t.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
+			t.notifyNewTimer(time.Time{}) // re-enqueue the event
+			return
+		}
+
+		tasks := make(map[task.Key]task.Task)
+		for _, taskInfo := range timerTaskInfos {
+			if !domainFilter.Filter(taskInfo.GetDomainID()) {
+				continue
+			}
+
+			task := t.taskInitializer(taskInfo)
+			tasks[newTimerTaskKey(taskInfo.GetVisibilityTimestamp(), taskInfo.GetTaskID())] = task
+			if submitted := t.submitTask(task); !submitted {
+				return
+			}
+			select {
+			case <-t.shutdownCh:
+				return
+			default:
+			}
+		}
+
+		var newReadLevel task.Key
+		if nextPageToken == nil {
+			if lookAheadTask != nil {
+				newReadLevel = newTimerTaskKey(lookAheadTask.GetVisibilityTimestamp(), 0)
+			} else {
+				t.notifyNewTimer(time.Time{})
+				newReadLevel = maxReadLevel
+			}
+		} else {
+			t.notifyNewTimer(time.Time{})
+			t.processingQueueReadProgress[level] = timeTaskReadProgress{
+				currentQueue:  activeQueue,
+				readLevel:     readLevel,
+				maxReadLevel:  maxReadLevel,
+				nextPageToken: nextPageToken,
+			}
+			newReadLevel = newTimerTaskKey(timerTaskInfos[len(timerTaskInfos)-1].GetVisibilityTimestamp(), 0)
+		}
+		t.queueCollectionsLock.Lock()
+		queueCollection.AddTasks(tasks, newReadLevel)
+		t.queueCollectionsLock.Unlock()
+
+		if lookAheadTask != nil {
+			t.timerGate.Update(lookAheadTask.VisibilityTimestamp)
+		}
+	}
 }
 
 func (t *timerQueueProcessorBase) updateAckLevel() (bool, error) {
 	t.queueCollectionsLock.Lock()
 	defer t.queueCollectionsLock.Unlock()
 
-	// TODO
+	// TODO: only for now, find the min ack level across all processing queues
+	// and update DB with that value.
+	// Once persistence layer is updated, we need to persist all queue states
+	// instead of only the min ack level
+	var minAckLevel task.Key
+	for _, queueCollection := range t.processingQueueCollections {
+		queueCollection.UpdateAckLevels()
+
+		for _, queue := range queueCollection.Queues() {
+			if minAckLevel == nil {
+				minAckLevel = queue.State().AckLevel()
+			} else {
+				minAckLevel = minTaskKey(minAckLevel, queue.State().AckLevel())
+			}
+		}
+	}
+
+	if minAckLevel == nil {
+		if err := t.queueShutdown(); err != nil {
+			t.logger.Error("Error shutdown queue", tag.Error(err))
+			return false, err
+		}
+		return true, nil
+	}
+
+	// TODO: emit metrics for total # of pending tasks
+
+	if err := t.updateClusterAckLevel(minAckLevel); err != nil {
+		t.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
+		t.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -282,6 +412,93 @@ func (t *timerQueueProcessorBase) splitQueue() {
 		t.processingQueueCollections,
 		t.options.QueueSplitPolicy,
 	)
+}
+
+func (t *timerQueueProcessorBase) readAndFilterTasks(
+	readLevel task.Key,
+	maxReadLevel task.Key,
+	nextPageToken []byte,
+) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, []byte, error) {
+	timerTasks, nextPageToken, err := t.getTimerTasks(readLevel, maxReadLevel, nextPageToken, t.options.BatchSize())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	var lookAheadTask *persistence.TimerTaskInfo
+	filteredTasks := []*persistence.TimerTaskInfo{}
+
+	for _, timerTask := range timerTasks {
+		if !t.isProcessNow(timerTask.GetVisibilityTimestamp()) {
+			lookAheadTask = timerTask
+			nextPageToken = nil
+			break
+		}
+		filteredTasks = append(filteredTasks, timerTask)
+	}
+
+	if len(nextPageToken) == 0 && lookAheadTask == nil {
+		lookAheadTask, err = t.getLookAheadTask(maxReadLevel)
+		if err != nil {
+			return filteredTasks, nil, nil, nil
+		}
+	}
+
+	return filteredTasks, lookAheadTask, nextPageToken, nil
+}
+
+func (t *timerQueueProcessorBase) getLookAheadTask(
+	lookAheadStartLevel task.Key,
+) (*persistence.TimerTaskInfo, error) {
+	tasks, _, err := t.getTimerTasks(
+		lookAheadStartLevel,
+		maximumTimerTaskKey,
+		nil,
+		1,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tasks) == 1 {
+		return tasks[0], nil
+	}
+	return nil, nil
+}
+
+func (t *timerQueueProcessorBase) getTimerTasks(
+	readLevel task.Key,
+	maxReadLevel task.Key,
+	nextPageToken []byte,
+	batchSize int,
+) ([]*persistence.TimerTaskInfo, []byte, error) {
+	request := &persistence.GetTimerIndexTasksRequest{
+		MinTimestamp:  readLevel.(*timerTaskKey).visibilityTimeStamp,
+		MaxTimestamp:  maxReadLevel.(*timerTaskKey).visibilityTimeStamp,
+		BatchSize:     batchSize,
+		NextPageToken: nextPageToken,
+	}
+
+	var err error
+	var response *persistence.GetTimerIndexTasksResponse
+	retryCount := t.shard.GetConfig().TimerProcessorGetFailureRetryCount()
+	for attempt := 0; attempt < retryCount; attempt++ {
+		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(request)
+		if err == nil {
+			return response.Timers, response.NextPageToken, nil
+		}
+		backoff := time.Duration(attempt * 100)
+		time.Sleep(backoff * time.Millisecond)
+	}
+	return nil, nil, err
+}
+
+func (t *timerQueueProcessorBase) isProcessNow(
+	expiryTime time.Time,
+) bool {
+	if expiryTime.IsZero() { // return true, but somewhere probably have bug creating empty timerTask.
+		t.logger.Warn("Timer task has timestamp zero")
+	}
+	return expiryTime.UnixNano() <= t.shard.GetCurrentTime(t.clusterName).UnixNano()
 }
 
 func (t *timerQueueProcessorBase) notifyNewTimers(
@@ -325,6 +542,20 @@ func (t *timerQueueProcessorBase) notifyNewTimer(
 			// Channel "full" -> drop and move on, this will happen only if service is in high load.
 		}
 	}
+}
+
+func (t *timerQueueProcessorBase) submitTask(
+	task task.Task,
+) bool {
+	submitted, err := t.taskProcessor.TrySubmit(task)
+	if err != nil {
+		return false
+	}
+	if !submitted {
+		t.redispatchQueue.Add(task)
+	}
+
+	return true
 }
 
 func newTimerTaskKey(

@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -46,28 +45,8 @@ var (
 )
 
 type (
-	maxReadLevel           func() task.Key
-	updateTransferAckLevel func(ackLevel int64) error
-	transferQueueShutdown  func() error
-
 	transferTaskKey struct {
 		taskID int64
-	}
-
-	queueProcessorOptions struct {
-		BatchSize                           dynamicconfig.IntPropertyFn
-		MaxPollRPS                          dynamicconfig.IntPropertyFn
-		MaxPollInterval                     dynamicconfig.DurationPropertyFn
-		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
-		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
-		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
-		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		QueueSplitPolicy                    ProcessingQueueSplitPolicy
-		RedispatchInterval                  dynamicconfig.DurationPropertyFn
-		RedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		MaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
-		MetricScope                         int
 	}
 
 	transferQueueProcessorBase struct {
@@ -76,11 +55,11 @@ type (
 		taskProcessor              task.Processor
 		redispatchQueue            collection.Queue
 
-		options                *queueProcessorOptions
-		maxReadLevel           maxReadLevel
-		updateTransferAckLevel updateTransferAckLevel
-		transferQueueShutdown  transferQueueShutdown
-		taskInitializer        task.Initializer
+		options               *queueProcessorOptions
+		updateMaxReadLevel    updateMaxReadLevelFn
+		updateClusterAckLevel updateClusterAckLevelFn
+		queueShutdown         queueShutdownFn
+		taskInitializer       task.Initializer
 
 		logger        log.Logger
 		metricsClient metrics.Client
@@ -101,9 +80,9 @@ func newTransferQueueProcessorBase(
 	taskProcessor task.Processor,
 	redispatchQueue collection.Queue,
 	options *queueProcessorOptions,
-	maxReadLevel maxReadLevel,
-	updateTransferAckLevel updateTransferAckLevel,
-	transferQueueShutdown transferQueueShutdown,
+	updateMaxReadLevel updateMaxReadLevelFn,
+	updateClusterAckLevel updateClusterAckLevelFn,
+	queueShutdown queueShutdownFn,
 	taskInitializer task.Initializer,
 	logger log.Logger,
 	metricsClient metrics.Client,
@@ -114,11 +93,11 @@ func newTransferQueueProcessorBase(
 		taskProcessor:   taskProcessor,
 		redispatchQueue: redispatchQueue,
 
-		options:                options,
-		maxReadLevel:           maxReadLevel,
-		updateTransferAckLevel: updateTransferAckLevel,
-		transferQueueShutdown:  transferQueueShutdown,
-		taskInitializer:        taskInitializer,
+		options:               options,
+		updateMaxReadLevel:    updateMaxReadLevel,
+		updateClusterAckLevel: updateClusterAckLevel,
+		queueShutdown:         queueShutdown,
+		taskInitializer:       taskInitializer,
 
 		logger:        logger.WithTags(tag.ComponentTransferQueue),
 		metricsClient: metricsClient,
@@ -286,7 +265,7 @@ func (t *transferQueueProcessorBase) processBatch() {
 
 		readLevel := activeQueue.State().ReadLevel()
 		maxReadLevel := activeQueue.State().MaxLevel()
-		shardMaxReadLevel := t.maxReadLevel()
+		shardMaxReadLevel := t.updateMaxReadLevel()
 		if shardMaxReadLevel.Less(maxReadLevel) {
 			maxReadLevel = shardMaxReadLevel
 		}
@@ -352,7 +331,7 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 
 	if minAckLevel == nil {
 		// note that only failover processor will meet this condition
-		err := t.transferQueueShutdown()
+		err := t.queueShutdown()
 		if err != nil {
 			t.logger.Error("Error shutdown queue", tag.Error(err))
 			// return error so that shutdown callback can be retried
@@ -363,7 +342,7 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 
 	// TODO: emit metrics for total # of pending tasks
 
-	if err := t.updateTransferAckLevel(minAckLevel.(*transferTaskKey).taskID); err != nil {
+	if err := t.updateClusterAckLevel(minAckLevel); err != nil {
 		t.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
 		t.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
 		return false, err

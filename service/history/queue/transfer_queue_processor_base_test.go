@@ -144,8 +144,8 @@ func (s *transferQueueProcessorBaseSuite) TestUpdateAckLevel_ProcessNotFinished(
 		),
 	}
 	updateAckLevel := int64(0)
-	updateTransferAckLevelFn := func(ackLevel int64) error {
-		updateAckLevel = ackLevel
+	updateTransferAckLevelFn := func(ackLevel task.Key) error {
+		updateAckLevel = ackLevel.(*transferTaskKey).taskID
 		return nil
 	}
 
@@ -225,9 +225,9 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_FullRead_WithNextPage() 
 
 func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessBase(
 	processingQueueStates []ProcessingQueueState,
-	maxReadLevel maxReadLevel,
-	updateTransferAckLevel updateTransferAckLevel,
-	transferQueueShutdown transferQueueShutdown,
+	maxReadLevel updateMaxReadLevelFn,
+	updateTransferAckLevel updateClusterAckLevelFn,
+	transferQueueShutdown queueShutdownFn,
 	taskInitializer task.Initializer,
 ) *transferQueueProcessorBase {
 	testConfig := s.mockShard.GetConfig()
