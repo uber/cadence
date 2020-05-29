@@ -267,9 +267,10 @@ func TestIterator(t *testing.T) {
 }
 
 func TestLRU_SizeBased_SizeExceeded(t *testing.T) {
+	valueSize := 5
 	cache := New(5, &Options{
 		GetCacheItemSizeInBytesFunc: func(interface{}) uint32 {
-			return 5
+			return uint32(valueSize)
 		},
 		MaxSizeInBytes: 15,
 	})
@@ -294,11 +295,12 @@ func TestLRU_SizeBased_SizeExceeded(t *testing.T) {
 	assert.Nil(t, cache.Get("B"))
 	assert.Equal(t, 3, cache.Size())
 
+	valueSize = 15 // put large value to evict the rest in a loop
 	cache.Put("E", "Epsi")
 	assert.Nil(t, cache.Get("C"))
 	assert.Equal(t, "Epsi", cache.Get("E"))
-	assert.Equal(t, "Foo2", cache.Get("A"))
-	assert.Equal(t, 3, cache.Size())
+	assert.Nil(t, cache.Get("A"))
+	assert.Equal(t, 1, cache.Size())
 }
 
 func TestLRU_SizeBased_CountExceeded(t *testing.T) {
