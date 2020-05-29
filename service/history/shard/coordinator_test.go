@@ -21,3 +21,84 @@
 // SOFTWARE.
 
 package shard
+
+import (
+	"testing"
+	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/.gen/go/history/historyservicetest"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
+	mmocks "github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/resource"
+)
+
+type (
+	coordinatorSuite struct {
+		suite.Suite
+		*require.Assertions
+
+		controller          *gomock.Controller
+		mockResource        *resource.Test
+		mockMetadataManager *mmocks.MetadataManager
+		historyClient       *historyservicetest.MockClient
+		config          *config.Config
+		coordinator *coordinatorImpl
+	}
+)
+
+func TestCoordinatorSuite(t *testing.T) {
+	s := new(coordinatorSuite)
+	suite.Run(t, s)
+}
+
+func (s *coordinatorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+	s.controller = gomock.NewController(s.T())
+	s.mockResource = resource.NewTest(s.controller, metrics.History)
+	s.mockMetadataManager = s.mockResource.MetadataMgr
+	s.historyClient = s.mockResource.HistoryClient
+	s.config = config.NewForTest()
+	s.config.NumberOfShards = 1
+	s.config.FailoverMarkerHeartbeatInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
+	s.config.FailoverMarkerHeartbeatTimerJitterCoefficient = dynamicconfig.GetFloatPropertyFn(0.01)
+
+	s.coordinator = NewCoordinator(
+		s.mockMetadataManager,
+		s.historyClient,
+		s.config,
+		s.mockResource.GetMetricsClient(),
+		s.mockResource.GetLogger(),
+	).(*coordinatorImpl)
+	s.coordinator.Start()
+}
+
+func (s *coordinatorSuite) TearDownTest() {
+	s.controller.Finish()
+	s.mockResource.Finish(s.T())
+	s.coordinator.Stop()
+}
+
+func (s *coordinatorSuite) TestHeartbeatFailoverMarkers() {
+	respCh := s.coordinator.HeartbeatFailoverMarkers(
+		1,
+		[]*replicator.FailoverMarkerAttributes{
+			{
+				DomainID:        common.StringPtr(uuid.New()),
+				FailoverVersion: common.Int64Ptr(1),
+				CreationTime:    common.Int64Ptr(1),
+			},
+		},
+	)
+
+	err := <-respCh
+	s.NoError(err)
+}

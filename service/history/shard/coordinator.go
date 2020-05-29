@@ -53,11 +53,11 @@ type (
 	}
 
 	coordinatorImpl struct {
-		status       int32
-		recorder     map[string]*failoverRecord
-		sendChan     chan *request
-		receiveChan  chan *request
-		shutdownChan chan struct{}
+		status        int32
+		recorder      map[string]*failoverRecord
+		heartbeatChan chan *request
+		receiveChan   chan *request
+		shutdownChan  chan struct{}
 
 		metadataMgr   persistence.MetadataManager
 		historyClient history.Client
@@ -89,7 +89,7 @@ func NewCoordinator(
 	return &coordinatorImpl{
 		status:        common.DaemonStatusInitialized,
 		recorder:      make(map[string]*failoverRecord),
-		sendChan:      make(chan *request, sendChanBufferSize),
+		heartbeatChan: make(chan *request, sendChanBufferSize),
 		receiveChan:   make(chan *request, receiveChanBufferSize),
 		shutdownChan:  make(chan struct{}),
 		metadataMgr:   metadataMgr,
@@ -128,7 +128,7 @@ func (c *coordinatorImpl) HeartbeatFailoverMarkers(
 ) <-chan error {
 
 	respCh := make(chan error, 1)
-	c.sendChan <- &request{
+	c.heartbeatChan <- &request{
 		shardID: shardID,
 		markers: markers,
 		respCh:  respCh,
@@ -173,7 +173,7 @@ func (c *coordinatorImpl) heartbeatFailoverMarkerLoop() {
 		select {
 		case <-c.shutdownChan:
 			return
-		case request := <-c.sendChan:
+		case request := <-c.heartbeatChan:
 			// Here we only add the request to map. We will wait until timer fires to send the request to remote.
 			if req, ok := requestByShard[request.shardID]; ok && req != request {
 				// during shard movement, duplicated requests can appear
