@@ -348,9 +348,11 @@ func (t *transferQueueProcessorBase) processBatch() {
 		}
 		t.queueCollectionsLock.Lock()
 		queueCollection.AddTasks(tasks, newReadLevel)
+		newActiveQueue := queueCollection.ActiveQueue()
 		t.queueCollectionsLock.Unlock()
 
-		if more {
+		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
+			// more tasks for the current active queue or the active queue has changed
 			t.notifyNewTask()
 		}
 	}

@@ -274,6 +274,9 @@ func (q *processingQueueImpl) UpdateAckLevel() {
 	if len(q.outstandingTasks) == 0 {
 		q.state.ackLevel = q.state.readLevel
 	}
+
+	// TODO: add a check for specifically for timer task key
+	// and override the taskID field for timer task key to 0.
 }
 
 func splitProcessingQueue(
