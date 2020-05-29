@@ -97,7 +97,8 @@ func NewSelectedDomainSplitPolicy(
 	}
 }
 
-// NewRandomSplitPolicy initialize a policy random splitting for testing purpose
+// NewRandomSplitPolicy creates a split policy that will randomly split one
+// or more domains into a new processing queue
 func NewRandomSplitPolicy(
 	splitProbability float64,
 	maxNewQueueLevel int,
