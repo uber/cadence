@@ -171,8 +171,8 @@ func (t *taskAllocatorImpl) checkDomainPendingActive(
 	return nil
 }
 
-// lock block all task allocation
-func (t *taskAllocatorImpl) lock() {
+// Lock block all task allocation
+func (t *taskAllocatorImpl) Lock() {
 	t.locker.Lock()
 }
 
