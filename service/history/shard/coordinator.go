@@ -174,7 +174,7 @@ func (c *coordinatorImpl) heartbeatFailoverMarkerLoop() {
 		case <-c.shutdownChan:
 			return
 		case request := <-c.heartbeatChan:
-			// Here we only add the request to map. We will wait until timer fires to send the request to remote.
+			// Here we only add the request to map. We will wait until timer fires to heartbeat the request to remote.
 			if req, ok := requestByShard[request.shardID]; ok && req != request {
 				// during shard movement, duplicated requests can appear
 				// if shard moved from this host, to this host.
