@@ -258,7 +258,6 @@ func (c *lru) Size() int {
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
-	// Assuming the value size cannot be greater than maxSizeInBytes
 	valueSizeInBytes := c.sizeFunc(value)
 	c.mut.Lock()
 	defer c.mut.Unlock()
@@ -302,6 +301,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	c.byKey[key] = c.byAccess.PushFront(entry)
 	c.updateSizeInBytesOnAdd(key, valueSizeInBytes)
 	// keep the count check to prevent infinite growing.
+	// if the value size is greater than maxSizeInBytes(should never happen) then the item will be still cached
 	for len(c.byKey) == c.maxSize || !c.checkSizeBytes() {
 		oldest := c.byAccess.Back().Value.(*entryImpl)
 
