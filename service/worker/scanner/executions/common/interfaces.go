@@ -65,7 +65,7 @@ type (
 
 	// ScanOutputIterator gets ScanOutputEntities from underlying store
 	ScanOutputIterator interface {
-		// Next returns the next ScanOutputEntity found. Any error reading form underlying store
+		// Next returns the next ScanOutputEntity found. Any error reading from underlying store
 		// or converting store entry to ScanOutputEntity will result in an error after which iterator cannot be used.
 		Next() (*ScanOutputEntity, error)
 		// HasNext indicates if the iterator has a next element. If HasNext is true it is

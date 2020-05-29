@@ -47,7 +47,7 @@ func NewBlobstoreIterator(
 	}
 }
 
-// Next returns the next Execution
+// Next returns the next ScanOutputEntity
 func (i *blobstoreIterator) Next() (*ScanOutputEntity, error) {
 	exec, err := i.itr.Next()
 	if exec != nil {
@@ -56,7 +56,7 @@ func (i *blobstoreIterator) Next() (*ScanOutputEntity, error) {
 	return nil, err
 }
 
-// HasNext returns true if there is a next Execution false otherwise
+// HasNext returns true if there is a next ScanOutputEntity false otherwise
 func (i *blobstoreIterator) HasNext() bool {
 	return i.itr.HasNext()
 }
