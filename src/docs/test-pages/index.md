@@ -3,7 +3,6 @@ layout: default
 title: Table of contents
 permalink: /docs/test-pages
 ---
-<!-- rename file to .md to enable this file. Otherwise file will be parsed by compiler and added to search results. -->
 
 # Table of contents
 

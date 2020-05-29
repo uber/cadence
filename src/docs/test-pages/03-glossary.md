@@ -3,7 +3,6 @@ layout: default
 title: Glossary
 permalink: /docs/test-pages/glossary
 ---
-<!-- rename file to .md to enable this file. Otherwise file will be parsed by compiler and added to search results. -->
 
 # Glossary
 

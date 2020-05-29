@@ -3,7 +3,6 @@ layout: default
 title: Code tabs
 permalink: /docs/test-page/code-tabs
 ---
-<!-- rename file to .md to enable this file. Otherwise file will be parsed by compiler and added to search results. -->
 
 # Code tabs
 
