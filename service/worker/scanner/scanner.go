@@ -22,6 +22,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/uber/cadence/service/worker/scanner/executions"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -29,8 +30,6 @@ import (
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
-
-	"github.com/uber/cadence/service/worker/scanner/executions"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -44,13 +43,6 @@ import (
 const (
 	// scannerStartUpDelay is to let services warm up
 	scannerStartUpDelay = time.Second * 4
-)
-
-var (
-	defaultExecutionsScannerParams = executions.ScannerWorkflowParams{
-		// fullExecutionsScanDefaultQuery indicates the visibility scanner should scan through all open workflows
-		VisibilityQuery: "SELECT * from elasticSearch.executions WHERE state IS open", // TODO: depending on if we go straight to ES or through frontend this query will look different
-	}
 )
 
 type (
@@ -123,18 +115,20 @@ func New(
 
 // Start starts the scanner
 func (s *Scanner) Start() error {
+	backgroundActivityContext := context.WithValue(context.Background(), scannerContextKey, s.context)
+	backgroundActivityContext = context.WithValue(backgroundActivityContext, executions.ScannerContextKey, s.context)
 	workerOpts := worker.Options{
 		Logger:                                 s.context.zapLogger,
 		MetricsScope:                           s.context.tallyScope,
 		MaxConcurrentActivityExecutionSize:     maxConcurrentActivityExecutionSize,
 		MaxConcurrentDecisionTaskExecutionSize: maxConcurrentDecisionTaskExecutionSize,
-		BackgroundActivityContext:              context.WithValue(context.Background(), scannerContextKey, s.context),
+		BackgroundActivityContext:              backgroundActivityContext,
 	}
 
 	var workerTaskListNames []string
 	if s.context.cfg.ExecutionsScannerEnabled() {
 		workerTaskListNames = append(workerTaskListNames, executionsScannerTaskListName)
-		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, defaultExecutionsScannerParams)
+		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName)
 	}
 
 	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL && s.context.cfg.TaskListScannerEnabled() {

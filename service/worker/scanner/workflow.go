@@ -22,9 +22,8 @@ package scanner
 
 import (
 	"context"
-	"time"
-
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
@@ -60,7 +59,10 @@ const (
 	executionsScannerWFID           = "cadence-sys-executions-scanner"
 	executionsScannerWFTypeName     = "cadence-sys-executions-scanner-workflow"
 	executionsScannerTaskListName   = "cadence-sys-executions-scanner-tasklist-0"
-	executionsScavengerActivityName = "cadence-sys-executions-scanner-scvg-activity"
+
+	// TODO: these will need to be defined inside of executions/activity.go
+	executionsScanShardActivityName = "cadence-sys-executions-scanner-scan-shard-activity"
+	executionsScanConfigActivity    = "cadence-sys-executions-scanner-config-activity"
 )
 
 var (
@@ -104,12 +106,14 @@ var (
 
 func init() {
 	workflow.RegisterWithOptions(TaskListScannerWorkflow, workflow.RegisterOptions{Name: tlScannerWFTypeName})
-	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
-	workflow.RegisterWithOptions(ExecutionsScannerWorkflow, workflow.RegisterOptions{Name: executionsScannerWFTypeName})
-
 	activity.RegisterWithOptions(TaskListScavengerActivity, activity.RegisterOptions{Name: taskListScavengerActivityName})
+
+	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
 	activity.RegisterWithOptions(HistoryScavengerActivity, activity.RegisterOptions{Name: historyScavengerActivityName})
-	activity.RegisterWithOptions(ExecutionsScavengerActivity, activity.RegisterOptions{Name: executionsScavengerActivityName})
+
+	//workflow.RegisterWithOptions(executions.ScannerWorkflow, workflow.RegisterOptions{Name: executionsScannerWFTypeName})
+	//activity.RegisterWithOptions(executions.ScanShardActivity, activity.RegisterOptions{Name: executionsScanShardActivityName})
+	activity.RegisterWithOptions(executions.ScannerConfigActivity, activity.RegisterOptions{Name: executionsScanConfigActivity})
 }
 
 // TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon
@@ -130,16 +134,6 @@ func HistoryScannerWorkflow(
 		workflow.WithActivityOptions(ctx, activityOptions),
 		historyScavengerActivityName,
 	)
-	return future.Get(ctx, nil)
-}
-
-// ExecutionsScannerWorkflow is the workflow that runs the executions scanner background daemon
-func ExecutionsScannerWorkflow(
-	ctx workflow.Context,
-	executionsScannerWorkflowParams executions.ScannerWorkflowParams,
-) error {
-
-	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, activityOptions), executionsScavengerActivityName, executionsScannerWorkflowParams)
 	return future.Get(ctx, nil)
 }
 
@@ -186,28 +180,6 @@ func TaskListScavengerActivity(
 			return activityCtx.Err()
 		}
 		time.Sleep(tlScavengerHBInterval)
-	}
-	return nil
-}
-
-// ExecutionsScavengerActivity is the activity that runs executions scavenger
-func ExecutionsScavengerActivity(
-	activityCtx context.Context,
-	executionsScannerWorkflowParams executions.ScannerWorkflowParams,
-) error {
-
-	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
-	scavenger := executions.NewScavenger(executionsScannerWorkflowParams, ctx.GetFrontendClient(), ctx.GetHistoryManager(), ctx.GetMetricsClient(), ctx.GetLogger())
-	ctx.GetLogger().Info("Starting executions scavenger")
-	scavenger.Start()
-	for scavenger.Alive() {
-		activity.RecordHeartbeat(activityCtx)
-		if activityCtx.Err() != nil {
-			ctx.GetLogger().Info("activity context error, stopping scavenger", tag.Error(activityCtx.Err()))
-			scavenger.Stop()
-			return activityCtx.Err()
-		}
-		time.Sleep(executionsScavengerHBInterval)
 	}
 	return nil
 }
