@@ -225,6 +225,7 @@ processorPumpLoop:
 		case <-t.notifyCh:
 			if t.redispatchQueue.Len() <= t.options.MaxRedispatchQueueSize() {
 				t.processBatch()
+				continue
 			}
 
 			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
