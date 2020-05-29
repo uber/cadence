@@ -110,7 +110,7 @@ var keys = map[Key]string{
 	VisibilityArchivalQueryMaxRangeInDays:       "frontend.visibilityArchivalQueryMaxRangeInDays",
 	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
-	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshJitter",
+	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",

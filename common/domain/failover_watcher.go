@@ -121,11 +121,11 @@ func (p *failoverWatcherImpl) refreshDomainLoop() {
 		p.refreshInterval(),
 		p.refreshJitter(),
 	))
+	defer timer.Stop()
 
 	for {
 		select {
 		case <-p.shutdownChan:
-			timer.Stop()
 			return
 		case <-timer.C:
 			domains := p.domainCache.GetAllDomain()
@@ -133,10 +133,9 @@ func (p *failoverWatcherImpl) refreshDomainLoop() {
 				p.handleFailoverTimeout(domain)
 				select {
 				case <-p.shutdownChan:
-					timer.Stop()
+					p.logger.Debug("Stop refresh domain as the processing is stopping.")
 					return
 				default:
-					p.logger.Debug("Stop refresh domain as the processing is stopping.")
 				}
 			}
 
@@ -168,6 +167,7 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 	}
 }
 
+// CleanPendingActiveState removes the pending active state from the domain
 func CleanPendingActiveState(
 	metadataMgr persistence.MetadataManager,
 	domainName string,
