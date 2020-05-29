@@ -562,8 +562,6 @@ func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_Random() {
 	s.Equal(numTasks-dispatched, s.redispatchQueue.Len())
 }
 
-// TODO: add test for processBatch()
-
 func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessBase(
 	processingQueueStates []ProcessingQueueState,
 	maxReadLevel maxReadLevel,
