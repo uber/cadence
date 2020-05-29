@@ -383,22 +383,17 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 
 	failoverMarkerInsertion := func(
 		shardNotificationVersion int64,
-		prevDomain *cache.DomainCacheEntry,
 		nextDomain *cache.DomainCacheEntry,
 	) error {
 
 		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
 
-		if prevDomain != nil {
-			previousActiveCluster := prevDomain.GetReplicationConfig().ActiveClusterName
-			if prevDomain.IsGlobalDomain() &&
-				nextDomain.IsGlobalDomain() &&
-				domainFailoverNotificationVersion >= shardNotificationVersion &&
-				previousActiveCluster != domainActiveCluster &&
-				previousActiveCluster == e.currentClusterName {
-				return e.shard.InsertFailoverMarker(nextDomain.GetInfo().ID, nextDomain.GetFailoverVersion())
-			}
+		if nextDomain.IsGlobalDomain() &&
+			domainFailoverNotificationVersion >= shardNotificationVersion &&
+			nextDomain.GetFailoverEndTime() != nil &&
+			domainActiveCluster == e.currentClusterName {
+			return e.shard.InsertFailoverMarker(nextDomain.GetInfo().ID, nextDomain.GetFailoverVersion())
 		}
 		return nil
 	}
@@ -424,24 +419,10 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			shardNotificationVersion := e.shard.GetDomainNotificationVersion()
 			failoverDomainIDs := map[string]struct{}{}
 
-			for idx, nextDomain := range nextDomains {
+			for _, nextDomain := range nextDomains {
 				failoverPredicate(shardNotificationVersion, nextDomain, func() {
 					failoverDomainIDs[nextDomain.GetInfo().ID] = struct{}{}
 				})
-
-				// handle graceful failover on active to passive
-				if err := failoverMarkerInsertion(
-					shardNotificationVersion,
-					prevDomains[idx],
-					nextDomain,
-				); err != nil {
-					e.logger.Error("Failed to insert failover marker to replication queue.",
-						tag.Error(err),
-						tag.WorkflowDomainName(nextDomain.GetInfo().Name))
-					e.metricsClient.IncCounter(metrics.HistoryFailoverMarkerScope, metrics.HistroyFailoverMarkerInsertFailure)
-					// fail this failover callback and it retries on next domain cache refresh
-					return
-				}
 			}
 
 			if len(failoverDomainIDs) > 0 {
@@ -457,6 +438,22 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
 				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
 				e.timerProcessor.NotifyNewTimers(e.currentClusterName, fakeDecisionTimeoutTask)
+			}
+
+			// handle graceful failover on active to passive
+			// make sure task processor failover the domain before inserting the failover marker
+			for _, nextDomain := range nextDomains {
+				if err := failoverMarkerInsertion(
+					shardNotificationVersion,
+					nextDomain,
+				); err != nil {
+					e.logger.Error("Failed to insert failover marker to replication queue.",
+						tag.Error(err),
+						tag.WorkflowDomainName(nextDomain.GetInfo().Name))
+					e.metricsClient.IncCounter(metrics.HistoryFailoverMarkerScope, metrics.HistroyFailoverMarkerInsertFailure)
+					// fail this failover callback and it retries on next domain cache refresh
+					return
+				}
 			}
 
 			//nolint:errcheck
