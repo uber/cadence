@@ -50,8 +50,8 @@ type (
 		mockResource        *resource.Test
 		mockMetadataManager *mmocks.MetadataManager
 		historyClient       *historyservicetest.MockClient
-		config          *config.Config
-		coordinator *coordinatorImpl
+		config              *config.Config
+		coordinator         *coordinatorImpl
 	}
 )
 
