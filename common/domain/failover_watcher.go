@@ -37,6 +37,12 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
+const (
+	updateDomainRetryInitialInterval = 50 * time.Millisecond
+	updateDomainRetryCoefficient     = 2.0
+	updateDomainMaxRetry             = 3
+)
+
 type (
 	// FailoverWatcher handles failover operation on domain entities
 	FailoverWatcher interface {
@@ -48,6 +54,7 @@ type (
 		shutdownChan    chan struct{}
 		refreshInterval dynamicconfig.DurationPropertyFn
 		refreshJitter   dynamicconfig.FloatPropertyFn
+		retryPolicy     backoff.RetryPolicy
 
 		metadataMgr persistence.MetadataManager
 		domainCache cache.DomainCache
@@ -70,11 +77,17 @@ func NewFailoverWatcher(
 	logger log.Logger,
 ) FailoverWatcher {
 
+	retryPolicy := &backoff.ExponentialRetryPolicy{}
+	retryPolicy.SetInitialInterval(updateDomainRetryInitialInterval)
+	retryPolicy.SetBackoffCoefficient(updateDomainRetryCoefficient)
+	retryPolicy.SetMaximumAttempts(updateDomainMaxRetry)
+
 	return &failoverWatcherImpl{
 		status:          common.DaemonStatusInitialized,
 		shutdownChan:    make(chan struct{}),
 		refreshInterval: refreshInterval,
 		refreshJitter:   refreshJitter,
+		retryPolicy:     retryPolicy,
 		domainCache:     domainCache,
 		metadataMgr:     metadataMgr,
 		timeSource:      timeSource,
@@ -143,9 +156,11 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 	if failoverEndTime != nil && p.timeSource.Now().After(time.Unix(0, *failoverEndTime)) {
 		domainName := domain.GetInfo().Name
 		// force failover the domain without setting the failover timeout
-		if err := p.cleanPendingActiveState(
+		if err := CleanPendingActiveState(
+			p.metadataMgr,
 			domainName,
 			domain.GetFailoverVersion(),
+			p.retryPolicy,
 		); err != nil {
 			p.metrics.IncCounter(metrics.DomainFailoverScope, metrics.CadenceFailures)
 			p.logger.Error("Failed to update pending-active domain to active.", tag.WorkflowDomainID(domainName), tag.Error(err))
@@ -153,50 +168,58 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 	}
 }
 
-func (p *failoverWatcherImpl) cleanPendingActiveState(
+func CleanPendingActiveState(
+	metadataMgr persistence.MetadataManager,
 	domainName string,
 	failoverVersion int64,
+	policy backoff.RetryPolicy,
 ) error {
 
 	// must get the metadata (notificationVersion) first
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := p.metadataMgr.GetMetadata()
+	metadata, err := metadataMgr.GetMetadata()
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := p.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: domainName})
+	getResponse, err := metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: domainName})
 	if err != nil {
 		return err
 	}
-
-	info := getResponse.Info
-	config := getResponse.Config
-	replicationConfig := getResponse.ReplicationConfig
-	configVersion := getResponse.ConfigVersion
 	localFailoverVersion := getResponse.FailoverVersion
-	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 	isGlobalDomain := getResponse.IsGlobalDomain
 	gracefulFailoverEndTime := getResponse.FailoverEndTime
 
 	if isGlobalDomain && gracefulFailoverEndTime != nil && failoverVersion == localFailoverVersion {
 		// if the domain is still pending active and the failover versions are the same, clean the state
 		updateReq := &persistence.UpdateDomainRequest{
-			Info:                        info,
-			Config:                      config,
-			ReplicationConfig:           replicationConfig,
-			ConfigVersion:               configVersion,
-			FailoverVersion:             failoverVersion,
-			FailoverNotificationVersion: failoverNotificationVersion,
+			Info:                        getResponse.Info,
+			Config:                      getResponse.Config,
+			ReplicationConfig:           getResponse.ReplicationConfig,
+			ConfigVersion:               getResponse.ConfigVersion,
+			FailoverVersion:             localFailoverVersion,
+			FailoverNotificationVersion: getResponse.FailoverNotificationVersion,
 			FailoverEndTime:             nil,
 			NotificationVersion:         notificationVersion,
 		}
-		err = p.metadataMgr.UpdateDomain(updateReq)
-		if err != nil {
+		op := func() error {
+			return metadataMgr.UpdateDomain(updateReq)
+		}
+		if err := backoff.Retry(
+			op,
+			policy,
+			isUpdateDomainRetryable,
+		); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func isUpdateDomainRetryable(
+	err error,
+) bool {
+	return true
 }

@@ -137,7 +137,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 	s.NoError(err)
 
 	// does not have failover end time
-	err = s.watcher.cleanPendingActiveState(domainName, 1)
+	err = CleanPendingActiveState(s.metadataMgr, domainName, 1, s.watcher.retryPolicy)
 	s.NoError(err)
 
 	metadata, err := s.metadataMgr.GetMetadata()
@@ -156,10 +156,10 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 	s.NoError(err)
 
 	// does not have failover version
-	err = s.watcher.cleanPendingActiveState(domainName, 5)
+	err = CleanPendingActiveState(s.metadataMgr, domainName, 5, s.watcher.retryPolicy)
 	s.NoError(err)
 
-	err = s.watcher.cleanPendingActiveState(domainName, 2)
+	err = CleanPendingActiveState(s.metadataMgr, domainName, 2, s.watcher.retryPolicy)
 	s.NoError(err)
 
 	resp, err := s.metadataMgr.GetDomain(&persistence.GetDomainRequest{
