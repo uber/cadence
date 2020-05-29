@@ -301,6 +301,11 @@ func TestLRU_SizeBased_SizeExceeded(t *testing.T) {
 	assert.Equal(t, "Epsi", cache.Get("E"))
 	assert.Nil(t, cache.Get("A"))
 	assert.Equal(t, 1, cache.Size())
+
+	valueSize = 25 // put large value greater than maxSizeInBytes to evict everything
+	cache.Put("M", "Mepsi")
+	assert.Nil(t, cache.Get("M"))
+	assert.Equal(t, 0, cache.Size())
 }
 
 func TestLRU_SizeBased_CountExceeded(t *testing.T) {
