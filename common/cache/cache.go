@@ -86,6 +86,16 @@ type SimpleOptions struct {
 	RemovedFunc RemovedFunc
 }
 
+// SimpleOptions provides options that can be used to configure SimpleCache
+type SimpleOptions struct {
+	// InitialCapacity controls the initial capacity of the cache
+	InitialCapacity int
+
+	// RemovedFunc is an optional function called when an element
+	// is scheduled for deletion
+	RemovedFunc RemovedFunc
+}
+
 // RemovedFunc is a type for notifying applications when an item is
 // scheduled for removal from the Cache. If f is a function with the
 // appropriate signature and i is the interface{} scheduled for
