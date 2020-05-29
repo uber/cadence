@@ -113,6 +113,7 @@ type (
 		rawMatchingClient         matching.Client
 		clientChecker             client.VersionChecker
 		replicationDLQHandler     replication.DLQHandler
+		failoverCoordinator       shard.Coordinator
 	}
 )
 
@@ -171,6 +172,7 @@ func NewEngineWithShardContext(
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
+	failoverCoordinator shard.Coordinator,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -201,11 +203,12 @@ func NewEngineWithShardContext(
 			shard.GetConfig().ArchiveRequestRPS,
 			shard.GetService().GetArchiverProvider(),
 		),
-		publicClient:       publicClient,
-		matchingClient:     matching,
-		rawMatchingClient:  rawMatchingClient,
-		queueTaskProcessor: queueTaskProcessor,
-		clientChecker:      client.NewVersionChecker(),
+		publicClient:        publicClient,
+		matchingClient:      matching,
+		rawMatchingClient:   rawMatchingClient,
+		queueTaskProcessor:  queueTaskProcessor,
+		clientChecker:       client.NewVersionChecker(),
+		failoverCoordinator: failoverCoordinator,
 	}
 
 	historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, queueTaskProcessor, logger)

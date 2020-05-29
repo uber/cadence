@@ -231,6 +231,7 @@ type Config struct {
 	//Failover marker heartbeat
 	FailoverMarkerHeartbeatInterval               dynamicconfig.DurationPropertyFn
 	FailoverMarkerHeartbeatTimerJitterCoefficient dynamicconfig.FloatPropertyFn
+	EnableGracefulFailover                        dynamicconfig.BoolPropertyFn
 }
 
 const (
@@ -403,6 +404,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		FailoverMarkerHeartbeatInterval:               dc.GetDurationProperty(dynamicconfig.FailoverMarkerHeartbeatInterval, 5*time.Second),
 		FailoverMarkerHeartbeatTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.FailoverMarkerHeartbeatTimerJitterCoefficient, 0.15),
+		EnableGracefulFailover:                        dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 	}
 
 	return cfg

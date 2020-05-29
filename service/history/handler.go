@@ -69,6 +69,7 @@ type (
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers replication.TaskFetchers
 		queueTaskProcessor      task.Processor
+		failoverCoordinator     shard.Coordinator
 	}
 )
 
@@ -185,6 +186,16 @@ func (h *Handler) Start() {
 		h.config,
 	)
 	h.historyEventNotifier = events.NewNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
+	h.failoverCoordinator = shard.NewCoordinator(
+		h.GetMetadataManager(),
+		h.GetHistoryClient(),
+		h.config,
+		h.GetMetricsClient(),
+		h.GetLogger(),
+	)
+	if h.config.EnableGracefulFailover() {
+		h.failoverCoordinator.Start()
+	}
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
@@ -201,6 +212,7 @@ func (h *Handler) Stop() {
 	}
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
+	h.failoverCoordinator.Stop()
 }
 
 // PrepareToStop starts graceful traffic drain in preparation for shutdown
@@ -228,6 +240,7 @@ func (h *Handler) CreateEngine(
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
+		h.failoverCoordinator,
 	)
 }
 
