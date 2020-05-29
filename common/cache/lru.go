@@ -300,6 +300,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
 	c.updateSizeInBytesOnAdd(key, valueSizeInBytes)
+	// keep the count check to prevent infinite growing
 	for len(c.byKey) == c.maxSize || !c.checkSizeBytes() {
 		oldest := c.byAccess.Back().Value.(*entryImpl)
 

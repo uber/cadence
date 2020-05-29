@@ -538,7 +538,7 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 	return res + golandMapReserverNumberOfBytes
 }
 
-// GetSizeOfMapStringToByteArray get size of map[string][]byte
+// GetSizeOfMapStringToByteArray returns approximate size of the history event taking into account byte arrays only now
 func GetSizeOfHistoryEvent(event *shared.HistoryEvent) uint32 {
 	if event == nil {
 		return 0
@@ -559,53 +559,187 @@ func GetSizeOfHistoryEvent(event *shared.HistoryEvent) uint32 {
 		if event.WorkflowExecutionStartedEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionStartedEventAttributes.Header.Fields)
 		}
+		if event.WorkflowExecutionStartedEventAttributes.SearchAttributes != nil {
+			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionStartedEventAttributes.SearchAttributes.IndexedFields)
+		}
 	case shared.EventTypeWorkflowExecutionCompleted:
 		if event.WorkflowExecutionCompletedEventAttributes == nil {
 			return 0
 		}
 		res += len(event.WorkflowExecutionCompletedEventAttributes.Result)
 	case shared.EventTypeWorkflowExecutionFailed:
+		if event.WorkflowExecutionFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionFailedEventAttributes.Details)
 	case shared.EventTypeWorkflowExecutionTimedOut:
 	case shared.EventTypeDecisionTaskScheduled:
 	case shared.EventTypeDecisionTaskStarted:
 	case shared.EventTypeDecisionTaskCompleted:
+		if event.DecisionTaskCompletedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.DecisionTaskCompletedEventAttributes.ExecutionContext)
 	case shared.EventTypeDecisionTaskTimedOut:
 	case shared.EventTypeDecisionTaskFailed:
+		if event.DecisionTaskFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.DecisionTaskFailedEventAttributes.Details)
 	case shared.EventTypeActivityTaskScheduled:
+		if event.ActivityTaskScheduledEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ActivityTaskScheduledEventAttributes.Input)
+		if event.ActivityTaskScheduledEventAttributes.Header != nil {
+			res += GetSizeOfMapStringToByteArray(event.ActivityTaskScheduledEventAttributes.Header.Fields)
+		}
 	case shared.EventTypeActivityTaskStarted:
+		if event.ActivityTaskStartedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ActivityTaskStartedEventAttributes.LastFailureDetails)
 	case shared.EventTypeActivityTaskCompleted:
+		if event.ActivityTaskCompletedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ActivityTaskCompletedEventAttributes.Result)
 	case shared.EventTypeActivityTaskFailed:
+		if event.ActivityTaskFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ActivityTaskFailedEventAttributes.Details)
 	case shared.EventTypeActivityTaskTimedOut:
+		if event.ActivityTaskTimedOutEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ActivityTaskTimedOutEventAttributes.Details)
+		res += len(event.ActivityTaskTimedOutEventAttributes.LastFailureDetails)
 	case shared.EventTypeActivityTaskCancelRequested:
 	case shared.EventTypeRequestCancelActivityTaskFailed:
 	case shared.EventTypeActivityTaskCanceled:
+		if event.ActivityTaskCanceledEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ActivityTaskCanceledEventAttributes.Details)
 	case shared.EventTypeTimerStarted:
 	case shared.EventTypeTimerFired:
 	case shared.EventTypeCancelTimerFailed:
 	case shared.EventTypeTimerCanceled:
 	case shared.EventTypeWorkflowExecutionCancelRequested:
 	case shared.EventTypeWorkflowExecutionCanceled:
+		if event.WorkflowExecutionCanceledEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionCanceledEventAttributes.Details)
 	case shared.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
+		if event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.Control)
 	case shared.EventTypeRequestCancelExternalWorkflowExecutionFailed:
+		if event.RequestCancelExternalWorkflowExecutionFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.RequestCancelExternalWorkflowExecutionFailedEventAttributes.Control)
 	case shared.EventTypeExternalWorkflowExecutionCancelRequested:
 	case shared.EventTypeMarkerRecorded:
+		if event.MarkerRecordedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.MarkerRecordedEventAttributes.Details)
 	case shared.EventTypeWorkflowExecutionSignaled:
+		if event.WorkflowExecutionSignaledEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionSignaledEventAttributes.Input)
 	case shared.EventTypeWorkflowExecutionTerminated:
+		if event.WorkflowExecutionTerminatedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionTerminatedEventAttributes.Details)
 	case shared.EventTypeWorkflowExecutionContinuedAsNew:
+		if event.WorkflowExecutionContinuedAsNewEventAttributes == nil {
+			return 0
+		}
+		res += len(event.WorkflowExecutionContinuedAsNewEventAttributes.Input)
+		if event.WorkflowExecutionContinuedAsNewEventAttributes.Memo != nil {
+			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.Memo.Fields)
+		}
+		if event.WorkflowExecutionContinuedAsNewEventAttributes.Header != nil {
+			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.Header.Fields)
+		}
+		if event.WorkflowExecutionContinuedAsNewEventAttributes.SearchAttributes != nil {
+			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.SearchAttributes.IndexedFields)
+		}
 	case shared.EventTypeStartChildWorkflowExecutionInitiated:
+		if event.StartChildWorkflowExecutionInitiatedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.StartChildWorkflowExecutionInitiatedEventAttributes.Input)
+		res += len(event.StartChildWorkflowExecutionInitiatedEventAttributes.Control)
+		if event.StartChildWorkflowExecutionInitiatedEventAttributes.Memo != nil {
+			res += GetSizeOfMapStringToByteArray(event.StartChildWorkflowExecutionInitiatedEventAttributes.Memo.Fields)
+		}
+		if event.StartChildWorkflowExecutionInitiatedEventAttributes.Header != nil {
+			res += GetSizeOfMapStringToByteArray(event.StartChildWorkflowExecutionInitiatedEventAttributes.Header.Fields)
+		}
+		if event.StartChildWorkflowExecutionInitiatedEventAttributes.SearchAttributes != nil {
+			res += GetSizeOfMapStringToByteArray(event.StartChildWorkflowExecutionInitiatedEventAttributes.SearchAttributes.IndexedFields)
+		}
 	case shared.EventTypeStartChildWorkflowExecutionFailed:
+		if event.StartChildWorkflowExecutionFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.StartChildWorkflowExecutionFailedEventAttributes.Control)
 	case shared.EventTypeChildWorkflowExecutionStarted:
+		if event.ChildWorkflowExecutionStartedEventAttributes == nil {
+			return 0
+		}
+		if event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
+			res += GetSizeOfMapStringToByteArray(event.ChildWorkflowExecutionStartedEventAttributes.Header.Fields)
+		}
 	case shared.EventTypeChildWorkflowExecutionCompleted:
+		if event.ChildWorkflowExecutionCompletedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ChildWorkflowExecutionCompletedEventAttributes.Result)
 	case shared.EventTypeChildWorkflowExecutionFailed:
+		if event.ChildWorkflowExecutionFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ChildWorkflowExecutionFailedEventAttributes.Details)
 	case shared.EventTypeChildWorkflowExecutionCanceled:
+		if event.ChildWorkflowExecutionCanceledEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ChildWorkflowExecutionCanceledEventAttributes.Details)
 	case shared.EventTypeChildWorkflowExecutionTimedOut:
 	case shared.EventTypeChildWorkflowExecutionTerminated:
 	case shared.EventTypeSignalExternalWorkflowExecutionInitiated:
+		if event.SignalExternalWorkflowExecutionInitiatedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.Input)
+		res += len(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.Control)
 	case shared.EventTypeSignalExternalWorkflowExecutionFailed:
+		if event.SignalExternalWorkflowExecutionFailedEventAttributes == nil {
+			return 0
+		}
+		res += len(event.SignalExternalWorkflowExecutionFailedEventAttributes.Control)
 	case shared.EventTypeExternalWorkflowExecutionSignaled:
+		if event.ExternalWorkflowExecutionSignaledEventAttributes == nil {
+			return 0
+		}
+		res += len(event.ExternalWorkflowExecutionSignaledEventAttributes.Control)
 	case shared.EventTypeUpsertWorkflowSearchAttributes:
+		if event.UpsertWorkflowSearchAttributesEventAttributes == nil {
+			return 0
+		}
+		if event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes != nil {
+			res += GetSizeOfMapStringToByteArray(event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes.IndexedFields)
+		}
 	}
-
 	return uint32(res)
 }
 

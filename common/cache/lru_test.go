@@ -62,6 +62,7 @@ func TestLRU(t *testing.T) {
 	cache.Get("C")
 	cache.Put("F", "Felp")
 	assert.Nil(t, cache.Get("D"))
+	assert.Equal(t, 4, cache.Size())
 
 	cache.Delete("A")
 	assert.Nil(t, cache.Get("A"))
@@ -263,4 +264,72 @@ func TestIterator(t *testing.T) {
 	}
 	it.Close()
 	assert.Equal(t, expected, actual)
+}
+
+func TestLRU_SizeBased_SizeExceeded(t *testing.T) {
+	cache := New(5, &Options{
+		GetCacheItemSizeInBytesFunc: func(interface{}) uint32 {
+			return 5
+		},
+		MaxSizeInBytes: 15,
+	})
+
+	cache.Put("A", "Foo")
+	assert.Equal(t, "Foo", cache.Get("A"))
+	assert.Nil(t, cache.Get("B"))
+	assert.Equal(t, 1, cache.Size())
+
+	cache.Put("B", "Bar")
+	cache.Put("C", "Cid")
+	cache.Put("D", "Delt")
+	assert.Nil(t, cache.Get("A"))
+	assert.Equal(t, 3, cache.Size())
+
+	assert.Equal(t, "Bar", cache.Get("B"))
+	assert.Equal(t, "Cid", cache.Get("C"))
+	assert.Equal(t, "Delt", cache.Get("D"))
+
+	cache.Put("A", "Foo2")
+	assert.Equal(t, "Foo2", cache.Get("A"))
+	assert.Nil(t, cache.Get("B"))
+	assert.Equal(t, 3, cache.Size())
+
+	cache.Put("E", "Epsi")
+	assert.Nil(t, cache.Get("C"))
+	assert.Equal(t, "Epsi", cache.Get("E"))
+	assert.Equal(t, "Foo2", cache.Get("A"))
+	assert.Equal(t, 3, cache.Size())
+}
+
+func TestLRU_SizeBased_CountExceeded(t *testing.T) {
+	cache := New(5, &Options{
+		GetCacheItemSizeInBytesFunc: func(interface{}) uint32 {
+			return 5
+		},
+		MaxSizeInBytes: 25,
+	})
+
+	cache.Put("A", "Foo")
+	assert.Equal(t, "Foo", cache.Get("A"))
+	assert.Nil(t, cache.Get("B"))
+	assert.Equal(t, 1, cache.Size())
+
+	cache.Put("B", "Bar")
+	cache.Put("C", "Cid")
+	cache.Put("D", "Delt")
+	assert.Equal(t, 4, cache.Size())
+
+	assert.Equal(t, "Bar", cache.Get("B"))
+	assert.Equal(t, "Cid", cache.Get("C"))
+	assert.Equal(t, "Delt", cache.Get("D"))
+
+	cache.Put("A", "Foo2")
+	assert.Equal(t, "Foo2", cache.Get("A"))
+	assert.Equal(t, 4, cache.Size())
+
+	cache.Put("E", "Epsi")
+	assert.Nil(t, cache.Get("B"))
+	assert.Equal(t, "Epsi", cache.Get("E"))
+	assert.Equal(t, "Foo2", cache.Get("A"))
+	assert.Equal(t, 4, cache.Size())
 }
