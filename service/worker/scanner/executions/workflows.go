@@ -1,3 +1,25 @@
+// The MIT License (MIT)
+// 
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package executions
 
 import (
@@ -11,49 +33,68 @@ import (
 )
 
 const (
+	// ScannerContextKey is the key used to access ScannerContext in activities
 	ScannerContextKey = ContextKey(0)
 
+	// ShardReportQuery is the query name for the query used to get a single shard's report
 	ShardReportQuery = "shard_report"
+	// ShardStatusQuery is the query name for the query used to get the status of all shards
 	ShardStatusQuery = "shard_status_query"
+	// AggregateReportQuery is the query name for the query used to get the aggregate result of all finished shards
 	AggregateReportQuery = "aggregate_report"
 
+	// ShardStatusRunning indicates the shard has not completed yet
 	ShardStatusRunning ShardStatus = "running"
+	// ShardStatusSuccess indicates the scan on the shard ran successfully
 	ShardStatusSuccess ShardStatus = "success"
+	// ShardStatusControlFlowFailure indicates the scan on the shard failed
 	ShardStatusControlFlowFailure ShardStatus = "control_flow_failure"
 
 	shardReportChan = "share"
 )
 
 type (
+	// ContextKey is the type which identifies context keys
 	ContextKey int
 
+	// ScannerContext is the resource that is available in activities under ScannerContextKey context key
 	ScannerContext struct {
 		Resource resource.Resource
 		Scope metrics.Scope
 		ScannerWorkflowDynamicConfig *ScannerWorkflowDynamicConfig
 	}
 
+	// ScannerWorkflowParams are the parameters to the scan workflow
 	ScannerWorkflowParams struct {
 		Shards Shards
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
 	}
 
+	// Shards identify the shards that should be scanned.
+	// Exactly one of List of Range should be non-nil.
 	Shards struct {
 		List []int
 		Range *ShardRange
 	}
 
+	// ShardRange identifies a set of shards based on min (inclusive) and max (exclusive)
 	ShardRange struct {
 		Min int
 		Max int
 	}
 
+	// ShardStatusResult indicates the status for all shards
 	ShardStatusResult map[int]ShardStatus
 
+	// AggregateReportResult indicates the result of summing together all
+	// shard reports which have finished.
 	AggregateReportResult common.ShardScanStats
 
+	// StatusStatus is the type which indicates the status of a shard scan.
 	ShardStatus string
 
+	// ReportError is a type that is used to send either error or report on a channel.
+	// Exactly one of Report and ErrorStr should be non-nil.
 	ReportError struct {
 		Report *common.ShardScanReport
 		ErrorStr *string

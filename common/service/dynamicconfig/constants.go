@@ -288,6 +288,11 @@ var keys = map[Key]string{
 	TaskListScannerEnabled:                          "worker.taskListScannerEnabled",
 	HistoryScannerEnabled:                           "worker.historyScannerEnabled",
 	ExecutionsScannerEnabled:                        "worker.executionsScannerEnabled",
+	ExecutionScannerBlobstoreFlushThreshold:         "worker.executionScannerBlobstoreFlushThreshold",
+	ExecutionScannerConcurrency:                     "worker.executionScannerConcurrency",
+	ExecutionScannerPersistencePageSize:             "worker.executionScannerPersistencePageSize",
+	ExecutionScannerInvariantCollectionHistory:      "worker.executionScannerInvariantCollectionHistory",
+	ExecutionScannerInvariantCollectionMutableState: "worker.executionScannerInvariantCollectionMutableState",
 }
 
 const (
@@ -745,6 +750,16 @@ const (
 	HistoryScannerEnabled
 	// ExecutionsScannerEnabled indicates if executions scanner should be started as part of worker.Scanner
 	ExecutionsScannerEnabled
+	// ExecutionScannerConcurrency indicates the concurrency of execution scanner
+	ExecutionScannerConcurrency
+	// ExecutionScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in execution scanner
+	ExecutionScannerBlobstoreFlushThreshold
+	// ExecutionScannerPersistencePageSize indicates the page size of execution persistence fetches in execution scanner
+	ExecutionScannerPersistencePageSize
+	// ExecutionScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
+	ExecutionScannerInvariantCollectionMutableState
+	// ExecutionScannerInvariantCollectionHistory indicates if history invariant checks should be run
+	ExecutionScannerInvariantCollectionHistory
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task

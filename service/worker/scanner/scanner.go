@@ -61,6 +61,8 @@ type (
 		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
 		// ExecutionsScannerEnabled indicates if executions scanner should be started as part of scanner
 		ExecutionsScannerEnabled dynamicconfig.BoolPropertyFn
+		// ExecutionScannerConfig is the config for execution scanner
+		ExecutionScannerConfig *executions.ScannerWorkflowDynamicConfig
 	}
 
 	// BootstrapParams contains the set of params needed to bootstrap
