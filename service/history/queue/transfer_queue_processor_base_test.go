@@ -345,7 +345,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_PartialRea
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
 		ReadLevel:    ackLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxLevel.(*transferTaskKey).taskID,
+		MaxReadLevel: shardMaxLevel.(*transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(&persistence.GetTransferTasksResponse{
 		Tasks:         taskInfos,
@@ -365,7 +365,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_PartialRea
 	processorBase.processBatch()
 
 	queueCollection := processorBase.processingQueueCollections[0]
-	s.Nil(queueCollection.ActiveQueue())
+	s.NotNil(queueCollection.ActiveQueue())
 	s.True(taskKeyEquals(shardMaxLevel, queueCollection.Queues()[0].State().ReadLevel()))
 
 	newTasks := false
