@@ -189,6 +189,7 @@ func (h *Handler) Start() {
 	h.failoverCoordinator = shard.NewCoordinator(
 		h.GetMetadataManager(),
 		h.GetHistoryClient(),
+		h.GetTimeSource(),
 		h.config,
 		h.GetMetricsClient(),
 		h.GetLogger(),

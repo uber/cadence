@@ -74,6 +74,7 @@ func (s *coordinatorSuite) SetupTest() {
 	s.coordinator = NewCoordinator(
 		s.mockMetadataManager,
 		s.historyClient,
+		s.mockResource.GetTimeSource(),
 		s.config,
 		s.mockResource.GetMetricsClient(),
 		s.mockResource.GetLogger(),

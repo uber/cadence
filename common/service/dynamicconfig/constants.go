@@ -258,7 +258,6 @@ var keys = map[Key]string{
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
 	FailoverMarkerHeartbeatInterval:                        "history.FailoverMarkerHeartbeatInterval",
 	FailoverMarkerHeartbeatTimerJitterCoefficient:          "history.FailoverMarkerHeartbeatTimerJitterCoefficient",
-	EnableGracefulFailover:                                 "history.EnableGracefulFailover",
 
 	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                   "worker.persistenceGlobalMaxQPS",
@@ -796,8 +795,6 @@ const (
 	FailoverMarkerHeartbeatInterval
 	// FailoverMarkerHeartbeatTimerJitterCoefficient is the jitter for failover marker heartbeat timer
 	FailoverMarkerHeartbeatTimerJitterCoefficient
-	// EnableGracefulFailover is the feature flag for graceful failover
-	EnableGracefulFailover
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

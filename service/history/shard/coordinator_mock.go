@@ -97,13 +97,13 @@ func (mr *MockCoordinatorMockRecorder) HeartbeatFailoverMarkers(shardID, markers
 }
 
 // ReceiveFailoverMarkers mocks base method
-func (m *MockCoordinator) ReceiveFailoverMarkers(shardID int, markers []*replicator.FailoverMarkerAttributes) {
+func (m *MockCoordinator) ReceiveFailoverMarkers(shardIDs []int, marker *replicator.FailoverMarkerAttributes) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ReceiveFailoverMarkers", shardID, markers)
+	m.ctrl.Call(m, "ReceiveFailoverMarkers", shardIDs, marker)
 }
 
 // ReceiveFailoverMarkers indicates an expected call of ReceiveFailoverMarkers
-func (mr *MockCoordinatorMockRecorder) ReceiveFailoverMarkers(shardID, markers interface{}) *gomock.Call {
+func (mr *MockCoordinatorMockRecorder) ReceiveFailoverMarkers(shardIDs, marker interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReceiveFailoverMarkers", reflect.TypeOf((*MockCoordinator)(nil).ReceiveFailoverMarkers), shardID, markers)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReceiveFailoverMarkers", reflect.TypeOf((*MockCoordinator)(nil).ReceiveFailoverMarkers), shardIDs, marker)
 }
