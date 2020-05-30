@@ -1,11 +1,13 @@
 package executions
 
 import (
+	"errors"
 	"fmt"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"go.uber.org/cadence/workflow"
+	"time"
 )
 
 const (
@@ -18,6 +20,8 @@ const (
 	ShardStatusRunning ShardStatus = "running"
 	ShardStatusSuccess ShardStatus = "success"
 	ShardStatusControlFlowFailure ShardStatus = "control_flow_failure"
+
+	shardReportChan = "share"
 )
 
 type (
@@ -31,6 +35,7 @@ type (
 
 	ScannerWorkflowParams struct {
 		Shards Shards
+		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
 	}
 
 	Shards struct {
@@ -48,6 +53,11 @@ type (
 	AggregateReportResult common.ShardScanStats
 
 	ShardStatus string
+
+	ReportError struct {
+		Report *common.ShardScanReport
+		ErrorStr *string
+	}
 )
 
 // ScannerWorkflow is the workflow that scans over all concrete executions
@@ -73,19 +83,70 @@ func ScannerWorkflow(
 		return err
 	}
 
+	activityOptions := workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:   	time.Minute,
+	}
+	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
+	var resolvedConfig ResolvedScannerWorkflowConfig
+	if err := workflow.ExecuteActivity(activityCtx, ScannerConfigActivityName, ScannerConfigActivityParams{
+		Overwrites: params.ScannerWorkflowConfigOverwrites,
+	}).Get(ctx, &resolvedConfig); err != nil {
+		return err
+	}
 
+	if !resolvedConfig.Enabled {
+		return nil
+	}
 
+	shardReportChan := workflow.GetSignalChannel(ctx, shardReportChan)
+	for i := 0; i < resolvedConfig.Concurrency; i++ {
+		idx := i
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			for _, shard := range shards {
+				if shard % resolvedConfig.Concurrency == idx {
+					activityOptions.StartToCloseTimeout = time.Hour * 3
+					activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
+					var report *common.ShardScanReport
+					if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
+						ShardID: shard,
+						ExecutionsPageSize: resolvedConfig.ExecutionsPageSize,
+						BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
+						InvariantCollections: resolvedConfig.InvariantCollections,
+					}).Get(ctx, &report); err != nil {
+						errStr := err.Error()
+						shardReportChan.Send(ctx, ReportError{
+							Report: nil,
+							ErrorStr: &errStr,
+						})
+						return
+					}
+					shardReportChan.Send(ctx, ReportError{
+						Report: report,
+						ErrorStr: nil,
+					})
+				}
+			}
+		})
+	}
 
+	for i := 0; i < len(shards); i++ {
+		var reportErr ReportError
+		shardReportChan.Receive(ctx, &reportErr)
+		if reportErr.ErrorStr != nil {
+			return errors.New(*reportErr.ErrorStr)
+		}
+		aggregator.addReport(*reportErr.Report)
+	}
 
-
-
-	// 2. start some number of cadence go routines
-	// 3. iterate over all shards and for each one a goroutine will run the activity
-	// 4. keep track of a map from shardID -> report, this will get used in query
-	// 5. there should also be queries to get aggregate information this will also be kept in workflow and updated each time a shard finishes
-
-
-
+	activityOptions.StartToCloseTimeout = time.Minute
+	activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
+	if err := workflow.ExecuteActivity(activityCtx, ScannerEmitMetricsActivityName, ScannerEmitMetricsActivityParams{
+		ShardStatusResult: aggregator.status,
+		AggregateReportResult: aggregator.aggregation,
+	}).Get(ctx, nil); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -142,7 +203,6 @@ func (a *shardResultAggregator) adjustAggregation(stats common.ShardScanStats, f
 	a.aggregation.CorruptedCount = fn(a.aggregation.CorruptedCount, stats.CorruptedCount)
 	a.aggregation.CheckFailedCount = fn(a.aggregation.CheckFailedCount, stats.CheckFailedCount)
 	a.aggregation.CorruptedOpenExecutionCount = fn(a.aggregation.CorruptedOpenExecutionCount, stats.CorruptedOpenExecutionCount)
-	// TODO: this cannot be called within workflow its not deterministic
 	for k, v := range stats.CorruptionByType {
 		a.aggregation.CorruptionByType[k] = fn(a.aggregation.CorruptionByType[k], v)
 	}

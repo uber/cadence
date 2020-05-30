@@ -2,8 +2,6 @@ package executions
 
 import (
 	"context"
-	"time"
-
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"github.com/uber/cadence/service/worker/scanner/executions/shard"
@@ -16,34 +14,32 @@ const (
 )
 
 type (
-	scannerConfigActivityParams struct {
-		overwrites *ScannerWorkflowConfigOverwrites
+	ScannerConfigActivityParams struct {
+		Overwrites ScannerWorkflowConfigOverwrites
 	}
 
-	scanShardActivityParams struct {
-		shardID int
-		executionsPageSize int
-		blobstoreFlushThreshold int
-		invariantCollections []common.InvariantCollection
+	ScanShardActivityParams struct {
+		ShardID int
+		ExecutionsPageSize int
+		BlobstoreFlushThreshold int
+		InvariantCollections InvariantCollections
 	}
 
-	scannerEmitMetricsActivityParams struct {
-		latency time.Duration
-		shardStatusResult ShardStatusResult
-		aggregateReportResult AggregateReportResult
+	ScannerEmitMetricsActivityParams struct {
+		ShardStatusResult ShardStatusResult
+		AggregateReportResult AggregateReportResult
 	}
 )
 
 // ScannerEmitMetricsActivity will emit metrics for a complete run of scanner
 func ScannerEmitMetricsActivity(
 	activityCtx context.Context,
-	params scannerEmitMetricsActivityParams,
+	params ScannerEmitMetricsActivityParams,
 ) {
 	scope := activityCtx.Value(ScannerContextKey).(ScannerContext).Scope.Tagged(metrics.ActivityTypeTag(ScannerEmitMetricsActivityName))
-	scope.RecordTimer(metrics.CadenceLatency, params.latency)
 	shardSuccess := 0
 	shardControlFlowFailure := 0
-	for _, v := range params.shardStatusResult {
+	for _, v := range params.ShardStatusResult {
 		switch v {
 		case ShardStatusSuccess:
 			shardSuccess++
@@ -54,11 +50,12 @@ func ScannerEmitMetricsActivity(
 	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(shardSuccess))
 	scope.UpdateGauge(metrics.CadenceShardFailureGauge, float64(shardControlFlowFailure))
 
-	scope.UpdateGauge(metrics.ScannerExecutionsGauge, float64(params.aggregateReportResult.ExecutionsCount))
-	scope.UpdateGauge(metrics.ScannerCorruptedGauge, float64(params.aggregateReportResult.CorruptedCount))
-	scope.UpdateGauge(metrics.ScannerCheckFailedGauge, float64(params.aggregateReportResult.CheckFailedCount))
-	scope.UpdateGauge(metrics.ScannerCorruptedOpenExecutionGauge, float64(params.aggregateReportResult.CorruptedOpenExecutionCount))
-	for k, v := range params.aggregateReportResult.CorruptionByType {
+	agg := params.AggregateReportResult
+	scope.UpdateGauge(metrics.ScannerExecutionsGauge, float64(agg.ExecutionsCount))
+	scope.UpdateGauge(metrics.ScannerCorruptedGauge, float64(agg.CorruptedCount))
+	scope.UpdateGauge(metrics.ScannerCheckFailedGauge, float64(agg.CheckFailedCount))
+	scope.UpdateGauge(metrics.ScannerCorruptedOpenExecutionGauge, float64(agg.CorruptedOpenExecutionCount))
+	for k, v := range agg.CorruptionByType {
 		scope.Tagged(metrics.InvariantTypeTag(string(k))).UpdateGauge(metrics.ScannerCorruptionByTypeGauge, float64(v))
 	}
 }
@@ -66,26 +63,33 @@ func ScannerEmitMetricsActivity(
 // ScanShardActivity will scan all executions in a shard and check for invariant violations.
 func ScanShardActivity(
 	activityCtx context.Context,
-	params scanShardActivityParams,
+	params ScanShardActivityParams,
 ) (*common.ShardScanReport, error) {
 	ctx := activityCtx.Value(ScannerContextKey).(ScannerContext)
 	resources := ctx.Resource
 	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(ScannerScanShardActivityName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer sw.Stop()
-	execManager, err := resources.GetExecutionManager(params.shardID)
+	execManager, err := resources.GetExecutionManager(params.ShardID)
 	if err != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 		return nil, err
 	}
+	var collections []common.InvariantCollection
+	if params.InvariantCollections.InvariantCollectionHistory {
+		collections = append(collections, common.InvariantCollectionHistory)
+	}
+	if params.InvariantCollections.InvariantCollectionMutableState {
+		collections = append(collections, common.InvariantCollectionMutableState)
+	}
 	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
 	scanner := shard.NewScanner(
-		params.shardID,
+		params.ShardID,
 		pr,
-		params.executionsPageSize,
+		params.ExecutionsPageSize,
 		resources.GetBlobstoreClient(),
-		params.blobstoreFlushThreshold,
-		params.invariantCollections)
+		params.BlobstoreFlushThreshold,
+		collections)
 	report := scanner.Scan()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
@@ -96,10 +100,9 @@ func ScanShardActivity(
 // ScannerConfigActivity will read dynamic config, apply overwrites and return a resolved config.
 func ScannerConfigActivity(
 	activityCtx context.Context,
-	params scannerConfigActivityParams,
+	params ScannerConfigActivityParams,
 ) (ResolvedScannerWorkflowConfig, error) {
 	dc := activityCtx.Value(ScannerContextKey).(ScannerContext).ScannerWorkflowDynamicConfig
-	overwrites := params.overwrites
 	result := ResolvedScannerWorkflowConfig{
 		Enabled: dc.Enabled(),
 		Concurrency: dc.Concurrency(),
@@ -110,6 +113,7 @@ func ScannerConfigActivity(
 			InvariantCollectionHistory: dc.DynamicConfigInvariantCollections.InvariantCollectionHistory(),
 		},
 	}
+	overwrites := params.Overwrites
 	if overwrites.Enabled != nil {
 		result.Enabled = *overwrites.Enabled
 	}

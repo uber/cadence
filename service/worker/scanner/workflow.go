@@ -59,9 +59,6 @@ const (
 	executionsScannerWFID           = "cadence-sys-executions-scanner"
 	executionsScannerWFTypeName     = "cadence-sys-executions-scanner-workflow"
 	executionsScannerTaskListName   = "cadence-sys-executions-scanner-tasklist-0"
-
-	executionsScanShardActivityName = "cadence-sys-executions-scanner-scan-shard-activity"
-
 )
 
 var (
@@ -110,7 +107,7 @@ func init() {
 	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
 	activity.RegisterWithOptions(HistoryScavengerActivity, activity.RegisterOptions{Name: historyScavengerActivityName})
 
-	//workflow.RegisterWithOptions(executions.ScannerWorkflow, workflow.RegisterOptions{Name: executionsScannerWFTypeName})
+	workflow.RegisterWithOptions(executions.ScannerWorkflow, workflow.RegisterOptions{Name: executionsScannerWFTypeName})
 	activity.RegisterWithOptions(executions.ScannerEmitMetricsActivity, activity.RegisterOptions{Name: executions.ScannerEmitMetricsActivityName})
 	activity.RegisterWithOptions(executions.ScanShardActivity, activity.RegisterOptions{Name: executions.ScannerScanShardActivityName})
 	activity.RegisterWithOptions(executions.ScannerConfigActivity, activity.RegisterOptions{Name: executions.ScannerConfigActivityName})
