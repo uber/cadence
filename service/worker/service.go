@@ -21,9 +21,10 @@
 package worker
 
 import (
-	"github.com/uber/cadence/service/worker/scanner/executions"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/service/worker/scanner/executions"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -134,14 +135,14 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
 			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, true),
 			ExecutionsScannerEnabled: dc.GetBoolProperty(dynamicconfig.ExecutionsScannerEnabled, false),
-			ExecutionScannerConfig:   &executions.ScannerWorkflowDynamicConfig{
-				Enabled: dc.GetBoolProperty(dynamicconfig.ExecutionsScannerEnabled, false),
-				Concurrency: dc.GetIntProperty(dynamicconfig.ExecutionScannerConcurrency, 25),
-				ExecutionsPageSize: dc.GetIntProperty(dynamicconfig.ExecutionScannerPersistencePageSize, 1000),
-				BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ExecutionScannerBlobstoreFlushThreshold, 100),
+			ExecutionScannerConfig: &executions.ScannerWorkflowDynamicConfig{
+				Enabled:                 dc.GetBoolProperty(dynamicconfig.ExecutionsScannerEnabled, false),
+				Concurrency:             dc.GetIntProperty(dynamicconfig.ExecutionsScannerConcurrency, 25),
+				ExecutionsPageSize:      dc.GetIntProperty(dynamicconfig.ExecutionsScannerPersistencePageSize, 1000),
+				BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ExecutionsScannerBlobstoreFlushThreshold, 100),
 				DynamicConfigInvariantCollections: executions.DynamicConfigInvariantCollections{
-					InvariantCollectionMutableState: dc.GetBoolProperty(dynamicconfig.ExecutionScannerInvariantCollectionMutableState, false),
-					InvariantCollectionHistory: dc.GetBoolProperty(dynamicconfig.ExecutionScannerInvariantCollectionHistory, false),
+					InvariantCollectionMutableState: dc.GetBoolProperty(dynamicconfig.ExecutionsScannerInvariantCollectionMutableState, false),
+					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.ExecutionsScannerInvariantCollectionHistory, false),
 				},
 			},
 		},

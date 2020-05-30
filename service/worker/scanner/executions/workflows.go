@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2017-2020 Uber Technologies Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,11 +25,13 @@ package executions
 import (
 	"errors"
 	"fmt"
+	"time"
+
+	"go.uber.org/cadence/workflow"
+
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
-	"go.uber.org/cadence/workflow"
-	"time"
 )
 
 const (
@@ -50,7 +52,7 @@ const (
 	// ShardStatusControlFlowFailure indicates the scan on the shard failed
 	ShardStatusControlFlowFailure ShardStatus = "control_flow_failure"
 
-	shardReportChan = "share"
+	shardReportChan = "shardReportChan"
 )
 
 type (
@@ -59,21 +61,21 @@ type (
 
 	// ScannerContext is the resource that is available in activities under ScannerContextKey context key
 	ScannerContext struct {
-		Resource resource.Resource
-		Scope metrics.Scope
+		Resource                     resource.Resource
+		Scope                        metrics.Scope
 		ScannerWorkflowDynamicConfig *ScannerWorkflowDynamicConfig
 	}
 
 	// ScannerWorkflowParams are the parameters to the scan workflow
 	ScannerWorkflowParams struct {
-		Shards Shards
+		Shards                          Shards
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
 	}
 
 	// Shards identify the shards that should be scanned.
 	// Exactly one of List of Range should be non-nil.
 	Shards struct {
-		List []int
+		List  []int
 		Range *ShardRange
 	}
 
@@ -90,13 +92,13 @@ type (
 	// shard reports which have finished.
 	AggregateReportResult common.ShardScanStats
 
-	// StatusStatus is the type which indicates the status of a shard scan.
+	// ShardStatus is the type which indicates the status of a shard scan.
 	ShardStatus string
 
 	// ReportError is a type that is used to send either error or report on a channel.
 	// Exactly one of Report and ErrorStr should be non-nil.
 	ReportError struct {
-		Report *common.ShardScanReport
+		Report   *common.ShardScanReport
 		ErrorStr *string
 	}
 )
@@ -126,7 +128,7 @@ func ScannerWorkflow(
 
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:   	time.Minute,
+		StartToCloseTimeout:    time.Minute,
 	}
 	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
 	var resolvedConfig ResolvedScannerWorkflowConfig
@@ -145,25 +147,25 @@ func ScannerWorkflow(
 		idx := i
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for _, shard := range shards {
-				if shard % resolvedConfig.Concurrency == idx {
+				if shard%resolvedConfig.Concurrency == idx {
 					activityOptions.StartToCloseTimeout = time.Hour * 3
 					activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
 					var report *common.ShardScanReport
 					if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
-						ShardID: shard,
-						ExecutionsPageSize: resolvedConfig.ExecutionsPageSize,
+						ShardID:                 shard,
+						ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
 						BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
-						InvariantCollections: resolvedConfig.InvariantCollections,
+						InvariantCollections:    resolvedConfig.InvariantCollections,
 					}).Get(ctx, &report); err != nil {
 						errStr := err.Error()
 						shardReportChan.Send(ctx, ReportError{
-							Report: nil,
+							Report:   nil,
 							ErrorStr: &errStr,
 						})
 						return
 					}
 					shardReportChan.Send(ctx, ReportError{
-						Report: report,
+						Report:   report,
 						ErrorStr: nil,
 					})
 				}
@@ -183,7 +185,7 @@ func ScannerWorkflow(
 	activityOptions.StartToCloseTimeout = time.Minute
 	activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
 	if err := workflow.ExecuteActivity(activityCtx, ScannerEmitMetricsActivityName, ScannerEmitMetricsActivityParams{
-		ShardStatusResult: aggregator.status,
+		ShardStatusResult:     aggregator.status,
 		AggregateReportResult: aggregator.aggregation,
 	}).Get(ctx, nil); err != nil {
 		return err
@@ -192,8 +194,8 @@ func ScannerWorkflow(
 }
 
 type shardResultAggregator struct {
-	reports map[int]common.ShardScanReport
-	status ShardStatusResult
+	reports     map[int]common.ShardScanReport
+	status      ShardStatusResult
 	aggregation AggregateReportResult
 }
 
@@ -204,7 +206,7 @@ func newShardResultAggregator(shards []int) *shardResultAggregator {
 	}
 	return &shardResultAggregator{
 		reports: make(map[int]common.ShardScanReport),
-		status: status,
+		status:  status,
 		aggregation: AggregateReportResult{
 			CorruptionByType: make(map[common.InvariantType]int64),
 		},

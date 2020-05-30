@@ -22,8 +22,9 @@ package scanner
 
 import (
 	"context"
-	"github.com/uber/cadence/service/worker/scanner/executions"
 	"time"
+
+	"github.com/uber/cadence/service/worker/scanner/executions"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
@@ -56,9 +57,9 @@ const (
 	historyScannerTaskListName   = "cadence-sys-history-scanner-tasklist-0"
 	historyScavengerActivityName = "cadence-sys-history-scanner-scvg-activity"
 
-	executionsScannerWFID           = "cadence-sys-executions-scanner"
-	executionsScannerWFTypeName     = "cadence-sys-executions-scanner-workflow"
-	executionsScannerTaskListName   = "cadence-sys-executions-scanner-tasklist-0"
+	executionsScannerWFID         = "cadence-sys-executions-scanner"
+	executionsScannerWFTypeName   = "cadence-sys-executions-scanner-workflow"
+	executionsScannerTaskListName = "cadence-sys-executions-scanner-tasklist-0"
 )
 
 var (

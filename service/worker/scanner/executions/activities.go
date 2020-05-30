@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
+//
 // Copyright (c) 2017-2020 Uber Technologies Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,31 +24,38 @@ package executions
 
 import (
 	"context"
+
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 const (
-	ScannerConfigActivityName    = "cadence-sys-executions-scanner-config-activity"
+	// ScannerConfigActivityName is the activity name ScannerConfigActivity
+	ScannerConfigActivityName = "cadence-sys-executions-scanner-config-activity"
+	// ScannerScanShardActivityName is the activity name for ScanShardActivity
 	ScannerScanShardActivityName = "cadence-sys-executions-scanner-scan-shard-activity"
+	// ScannerEmitMetricsActivityName is the activity name for ScannerEmitMetricsActivity
 	ScannerEmitMetricsActivityName = "cadence-sys-executions-scanner-emit-metrics-activity"
 )
 
 type (
+	// ScannerConfigActivityParams is the parameter for ScannerConfigActivity
 	ScannerConfigActivityParams struct {
 		Overwrites ScannerWorkflowConfigOverwrites
 	}
 
+	// ScanShardActivityParams is the parameter for ScanShardActivity
 	ScanShardActivityParams struct {
-		ShardID int
-		ExecutionsPageSize int
+		ShardID                 int
+		ExecutionsPageSize      int
 		BlobstoreFlushThreshold int
-		InvariantCollections InvariantCollections
+		InvariantCollections    InvariantCollections
 	}
 
+	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
 	ScannerEmitMetricsActivityParams struct {
-		ShardStatusResult ShardStatusResult
+		ShardStatusResult     ShardStatusResult
 		AggregateReportResult AggregateReportResult
 	}
 )
@@ -57,7 +64,7 @@ type (
 func ScannerEmitMetricsActivity(
 	activityCtx context.Context,
 	params ScannerEmitMetricsActivityParams,
-) {
+) error {
 	scope := activityCtx.Value(ScannerContextKey).(ScannerContext).Scope.Tagged(metrics.ActivityTypeTag(ScannerEmitMetricsActivityName))
 	shardSuccess := 0
 	shardControlFlowFailure := 0
@@ -80,6 +87,7 @@ func ScannerEmitMetricsActivity(
 	for k, v := range agg.CorruptionByType {
 		scope.Tagged(metrics.InvariantTypeTag(string(k))).UpdateGauge(metrics.ScannerCorruptionByTypeGauge, float64(v))
 	}
+	return nil
 }
 
 // ScanShardActivity will scan all executions in a shard and check for invariant violations.
@@ -126,13 +134,13 @@ func ScannerConfigActivity(
 ) (ResolvedScannerWorkflowConfig, error) {
 	dc := activityCtx.Value(ScannerContextKey).(ScannerContext).ScannerWorkflowDynamicConfig
 	result := ResolvedScannerWorkflowConfig{
-		Enabled: dc.Enabled(),
-		Concurrency: dc.Concurrency(),
-		ExecutionsPageSize: dc.ExecutionsPageSize(),
+		Enabled:                 dc.Enabled(),
+		Concurrency:             dc.Concurrency(),
+		ExecutionsPageSize:      dc.ExecutionsPageSize(),
 		BlobstoreFlushThreshold: dc.BlobstoreFlushThreshold(),
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: dc.DynamicConfigInvariantCollections.InvariantCollectionMutableState(),
-			InvariantCollectionHistory: dc.DynamicConfigInvariantCollections.InvariantCollectionHistory(),
+			InvariantCollectionHistory:      dc.DynamicConfigInvariantCollections.InvariantCollectionHistory(),
 		},
 	}
 	overwrites := params.Overwrites

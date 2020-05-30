@@ -2330,7 +2330,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
-		ScannerExecutionsGauge:            			   {metricName: "scanner_executions", metricType: Gauge},
+		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
 		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},
 		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
 		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},

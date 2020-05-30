@@ -22,9 +22,10 @@ package scanner
 
 import (
 	"context"
+	"time"
+
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions"
-	"time"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -120,9 +121,9 @@ func New(
 func (s *Scanner) Start() error {
 	backgroundActivityContext := context.WithValue(context.Background(), scannerContextKey, s.context)
 	backgroundActivityContext = context.WithValue(backgroundActivityContext, executions.ScannerContextKey, executions.ScannerContext{
-		Resource: s.context.Resource,
-		Scope: s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
-		ScannerWorkflowDynamicConfig: executions.GetScannerWorkflowDynamicConfig(),
+		Resource:                     s.context.Resource,
+		Scope:                        s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
+		ScannerWorkflowDynamicConfig: s.context.cfg.ExecutionScannerConfig,
 	})
 	workerOpts := worker.Options{
 		Logger:                                 s.context.zapLogger,
@@ -135,7 +136,14 @@ func (s *Scanner) Start() error {
 	var workerTaskListNames []string
 	if s.context.cfg.ExecutionsScannerEnabled() {
 		workerTaskListNames = append(workerTaskListNames, executionsScannerTaskListName)
-		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName)
+		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, executions.ScannerWorkflowParams{
+			Shards: executions.Shards{
+				Range: &executions.ShardRange{
+					Min: 0, // TODO: fix this plumbing
+					Max: 0,
+				},
+			},
+		})
 	}
 
 	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL && s.context.cfg.TaskListScannerEnabled() {
