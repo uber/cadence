@@ -2,6 +2,7 @@ package executions
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"go.uber.org/cadence/workflow"
@@ -24,6 +25,7 @@ type (
 
 	ScannerContext struct {
 		Resource resource.Resource
+		Scope metrics.Scope
 		ScannerWorkflowDynamicConfig *ScannerWorkflowDynamicConfig
 	}
 
@@ -140,6 +142,7 @@ func (a *shardResultAggregator) adjustAggregation(stats common.ShardScanStats, f
 	a.aggregation.CorruptedCount = fn(a.aggregation.CorruptedCount, stats.CorruptedCount)
 	a.aggregation.CheckFailedCount = fn(a.aggregation.CheckFailedCount, stats.CheckFailedCount)
 	a.aggregation.CorruptedOpenExecutionCount = fn(a.aggregation.CorruptedOpenExecutionCount, stats.CorruptedOpenExecutionCount)
+	// TODO: this cannot be called within workflow its not deterministic
 	for k, v := range stats.CorruptionByType {
 		a.aggregation.CorruptionByType[k] = fn(a.aggregation.CorruptionByType[k], v)
 	}

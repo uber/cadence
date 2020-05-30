@@ -22,6 +22,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 	"time"
 
@@ -116,7 +117,11 @@ func New(
 // Start starts the scanner
 func (s *Scanner) Start() error {
 	backgroundActivityContext := context.WithValue(context.Background(), scannerContextKey, s.context)
-	backgroundActivityContext = context.WithValue(backgroundActivityContext, executions.ScannerContextKey, s.context)
+	backgroundActivityContext = context.WithValue(backgroundActivityContext, executions.ScannerContextKey, executions.ScannerContext{
+		Resource: s.context.Resource,
+		Scope: s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
+		ScannerWorkflowDynamicConfig: executions.GetScannerWorkflowDynamicConfig(),
+	})
 	workerOpts := worker.Options{
 		Logger:                                 s.context.zapLogger,
 		MetricsScope:                           s.context.tallyScope,

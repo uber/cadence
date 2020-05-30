@@ -1034,8 +1034,8 @@ const (
 	ArchiverArchivalWorkflowScope
 	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
 	TaskListScavengerScope
-	// ExecutionsScavengerScope is scope used by all metrics emitted by worker.executions.Scavenger module
-	ExecutionsScavengerScope
+	// ExecutionsScannerScope is scope used by all metrics emitted by worker.executions.Scanner module
+	ExecutionsScannerScope
 	// BatcherScope is scope used by all metrics emitted by worker.Batcher module
 	BatcherScope
 	// HistoryScavengerScope is scope used by all metrics emitted by worker.history.Scavenger module
@@ -1505,7 +1505,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                      {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:          {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
-		ExecutionsScavengerScope:               {operation: "executionsscavenger"},
+		ExecutionsScannerScope:                 {operation: "ExecutionsScanner"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
@@ -1641,6 +1641,9 @@ const (
 	CadenceErrUnauthorizedPerTaskListCounter
 	CadenceErrAuthorizeFailedPerTaskListCounter
 	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
+
+	CadenceShardSuccessGauge
+	CadenceShardFailureGauge
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1905,6 +1908,11 @@ const (
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
 	DomainReplicationEnqueueDLQCount
+	ScannerExecutionsGauge
+	ScannerCorruptedGauge
+	ScannerCheckFailedGauge
+	ScannerCorruptionByTypeGauge
+	ScannerCorruptedOpenExecutionGauge
 
 	NumWorkerMetrics
 )
@@ -2064,9 +2072,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrAuthorizeFailedPerTaskListCounter: {
 			metricName: "cadence_errors_authorize_failed_per_tl", metricRollupName: "cadence_errors_authorize_failed", metricType: Counter,
 		},
+<<<<<<< HEAD
 		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
 			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
 		},
+=======
+		CadenceShardSuccessGauge: {metricName: "cadence_shard_success", metricType: Gauge},
+		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
+>>>>>>> d1d9c6c2... finish impl of activites for scanner workflow
 	},
 	History: {
 		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
@@ -2317,6 +2330,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
+		ScannerExecutionsGauge:            			   {metricName: "scanner_executions", metricType: Gauge},
+		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},
+		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
+		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
+		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
 	},
 }
 
