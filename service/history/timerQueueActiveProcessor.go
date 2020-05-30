@@ -53,7 +53,7 @@ func newTimerQueueActiveProcessor(
 	shard shard.Context,
 	historyService *historyEngineImpl,
 	matchingClient matching.Client,
-	taskAllocator taskAllocator,
+	taskAllocator queue.TaskAllocator,
 	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) *timerQueueActiveProcessorImpl {
@@ -71,7 +71,7 @@ func newTimerQueueActiveProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
-		return taskAllocator.verifyActiveTask(timer.DomainID, timer)
+		return taskAllocator.VerifyActiveTask(timer.DomainID, timer)
 	}
 
 	timerQueueAckMgr := newTimerQueueAckMgr(
@@ -149,7 +149,7 @@ func newTimerQueueFailoverProcessor(
 	minLevel time.Time,
 	maxLevel time.Time,
 	matchingClient matching.Client,
-	taskAllocator taskAllocator,
+	taskAllocator queue.TaskAllocator,
 	queueTaskProcessor task.Processor,
 	logger log.Logger,
 ) (func(ackLevel timerKey) error, *timerQueueActiveProcessorImpl) {
@@ -188,7 +188,7 @@ func newTimerQueueFailoverProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
-		return taskAllocator.verifyFailoverActiveTask(domainIDs, timer.DomainID, timer)
+		return taskAllocator.VerifyFailoverActiveTask(domainIDs, timer.DomainID, timer)
 	}
 
 	timerQueueAckMgr := newTimerQueueFailoverAckMgr(

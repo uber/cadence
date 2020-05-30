@@ -117,13 +117,7 @@ func newProcessingQueue(
 	if stateImpl, ok := state.(*processingQueueStateImpl); ok {
 		queue.state = stateImpl
 	} else {
-		queue.state = newProcessingQueueState(
-			state.Level(),
-			state.AckLevel(),
-			state.ReadLevel(),
-			state.MaxLevel(),
-			state.DomainFilter(),
-		)
+		queue.state = copyQueueState(state)
 	}
 
 	return queue
@@ -280,6 +274,9 @@ func (q *processingQueueImpl) UpdateAckLevel() {
 	if len(q.outstandingTasks) == 0 {
 		q.state.ackLevel = q.state.readLevel
 	}
+
+	// TODO: add a check for specifically for timer task key
+	// and override the taskID field for timer task key to 0.
 }
 
 func splitProcessingQueue(
@@ -368,4 +365,16 @@ func maxTaskKey(
 		return key2
 	}
 	return key1
+}
+
+func copyQueueState(
+	state ProcessingQueueState,
+) *processingQueueStateImpl {
+	return newProcessingQueueState(
+		state.Level(),
+		state.AckLevel(),
+		state.ReadLevel(),
+		state.MaxLevel(),
+		state.DomainFilter(),
+	)
 }

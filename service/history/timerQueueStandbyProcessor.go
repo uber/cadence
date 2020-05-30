@@ -54,7 +54,7 @@ func newTimerQueueStandbyProcessor(
 	shard shard.Context,
 	historyService *historyEngineImpl,
 	clusterName string,
-	taskAllocator taskAllocator,
+	taskAllocator queue.TaskAllocator,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	queueTaskProcessor task.Processor,
@@ -73,7 +73,7 @@ func newTimerQueueStandbyProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
-		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
+		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
 	timerGate := queue.NewRemoteTimerGate()
