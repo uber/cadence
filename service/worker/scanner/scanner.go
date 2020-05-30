@@ -24,9 +24,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/service/worker/scanner/executions"
-
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
@@ -37,9 +34,11 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/worker/scanner/executions"
 )
 
 const (

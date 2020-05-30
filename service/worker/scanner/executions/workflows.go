@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/cadence"
+
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/metrics"
@@ -73,7 +75,7 @@ type (
 	}
 
 	// Shards identify the shards that should be scanned.
-	// Exactly one of List of Range should be non-nil.
+	// Exactly one of List or Range should be non-nil.
 	Shards struct {
 		List  []int
 		Range *ShardRange
@@ -129,6 +131,11 @@ func ScannerWorkflow(
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    10 * time.Second,
+			BackoffCoefficient: 1.7,
+			ExpirationInterval: 5 * time.Minute,
+		},
 	}
 	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
 	var resolvedConfig ResolvedScannerWorkflowConfig
