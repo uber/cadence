@@ -59,8 +59,8 @@ func (s *FixerSuite) TestFix_Failure_FirstIteratorError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(nil, errors.New("iterator error")).Times(1)
 	fixer := &fixer{
-		shardID: 0,
-		itr:     mockItr,
+		shardID:          0,
+		itr:              mockItr,
 		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
@@ -221,9 +221,9 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterFlushError() {
 	fixedWriter := common.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Flush().Return(errors.New("fix writer flush failed")).Times(1)
 	fixer := &fixer{
-		shardID:     0,
-		itr:         mockItr,
-		fixedWriter: fixedWriter,
+		shardID:          0,
+		itr:              mockItr,
+		fixedWriter:      fixedWriter,
 		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
@@ -246,10 +246,10 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterFlushError() {
 	skippedWriter := common.NewMockExecutionWriter(s.controller)
 	skippedWriter.EXPECT().Flush().Return(errors.New("skip writer flush failed")).Times(1)
 	fixer := &fixer{
-		shardID:       0,
-		itr:           mockItr,
-		fixedWriter:   fixedWriter,
-		skippedWriter: skippedWriter,
+		shardID:          0,
+		itr:              mockItr,
+		fixedWriter:      fixedWriter,
+		skippedWriter:    skippedWriter,
 		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
@@ -274,11 +274,11 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterFlushError() {
 	failedWriter := common.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(errors.New("fail writer flush failed")).Times(1)
 	fixer := &fixer{
-		shardID:       0,
-		itr:           mockItr,
-		fixedWriter:   fixedWriter,
-		skippedWriter: skippedWriter,
-		failedWriter:  failedWriter,
+		shardID:          0,
+		itr:              mockItr,
+		fixedWriter:      fixedWriter,
+		skippedWriter:    skippedWriter,
+		failedWriter:     failedWriter,
 		progressReportFn: func() {},
 	}
 	result := fixer.Fix()

@@ -247,8 +247,8 @@ func (s *Service) startBatcher() {
 
 func (s *Service) startScanner() {
 	params := &scanner.BootstrapParams{
-		Config:           *s.config.ScannerCfg,
-		TallyScope:       s.params.MetricScope,
+		Config:     *s.config.ScannerCfg,
+		TallyScope: s.params.MetricScope,
 	}
 	if err := scanner.New(s.Resource, params).Start(); err != nil {
 		s.GetLogger().Fatal("error starting scanner", tag.Error(err))

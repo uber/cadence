@@ -59,8 +59,8 @@ func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(nil, errors.New("iterator error")).Times(1)
 	scanner := &scanner{
-		shardID: 0,
-		itr:     mockItr,
+		shardID:          0,
+		itr:              mockItr,
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
@@ -191,9 +191,9 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
 	failedWriter := common.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(errors.New("failed writer flush failed")).Times(1)
 	scanner := &scanner{
-		shardID:      0,
-		itr:          mockItr,
-		failedWriter: failedWriter,
+		shardID:          0,
+		itr:              mockItr,
+		failedWriter:     failedWriter,
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
@@ -220,10 +220,10 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
 	failedWriter := common.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(nil).Times(1)
 	scanner := &scanner{
-		shardID:         0,
-		itr:             mockItr,
-		corruptedWriter: corruptedWriter,
-		failedWriter:    failedWriter,
+		shardID:          0,
+		itr:              mockItr,
+		corruptedWriter:  corruptedWriter,
+		failedWriter:     failedWriter,
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
