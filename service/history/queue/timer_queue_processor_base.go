@@ -295,6 +295,7 @@ func (t *timerQueueProcessorBase) processBatch() {
 		var nextPageToken []byte
 		readLevel := activeQueue.State().ReadLevel()
 		maxReadLevel := activeQueue.State().MaxLevel()
+		lookAheadMaxLevel := activeQueue.State().MaxLevel()
 		domainFilter := activeQueue.State().DomainFilter()
 		t.queueCollectionsLock.RUnlock()
 
@@ -311,7 +312,11 @@ func (t *timerQueueProcessorBase) processBatch() {
 			delete(t.processingQueueReadProgress, level)
 		}
 
-		timerTaskInfos, lookAheadTask, nextPageToken, err := t.readAndFilterTasks(readLevel, maxReadLevel, nextPageToken)
+		if !readLevel.Less(maxReadLevel) {
+			continue
+		}
+
+		timerTaskInfos, lookAheadTask, nextPageToken, err := t.readAndFilterTasks(readLevel, maxReadLevel, nextPageToken, lookAheadMaxLevel)
 		if err != nil {
 			t.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
 			t.notifyNewTimer(time.Time{}) // re-enqueue the event
@@ -418,6 +423,7 @@ func (t *timerQueueProcessorBase) readAndFilterTasks(
 	readLevel task.Key,
 	maxReadLevel task.Key,
 	nextPageToken []byte,
+	lookAheadMaxLevel task.Key,
 ) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, []byte, error) {
 	timerTasks, nextPageToken, err := t.getTimerTasks(readLevel, maxReadLevel, nextPageToken, t.options.BatchSize())
 	if err != nil {
@@ -436,8 +442,9 @@ func (t *timerQueueProcessorBase) readAndFilterTasks(
 		filteredTasks = append(filteredTasks, timerTask)
 	}
 
-	if len(nextPageToken) == 0 && lookAheadTask == nil {
-		lookAheadTask, err = t.getLookAheadTask(maxReadLevel)
+	if len(nextPageToken) == 0 && lookAheadTask == nil && maxReadLevel.Less(lookAheadMaxLevel) {
+		// only look ahead within the processing queue boundary
+		lookAheadTask, err = t.getLookAheadTask(maxReadLevel, lookAheadMaxLevel)
 		if err != nil {
 			return filteredTasks, nil, nil, nil
 		}
@@ -448,10 +455,11 @@ func (t *timerQueueProcessorBase) readAndFilterTasks(
 
 func (t *timerQueueProcessorBase) getLookAheadTask(
 	lookAheadStartLevel task.Key,
+	lookAheadMaxLevel task.Key,
 ) (*persistence.TimerTaskInfo, error) {
 	tasks, _, err := t.getTimerTasks(
 		lookAheadStartLevel,
-		maximumTimerTaskKey,
+		lookAheadMaxLevel,
 		nil,
 		1,
 	)
@@ -472,8 +480,8 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 	batchSize int,
 ) ([]*persistence.TimerTaskInfo, []byte, error) {
 	request := &persistence.GetTimerIndexTasksRequest{
-		MinTimestamp:  readLevel.(*timerTaskKey).visibilityTimeStamp,
-		MaxTimestamp:  maxReadLevel.(*timerTaskKey).visibilityTimeStamp,
+		MinTimestamp:  readLevel.(timerTaskKey).visibilityTimeStamp,
+		MaxTimestamp:  maxReadLevel.(timerTaskKey).visibilityTimeStamp,
 		BatchSize:     batchSize,
 		NextPageToken: nextPageToken,
 	}
@@ -495,7 +503,8 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 func (t *timerQueueProcessorBase) isProcessNow(
 	expiryTime time.Time,
 ) bool {
-	if expiryTime.IsZero() { // return true, but somewhere probably have bug creating empty timerTask.
+	if expiryTime.IsZero() {
+		// return true, but somewhere probably have bug creating empty timerTask.
 		t.logger.Warn("Timer task has timestamp zero")
 	}
 	return expiryTime.UnixNano() <= t.shard.GetCurrentTime(t.clusterName).UnixNano()
@@ -562,16 +571,16 @@ func newTimerTaskKey(
 	visibilityTimestamp time.Time,
 	taskID int64,
 ) task.Key {
-	return &timerTaskKey{
+	return timerTaskKey{
 		visibilityTimeStamp: visibilityTimestamp,
 		taskID:              taskID,
 	}
 }
 
-func (k *timerTaskKey) Less(
+func (k timerTaskKey) Less(
 	key task.Key,
 ) bool {
-	timerKey := key.(*timerTaskKey)
+	timerKey := key.(timerTaskKey)
 	if k.visibilityTimeStamp.Equal(timerKey.visibilityTimeStamp) {
 		return k.taskID < timerKey.taskID
 	}

@@ -278,6 +278,9 @@ func (t *transferQueueProcessorBase) processBatch() {
 		shardMaxReadLevel := t.updateMaxReadLevel()
 		if shardMaxReadLevel.Less(maxReadLevel) {
 			maxReadLevel = shardMaxReadLevel
+			if !readLevel.Less(maxReadLevel) {
+				continue
+			}
 		}
 
 		transferTaskInfos, more, err := t.readTasks(readLevel, maxReadLevel)
@@ -397,8 +400,8 @@ func (t *transferQueueProcessorBase) readTasks(
 	op := func() error {
 		var err error
 		response, err = t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
-			ReadLevel:    readLevel.(*transferTaskKey).taskID,
-			MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
+			ReadLevel:    readLevel.(transferTaskKey).taskID,
+			MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 			BatchSize:    t.options.BatchSize(),
 		})
 		return err
@@ -429,13 +432,13 @@ func (t *transferQueueProcessorBase) submitTask(
 func newTransferTaskKey(
 	taskID int64,
 ) task.Key {
-	return &transferTaskKey{
+	return transferTaskKey{
 		taskID: taskID,
 	}
 }
 
-func (k *transferTaskKey) Less(
+func (k transferTaskKey) Less(
 	key task.Key,
 ) bool {
-	return k.taskID < key.(*transferTaskKey).taskID
+	return k.taskID < key.(transferTaskKey).taskID
 }

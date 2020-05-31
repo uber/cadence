@@ -267,7 +267,7 @@ func (t *transferQueueProcessor) FailoverDomain(
 
 	maxReadLevel := int64(0)
 	for _, queueState := range t.activeQueueProcessor.getProcessingQueueStates() {
-		queueReadLevel := queueState.ReadLevel().(*transferTaskKey).taskID
+		queueReadLevel := queueState.ReadLevel().(transferTaskKey).taskID
 		if maxReadLevel < queueReadLevel {
 			maxReadLevel = queueReadLevel
 		}
@@ -376,7 +376,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 		}
 	}
 
-	newAckLevelTaskID := newAckLevel.(*transferTaskKey).taskID
+	newAckLevelTaskID := newAckLevel.(transferTaskKey).taskID
 	t.logger.Debug(fmt.Sprintf("Start completing transfer task from: %v, to %v.", t.ackLevel, newAckLevelTaskID))
 	if t.ackLevel >= newAckLevelTaskID {
 		return nil
@@ -438,7 +438,7 @@ func newTransferQueueActiveProcessor(
 	}
 
 	updateTransferAckLevel := func(ackLevel task.Key) error {
-		taskID := ackLevel.(*transferTaskKey).taskID
+		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferClusterAckLevel(currentClusterName, taskID)
 	}
 
@@ -536,7 +536,7 @@ func newTransferQueueStandbyProcessor(
 	}
 
 	updateTransferAckLevel := func(ackLevel task.Key) error {
-		taskID := ackLevel.(*transferTaskKey).taskID
+		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferClusterAckLevel(clusterName, taskID)
 	}
 
@@ -641,7 +641,7 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	updateTransferAckLevel := func(ackLevel task.Key) error {
-		taskID := ackLevel.(*transferTaskKey).taskID
+		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferFailoverLevel(
 			failoverUUID,
 			persistence.TransferFailoverLevel{

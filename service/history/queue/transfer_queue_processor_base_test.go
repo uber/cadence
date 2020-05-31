@@ -145,7 +145,7 @@ func (s *transferQueueProcessorBaseSuite) TestUpdateAckLevel_ProcessNotFinished(
 	}
 	updateAckLevel := int64(0)
 	updateTransferAckLevelFn := func(ackLevel task.Key) error {
-		updateAckLevel = ackLevel.(*transferTaskKey).taskID
+		updateAckLevel = ackLevel.(transferTaskKey).taskID
 		return nil
 	}
 
@@ -202,8 +202,8 @@ func (s *transferQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_FullRead()
 	}
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    ackLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxLevel.(*transferTaskKey).taskID,
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(&persistence.GetTransferTasksResponse{
 		Tasks:         taskInfos,
@@ -270,8 +270,8 @@ func (s *transferQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_PartialRea
 	}
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    ackLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: shardMaxLevel.(*transferTaskKey).taskID,
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: shardMaxLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(&persistence.GetTransferTasksResponse{
 		Tasks:         taskInfos,
@@ -341,8 +341,8 @@ func (s *transferQueueProcessorBaseSuite) TestProcessBatch_WithNextPage() {
 	}
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    ackLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxLevel.(*transferTaskKey).taskID,
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(&persistence.GetTransferTasksResponse{
 		Tasks:         taskInfos,
@@ -385,8 +385,8 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_NoNextPage() {
 		NextPageToken: nil,
 	}
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
+		ReadLevel:    readLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
@@ -414,8 +414,8 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_WithNextPage() {
 		NextPageToken: []byte{1, 2, 3},
 	}
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
+		ReadLevel:    readLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
