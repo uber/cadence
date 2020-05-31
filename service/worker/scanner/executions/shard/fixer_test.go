@@ -61,6 +61,7 @@ func (s *FixerSuite) TestFix_Failure_FirstIteratorError() {
 	fixer := &fixer{
 		shardID: 0,
 		itr:     mockItr,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -100,6 +101,7 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		fixedWriter:      fixedWriter,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -132,6 +134,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 		itr:              mockItr,
 		skippedWriter:    skippedWriter,
 		invariantManager: mockInvariantManager,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -163,6 +166,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 		itr:              mockItr,
 		failedWriter:     failedWriter,
 		invariantManager: mockInvariantManager,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -194,6 +198,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 		itr:              mockItr,
 		fixedWriter:      fixedWriter,
 		invariantManager: mockInvariantManager,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -219,6 +224,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterFlushError() {
 		shardID:     0,
 		itr:         mockItr,
 		fixedWriter: fixedWriter,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -244,6 +250,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterFlushError() {
 		itr:           mockItr,
 		fixedWriter:   fixedWriter,
 		skippedWriter: skippedWriter,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -272,6 +279,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterFlushError() {
 		fixedWriter:   fixedWriter,
 		skippedWriter: skippedWriter,
 		failedWriter:  failedWriter,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{
@@ -548,6 +556,7 @@ func (s *FixerSuite) TestFix_Success() {
 		failedWriter:     mockFailedWriter,
 		fixedWriter:      mockFixedWriter,
 		itr:              mockItr,
+		progressReportFn: func() {},
 	}
 	result := fixer.Fix()
 	s.Equal(common.ShardFixReport{

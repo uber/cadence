@@ -132,7 +132,7 @@ func ScannerWorkflow(
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    10 * time.Second,
+			InitialInterval:    time.Second,
 			BackoffCoefficient: 1.7,
 			ExpirationInterval: 5 * time.Minute,
 		},
@@ -155,7 +155,8 @@ func ScannerWorkflow(
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for _, shard := range shards {
 				if shard%resolvedConfig.Concurrency == idx {
-					activityOptions.StartToCloseTimeout = time.Hour * 3
+					activityOptions.RetryPolicy.ExpirationInterval = time.Hour * 5
+					activityOptions.HeartbeatTimeout = time.Minute
 					activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
 					var report *common.ShardScanReport
 					if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
@@ -189,7 +190,7 @@ func ScannerWorkflow(
 		aggregator.addReport(*reportErr.Report)
 	}
 
-	activityOptions.StartToCloseTimeout = time.Minute
+	activityOptions.RetryPolicy.ExpirationInterval = time.Minute * 5
 	activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
 	if err := workflow.ExecuteActivity(activityCtx, ScannerEmitMetricsActivityName, ScannerEmitMetricsActivityParams{
 		ShardStatusResult:     aggregator.status,

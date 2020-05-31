@@ -24,6 +24,7 @@ package executions
 
 import (
 	"context"
+	"go.uber.org/cadence/activity"
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
@@ -119,7 +120,8 @@ func ScanShardActivity(
 		params.ExecutionsPageSize,
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
-		collections)
+		collections,
+		func() { activity.RecordHeartbeat(activityCtx) })
 	report := scanner.Scan()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)

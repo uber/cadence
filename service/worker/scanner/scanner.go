@@ -138,8 +138,8 @@ func (s *Scanner) Start() error {
 		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, executions.ScannerWorkflowParams{
 			Shards: executions.Shards{
 				Range: &executions.ShardRange{
-					Min: 0, // TODO: fix this plumbing
-					Max: 0,
+					Min: 0,
+					Max: s.context.cfg.Persistence.NumHistoryShards,
 				},
 			},
 		})

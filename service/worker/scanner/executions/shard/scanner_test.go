@@ -61,6 +61,7 @@ func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
 	scanner := &scanner{
 		shardID: 0,
 		itr:     mockItr,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
@@ -100,6 +101,7 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 		shardID:          0,
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
@@ -132,6 +134,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		corruptedWriter:  corruptedWriter,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
@@ -164,6 +167,7 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		failedWriter:     failedWriter,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
@@ -190,6 +194,7 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
 		shardID:      0,
 		itr:          mockItr,
 		failedWriter: failedWriter,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
@@ -219,6 +224,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
 		itr:             mockItr,
 		corruptedWriter: corruptedWriter,
 		failedWriter:    failedWriter,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
@@ -432,6 +438,7 @@ func (s *ScannerSuite) TestScan_Success() {
 		corruptedWriter:  mockCorruptedWriter,
 		failedWriter:     mockFailedWriter,
 		itr:              mockItr,
+		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
 	s.Equal(common.ShardScanReport{
