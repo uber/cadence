@@ -114,4 +114,4 @@ type Entry interface {
 }
 
 // GetCacheItemSizeInBytesFunc returns the cache item size in bytes
-type GetCacheItemSizeInBytesFunc func(interface{}) uint32
+type GetCacheItemSizeInBytesFunc func(interface{}) uint64

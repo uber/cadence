@@ -45,7 +45,7 @@ type (
 		sizeFunc         GetCacheItemSizeInBytesFunc
 		maxSizeInBytes   uint64
 		currSizeInBytes  uint64
-		sizeByKey        map[interface{}]uint32
+		sizeByKey        map[interface{}]uint64
 		checkSizeInBytes bool
 	}
 
@@ -150,10 +150,10 @@ func New(maxSize int, opts *Options) Cache {
 	if cache.checkSizeInBytes {
 		cache.sizeFunc = opts.GetCacheItemSizeInBytesFunc
 		cache.maxSizeInBytes = opts.MaxSizeInBytes
-		cache.sizeByKey = make(map[interface{}]uint32, opts.InitialCapacity)
+		cache.sizeByKey = make(map[interface{}]uint64, opts.InitialCapacity)
 	} else {
 		// consider cache is just count based
-		cache.sizeFunc = func(interface{}) uint32 {
+		cache.sizeFunc = func(interface{}) uint64 {
 			return 0
 		}
 	}
@@ -335,7 +335,7 @@ func (c *lru) isCacheWithinSizeLimit() bool {
 	return !c.checkSizeInBytes || c.currSizeInBytes <= c.maxSizeInBytes
 }
 
-func (c *lru) updateSizeInBytesOnAdd(key interface{}, valueSizeInBytes uint32) {
+func (c *lru) updateSizeInBytesOnAdd(key interface{}, valueSizeInBytes uint64) {
 	if c.checkSizeInBytes {
 		c.sizeByKey[key] = valueSizeInBytes
 		// the int overflow should not happen here

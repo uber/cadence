@@ -93,7 +93,7 @@ func NewGlobalCache(
 	historyManager persistence.HistoryManager,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	maxSizeInKb uint,
+	maxSizeInBytes uint64,
 ) Cache {
 	return newCacheWithOption(
 		nil,
@@ -104,7 +104,7 @@ func NewGlobalCache(
 		false,
 		logger,
 		metricsClient,
-		uint64(maxSizeInKb*1024),
+		maxSizeInBytes,
 	)
 }
 
