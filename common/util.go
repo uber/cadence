@@ -538,7 +538,7 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 }
 
 // GetSizeOfHistoryEvent returns approximate size of the history event taking into account byte arrays only now
-func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint32 {
+func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 	if event == nil {
 		return 0
 	}
@@ -658,7 +658,7 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint32 {
 			res += GetSizeOfMapStringToByteArray(event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes.IndexedFields)
 		}
 	}
-	return uint32(res)
+	return uint64(res)
 }
 
 // IsJustOrderByClause return true is query start with order by

@@ -146,7 +146,7 @@ func newCacheWithOption(
 
 	if maxSizeInBytes > 0 {
 		opts.MaxSizeInBytes = maxSizeInBytes
-		opts.GetCacheItemSizeInBytesFunc = func(event interface{}) uint32 {
+		opts.GetCacheItemSizeInBytesFunc = func(event interface{}) uint64 {
 			return common.GetSizeOfHistoryEvent(event.(*shared.HistoryEvent))
 		}
 	}

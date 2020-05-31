@@ -269,8 +269,8 @@ func TestIterator(t *testing.T) {
 func TestLRU_SizeBased_SizeExceeded(t *testing.T) {
 	valueSize := 5
 	cache := New(5, &Options{
-		GetCacheItemSizeInBytesFunc: func(interface{}) uint32 {
-			return uint32(valueSize)
+		GetCacheItemSizeInBytesFunc: func(interface{}) uint64 {
+			return uint64(valueSize)
 		},
 		MaxSizeInBytes: 15,
 	})
@@ -310,7 +310,7 @@ func TestLRU_SizeBased_SizeExceeded(t *testing.T) {
 
 func TestLRU_SizeBased_CountExceeded(t *testing.T) {
 	cache := New(5, &Options{
-		GetCacheItemSizeInBytesFunc: func(interface{}) uint32 {
+		GetCacheItemSizeInBytesFunc: func(interface{}) uint64 {
 			return 5
 		},
 		MaxSizeInBytes: 25,
