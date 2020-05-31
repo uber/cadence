@@ -302,7 +302,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	c.updateSizeInBytesOnAdd(key, valueSizeInBytes)
 	// keep the count check to prevent infinite growing.
 	// if the value size is greater than maxSizeInBytes(should never happen) then the item wont be cached
-	for len(c.byKey) == c.maxSize || !c.checkSizeBytes() {
+	for len(c.byKey) == c.maxSize || !c.isCacheWithinSizeLimit() {
 		oldest := c.byAccess.Back().Value.(*entryImpl)
 
 		if oldest.refCount > 0 {
@@ -331,7 +331,7 @@ func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
 	return entry.refCount == 0 && !entry.createTime.IsZero() && currentTime.After(entry.createTime.Add(c.ttl))
 }
 
-func (c *lru) checkSizeBytes() bool {
+func (c *lru) isCacheWithinSizeLimit() bool {
 	return !c.checkSizeInBytes || c.currSizeInBytes <= c.maxSizeInBytes
 }
 

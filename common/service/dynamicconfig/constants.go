@@ -146,7 +146,7 @@ var keys = map[Key]string{
 	HistoryShutdownDrainDuration:                           "history.shutdownDrainDuration",
 	EventsCacheInitialSize:                                 "history.eventsCacheInitialSize",
 	EventsCacheMaxSize:                                     "history.eventsCacheMaxSize",
-	EventsCacheMaxSizeInBytes:                              "history.eventsCacheMaxSizeInBytes",
+	EventsCacheMaxSizeInKb:                                 "history.eventsCacheMaxSizeInBytes",
 	EventsCacheTTL:                                         "history.eventsCacheTTL",
 	EventsCacheGlobalEnable:                                "history.eventsCacheGlobalEnable",
 	EventsCacheGlobalInitialSize:                           "history.eventsCacheGlobalInitialSize",
@@ -489,7 +489,7 @@ const (
 	// EventsCacheMaxSize is max size of events cache
 	EventsCacheMaxSize
 	// EventsCacheMaxSizeInKb is max size of events cache in kilobyte
-	EventsCacheMaxSizeInBytes
+	EventsCacheMaxSizeInKb
 	// EventsCacheTTL is TTL of events cache
 	EventsCacheTTL
 	// EventsCacheGlobalEnable enables global cache over all history shards
