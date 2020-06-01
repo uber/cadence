@@ -23,8 +23,7 @@
 package cache
 
 import (
-	"fmt"
-	"strconv"
+	"github.com/uber/cadence/common/metrics"
 	"sync"
 	"testing"
 
@@ -37,20 +36,19 @@ func TestGetMetricsScope(t *testing.T) {
 
 	mockMetricsScope := &mocks.Scope{}
 
-	metricsCache.Put("A", mockMetricsScope)
-	metricsCache.Put("B", mockMetricsScope)
-	metricsCache.Put("C", mockMetricsScope)
+	metricsCache.Put("A", 1, mockMetricsScope)
+	metricsCache.Put("B", 2, mockMetricsScope)
+	metricsCache.Put("C", 1, mockMetricsScope)
 
-	assert.Equal(t, mockMetricsScope, metricsCache.Get("A"))
-	assert.Equal(t, mockMetricsScope, metricsCache.Get("B"))
-	assert.Equal(t, mockMetricsScope, metricsCache.Get("C"))
+	assert.Equal(t, mockMetricsScope, metricsCache.Get("A", 1))
+	assert.Equal(t, mockMetricsScope, metricsCache.Get("B", 2))
+	assert.Equal(t, mockMetricsScope, metricsCache.Get("C", 1))
 }
 
 func TestConcurrentMetricsScopeAccess(t *testing.T) {
 	metricsCache := NewMetricsCache()
 
-	mockMetricsScope := &mocks.Scope{}
-
+	ch := make(chan struct{})
 	var wg sync.WaitGroup
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
@@ -58,16 +56,13 @@ func TestConcurrentMetricsScopeAccess(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			metricsCache.Get(strconv.Itoa(i))
-			metricsCache.Put(strconv.Itoa(i), mockMetricsScope)
+			<- ch
+
+			metricsCache.Get("test_domain", i)
+			metricsCache.Put("test_domain", i, metrics.NoopScope(metrics.ServiceIdx(i)))
 		}()
 	}
 
+	close(ch)
 	wg.Wait()
-
-	for i := 0; i < 1000; i++ {
-		if metricsCache.Get(strconv.Itoa(i)) != mockMetricsScope {
-			t.Error(fmt.Sprintf("Metrics scope not set for %d", i))
-		}
-	}
 }

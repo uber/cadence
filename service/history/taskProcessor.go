@@ -252,14 +252,16 @@ func (t *taskProcessor) processTaskOnce(
 	var err error
 
 	domainID := task.task.GetDomainID()
+	taskType := task.task.GetTaskType()
+
 	scopeIdx, err = task.processor.process(task)
-	scope := t.metricsScopeCache.Get(domainID)
+	scope := t.metricsScopeCache.Get(domainID, taskType)
 
 	startTime := t.timeSource.Now()
 
 	if scope == nil {
 		scope = t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
-		t.metricsScopeCache.Put(domainID, scope)
+		t.metricsScopeCache.Put(domainID, taskType, scope)
 	}
 
 	if task.shouldProcessTask {

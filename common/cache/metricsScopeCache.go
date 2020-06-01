@@ -23,6 +23,7 @@
 package cache
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/uber/cadence/common/metrics"
@@ -41,21 +42,22 @@ func NewMetricsCache() MetricsCache {
 }
 
 // Get retrieves scope using domainID from scopeMap
-func (mc *metricsCache) Get(domainID string) metrics.Scope {
+func (mc *metricsCache) Get(domainID string, taskType int) metrics.Scope {
 	mc.RLock()
 	defer mc.RUnlock()
 
-	if metricsScope, ok := mc.scopeMap[domainID]; ok {
+	key := domainID + "_" + strconv.Itoa(taskType)
+	if metricsScope, ok := mc.scopeMap[key]; ok {
 		return metricsScope
 	}
-
 	return nil
 }
 
 // Put puts map of domainID and scope in the metricsCache accessMap
-func (mc *metricsCache) Put(domainID string, scope metrics.Scope) {
+func (mc *metricsCache) Put(domainID string, taskType int, scope metrics.Scope) {
 	mc.Lock()
 	defer mc.Unlock()
 
-	mc.scopeMap[domainID] = scope
+	key := domainID + "_" + strconv.Itoa(taskType)
+	mc.scopeMap[key] = scope
 }
