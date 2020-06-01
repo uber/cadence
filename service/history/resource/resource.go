@@ -25,23 +25,31 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/failover"
 )
 
 // Resource is the interface which expose common history resources
 type Resource interface {
 	resource.Resource
 	GetEventCache() events.Cache
+	GetCoordinator() failover.Coordinator
 }
 
 // Impl contains all common resources shared across history
 type Impl struct {
 	resource.Resource
-	eventCache events.Cache
+	eventCache  events.Cache
+	coordinator failover.Coordinator
 }
 
 // GetEventCache return event cache
 func (h *Impl) GetEventCache() events.Cache {
 	return h.eventCache
+}
+
+// GetCoordinator return failover coordinator
+func (h *Impl) GetCoordinator() failover.Coordinator {
+	return h.coordinator
 }
 
 // New create a new resource containing common history dependencies
@@ -63,16 +71,27 @@ func New(
 		return nil, err
 	}
 
+	eventCache := events.NewGlobalCache(
+		config.EventsCacheGlobalInitialSize(),
+		config.EventsCacheGlobalMaxSize(),
+		config.EventsCacheTTL(),
+		serviceResource.GetHistoryManager(),
+		params.Logger,
+		params.MetricsClient,
+	)
+	coordinator := failover.NewCoordinator(
+		serviceResource.GetMetadataManager(),
+		serviceResource.GetHistoryClient(),
+		serviceResource.GetTimeSource(),
+		config,
+		serviceResource.GetMetricsClient(),
+		serviceResource.GetLogger(),
+	)
+
 	impl = &Impl{
-		Resource: serviceResource,
-		eventCache: events.NewGlobalCache(
-			config.EventsCacheGlobalInitialSize(),
-			config.EventsCacheGlobalMaxSize(),
-			config.EventsCacheTTL(),
-			serviceResource.GetHistoryManager(),
-			params.Logger,
-			params.MetricsClient,
-		),
+		Resource:    serviceResource,
+		eventCache:  eventCache,
+		coordinator: coordinator,
 	}
 	return impl, nil
 }

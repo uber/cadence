@@ -20,9 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination coordinator_mock.go -self_package github.com/uber/cadence/service/history/shard
+//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination coordinator_mock.go -self_package github.com/uber/cadence/service/history/failover
 
-package shard
+package failover
 
 import (
 	"sync/atomic"
@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	sendChanBufferSize               = 800
+	notificationChanBufferSize       = 800
 	receiveChanBufferSize            = 400
 	cleanupMarkerInterval            = 30 * time.Minute
 	invalidMarkerDuration            = 1 * time.Hour
@@ -56,17 +56,17 @@ type (
 	Coordinator interface {
 		common.Daemon
 
-		HeartbeatFailoverMarkers(shardID int, markers []*replicator.FailoverMarkerAttributes) <-chan error
+		NotifyFailoverMarkers(shardID int, markers []*replicator.FailoverMarkerAttributes) <-chan error
 		ReceiveFailoverMarkers(shardIDs []int, marker *replicator.FailoverMarkerAttributes)
 	}
 
 	coordinatorImpl struct {
-		status        int32
-		recorder      map[string]*failoverRecord
-		heartbeatChan chan *heartbeatRequest
-		receiveChan   chan *receiveRequest
-		shutdownChan  chan struct{}
-		retryPolicy   backoff.RetryPolicy
+		status           int32
+		recorder         map[string]*failoverRecord
+		notificationChan chan *notificationRequest
+		receiveChan      chan *receiveRequest
+		shutdownChan     chan struct{}
+		retryPolicy      backoff.RetryPolicy
 
 		metadataMgr   persistence.MetadataManager
 		historyClient history.Client
@@ -76,7 +76,7 @@ type (
 		logger        log.Logger
 	}
 
-	heartbeatRequest struct {
+	notificationRequest struct {
 		shardID int
 		markers []*replicator.FailoverMarkerAttributes
 		respCh  chan error
@@ -111,18 +111,18 @@ func NewCoordinator(
 	retryPolicy.SetMaximumAttempts(updateDomainMaxRetry)
 
 	return &coordinatorImpl{
-		status:        common.DaemonStatusInitialized,
-		recorder:      make(map[string]*failoverRecord),
-		heartbeatChan: make(chan *heartbeatRequest, sendChanBufferSize),
-		receiveChan:   make(chan *receiveRequest, receiveChanBufferSize),
-		shutdownChan:  make(chan struct{}),
-		retryPolicy:   retryPolicy,
-		metadataMgr:   metadataMgr,
-		historyClient: historyClient,
-		timeSource:    timeSource,
-		config:        config,
-		metrics:       metrics,
-		logger:        logger,
+		status:           common.DaemonStatusInitialized,
+		recorder:         make(map[string]*failoverRecord),
+		notificationChan: make(chan *notificationRequest, notificationChanBufferSize),
+		receiveChan:      make(chan *receiveRequest, receiveChanBufferSize),
+		shutdownChan:     make(chan struct{}),
+		retryPolicy:      retryPolicy,
+		metadataMgr:      metadataMgr,
+		historyClient:    historyClient,
+		timeSource:       timeSource,
+		config:           config,
+		metrics:          metrics,
+		logger:           logger,
 	}
 }
 
@@ -133,7 +133,7 @@ func (c *coordinatorImpl) Start() {
 	}
 
 	go c.receiveFailoverMarkersLoop()
-	go c.heartbeatFailoverMarkerLoop()
+	go c.notifyFailoverMarkerLoop()
 
 	c.logger.Info("Failover coordinator started.")
 }
@@ -148,13 +148,13 @@ func (c *coordinatorImpl) Stop() {
 	c.logger.Info("Failover coordinator stopped.")
 }
 
-func (c *coordinatorImpl) HeartbeatFailoverMarkers(
+func (c *coordinatorImpl) NotifyFailoverMarkers(
 	shardID int,
 	markers []*replicator.FailoverMarkerAttributes,
 ) <-chan error {
 
 	respCh := make(chan error, 1)
-	c.heartbeatChan <- &heartbeatRequest{
+	c.notificationChan <- &notificationRequest{
 		shardID: shardID,
 		markers: markers,
 		respCh:  respCh,
@@ -191,7 +191,7 @@ func (c *coordinatorImpl) receiveFailoverMarkersLoop() {
 	}
 }
 
-func (c *coordinatorImpl) heartbeatFailoverMarkerLoop() {
+func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 
 	timer := time.NewTimer(backoff.JitDuration(
 		c.config.FailoverMarkerHeartbeatInterval(),
@@ -204,19 +204,19 @@ func (c *coordinatorImpl) heartbeatFailoverMarkerLoop() {
 		select {
 		case <-c.shutdownChan:
 			return
-		case heartbeatReq := <-c.heartbeatChan:
+		case notificationReq := <-c.notificationChan:
 			// if there is a shard movement happen, it is fine to have duplicate shard ID in the request
 			// The receiver side will de-dup the shard IDs. See: handleFailoverMarkers
-			for _, marker := range heartbeatReq.markers {
+			for _, marker := range notificationReq.markers {
 				if _, ok := requestByMarker[marker]; !ok {
 					requestByMarker[marker] = &receiveRequest{
 						shardIDs: []int{},
 						marker:   marker,
-						respCh:   heartbeatReq.respCh,
+						respCh:   notificationReq.respCh,
 					}
 				}
 				req := requestByMarker[marker]
-				req.shardIDs = append(req.shardIDs, heartbeatReq.shardID)
+				req.shardIDs = append(req.shardIDs, notificationReq.shardID)
 			}
 		case <-timer.C:
 			if len(requestByMarker) > 0 {
