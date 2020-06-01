@@ -115,11 +115,11 @@ Bad binaries to reset:
 Go to the [Maven Repository Uber Cadence Java Client Page](https://mvnrepository.com/artifact/com.uber.cadence/cadence-client)
 and find the latest version of the library. Include it as a dependency into your Java project. For example if you
 are using Gradle the dependency looks like:
-```
+```bash
 compile group: 'com.uber.cadence', name: 'cadence-client', version: '<latest_version>'
 ```
 Also add the following dependencies that cadence-client relies on:
-```
+```bash
     compile group: 'commons-configuration', name: 'commons-configuration', version: '1.9'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
 ```
@@ -200,7 +200,7 @@ a Cadence Service. By default the :worker: connects to the locally running Caden
 ### Execute Hello World Workflow using the CLI
 
 Now run the :worker: program. Following is an example log:
-```text
+```bash
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
@@ -211,7 +211,7 @@ No Hello printed. This is expected because a :worker: is just a :workflow: code 
 Started Workflow Id: bcacfabd-9f9a-46ac-9b25-83bcea5d7fd7, run Id: e7c40431-8e23-485b-9649-e8f161219efe
 ```
 The output of the program should change to:
-```text
+```bash
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
@@ -223,7 +223,7 @@ Let's start another :workflow_execution::
 Started Workflow Id: d2083532-9c68-49ab-90e1-d960175377a7, run Id: 331bfa04-834b-45a7-861e-bcb9f6ddae3e
 ```
 And the output changed to:
-```text
+```bash
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
@@ -381,7 +381,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Started Workflow Id: HelloSignal, run Id: 6fa204cb-f478-469a-9432-78060b83b6cd
 ```
 Program output:
-```text
+```bash
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 ```
 Let's send a :signal: using :CLI::
@@ -390,7 +390,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Signal workflow succeeded.
 ```
 Program output:
-```text
+```bash
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 ```
@@ -401,7 +401,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Signal workflow succeeded.
 ```
 Program output:
-```text
+```bash
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 16:56:24.400 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
@@ -433,7 +433,7 @@ sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)"
 Yes, indeed the :workflow: is blocked on await. This feature works for any open :workflow:, greatly simplifying troubleshooting in production.
 Let's complete the :workflow: by sending a :signal: with a "Bye" greeting:
 
-```text
+```bash
 16:58:22.962 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 4: Bye World!
 ```
 Note that the value of the count variable was not lost during the restart.
@@ -501,7 +501,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Signal workflow succeeded.
 ```
 The :worker: output:
-```text
+```bash
 17:35:50.485 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 17:36:10.483 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 17:36:16.204 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
@@ -614,7 +614,7 @@ Started Workflow Id: HelloActivityWorker, run Id: ff015637-b5af-43e8-b3f6-8b6c7b
 The :workflow: is started, but nothing visible happens. This is expected as the :activity_worker: is not running. What are the options to understand the currently running :workflow: state?
 
 The first option is look at the stack trace:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow stack  --workflow_id "HelloActivityWorker"
 :query:Query: result as JSON:
 "workflow-root: (BLOCKED on Feature.get)com.uber.cadence.internal.sync.CompletablePromiseImpl.get(CompletablePromiseImpl.java:71)
@@ -633,7 +633,7 @@ You can restart the :workflow_worker: if you want to make sure that restarting i
 of any duration. It is okay for the :workflow: code to block on an :activity: invocation for a month for example.
 
 Another way to see what exactly happened in the :workflow_execution: is to look at the :workflow_execution: history:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow show  --workflow_id "HelloActivityWorker"
   1  WorkflowExecutionStarted  {WorkflowType:{Name:HelloWorld::sayHello},
                                 TaskList:{Name:HelloWorldTaskList},
@@ -668,7 +668,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 The last :event: in the :workflow: history is `ActivityTaskScheduled`. It is recorded when :workflow: invoked the :activity:, but it wasn't picked up by an :activity_worker: yet.
 
 Another useful API is `DescribeWorkflowExecution` which, among other information, contains the list of outstanding activities:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow describe  --workflow_id "HelloActivityWorker"
 {
   "ExecutionConfiguration": {
@@ -708,11 +708,11 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 }
 ```
 Let's start the :activity_worker:. It starts and immediately prints:
-```text
+```bash
 1: Hello World!
 ```
 Let's look at the :workflow_execution: history:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow show  --workflow_id "HelloActivityWorker"
    1  WorkflowExecutionStarted  {WorkflowType:{Name:HelloWorld::sayHello},
                                 TaskList:{Name:HelloWorldTaskList},
