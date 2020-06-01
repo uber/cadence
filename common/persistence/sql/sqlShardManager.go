@@ -210,6 +210,13 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error)
 		timerAckLevels[k] = v.UnixNano()
 	}
 
+	var markerData []byte
+	var markerEncoding string
+
+	if s.PendingFailoverMarkers != nil {
+		markerData = s.PendingFailoverMarkers.Data
+		markerEncoding = string(s.PendingFailoverMarkers.Encoding)
+	}
 	shardInfo := &sqlblobs.ShardInfo{
 		StolenSinceRenew:          common.Int32Ptr(int32(s.StolenSinceRenew)),
 		UpdatedAtNanos:            common.Int64Ptr(s.UpdatedAt.UnixNano()),
@@ -221,6 +228,8 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error)
 		DomainNotificationVersion: common.Int64Ptr(s.DomainNotificationVersion),
 		Owner:                     &s.Owner,
 		ClusterReplicationLevel:   s.ClusterReplicationLevel,
+		PendingFailoverMarkers:    markerData,
+		PendingFailoverMarkersEncoding: common.StringPtr(markerEncoding),
 	}
 
 	blob, err := shardInfoToBlob(shardInfo)
