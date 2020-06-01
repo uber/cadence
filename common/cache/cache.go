@@ -67,13 +67,13 @@ type Options struct {
 	// is scheduled for deletion
 	RemovedFunc RemovedFunc
 
-	// GetCacheItemSizeInBytesFunc is an optional function called upon adding the item to update the cache size.
+	// GetCacheItemSizeFunc is an optional function called upon adding the item to update the cache size.
 	// It returns 0 by default, assuming the cache is just count based
-	GetCacheItemSizeInBytesFunc GetCacheItemSizeInBytesFunc
+	GetCacheItemSizeFunc GetCacheItemSizeFunc
 
-	// MaxSizeInBytes is an optional and must be set along with GetCacheItemSizeInBytesFunc
+	// MaxSize is an optional and must be set along with GetCacheItemSizeFunc
 	// to control the max capacity(in bytes) of the cache
-	MaxSizeInBytes uint64
+	MaxSize uint64
 }
 
 // SimpleOptions provides options that can be used to configure SimpleCache
@@ -113,5 +113,5 @@ type Entry interface {
 	CreateTime() time.Time
 }
 
-// GetCacheItemSizeInBytesFunc returns the cache item size in bytes
-type GetCacheItemSizeInBytesFunc func(interface{}) uint64
+// GetCacheItemSizeFunc returns the cache item size in bytes
+type GetCacheItemSizeFunc func(interface{}) uint64

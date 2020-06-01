@@ -537,7 +537,7 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 	return res + golandMapReserverNumberOfBytes
 }
 
-// GetSizeOfHistoryEvent returns approximate size of the history event taking into account byte arrays only now
+// GetSizeOfHistoryEvent returns approximate size in bytes of the history event taking into account byte arrays only now
 func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 	if event == nil {
 		return 0

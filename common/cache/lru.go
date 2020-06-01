@@ -32,21 +32,24 @@ var (
 	ErrCacheFull = errors.New("Cache capacity is fully occupied with pinned elements")
 )
 
+// keep the count check to prevent infinite growing
+const cacheCountLimit = 1 << 20
+
 // lru is a concurrent fixed size cache that evicts elements in lru order
 type (
 	lru struct {
-		mut              sync.Mutex
-		byAccess         *list.List
-		byKey            map[interface{}]*list.Element
-		maxSize          int
-		ttl              time.Duration
-		pin              bool
-		rmFunc           RemovedFunc
-		sizeFunc         GetCacheItemSizeInBytesFunc
-		maxSizeInBytes   uint64
-		currSizeInBytes  uint64
-		sizeByKey        map[interface{}]uint64
-		checkSizeInBytes bool
+		mut       sync.Mutex
+		byAccess  *list.List
+		byKey     map[interface{}]*list.Element
+		maxCount  int
+		ttl       time.Duration
+		pin       bool
+		rmFunc    RemovedFunc
+		sizeFunc  GetCacheItemSizeFunc
+		maxSize   uint64
+		currSize  uint64
+		sizeByKey map[interface{}]uint64
+		checkSize bool
 	}
 
 	iteratorImpl struct {
@@ -131,7 +134,7 @@ func (entry *entryImpl) CreateTime() time.Time {
 }
 
 // New creates a new cache with the given options
-func New(maxSize int, opts *Options) Cache {
+func New(maxCount int, opts *Options) Cache {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -140,19 +143,19 @@ func New(maxSize int, opts *Options) Cache {
 		byAccess: list.New(),
 		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
 		ttl:      opts.TTL,
-		maxSize:  maxSize,
+		maxCount: maxCount,
 		pin:      opts.Pin,
 		rmFunc:   opts.RemovedFunc,
 	}
 
-	cache.checkSizeInBytes = opts.GetCacheItemSizeInBytesFunc != nil && opts.MaxSizeInBytes > 0
+	cache.checkSize = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
 
-	if cache.checkSizeInBytes {
-		cache.sizeFunc = opts.GetCacheItemSizeInBytesFunc
-		cache.maxSizeInBytes = opts.MaxSizeInBytes
+	if cache.checkSize {
+		cache.sizeFunc = opts.GetCacheItemSizeFunc
+		cache.maxSize = opts.MaxSize
 		cache.sizeByKey = make(map[interface{}]uint64, opts.InitialCapacity)
 	} else {
-		// consider cache is just count based
+		// cache is count based if max size and sizeFunc are not provided
 		cache.sizeFunc = func(interface{}) uint64 {
 			return 0
 		}
@@ -258,7 +261,7 @@ func (c *lru) Size() int {
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
-	valueSizeInBytes := c.sizeFunc(value)
+	valueSize := c.sizeFunc(value)
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -299,10 +302,8 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
-	c.updateSizeInBytesOnAdd(key, valueSizeInBytes)
-	// keep the count check to prevent infinite growing.
-	// if the value size is greater than maxSizeInBytes(should never happen) then the item wont be cached
-	for len(c.byKey) == c.maxSize || !c.isCacheWithinSizeLimit() {
+	c.updateSizeOnAdd(key, valueSize)
+	for c.isCacheFull() {
 		oldest := c.byAccess.Back().Value.(*entryImpl)
 
 		if oldest.refCount > 0 {
@@ -324,28 +325,30 @@ func (c *lru) deleteInternal(element *list.Element) {
 		go c.rmFunc(entry.value)
 	}
 	delete(c.byKey, entry.key)
-	c.updateSizeInBytesOnDelete(entry.key)
+	c.updateSizeOnDelete(entry.key)
 }
 
 func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
 	return entry.refCount == 0 && !entry.createTime.IsZero() && currentTime.After(entry.createTime.Add(c.ttl))
 }
 
-func (c *lru) isCacheWithinSizeLimit() bool {
-	return !c.checkSizeInBytes || c.currSizeInBytes <= c.maxSizeInBytes
+func (c *lru) isCacheFull() bool {
+	count := len(c.byKey)
+	// if the value size is greater than maxSize(should never happen) then the item wont be cached
+	return (!c.checkSize && count == c.maxCount) || c.currSize > c.maxSize || count > cacheCountLimit
 }
 
-func (c *lru) updateSizeInBytesOnAdd(key interface{}, valueSizeInBytes uint64) {
-	if c.checkSizeInBytes {
-		c.sizeByKey[key] = valueSizeInBytes
+func (c *lru) updateSizeOnAdd(key interface{}, valueSize uint64) {
+	if c.checkSize {
+		c.sizeByKey[key] = valueSize
 		// the int overflow should not happen here
-		c.currSizeInBytes += uint64(valueSizeInBytes)
+		c.currSize += uint64(valueSize)
 	}
 }
 
-func (c *lru) updateSizeInBytesOnDelete(key interface{}) {
-	if c.checkSizeInBytes {
-		c.currSizeInBytes -= uint64(c.sizeByKey[key])
+func (c *lru) updateSizeOnDelete(key interface{}) {
+	if c.checkSize {
+		c.currSize -= uint64(c.sizeByKey[key])
 		delete(c.sizeByKey, key)
 	}
 }
