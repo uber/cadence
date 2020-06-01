@@ -146,10 +146,10 @@ func (s *Scanner) Start() error {
 	}
 
 	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL && s.context.cfg.TaskListScannerEnabled() {
-		go s.startWorkflowWithRetry(tlScannerWFStartOptions, tlScannerWFTypeName)
+		go s.startWorkflowWithRetry(tlScannerWFStartOptions, tlScannerWFTypeName, nil)
 		workerTaskListNames = append(workerTaskListNames, tlScannerTaskListName)
 	} else if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeCassandra && s.context.cfg.HistoryScannerEnabled() {
-		go s.startWorkflowWithRetry(historyScannerWFStartOptions, historyScannerWFTypeName)
+		go s.startWorkflowWithRetry(historyScannerWFStartOptions, historyScannerWFTypeName, nil)
 		workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
 	}
 
@@ -164,7 +164,7 @@ func (s *Scanner) Start() error {
 func (s *Scanner) startWorkflowWithRetry(
 	options cclient.StartWorkflowOptions,
 	workflowType string,
-	workflowArgs ...interface{},
+	workflowArg interface{},
 ) {
 
 	// let history / matching service warm up
@@ -175,7 +175,7 @@ func (s *Scanner) startWorkflowWithRetry(
 	policy.SetMaximumInterval(time.Minute)
 	policy.SetExpirationInterval(backoff.NoInterval)
 	err := backoff.Retry(func() error {
-		return s.startWorkflow(sdkClient, options, workflowType, workflowArgs)
+		return s.startWorkflow(sdkClient, options, workflowType, workflowArg)
 	}, policy, func(err error) bool {
 		return true
 	})
@@ -188,11 +188,17 @@ func (s *Scanner) startWorkflow(
 	client cclient.Client,
 	options cclient.StartWorkflowOptions,
 	workflowType string,
-	workflowArgs ...interface{},
+	workflowArg interface{},
 ) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	_, err := client.StartWorkflow(ctx, options, workflowType, workflowArgs)
+	var err error
+	if workflowArg != nil {
+		_, err = client.StartWorkflow(ctx, options, workflowType, workflowArg)
+	} else {
+		_, err = client.StartWorkflow(ctx, options, workflowType)
+	}
+
 	cancel()
 	if err != nil {
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {

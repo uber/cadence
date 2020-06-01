@@ -97,7 +97,7 @@ var (
 		TaskList:                     executionsScannerTaskListName,
 		ExecutionStartToCloseTimeout: infiniteDuration,
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		CronSchedule:                 "0 */12 * * *",
+		CronSchedule:                 "* * * * *",
 	}
 )
 
