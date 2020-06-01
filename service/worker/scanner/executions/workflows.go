@@ -229,7 +229,9 @@ func (a *shardResultAggregator) addReport(report common.ShardScanReport) {
 	} else {
 		a.status[report.ShardID] = ShardStatusSuccess
 	}
-	a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a + b })
+	if report.Result.ControlFlowFailure == nil {
+		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a + b })
+	}
 }
 
 func (a *shardResultAggregator) removeReport(shardID int) {
@@ -239,7 +241,9 @@ func (a *shardResultAggregator) removeReport(shardID int) {
 	}
 	delete(a.reports, shardID)
 	delete(a.status, shardID)
-	a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a - b })
+	if report.Result.ControlFlowFailure == nil {
+		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a - b })
+	}
 }
 
 func (a *shardResultAggregator) getReport(shardID int) (*common.ShardScanReport, error) {

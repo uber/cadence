@@ -24,7 +24,6 @@ package executions
 
 import (
 	"context"
-
 	"go.uber.org/cadence/activity"
 
 	"github.com/uber/cadence/common/metrics"
