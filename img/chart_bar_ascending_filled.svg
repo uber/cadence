@@ -1,0 +1,20 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Chart bar ascending (filled)</title>
+  <g transform="matrix(
+          1 0
+          0 1
+          7 10
+        )"><path fill-rule="nonzero" clip-rule="nonzero" d="M4 0L0 0L0 12L4 12L4 0Z" fill="#276EF1" opacity="1"/></g>,<g transform="matrix(
+          1 0
+          0 1
+          1 14
+        )"><path fill-rule="nonzero" clip-rule="nonzero" d="M4 0L0 0L0 8L4 8L4 0Z" fill="#276EF1" opacity="1"/></g>,<g transform="matrix(
+          1 0
+          0 1
+          13 6
+        )"><path fill-rule="nonzero" clip-rule="nonzero" d="M4 0L0 0L0 16L4 16L4 0Z" fill="#276EF1" opacity="1"/></g>,<g transform="matrix(
+          1 0
+          0 1
+          19 2
+        )"><path fill-rule="nonzero" clip-rule="nonzero" d="M4 0L0 0L0 20L4 20L4 0Z" fill="#276EF1" opacity="1"/></g>
+</svg>

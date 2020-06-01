@@ -1,0 +1,98 @@
+.home {
+  margin: auto !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+
+  .hero {
+    background: linear-gradient(180deg, rgba(25,29,46,1) 0%, rgba(48,56,78,1) 35%, rgba(70,80,109,1) 100%);
+    color: white !important;
+    padding-top: 11rem;
+    padding-bottom: 3rem;
+
+    * {
+      max-width: 1100px !important;
+      margin: 0 auto;
+    }
+
+    p.description {
+      color: rgba(255, 255, 255, 0.7) !important;
+      font-size: 2rem;
+      max-width: 800px !important;
+    }
+  }
+
+  #main-title {
+    font-size: 6rem;
+    font-weight: 400 !important;
+  }
+
+  .action-button {
+    background-color: $uberBlue !important;
+  }
+
+  .features {
+    max-width: 960px;
+    margin: 0px auto;
+  }
+
+  .feature {
+    h2 {
+      color: white !important;
+    }
+
+    p {
+      color: white !important;
+    }
+  }
+
+  .footer {
+    background-color: $navColor;
+    color: white !important;
+    padding: 1.5rem !important;
+  }
+
+  .section {
+    background-color: white;
+    color: #2c3e50;
+    padding: 3rem;
+
+    .content {
+      max-width: 800px !important;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-weight: 1000;
+      text-align: center;
+    }
+
+    .tagline {
+      font-size: 1.6rem;
+      text-align: center;
+    }
+
+
+    &.alt {
+      background-color: rgba(48,56,78,1);
+      color: white;
+    }
+  }
+}
+
+@media (max-width: 719px) {
+  .home {
+    .hero {
+      padding-left: 1.5rem !important;
+      padding-right: 1.5rem !important;
+      padding-top: 6rem !important;
+    }
+
+    #main-title {
+      font-size: 3rem !important;
+    }
+
+    .description {
+      font-size: 1.6rem !important;
+    }
+  }
+}

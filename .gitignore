@@ -1,6 +1,0 @@
-/vendor
-.DS_Store
-/_site
-Gemfile.lock
-/.bundle
-/build

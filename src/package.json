@@ -1,0 +1,27 @@
+{
+  "name": "cadence-docs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "npm run clean",
+    "build": "vuepress build",
+    "clean": "rm -rf ../assets ../docs ../img ../404.html ../GLOSSARY.html ../index.html ../CNAME",
+    "copy-build": "cp -r .vuepress/dist/. ../",
+    "copy-cname": "cp CNAME ../",
+    "postbuild": "npm run copy-build && npm run copy-cname",
+    "start": "vuepress dev"
+  },
+  "dependencies": {
+    "@vuepress/plugin-back-to-top": "^1.4.1",
+    "vuepress": "^1.4.1",
+    "vuepress-plugin-clean-urls": "^1.1.1",
+    "vuepress-plugin-code-copy": "^1.0.6",
+    "vuepress-plugin-code-switcher": "^1.0.3",
+    "vuepress-plugin-glossary": "^1.0.2",
+    "vuepress-plugin-reading-progress": "^1.0.9"
+  },
+  "devDependencies": {
+    "vuepress-plugin-flexsearch": "^0.0.6"
+  }
+}
