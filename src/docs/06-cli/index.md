@@ -202,8 +202,8 @@ cadence --do samples-domain wf batch start --query "WorkflowType='main.SamplePar
 This batch job will be operating on 5 workflows.
 Please confirm[Yes/No]:yes
 {
-  "jobID": "<batch-job-id>",
-  "msg": "batch job is started"
+    "jobID": "<batch-job-id>",
+    "msg": "batch job is started"
 }
 
 ```

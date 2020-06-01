@@ -15,64 +15,65 @@ The following code implements unit tests for the `SimpleWorkflow` sample:
 package sample
 
 import (
-        "errors"
-        "testing"
+    "errors"
+    "testing"
 
-        "github.com/stretchr/testify/mock"
-        "github.com/stretchr/testify/suite"
+    "github.com/stretchr/testify/mock"
+    "github.com/stretchr/testify/suite"
 
-        "go.uber.org/cadence"
-        "go.uber.org/cadence/testsuite"
+    "go.uber.org/cadence"
+    "go.uber.org/cadence/testsuite"
 )
 
 type UnitTestSuite struct {
-        suite.Suite
-        testsuite.WorkflowTestSuite
+    suite.Suite
+    testsuite.WorkflowTestSuite
 
-        env *testsuite.TestWorkflowEnvironment
+    env *testsuite.TestWorkflowEnvironment
 }
 
 func (s *UnitTestSuite) SetupTest() {
-        s.env = s.NewTestWorkflowEnvironment()
+    s.env = s.NewTestWorkflowEnvironment()
 }
 
 func (s *UnitTestSuite) AfterTest(suiteName, testName string) {
-        s.env.AssertExpectations(s.T())
+    s.env.AssertExpectations(s.T())
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_Success() {
-        s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
+    s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
 
-        s.True(s.env.IsWorkflowCompleted())
-        s.NoError(s.env.GetWorkflowError())
+    s.True(s.env.IsWorkflowCompleted())
+    s.NoError(s.env.GetWorkflowError())
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
-          func(ctx context.Context, value string) (string, error) {
-                s.Equal("test_success", value)
-                return value, nil
-        })
-        s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
+    s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+        func(ctx context.Context, value string) (string, error) {
+            s.Equal("test_success", value)
+            return value, nil
+        }
+    )
+    s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
 
-        s.True(s.env.IsWorkflowCompleted())
-        s.NoError(s.env.GetWorkflowError())
+    s.True(s.env.IsWorkflowCompleted())
+    s.NoError(s.env.GetWorkflowError())
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
-          "", errors.New("SimpleActivityFailure"))
-        s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
+    s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+        "", errors.New("SimpleActivityFailure"))
+    s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
 
-        s.True(s.env.IsWorkflowCompleted())
+    s.True(s.env.IsWorkflowCompleted())
 
-        s.NotNil(s.env.GetWorkflowError())
-        s.True(cadence.IsGenericError(s.env.GetWorkflowError()))
-        s.Equal("SimpleActivityFailure", s.env.GetWorkflowError().Error())
+    s.NotNil(s.env.GetWorkflowError())
+    s.True(cadence.IsGenericError(s.env.GetWorkflowError()))
+    s.Equal("SimpleActivityFailure", s.env.GetWorkflowError().Error())
 }
 
 func TestUnitTestSuite(t *testing.T) {
-        suite.Run(t, new(UnitTestSuite))
+    suite.Run(t, new(UnitTestSuite))
 }
 ```
 
@@ -98,10 +99,10 @@ evaluate the results.
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_Success() {
-        s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
+    s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
 
-        s.True(s.env.IsWorkflowCompleted())
-        s.NoError(s.env.GetWorkflowError())
+    s.True(s.env.IsWorkflowCompleted())
+    s.NoError(s.env.GetWorkflowError())
 }
 ```
 Calling `s.env.ExecuteWorkflow(...)` executes the :workflow: logic and any invoked :activity:activities: inside the
@@ -131,16 +132,16 @@ Let's take a look at a test that simulates a test that fails via the "activity m
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
-          "", errors.New("SimpleActivityFailure"))
-        s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
+    s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+        "", errors.New("SimpleActivityFailure"))
+    s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
 
-        s.True(s.env.IsWorkflowCompleted())
+    s.True(s.env.IsWorkflowCompleted())
 
-        s.NotNil(s.env.GetWorkflowError())
-        _, ok := s.env.GetWorkflowError().(*cadence.GenericError)
-        s.True(ok)
-        s.Equal("SimpleActivityFailure", s.env.GetWorkflowError().Error())
+    s.NotNil(s.env.GetWorkflowError())
+    _, ok := s.env.GetWorkflowError().(*cadence.GenericError)
+    s.True(ok)
+    s.Equal("SimpleActivityFailure", s.env.GetWorkflowError().Error())
 }
 ```
 This test simulates the execution of the :activity: `SimpleActivity` that is invoked by our :workflow:
@@ -149,7 +150,7 @@ for the `SimpleActivity` that returns an error.
 
 ```go
 s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
-  "", errors.New("SimpleActivityFailure"))
+    "", errors.New("SimpleActivityFailure"))
 ```
 With the mock set up we can now execute the :workflow: via the s.env.ExecuteWorkflow(...) method and
 assert that the :workflow: completed successfully and returned the expected error.
@@ -161,15 +162,16 @@ with the correct parameters.
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
-          func(ctx context.Context, value string) (string, error) {
-                s.Equal("test_success", value)
-                return value, nil
-        })
-        s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
+    s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+        func(ctx context.Context, value string) (string, error) {
+            s.Equal("test_success", value)
+            return value, nil
+        }
+    )
+    s.env.ExecuteWorkflow(SimpleWorkflow, "test_success")
 
-        s.True(s.env.IsWorkflowCompleted())
-        s.NoError(s.env.GetWorkflowError())
+    s.True(s.env.IsWorkflowCompleted())
+    s.NoError(s.env.GetWorkflowError())
 }
 ```
 

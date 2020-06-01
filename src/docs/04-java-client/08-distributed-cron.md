@@ -27,7 +27,7 @@ For :workflow:workflows: with CronSchedule:
 
 Cadence supports the standard cron spec:
 
-```go
+```java
 // CronSchedule - Optional cron schedule for workflow. If a cron schedule is specified, the workflow will run
 // as a cron based on the schedule. The scheduling will be based on UTC time. The schedule for the next run only happens
 // after the current run is completed/failed/timeout. If a RetryPolicy is also supplied, and the workflow failed

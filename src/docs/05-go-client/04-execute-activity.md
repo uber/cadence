@@ -12,19 +12,19 @@ sample code demonstrates making this call:
 
 ```go
 ao := cadence.ActivityOptions{
-        TaskList:               "sampleTaskList",
-        ScheduleToCloseTimeout: time.Second * 60,
-        ScheduleToStartTimeout: time.Second * 60,
-        StartToCloseTimeout:    time.Second * 60,
-        HeartbeatTimeout:       time.Second * 10,
-        WaitForCancellation:    false,
+    TaskList:               "sampleTaskList",
+    ScheduleToCloseTimeout: time.Second * 60,
+    ScheduleToStartTimeout: time.Second * 60,
+    StartToCloseTimeout:    time.Second * 60,
+    HeartbeatTimeout:       time.Second * 10,
+    WaitForCancellation:    false,
 }
 ctx = cadence.WithActivityOptions(ctx, ao)
 
 future := workflow.ExecuteActivity(ctx, SimpleActivity, value)
 var result string
 if err := future.Get(ctx, &result); err != nil {
-        return err
+    return err
 }
 ```
 Let's take a look at each component of this call.
@@ -79,16 +79,16 @@ you can use the result if it is a string value:
 ```go
 var result string
 if err := future.Get(ctx1, &result); err != nil {
-        return err
+    return err
 }
 
 switch result {
 case "apple":
-        // Do something.
+    // Do something.
 case "banana":
-        // Do something.
+    // Do something.
 default:
-        return err
+    return err
 }
 ```
 In this example, we called the `Get()` method on the returned future immediately after `workflow.ExecuteActivity()`.

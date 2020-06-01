@@ -26,31 +26,31 @@ serializable. The following sample code sets up a :query: handler that handles t
 `current_state`:
 ```go
 func MyWorkflow(ctx workflow.Context, input string) error {
-  currentState := "started" // This could be any serializable struct.
-  err := workflow.SetQueryHandler(ctx, "current_state", func() (string, error) {
-    return currentState, nil
-  })
-  if err != nil {
-    currentState = "failed to register query handler"
-    return err
-  }
-  // Your normal workflow code begins here, and you update the currentState as the code makes progress.
-  currentState = "waiting timer"
-  err = NewTimer(ctx, time.Hour).Get(ctx, nil)
-  if err != nil {
-    currentState = "timer failed"
-    return err
-  }
+    currentState := "started" // This could be any serializable struct.
+    err := workflow.SetQueryHandler(ctx, "current_state", func() (string, error) {
+        return currentState, nil
+    })
+    if err != nil {
+        currentState = "failed to register query handler"
+        return err
+    }
+    // Your normal workflow code begins here, and you update the currentState as the code makes progress.
+    currentState = "waiting timer"
+    err = NewTimer(ctx, time.Hour).Get(ctx, nil)
+    if err != nil {
+        currentState = "timer failed"
+        return err
+    }
 
-  currentState = "waiting activity"
-  ctx = WithActivityOptions(ctx, myActivityOptions)
-  err = ExecuteActivity(ctx, MyActivity, "my_input").Get(ctx, nil)
-  if err != nil {
-    currentState = "activity failed"
-    return err
-  }
-  currentState = "done"
-  return nil
+    currentState = "waiting activity"
+    ctx = WithActivityOptions(ctx, myActivityOptions)
+    err = ExecuteActivity(ctx, MyActivity, "my_input").Get(ctx, nil)
+    if err != nil {
+        currentState = "activity failed"
+        return err
+    }
+    currentState = "done"
+    return nil
 }
 ```
 You can now :query: `current_state` by using the :CLI::
@@ -85,10 +85,10 @@ In order to run a :query: using the go client do the following:
 
 ```go
 resp, err := cadenceClient.QueryWorkflowWithOptions(ctx, &client.QueryWorkflowWithOptionsRequest{
-        WorkflowID:            workflowID,
-        RunID:                 runID,
-        QueryType:             queryType,
-        QueryConsistencyLevel: shared.QueryConsistencyLevelStrong.Ptr(),
+    WorkflowID:            workflowID,
+    RunID:                 runID,
+    QueryType:             queryType,
+    QueryConsistencyLevel: shared.QueryConsistencyLevelStrong.Ptr(),
 })
 ```
 

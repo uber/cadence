@@ -12,7 +12,7 @@ This topic helps you install the Cadence service and implement a :workflow:.
 
 ### Install docker
 
-Follow the Docker installation instructions found here: https://docs.docker.com/engine/installation/
+Follow the Docker installation instructions found here: [https://docs.docker.com/engine/installation/](https://docs.docker.com/engine/installation/)
 
 ### Run Cadence Server Using Docker Compose
 
@@ -115,13 +115,13 @@ Bad binaries to reset:
 Go to the [Maven Repository Uber Cadence Java Client Page](https://mvnrepository.com/artifact/com.uber.cadence/cadence-client)
 and find the latest version of the library. Include it as a dependency into your Java project. For example if you
 are using Gradle the dependency looks like:
-```
+```bash
 compile group: 'com.uber.cadence', name: 'cadence-client', version: '<latest_version>'
 ```
 Also add the following dependencies that cadence-client relies on:
-```
-    compile group: 'commons-configuration', name: 'commons-configuration', version: '1.9'
-    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+```bash
+compile group: 'commons-configuration', name: 'commons-configuration', version: '1.9'
+compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
 ```
 Make sure that the following code compiles:
 ```java
@@ -190,17 +190,17 @@ public class GettingStarted {
 To link the :workflow: implementation to the Cadence framework, it should be registered with a :worker: that connects to
 a Cadence Service. By default the :worker: connects to the locally running Cadence service.
 ```java
-    public static void main(String[] args) {
-        Worker.Factory factory = new Worker.Factory("test-domain");
-        Worker worker = factory.newWorker("HelloWorldTaskList");
-        worker.registerWorkflowImplementationTypes(HelloWorldImpl.class);
-        factory.start();
-    }
+public static void main(String[] args) {
+    Worker.Factory factory = new Worker.Factory("test-domain");
+    Worker worker = factory.newWorker("HelloWorldTaskList");
+    worker.registerWorkflowImplementationTypes(HelloWorldImpl.class);
+    factory.start();
+}
 ```
 ### Execute Hello World Workflow using the CLI
 
 Now run the :worker: program. Following is an example log:
-```text
+```bash
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
@@ -211,7 +211,7 @@ No Hello printed. This is expected because a :worker: is just a :workflow: code 
 Started Workflow Id: bcacfabd-9f9a-46ac-9b25-83bcea5d7fd7, run Id: e7c40431-8e23-485b-9649-e8f161219efe
 ```
 The output of the program should change to:
-```text
+```bash
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
@@ -223,7 +223,7 @@ Let's start another :workflow_execution::
 Started Workflow Id: d2083532-9c68-49ab-90e1-d960175377a7, run Id: 331bfa04-834b-45a7-861e-bcb9f6ddae3e
 ```
 And the output changed to:
-```text
+```bash
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
@@ -341,34 +341,34 @@ OPTIONS:
 
 So far our :workflow: is not very interesting. Let's change it to listen on an external :event: and update state accordingly.
 ```java
-  public interface HelloWorld {
+public interface HelloWorld {
     @WorkflowMethod
     void sayHello(String name);
 
     @SignalMethod
     void updateGreeting(String greeting);
-  }
+}
 
-  public static class HelloWorldImpl implements HelloWorld {
+public static class HelloWorldImpl implements HelloWorld {
 
     private String greeting = "Hello";
 
     @Override
     public void sayHello(String name) {
-      int count = 0;
-      while (!"Bye".equals(greeting)) {
+        int count = 0;
+        while (!"Bye".equals(greeting)) {
+            logger.info(++count + ": " + greeting + " " + name + "!");
+            String oldGreeting = greeting;
+            Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+        }
         logger.info(++count + ": " + greeting + " " + name + "!");
-        String oldGreeting = greeting;
-        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-      }
-      logger.info(++count + ": " + greeting + " " + name + "!");
     }
 
     @Override
     public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+        this.greeting = greeting;
     }
-  }
+}
 ```
 The :workflow: interface now has a new method annotated with @SignalMethod. It is a callback method that is invoked
 every time a new :signal: of "HelloWorld::updateGreeting" is delivered to a :workflow:. The :workflow: interface can have only
@@ -381,7 +381,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Started Workflow Id: HelloSignal, run Id: 6fa204cb-f478-469a-9432-78060b83b6cd
 ```
 Program output:
-```text
+```bash
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 ```
 Let's send a :signal: using :CLI::
@@ -390,7 +390,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Signal workflow succeeded.
 ```
 Program output:
-```text
+```bash
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 ```
@@ -401,7 +401,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Signal workflow succeeded.
 ```
 Program output:
-```text
+```bash
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 16:56:24.400 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
@@ -433,7 +433,7 @@ sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)"
 Yes, indeed the :workflow: is blocked on await. This feature works for any open :workflow:, greatly simplifying troubleshooting in production.
 Let's complete the :workflow: by sending a :signal: with a "Bye" greeting:
 
-```text
+```bash
 16:58:22.962 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 4: Bye World!
 ```
 Note that the value of the count variable was not lost during the restart.
@@ -449,7 +449,7 @@ Cadence provides a :query: feature that supports synchronously returning any inf
 
 Update the :workflow: code to:
 ```java
-  public interface HelloWorld {
+public interface HelloWorld {
     @WorkflowMethod
     void sayHello(String name);
 
@@ -458,33 +458,33 @@ Update the :workflow: code to:
 
     @QueryMethod
     int getCount();
-  }
+}
 
-  public static class HelloWorldImpl implements HelloWorld {
+public static class HelloWorldImpl implements HelloWorld {
 
     private String greeting = "Hello";
     private int count = 0;
 
     @Override
     public void sayHello(String name) {
-      while (!"Bye".equals(greeting)) {
+        while (!"Bye".equals(greeting)) {
+            logger.info(++count + ": " + greeting + " " + name + "!");
+            String oldGreeting = greeting;
+            Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+        }
         logger.info(++count + ": " + greeting + " " + name + "!");
-        String oldGreeting = greeting;
-        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-      }
-      logger.info(++count + ": " + greeting + " " + name + "!");
     }
 
     @Override
     public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+        this.greeting = greeting;
     }
 
     @Override
     public int getCount() {
-      return count;
+        return count;
     }
-  }
+}
 ```
 The new `getCount` method annotated with `@QueryMethod` was added to the :workflow: interface definition. It is allowed
 to have multiple :query: methods per :workflow: interface.
@@ -501,7 +501,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Signal workflow succeeded.
 ```
 The :worker: output:
-```text
+```bash
 17:35:50.485 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 17:36:10.483 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 17:36:16.204 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
@@ -534,10 +534,10 @@ Let's change our program to print the greeting from an :activity: on every chang
 
 First let's define an :activity:activities: interface and implement it:
 ```java
-  public interface HelloWorldActivities {
+public interface HelloWorldActivities {
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
     void say(String message);
-  }
+}
 ```
 The `@ActivityMethod` annotation is not required, but `scheduleToCloseTimeoutSeconds` is required and annotation is a convenient way to specify it.
 It is allowed to have multiple :activity:activities: on a single interface.
@@ -546,18 +546,18 @@ Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Pl
 The `out` stream is passed as a parameter to the constructor to demonstrate that the
 activity object can have any dependencies. Examples of real application dependencies are database connections and service clients.
 ```java
-  public class HelloWordActivitiesImpl implements HelloWorldActivities {
+public class HelloWordActivitiesImpl implements HelloWorldActivities {
     private final PrintStream out;
 
     public HelloWordActivitiesImpl(PrintStream out) {
-      this.out = out;
+        this.out = out;
     }
 
     @Override
     public void say(String message) {
-      out.println(message);
+        out.println(message);
     }
-  }
+}
 ```
 Let's create a separate main method for the :activity_worker:. It is common to have a single :worker: that hosts both :activity:activities: and :workflow:workflows:,
 but here we keep them separate to demonstrate how Cadence deals with :worker: failures.
@@ -565,19 +565,19 @@ To make the :activity: implementation known to Cadence, register it with the :wo
 ```java
 public class GettingStartedActivityWorker {
 
-  public static void main(String[] args) {
-    Worker.Factory factory = new Worker.Factory("test-domain");
-    Worker worker = factory.newWorker("HelloWorldTaskList");
-    worker.registerActivitiesImplementations(new HelloWordActivitiesImpl(System.out));
-    factory.start();
-  }
+    public static void main(String[] args) {
+        Worker.Factory factory = new Worker.Factory("test-domain");
+        Worker worker = factory.newWorker("HelloWorldTaskList");
+        worker.registerActivitiesImplementations(new HelloWordActivitiesImpl(System.out));
+        factory.start();
+    }
 }
 ```
 A single instance of an :activity: object is registered per :activity: interface type. This means that the :activity: implementation should be thread-safe since the :activity: method can be simultaneously called from multiple threads.
 
 Let's modify the :workflow: code to invoke the :activity: instead of logging:
 ```java
-  public static class HelloWorldImpl implements HelloWorld {
+public static class HelloWorldImpl implements HelloWorld {
 
     private final HelloWorldActivities activities = Workflow.newActivityStub(HelloWorldActivities.class);
     private String greeting = "Hello";
@@ -585,24 +585,24 @@ Let's modify the :workflow: code to invoke the :activity: instead of logging:
 
     @Override
     public void sayHello(String name) {
-      while (!"Bye".equals(greeting)) {
+        while (!"Bye".equals(greeting)) {
+            activities.say(++count + ": " + greeting + " " + name + "!");
+            String oldGreeting = greeting;
+            Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+        }
         activities.say(++count + ": " + greeting + " " + name + "!");
-        String oldGreeting = greeting;
-        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-      }
-      activities.say(++count + ": " + greeting + " " + name + "!");
     }
 
     @Override
     public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+        this.greeting = greeting;
     }
 
     @Override
     public int getCount() {
-      return count;
+        return count;
     }
-  }
+}
 ```
 :activity:Activities: are invoked through a stub that implements their interface. So an invocation is just a method call on an :activity: stub.
 
@@ -614,7 +614,7 @@ Started Workflow Id: HelloActivityWorker, run Id: ff015637-b5af-43e8-b3f6-8b6c7b
 The :workflow: is started, but nothing visible happens. This is expected as the :activity_worker: is not running. What are the options to understand the currently running :workflow: state?
 
 The first option is look at the stack trace:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow stack  --workflow_id "HelloActivityWorker"
 :query:Query: result as JSON:
 "workflow-root: (BLOCKED on Feature.get)com.uber.cadence.internal.sync.CompletablePromiseImpl.get(CompletablePromiseImpl.java:71)
@@ -633,7 +633,7 @@ You can restart the :workflow_worker: if you want to make sure that restarting i
 of any duration. It is okay for the :workflow: code to block on an :activity: invocation for a month for example.
 
 Another way to see what exactly happened in the :workflow_execution: is to look at the :workflow_execution: history:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow show  --workflow_id "HelloActivityWorker"
   1  WorkflowExecutionStarted  {WorkflowType:{Name:HelloWorld::sayHello},
                                 TaskList:{Name:HelloWorldTaskList},
@@ -668,51 +668,51 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 The last :event: in the :workflow: history is `ActivityTaskScheduled`. It is recorded when :workflow: invoked the :activity:, but it wasn't picked up by an :activity_worker: yet.
 
 Another useful API is `DescribeWorkflowExecution` which, among other information, contains the list of outstanding activities:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow describe  --workflow_id "HelloActivityWorker"
 {
-  "ExecutionConfiguration": {
-    "taskList": {
-      "name": "HelloWorldTaskList"
+    "ExecutionConfiguration": {
+        "taskList": {
+            "name": "HelloWorldTaskList"
+        },
+        "executionStartToCloseTimeoutSeconds": 3600,
+        "taskStartToCloseTimeoutSeconds": 10,
+        "childPolicy": "TERMINATE"
     },
-    "executionStartToCloseTimeoutSeconds": 3600,
-    "taskStartToCloseTimeoutSeconds": 10,
-    "childPolicy": "TERMINATE"
-  },
-  "WorkflowExecutionInfo": {
-    "Execution": {
-      "workflowId": "HelloActivityWorker",
-      "runId": "ff015637-b5af-43e8-b3f6-8b6c7b919b62"
+    "WorkflowExecutionInfo": {
+        "Execution": {
+            "workflowId": "HelloActivityWorker",
+            "runId": "ff015637-b5af-43e8-b3f6-8b6c7b919b62"
+        },
+        "Type": {
+            "name": "HelloWorld::sayHello"
+        },
+        "StartTime": "2019-06-08T23:56:41Z",
+        "CloseTime": "1970-01-01T00:00:00Z",
+        "CloseStatus": null,
+        "HistoryLength": 5,
+        "ParentDomainID": null,
+        "ParentExecution": null,
+        "AutoResetPoints": {}
     },
-    "Type": {
-      "name": "HelloWorld::sayHello"
-    },
-    "StartTime": "2019-06-08T23:56:41Z",
-    "CloseTime": "1970-01-01T00:00:00Z",
-    "CloseStatus": null,
-    "HistoryLength": 5,
-    "ParentDomainID": null,
-    "ParentExecution": null,
-    "AutoResetPoints": {}
-  },
-  "PendingActivities": [
-    {
-      "ActivityID": "0",
-      "ActivityType": {
-        "name": "HelloWorldActivities::say"
-      },
-      "State": "SCHEDULED",
-      "ScheduledTimestamp": "2019-06-08T23:57:00Z"
-    }
-  ]
+    "PendingActivities": [
+        {
+            "ActivityID": "0",
+            "ActivityType": {
+                "name": "HelloWorldActivities::say"
+            },
+            "State": "SCHEDULED",
+            "ScheduledTimestamp": "2019-06-08T23:57:00Z"
+        }
+    ]
 }
 ```
 Let's start the :activity_worker:. It starts and immediately prints:
-```text
+```bash
 1: Hello World!
 ```
 Let's look at the :workflow_execution: history:
-```text
+```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow show  --workflow_id "HelloActivityWorker"
    1  WorkflowExecutionStarted  {WorkflowType:{Name:HelloWorld::sayHello},
                                 TaskList:{Name:HelloWorldTaskList},
@@ -767,22 +767,22 @@ _ActivityTaskCompleted_ :event: is recorded when :activity: completes. It contai
 
 Let's look at various failure scenarios. Modify :activity: :task: timeout:
 ```java
-  public interface HelloWorldActivities {
+public interface HelloWorldActivities {
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
     void say(String message);
-  }
+}
 
-  public class HelloWordActivitiesImpl implements HelloWorldActivities {
+public class HelloWordActivitiesImpl implements HelloWorldActivities {
     private final PrintStream out;
 
     public HelloWordActivitiesImpl(PrintStream out) {
-      this.out = out;
+        this.out = out;
     }
 
     @Override
     public void say(String message) {
-      out.println(message);
+        out.println(message);
     }
-  }
+}
 ```
 (To be continued ...)

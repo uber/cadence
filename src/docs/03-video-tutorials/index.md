@@ -43,5 +43,4 @@ cadence --domain samples-domain workflow start -wt test -tl test -et 300
 cadence --domain samples-domain workflow list -op
 
 cadence --domain samples-domain workflow terminate -wid <workflowID>
-
 ```

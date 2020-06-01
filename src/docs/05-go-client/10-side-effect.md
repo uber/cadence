@@ -22,14 +22,14 @@ The following sample demonstrates how to use `SideEffect`:
 
 ```go
 encodedRandom := SideEffect(func(ctx cadence.Context) interface{} {
-        return rand.Intn(100)
+    return rand.Intn(100)
 })
 
 var random int
 encodedRandom.Get(&random)
 if random < 50 {
-        ....
+    ...
 } else {
-        ....
+    ...
 }
 ```

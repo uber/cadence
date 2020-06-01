@@ -23,13 +23,13 @@ The most important APIs provided by the session framework are `workflow.CreateSe
 Here's a more detailed description of these two APIs:
 ```go
 type SessionOptions struct {
-  // ExecutionTimeout: required, no default.
-  //     Specifies the maximum amount of time the session can run.
-  ExecutionTimeout time.Duration
+    // ExecutionTimeout: required, no default.
+    //     Specifies the maximum amount of time the session can run.
+    ExecutionTimeout time.Duration
 
-  // CreationTimeout: required, no default.
-  //     Specifies how long session creation can take before returning an error.
-  CreationTimeout  time.Duration
+    // CreationTimeout: required, no default.
+    //     Specifies how long session creation can take before returning an error.
+    CreationTimeout  time.Duration
 }
 
 func CreateSession(ctx Context, sessionOptions *SessionOptions) (Context, error)
@@ -51,35 +51,35 @@ func CompleteSession(ctx Context)
 
 ```go
 func FileProcessingWorkflow(ctx workflow.Context, fileID string) (err error) {
-  ao := workflow.ActivityOptions{
-    ScheduleToStartTimeout: time.Second * 5,
-    StartToCloseTimeout:    time.Minute,
-  }
-  ctx = workflow.WithActivityOptions(ctx, ao)
+    ao := workflow.ActivityOptions{
+        ScheduleToStartTimeout: time.Second * 5,
+        StartToCloseTimeout:    time.Minute,
+    }
+    ctx = workflow.WithActivityOptions(ctx, ao)
 
-  so := &workflow.SessionOptions{
-    CreationTimeout:  time.Minute,
-    ExecutionTimeout: time.Minute,
-  }
-  sessionCtx, err := workflow.CreateSession(ctx, so)
-  if err != nil {
-    return err
-  }
-  defer workflow.CompleteSession(sessionCtx)
+    so := &workflow.SessionOptions{
+        CreationTimeout:  time.Minute,
+        ExecutionTimeout: time.Minute,
+    }
+    sessionCtx, err := workflow.CreateSession(ctx, so)
+    if err != nil {
+        return err
+    }
+    defer workflow.CompleteSession(sessionCtx)
 
-  var fInfo *fileInfo
-  err = workflow.ExecuteActivity(sessionCtx, downloadFileActivityName, fileID).Get(sessionCtx, &fInfo)
-  if err != nil {
-    return err
-  }
+    var fInfo *fileInfo
+    err = workflow.ExecuteActivity(sessionCtx, downloadFileActivityName, fileID).Get(sessionCtx, &fInfo)
+    if err != nil {
+        return err
+    }
 
-  var fInfoProcessed *fileInfo
-  err = workflow.ExecuteActivity(sessionCtx, processFileActivityName, *fInfo).Get(sessionCtx, &fInfoProcessed)
-  if err != nil {
-    return err
-  }
+    var fInfoProcessed *fileInfo
+    err = workflow.ExecuteActivity(sessionCtx, processFileActivityName, *fInfo).Get(sessionCtx, &fInfoProcessed)
+    if err != nil {
+        return err
+    }
 
-  return workflow.ExecuteActivity(sessionCtx, uploadFileActivityName, *fInfoProcessed).Get(sessionCtx, nil)
+    return workflow.ExecuteActivity(sessionCtx, uploadFileActivityName, *fInfoProcessed).Get(sessionCtx, nil)
 }
 ```
 
@@ -87,13 +87,13 @@ func FileProcessingWorkflow(ctx workflow.Context, fileID string) (err error) {
 
 ```go
 type SessionInfo struct {
-  // A unique ID for the session
-  SessionID         string
+    // A unique ID for the session
+    SessionID         string
 
-  // The hostname of the worker that is executing the session
-  HostName          string
+    // The hostname of the worker that is executing the session
+    HostName          string
 
-  // ... other unexported fields
+    // ... other unexported fields
 }
 
 func GetSessionInfo(ctx Context) *SessionInfo
