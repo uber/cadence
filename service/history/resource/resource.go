@@ -72,12 +72,13 @@ func New(
 	}
 
 	eventCache := events.NewGlobalCache(
-		config.EventsCacheGlobalInitialSize(),
-		config.EventsCacheGlobalMaxSize(),
-		config.EventsCacheTTL(),
-		serviceResource.GetHistoryManager(),
-		params.Logger,
-		params.MetricsClient,
+			config.EventsCacheGlobalInitialCount(),
+			config.EventsCacheGlobalMaxCount(),
+			config.EventsCacheTTL(),
+			serviceResource.GetHistoryManager(),
+			params.Logger,
+			params.MetricsClient,
+			uint64(config.EventsCacheMaxSize()),
 	)
 	coordinator := failover.NewCoordinator(
 		serviceResource.GetMetadataManager(),
