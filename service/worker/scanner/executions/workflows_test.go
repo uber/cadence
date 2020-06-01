@@ -1,14 +1,38 @@
+// The MIT License (MIT)
+//
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package executions
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
-	"testing"
+
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
 )
 
 type workflowsSuite struct {
@@ -56,7 +80,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success_Disabled() {
 func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(ScannerConfigActivityName, mock.Anything, mock.Anything).Return(ResolvedScannerWorkflowConfig{
-		Enabled: true,
+		Enabled:     true,
 		Concurrency: 3,
 	}, nil)
 	env.OnActivity(ScannerEmitMetricsActivityName, mock.Anything, mock.Anything).Return(nil)
@@ -67,7 +91,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 		},
 	}
 	for i := 0; i < 30; i++ {
-		if i % 5 == 0 {
+		if i%5 == 0 {
 			env.OnActivity(ScannerScanShardActivityName, mock.Anything, ScanShardActivityParams{
 				ShardID: i,
 			}).Return(&common.ShardScanReport{
@@ -87,11 +111,11 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 			}).Return(&common.ShardScanReport{
 				ShardID: i,
 				Stats: common.ShardScanStats{
-					ExecutionsCount: 10,
-					CorruptedCount: 2,
+					ExecutionsCount:  10,
+					CorruptedCount:   2,
 					CheckFailedCount: 1,
 					CorruptionByType: map[common.InvariantType]int64{
-						common.HistoryExistsInvariantType: 1,
+						common.HistoryExistsInvariantType:   1,
 						common.ValidFirstEventInvariantType: 1,
 					},
 					CorruptedOpenExecutionCount: 0,
@@ -99,7 +123,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 				Result: common.ShardScanResult{
 					ShardScanKeys: &common.ShardScanKeys{
 						Corrupt: &common.Keys{
-							UUID: "test_uuid",
+							UUID:    "test_uuid",
 							MinPage: 0,
 							MaxPage: i,
 						},
@@ -118,11 +142,11 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	var agg AggregateReportResult
 	s.NoError(aggValue.Get(&agg))
 	s.Equal(AggregateReportResult{
-		ExecutionsCount: 240,
-		CorruptedCount: 48,
+		ExecutionsCount:  240,
+		CorruptedCount:   48,
 		CheckFailedCount: 24,
 		CorruptionByType: map[common.InvariantType]int64{
-			common.HistoryExistsInvariantType: 24,
+			common.HistoryExistsInvariantType:   24,
 			common.ValidFirstEventInvariantType: 24,
 		},
 	}, agg)
@@ -131,7 +155,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 		s.NoError(err)
 		var shardReport *common.ShardScanReport
 		s.NoError(shardReportValue.Get(&shardReport))
-		if i % 5 == 0 {
+		if i%5 == 0 {
 			s.Equal(&common.ShardScanReport{
 				ShardID: i,
 				Stats: common.ShardScanStats{
@@ -147,11 +171,11 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 			s.Equal(&common.ShardScanReport{
 				ShardID: i,
 				Stats: common.ShardScanStats{
-					ExecutionsCount: 10,
-					CorruptedCount: 2,
+					ExecutionsCount:  10,
+					CorruptedCount:   2,
 					CheckFailedCount: 1,
 					CorruptionByType: map[common.InvariantType]int64{
-						common.HistoryExistsInvariantType: 1,
+						common.HistoryExistsInvariantType:   1,
 						common.ValidFirstEventInvariantType: 1,
 					},
 					CorruptedOpenExecutionCount: 0,
@@ -159,7 +183,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 				Result: common.ShardScanResult{
 					ShardScanKeys: &common.ShardScanKeys{
 						Corrupt: &common.Keys{
-							UUID: "test_uuid",
+							UUID:    "test_uuid",
 							MinPage: 0,
 							MaxPage: i,
 						},
@@ -174,7 +198,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	s.NoError(statusValue.Get(&status))
 	expected := make(map[int]ShardStatus)
 	for i := 0; i < 30; i++ {
-		if i % 5 == 0 {
+		if i%5 == 0 {
 			expected[i] = ShardStatusControlFlowFailure
 		} else {
 			expected[i] = ShardStatusSuccess
@@ -189,7 +213,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	for i := 0; i < 30; i++ {
 		if i%5 != 0 {
 			expectedCorrupted[i] = common.Keys{
-				UUID: "test_uuid",
+				UUID:    "test_uuid",
 				MinPage: 0,
 				MaxPage: i,
 			}
@@ -201,7 +225,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(ScannerConfigActivityName, mock.Anything, mock.Anything).Return(ResolvedScannerWorkflowConfig{
-		Enabled: true,
+		Enabled:     true,
 		Concurrency: 3,
 	}, nil)
 	shards := Shards{
@@ -211,7 +235,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 		},
 	}
 	for i := 0; i < 30; i++ {
-		if i % 5 == 0 {
+		if i%5 == 0 {
 			env.OnActivity(ScannerScanShardActivityName, mock.Anything, ScanShardActivityParams{
 				ShardID: i,
 			}).Return(&common.ShardScanReport{
@@ -231,11 +255,11 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 			}).Return(&common.ShardScanReport{
 				ShardID: i,
 				Stats: common.ShardScanStats{
-					ExecutionsCount: 10,
-					CorruptedCount: 2,
+					ExecutionsCount:  10,
+					CorruptedCount:   2,
 					CheckFailedCount: 1,
 					CorruptionByType: map[common.InvariantType]int64{
-						common.HistoryExistsInvariantType: 1,
+						common.HistoryExistsInvariantType:   1,
 						common.ValidFirstEventInvariantType: 1,
 					},
 					CorruptedOpenExecutionCount: 0,
@@ -255,8 +279,8 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 }
 
 func (s *workflowsSuite) TestFlattenShards() {
-	testCases := []struct{
-		input Shards
+	testCases := []struct {
+		input    Shards
 		expected []int
 	}{
 		{
@@ -301,11 +325,11 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 	firstReport := common.ShardScanReport{
 		ShardID: 1,
 		Stats: common.ShardScanStats{
-			ExecutionsCount: 10,
-			CorruptedCount: 3,
+			ExecutionsCount:  10,
+			CorruptedCount:   3,
 			CheckFailedCount: 1,
 			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType: 2,
+				common.HistoryExistsInvariantType:        2,
 				common.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
@@ -325,7 +349,7 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 	expected.aggregation.CorruptedCount = 3
 	expected.aggregation.CheckFailedCount = 1
 	expected.aggregation.CorruptionByType = map[common.InvariantType]int64{
-		common.HistoryExistsInvariantType: 2,
+		common.HistoryExistsInvariantType:        2,
 		common.OpenCurrentExecutionInvariantType: 1,
 	}
 	expected.aggregation.CorruptedOpenExecutionCount = 1
@@ -343,11 +367,11 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 	secondReport := common.ShardScanReport{
 		ShardID: 2,
 		Stats: common.ShardScanStats{
-			ExecutionsCount: 10,
-			CorruptedCount: 3,
+			ExecutionsCount:  10,
+			CorruptedCount:   3,
 			CheckFailedCount: 1,
 			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType: 2,
+				common.HistoryExistsInvariantType:        2,
 				common.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,

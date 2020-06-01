@@ -53,7 +53,7 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   execution.BranchToken,
 		MinEventID:    c.FirstEventID,
-		MaxEventID:    c.FirstEventID  + 1,
+		MaxEventID:    c.FirstEventID + 1,
 		PageSize:      historyPageSize,
 		NextPageToken: nil,
 		ShardID:       c.IntPtr(execution.ShardID),

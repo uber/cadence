@@ -27,9 +27,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	c "github.com/uber/cadence/common"
+
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
+
+	c "github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
@@ -70,12 +72,12 @@ type (
 	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityParams struct {
 		ScannerWorkflowWorkflowID string
-		ScannerWorkflowRunID string
+		ScannerWorkflowRunID      string
 	}
 
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
 	CorruptedKeysEntry struct {
-		ShardID int
+		ShardID       int
 		CorruptedKeys common.Keys
 	}
 )
@@ -197,7 +199,7 @@ func FixerCorruptedKeysActivity(
 		Domain: c.StringPtr(c.SystemLocalDomainName),
 		Execution: &shared.WorkflowExecution{
 			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
-			RunId: c.StringPtr(params.ScannerWorkflowRunID),
+			RunId:      c.StringPtr(params.ScannerWorkflowRunID),
 		},
 	})
 	if err != nil {
@@ -212,7 +214,7 @@ func FixerCorruptedKeysActivity(
 		Domain: c.StringPtr(c.SystemLocalDomainName),
 		Execution: &shared.WorkflowExecution{
 			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
-			RunId: c.StringPtr(params.ScannerWorkflowRunID),
+			RunId:      c.StringPtr(params.ScannerWorkflowRunID),
 		},
 		Query: &shared.WorkflowQuery{
 			QueryType: c.StringPtr(ShardCorruptKeysQuery),
@@ -229,7 +231,7 @@ func FixerCorruptedKeysActivity(
 	var result []CorruptedKeysEntry
 	for k, v := range corruptedKeys {
 		result = append(result, CorruptedKeysEntry{
-			ShardID: k,
+			ShardID:       k,
 			CorruptedKeys: v,
 		})
 	}

@@ -239,14 +239,13 @@ func FixerWorkflow(
 
 	// otherwise at this point you have corrupted keys
 
-
 	return nil
 }
 
 type shardResultAggregator struct {
-	reports     map[int]common.ShardScanReport
-	status      ShardStatusResult
-	aggregation AggregateReportResult
+	reports        map[int]common.ShardScanReport
+	status         ShardStatusResult
+	aggregation    AggregateReportResult
 	corruptionKeys map[int]common.Keys
 }
 
