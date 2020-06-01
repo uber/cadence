@@ -67,12 +67,18 @@ type Options struct {
 	// is scheduled for deletion
 	RemovedFunc RemovedFunc
 
-	// GetCacheItemSizeFunc is an optional function called upon adding the item to update the cache size.
+	// MaxCount controls the max capacity of the cache
+	// It is required option if MaxSize is not provided
+	MaxCount int
+
+	// GetCacheItemSizeFunc is a function called upon adding the item to update the cache size.
 	// It returns 0 by default, assuming the cache is just count based
+	// It is required option if MaxCount is not provided
 	GetCacheItemSizeFunc GetCacheItemSizeFunc
 
 	// MaxSize is an optional and must be set along with GetCacheItemSizeFunc
-	// to control the max capacity(in bytes) of the cache
+	// to control the max size in bytes of the cache
+	// It is required option if MaxCount is not provided
 	MaxSize uint64
 }
 

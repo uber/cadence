@@ -32,24 +32,24 @@ var (
 	ErrCacheFull = errors.New("Cache capacity is fully occupied with pinned elements")
 )
 
-// keep the count check to prevent infinite growing
-const cacheCountLimit = 1 << 20
+// upper limit to prevent infinite growing
+const cacheCountLimit = 1 << 25
 
 // lru is a concurrent fixed size cache that evicts elements in lru order
 type (
 	lru struct {
-		mut       sync.Mutex
-		byAccess  *list.List
-		byKey     map[interface{}]*list.Element
-		maxCount  int
-		ttl       time.Duration
-		pin       bool
-		rmFunc    RemovedFunc
-		sizeFunc  GetCacheItemSizeFunc
-		maxSize   uint64
-		currSize  uint64
-		sizeByKey map[interface{}]uint64
-		checkSize bool
+		mut         sync.Mutex
+		byAccess    *list.List
+		byKey       map[interface{}]*list.Element
+		maxCount    int
+		ttl         time.Duration
+		pin         bool
+		rmFunc      RemovedFunc
+		sizeFunc    GetCacheItemSizeFunc
+		maxSize     uint64
+		currSize    uint64
+		sizeByKey   map[interface{}]uint64
+		isSizeBased bool
 	}
 
 	iteratorImpl struct {
@@ -134,47 +134,34 @@ func (entry *entryImpl) CreateTime() time.Time {
 }
 
 // New creates a new cache with the given options
-func New(maxCount int, opts *Options) Cache {
-	if opts == nil {
-		opts = &Options{}
+func New(opts *Options) Cache {
+	if opts == nil || (opts.MaxCount <= 0 && (opts.MaxSize <= 0 || opts.GetCacheItemSizeFunc == nil)) {
+		panic("Either MaxCount (count based) or " +
+			"MaxSize and GetCacheItemSizeFunc (size based) options must be provided for the LRU cache")
 	}
 
 	cache := &lru{
 		byAccess: list.New(),
 		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
 		ttl:      opts.TTL,
-		maxCount: maxCount,
 		pin:      opts.Pin,
 		rmFunc:   opts.RemovedFunc,
 	}
 
-	cache.checkSize = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
+	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
 
-	if cache.checkSize {
+	if cache.isSizeBased {
 		cache.sizeFunc = opts.GetCacheItemSizeFunc
 		cache.maxSize = opts.MaxSize
 		cache.sizeByKey = make(map[interface{}]uint64, opts.InitialCapacity)
 	} else {
 		// cache is count based if max size and sizeFunc are not provided
+		cache.maxCount = opts.MaxCount
 		cache.sizeFunc = func(interface{}) uint64 {
 			return 0
 		}
 	}
 	return cache
-}
-
-// NewLRU creates a new LRU cache of the given size, setting initial capacity
-// to the max size
-func NewLRU(maxSize int) Cache {
-	return New(maxSize, nil)
-}
-
-// NewLRUWithInitialCapacity creates a new LRU cache with an initial capacity
-// and a max size
-func NewLRUWithInitialCapacity(initialCapacity, maxSize int) Cache {
-	return New(maxSize, &Options{
-		InitialCapacity: initialCapacity,
-	})
 }
 
 // Get retrieves the value stored under the given key
@@ -335,11 +322,11 @@ func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
 func (c *lru) isCacheFull() bool {
 	count := len(c.byKey)
 	// if the value size is greater than maxSize(should never happen) then the item wont be cached
-	return (!c.checkSize && count == c.maxCount) || c.currSize > c.maxSize || count > cacheCountLimit
+	return (!c.isSizeBased && count == c.maxCount) || c.currSize > c.maxSize || count > cacheCountLimit
 }
 
 func (c *lru) updateSizeOnAdd(key interface{}, valueSize uint64) {
-	if c.checkSize {
+	if c.isSizeBased {
 		c.sizeByKey[key] = valueSize
 		// the int overflow should not happen here
 		c.currSize += uint64(valueSize)
@@ -347,7 +334,7 @@ func (c *lru) updateSizeOnAdd(key interface{}, valueSize uint64) {
 }
 
 func (c *lru) updateSizeOnDelete(key interface{}) {
-	if c.checkSize {
+	if c.isSizeBased {
 		c.currSize -= uint64(c.sizeByKey[key])
 		delete(c.sizeByKey, key)
 	}

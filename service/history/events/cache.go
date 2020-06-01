@@ -143,6 +143,7 @@ func newCacheWithOption(
 	opts := &cache.Options{}
 	opts.InitialCapacity = initialCount
 	opts.TTL = ttl
+	opts.MaxCount = maxCount
 
 	if maxSize > 0 {
 		opts.MaxSize = maxSize
@@ -152,7 +153,7 @@ func newCacheWithOption(
 	}
 
 	return &cacheImpl{
-		Cache:          cache.New(maxCount, opts),
+		Cache:          cache.New(opts),
 		historyManager: historyManager,
 		disabled:       disabled,
 		logger:         logger.WithTags(tag.ComponentEventsCache),
