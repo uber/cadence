@@ -32,21 +32,21 @@ to it, and then returns a result.
 package simple
 
 import (
-	"context"
+    "context"
 
     "go.uber.org/cadence/activity"
     "go.uber.org/zap"
 )
 
 func init() {
-	activity.Register(SimpleActivity)
+    activity.Register(SimpleActivity)
 }
 
 // SimpleActivity is a sample Cadence activity function that takes one parameter and
 // returns a string containing the parameter value.
 func SimpleActivity(ctx context.Context, value string) (string, error) {
-	activity.GetLogger(ctx).Info("SimpleActivity called.", zap.String("Value", value))
-	return "Processed: " + value, nil
+    activity.GetLogger(ctx).Info("SimpleActivity called.", zap.String("Value", value))
+    return "Processed: " + value, nil
 }
 ```
 Let's take a look at each component of this activity.
@@ -115,7 +115,7 @@ call to `activity.Register`.
 
 ```go
 func init() {
-	activity.Register(SimpleActivity)
+    activity.Register(SimpleActivity)
 }
 ```
 This call creates an in-memory mapping inside the :worker: process between the fully qualified function

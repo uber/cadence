@@ -17,19 +17,19 @@ Consider the following :workflow: definition:
 
 ```go
 func MyWorkflow(ctx workflow.Context, data string) (string, error) {
-        ao := workflow.ActivityOptions{
-                ScheduleToStartTimeout: time.Minute,
-                StartToCloseTimeout:    time.Minute,
-        }
-        ctx = workflow.WithActivityOptions(ctx, ao)
-        var result1 string
-        err := workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
-        if err != nil {
-                return "", err
-        }
-        var result2 string
-        err = workflow.ExecuteActivity(ctx, ActivityB, result1).Get(ctx, &result2)
-        return result2, err
+    ao := workflow.ActivityOptions{
+        ScheduleToStartTimeout: time.Minute,
+        StartToCloseTimeout:    time.Minute,
+    }
+    ctx = workflow.WithActivityOptions(ctx, ao)
+    var result1 string
+    err := workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
+    if err != nil {
+        return "", err
+    }
+    var result2 string
+    err = workflow.ExecuteActivity(ctx, ActivityB, result1).Get(ctx, &result2)
+    return result2, err
 }
 ```
 Now let's say we have replaced ActivityA with ActivityC, and deployed the updated code. If there
@@ -45,12 +45,12 @@ Thus we use `workflow.GetVersion().`
 var err error
 v := workflow.GetVersion(ctx, "Step1", workflow.DefaultVersion, 1)
 if v == workflow.DefaultVersion {
-        err = workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
 } else {
-        err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
 }
 if err != nil {
-        return "", err
+    return "", err
 }
 
 var result2 string
@@ -67,11 +67,11 @@ add some additional code:
 ```go
 v := workflow.GetVersion(ctx, "Step1", workflow.DefaultVersion, 2)
 if v == workflow.DefaultVersion {
-        err = workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
 } else if v == 1 {
-        err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
 } else {
-        err = workflow.ExecuteActivity(ctx, ActivityD, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityD, data).Get(ctx, &result1)
 }
 ```
 Note that we have changed `maxSupported` from 1 to 2. A :workflow: that had already passed this
@@ -84,9 +84,9 @@ remove the code for that version. It should now look like the following:
 ```go
 v := workflow.GetVersion(ctx, "Step1", 1, 2)
 if v == 1 {
-        err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
 } else {
-        err = workflow.ExecuteActivity(ctx, ActivityD, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityD, data).Get(ctx, &result1)
 }
 ```
 You'll note that `minSupported` has changed from `DefaultVersion` to `1`. If an older version of the
@@ -118,9 +118,9 @@ following:
 ```go
 v := workflow.GetVersion(ctx, "Step1-fix2", workflow.DefaultVersion, 1)
 if v == workflow.DefaultVersion {
-        err = workflow.ExecuteActivity(ctx, ActivityD, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityD, data).Get(ctx, &result1)
 } else {
-        err = workflow.ExecuteActivity(ctx, ActivityE, data).Get(ctx, &result1)
+    err = workflow.ExecuteActivity(ctx, ActivityE, data).Get(ctx, &result1)
 }
 ```
 Upgrading a :workflow: is straightforward if you don't need to preserve your currently running

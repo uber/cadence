@@ -26,7 +26,7 @@ The sample code below shows a simple implementation of a :workflow: that execute
 :workflow: also passes the sole parameter it receives as part of its initialization as a parameter
 to the :activity:.
 
-``` go
+```go
 package sample
 
 import (
@@ -65,8 +65,8 @@ func SimpleWorkflow(ctx workflow.Context, value string) error {
 In the Cadence programing model, a :workflow: is implemented with a function. The function declaration
 specifies the parameters the :workflow: accepts as well as any values it might return.
 
-``` go
-    func SimpleWorkflow(ctx workflow.Context, value string) error
+```go
+func SimpleWorkflow(ctx workflow.Context, value string) error
 ```
 
 Let’s deconstruct the declaration above:
@@ -141,7 +141,7 @@ error via the **err** return value.
 For some client code to be able to invoke a :workflow: type, the :worker: process needs to be aware of
 all the implementations it has access to. A :workflow: is registered with the following call:
 
-``` go
+```go
 workflow.Register(SimpleWorkflow)
 ```
 

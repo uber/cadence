@@ -12,17 +12,17 @@ implementation. The parent :workflow: has the ability to monitor and impact the 
 
 ```go
 cwo := workflow.ChildWorkflowOptions{
-        // Do not specify WorkflowID if you want Cadence to generate a unique ID for the child execution.
-        WorkflowID:                   "BID-SIMPLE-CHILD-WORKFLOW",
-        ExecutionStartToCloseTimeout: time.Minute * 30,
+    // Do not specify WorkflowID if you want Cadence to generate a unique ID for the child execution.
+    WorkflowID:                   "BID-SIMPLE-CHILD-WORKFLOW",
+    ExecutionStartToCloseTimeout: time.Minute * 30,
 }
 ctx = workflow.WithChildWorkflowOptions(ctx, cwo)
 
 var result string
 future := workflow.ExecuteChildWorkflow(ctx, SimpleChildWorkflow, value)
 if err := future.Get(ctx, &result); err != nil {
-        workflow.GetLogger(ctx).Error("SimpleChildWorkflow failed.", zap.Error(err))
-        return err
+    workflow.GetLogger(ctx).Error("SimpleChildWorkflow failed.", zap.Error(err))
+    return err
 }
 ```
 Let's take a look at each component of this call.

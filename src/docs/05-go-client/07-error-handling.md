@@ -16,42 +16,42 @@ There are other types of errors such as `workflow.TimeoutError`, `workflow.Cance
 ```go
 err := workflow.ExecuteActivity(ctx, YourActivityFunc).Get(ctx, nil)
 switch err := err.(type) {
-case *cadence.CustomError:
+    case *cadence.CustomError:
         switch err.Reason() {
-        case "err-reason-a":
+            case "err-reason-a":
                 // Handle error-reason-a.
                 var details YourErrorDetailsType
                 err.Details(&details)
                 // Deal with details.
-        case "err-reason-b":
+            case "err-reason-b":
                 // Handle error-reason-b.
-        default:
+            default:
                 // Handle all other error reasons.
         }
-case *workflow.GenericError:
+    case *workflow.GenericError:
         switch err.Error() {
-        case "err-msg-1":
+            case "err-msg-1":
                 // Handle error with message "err-msg-1".
-        case "err-msg-2":
+            case "err-msg-2":
                 // Handle error with message "err-msg-2".
-        default:
+            default:
                 // Handle all other generic errors.
         }
-case *workflow.TimeoutError:
+    case *workflow.TimeoutError:
         switch err.TimeoutType() {
-        case shared.TimeoutTypeScheduleToStart:
+            case shared.TimeoutTypeScheduleToStart:
                 // Handle ScheduleToStart timeout.
-        case shared.TimeoutTypeStartToClose:
+            case shared.TimeoutTypeStartToClose:
                 // Handle StartToClose timeout.
-        case shared.TimeoutTypeHeartbeat:
+            case shared.TimeoutTypeHeartbeat:
                 // Handle heartbeat timeout.
-        default:
+            default:
         }
-case *workflow.PanicError:
-         // Handle panic error.
-case *cadence.CanceledError:
+    case *workflow.PanicError:
+        // Handle panic error.
+    case *cadence.CanceledError:
         // Handle canceled error.
-default:
+    default:
         // All other cases (ideally, this should not happen).
 }
 ```

@@ -120,8 +120,8 @@ compile group: 'com.uber.cadence', name: 'cadence-client', version: '<latest_ver
 ```
 Also add the following dependencies that cadence-client relies on:
 ```bash
-    compile group: 'commons-configuration', name: 'commons-configuration', version: '1.9'
-    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+compile group: 'commons-configuration', name: 'commons-configuration', version: '1.9'
+compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
 ```
 Make sure that the following code compiles:
 ```java
@@ -190,12 +190,12 @@ public class GettingStarted {
 To link the :workflow: implementation to the Cadence framework, it should be registered with a :worker: that connects to
 a Cadence Service. By default the :worker: connects to the locally running Cadence service.
 ```java
-    public static void main(String[] args) {
-        Worker.Factory factory = new Worker.Factory("test-domain");
-        Worker worker = factory.newWorker("HelloWorldTaskList");
-        worker.registerWorkflowImplementationTypes(HelloWorldImpl.class);
-        factory.start();
-    }
+public static void main(String[] args) {
+    Worker.Factory factory = new Worker.Factory("test-domain");
+    Worker worker = factory.newWorker("HelloWorldTaskList");
+    worker.registerWorkflowImplementationTypes(HelloWorldImpl.class);
+    factory.start();
+}
 ```
 ### Execute Hello World Workflow using the CLI
 
@@ -341,34 +341,34 @@ OPTIONS:
 
 So far our :workflow: is not very interesting. Let's change it to listen on an external :event: and update state accordingly.
 ```java
-  public interface HelloWorld {
+public interface HelloWorld {
     @WorkflowMethod
     void sayHello(String name);
 
     @SignalMethod
     void updateGreeting(String greeting);
-  }
+}
 
-  public static class HelloWorldImpl implements HelloWorld {
+public static class HelloWorldImpl implements HelloWorld {
 
     private String greeting = "Hello";
 
     @Override
     public void sayHello(String name) {
-      int count = 0;
-      while (!"Bye".equals(greeting)) {
+        int count = 0;
+        while (!"Bye".equals(greeting)) {
+            logger.info(++count + ": " + greeting + " " + name + "!");
+            String oldGreeting = greeting;
+            Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+        }
         logger.info(++count + ": " + greeting + " " + name + "!");
-        String oldGreeting = greeting;
-        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-      }
-      logger.info(++count + ": " + greeting + " " + name + "!");
     }
 
     @Override
     public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+        this.greeting = greeting;
     }
-  }
+}
 ```
 The :workflow: interface now has a new method annotated with @SignalMethod. It is a callback method that is invoked
 every time a new :signal: of "HelloWorld::updateGreeting" is delivered to a :workflow:. The :workflow: interface can have only
@@ -449,7 +449,7 @@ Cadence provides a :query: feature that supports synchronously returning any inf
 
 Update the :workflow: code to:
 ```java
-  public interface HelloWorld {
+public interface HelloWorld {
     @WorkflowMethod
     void sayHello(String name);
 
@@ -458,33 +458,33 @@ Update the :workflow: code to:
 
     @QueryMethod
     int getCount();
-  }
+}
 
-  public static class HelloWorldImpl implements HelloWorld {
+public static class HelloWorldImpl implements HelloWorld {
 
     private String greeting = "Hello";
     private int count = 0;
 
     @Override
     public void sayHello(String name) {
-      while (!"Bye".equals(greeting)) {
+        while (!"Bye".equals(greeting)) {
+            logger.info(++count + ": " + greeting + " " + name + "!");
+            String oldGreeting = greeting;
+            Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+        }
         logger.info(++count + ": " + greeting + " " + name + "!");
-        String oldGreeting = greeting;
-        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-      }
-      logger.info(++count + ": " + greeting + " " + name + "!");
     }
 
     @Override
     public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+        this.greeting = greeting;
     }
 
     @Override
     public int getCount() {
-      return count;
+        return count;
     }
-  }
+}
 ```
 The new `getCount` method annotated with `@QueryMethod` was added to the :workflow: interface definition. It is allowed
 to have multiple :query: methods per :workflow: interface.
@@ -534,10 +534,10 @@ Let's change our program to print the greeting from an :activity: on every chang
 
 First let's define an :activity:activities: interface and implement it:
 ```java
-  public interface HelloWorldActivities {
+public interface HelloWorldActivities {
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
     void say(String message);
-  }
+}
 ```
 The `@ActivityMethod` annotation is not required, but `scheduleToCloseTimeoutSeconds` is required and annotation is a convenient way to specify it.
 It is allowed to have multiple :activity:activities: on a single interface.
@@ -546,18 +546,18 @@ Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Pl
 The `out` stream is passed as a parameter to the constructor to demonstrate that the
 activity object can have any dependencies. Examples of real application dependencies are database connections and service clients.
 ```java
-  public class HelloWordActivitiesImpl implements HelloWorldActivities {
+public class HelloWordActivitiesImpl implements HelloWorldActivities {
     private final PrintStream out;
 
     public HelloWordActivitiesImpl(PrintStream out) {
-      this.out = out;
+        this.out = out;
     }
 
     @Override
     public void say(String message) {
-      out.println(message);
+        out.println(message);
     }
-  }
+}
 ```
 Let's create a separate main method for the :activity_worker:. It is common to have a single :worker: that hosts both :activity:activities: and :workflow:workflows:,
 but here we keep them separate to demonstrate how Cadence deals with :worker: failures.
@@ -565,19 +565,19 @@ To make the :activity: implementation known to Cadence, register it with the :wo
 ```java
 public class GettingStartedActivityWorker {
 
-  public static void main(String[] args) {
-    Worker.Factory factory = new Worker.Factory("test-domain");
-    Worker worker = factory.newWorker("HelloWorldTaskList");
-    worker.registerActivitiesImplementations(new HelloWordActivitiesImpl(System.out));
-    factory.start();
-  }
+    public static void main(String[] args) {
+        Worker.Factory factory = new Worker.Factory("test-domain");
+        Worker worker = factory.newWorker("HelloWorldTaskList");
+        worker.registerActivitiesImplementations(new HelloWordActivitiesImpl(System.out));
+        factory.start();
+    }
 }
 ```
 A single instance of an :activity: object is registered per :activity: interface type. This means that the :activity: implementation should be thread-safe since the :activity: method can be simultaneously called from multiple threads.
 
 Let's modify the :workflow: code to invoke the :activity: instead of logging:
 ```java
-  public static class HelloWorldImpl implements HelloWorld {
+public static class HelloWorldImpl implements HelloWorld {
 
     private final HelloWorldActivities activities = Workflow.newActivityStub(HelloWorldActivities.class);
     private String greeting = "Hello";
@@ -585,24 +585,24 @@ Let's modify the :workflow: code to invoke the :activity: instead of logging:
 
     @Override
     public void sayHello(String name) {
-      while (!"Bye".equals(greeting)) {
+        while (!"Bye".equals(greeting)) {
+            activities.say(++count + ": " + greeting + " " + name + "!");
+            String oldGreeting = greeting;
+            Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+        }
         activities.say(++count + ": " + greeting + " " + name + "!");
-        String oldGreeting = greeting;
-        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-      }
-      activities.say(++count + ": " + greeting + " " + name + "!");
     }
 
     @Override
     public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+        this.greeting = greeting;
     }
 
     @Override
     public int getCount() {
-      return count;
+        return count;
     }
-  }
+}
 ```
 :activity:Activities: are invoked through a stub that implements their interface. So an invocation is just a method call on an :activity: stub.
 
@@ -671,40 +671,40 @@ Another useful API is `DescribeWorkflowExecution` which, among other information
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow describe  --workflow_id "HelloActivityWorker"
 {
-  "ExecutionConfiguration": {
-    "taskList": {
-      "name": "HelloWorldTaskList"
+    "ExecutionConfiguration": {
+        "taskList": {
+            "name": "HelloWorldTaskList"
+        },
+        "executionStartToCloseTimeoutSeconds": 3600,
+        "taskStartToCloseTimeoutSeconds": 10,
+        "childPolicy": "TERMINATE"
     },
-    "executionStartToCloseTimeoutSeconds": 3600,
-    "taskStartToCloseTimeoutSeconds": 10,
-    "childPolicy": "TERMINATE"
-  },
-  "WorkflowExecutionInfo": {
-    "Execution": {
-      "workflowId": "HelloActivityWorker",
-      "runId": "ff015637-b5af-43e8-b3f6-8b6c7b919b62"
+    "WorkflowExecutionInfo": {
+        "Execution": {
+            "workflowId": "HelloActivityWorker",
+            "runId": "ff015637-b5af-43e8-b3f6-8b6c7b919b62"
+        },
+        "Type": {
+            "name": "HelloWorld::sayHello"
+        },
+        "StartTime": "2019-06-08T23:56:41Z",
+        "CloseTime": "1970-01-01T00:00:00Z",
+        "CloseStatus": null,
+        "HistoryLength": 5,
+        "ParentDomainID": null,
+        "ParentExecution": null,
+        "AutoResetPoints": {}
     },
-    "Type": {
-      "name": "HelloWorld::sayHello"
-    },
-    "StartTime": "2019-06-08T23:56:41Z",
-    "CloseTime": "1970-01-01T00:00:00Z",
-    "CloseStatus": null,
-    "HistoryLength": 5,
-    "ParentDomainID": null,
-    "ParentExecution": null,
-    "AutoResetPoints": {}
-  },
-  "PendingActivities": [
-    {
-      "ActivityID": "0",
-      "ActivityType": {
-        "name": "HelloWorldActivities::say"
-      },
-      "State": "SCHEDULED",
-      "ScheduledTimestamp": "2019-06-08T23:57:00Z"
-    }
-  ]
+    "PendingActivities": [
+        {
+            "ActivityID": "0",
+            "ActivityType": {
+                "name": "HelloWorldActivities::say"
+            },
+            "State": "SCHEDULED",
+            "ScheduledTimestamp": "2019-06-08T23:57:00Z"
+        }
+    ]
 }
 ```
 Let's start the :activity_worker:. It starts and immediately prints:
@@ -767,22 +767,22 @@ _ActivityTaskCompleted_ :event: is recorded when :activity: completes. It contai
 
 Let's look at various failure scenarios. Modify :activity: :task: timeout:
 ```java
-  public interface HelloWorldActivities {
+public interface HelloWorldActivities {
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
     void say(String message);
-  }
+}
 
-  public class HelloWordActivitiesImpl implements HelloWorldActivities {
+public class HelloWordActivitiesImpl implements HelloWorldActivities {
     private final PrintStream out;
 
     public HelloWordActivitiesImpl(PrintStream out) {
-      this.out = out;
+        this.out = out;
     }
 
     @Override
     public void say(String message) {
-      out.println(message);
+        out.println(message);
     }
-  }
+}
 ```
 (To be continued ...)

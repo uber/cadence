@@ -50,8 +50,8 @@ class provides static getters to access information about the :workflow: that in
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
 
-     @Override
-     public String download(String bucketName, String remoteName, String localName) {
+    @Override
+    public String download(String bucketName, String remoteName, String localName) {
         log.info("domain=" +  Activity.getDomain());
         WorkflowExecution execution = Activity.getWorkflowExecution();
         log.info("workflowId=" + execution.getWorkflowId());
@@ -60,9 +60,9 @@ public class FileProcessingActivitiesImpl implements FileProcessingActivities {
         log.info("activityId=" + activityTask.getActivityId());
         log.info("activityTimeout=" + activityTask.getStartToCloseTimeoutSeconds());
         return downloadFileFromS3(bucketName, remoteName, localDirectory + localName);
-     }
-     ...
- }
+    }
+    ...
+}
 ```
 
 ## Asynchronous Activity Completion
@@ -78,24 +78,24 @@ To correlate :activity: invocation with completion, use either `TaskToken` or :w
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
 
-     public String download(String bucketName, String remoteName, String localName) {
-         byte[] taskToken = Activity.getTaskToken(); // Used to correlate reply.
-         asyncDownloadFileFromS3(taskToken, bucketName, remoteName, localDirectory + localName);
-         Activity.doNotCompleteOnReturn();
-         return "ignored"; // Return value is ignored when doNotCompleteOnReturn was called.
-     }
-     ...
+    public String download(String bucketName, String remoteName, String localName) {
+        byte[] taskToken = Activity.getTaskToken(); // Used to correlate reply.
+        asyncDownloadFileFromS3(taskToken, bucketName, remoteName, localDirectory + localName);
+        Activity.doNotCompleteOnReturn();
+        return "ignored"; // Return value is ignored when doNotCompleteOnReturn was called.
+    }
+    ...
 }
 ```
 When the download is complete, the download service potentially calls back from a different process:
 ```java
-    public <R> void completeActivity(byte[] taskToken, R result) {
-        completionClient.complete(taskToken, result);
-    }
+public <R> void completeActivity(byte[] taskToken, R result) {
+    completionClient.complete(taskToken, result);
+}
 
-    public void failActivity(byte[] taskToken, Exception failure) {
-        completionClient.completeExceptionally(taskToken, failure);
-    }
+public void failActivity(byte[] taskToken, Exception failure) {
+    completionClient.completeExceptionally(taskToken, failure);
+}
 ```
 
 ## Activity Heart Beating
@@ -108,8 +108,8 @@ the next :activity: invocation. This acts as a periodic checkpoint mechanism for
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
 
-     @Override
-     public String download(String bucketName, String remoteName, String localName) {
+    @Override
+    public String download(String bucketName, String remoteName, String localName) {
         InputStream inputStream = openInputStream(file);
         try {
             byte[] bytes = new byte[MAX_BUFFER_SIZE];
@@ -119,12 +119,12 @@ public class FileProcessingActivitiesImpl implements FileProcessingActivities {
                 /*
                  * Let the service know about the download progress.
                  */
-                 Activity.heartbeat(totalRead);
+                Activity.heartbeat(totalRead);
             }
         } finally {
             inputStream.close();
         }
-     }
-     ...
+    }
+    ...
 }
 ```

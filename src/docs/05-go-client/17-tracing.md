@@ -35,7 +35,7 @@ transitions.
 
 ```go
 struct Header {
-  10: optional map<string, binary> fields
+    10: optional map<string, binary> fields
 }
 ```
 
@@ -48,11 +48,11 @@ provided handler function on each key/value pair, allowing you to deal with the 
 
 ```go
 type HeaderWriter interface {
-  Set(string, []byte)
+    Set(string, []byte)
 }
 
 type HeaderReader interface {
-  ForEachKey(handler func(string, []byte) error) error
+    ForEachKey(handler func(string, []byte) error) error
 }
 ```
 
@@ -71,13 +71,13 @@ shows a sample implementation of context propagation.
 
 ```go
 type ContextPropagator interface {
-  Inject(context.Context, HeaderWriter) error
+    Inject(context.Context, HeaderWriter) error
 
-  Extract(context.Context, HeaderReader) (context.Context, error)
+    Extract(context.Context, HeaderReader) (context.Context, error)
 
-  InjectFromWorkflow(Context, HeaderWriter) error
+    InjectFromWorkflow(Context, HeaderWriter) error
 
-  ExtractToWorkflow(Context, HeaderReader) (Context, error)
+    ExtractToWorkflow(Context, HeaderReader) (Context, error)
 }
 ```
 
