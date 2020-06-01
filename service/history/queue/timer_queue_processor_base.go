@@ -93,7 +93,7 @@ type (
 	}
 )
 
-func newTimeQueueProcessorBase(
+func newTimerQueueProcessorBase(
 	clusterName string,
 	shard shard.Context,
 	processingQueueStates []ProcessingQueueState,
@@ -313,6 +313,8 @@ func (t *timerQueueProcessorBase) processBatch() {
 		}
 
 		if !readLevel.Less(maxReadLevel) {
+			// notify timer gate about the min time
+			t.timerGate.Update(readLevel.(timerTaskKey).visibilityTimeStamp)
 			continue
 		}
 
@@ -371,7 +373,6 @@ func (t *timerQueueProcessorBase) processBatch() {
 
 func (t *timerQueueProcessorBase) updateAckLevel() (bool, error) {
 	t.queueCollectionsLock.Lock()
-	defer t.queueCollectionsLock.Unlock()
 
 	// TODO: only for now, find the min ack level across all processing queues
 	// and update DB with that value.
@@ -389,6 +390,7 @@ func (t *timerQueueProcessorBase) updateAckLevel() (bool, error) {
 			}
 		}
 	}
+	t.queueCollectionsLock.Unlock()
 
 	if minAckLevel == nil {
 		if err := t.queueShutdown(); err != nil {
@@ -444,7 +446,7 @@ func (t *timerQueueProcessorBase) readAndFilterTasks(
 
 	if len(nextPageToken) == 0 && lookAheadTask == nil && maxReadLevel.Less(lookAheadMaxLevel) {
 		// only look ahead within the processing queue boundary
-		lookAheadTask, err = t.getLookAheadTask(maxReadLevel, lookAheadMaxLevel)
+		lookAheadTask, err = t.readLookAheadTask(maxReadLevel, lookAheadMaxLevel)
 		if err != nil {
 			return filteredTasks, nil, nil, nil
 		}
@@ -453,7 +455,7 @@ func (t *timerQueueProcessorBase) readAndFilterTasks(
 	return filteredTasks, lookAheadTask, nextPageToken, nil
 }
 
-func (t *timerQueueProcessorBase) getLookAheadTask(
+func (t *timerQueueProcessorBase) readLookAheadTask(
 	lookAheadStartLevel task.Key,
 	lookAheadMaxLevel task.Key,
 ) (*persistence.TimerTaskInfo, error) {
