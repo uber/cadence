@@ -12,7 +12,7 @@ This topic helps you install the Cadence service and implement a :workflow:.
 
 ### Install docker
 
-Follow the Docker installation instructions found here: https://docs.docker.com/engine/installation/
+Follow the Docker installation instructions found here: [https://docs.docker.com/engine/installation/](https://docs.docker.com/engine/installation/)
 
 ### Run Cadence Server Using Docker Compose
 
