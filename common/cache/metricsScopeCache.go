@@ -28,33 +28,34 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-type MetricsCache struct {
+type metricsCache struct {
 	sync.RWMutex
 	scopeMap map[string]metrics.Scope
 }
 
-// NewMetricsCache creates a new metricsCache struct
-func NewMetricsCache() *MetricsCache {
-	return &MetricsCache{
+// NewMetricsCache constructs a new metricsCache struct
+func NewMetricsCache() MetricsCache {
+	return &metricsCache{
 		scopeMap: make(map[string]metrics.Scope),
 	}
 }
 
 // Get retrieves scope using domainID from scopeMap
-func (mC *MetricsCache) Get(domainID string) metrics.Scope {
-	mC.RLock()
-	defer mC.RUnlock()
+func (mc *metricsCache) Get(domainID string) metrics.Scope {
+	mc.RLock()
+	defer mc.RUnlock()
 
-	var metricsScope metrics.Scope
-	metricsScope = mC.scopeMap[domainID]
+	if metricsScope, ok := mc.scopeMap[domainID]; ok {
+		return metricsScope
+	}
 
-	return metricsScope
+	return nil
 }
 
 // Put puts map of domainID and scope in the metricsCache accessMap
-func (mC *MetricsCache) Put(domainID string, scope metrics.Scope) {
-	mC.Lock()
-	defer mC.Unlock()
+func (mc *metricsCache) Put(domainID string, scope metrics.Scope) {
+	mc.Lock()
+	defer mc.Unlock()
 
-	mC.scopeMap[domainID] = scope
+	mc.scopeMap[domainID] = scope
 }

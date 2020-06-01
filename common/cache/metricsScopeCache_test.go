@@ -28,8 +28,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/bmizerany/assert"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/uber/cadence/common/metrics/mocks"
 )
 
@@ -41,8 +40,6 @@ func TestGetMetricsScope(t *testing.T) {
 	metricsCache.Put("A", mockMetricsScope)
 	metricsCache.Put("B", mockMetricsScope)
 	metricsCache.Put("C", mockMetricsScope)
-
-	assert.Equal(t, 3, len(metricsCache.scopeMap))
 
 	assert.Equal(t, mockMetricsScope, metricsCache.Get("A"))
 	assert.Equal(t, mockMetricsScope, metricsCache.Get("B"))
@@ -68,10 +65,8 @@ func TestConcurrentMetricsScopeAccess(t *testing.T) {
 
 	wg.Wait()
 
-	assert.Equal(t, 1000, len(metricsCache.scopeMap))
-
 	for i := 0; i < 1000; i++ {
-		if metricsCache.scopeMap[strconv.Itoa(i)] == nil {
+		if metricsCache.Get(strconv.Itoa(i)) != mockMetricsScope {
 			t.Error(fmt.Sprintf("Metrics scope not set for %d", i))
 		}
 	}

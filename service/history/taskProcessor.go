@@ -69,7 +69,7 @@ type (
 		timeSource    clock.TimeSource
 		retryPolicy   backoff.RetryPolicy
 		workerWG      sync.WaitGroup
-		metricsScopeCache *cache.MetricsCache
+		metricsScopeCache cache.MetricsCache
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -117,7 +117,6 @@ func newTaskProcessor(
 		workerNotificationChans: workerNotificationChans,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
 		numOfWorker:             options.workerCount,
-
 	}
 
 	return base
@@ -253,13 +252,13 @@ func (t *taskProcessor) processTaskOnce(
 	var err error
 
 	domainID := task.task.GetDomainID()
+	scopeIdx, err = task.processor.process(task)
 	scope := t.metricsScopeCache.Get(domainID)
 
 	startTime := t.timeSource.Now()
 
 	if scope == nil {
-		scopeIdx, err = task.processor.process(task)
-		scope := t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
+		scope = t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
 		t.metricsScopeCache.Put(domainID, scope)
 	}
 

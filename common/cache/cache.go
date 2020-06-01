@@ -21,6 +21,7 @@
 package cache
 
 import (
+	"github.com/uber/cadence/common/metrics"
 	"time"
 )
 
@@ -121,3 +122,9 @@ type Entry interface {
 
 // GetCacheItemSizeFunc returns the cache item size in bytes
 type GetCacheItemSizeFunc func(interface{}) uint64
+type MetricsCache interface {
+	// Get retrieves metrics scope based on me
+	Get(string) metrics.Scope
+	// Put adds metrics scope for a domainID
+	Put(string, metrics.Scope)
+}
