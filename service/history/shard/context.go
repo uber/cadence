@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -109,6 +110,9 @@ type (
 		ConflictResolveWorkflowExecution(request *persistence.ConflictResolveWorkflowExecutionRequest) error
 		ResetWorkflowExecution(request *persistence.ResetWorkflowExecutionRequest) error
 		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
+
+		AddFailoverMarker(*replicator.FailoverMarkerAttributes) error
+		ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error)
 	}
 
 	contextImpl struct {
@@ -133,6 +137,8 @@ type (
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
 		timerMaxReadLevelMap      map[string]time.Time // cluster -> timerMaxReadLevel
+		pendingFailoverMarkers    []*replicator.FailoverMarkerAttributes
+		lastUpdatedMarkerTime     time.Time
 
 		// exist only in memory
 		remoteClusterCurrentTime map[string]time.Time
@@ -158,6 +164,7 @@ const (
 	logWarnTransferLevelDiff = 3000000 // 3 million
 	logWarnTimerLevelDiff    = time.Duration(30 * time.Minute)
 	historySizeLogThreshold  = 10 * 1024 * 1024
+	failoverMarkerRetention  = 2 * time.Minute
 )
 
 func (s *contextImpl) GetShardID() int {
@@ -1170,6 +1177,57 @@ func (s *contextImpl) GetLastUpdatedTime() time.Time {
 	return s.lastUpdated
 }
 
+func (s *contextImpl) AddFailoverMarker(
+	task *replicator.FailoverMarkerAttributes,
+) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.pendingFailoverMarkers = append(s.pendingFailoverMarkers, task)
+	s.lastUpdatedMarkerTime = s.GetTimeSource().Now()
+
+	if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
+		return err
+	}
+	return s.updateShardInfoLocked()
+}
+
+func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
+	now := s.GetTimeSource().Now()
+	s.RLock()
+	shouldUpdateFailoverMarker := len(s.pendingFailoverMarkers) > 0 && now.Sub(s.lastUpdatedMarkerTime) > failoverMarkerRetention
+	if !shouldUpdateFailoverMarker {
+		defer s.RUnlock()
+		return s.pendingFailoverMarkers, nil
+	}
+	s.RUnlock()
+
+	s.Lock()
+	defer s.Unlock()
+	s.pendingFailoverMarkers = []*replicator.FailoverMarkerAttributes{}
+	s.lastUpdatedMarkerTime = now
+
+	if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
+		return nil, err
+	}
+	if err := s.updateShardInfoLocked(); err != nil {
+		return nil, err
+	}
+	return s.pendingFailoverMarkers, nil
+}
+
+func (s *contextImpl) updateFailoverMarkersInShardInfoLocked() error {
+
+	serializer := s.GetPayloadSerializer()
+	data, err := serializer.SerializePendingFailoverMarkers(s.pendingFailoverMarkers, common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+
+	s.shardInfo.PendingFailoverMarkers = data
+	return nil
+}
+
 func acquireShard(
 	shardItem *historyShardsItem,
 	closeCallback func(int, *historyShardsItem),
@@ -1257,6 +1315,8 @@ func acquireShard(
 		config:                         shardItem.config,
 		remoteClusterCurrentTime:       remoteClusterCurrentTime,
 		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
+		pendingFailoverMarkers:         []*replicator.FailoverMarkerAttributes{},
+		lastUpdatedMarkerTime:          shardItem.Resource.GetTimeSource().Now(),
 		logger:                         shardItem.logger,
 		throttledLogger:                shardItem.throttledLogger,
 		previousShardOwnerWasDifferent: ownershipChanged,
@@ -1316,6 +1376,7 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 		ClusterTimerAckLevel:      clusterTimerAckLevel,
 		DomainNotificationVersion: shardInfo.DomainNotificationVersion,
 		ClusterReplicationLevel:   clusterReplicationLevel,
+		PendingFailoverMarkers:    shardInfo.PendingFailoverMarkers,
 		UpdatedAt:                 shardInfo.UpdatedAt,
 	}
 
