@@ -96,6 +96,15 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 					},
 					CorruptedOpenExecutionCount: 0,
 				},
+				Result: common.ShardScanResult{
+					ShardScanKeys: &common.ShardScanKeys{
+						Corrupt: &common.Keys{
+							UUID: "test_uuid",
+							MinPage: 0,
+							MaxPage: i,
+						},
+					},
+				},
 			}, nil)
 		}
 	}
@@ -147,6 +156,15 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 					},
 					CorruptedOpenExecutionCount: 0,
 				},
+				Result: common.ShardScanResult{
+					ShardScanKeys: &common.ShardScanKeys{
+						Corrupt: &common.Keys{
+							UUID: "test_uuid",
+							MinPage: 0,
+							MaxPage: i,
+						},
+					},
+				},
 			}, shardReport)
 		}
 	}
@@ -163,6 +181,21 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 		}
 	}
 	s.Equal(ShardStatusResult(expected), status)
+	corruptionKeysValue, err := env.QueryWorkflow(ShardCorruptKeysQuery)
+	s.NoError(err)
+	var shardCorruptKeysResult ShardCorruptKeysResult
+	s.NoError(corruptionKeysValue.Get(&shardCorruptKeysResult))
+	expectedCorrupted := make(map[int]common.Keys)
+	for i := 0; i < 30; i++ {
+		if i%5 != 0 {
+			expectedCorrupted[i] = common.Keys{
+				UUID: "test_uuid",
+				MinPage: 0,
+				MaxPage: i,
+			}
+		}
+	}
+	s.Equal(ShardCorruptKeysResult(expectedCorrupted), shardCorruptKeysResult)
 }
 
 func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
@@ -259,6 +292,7 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 		aggregation: AggregateReportResult{
 			CorruptionByType: make(map[common.InvariantType]int64),
 		},
+		corruptionKeys: make(map[int]common.Keys),
 	}
 	s.Equal(expected, agg)
 	report, err := agg.getReport(1)
@@ -277,7 +311,11 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 			CorruptedOpenExecutionCount: 1,
 		},
 		Result: common.ShardScanResult{
-			ShardScanKeys: &common.ShardScanKeys{},
+			ShardScanKeys: &common.ShardScanKeys{
+				Corrupt: &common.Keys{
+					UUID: "test_uuid",
+				},
+			},
 		},
 	}
 	agg.addReport(firstReport)
@@ -291,6 +329,11 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 		common.OpenCurrentExecutionInvariantType: 1,
 	}
 	expected.aggregation.CorruptedOpenExecutionCount = 1
+	expected.corruptionKeys = map[int]common.Keys{
+		1: {
+			UUID: "test_uuid",
+		},
+	}
 	s.Equal(expected, agg)
 	agg.addReport(firstReport)
 	s.Equal(expected, agg)

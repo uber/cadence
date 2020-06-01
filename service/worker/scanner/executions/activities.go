@@ -24,6 +24,11 @@ package executions
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	c "github.com/uber/cadence/common"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 
 	"github.com/uber/cadence/common/metrics"
@@ -38,6 +43,8 @@ const (
 	ScannerScanShardActivityName = "cadence-sys-executions-scanner-scan-shard-activity"
 	// ScannerEmitMetricsActivityName is the activity name for ScannerEmitMetricsActivity
 	ScannerEmitMetricsActivityName = "cadence-sys-executions-scanner-emit-metrics-activity"
+	// FixerCorruptedKeysActivityName is the activity name for FixerCorruptedKeysActivity
+	FixerCorruptedKeysActivityName = "cadence-sys-executions-fixer-corrupted-keys-activity"
 )
 
 type (
@@ -58,6 +65,18 @@ type (
 	ScannerEmitMetricsActivityParams struct {
 		ShardStatusResult     ShardStatusResult
 		AggregateReportResult AggregateReportResult
+	}
+
+	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
+	FixerCorruptedKeysActivityParams struct {
+		ScannerWorkflowWorkflowID string
+		ScannerWorkflowRunID string
+	}
+
+	// CorruptedKeysEntry is a pair of shardID and corrupted keys
+	CorruptedKeysEntry struct {
+		ShardID int
+		CorruptedKeys common.Keys
 	}
 )
 
@@ -161,5 +180,59 @@ func ScannerConfigActivity(
 	if overwrites.InvariantCollections != nil {
 		result.InvariantCollections = *overwrites.InvariantCollections
 	}
+	return result, nil
+}
+
+// FixerCorruptedKeysActivity will check that provided scanner workflow is closed
+// get corrupt keys from it, and flatten these keys into a list. If provided scanner
+// workflow is not closed or query fails then error will be returned.
+func FixerCorruptedKeysActivity(
+	activityCtx context.Context,
+	params FixerCorruptedKeysActivityParams,
+) ([]CorruptedKeysEntry, error) {
+	fmt.Println("in fixer activity 1")
+	resource := activityCtx.Value(ScannerContextKey).(ScannerContext).Resource
+	client := resource.GetSDKClient()
+	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
+		Domain: c.StringPtr(c.SystemLocalDomainName),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+			RunId: c.StringPtr(params.ScannerWorkflowRunID),
+		},
+	})
+	if err != nil {
+		fmt.Println("in fixer activity 2: ", err)
+		return nil, err
+	}
+	if descResp.WorkflowExecutionInfo.CloseStatus == nil {
+		fmt.Println("in fixer activity 3: ", err)
+		return nil, errors.New("provided scan workflow is not closed, can only use finished scan")
+	}
+	queryResp, err := client.QueryWorkflow(activityCtx, &shared.QueryWorkflowRequest{
+		Domain: c.StringPtr(c.SystemLocalDomainName),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+			RunId: c.StringPtr(params.ScannerWorkflowRunID),
+		},
+		Query: &shared.WorkflowQuery{
+			QueryType: c.StringPtr(ShardCorruptKeysQuery),
+		},
+	})
+	if err != nil {
+		fmt.Println("in fixer activity 4: ", err)
+		return nil, err
+	}
+	var corruptedKeys ShardCorruptKeysResult
+	if err := json.Unmarshal(queryResp.QueryResult, &corruptedKeys); err != nil {
+		return nil, err
+	}
+	var result []CorruptedKeysEntry
+	for k, v := range corruptedKeys {
+		result = append(result, CorruptedKeysEntry{
+			ShardID: k,
+			CorruptedKeys: v,
+		})
+	}
+	fmt.Println("in fixer activity 5: ", result)
 	return result, nil
 }
