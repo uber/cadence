@@ -110,7 +110,7 @@ type (
 		ResetWorkflowExecution(request *persistence.ResetWorkflowExecutionRequest) error
 		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
 
-		InsertFailoverMarker(domainID string, failoverVersion int64) error
+		InsertFailoverMarkers(makers []*persistence.FailoverMarkerTask) error
 	}
 
 	contextImpl struct {
@@ -1172,22 +1172,18 @@ func (s *contextImpl) GetLastUpdatedTime() time.Time {
 	return s.lastUpdated
 }
 
-func (s *contextImpl) InsertFailoverMarker(
-	domainID string,
-	failoverVersion int64,
+func (s *contextImpl) InsertFailoverMarkers(
+	markers []*persistence.FailoverMarkerTask,
 ) error {
+
+	tasks := make([]persistence.Task, 0, len(markers))
+	for _, marker := range markers {
+		tasks = append(tasks, marker)
+	}
+
 	s.Lock()
 	defer s.Unlock()
 
-	failoverMarker := &persistence.FailoverMarkerTask{
-		DomainID:            domainID,
-		Version:             failoverVersion,
-		VisibilityTimestamp: s.GetTimeSource().Now(),
-	}
-
-	tasks := []persistence.Task{
-		failoverMarker,
-	}
 	transferMaxReadLevel := int64(0)
 	if err := s.allocateTransferIDsLocked(
 		tasks,
@@ -1197,8 +1193,8 @@ func (s *contextImpl) InsertFailoverMarker(
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	if err := s.executionManager.CreateFailoverMarkerTask(&persistence.CreateFailoverMarkerRequest{
-		Marker: failoverMarker,
+	if err := s.executionManager.CreateFailoverMarkerTasks(&persistence.CreateFailoverMarkersRequest{
+		Markers: markers,
 	}); err != nil {
 		return err
 	}

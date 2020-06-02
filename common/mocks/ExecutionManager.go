@@ -453,12 +453,12 @@ func (_m *ExecutionManager) RangeCompleteTimerTask(request *persistence.RangeCom
 	return r0
 }
 
-// CreateFailoverMarkerTask provides a mock function with given fields: request
-func (_m *ExecutionManager) CreateFailoverMarkerTask(request *persistence.CreateFailoverMarkerRequest) error {
+// CreateFailoverMarkerTasks provides a mock function with given fields: request
+func (_m *ExecutionManager) CreateFailoverMarkerTasks(request *persistence.CreateFailoverMarkersRequest) error {
 	ret := _m.Called(request)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*persistence.CreateFailoverMarkerRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(*persistence.CreateFailoverMarkersRequest) error); ok {
 		r0 = rf(request)
 	} else {
 		r0 = ret.Error(0)

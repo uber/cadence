@@ -397,7 +397,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	failoverMarkerInsertion := func(
 		shardNotificationVersion int64,
 		nextDomain *cache.DomainCacheEntry,
-	) error {
+		action func(),
+	) {
 
 		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
@@ -406,9 +407,9 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			domainFailoverNotificationVersion >= shardNotificationVersion &&
 			nextDomain.GetFailoverEndTime() != nil &&
 			domainActiveCluster == e.currentClusterName {
-			return e.shard.InsertFailoverMarker(nextDomain.GetInfo().ID, nextDomain.GetFailoverVersion())
+			action()
+			//return e.shard.InsertFailoverMarkers(nextDomain.GetInfo().ID, nextDomain.GetFailoverVersion())
 		}
-		return nil
 	}
 
 	// first set the failover callback
@@ -455,14 +456,22 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 
 			// handle graceful failover on active to passive
 			// make sure task processor failover the domain before inserting the failover marker
+			failoverMarkerTasks := []*persistence.FailoverMarkerTask{}
 			for _, nextDomain := range nextDomains {
-				if err := failoverMarkerInsertion(
-					shardNotificationVersion,
-					nextDomain,
+				failoverMarkerInsertion(shardNotificationVersion, nextDomain, func() {
+					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
+						VisibilityTimestamp: e.timeSource.Now(),
+						Version:             shardNotificationVersion,
+						DomainID:            nextDomain.GetInfo().ID,
+					})
+				})
+			}
+
+			if len(failoverMarkerTasks) > 0 {
+				if err := e.shard.InsertFailoverMarkers(
+					failoverMarkerTasks,
 				); err != nil {
-					e.logger.Error("Failed to insert failover marker to replication queue.",
-						tag.Error(err),
-						tag.WorkflowDomainName(nextDomain.GetInfo().Name))
+					e.logger.Error("Failed to insert failover marker to replication queue.", tag.Error(err))
 					e.metricsClient.IncCounter(metrics.HistoryFailoverMarkerScope, metrics.HistroyFailoverMarkerInsertFailure)
 					// fail this failover callback and it retries on next domain cache refresh
 					return

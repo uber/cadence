@@ -1151,13 +1151,13 @@ func (s *TestBase) RangeDeleteReplicationTaskFromDLQ(
 	})
 }
 
-// CreateFailoverMarker is a utility method to create failover markers
-func (s *TestBase) CreateFailoverMarker(
-	marker *p.FailoverMarkerTask,
+// CreateFailoverMarkers is a utility method to create failover markers
+func (s *TestBase) CreateFailoverMarkers(
+	markers []*p.FailoverMarkerTask,
 ) error {
 
-	return s.ExecutionManager.CreateFailoverMarkerTask(&p.CreateFailoverMarkerRequest{
-		Marker: marker,
+	return s.ExecutionManager.CreateFailoverMarkerTasks(&p.CreateFailoverMarkersRequest{
+		Markers: markers,
 	})
 }
 

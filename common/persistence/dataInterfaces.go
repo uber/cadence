@@ -1474,9 +1474,9 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
-	// CreateFailoverMarkerRequest is request to create failover markers
-	CreateFailoverMarkerRequest struct {
-		Marker *FailoverMarkerTask
+	// CreateFailoverMarkersRequest is request to create failover markers
+	CreateFailoverMarkersRequest struct {
+		Markers []*FailoverMarkerTask
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
@@ -1521,7 +1521,7 @@ type (
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
-		CreateFailoverMarkerTask(request *CreateFailoverMarkerRequest) error
+		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)

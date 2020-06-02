@@ -2895,32 +2895,34 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 	return nil
 }
 
-func (d *cassandraPersistence) CreateFailoverMarkerTask(
-	request *p.CreateFailoverMarkerRequest,
+func (d *cassandraPersistence) CreateFailoverMarkerTasks(
+	request *p.CreateFailoverMarkersRequest,
 ) error {
 
 	batch := d.session.NewBatch(gocql.LoggedBatch)
-	t := []p.Task{request.Marker}
-	if err := createReplicationTasks(
-		batch,
-		t,
-		d.shardID,
-		request.Marker.DomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-	); err != nil {
-		return err
+	for _, task := range request.Markers {
+		t := []p.Task{task}
+		if err := createReplicationTasks(
+			batch,
+			t,
+			d.shardID,
+			task.DomainID,
+			rowTypeReplicationWorkflowID,
+			rowTypeReplicationRunID,
+		); err != nil {
+			return err
+		}
 	}
 
 	err := d.session.ExecuteBatch(batch)
 	if err != nil {
 		if isThrottlingError(err) {
 			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateFailoverMarkerTask operation failed. Error: %v", err),
+				Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
 			}
 		}
 		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateFailoverMarkerTask operation failed. Error: %v", err),
+			Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
 		}
 	}
 	return nil

@@ -868,10 +868,10 @@ func (m *executionManagerImpl) RangeDeleteReplicationTaskFromDLQ(
 	return m.persistence.RangeDeleteReplicationTaskFromDLQ(request)
 }
 
-func (m *executionManagerImpl) CreateFailoverMarkerTask(
-	request *CreateFailoverMarkerRequest,
+func (m *executionManagerImpl) CreateFailoverMarkerTasks(
+	request *CreateFailoverMarkersRequest,
 ) error {
-	return m.persistence.CreateFailoverMarkerTask(request)
+	return m.persistence.CreateFailoverMarkerTasks(request)
 }
 
 // Timer related methods.
