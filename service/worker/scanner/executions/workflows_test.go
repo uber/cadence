@@ -24,6 +24,7 @@ package executions
 
 import (
 	"errors"
+	common2 "github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -49,6 +50,10 @@ func (s *workflowsSuite) SetupSuite() {
 	activity.RegisterWithOptions(ScannerConfigActivity, activity.RegisterOptions{Name: ScannerConfigActivityName})
 	activity.RegisterWithOptions(ScanShardActivity, activity.RegisterOptions{Name: ScannerScanShardActivityName})
 	activity.RegisterWithOptions(ScannerEmitMetricsActivity, activity.RegisterOptions{Name: ScannerEmitMetricsActivityName})
+
+	workflow.Register(FixerWorkflow)
+	activity.RegisterWithOptions(FixShardActivity, activity.RegisterOptions{Name: FixerFixShardActivityName})
+	activity.RegisterWithOptions(FixerCorruptedKeysActivity, activity.RegisterOptions{Name: FixerCorruptedKeysActivityName})
 }
 
 func (s *workflowsSuite) TestScannerWorkflow_Failure_ScannerConfigActivity() {
@@ -276,4 +281,167 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Error(env.GetWorkflowError())
+}
+
+func (s *workflowsSuite) TestScannerWorkflow_Failure_CorruptedKeysActivity() {
+	env := s.NewTestWorkflowEnvironment()
+	env.OnActivity(FixerCorruptedKeysActivityName, mock.Anything, mock.Anything).Return(nil, errors.New("got error getting corrupted keys"))
+	env.ExecuteWorkflow(FixerWorkflow, FixerWorkflowParams{})
+	s.True(env.IsWorkflowCompleted())
+	s.Equal("got error getting corrupted keys", env.GetWorkflowError().Error())
+}
+
+func (s *workflowsSuite) TestFixerWorkflow_Success() {
+	env := s.NewTestWorkflowEnvironment()
+	corruptedKeys := make([]CorruptedKeysEntry, 30, 30)
+	shards := make([]int, 30, 30)
+	for i := 0; i < 30; i++ {
+		corruptedKeys[i] = CorruptedKeysEntry{
+			ShardID: i,
+		}
+		shards[i] = i
+	}
+	env.OnActivity(FixerCorruptedKeysActivityName, mock.Anything, mock.Anything).Return(&FixerCorruptedKeysActivityResult{
+		CorruptedKeys: corruptedKeys,
+		Shards: shards,
+	}, nil)
+
+	fixerWorkflowConfigOverwrites := FixerWorkflowConfigOverwrites{
+		Concurrency: common2.IntPtr(3),
+		BlobstoreFlushThreshold: common2.IntPtr(1000),
+		InvariantCollections: &InvariantCollections{
+			InvariantCollectionHistory: true,
+			InvariantCollectionMutableState: true,
+		},
+	}
+	resolvedFixerWorkflowConfig := ResolvedFixerWorkflowConfig{
+		Concurrency: 3,
+		BlobstoreFlushThreshold: 1000,
+		InvariantCollections: InvariantCollections{
+			InvariantCollectionMutableState: true,
+			InvariantCollectionHistory: true,
+		},
+	}
+	for i := 0; i < 30; i++ {
+		if i%5 == 0 {
+			env.OnActivity(FixerFixShardActivityName, mock.Anything, FixShardActivityParams{
+				CorruptedKeysEntry: CorruptedKeysEntry{
+					ShardID: i,
+				},
+				ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
+			}).Return(&common.ShardFixReport{
+				ShardID: i,
+				Stats: common.ShardFixStats{
+					ExecutionCount: 10,
+				},
+				Result: common.ShardFixResult{
+					ControlFlowFailure: &common.ControlFlowFailure{
+						Info: "got control flow failure",
+					},
+				},
+			}, nil)
+		} else {
+			env.OnActivity(FixerFixShardActivityName, mock.Anything, FixShardActivityParams{
+				CorruptedKeysEntry: CorruptedKeysEntry{
+					ShardID: i,
+				},
+				ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
+			}).Return(&common.ShardFixReport{
+				ShardID: i,
+				Stats: common.ShardFixStats{
+					ExecutionCount: 10,
+					FixedCount: 2,
+					SkippedCount: 1,
+					FailedCount: 1,
+				},
+				Result: common.ShardFixResult{
+					ShardFixKeys: &common.ShardFixKeys{
+						Skipped: &common.Keys{
+							UUID: "skipped_keys",
+						},
+						Failed: &common.Keys{
+							UUID: "failed_keys",
+						},
+						Fixed: &common.Keys{
+							UUID: "fixed_keys",
+						},
+					},
+				},
+			}, nil)
+		}
+	}
+
+	env.ExecuteWorkflow(FixerWorkflow, FixerWorkflowParams{
+		FixerCorruptedKeysActivityParams: FixerCorruptedKeysActivityParams{},
+		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,
+	})
+	s.True(env.IsWorkflowCompleted())
+	s.NoError(env.GetWorkflowError())
+
+	aggValue, err := env.QueryWorkflow(AggregateReportQuery)
+	s.NoError(err)
+	var agg AggregateFixReportResult
+	s.NoError(aggValue.Get(&agg))
+	s.Equal(AggregateFixReportResult{
+		ExecutionCount:  240,
+		FixedCount:   48,
+		FailedCount: 24,
+		SkippedCount: 24,
+	}, agg)
+
+	for i := 0; i < 30; i++ {
+		shardReportValue, err := env.QueryWorkflow(ShardReportQuery, i)
+		s.NoError(err)
+		var shardReport *common.ShardFixReport
+		s.NoError(shardReportValue.Get(&shardReport))
+		if i%5 == 0 {
+			s.Equal(&common.ShardFixReport{
+				ShardID: i,
+				Stats: common.ShardFixStats{
+					ExecutionCount: 10,
+				},
+				Result: common.ShardFixResult{
+					ControlFlowFailure: &common.ControlFlowFailure{
+						Info: "got control flow failure",
+					},
+				},
+			}, shardReport)
+		} else {
+			s.Equal(&common.ShardFixReport{
+				ShardID: i,
+				Stats: common.ShardFixStats{
+					ExecutionCount:  10,
+					FixedCount:   2,
+					FailedCount: 1,
+					SkippedCount: 1,
+				},
+				Result: common.ShardFixResult{
+					ShardFixKeys: &common.ShardFixKeys{
+						Skipped: &common.Keys{
+							UUID: "skipped_keys",
+						},
+						Failed: &common.Keys{
+							UUID: "failed_keys",
+						},
+						Fixed: &common.Keys{
+							UUID: "fixed_keys",
+						},
+					},
+				},
+			}, shardReport)
+		}
+	}
+
+	statusValue, err := env.QueryWorkflow(ShardStatusQuery)
+	s.NoError(err)
+	var status ShardStatusResult
+	s.NoError(statusValue.Get(&status))
+	expected := make(map[int]ShardStatus)
+	for i := 0; i < 30; i++ {
+		if i%5 == 0 {
+			expected[i] = ShardStatusControlFlowFailure
+		} else {
+			expected[i] = ShardStatusSuccess
+		}
+	}
 }
