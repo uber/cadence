@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	//"github.com/uber/cadence/common/blobstore"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -79,13 +80,13 @@ type (
 
 	// FixShardActivityParams is the parameter for FixShardActivity
 	FixShardActivityParams struct {
-		CorruptedKeysEntry CorruptedKeysEntry
+		CorruptedKeysEntry          CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
 	}
 
 	FixerCorruptedKeysActivityResult struct {
 		CorruptedKeys []CorruptedKeysEntry
-		Shards []int
+		Shards        []int
 	}
 
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
@@ -248,7 +249,7 @@ func FixerCorruptedKeysActivity(
 	}
 	return &FixerCorruptedKeysActivityResult{
 		CorruptedKeys: corrupted,
-		Shards: shards,
+		Shards:        shards,
 	}, nil
 }
 

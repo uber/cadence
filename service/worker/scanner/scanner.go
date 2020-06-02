@@ -126,7 +126,7 @@ func (s *Scanner) Start() error {
 	})
 	backgroundActivityContext = context.WithValue(backgroundActivityContext, executions.FixerContextKey, executions.FixerContext{
 		Resource: s.context.Resource,
-		Scope: s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
+		Scope:    s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
 	})
 	workerOpts := worker.Options{
 		Logger:                                 s.context.zapLogger,

@@ -59,7 +59,7 @@ const (
 	ShardStatusControlFlowFailure ShardStatus = "control_flow_failure"
 
 	scanShardReportChan = "scanShardReportChan"
-	fixShardReportChan = "fixShardReportChan"
+	fixShardReportChan  = "fixShardReportChan"
 )
 
 type (
@@ -76,7 +76,7 @@ type (
 	// FixerContext is the resource that is available to activities under FixerContextKey
 	FixerContext struct {
 		Resource resource.Resource
-		Scope metrics.Scope
+		Scope    metrics.Scope
 	}
 
 	// ScannerWorkflowParams are the parameters to the scan workflow
@@ -88,7 +88,7 @@ type (
 	// FixerWorkflowParams are the parameters to the fix workflow
 	FixerWorkflowParams struct {
 		FixerCorruptedKeysActivityParams FixerCorruptedKeysActivityParams
-		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
+		FixerWorkflowConfigOverwrites    FixerWorkflowConfigOverwrites
 	}
 
 	// Shards identify the shards that should be scanned.
@@ -381,7 +381,7 @@ func FixerWorkflow(
 					activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
 					var report *common.ShardFixReport
 					if err := workflow.ExecuteActivity(activityCtx, FixerFixShardActivityName, FixShardActivityParams{
-						CorruptedKeysEntry: corrupted,
+						CorruptedKeysEntry:          corrupted,
 						ResolvedFixerWorkflowConfig: resolvedConfig,
 					}).Get(ctx, &report); err != nil {
 						errStr := err.Error()
@@ -413,8 +413,8 @@ func FixerWorkflow(
 }
 
 type shardFixResultAggregator struct {
-	reports map[int]common.ShardFixReport
-	status ShardStatusResult
+	reports     map[int]common.ShardFixReport
+	status      ShardStatusResult
 	aggregation AggregateFixReportResult
 }
 
@@ -424,8 +424,8 @@ func newShardFixResultAggregator(shards []int) *shardFixResultAggregator {
 		status[s] = ShardStatusRunning
 	}
 	return &shardFixResultAggregator{
-		reports: make(map[int]common.ShardFixReport),
-		status: status,
+		reports:     make(map[int]common.ShardFixReport),
+		status:      status,
 		aggregation: AggregateFixReportResult{},
 	}
 }
@@ -474,11 +474,11 @@ func (a *shardFixResultAggregator) adjustAggregation(stats common.ShardFixStats,
 
 func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerWorkflowConfig {
 	resolvedConfig := ResolvedFixerWorkflowConfig{
-		Concurrency: 25,
+		Concurrency:             25,
 		BlobstoreFlushThreshold: 1000,
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: true,
-			InvariantCollectionHistory: true,
+			InvariantCollectionHistory:      true,
 		},
 	}
 	if overwrites.Concurrency != nil {
