@@ -24,9 +24,6 @@ package executions
 
 import (
 	"errors"
-	"time"
-
-	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/workflow"
 
@@ -228,17 +225,6 @@ func ScannerWorkflow(
 	return nil
 }
 
-func flattenShards(shards Shards) []int {
-	if len(shards.List) != 0 {
-		return shards.List
-	}
-	var result []int
-	for i := shards.Range.Min; i < shards.Range.Max; i++ {
-		result = append(result, i)
-	}
-	return result
-}
-
 // FixerWorkflow is the workflow that fixes all concrete executions from a scan output.
 func FixerWorkflow(
 	ctx workflow.Context,
@@ -315,52 +301,4 @@ func FixerWorkflow(
 		aggregator.addReport(*reportErr.Report)
 	}
 	return nil
-}
-
-func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerWorkflowConfig {
-	resolvedConfig := ResolvedFixerWorkflowConfig{
-		Concurrency:             25,
-		BlobstoreFlushThreshold: 1000,
-		InvariantCollections: InvariantCollections{
-			InvariantCollectionMutableState: true,
-			InvariantCollectionHistory:      true,
-		},
-	}
-	if overwrites.Concurrency != nil {
-		resolvedConfig.Concurrency = *overwrites.Concurrency
-	}
-	if overwrites.BlobstoreFlushThreshold != nil {
-		resolvedConfig.BlobstoreFlushThreshold = *overwrites.BlobstoreFlushThreshold
-	}
-	if overwrites.InvariantCollections != nil {
-		resolvedConfig.InvariantCollections = *overwrites.InvariantCollections
-	}
-	return resolvedConfig
-}
-
-func getShortActivityContext(ctx workflow.Context) workflow.Context {
-	activityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Minute,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 1.7,
-			ExpirationInterval: 5 * time.Minute,
-		},
-	}
-	return workflow.WithActivityOptions(ctx, activityOptions)
-}
-
-func getLongActivityContext(ctx workflow.Context) workflow.Context {
-	activityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Minute,
-		HeartbeatTimeout:       time.Minute,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 1.7,
-			ExpirationInterval: 5 * time.Hour,
-		},
-	}
-	return workflow.WithActivityOptions(ctx, activityOptions)
 }
