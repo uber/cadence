@@ -26,14 +26,13 @@ import (
 	"errors"
 	"testing"
 
-	common2 "github.com/uber/cadence/common"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 
+	common2 "github.com/uber/cadence/common"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 )
 
