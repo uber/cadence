@@ -95,7 +95,7 @@ func NewTransferQueueProcessor(
 	workflowResetor reset.WorkflowResetor,
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
-) TransferQueueProcessor {
+) QueueProcessor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
 	taskAllocator := NewTaskAllocator(shard)

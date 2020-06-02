@@ -68,7 +68,7 @@ type (
 		controller               *gomock.Controller
 		mockShard                *shard.TestContext
 		mockWorkflowResetor      *reset.MockWorkflowResetor
-		mockTxProcessor          *queue.MockTransferQueueProcessor
+		mockTxProcessor          *queue.MockQueueProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MocktimerQueueProcessor
 		mockStateBuilder         *execution.MockStateBuilder
@@ -102,7 +102,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockWorkflowResetor = reset.NewMockWorkflowResetor(s.controller)
-	s.mockTxProcessor = queue.NewMockTransferQueueProcessor(s.controller)
+	s.mockTxProcessor = queue.NewMockQueueProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
 	s.mockStateBuilder = execution.NewMockStateBuilder(s.controller)

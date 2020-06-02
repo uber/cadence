@@ -90,7 +90,7 @@ type (
 		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             persistence.VisibilityManager
-		txProcessor               queue.TransferQueueProcessor
+		txProcessor               queue.QueueProcessor
 		timerProcessor            timerQueueProcessor
 		replicator                *historyReplicator
 		nDCReplicator             ndc.HistoryReplicator

@@ -79,8 +79,8 @@ type (
 		// TODO: add Offload() method
 	}
 
-	// TransferQueueProcessor is the interface for transfer task queue processor
-	TransferQueueProcessor interface {
+	// QueueProcessor is the interface for transfer task queue processor
+	QueueProcessor interface {
 		common.Daemon
 		FailoverDomain(domainIDs map[string]struct{})
 		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
