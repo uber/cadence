@@ -28,10 +28,12 @@
 package queue
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
+
 	persistence "github.com/uber/cadence/common/persistence"
 	task "github.com/uber/cadence/service/history/task"
-	reflect "reflect"
 )
 
 // MockProcessingQueueState is a mock of ProcessingQueueState interface
@@ -368,97 +370,97 @@ func (mr *MockProcessingQueueCollectionMockRecorder) Merge(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Merge", reflect.TypeOf((*MockProcessingQueueCollection)(nil).Merge), arg0)
 }
 
-// MockQueueProcessor is a mock of QueueProcessor interface
-type MockQueueProcessor struct {
+// MockProcessor is a mock of Processor interface
+type MockProcessor struct {
 	ctrl     *gomock.Controller
-	recorder *MockQueueProcessorMockRecorder
+	recorder *MockProcessorMockRecorder
 }
 
-// MockQueueProcessorMockRecorder is the mock recorder for MockQueueProcessor
-type MockQueueProcessorMockRecorder struct {
-	mock *MockQueueProcessor
+// MockProcessorMockRecorder is the mock recorder for MockProcessor
+type MockProcessorMockRecorder struct {
+	mock *MockProcessor
 }
 
-// NewMockQueueProcessor creates a new mock instance
-func NewMockQueueProcessor(ctrl *gomock.Controller) *MockQueueProcessor {
-	mock := &MockQueueProcessor{ctrl: ctrl}
-	mock.recorder = &MockQueueProcessorMockRecorder{mock}
+// NewMockProcessor creates a new mock instance
+func NewMockProcessor(ctrl *gomock.Controller) *MockProcessor {
+	mock := &MockProcessor{ctrl: ctrl}
+	mock.recorder = &MockProcessorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockQueueProcessor) EXPECT() *MockQueueProcessorMockRecorder {
+func (m *MockProcessor) EXPECT() *MockProcessorMockRecorder {
 	return m.recorder
 }
 
 // Start mocks base method
-func (m *MockQueueProcessor) Start() {
+func (m *MockProcessor) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
 // Start indicates an expected call of Start
-func (mr *MockQueueProcessorMockRecorder) Start() *gomock.Call {
+func (mr *MockProcessorMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockQueueProcessor)(nil).Start))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockProcessor)(nil).Start))
 }
 
 // Stop mocks base method
-func (m *MockQueueProcessor) Stop() {
+func (m *MockProcessor) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
 // Stop indicates an expected call of Stop
-func (mr *MockQueueProcessorMockRecorder) Stop() *gomock.Call {
+func (mr *MockProcessorMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockQueueProcessor)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockProcessor)(nil).Stop))
 }
 
 // FailoverDomain mocks base method
-func (m *MockQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
+func (m *MockProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "FailoverDomain", domainIDs)
 }
 
 // FailoverDomain indicates an expected call of FailoverDomain
-func (mr *MockQueueProcessorMockRecorder) FailoverDomain(domainIDs interface{}) *gomock.Call {
+func (mr *MockProcessorMockRecorder) FailoverDomain(domainIDs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailoverDomain", reflect.TypeOf((*MockQueueProcessor)(nil).FailoverDomain), domainIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailoverDomain", reflect.TypeOf((*MockProcessor)(nil).FailoverDomain), domainIDs)
 }
 
 // NotifyNewTask mocks base method
-func (m *MockQueueProcessor) NotifyNewTask(clusterName string, transferTasks []persistence.Task) {
+func (m *MockProcessor) NotifyNewTask(clusterName string, transferTasks []persistence.Task) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "NotifyNewTask", clusterName, transferTasks)
 }
 
 // NotifyNewTask indicates an expected call of NotifyNewTask
-func (mr *MockQueueProcessorMockRecorder) NotifyNewTask(clusterName, transferTasks interface{}) *gomock.Call {
+func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, transferTasks interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockQueueProcessor)(nil).NotifyNewTask), clusterName, transferTasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, transferTasks)
 }
 
 // LockTaskProcessing mocks base method
-func (m *MockQueueProcessor) LockTaskProcessing() {
+func (m *MockProcessor) LockTaskProcessing() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "LockTaskProcessing")
 }
 
 // LockTaskProcessing indicates an expected call of LockTaskProcessing
-func (mr *MockQueueProcessorMockRecorder) LockTaskProcessing() *gomock.Call {
+func (mr *MockProcessorMockRecorder) LockTaskProcessing() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockTaskProcessing", reflect.TypeOf((*MockQueueProcessor)(nil).LockTaskProcessing))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockTaskProcessing", reflect.TypeOf((*MockProcessor)(nil).LockTaskProcessing))
 }
 
 // UnlockTaskProcessing mocks base method
-func (m *MockQueueProcessor) UnlockTaskProcessing() {
+func (m *MockProcessor) UnlockTaskProcessing() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UnlockTaskProcessing")
 }
 
 // UnlockTaskProcessing indicates an expected call of UnlockTaskProcessing
-func (mr *MockQueueProcessorMockRecorder) UnlockTaskProcessing() *gomock.Call {
+func (mr *MockProcessorMockRecorder) UnlockTaskProcessing() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockTaskProcessing", reflect.TypeOf((*MockQueueProcessor)(nil).UnlockTaskProcessing))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockTaskProcessing", reflect.TypeOf((*MockProcessor)(nil).UnlockTaskProcessing))
 }

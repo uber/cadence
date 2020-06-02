@@ -65,8 +65,8 @@ type (
 		historyEngine         *historyEngineImpl
 		domainCache           cache.DomainCache
 		executionCache        *execution.Cache
-		txProcessor           queue.QueueProcessor
-		timerProcessor        timerQueueProcessor
+		txProcessor           queue.Processor
+		timerProcessor        queue.Processor
 		tokenSerializer       common.TaskTokenSerializer
 		metricsClient         metrics.Client
 		logger                log.Logger

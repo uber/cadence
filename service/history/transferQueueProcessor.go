@@ -73,7 +73,7 @@ func newTransferQueueProcessor(
 	historyClient history.Client,
 	queueTaskProcessor task.Processor,
 	logger log.Logger,
-) queue.QueueProcessor {
+) queue.Processor {
 
 	logger = logger.WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()

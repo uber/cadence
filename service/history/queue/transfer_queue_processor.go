@@ -86,7 +86,7 @@ type (
 	}
 )
 
-// NewTransferQueueProcessor creates a new TransferQueueProcessor
+// NewTransferQueueProcessor creates a new transfer QueueProcessor
 func NewTransferQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
@@ -95,7 +95,7 @@ func NewTransferQueueProcessor(
 	workflowResetor reset.WorkflowResetor,
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
-) QueueProcessor {
+) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
 	taskAllocator := NewTaskAllocator(shard)
@@ -168,8 +168,6 @@ func NewTransferQueueProcessor(
 			taskProcessor,
 			taskAllocator,
 			standbyTaskExecutor,
-			historyRereplicator,
-			nDCHistoryResender,
 			logger,
 		)
 	}
@@ -331,7 +329,7 @@ func (t *transferQueueProcessor) completeTransferLoop() {
 					break
 				}
 
-				t.logger.Info("Failed to complete transfer task", tag.Error(err))
+				t.logger.Error("Failed to complete transfer task", tag.Error(err))
 				if err == shard.ErrShardClosed {
 					// shard closed, trigger shutdown and bail out
 					go t.Stop()
@@ -339,7 +337,15 @@ func (t *transferQueueProcessor) completeTransferLoop() {
 				}
 				backoff := time.Duration(attempt * 100)
 				time.Sleep(backoff * time.Millisecond)
+
+				select {
+				case <-t.shutdownChan:
+					// break the retry loop if shutdown chan is closed
+					break
+				default:
+				}
 			}
+
 			completeTimer.Reset(t.config.TransferProcessorCompleteTransferInterval())
 		}
 	}
@@ -376,6 +382,10 @@ func (t *transferQueueProcessor) completeTransfer() error {
 		}
 	}
 
+	if newAckLevel == nil {
+		panic("Unable to get transfer queue processor ack level")
+	}
+
 	newAckLevelTaskID := newAckLevel.(transferTaskKey).taskID
 	t.logger.Debug(fmt.Sprintf("Start completing transfer task from: %v, to %v.", t.ackLevel, newAckLevelTaskID))
 	if t.ackLevel >= newAckLevelTaskID {
@@ -384,11 +394,10 @@ func (t *transferQueueProcessor) completeTransfer() error {
 
 	t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	err := t.shard.GetExecutionManager().RangeCompleteTransferTask(&persistence.RangeCompleteTransferTaskRequest{
+	if err := t.shard.GetExecutionManager().RangeCompleteTransferTask(&persistence.RangeCompleteTransferTaskRequest{
 		ExclusiveBeginTaskID: t.ackLevel,
 		InclusiveEndTaskID:   newAckLevelTaskID,
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
@@ -500,8 +509,6 @@ func newTransferQueueStandbyProcessor(
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
 	taskExecutor task.Executor,
-	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryResender xdc.NDCHistoryResender,
 	logger log.Logger,
 ) *transferQueueProcessorBase {
 	config := shard.GetConfig()
