@@ -2075,7 +2075,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrAuthorizeFailedPerTaskListCounter: {
 			metricName: "cadence_errors_authorize_failed_per_tl", metricRollupName: "cadence_errors_authorize_failed", metricType: Counter,
 		},
-
 		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
 			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
 		},
