@@ -233,7 +233,7 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 		return 0
 	}
 	numOfShards := p.config.IndexerConcurrency()
-	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
+	return uint32(common.StringToHistoryShard(id, numOfShards))
 }
 
 func (p *esProcessorImpl) getKeyForKafkaMsg(request elastic.BulkableRequest) string {

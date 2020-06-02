@@ -971,7 +971,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 		WorkflowId: common.StringPtr("wid"),
 		RunId:      common.StringPtr("rid"),
 	}
-	shardID := common.WorkflowIDToHistoryShard(*we.WorkflowId, numHistoryShards)
+	shardID := common.StringToHistoryShard(*we.WorkflowId, numHistoryShards)
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,

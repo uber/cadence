@@ -691,7 +691,7 @@ func AdminRereplicate(c *cli.Context) {
 				maxID = int64(i)
 			}
 
-			shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
+			shardID := common.StringToHistoryShard(wid, numberOfShards)
 			doRereplicate(ctx, shardID, domainID, wid, rid, minID, maxID, startVersion, targets, producer, session, adminClient)
 			fmt.Printf("Done processing line %v ...\n", idx)
 		}
@@ -704,7 +704,7 @@ func AdminRereplicate(c *cli.Context) {
 		rid := getRequiredOption(c, FlagRunID)
 		minID := c.Int64(FlagMinEventID)
 		maxID := c.Int64(FlagMaxEventID)
-		shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
+		shardID := common.StringToHistoryShard(wid, numberOfShards)
 
 		doRereplicate(ctx, shardID, domainID, wid, rid, minID, maxID, startVersion, targets, producer, session, adminClient)
 	}

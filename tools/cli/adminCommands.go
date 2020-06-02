@@ -357,7 +357,7 @@ func AdminGetShardID(c *cli.Context) {
 		ErrorAndExit("numberOfShards is required", nil)
 		return
 	}
-	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
+	shardID := common.StringToHistoryShard(wid, numberOfShards)
 	fmt.Printf("ShardID for workflowID: %v is %v \n", wid, shardID)
 }
 

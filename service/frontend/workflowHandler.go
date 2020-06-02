@@ -3276,7 +3276,7 @@ func (wh *WorkflowHandler) getRawHistory(
 	branchToken []byte,
 ) ([]*gen.DataBlob, []byte, error) {
 	rawHistory := []*gen.DataBlob{}
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
+	shardID := common.StringToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 
 	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
@@ -3353,7 +3353,7 @@ func (wh *WorkflowHandler) getHistory(
 	var size int
 
 	isFirstPage := len(nextPageToken) == 0
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
+	shardID := common.StringToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 	var err error
 	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
