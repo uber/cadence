@@ -124,6 +124,10 @@ func (s *Scanner) Start() error {
 		Scope:                        s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
 		ScannerWorkflowDynamicConfig: s.context.cfg.ExecutionScannerConfig,
 	})
+	backgroundActivityContext = context.WithValue(backgroundActivityContext, executions.FixerContextKey, executions.FixerContext{
+		Resource: s.context.Resource,
+		Scope: s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
+	})
 	workerOpts := worker.Options{
 		Logger:                                 s.context.zapLogger,
 		MetricsScope:                           s.context.tallyScope,
@@ -132,7 +136,7 @@ func (s *Scanner) Start() error {
 		BackgroundActivityContext:              backgroundActivityContext,
 	}
 
-	var workerTaskListNames []string
+	workerTaskListNames := []string{executionsFixerTaskListName}
 	if s.context.cfg.ExecutionsScannerEnabled() {
 		workerTaskListNames = append(workerTaskListNames, executionsScannerTaskListName)
 		go s.startWorkflowWithRetry(executionsScannerWFStartOptions, executionsScannerWFTypeName, executions.ScannerWorkflowParams{

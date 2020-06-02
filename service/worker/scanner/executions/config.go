@@ -68,4 +68,20 @@ type (
 		InvariantCollectionMutableState bool
 		InvariantCollectionHistory      bool
 	}
+
+	// FixerWorkflowConfigOverwrites enables overwriting the default values.
+	// If provided workflow will favor overwrites over defaults.
+	// Any overwrites that are left as nil will fall back to defaults.
+	FixerWorkflowConfigOverwrites struct {
+		Concurrency *int
+		BlobstoreFlushThreshold *int
+		InvariantCollections *InvariantCollections
+	}
+
+	// ResolvedFixerWorkflowConfig is the resolved config after reading defaults and applying overwrites.
+	ResolvedFixerWorkflowConfig struct {
+		Concurrency int
+		BlobstoreFlushThreshold int
+		InvariantCollections InvariantCollections
+	}
 )

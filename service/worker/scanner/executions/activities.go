@@ -26,7 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/uber/cadence/common/blobstore"
 
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
@@ -47,6 +47,8 @@ const (
 	ScannerEmitMetricsActivityName = "cadence-sys-executions-scanner-emit-metrics-activity"
 	// FixerCorruptedKeysActivityName is the activity name for FixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityName = "cadence-sys-executions-fixer-corrupted-keys-activity"
+	// FixerFixShardActivityName is the activity name for FixShardActivity
+	FixerFixShardActivityName = "cadence-sys-executions-fixer-fix-shard-activity"
 )
 
 type (
@@ -73,6 +75,12 @@ type (
 	FixerCorruptedKeysActivityParams struct {
 		ScannerWorkflowWorkflowID string
 		ScannerWorkflowRunID      string
+	}
+
+	// FixShardActivityParams is the parameter for FixShardActivity
+	FixShardActivityParams struct {
+		CorruptedKeysEntry CorruptedKeysEntry
+		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
 	}
 
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
@@ -192,8 +200,7 @@ func FixerCorruptedKeysActivity(
 	activityCtx context.Context,
 	params FixerCorruptedKeysActivityParams,
 ) ([]CorruptedKeysEntry, error) {
-	fmt.Println("in fixer activity 1")
-	resource := activityCtx.Value(ScannerContextKey).(ScannerContext).Resource
+	resource := activityCtx.Value(FixerContextKey).(FixerContext).Resource
 	client := resource.GetSDKClient()
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
 		Domain: c.StringPtr(c.SystemLocalDomainName),
@@ -203,11 +210,9 @@ func FixerCorruptedKeysActivity(
 		},
 	})
 	if err != nil {
-		fmt.Println("in fixer activity 2: ", err)
 		return nil, err
 	}
 	if descResp.WorkflowExecutionInfo.CloseStatus == nil {
-		fmt.Println("in fixer activity 3: ", err)
 		return nil, errors.New("provided scan workflow is not closed, can only use finished scan")
 	}
 	queryResp, err := client.QueryWorkflow(activityCtx, &shared.QueryWorkflowRequest{
@@ -221,7 +226,6 @@ func FixerCorruptedKeysActivity(
 		},
 	})
 	if err != nil {
-		fmt.Println("in fixer activity 4: ", err)
 		return nil, err
 	}
 	var corruptedKeys ShardCorruptKeysResult
@@ -235,6 +239,14 @@ func FixerCorruptedKeysActivity(
 			CorruptedKeys: v,
 		})
 	}
-	fmt.Println("in fixer activity 5: ", result)
 	return result, nil
+}
+
+// FixShardActivity will fetch blob of corrupted executions from scan workflow.
+// It will then iterate over all corrupted executions and run fix on them.
+func FixShardActivity(
+	activityCtx context.Context,
+	params FixShardActivityParams,
+) (*common.ShardFixReport, error) {
+	return nil, nil
 }

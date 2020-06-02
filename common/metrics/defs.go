@@ -1036,6 +1036,8 @@ const (
 	TaskListScavengerScope
 	// ExecutionsScannerScope is scope used by all metrics emitted by worker.executions.Scanner module
 	ExecutionsScannerScope
+	// ExecutionsFixerScope is the scope used by all metrics emitted by worker.executions.Fixer module
+	ExecutionsFixerScope
 	// BatcherScope is scope used by all metrics emitted by worker.Batcher module
 	BatcherScope
 	// HistoryScavengerScope is scope used by all metrics emitted by worker.history.Scavenger module
@@ -1506,6 +1508,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverArchivalWorkflowScope:          {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
 		ExecutionsScannerScope:                 {operation: "ExecutionsScanner"},
+		ExecutionsFixerScope:                   {operation: "ExecutionsFixer"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},

@@ -61,7 +61,6 @@ const (
 	executionsScannerWFTypeName   = "cadence-sys-executions-scanner-workflow"
 	executionsScannerTaskListName = "cadence-sys-executions-scanner-tasklist-0"
 
-	executionsFixerWFID         = "cadence-sys-executions-fixer"
 	executionsFixerWFTypeName   = "cadence-sys-executions-fixer-workflow"
 	executionsFixerTaskListName = "cadence-sys-executions-fixer-tasklist-0"
 )
@@ -119,6 +118,7 @@ func init() {
 
 	workflow.RegisterWithOptions(executions.FixerWorkflow, workflow.RegisterOptions{Name: executionsFixerWFTypeName})
 	activity.RegisterWithOptions(executions.FixerCorruptedKeysActivity, activity.RegisterOptions{Name: executions.FixerCorruptedKeysActivityName})
+	activity.RegisterWithOptions(executions.FixShardActivity, activity.RegisterOptions{Name: executions.FixerFixShardActivityName})
 }
 
 // TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon
