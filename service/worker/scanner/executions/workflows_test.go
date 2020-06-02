@@ -24,8 +24,9 @@ package executions
 
 import (
 	"errors"
-	common2 "github.com/uber/cadence/common"
 	"testing"
+
+	common2 "github.com/uber/cadence/common"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -303,23 +304,23 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	}
 	env.OnActivity(FixerCorruptedKeysActivityName, mock.Anything, mock.Anything).Return(&FixerCorruptedKeysActivityResult{
 		CorruptedKeys: corruptedKeys,
-		Shards: shards,
+		Shards:        shards,
 	}, nil)
 
 	fixerWorkflowConfigOverwrites := FixerWorkflowConfigOverwrites{
-		Concurrency: common2.IntPtr(3),
+		Concurrency:             common2.IntPtr(3),
 		BlobstoreFlushThreshold: common2.IntPtr(1000),
 		InvariantCollections: &InvariantCollections{
-			InvariantCollectionHistory: true,
+			InvariantCollectionHistory:      true,
 			InvariantCollectionMutableState: true,
 		},
 	}
 	resolvedFixerWorkflowConfig := ResolvedFixerWorkflowConfig{
-		Concurrency: 3,
+		Concurrency:             3,
 		BlobstoreFlushThreshold: 1000,
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: true,
-			InvariantCollectionHistory: true,
+			InvariantCollectionHistory:      true,
 		},
 	}
 	for i := 0; i < 30; i++ {
@@ -350,9 +351,9 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 				ShardID: i,
 				Stats: common.ShardFixStats{
 					ExecutionCount: 10,
-					FixedCount: 2,
-					SkippedCount: 1,
-					FailedCount: 1,
+					FixedCount:     2,
+					SkippedCount:   1,
+					FailedCount:    1,
 				},
 				Result: common.ShardFixResult{
 					ShardFixKeys: &common.ShardFixKeys{
@@ -373,7 +374,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 
 	env.ExecuteWorkflow(FixerWorkflow, FixerWorkflowParams{
 		FixerCorruptedKeysActivityParams: FixerCorruptedKeysActivityParams{},
-		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,
+		FixerWorkflowConfigOverwrites:    fixerWorkflowConfigOverwrites,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -383,10 +384,10 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	var agg AggregateFixReportResult
 	s.NoError(aggValue.Get(&agg))
 	s.Equal(AggregateFixReportResult{
-		ExecutionCount:  240,
-		FixedCount:   48,
-		FailedCount: 24,
-		SkippedCount: 24,
+		ExecutionCount: 240,
+		FixedCount:     48,
+		FailedCount:    24,
+		SkippedCount:   24,
 	}, agg)
 
 	for i := 0; i < 30; i++ {
@@ -410,10 +411,10 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 			s.Equal(&common.ShardFixReport{
 				ShardID: i,
 				Stats: common.ShardFixStats{
-					ExecutionCount:  10,
-					FixedCount:   2,
-					FailedCount: 1,
-					SkippedCount: 1,
+					ExecutionCount: 10,
+					FixedCount:     2,
+					FailedCount:    1,
+					SkippedCount:   1,
 				},
 				Result: common.ShardFixResult{
 					ShardFixKeys: &common.ShardFixKeys{
