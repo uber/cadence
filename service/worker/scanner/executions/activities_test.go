@@ -24,10 +24,12 @@ package executions
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
@@ -36,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	c "github.com/uber/cadence/service/worker/scanner/executions/common"
 )
 
 type activitiesSuite struct {
@@ -50,11 +53,12 @@ func TestActivitiesSuite(t *testing.T) {
 	suite.Run(t, new(activitiesSuite))
 }
 
-func (s *activitiesSuite) SetupTest() {
+func (s *activitiesSuite) SetupSuite() {
 	activity.Register(ScannerConfigActivity)
-	activity.Register(ScanShardActivity)
-	activity.Register(ScannerEmitMetricsActivity)
+	activity.Register(FixerCorruptedKeysActivity)
+}
 
+func (s *activitiesSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Worker)
 }
@@ -136,4 +140,59 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		s.NoError(resolvedValue.Get(&resolved))
 		s.Equal(tc.resolved, resolved)
 	}
+}
+
+func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
+	s.mockResource.SDKClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&shared.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &shared.WorkflowExecutionInfo{
+			CloseStatus: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+		},
+	}, nil)
+	corruptKeys := map[int]c.Keys{
+		1: {
+			UUID: "first",
+		},
+		2: {
+			UUID: "second",
+		},
+		3: {
+			UUID: "third",
+		},
+	}
+	queryResult, err := json.Marshal(corruptKeys)
+	s.NoError(err)
+	s.mockResource.SDKClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&shared.QueryWorkflowResponse{
+		QueryResult: queryResult,
+	}, nil)
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), FixerContextKey, FixerContext{
+			Resource: s.mockResource,
+		}),
+	})
+	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
+	s.NoError(err)
+	fixerResult := &FixerCorruptedKeysActivityResult{}
+	s.NoError(fixerResultValue.Get(&fixerResult))
+	s.Contains(fixerResult.Shards, 1)
+	s.Contains(fixerResult.Shards, 2)
+	s.Contains(fixerResult.Shards, 3)
+	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
+		ShardID: 1,
+		CorruptedKeys: c.Keys{
+			UUID: "first",
+		},
+	})
+	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
+		ShardID: 2,
+		CorruptedKeys: c.Keys{
+			UUID: "second",
+		},
+	})
+	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
+		ShardID: 3,
+		CorruptedKeys: c.Keys{
+			UUID: "third",
+		},
+	})
 }

@@ -24,7 +24,6 @@ package executions
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"go.uber.org/cadence"
@@ -168,16 +167,7 @@ func ScannerWorkflow(
 		return err
 	}
 
-	activityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Minute,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 1.7,
-			ExpirationInterval: 5 * time.Minute,
-		},
-	}
-	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
+	activityCtx := getShortActivityContext(ctx)
 	var resolvedConfig ResolvedScannerWorkflowConfig
 	if err := workflow.ExecuteActivity(activityCtx, ScannerConfigActivityName, ScannerConfigActivityParams{
 		Overwrites: params.ScannerWorkflowConfigOverwrites,
@@ -195,10 +185,8 @@ func ScannerWorkflow(
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for _, shard := range shards {
 				if shard%resolvedConfig.Concurrency == idx {
-					activityOptions.RetryPolicy.ExpirationInterval = time.Hour * 5
-					activityOptions.HeartbeatTimeout = time.Minute
-					activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
-					var report *common.ShardScanReport
+					activityCtx = getLongActivityContext(ctx)
+					report := &common.ShardScanReport{}
 					if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
 						ShardID:                 shard,
 						ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
@@ -230,8 +218,7 @@ func ScannerWorkflow(
 		aggregator.addReport(*reportErr.Report)
 	}
 
-	activityOptions.RetryPolicy.ExpirationInterval = time.Minute * 5
-	activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
+	activityCtx = getShortActivityContext(ctx)
 	if err := workflow.ExecuteActivity(activityCtx, ScannerEmitMetricsActivityName, ScannerEmitMetricsActivityParams{
 		ShardStatusResult:     aggregator.status,
 		AggregateReportResult: aggregator.aggregation,
@@ -239,77 +226,6 @@ func ScannerWorkflow(
 		return err
 	}
 	return nil
-}
-
-type shardScanResultAggregator struct {
-	reports        map[int]common.ShardScanReport
-	status         ShardStatusResult
-	aggregation    AggregateScanReportResult
-	corruptionKeys map[int]common.Keys
-}
-
-func newShardScanResultAggregator(shards []int) *shardScanResultAggregator {
-	status := make(map[int]ShardStatus)
-	for _, s := range shards {
-		status[s] = ShardStatusRunning
-	}
-	return &shardScanResultAggregator{
-		reports: make(map[int]common.ShardScanReport),
-		status:  status,
-		aggregation: AggregateScanReportResult{
-			CorruptionByType: make(map[common.InvariantType]int64),
-		},
-		corruptionKeys: make(map[int]common.Keys),
-	}
-}
-
-func (a *shardScanResultAggregator) addReport(report common.ShardScanReport) {
-	a.removeReport(report.ShardID)
-	a.reports[report.ShardID] = report
-	if report.Result.ControlFlowFailure != nil {
-		a.status[report.ShardID] = ShardStatusControlFlowFailure
-	} else {
-		a.status[report.ShardID] = ShardStatusSuccess
-	}
-	if report.Result.ControlFlowFailure == nil {
-		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a + b })
-		if report.Result.ShardScanKeys.Corrupt != nil {
-			a.corruptionKeys[report.ShardID] = *report.Result.ShardScanKeys.Corrupt
-		}
-	}
-}
-
-func (a *shardScanResultAggregator) removeReport(shardID int) {
-	report, ok := a.reports[shardID]
-	if !ok {
-		return
-	}
-	delete(a.reports, shardID)
-	delete(a.status, shardID)
-	delete(a.corruptionKeys, shardID)
-	if report.Result.ControlFlowFailure == nil {
-		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a - b })
-	}
-}
-
-func (a *shardScanResultAggregator) getReport(shardID int) (*common.ShardScanReport, error) {
-	if report, ok := a.reports[shardID]; ok {
-		return &report, nil
-	}
-	if _, ok := a.status[shardID]; !ok {
-		return nil, fmt.Errorf("shard %v is not included in the shards that will be processed", shardID)
-	}
-	return nil, fmt.Errorf("shard %v has not finished yet, check back later for report", shardID)
-}
-
-func (a *shardScanResultAggregator) adjustAggregation(stats common.ShardScanStats, fn func(a, b int64) int64) {
-	a.aggregation.ExecutionsCount = fn(a.aggregation.ExecutionsCount, stats.ExecutionsCount)
-	a.aggregation.CorruptedCount = fn(a.aggregation.CorruptedCount, stats.CorruptedCount)
-	a.aggregation.CheckFailedCount = fn(a.aggregation.CheckFailedCount, stats.CheckFailedCount)
-	a.aggregation.CorruptedOpenExecutionCount = fn(a.aggregation.CorruptedOpenExecutionCount, stats.CorruptedOpenExecutionCount)
-	for k, v := range stats.CorruptionByType {
-		a.aggregation.CorruptionByType[k] = fn(a.aggregation.CorruptionByType[k], v)
-	}
 }
 
 func flattenShards(shards Shards) []int {
@@ -353,17 +269,8 @@ func FixerWorkflow(
 	}); err != nil {
 		return err
 	}
-	activityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Minute,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 1.7,
-			ExpirationInterval: 5 * time.Minute,
-		},
-	}
-	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
-	var corruptedKeysResult *FixerCorruptedKeysActivityResult
+	activityCtx := getShortActivityContext(ctx)
+	corruptedKeysResult := &FixerCorruptedKeysActivityResult{}
 	if err := workflow.ExecuteActivity(
 		activityCtx, FixerCorruptedKeysActivityName, params.FixerCorruptedKeysActivityParams).Get(ctx, &corruptedKeysResult); err != nil {
 		return err
@@ -376,10 +283,8 @@ func FixerWorkflow(
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for j, corrupted := range corruptedKeysResult.CorruptedKeys {
 				if j%resolvedConfig.Concurrency == idx {
-					activityOptions.RetryPolicy.ExpirationInterval = time.Hour * 5
-					activityOptions.HeartbeatTimeout = time.Minute
-					activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
-					var report *common.ShardFixReport
+					activityCtx = getLongActivityContext(ctx)
+					report := &common.ShardFixReport{}
 					if err := workflow.ExecuteActivity(activityCtx, FixerFixShardActivityName, FixShardActivityParams{
 						CorruptedKeysEntry:          corrupted,
 						ResolvedFixerWorkflowConfig: resolvedConfig,
@@ -412,66 +317,6 @@ func FixerWorkflow(
 	return nil
 }
 
-type shardFixResultAggregator struct {
-	reports     map[int]common.ShardFixReport
-	status      ShardStatusResult
-	aggregation AggregateFixReportResult
-}
-
-func newShardFixResultAggregator(shards []int) *shardFixResultAggregator {
-	status := make(map[int]ShardStatus)
-	for _, s := range shards {
-		status[s] = ShardStatusRunning
-	}
-	return &shardFixResultAggregator{
-		reports:     make(map[int]common.ShardFixReport),
-		status:      status,
-		aggregation: AggregateFixReportResult{},
-	}
-}
-
-func (a *shardFixResultAggregator) addReport(report common.ShardFixReport) {
-	a.removeReport(report.ShardID)
-	a.reports[report.ShardID] = report
-	if report.Result.ControlFlowFailure != nil {
-		a.status[report.ShardID] = ShardStatusControlFlowFailure
-	} else {
-		a.status[report.ShardID] = ShardStatusSuccess
-	}
-	if report.Result.ControlFlowFailure == nil {
-		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a + b })
-	}
-}
-
-func (a *shardFixResultAggregator) removeReport(shardID int) {
-	report, ok := a.reports[shardID]
-	if !ok {
-		return
-	}
-	delete(a.reports, shardID)
-	delete(a.status, shardID)
-	if report.Result.ControlFlowFailure == nil {
-		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a - b })
-	}
-}
-
-func (a *shardFixResultAggregator) getReport(shardID int) (*common.ShardFixReport, error) {
-	if report, ok := a.reports[shardID]; ok {
-		return &report, nil
-	}
-	if _, ok := a.status[shardID]; !ok {
-		return nil, fmt.Errorf("shard %v is not included in the shards that will be processed", shardID)
-	}
-	return nil, fmt.Errorf("shard %v has not finished yet, check back later for report", shardID)
-}
-
-func (a *shardFixResultAggregator) adjustAggregation(stats common.ShardFixStats, fn func(a, b int64) int64) {
-	a.aggregation.ExecutionCount = fn(a.aggregation.ExecutionCount, stats.ExecutionCount)
-	a.aggregation.SkippedCount = fn(a.aggregation.SkippedCount, stats.SkippedCount)
-	a.aggregation.FailedCount = fn(a.aggregation.FailedCount, stats.FailedCount)
-	a.aggregation.FixedCount = fn(a.aggregation.FixedCount, stats.FixedCount)
-}
-
 func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerWorkflowConfig {
 	resolvedConfig := ResolvedFixerWorkflowConfig{
 		Concurrency:             25,
@@ -491,4 +336,31 @@ func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerW
 		resolvedConfig.InvariantCollections = *overwrites.InvariantCollections
 	}
 	return resolvedConfig
+}
+
+func getShortActivityContext(ctx workflow.Context) workflow.Context {
+	activityOptions := workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    time.Minute,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 1.7,
+			ExpirationInterval: 5 * time.Minute,
+		},
+	}
+	return workflow.WithActivityOptions(ctx, activityOptions)
+}
+
+func getLongActivityContext(ctx workflow.Context) workflow.Context {
+	activityOptions := workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    time.Minute,
+		HeartbeatTimeout:       time.Minute,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 1.7,
+			ExpirationInterval: 5 * time.Hour,
+		},
+	}
+	return workflow.WithActivityOptions(ctx, activityOptions)
 }

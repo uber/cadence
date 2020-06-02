@@ -27,13 +27,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	//"github.com/uber/cadence/common/blobstore"
-
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 
 	c "github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/worker/scanner/executions/common"
 	"github.com/uber/cadence/service/worker/scanner/executions/shard"
@@ -277,7 +274,7 @@ func FixShardActivity(
 		collections = append(collections, common.InvariantCollectionMutableState)
 	}
 	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
-	scanner := shard.NewFixer(
+	fixer := shard.NewFixer(
 		params.CorruptedKeysEntry.ShardID,
 		pr,
 		resources.GetBlobstoreClient(),
@@ -285,7 +282,7 @@ func FixShardActivity(
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		collections,
 		func() { activity.RecordHeartbeat(activityCtx) })
-	report := scanner.Fix()
+	report := fixer.Fix()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 	}
