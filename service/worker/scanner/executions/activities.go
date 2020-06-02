@@ -26,7 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/common/blobstore"
+	//"github.com/uber/cadence/common/blobstore"
 
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
@@ -68,7 +68,7 @@ type (
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
 	ScannerEmitMetricsActivityParams struct {
 		ShardStatusResult     ShardStatusResult
-		AggregateReportResult AggregateReportResult
+		AggregateReportResult AggregateScanReportResult
 	}
 
 	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
@@ -81,6 +81,11 @@ type (
 	FixShardActivityParams struct {
 		CorruptedKeysEntry CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
+	}
+
+	FixerCorruptedKeysActivityResult struct {
+		CorruptedKeys []CorruptedKeysEntry
+		Shards []int
 	}
 
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
@@ -199,7 +204,7 @@ func ScannerConfigActivity(
 func FixerCorruptedKeysActivity(
 	activityCtx context.Context,
 	params FixerCorruptedKeysActivityParams,
-) ([]CorruptedKeysEntry, error) {
+) (*FixerCorruptedKeysActivityResult, error) {
 	resource := activityCtx.Value(FixerContextKey).(FixerContext).Resource
 	client := resource.GetSDKClient()
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
@@ -232,21 +237,56 @@ func FixerCorruptedKeysActivity(
 	if err := json.Unmarshal(queryResp.QueryResult, &corruptedKeys); err != nil {
 		return nil, err
 	}
-	var result []CorruptedKeysEntry
+	var corrupted []CorruptedKeysEntry
+	var shards []int
 	for k, v := range corruptedKeys {
-		result = append(result, CorruptedKeysEntry{
+		corrupted = append(corrupted, CorruptedKeysEntry{
 			ShardID:       k,
 			CorruptedKeys: v,
 		})
+		shards = append(shards, k)
 	}
-	return result, nil
+	return &FixerCorruptedKeysActivityResult{
+		CorruptedKeys: corrupted,
+		Shards: shards,
+	}, nil
 }
 
-// FixShardActivity will fetch blob of corrupted executions from scan workflow.
+// FixShardActivity will fetch blobs of corrupted executions from scan workflow.
 // It will then iterate over all corrupted executions and run fix on them.
 func FixShardActivity(
 	activityCtx context.Context,
 	params FixShardActivityParams,
 ) (*common.ShardFixReport, error) {
-	return nil, nil
+	ctx := activityCtx.Value(FixerContextKey).(FixerContext)
+	resources := ctx.Resource
+	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(FixerFixShardActivityName))
+	sw := scope.StartTimer(metrics.CadenceLatency)
+	defer sw.Stop()
+	execManager, err := resources.GetExecutionManager(params.CorruptedKeysEntry.ShardID)
+	if err != nil {
+		scope.IncCounter(metrics.CadenceFailures)
+		return nil, err
+	}
+	var collections []common.InvariantCollection
+	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionHistory {
+		collections = append(collections, common.InvariantCollectionHistory)
+	}
+	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionMutableState {
+		collections = append(collections, common.InvariantCollectionMutableState)
+	}
+	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
+	scanner := shard.NewFixer(
+		params.CorruptedKeysEntry.ShardID,
+		pr,
+		resources.GetBlobstoreClient(),
+		params.CorruptedKeysEntry.CorruptedKeys,
+		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
+		collections,
+		func() { activity.RecordHeartbeat(activityCtx) })
+	report := scanner.Fix()
+	if report.Result.ControlFlowFailure != nil {
+		scope.IncCounter(metrics.CadenceFailures)
+	}
+	return &report, nil
 }

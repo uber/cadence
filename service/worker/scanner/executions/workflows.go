@@ -107,9 +107,13 @@ type (
 	// ShardStatusResult indicates the status for all shards
 	ShardStatusResult map[int]ShardStatus
 
-	// AggregateReportResult indicates the result of summing together all
-	// shard reports which have finished.
-	AggregateReportResult common.ShardScanStats
+	// AggregateScanReportResult indicates the result of summing together all
+	// shard reports which have finished scan.
+	AggregateScanReportResult common.ShardScanStats
+
+	// AggregateFixReportResult indicates the result of summing together all
+	// shard reports that have finished for fix.
+	AggregateFixReportResult common.ShardFixStats
 
 	// ShardCorruptKeysResult is a map of all shards which have finished scan successfully and have at least one corruption
 	ShardCorruptKeysResult map[int]common.Keys
@@ -132,6 +136,10 @@ type (
 	}
 )
 
+var (
+	errQueryNotReady = errors.New("query is not yet ready to be handled, please try again shortly")
+)
+
 // ScannerWorkflow is the workflow that scans over all concrete executions
 func ScannerWorkflow(
 	ctx workflow.Context,
@@ -149,7 +157,7 @@ func ScannerWorkflow(
 	}); err != nil {
 		return err
 	}
-	if err := workflow.SetQueryHandler(ctx, AggregateReportQuery, func() (AggregateReportResult, error) {
+	if err := workflow.SetQueryHandler(ctx, AggregateReportQuery, func() (AggregateScanReportResult, error) {
 		return aggregator.aggregation, nil
 	}); err != nil {
 		return err
@@ -236,7 +244,7 @@ func ScannerWorkflow(
 type shardScanResultAggregator struct {
 	reports        map[int]common.ShardScanReport
 	status         ShardStatusResult
-	aggregation    AggregateReportResult
+	aggregation    AggregateScanReportResult
 	corruptionKeys map[int]common.Keys
 }
 
@@ -248,7 +256,7 @@ func newShardScanResultAggregator(shards []int) *shardScanResultAggregator {
 	return &shardScanResultAggregator{
 		reports: make(map[int]common.ShardScanReport),
 		status:  status,
-		aggregation: AggregateReportResult{
+		aggregation: AggregateScanReportResult{
 			CorruptionByType: make(map[common.InvariantType]int64),
 		},
 		corruptionKeys: make(map[int]common.Keys),
@@ -288,6 +296,9 @@ func (a *shardScanResultAggregator) getReport(shardID int) (*common.ShardScanRep
 	if report, ok := a.reports[shardID]; ok {
 		return &report, nil
 	}
+	if _, ok := a.status[shardID]; !ok {
+		return nil, fmt.Errorf("shard %v is not included in the shards that will be processed", shardID)
+	}
 	return nil, fmt.Errorf("shard %v has not finished yet, check back later for report", shardID)
 }
 
@@ -312,15 +323,36 @@ func flattenShards(shards Shards) []int {
 	return result
 }
 
+// FixerWorkflow is the workflow that fixes all concrete executions from a scan output.
 func FixerWorkflow(
 	ctx workflow.Context,
 	params FixerWorkflowParams,
 ) error {
-	// 1. get the corrupted keys from scanner workflow
-	// 2. resolve the config using overwrites and sane defaults
-	// 3. start concurrency number of go routines and have them consume
-
-
+	var aggregator *shardFixResultAggregator
+	if err := workflow.SetQueryHandler(ctx, ShardReportQuery, func(shardID int) (*common.ShardFixReport, error) {
+		if aggregator == nil {
+			return nil, errQueryNotReady
+		}
+		return aggregator.getReport(shardID)
+	}); err != nil {
+		return err
+	}
+	if err := workflow.SetQueryHandler(ctx, ShardStatusQuery, func() (ShardStatusResult, error) {
+		if aggregator == nil {
+			return nil, errQueryNotReady
+		}
+		return aggregator.status, nil
+	}); err != nil {
+		return err
+	}
+	if err := workflow.SetQueryHandler(ctx, AggregateReportQuery, func() (AggregateFixReportResult, error) {
+		if aggregator == nil {
+			return AggregateFixReportResult{}, errQueryNotReady
+		}
+		return aggregator.aggregation, nil
+	}); err != nil {
+		return err
+	}
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
@@ -331,21 +363,18 @@ func FixerWorkflow(
 		},
 	}
 	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
-	var corruptedKeys []CorruptedKeysEntry
+	var corruptedKeysResult *FixerCorruptedKeysActivityResult
 	if err := workflow.ExecuteActivity(
-		activityCtx, FixerCorruptedKeysActivityName, params.FixerCorruptedKeysActivityParams).Get(ctx, &corruptedKeys); err != nil {
+		activityCtx, FixerCorruptedKeysActivityName, params.FixerCorruptedKeysActivityParams).Get(ctx, &corruptedKeysResult); err != nil {
 		return err
 	}
 
 	resolvedConfig := resolveFixerConfig(params.FixerWorkflowConfigOverwrites)
-
-
-
 	shardReportChan := workflow.GetSignalChannel(ctx, fixShardReportChan)
 	for i := 0; i < resolvedConfig.Concurrency; i++ {
 		idx := i
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			for j, corrupted := range corruptedKeys {
+			for j, corrupted := range corruptedKeysResult.CorruptedKeys {
 				if j%resolvedConfig.Concurrency == idx {
 					activityOptions.RetryPolicy.ExpirationInterval = time.Hour * 5
 					activityOptions.HeartbeatTimeout = time.Minute
@@ -371,7 +400,8 @@ func FixerWorkflow(
 		})
 	}
 
-	for i := 0; i < len(corruptedKeys); i++ {
+	aggregator = newShardFixResultAggregator(corruptedKeysResult.Shards)
+	for i := 0; i < len(corruptedKeysResult.CorruptedKeys); i++ {
 		var reportErr FixReportError
 		shardReportChan.Receive(ctx, &reportErr)
 		if reportErr.ErrorStr != nil {
@@ -379,9 +409,67 @@ func FixerWorkflow(
 		}
 		aggregator.addReport(*reportErr.Report)
 	}
-
-
 	return nil
+}
+
+type shardFixResultAggregator struct {
+	reports map[int]common.ShardFixReport
+	status ShardStatusResult
+	aggregation AggregateFixReportResult
+}
+
+func newShardFixResultAggregator(shards []int) *shardFixResultAggregator {
+	status := make(map[int]ShardStatus)
+	for _, s := range shards {
+		status[s] = ShardStatusRunning
+	}
+	return &shardFixResultAggregator{
+		reports: make(map[int]common.ShardFixReport),
+		status: status,
+		aggregation: AggregateFixReportResult{},
+	}
+}
+
+func (a *shardFixResultAggregator) addReport(report common.ShardFixReport) {
+	a.removeReport(report.ShardID)
+	a.reports[report.ShardID] = report
+	if report.Result.ControlFlowFailure != nil {
+		a.status[report.ShardID] = ShardStatusControlFlowFailure
+	} else {
+		a.status[report.ShardID] = ShardStatusSuccess
+	}
+	if report.Result.ControlFlowFailure == nil {
+		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a + b })
+	}
+}
+
+func (a *shardFixResultAggregator) removeReport(shardID int) {
+	report, ok := a.reports[shardID]
+	if !ok {
+		return
+	}
+	delete(a.reports, shardID)
+	delete(a.status, shardID)
+	if report.Result.ControlFlowFailure == nil {
+		a.adjustAggregation(report.Stats, func(a, b int64) int64 { return a - b })
+	}
+}
+
+func (a *shardFixResultAggregator) getReport(shardID int) (*common.ShardFixReport, error) {
+	if report, ok := a.reports[shardID]; ok {
+		return &report, nil
+	}
+	if _, ok := a.status[shardID]; !ok {
+		return nil, fmt.Errorf("shard %v is not included in the shards that will be processed", shardID)
+	}
+	return nil, fmt.Errorf("shard %v has not finished yet, check back later for report", shardID)
+}
+
+func (a *shardFixResultAggregator) adjustAggregation(stats common.ShardFixStats, fn func(a, b int64) int64) {
+	a.aggregation.ExecutionCount = fn(a.aggregation.ExecutionCount, stats.ExecutionCount)
+	a.aggregation.SkippedCount = fn(a.aggregation.SkippedCount, stats.SkippedCount)
+	a.aggregation.FailedCount = fn(a.aggregation.FailedCount, stats.FailedCount)
+	a.aggregation.FixedCount = fn(a.aggregation.FixedCount, stats.FixedCount)
 }
 
 func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerWorkflowConfig {

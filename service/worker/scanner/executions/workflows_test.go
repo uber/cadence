@@ -139,9 +139,9 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	s.NoError(env.GetWorkflowError())
 	aggValue, err := env.QueryWorkflow(AggregateReportQuery)
 	s.NoError(err)
-	var agg AggregateReportResult
+	var agg AggregateScanReportResult
 	s.NoError(aggValue.Get(&agg))
-	s.Equal(AggregateReportResult{
+	s.Equal(AggregateScanReportResult{
 		ExecutionsCount:  240,
 		CorruptedCount:   48,
 		CheckFailedCount: 24,
@@ -305,15 +305,15 @@ func (s *workflowsSuite) TestFlattenShards() {
 }
 
 func (s *workflowsSuite) TestShardResultAggregator() {
-	agg := newShardResultAggregator([]int{1, 2, 3})
-	expected := &shardResultAggregator{
+	agg := newShardScanResultAggregator([]int{1, 2, 3})
+	expected := &shardScanResultAggregator{
 		reports: map[int]common.ShardScanReport{},
 		status: map[int]ShardStatus{
 			1: ShardStatusRunning,
 			2: ShardStatusRunning,
 			3: ShardStatusRunning,
 		},
-		aggregation: AggregateReportResult{
+		aggregation: AggregateScanReportResult{
 			CorruptionByType: make(map[common.InvariantType]int64),
 		},
 		corruptionKeys: make(map[int]common.Keys),
@@ -321,7 +321,10 @@ func (s *workflowsSuite) TestShardResultAggregator() {
 	s.Equal(expected, agg)
 	report, err := agg.getReport(1)
 	s.Nil(report)
-	s.Error(err)
+	s.Equal("shard 1 has not finished yet, check back later for report", err.Error())
+	report, err = agg.getReport(5)
+	s.Nil(report)
+	s.Equal("shard 5 is not included in the shards that will be processed", err.Error())
 	firstReport := common.ShardScanReport{
 		ShardID: 1,
 		Stats: common.ShardScanStats{
