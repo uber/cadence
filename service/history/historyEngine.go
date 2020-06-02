@@ -394,24 +394,6 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 		}
 	}
 
-	failoverMarkerInsertion := func(
-		shardNotificationVersion int64,
-		nextDomain *cache.DomainCacheEntry,
-		action func(),
-	) {
-
-		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
-		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
-
-		if nextDomain.IsGlobalDomain() &&
-			domainFailoverNotificationVersion >= shardNotificationVersion &&
-			nextDomain.GetFailoverEndTime() != nil &&
-			domainActiveCluster == e.currentClusterName {
-			action()
-			//return e.shard.InsertFailoverMarkers(nextDomain.GetInfo().ID, nextDomain.GetFailoverVersion())
-		}
-	}
-
 	// first set the failover callback
 	e.shard.GetDomainCache().RegisterDomainChangeCallback(
 		e.shard.GetShardID(),
@@ -458,13 +440,19 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			// make sure task processor failover the domain before inserting the failover marker
 			failoverMarkerTasks := []*persistence.FailoverMarkerTask{}
 			for _, nextDomain := range nextDomains {
-				failoverMarkerInsertion(shardNotificationVersion, nextDomain, func() {
+				domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
+				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
+
+				if nextDomain.IsGlobalDomain() &&
+					domainFailoverNotificationVersion >= shardNotificationVersion &&
+					nextDomain.GetFailoverEndTime() != nil &&
+					domainActiveCluster == e.currentClusterName {
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
 						VisibilityTimestamp: e.timeSource.Now(),
 						Version:             shardNotificationVersion,
 						DomainID:            nextDomain.GetInfo().ID,
 					})
-				})
+				}
 			}
 
 			if len(failoverMarkerTasks) > 0 {

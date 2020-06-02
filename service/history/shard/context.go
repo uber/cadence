@@ -1193,12 +1193,14 @@ func (s *contextImpl) InsertFailoverMarkers(
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	if err := s.executionManager.CreateFailoverMarkerTasks(&persistence.CreateFailoverMarkersRequest{
-		Markers: markers,
-	}); err != nil {
-		return err
+	var err error
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		err = s.executionManager.CreateFailoverMarkerTasks(&persistence.CreateFailoverMarkersRequest{Markers: markers})
+		if err == nil {
+			break
+		}
 	}
-	return nil
+	return err
 }
 
 func acquireShard(
@@ -1218,7 +1220,6 @@ func acquireShard(
 		}
 		_, ok := err.(*persistence.ShardAlreadyExistError)
 		return ok
-
 	}
 
 	getShard := func() error {
