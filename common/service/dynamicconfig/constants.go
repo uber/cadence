@@ -62,6 +62,7 @@ var keys = map[Key]string{
 	VisibilityArchivalStatus:            "system.visibilityArchivalStatus",
 	EnableReadFromVisibilityArchival:    "system.enableReadFromVisibilityArchival",
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
+	EnableGracefulFailover:              "system.enableGracefulFailover",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
@@ -82,32 +83,34 @@ var keys = map[Key]string{
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:             "frontend.persistenceMaxQPS",
-	FrontendPersistenceGlobalMaxQPS:       "frontend.persistenceGlobalMaxQPS",
-	FrontendVisibilityMaxPageSize:         "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:          "frontend.visibilityListMaxQPS",
-	FrontendESVisibilityListMaxQPS:        "frontend.esVisibilityListMaxQPS",
-	FrontendMaxBadBinaries:                "frontend.maxBadBinaries",
-	FrontendESIndexMaxResultWindow:        "frontend.esIndexMaxResultWindow",
-	FrontendHistoryMaxPageSize:            "frontend.historyMaxPageSize",
-	FrontendRPS:                           "frontend.rps",
-	FrontendMaxDomainRPSPerInstance:       "frontend.domainrps",
-	FrontendGlobalDomainRPS:               "frontend.globalDomainrps",
-	FrontendHistoryMgrNumConns:            "frontend.historyMgrNumConns",
-	FrontendShutdownDrainDuration:         "frontend.shutdownDrainDuration",
-	DisableListVisibilityByFilter:         "frontend.disableListVisibilityByFilter",
-	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
-	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
-	ValidSearchAttributes:                 "frontend.validSearchAttributes",
-	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
-	FrontendEnableRPCReplication:          "frontend.enableRPCReplication",
-	FrontendEnableCleanupReplicationTask:  "frontend.enableCleanupReplicationTask",
-	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
-	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
-	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
-	VisibilityArchivalQueryMaxPageSize:    "frontend.visibilityArchivalQueryMaxPageSize",
-	VisibilityArchivalQueryMaxRangeInDays: "frontend.visibilityArchivalQueryMaxRangeInDays",
-	VisibilityArchivalQueryMaxQPS:         "frontend.visibilityArchivalQueryMaxQPS",
+	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
+	FrontendPersistenceGlobalMaxQPS:             "frontend.persistenceGlobalMaxQPS",
+	FrontendVisibilityMaxPageSize:               "frontend.visibilityMaxPageSize",
+	FrontendVisibilityListMaxQPS:                "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS:              "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:                      "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow:              "frontend.esIndexMaxResultWindow",
+	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
+	FrontendRPS:                                 "frontend.rps",
+	FrontendMaxDomainRPSPerInstance:             "frontend.domainrps",
+	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
+	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
+	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
+	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:                     "frontend.throttledLogRPS",
+	EnableClientVersionCheck:                    "frontend.enableClientVersionCheck",
+	ValidSearchAttributes:                       "frontend.validSearchAttributes",
+	SendRawWorkflowHistory:                      "frontend.sendRawWorkflowHistory",
+	FrontendEnableRPCReplication:                "frontend.enableRPCReplication",
+	FrontendEnableCleanupReplicationTask:        "frontend.enableCleanupReplicationTask",
+	SearchAttributesNumberOfKeysLimit:           "frontend.searchAttributesNumberOfKeysLimit",
+	SearchAttributesSizeOfValueLimit:            "frontend.searchAttributesSizeOfValueLimit",
+	SearchAttributesTotalSizeLimit:              "frontend.searchAttributesTotalSizeLimit",
+	VisibilityArchivalQueryMaxPageSize:          "frontend.visibilityArchivalQueryMaxPageSize",
+	VisibilityArchivalQueryMaxRangeInDays:       "frontend.visibilityArchivalQueryMaxRangeInDays",
+	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
+	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
+	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -144,12 +147,13 @@ var keys = map[Key]string{
 	HistoryCacheMaxSize:                                    "history.cacheMaxSize",
 	HistoryCacheTTL:                                        "history.cacheTTL",
 	HistoryShutdownDrainDuration:                           "history.shutdownDrainDuration",
-	EventsCacheInitialSize:                                 "history.eventsCacheInitialSize",
-	EventsCacheMaxSize:                                     "history.eventsCacheMaxSize",
+	EventsCacheInitialCount:                                "history.eventsCacheInitialSize",
+	EventsCacheMaxCount:                                    "history.eventsCacheMaxSize",
+	EventsCacheMaxSize:                                     "history.eventsCacheMaxSizeInBytes",
 	EventsCacheTTL:                                         "history.eventsCacheTTL",
 	EventsCacheGlobalEnable:                                "history.eventsCacheGlobalEnable",
-	EventsCacheGlobalInitialSize:                           "history.eventsCacheGlobalInitialSize",
-	EventsCacheGlobalMaxSize:                               "history.eventsCacheGlobalMaxSize",
+	EventsCacheGlobalInitialCount:                          "history.eventsCacheGlobalInitialSize",
+	EventsCacheGlobalMaxCount:                              "history.eventsCacheGlobalMaxSize",
 	AcquireShardInterval:                                   "history.acquireShardInterval",
 	AcquireShardConcurrency:                                "history.acquireShardConcurrency",
 	StandbyClusterDelay:                                    "history.standbyClusterDelay",
@@ -200,6 +204,7 @@ var keys = map[Key]string{
 	TransferProcessorRedispatchIntervalJitterCoefficient:   "history.transferProcessorRedispatchIntervalJitterCoefficient",
 	TransferProcessorMaxRedispatchQueueSize:                "history.transferProcessorMaxRedispatchQueueSize",
 	TransferProcessorEnablePriorityTaskProcessor:           "history.transferProcessorEnablePriorityTaskProcessor",
+	TransferProcessorEnableMultiCurosrProcessor:            "history.transferProcessorEnableMultiCursorProcessor",
 	TransferProcessorVisibilityArchivalTimeLimit:           "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                                "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                              "history.replicatorTaskWorkerCount",
@@ -331,6 +336,8 @@ const (
 	// EnableDomainNotActiveAutoForwarding whether enabling DC auto forwarding to active cluster
 	// for signal / start / signal with start API if domain is not active
 	EnableDomainNotActiveAutoForwarding
+	// EnableGracefulFailover whether enabling graceful failover
+	EnableGracefulFailover
 	// TransactionSizeLimit is the largest allowed transaction size to persistence
 	TransactionSizeLimit
 	// MinRetentionDays is the minimal allowed retention days for domain
@@ -415,6 +422,11 @@ const (
 	// VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query
 	VisibilityArchivalQueryMaxQPS
 
+	// DomainFailoverRefreshInterval is the domain failover refresh timer
+	DomainFailoverRefreshInterval
+	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
+	DomainFailoverRefreshTimerJitterCoefficient
+
 	// key for matching
 
 	// MatchingRPS is request rate per second for each matching host
@@ -482,18 +494,20 @@ const (
 	HistoryCacheTTL
 	// HistoryShutdownDrainDuration is the duration of traffic drain during shutdown
 	HistoryShutdownDrainDuration
-	// EventsCacheInitialSize is initial size of events cache
-	EventsCacheInitialSize
-	// EventsCacheMaxSize is max size of events cache
+	// EventsCacheInitialCount is initial count of events cache
+	EventsCacheInitialCount
+	// EventsCacheMaxCount is max count of events cache
+	EventsCacheMaxCount
+	// EventsCacheMaxSize is max size of events cache in bytes
 	EventsCacheMaxSize
 	// EventsCacheTTL is TTL of events cache
 	EventsCacheTTL
 	// EventsCacheGlobalEnable enables global cache over all history shards
 	EventsCacheGlobalEnable
-	// EventsCacheGlobalInitialSize is initial size of global events cache
-	EventsCacheGlobalInitialSize
-	// EventsCacheGlobalMaxSize is max size of global events cache
-	EventsCacheGlobalMaxSize
+	// EventsCacheGlobalInitialCount is initial count of global events cache
+	EventsCacheGlobalInitialCount
+	// EventsCacheGlobalMaxCount is max count of global events cache
+	EventsCacheGlobalMaxCount
 	// AcquireShardInterval is interval that timer used to acquire shard
 	AcquireShardInterval
 	// AcquireShardConcurrency is number of goroutines that can be used to acquire shards in the shard controller.
@@ -596,6 +610,8 @@ const (
 	TransferProcessorMaxRedispatchQueueSize
 	// TransferProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for transferQueueProcessor
 	TransferProcessorEnablePriorityTaskProcessor
+	// TransferProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for transferQueueProcessor
+	TransferProcessorEnableMultiCurosrProcessor
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	TransferProcessorVisibilityArchivalTimeLimit
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor

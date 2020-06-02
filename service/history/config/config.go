@@ -59,12 +59,13 @@ type Config struct {
 
 	// EventsCache settings
 	// Change of these configs require shard restart
-	EventsCacheInitialSize       dynamicconfig.IntPropertyFn
-	EventsCacheMaxSize           dynamicconfig.IntPropertyFn
-	EventsCacheTTL               dynamicconfig.DurationPropertyFn
-	EventsCacheGlobalEnable      dynamicconfig.BoolPropertyFn
-	EventsCacheGlobalInitialSize dynamicconfig.IntPropertyFn
-	EventsCacheGlobalMaxSize     dynamicconfig.IntPropertyFn
+	EventsCacheInitialCount       dynamicconfig.IntPropertyFn
+	EventsCacheMaxCount           dynamicconfig.IntPropertyFn
+	EventsCacheMaxSize            dynamicconfig.IntPropertyFn
+	EventsCacheTTL                dynamicconfig.DurationPropertyFn
+	EventsCacheGlobalEnable       dynamicconfig.BoolPropertyFn
+	EventsCacheGlobalInitialCount dynamicconfig.IntPropertyFn
+	EventsCacheGlobalMaxCount     dynamicconfig.IntPropertyFn
 
 	// ShardController settings
 	RangeSizeBits           uint
@@ -125,6 +126,7 @@ type Config struct {
 	TransferProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TransferProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
+	TransferProcessorEnableMultiCurosrProcessor          dynamicconfig.BoolPropertyFn
 	TransferProcessorVisibilityArchivalTimeLimit         dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
@@ -264,12 +266,13 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		HistoryCacheInitialSize:              dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                  dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                      dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
-		EventsCacheInitialSize:               dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 128),
-		EventsCacheMaxSize:                   dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 512),
+		EventsCacheInitialCount:              dc.GetIntProperty(dynamicconfig.EventsCacheInitialCount, 128),
+		EventsCacheMaxCount:                  dc.GetIntProperty(dynamicconfig.EventsCacheMaxCount, 512),
+		EventsCacheMaxSize:                   dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 0),
 		EventsCacheTTL:                       dc.GetDurationProperty(dynamicconfig.EventsCacheTTL, time.Hour),
 		EventsCacheGlobalEnable:              dc.GetBoolProperty(dynamicconfig.EventsCacheGlobalEnable, false),
-		EventsCacheGlobalInitialSize:         dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 4096),
-		EventsCacheGlobalMaxSize:             dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 65536),
+		EventsCacheGlobalInitialCount:        dc.GetIntProperty(dynamicconfig.EventsCacheGlobalInitialCount, 4096),
+		EventsCacheGlobalMaxCount:            dc.GetIntProperty(dynamicconfig.EventsCacheGlobalMaxCount, 131072),
 		RangeSizeBits:                        20, // 20 bits for sequencer, 2^20 sequence number for any range
 		AcquireShardInterval:                 dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, time.Minute),
 		AcquireShardConcurrency:              dc.GetIntProperty(dynamicconfig.AcquireShardConcurrency, 1),
@@ -323,6 +326,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		TransferProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 10000),
 		TransferProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TransferProcessorEnablePriorityTaskProcessor, false),
+		TransferProcessorEnableMultiCurosrProcessor:          dc.GetBoolProperty(dynamicconfig.TransferProcessorEnableMultiCurosrProcessor, false),
 		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 200*time.Millisecond),
 
 		ReplicatorTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
