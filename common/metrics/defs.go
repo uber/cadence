@@ -2075,14 +2075,12 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrAuthorizeFailedPerTaskListCounter: {
 			metricName: "cadence_errors_authorize_failed_per_tl", metricRollupName: "cadence_errors_authorize_failed", metricType: Counter,
 		},
-<<<<<<< HEAD
+
 		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
 			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
 		},
-=======
 		CadenceShardSuccessGauge: {metricName: "cadence_shard_success", metricType: Gauge},
 		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
->>>>>>> d1d9c6c2... finish impl of activites for scanner workflow
 	},
 	History: {
 		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
