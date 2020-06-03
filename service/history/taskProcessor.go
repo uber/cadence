@@ -252,7 +252,6 @@ func (t *taskProcessor) processTaskOnce(
 	var err error
 
 	domainID := task.task.GetDomainID()
-	taskType := task.task.GetTaskType()
 
 	scopeIdx, err = task.processor.process(task)
 	scope, found := t.metricsScopeCache.Get(domainID, scopeIdx)
@@ -261,7 +260,7 @@ func (t *taskProcessor) processTaskOnce(
 
 	if !found {
 		scope = t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
-		t.metricsScopeCache.Put(domainID, taskType, scope)
+		t.metricsScopeCache.Put(domainID, scopeIdx, scope)
 	}
 
 	if task.shouldProcessTask {
