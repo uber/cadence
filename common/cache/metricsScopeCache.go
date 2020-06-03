@@ -34,14 +34,14 @@ type metricsScopeCache struct {
 	scopeMap map[string]metrics.Scope
 }
 
-// NewMetricsCache constructs a new metricsScopeCache
+// NewMetricsScopeCache constructs a new metricsScopeCache
 func NewMetricsScopeCache() MetricsScopeCache {
 	return &metricsScopeCache{
 		scopeMap: make(map[string]metrics.Scope),
 	}
 }
 
-// Get retrieves scope using domainID from scopeMap
+// Get retrieves scope using domainID and scopeIdx from scopeMap
 func (mc *metricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
 	mc.RLock()
 	defer mc.RUnlock()
@@ -52,7 +52,7 @@ func (mc *metricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, 
 	return metricsScope, found
 }
 
-// Put puts map of domainID and scope in the metricsCache accessMap
+// Put puts map of domainID and scopeIdx in the metricsCache scopeMap
 func (mc *metricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
 	mc.Lock()
 	defer mc.Unlock()

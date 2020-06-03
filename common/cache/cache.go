@@ -125,8 +125,8 @@ type Entry interface {
 type GetCacheItemSizeFunc func(interface{}) uint64
 
 type MetricsScopeCache interface {
-	// Get retrieves metrics scope for a domainID and scopeID
-	Get(domainID string, scopeID int) (metrics.Scope, bool)
-	// Put adds metrics scope for a domainID and scopeID
-	Put(domainID string, scopeID int, metricsScope metrics.Scope)
+	// Get retrieves metrics scope for a domainID and scopeIdx
+	Get(domainID string, scopeIdx int) (metrics.Scope, bool)
+	// Put adds metrics scope for a domainID and scopeIdx
+	Put(domainID string, scopeIdx int, metricsScope metrics.Scope)
 }
