@@ -79,6 +79,7 @@ type (
 		// other common resources
 
 		domainCache       cache.DomainCache
+		metricsScopeCache cache.MetricsScopeCache
 		timeSource        clock.TimeSource
 		payloadSerializer persistence.PayloadSerializer
 		metricsClient     metrics.Client
@@ -228,6 +229,8 @@ func New(
 		logger,
 	)
 
+	metricsScopeCache := cache.NewMetricsScopeCache()
+
 	frontendRawClient := clientBean.GetFrontendClient()
 	frontendClient := frontend.NewRetryableClient(
 		frontendRawClient,
@@ -287,6 +290,7 @@ func New(
 		// other common resources
 
 		domainCache:       domainCache,
+		metricsScopeCache: metricsScopeCache,
 		timeSource:        clock.NewRealTimeSource(),
 		payloadSerializer: persistence.NewPayloadSerializer(),
 		metricsClient:     params.MetricsClient,
@@ -422,6 +426,11 @@ func (h *Impl) GetClusterMetadata() cluster.Metadata {
 // GetDomainCache return domain cache
 func (h *Impl) GetDomainCache() cache.DomainCache {
 	return h.domainCache
+}
+
+// GetMetricsScopeCache return domain cache
+func (h *Impl) GetMetricsScopeCache() cache.MetricsScopeCache {
+	return h.metricsScopeCache
 }
 
 // GetTimeSource return time source

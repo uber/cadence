@@ -23,46 +23,80 @@
 package cache
 
 import (
-	"github.com/uber/cadence/common/metrics"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/metrics/mocks"
+
+	"github.com/uber/cadence/common/metrics"
 )
 
 func TestGetMetricsScope(t *testing.T) {
-	metricsCache := NewMetricsCache()
+	metricsCache := NewMetricsScopeCache()
+	var found bool
 
-	mockMetricsScope := &mocks.Scope{}
+	tests := []struct {
+		scopeID  int
+		domainID string
+	}{
+		{1, "A"},
+		{2, "B"},
+		{1, "C"},
+	}
 
-	metricsCache.Put("A", 1, mockMetricsScope)
-	metricsCache.Put("B", 2, mockMetricsScope)
-	metricsCache.Put("C", 1, mockMetricsScope)
+	for _, t := range tests {
+		mockMetricsScope := metrics.NoopScope(metrics.ServiceIdx(t.scopeID))
+		metricsCache.Put(t.domainID, t.scopeID, mockMetricsScope)
+	}
 
-	assert.Equal(t, mockMetricsScope, metricsCache.Get("A", 1))
-	assert.Equal(t, mockMetricsScope, metricsCache.Get("B", 2))
-	assert.Equal(t, mockMetricsScope, metricsCache.Get("C", 1))
+	metricsScope, found := metricsCache.Get("A", 1)
+	testMetricsScope := metrics.NoopScope(metrics.ServiceIdx(1))
+	assert.Equal(t, testMetricsScope, metricsScope)
+	assert.Equal(t, found, true)
+
+	_, found = metricsCache.Get("B", 2)
+	assert.Equal(t, found, true)
+
+	metricsScope, found = metricsCache.Get("C", 1)
+	testMetricsScope = metrics.NoopScope(metrics.ServiceIdx(3))
+	assert.NotEqual(t, testMetricsScope, metricsScope)
+	assert.Equal(t, found, true)
+
+	metricsScope, found = metricsCache.Get("D", 3)
+	testMetricsScope = metrics.NoopScope(metrics.ServiceIdx(3))
+	assert.NotEqual(t, testMetricsScope, metricsScope)
+	assert.Equal(t, found, false)
 }
 
 func TestConcurrentMetricsScopeAccess(t *testing.T) {
-	metricsCache := NewMetricsCache()
+	metricsCache := NewMetricsScopeCache()
 
 	ch := make(chan struct{})
 	var wg sync.WaitGroup
+	var metricsScope, testMetricsScope metrics.Scope
+	var found bool
+
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		// concurrent get and put
-		go func() {
+		go func(scopeIdx int) {
 			defer wg.Done()
 
-			<- ch
+			<-ch
 
-			metricsCache.Get("test_domain", i)
-			metricsCache.Put("test_domain", i, metrics.NoopScope(metrics.ServiceIdx(i)))
-		}()
+			metricsCache.Get("test_domain", scopeIdx)
+			metricsCache.Put("test_domain", scopeIdx, metrics.NoopScope(metrics.ServiceIdx(scopeIdx)))
+		}(i)
 	}
 
 	close(ch)
 	wg.Wait()
+
+	for i := 0; i < 1000; i++ {
+		metricsScope, found = metricsCache.Get("test_domain", i)
+		testMetricsScope = metrics.NoopScope(metrics.ServiceIdx(i))
+
+		assert.Equal(t, true, found)
+		assert.Equal(t, testMetricsScope, metricsScope)
+	}
 }

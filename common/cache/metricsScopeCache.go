@@ -29,35 +29,34 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-type metricsCache struct {
+type metricsScopeCache struct {
 	sync.RWMutex
 	scopeMap map[string]metrics.Scope
 }
 
-// NewMetricsCache constructs a new metricsCache struct
-func NewMetricsCache() MetricsCache {
-	return &metricsCache{
+// NewMetricsCache constructs a new metricsScopeCache
+func NewMetricsScopeCache() MetricsScopeCache {
+	return &metricsScopeCache{
 		scopeMap: make(map[string]metrics.Scope),
 	}
 }
 
 // Get retrieves scope using domainID from scopeMap
-func (mc *metricsCache) Get(domainID string, taskType int) metrics.Scope {
+func (mc *metricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
 	mc.RLock()
 	defer mc.RUnlock()
 
-	key := domainID + "_" + strconv.Itoa(taskType)
-	if metricsScope, ok := mc.scopeMap[key]; ok {
-		return metricsScope
-	}
-	return nil
+	key := domainID + "_" + strconv.Itoa(scopeIdx)
+
+	metricsScope, found := mc.scopeMap[key]
+	return metricsScope, found
 }
 
 // Put puts map of domainID and scope in the metricsCache accessMap
-func (mc *metricsCache) Put(domainID string, taskType int, scope metrics.Scope) {
+func (mc *metricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
 	mc.Lock()
 	defer mc.Unlock()
 
-	key := domainID + "_" + strconv.Itoa(taskType)
+	key := domainID + "_" + strconv.Itoa(scopeIdx)
 	mc.scopeMap[key] = scope
 }
