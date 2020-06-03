@@ -417,7 +417,7 @@ func NewForTest() *Config {
 
 // GetShardID return the corresponding shard ID for a given workflow ID
 func (config *Config) GetShardID(workflowID string) int {
-	return common.StringToHistoryShard(workflowID, config.NumberOfShards)
+	return common.WorkflowIDToHistoryShard(workflowID, config.NumberOfShards)
 }
 
 func convertWeightsToDynamicConfigValue(

@@ -261,9 +261,15 @@ func IsWhitelistServiceTransientError(err error) bool {
 	return false
 }
 
-// StringToHistoryShard is used to map a string to a shardID
-func StringToHistoryShard(id string, numberOfShards int) int {
-	hash := farm.Fingerprint32([]byte(id))
+// WorkflowIDToHistoryShard is used to map a workflowID to a shardID
+func WorkflowIDToHistoryShard(workflowID string, numberOfShards int) int {
+	hash := farm.Fingerprint32([]byte(workflowID))
+	return int(hash % uint32(numberOfShards))
+}
+
+// DomainIDToHistoryShard is used to map a domainID to a shardID
+func DomainIDToHistoryShard(domainID string, numberOfShards int) int {
+	hash := farm.Fingerprint32([]byte(domainID))
 	return int(hash % uint32(numberOfShards))
 }
 
