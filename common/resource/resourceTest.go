@@ -260,7 +260,7 @@ func (s *Test) GetDomainCache() cache.DomainCache {
 }
 
 // GetMetricsScopeCache for testing
-func (s *Test) GetMetricsScopeCache() cache.DomainCache {
+func (s *Test) GetMetricsScopeCache() cache.MetricsScopeCache {
 	return s.MetricsScopeCache
 }
 
