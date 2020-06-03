@@ -257,8 +257,12 @@ func (t *taskProcessor) processTaskOnce(
 	scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
 	if !found {
-		scope = t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
-		t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
+		domainTag, err := t.getDomainTagByID(domainID)
+		scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
+		// do not cache DomainUnknownTag
+		if err == nil {
+			t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
+		}
 	}
 
 	startTime := t.timeSource.Now()
@@ -334,11 +338,11 @@ func (t *taskProcessor) ackTaskOnce(
 	}
 }
 
-func (t *taskProcessor) getDomainTagByID(domainID string) metrics.Tag {
+func (t *taskProcessor) getDomainTagByID(domainID string) (metrics.Tag, error) {
 	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
 		t.logger.Error("Unable to get domainName", tag.Error(err))
-		return metrics.DomainUnknownTag()
+		return metrics.DomainUnknownTag(), err
 	}
-	return metrics.DomainTag(domainName)
+	return metrics.DomainTag(domainName), nil
 }
