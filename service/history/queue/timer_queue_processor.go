@@ -417,7 +417,7 @@ func newTimerQueueActiveProcessor(
 	}
 
 	maxReadLevel := func() task.Key {
-		return newTimerTaskKey(shard.GetTimerMaxReadLevel(clusterName), 0)
+		return newTimerTaskKey(shard.UpdateTimerMaxReadLevel(clusterName), 0)
 	}
 
 	updateClusterAckLevel := func(ackLevel task.Key) error {
@@ -455,7 +455,7 @@ func newTimerQueueActiveProcessor(
 		NewProcessingQueueState(
 			defaultProcessingQueueLevel,
 			ackLevel,
-			maxTransferReadLevel,
+			maximumTimerTaskKey,
 			NewDomainFilter(nil, true),
 		),
 	}
@@ -514,7 +514,7 @@ func newTimerQueueStandbyProcessor(
 	}
 
 	maxReadLevel := func() task.Key {
-		return newTimerTaskKey(shard.GetTimerMaxReadLevel(clusterName), 0)
+		return newTimerTaskKey(shard.UpdateTimerMaxReadLevel(clusterName), 0)
 	}
 
 	updateClusterAckLevel := func(ackLevel task.Key) error {
@@ -552,7 +552,7 @@ func newTimerQueueStandbyProcessor(
 		NewProcessingQueueState(
 			defaultProcessingQueueLevel,
 			ackLevel,
-			maxTransferReadLevel,
+			maximumTimerTaskKey,
 			NewDomainFilter(nil, true),
 		),
 	}
