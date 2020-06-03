@@ -99,7 +99,6 @@ type (
 		historyEventNotifier      events.Notifier
 		tokenSerializer           common.TaskTokenSerializer
 		executionCache            *execution.Cache
-		metricsScopeCache         cache.MetricsScopeCache
 		metricsClient             metrics.Client
 		logger                    log.Logger
 		throttledLogger           log.Logger
@@ -187,7 +186,6 @@ func NewEngineWithShardContext(
 		timeSource:           shard.GetTimeSource(),
 		historyV2Mgr:         historyV2Manager,
 		executionManager:     executionManager,
-		metricsScopeCache:    cache.NewMetricsScopeCache(),
 		visibilityMgr:        visibilityMgr,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		executionCache:       executionCache,
