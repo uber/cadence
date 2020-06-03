@@ -1541,6 +1541,7 @@ const (
 	CadenceErrNonDeterministicCounter
 	CadenceErrUnauthorizedCounter
 	CadenceErrAuthorizeFailedCounter
+	CadenceErrRemoteSyncMatchFailedCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -1645,6 +1646,7 @@ const (
 	CadenceErrNonDeterministicPerTaskListCounter
 	CadenceErrUnauthorizedPerTaskListCounter
 	CadenceErrAuthorizeFailedPerTaskListCounter
+	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1937,6 +1939,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrNonDeterministicCounter:                   {metricName: "cadence_errors_nondeterministic", metricType: Counter},
 		CadenceErrUnauthorizedCounter:                       {metricName: "cadence_errors_unauthorized", metricType: Counter},
 		CadenceErrAuthorizeFailedCounter:                    {metricName: "cadence_errors_authorize_failed", metricType: Counter},
+		CadenceErrRemoteSyncMatchFailedCounter:              {metricName: "cadence_errors_remote_syncmatch_failed", metricType: Counter},
 		PersistenceRequests:                                 {metricName: "persistence_requests", metricType: Counter},
 		PersistenceFailures:                                 {metricName: "persistence_errors", metricType: Counter},
 		PersistenceLatency:                                  {metricName: "persistence_latency", metricType: Timer},
@@ -2066,6 +2069,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		},
 		CadenceErrAuthorizeFailedPerTaskListCounter: {
 			metricName: "cadence_errors_authorize_failed_per_tl", metricRollupName: "cadence_errors_authorize_failed", metricType: Counter,
+		},
+		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
+			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
 		},
 	},
 	History: {
