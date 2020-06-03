@@ -78,15 +78,15 @@ type (
 
 		// other common resources
 
-		domainCache       cache.DomainCache
-		metricsScopeCache cache.MetricsScopeCache
-		timeSource        clock.TimeSource
-		payloadSerializer persistence.PayloadSerializer
-		metricsClient     metrics.Client
-		messagingClient   messaging.Client
-		blobstoreClient   blobstore.Client
-		archivalMetadata  archiver.ArchivalMetadata
-		archiverProvider  provider.ArchiverProvider
+		domainCache             cache.DomainCache
+		domainMetricsScopeCache cache.DomainMetricsScopeCache
+		timeSource              clock.TimeSource
+		payloadSerializer       persistence.PayloadSerializer
+		metricsClient           metrics.Client
+		messagingClient         messaging.Client
+		blobstoreClient         blobstore.Client
+		archivalMetadata        archiver.ArchivalMetadata
+		archiverProvider        provider.ArchiverProvider
 
 		// membership infos
 
@@ -229,7 +229,7 @@ func New(
 		logger,
 	)
 
-	metricsScopeCache := cache.NewMetricsScopeCache()
+	domainMetricsScopeCache := cache.NewDomainMetricsScopeCache()
 
 	frontendRawClient := clientBean.GetFrontendClient()
 	frontendClient := frontend.NewRetryableClient(
@@ -289,15 +289,15 @@ func New(
 
 		// other common resources
 
-		domainCache:       domainCache,
-		metricsScopeCache: metricsScopeCache,
-		timeSource:        clock.NewRealTimeSource(),
-		payloadSerializer: persistence.NewPayloadSerializer(),
-		metricsClient:     params.MetricsClient,
-		messagingClient:   params.MessagingClient,
-		blobstoreClient:   params.BlobstoreClient,
-		archivalMetadata:  params.ArchivalMetadata,
-		archiverProvider:  params.ArchiverProvider,
+		domainCache:             domainCache,
+		domainMetricsScopeCache: domainMetricsScopeCache,
+		timeSource:              clock.NewRealTimeSource(),
+		payloadSerializer:       persistence.NewPayloadSerializer(),
+		metricsClient:           params.MetricsClient,
+		messagingClient:         params.MessagingClient,
+		blobstoreClient:         params.BlobstoreClient,
+		archivalMetadata:        params.ArchivalMetadata,
+		archiverProvider:        params.ArchiverProvider,
 
 		// membership infos
 
@@ -429,8 +429,8 @@ func (h *Impl) GetDomainCache() cache.DomainCache {
 }
 
 // GetMetricsScopeCache return domain cache
-func (h *Impl) GetMetricsScopeCache() cache.MetricsScopeCache {
-	return h.metricsScopeCache
+func (h *Impl) GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache {
+	return h.domainMetricsScopeCache
 }
 
 // GetTimeSource return time source

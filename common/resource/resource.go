@@ -61,7 +61,7 @@ type (
 		// other common resources
 
 		GetDomainCache() cache.DomainCache
-		GetMetricsScopeCache() cache.MetricsScopeCache
+		GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache
 		GetTimeSource() clock.TimeSource
 		GetPayloadSerializer() persistence.PayloadSerializer
 		GetMetricsClient() metrics.Client

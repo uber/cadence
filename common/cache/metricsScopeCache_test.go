@@ -32,7 +32,7 @@ import (
 )
 
 func TestGetMetricsScope(t *testing.T) {
-	metricsCache := NewMetricsScopeCache()
+	metricsCache := NewDomainMetricsScopeCache()
 	var found bool
 
 	tests := []struct {
@@ -69,7 +69,7 @@ func TestGetMetricsScope(t *testing.T) {
 }
 
 func TestConcurrentMetricsScopeAccess(t *testing.T) {
-	metricsCache := NewMetricsScopeCache()
+	domainMetricsScopeCache := NewDomainMetricsScopeCache()
 
 	ch := make(chan struct{})
 	var wg sync.WaitGroup
@@ -84,8 +84,8 @@ func TestConcurrentMetricsScopeAccess(t *testing.T) {
 
 			<-ch
 
-			metricsCache.Get("test_domain", scopeIdx)
-			metricsCache.Put("test_domain", scopeIdx, metrics.NoopScope(metrics.ServiceIdx(scopeIdx)))
+			domainMetricsScopeCache.Get("test_domain", scopeIdx)
+			domainMetricsScopeCache.Put("test_domain", scopeIdx, metrics.NoopScope(metrics.ServiceIdx(scopeIdx)))
 		}(i)
 	}
 
@@ -93,7 +93,7 @@ func TestConcurrentMetricsScopeAccess(t *testing.T) {
 	wg.Wait()
 
 	for i := 0; i < 1000; i++ {
-		metricsScope, found = metricsCache.Get("test_domain", i)
+		metricsScope, found = domainMetricsScopeCache.Get("test_domain", i)
 		testMetricsScope = metrics.NoopScope(metrics.ServiceIdx(i))
 
 		assert.Equal(t, true, found)

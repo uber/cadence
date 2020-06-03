@@ -64,14 +64,14 @@ type (
 
 		// other common resources
 
-		DomainCache       *cache.MockDomainCache
-		MetricsScopeCache cache.MetricsScopeCache
-		TimeSource        clock.TimeSource
-		PayloadSerializer persistence.PayloadSerializer
-		MetricsClient     metrics.Client
-		ArchivalMetadata  *archiver.MockArchivalMetadata
-		ArchiverProvider  *provider.MockArchiverProvider
-		BlobstoreClient   *blobstore.MockClient
+		DomainCache             *cache.MockDomainCache
+		DomainMetricsScopeCache cache.DomainMetricsScopeCache
+		TimeSource              clock.TimeSource
+		PayloadSerializer       persistence.PayloadSerializer
+		MetricsClient           metrics.Client
+		ArchivalMetadata        *archiver.MockArchivalMetadata
+		ArchiverProvider        *provider.MockArchiverProvider
+		BlobstoreClient         *blobstore.MockClient
 
 		// membership infos
 
@@ -176,14 +176,14 @@ func NewTest(
 
 		// other common resources
 
-		DomainCache:       cache.NewMockDomainCache(controller),
-		MetricsScopeCache: cache.NewMetricsScopeCache(),
-		TimeSource:        clock.NewRealTimeSource(),
-		PayloadSerializer: persistence.NewPayloadSerializer(),
-		MetricsClient:     metrics.NewClient(scope, serviceMetricsIndex),
-		ArchivalMetadata:  &archiver.MockArchivalMetadata{},
-		ArchiverProvider:  &provider.MockArchiverProvider{},
-		BlobstoreClient:   &blobstore.MockClient{},
+		DomainCache:             cache.NewMockDomainCache(controller),
+		DomainMetricsScopeCache: cache.NewDomainMetricsScopeCache(),
+		TimeSource:              clock.NewRealTimeSource(),
+		PayloadSerializer:       persistence.NewPayloadSerializer(),
+		MetricsClient:           metrics.NewClient(scope, serviceMetricsIndex),
+		ArchivalMetadata:        &archiver.MockArchivalMetadata{},
+		ArchiverProvider:        &provider.MockArchiverProvider{},
+		BlobstoreClient:         &blobstore.MockClient{},
 
 		// membership infos
 
@@ -259,9 +259,9 @@ func (s *Test) GetDomainCache() cache.DomainCache {
 	return s.DomainCache
 }
 
-// GetMetricsScopeCache for testing
-func (s *Test) GetMetricsScopeCache() cache.MetricsScopeCache {
-	return s.MetricsScopeCache
+// GetDomainMetricsScopeCache for testing
+func (s *Test) GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache {
+	return s.DomainMetricsScopeCache
 }
 
 // GetTimeSource for testing

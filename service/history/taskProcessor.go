@@ -60,16 +60,16 @@ type (
 	}
 
 	taskProcessor struct {
-		shard             shard.Context
-		shutdownCh        chan struct{}
-		tasksCh           chan *taskInfo
-		config            *config.Config
-		logger            log.Logger
-		metricsClient     metrics.Client
-		timeSource        clock.TimeSource
-		retryPolicy       backoff.RetryPolicy
-		workerWG          sync.WaitGroup
-		metricsScopeCache cache.MetricsScopeCache
+		shard                   shard.Context
+		shutdownCh              chan struct{}
+		tasksCh                 chan *taskInfo
+		config                  *config.Config
+		logger                  log.Logger
+		metricsClient           metrics.Client
+		timeSource              clock.TimeSource
+		retryPolicy             backoff.RetryPolicy
+		workerWG                sync.WaitGroup
+		domainMetricsScopeCache cache.DomainMetricsScopeCache
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -112,7 +112,7 @@ func newTaskProcessor(
 		config:                  shard.GetConfig(),
 		logger:                  logger,
 		metricsClient:           shard.GetMetricsClient(),
-		metricsScopeCache:       shard.GetService().GetMetricsScopeCache(),
+		domainMetricsScopeCache: shard.GetService().GetDomainMetricsScopeCache(),
 		timeSource:              shard.GetTimeSource(),
 		workerNotificationChans: workerNotificationChans,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
@@ -254,13 +254,13 @@ func (t *taskProcessor) processTaskOnce(
 	domainID := task.task.GetDomainID()
 
 	scopeIdx, err = task.processor.process(task)
-	scope, found := t.metricsScopeCache.Get(domainID, scopeIdx)
+	scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
 	startTime := t.timeSource.Now()
 
 	if !found {
 		scope = t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
-		t.metricsScopeCache.Put(domainID, scopeIdx, scope)
+		t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
 	}
 
 	if task.shouldProcessTask {

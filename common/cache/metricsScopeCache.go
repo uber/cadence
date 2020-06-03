@@ -23,40 +23,50 @@
 package cache
 
 import (
+	"bytes"
 	"strconv"
 	"sync"
 
 	"github.com/uber/cadence/common/metrics"
 )
 
-type metricsScopeCache struct {
+type domainMetricsScopeCache struct {
 	sync.RWMutex
 	scopeMap map[string]metrics.Scope
 }
 
 // NewMetricsScopeCache constructs a new metricsScopeCache
-func NewMetricsScopeCache() MetricsScopeCache {
-	return &metricsScopeCache{
+func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
+	return &domainMetricsScopeCache{
 		scopeMap: make(map[string]metrics.Scope),
 	}
 }
 
-// Get retrieves scope using domainID and scopeIdx from scopeMap
-func (mc *metricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
-	mc.RLock()
-	defer mc.RUnlock()
+// Get retrieves scope for domainID and scopeIdx
+func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
+	c.RLock()
+	defer c.RUnlock()
 
-	key := domainID + "_" + strconv.Itoa(scopeIdx)
+	var buffer bytes.Buffer
+	buffer.WriteString(domainID)
+	buffer.WriteString("_")
+	buffer.WriteString(strconv.Itoa(scopeIdx))
+	key := buffer.String()
 
-	metricsScope, found := mc.scopeMap[key]
-	return metricsScope, found
+	metricsScope, ok := c.scopeMap[key]
+	return metricsScope, ok
 }
 
-// Put puts map of domainID and scopeIdx in the metricsCache scopeMap
-func (mc *metricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
-	mc.Lock()
-	defer mc.Unlock()
+// Put puts map of domainID and scopeIdx to metricsScope
+func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
+	c.Lock()
+	defer c.Unlock()
 
-	key := domainID + "_" + strconv.Itoa(scopeIdx)
-	mc.scopeMap[key] = scope
+	var buffer bytes.Buffer
+	buffer.WriteString(domainID)
+	buffer.WriteString("_")
+	buffer.WriteString(strconv.Itoa(scopeIdx))
+	key := buffer.String()
+
+	c.scopeMap[key] = scope
 }
