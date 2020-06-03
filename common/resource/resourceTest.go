@@ -65,6 +65,7 @@ type (
 		// other common resources
 
 		DomainCache       *cache.MockDomainCache
+		MetricsScopeCache cache.MetricsScopeCache
 		TimeSource        clock.TimeSource
 		PayloadSerializer persistence.PayloadSerializer
 		MetricsClient     metrics.Client
@@ -176,6 +177,7 @@ func NewTest(
 		// other common resources
 
 		DomainCache:       cache.NewMockDomainCache(controller),
+		MetricsScopeCache: cache.NewMetricsScopeCache(),
 		TimeSource:        clock.NewRealTimeSource(),
 		PayloadSerializer: persistence.NewPayloadSerializer(),
 		MetricsClient:     metrics.NewClient(scope, serviceMetricsIndex),
@@ -255,6 +257,11 @@ func (s *Test) GetClusterMetadata() cluster.Metadata {
 // GetDomainCache for testing
 func (s *Test) GetDomainCache() cache.DomainCache {
 	return s.DomainCache
+}
+
+// GetMetricsScopeCache for testing
+func (s *Test) GetMetricsScopeCache() cache.DomainCache {
+	return s.MetricsScopeCache
 }
 
 // GetTimeSource for testing
