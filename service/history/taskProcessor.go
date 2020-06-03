@@ -256,12 +256,12 @@ func (t *taskProcessor) processTaskOnce(
 	scopeIdx, err = task.processor.process(task)
 	scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
-	startTime := t.timeSource.Now()
-
 	if !found {
 		scope = t.metricsClient.Scope(scopeIdx).Tagged(t.getDomainTagByID(domainID))
 		t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
 	}
+
+	startTime := t.timeSource.Now()
 
 	if task.shouldProcessTask {
 		scope.IncCounter(metrics.TaskRequests)
