@@ -35,7 +35,7 @@ type domainMetricsScopeCache struct {
 	scopeMap map[string]metrics.Scope
 }
 
-// NewMetricsScopeCache constructs a new metricsScopeCache
+// NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
 func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
 	return &domainMetricsScopeCache{
 		scopeMap: make(map[string]metrics.Scope),

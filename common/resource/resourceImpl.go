@@ -428,7 +428,7 @@ func (h *Impl) GetDomainCache() cache.DomainCache {
 	return h.domainCache
 }
 
-// GetMetricsScopeCache return domain cache
+// GetDomainMetricsScopeCache return domainMetricsScope cache
 func (h *Impl) GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache {
 	return h.domainMetricsScopeCache
 }
