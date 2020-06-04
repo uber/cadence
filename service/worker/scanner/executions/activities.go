@@ -65,7 +65,8 @@ type (
 
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
 	ScannerEmitMetricsActivityParams struct {
-		ShardStatusResult     ShardStatusResult
+		ShardSuccessCount int
+		ShardControlFlowFailureCount int
 		AggregateReportResult AggregateScanReportResult
 	}
 
@@ -81,9 +82,11 @@ type (
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
 	}
 
+	// FixerCorruptedKeysActivityResult is the result of FixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityResult struct {
 		CorruptedKeys []CorruptedKeysEntry
-		Shards        []int
+		MinShard      int
+		MaxShard      int
 	}
 
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
@@ -99,18 +102,8 @@ func ScannerEmitMetricsActivity(
 	params ScannerEmitMetricsActivityParams,
 ) error {
 	scope := activityCtx.Value(ScannerContextKey).(ScannerContext).Scope.Tagged(metrics.ActivityTypeTag(ScannerEmitMetricsActivityName))
-	shardSuccess := 0
-	shardControlFlowFailure := 0
-	for _, v := range params.ShardStatusResult {
-		switch v {
-		case ShardStatusSuccess:
-			shardSuccess++
-		case ShardStatusControlFlowFailure:
-			shardControlFlowFailure++
-		}
-	}
-	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(shardSuccess))
-	scope.UpdateGauge(metrics.CadenceShardFailureGauge, float64(shardControlFlowFailure))
+	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(params.ShardSuccessCount))
+	scope.UpdateGauge(metrics.CadenceShardFailureGauge, float64(params.ShardControlFlowFailureCount))
 
 	agg := params.AggregateReportResult
 	scope.UpdateGauge(metrics.ScannerExecutionsGauge, float64(agg.ExecutionsCount))
@@ -199,6 +192,8 @@ func ScannerConfigActivity(
 // FixerCorruptedKeysActivity will check that provided scanner workflow is closed
 // get corrupt keys from it, and flatten these keys into a list. If provided scanner
 // workflow is not closed or query fails then error will be returned.
+
+// TODO: this will need to be reworked a lot
 func FixerCorruptedKeysActivity(
 	activityCtx context.Context,
 	params FixerCorruptedKeysActivityParams,
@@ -236,17 +231,14 @@ func FixerCorruptedKeysActivity(
 		return nil, err
 	}
 	var corrupted []CorruptedKeysEntry
-	var shards []int
 	for k, v := range corruptedKeys {
 		corrupted = append(corrupted, CorruptedKeysEntry{
 			ShardID:       k,
 			CorruptedKeys: v,
 		})
-		shards = append(shards, k)
 	}
 	return &FixerCorruptedKeysActivityResult{
 		CorruptedKeys: corrupted,
-		Shards:        shards,
 	}, nil
 }
 

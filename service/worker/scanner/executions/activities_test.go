@@ -174,9 +174,6 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	s.NoError(err)
 	fixerResult := &FixerCorruptedKeysActivityResult{}
 	s.NoError(fixerResultValue.Get(&fixerResult))
-	s.Contains(fixerResult.Shards, 1)
-	s.Contains(fixerResult.Shards, 2)
-	s.Contains(fixerResult.Shards, 3)
 	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
 		ShardID: 1,
 		CorruptedKeys: c.Keys{
