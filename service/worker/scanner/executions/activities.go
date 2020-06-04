@@ -214,6 +214,7 @@ func ScannerConfigActivity(
 		Concurrency:             dc.Concurrency(),
 		ExecutionsPageSize:      dc.ExecutionsPageSize(),
 		BlobstoreFlushThreshold: dc.BlobstoreFlushThreshold(),
+		ActivityBatchSize:       dc.ActivityBatchSize(),
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: dc.DynamicConfigInvariantCollections.InvariantCollectionMutableState(),
 			InvariantCollectionHistory:      dc.DynamicConfigInvariantCollections.InvariantCollectionHistory(),
@@ -234,6 +235,9 @@ func ScannerConfigActivity(
 	}
 	if overwrites.InvariantCollections != nil {
 		result.InvariantCollections = *overwrites.InvariantCollections
+	}
+	if overwrites.ActivityBatchSize != nil {
+		result.ActivityBatchSize = *overwrites.ActivityBatchSize
 	}
 	return result, nil
 }

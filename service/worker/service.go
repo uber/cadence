@@ -138,6 +138,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 				Concurrency:             dc.GetIntProperty(dynamicconfig.ExecutionsScannerConcurrency, 25),
 				ExecutionsPageSize:      dc.GetIntProperty(dynamicconfig.ExecutionsScannerPersistencePageSize, 1000),
 				BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ExecutionsScannerBlobstoreFlushThreshold, 100),
+				ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.ExecutionsScannerActivityBatchSize, 200),
 				DynamicConfigInvariantCollections: executions.DynamicConfigInvariantCollections{
 					InvariantCollectionMutableState: dc.GetBoolProperty(dynamicconfig.ExecutionsScannerInvariantCollectionMutableState, false),
 					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.ExecutionsScannerInvariantCollectionHistory, false),

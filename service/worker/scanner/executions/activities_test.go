@@ -74,6 +74,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				ExecutionsPageSize:      dynamicconfig.GetIntPropertyFn(100),
+				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(10),
 				BlobstoreFlushThreshold: dynamicconfig.GetIntPropertyFn(1000),
 				DynamicConfigInvariantCollections: DynamicConfigInvariantCollections{
 					InvariantCollectionMutableState: dynamicconfig.GetBoolPropertyFn(true),
@@ -86,6 +87,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			resolved: ResolvedScannerWorkflowConfig{
 				Enabled:                 true,
 				Concurrency:             10,
+				ActivityBatchSize:       10,
 				ExecutionsPageSize:      100,
 				BlobstoreFlushThreshold: 1000,
 				InvariantCollections: InvariantCollections{
@@ -98,6 +100,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			scannerWorkflowDynamicConfig: &ScannerWorkflowDynamicConfig{
 				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
+				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(100),
 				ExecutionsPageSize:      dynamicconfig.GetIntPropertyFn(100),
 				BlobstoreFlushThreshold: dynamicconfig.GetIntPropertyFn(1000),
 				DynamicConfigInvariantCollections: DynamicConfigInvariantCollections{
@@ -107,7 +110,8 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			params: ScannerConfigActivityParams{
 				Overwrites: ScannerWorkflowConfigOverwrites{
-					Enabled: common.BoolPtr(false),
+					Enabled:           common.BoolPtr(false),
+					ActivityBatchSize: common.IntPtr(1),
 					InvariantCollections: &InvariantCollections{
 						InvariantCollectionMutableState: false,
 						InvariantCollectionHistory:      true,
@@ -117,6 +121,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			resolved: ResolvedScannerWorkflowConfig{
 				Enabled:                 false,
 				Concurrency:             10,
+				ActivityBatchSize:       1,
 				ExecutionsPageSize:      100,
 				BlobstoreFlushThreshold: 1000,
 				InvariantCollections: InvariantCollections{

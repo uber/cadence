@@ -74,6 +74,7 @@ func (s *workflowsSuite) TestResolveFixerConfig() {
 	s.Equal(ResolvedFixerWorkflowConfig{
 		Concurrency:             1000,
 		BlobstoreFlushThreshold: 1000,
+		ActivityBatchSize:       activityBatchSize,
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: true,
 			InvariantCollectionHistory:      true,
@@ -134,54 +135,54 @@ func (s *workflowsSuite) TestValidateShards() {
 }
 
 func (s *workflowsSuite) TestGetBatchIndices() {
-	testCases := []struct{
-		batchSize int
+	testCases := []struct {
+		batchSize   int
 		concurrency int
 		sliceLength int
-		workerIdx int
-		batches [][]int
+		workerIdx   int
+		batches     [][]int
 	}{
 		{
-			batchSize: 1,
+			batchSize:   1,
 			concurrency: 1,
 			sliceLength: 20,
-			workerIdx: 0,
-			batches: [][]int{{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}},
+			workerIdx:   0,
+			batches:     [][]int{{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}},
 		},
 		{
-			batchSize: 2,
+			batchSize:   2,
 			concurrency: 1,
 			sliceLength: 20,
-			workerIdx: 0,
-			batches: [][]int{{0, 1}, {2, 3}, {4, 5}, {6, 7}, {8, 9}, {10, 11}, {12, 13}, {14, 15}, {16, 17}, {18, 19}},
+			workerIdx:   0,
+			batches:     [][]int{{0, 1}, {2, 3}, {4, 5}, {6, 7}, {8, 9}, {10, 11}, {12, 13}, {14, 15}, {16, 17}, {18, 19}},
 		},
 		{
-			batchSize: 7,
+			batchSize:   7,
 			concurrency: 1,
 			sliceLength: 20,
-			workerIdx: 0,
-			batches: [][]int{{0, 1, 2, 3, 4, 5, 6}, {7, 8, 9, 10, 11, 12, 13}, {14, 15, 16, 17, 18, 19}},
+			workerIdx:   0,
+			batches:     [][]int{{0, 1, 2, 3, 4, 5, 6}, {7, 8, 9, 10, 11, 12, 13}, {14, 15, 16, 17, 18, 19}},
 		},
 		{
-			batchSize: 5,
+			batchSize:   5,
 			concurrency: 3,
 			sliceLength: 20,
-			workerIdx: 0,
-			batches: [][]int{{0, 3, 6, 9, 12}, {15, 18}},
+			workerIdx:   0,
+			batches:     [][]int{{0, 3, 6, 9, 12}, {15, 18}},
 		},
 		{
-			batchSize: 5,
+			batchSize:   5,
 			concurrency: 3,
 			sliceLength: 20,
-			workerIdx: 1,
-			batches: [][]int{{1, 4, 7, 10, 13}, {16, 19}},
+			workerIdx:   1,
+			batches:     [][]int{{1, 4, 7, 10, 13}, {16, 19}},
 		},
 		{
-			batchSize: 5,
+			batchSize:   5,
 			concurrency: 3,
 			sliceLength: 20,
-			workerIdx: 2,
-			batches: [][]int{{2, 5, 8, 11, 14}, {17}},
+			workerIdx:   2,
+			batches:     [][]int{{2, 5, 8, 11, 14}, {17}},
 		},
 	}
 
