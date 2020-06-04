@@ -343,9 +343,6 @@ func FixerWorkflow(
 
 /**
 Tasks:
-- Go through all activities
-- Fix activity which queries scanner from fixer workflow
-- Ensure no activities accept parameters that are large or return large results
 - Update workflow to consume the activity changes
 - Ensure all tests pass
 - Do batching of shards in scanner to reduce history length

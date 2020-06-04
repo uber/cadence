@@ -63,7 +63,7 @@ type (
 
 	// ScanShardActivityParams is the parameter for ScanShardActivity
 	ScanShardActivityParams struct {
-		ShardID                 int
+		Shards                  []int
 		ExecutionsPageSize      int
 		BlobstoreFlushThreshold int
 		InvariantCollections    InvariantCollections
@@ -85,7 +85,7 @@ type (
 
 	// FixShardActivityParams is the parameter for FixShardActivity
 	FixShardActivityParams struct {
-		CorruptedKeysEntry          CorruptedKeysEntry
+		CorruptedKeysEntries        []CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
 	}
 
@@ -101,6 +101,18 @@ type (
 	CorruptedKeysEntry struct {
 		ShardID       int
 		CorruptedKeys common.Keys
+	}
+
+	// ScanShardHeartbeatDetails is the heartbeat details for scan shard
+	ScanShardHeartbeatDetails struct {
+		LastShardIndexHandled int
+		Reports               []*common.ShardScanReport
+	}
+
+	// FixShardHeartbeatDetails is the heartbeat details for the fix shard
+	FixShardHeartbeatDetails struct {
+		LastShardIndexHandled int
+		Reports               []*common.ShardFixReport
 	}
 )
 
@@ -124,17 +136,46 @@ func ScannerEmitMetricsActivity(
 	return nil
 }
 
-// ScanShardActivity will scan all executions in a shard and check for invariant violations.
+// ScanShardActivity will scan a collection of shards for invariant violations.
 func ScanShardActivity(
 	activityCtx context.Context,
 	params ScanShardActivityParams,
+) ([]*common.ShardScanReport, error) {
+	heartbeatDetails := ScanShardHeartbeatDetails{
+		LastShardIndexHandled: -1,
+		Reports:               nil,
+	}
+	if activity.HasHeartbeatDetails(activityCtx) {
+		if err := activity.GetHeartbeatDetails(activityCtx, &heartbeatDetails); err != nil {
+			return nil, err
+		}
+	}
+	for i := heartbeatDetails.LastShardIndexHandled + 1; i < len(params.Shards); i++ {
+		currentShardID := params.Shards[i]
+		shardReport, err := scanShard(activityCtx, params, currentShardID, heartbeatDetails)
+		if err != nil {
+			return nil, err
+		}
+		heartbeatDetails = ScanShardHeartbeatDetails{
+			LastShardIndexHandled: i,
+			Reports:               append(heartbeatDetails.Reports, shardReport),
+		}
+	}
+	return heartbeatDetails.Reports, nil
+}
+
+func scanShard(
+	activityCtx context.Context,
+	params ScanShardActivityParams,
+	shardID int,
+	heartbeatDetails ScanShardHeartbeatDetails,
 ) (*common.ShardScanReport, error) {
 	ctx := activityCtx.Value(ScannerContextKey).(ScannerContext)
 	resources := ctx.Resource
 	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(ScannerScanShardActivityName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer sw.Stop()
-	execManager, err := resources.GetExecutionManager(params.ShardID)
+	execManager, err := resources.GetExecutionManager(shardID)
 	if err != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 		return nil, err
@@ -148,13 +189,13 @@ func ScanShardActivity(
 	}
 	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
 	scanner := shard.NewScanner(
-		params.ShardID,
+		shardID,
 		pr,
 		params.ExecutionsPageSize,
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
 		collections,
-		func() { activity.RecordHeartbeat(activityCtx) })
+		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) })
 	report := scanner.Scan()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
@@ -268,18 +309,48 @@ func FixerCorruptedKeysActivity(
 	}, nil
 }
 
-// FixShardActivity will fetch blobs of corrupted executions from scan workflow.
-// It will then iterate over all corrupted executions and run fix on them.
+// FixShardActivity will fix a collection of shards.
 func FixShardActivity(
 	activityCtx context.Context,
 	params FixShardActivityParams,
+) ([]*common.ShardFixReport, error) {
+	heartbeatDetails := FixShardHeartbeatDetails{
+		LastShardIndexHandled: -1,
+		Reports:               nil,
+	}
+	if activity.HasHeartbeatDetails(activityCtx) {
+		if err := activity.GetHeartbeatDetails(activityCtx, &heartbeatDetails); err != nil {
+			return nil, err
+		}
+	}
+	for i := heartbeatDetails.LastShardIndexHandled + 1; i < len(params.CorruptedKeysEntries); i++ {
+		currentShardID := params.CorruptedKeysEntries[i].ShardID
+		currentKeys := params.CorruptedKeysEntries[i].CorruptedKeys
+		shardReport, err := fixShard(activityCtx, params, currentShardID, currentKeys, heartbeatDetails)
+		if err != nil {
+			return nil, err
+		}
+		heartbeatDetails = FixShardHeartbeatDetails{
+			LastShardIndexHandled: i,
+			Reports:               append(heartbeatDetails.Reports, shardReport),
+		}
+	}
+	return heartbeatDetails.Reports, nil
+}
+
+func fixShard(
+	activityCtx context.Context,
+	params FixShardActivityParams,
+	shardID int,
+	corruptedKeys common.Keys,
+	heartbeatDetails FixShardHeartbeatDetails,
 ) (*common.ShardFixReport, error) {
 	ctx := activityCtx.Value(FixerContextKey).(FixerContext)
 	resources := ctx.Resource
 	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(FixerFixShardActivityName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer sw.Stop()
-	execManager, err := resources.GetExecutionManager(params.CorruptedKeysEntry.ShardID)
+	execManager, err := resources.GetExecutionManager(shardID)
 	if err != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 		return nil, err
@@ -293,13 +364,13 @@ func FixShardActivity(
 	}
 	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
 	fixer := shard.NewFixer(
-		params.CorruptedKeysEntry.ShardID,
+		shardID,
 		pr,
 		resources.GetBlobstoreClient(),
-		params.CorruptedKeysEntry.CorruptedKeys,
+		corruptedKeys,
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		collections,
-		func() { activity.RecordHeartbeat(activityCtx) })
+		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) })
 	report := fixer.Fix()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
