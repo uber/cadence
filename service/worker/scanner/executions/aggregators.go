@@ -52,13 +52,13 @@ type (
 )
 
 func newShardFixResultAggregator(
-	shards []int,
+	corruptKeys []CorruptedKeysEntry,
 	minShard int,
 	maxShard int,
 ) *shardFixResultAggregator {
 	status := make(map[int]ShardStatus)
-	for _, s := range shards {
-		status[s] = ShardStatusRunning
+	for _, s := range corruptKeys {
+		status[s.ShardID] = ShardStatusRunning
 	}
 	return &shardFixResultAggregator{
 		minShard: minShard,

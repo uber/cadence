@@ -92,11 +92,11 @@ func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerW
 func getShortActivityContext(ctx workflow.Context) workflow.Context {
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Minute,
+		StartToCloseTimeout:    5 * time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       1.7,
-			ExpirationInterval:       5 * time.Minute,
+			ExpirationInterval:       10 * time.Minute,
 			NonRetriableErrorReasons: []string{ErrScanWorkflowNotClosed, ErrSerialization},
 		},
 	}
@@ -123,4 +123,67 @@ func shardInBounds(minShardID, maxShardID, shardID int) error {
 		return fmt.Errorf("requested shard %v is outside of bounds (min: %v and max: %v)", shardID, minShardID, maxShardID)
 	}
 	return nil
+}
+
+func getShardBatches(
+	batchSize int,
+	concurrency int,
+	shards []int,
+	workerIdx int,
+) [][]int {
+	batchIndices := getBatchIndices(batchSize, concurrency, len(shards), workerIdx)
+	var result [][]int
+	for _, batch := range batchIndices {
+		var curr []int
+		for _, i := range batch {
+			curr = append(curr, shards[i])
+		}
+		result = append(result, curr)
+	}
+	return result
+}
+
+func getCorruptedKeysBatches(
+	batchSize int,
+	concurrency int,
+	corruptedKeys []CorruptedKeysEntry,
+	workerIdx int,
+) [][]CorruptedKeysEntry {
+	batchIndices := getBatchIndices(batchSize, concurrency, len(corruptedKeys), workerIdx)
+	var result [][]CorruptedKeysEntry
+	for _, batch := range batchIndices {
+		var curr []CorruptedKeysEntry
+		for _, i := range batch {
+			curr = append(curr, corruptedKeys[i])
+		}
+		result = append(result, curr)
+	}
+	return result
+}
+
+func getBatchIndices(
+	batchSize int,
+	concurrency int,
+	sliceLength int,
+	workerIdx int,
+) [][]int {
+	var batches [][]int
+	var currBatch []int
+	for i := 0; i < sliceLength; i++ {
+		if i%concurrency == workerIdx {
+			currBatch = append(currBatch, i)
+			if len(currBatch) == batchSize {
+				copyCurrBatch := make([]int, batchSize, batchSize)
+				copy(copyCurrBatch, currBatch)
+				batches = append(batches, copyCurrBatch)
+				currBatch = nil
+			}
+		}
+	}
+	if len(currBatch) > 0 {
+		copyCurrBatch := make([]int, len(currBatch), len(currBatch))
+		copy(copyCurrBatch, currBatch)
+		batches = append(batches, copyCurrBatch)
+	}
+	return batches
 }

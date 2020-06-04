@@ -58,7 +58,7 @@ const (
 	fixShardReportChan  = "fixShardReportChan"
 
 	maxShardQueryResult = 1000
-	activityBatchSize = 10
+	activityBatchSize = 200
 )
 
 type (
@@ -86,7 +86,8 @@ type (
 
 	// FixerWorkflowParams are the parameters to the fix workflow
 	FixerWorkflowParams struct {
-		FixerCorruptedKeysActivityParams FixerCorruptedKeysActivityParams
+		ScannerWorkflowWorkflowID string
+		ScannerWorkflowRunID      string
 		FixerWorkflowConfigOverwrites    FixerWorkflowConfigOverwrites
 	}
 
@@ -217,54 +218,28 @@ func ScannerWorkflow(
 	for i := 0; i < resolvedConfig.Concurrency; i++ {
 		idx := i
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			var batches [][]int
-			currBatch := make([]int, activityBatchSize, activityBatchSize)
-			for _, shard := range shards {
-				if shard%resolvedConfig.Concurrency == idx {
-					currBatch = append(currBatch, shard)
-					if len(currBatch) == activityBatchSize {
-						copyCurrBatch := make([]int, activityBatchSize, activityBatchSize)
-						copy(copyCurrBatch, currBatch)
-						batches = append(batches, copyCurrBatch)
-						currBatch = make([]int, activityBatchSize, activityBatchSize)
-					}
+			batches := getShardBatches(activityBatchSize, resolvedConfig.Concurrency, shards, idx)
+			for _, batch := range batches {
+				activityCtx = getLongActivityContext(ctx)
+				var reports []*common.ShardScanReport
+				if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
+					Shards:                 batch,
+					ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
+					BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
+					InvariantCollections:    resolvedConfig.InvariantCollections,
+				}).Get(ctx, &reports); err != nil {
+					errStr := err.Error()
+					shardReportChan.Send(ctx, ScanReportError{
+						Report:   nil,
+						ErrorStr: &errStr,
+					})
+					return
 				}
-			}
-			if len(currBatch) > 0 {
-				copyCurrBatch := make([]int, activityBatchSize, activityBatchSize)
-				copy(copyCurrBatch, currBatch)
-				batches = append(batches, copyCurrBatch)
-			}
-
-
-
-
-
-			for _, shard := range shards {
-				if shard%resolvedConfig.Concurrency == idx {
-					batch = append(batch, shard)
-					if len(batch) == activityBatchSize {
-						activityCtx = getLongActivityContext(ctx)
-						report := &common.ShardScanReport{}
-						if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
-							Shards:                 batch,
-							ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
-							BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
-							InvariantCollections:    resolvedConfig.InvariantCollections,
-						}).Get(ctx, &report); err != nil {
-							errStr := err.Error()
-							shardReportChan.Send(ctx, ScanReportError{
-								Report:   nil,
-								ErrorStr: &errStr,
-							})
-							return
-						}
-						shardReportChan.Send(ctx, ScanReportError{
-							Report:   report,
-							ErrorStr: nil,
-						})
-						batch = nil
-					}
+				for _, report := range reports {
+					shardReportChan.Send(ctx, ScanReportError{
+						Report:   report,
+						ErrorStr: nil,
+					})
 				}
 			}
 		})
@@ -320,33 +295,36 @@ func FixerWorkflow(
 	}); err != nil {
 		return err
 	}
-	activityCtx := getShortActivityContext(ctx)
-	corruptedKeysResult := &FixerCorruptedKeysActivityResult{}
-	if err := workflow.ExecuteActivity(
-		activityCtx, FixerCorruptedKeysActivityName, params.FixerCorruptedKeysActivityParams).Get(ctx, &corruptedKeysResult); err != nil {
-		return err
-	}
 
 	resolvedConfig := resolveFixerConfig(params.FixerWorkflowConfigOverwrites)
 	shardReportChan := workflow.GetSignalChannel(ctx, fixShardReportChan)
+	minShardID, maxShardID, corruptKeys, err := getCorruptedKeys(ctx, params)
+	if err != nil {
+		return err
+	}
+	if len(corruptKeys) == 0 {
+		return nil
+	}
+
 	for i := 0; i < resolvedConfig.Concurrency; i++ {
 		idx := i
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			for j, corrupted := range corruptedKeysResult.CorruptedKeys {
-				if j%resolvedConfig.Concurrency == idx {
-					activityCtx = getLongActivityContext(ctx)
-					report := &common.ShardFixReport{}
-					if err := workflow.ExecuteActivity(activityCtx, FixerFixShardActivityName, FixShardActivityParams{
-						CorruptedKeysEntry:          corrupted,
-						ResolvedFixerWorkflowConfig: resolvedConfig,
-					}).Get(ctx, &report); err != nil {
-						errStr := err.Error()
-						shardReportChan.Send(ctx, FixReportError{
-							Report:   nil,
-							ErrorStr: &errStr,
-						})
-						return
-					}
+			batches := getCorruptedKeysBatches(activityBatchSize, resolvedConfig.Concurrency, corruptKeys, idx)
+			for _, batch := range batches {
+				activityCtx := getLongActivityContext(ctx)
+				var reports []*common.ShardFixReport
+				if err := workflow.ExecuteActivity(activityCtx, FixerFixShardActivityName, FixShardActivityParams{
+					CorruptedKeysEntries: batch,
+					ResolvedFixerWorkflowConfig: resolvedConfig,
+				}).Get(ctx, &reports); err != nil {
+					errStr := err.Error()
+					shardReportChan.Send(ctx, FixReportError{
+						Report:   nil,
+						ErrorStr: &errStr,
+					})
+					return
+				}
+				for _, report := range reports {
 					shardReportChan.Send(ctx, FixReportError{
 						Report:   report,
 						ErrorStr: nil,
@@ -356,26 +334,54 @@ func FixerWorkflow(
 		})
 	}
 
-	//aggregator = newShardFixResultAggregator(corruptedKeysResult.Shards)
-	//for i := 0; i < len(corruptedKeysResult.CorruptedKeys); i++ {
-	//	var reportErr FixReportError
-	//	shardReportChan.Receive(ctx, &reportErr)
-	//	if reportErr.ErrorStr != nil {
-	//		return errors.New(*reportErr.ErrorStr)
-	//	}
-	//	aggregator.addReport(*reportErr.Report)
-	//}
-	//return nil
+	aggregator = newShardFixResultAggregator(corruptKeys, *minShardID, *maxShardID)
+	for i := 0; i < len(corruptKeys); i++ {
+		var reportErr FixReportError
+		shardReportChan.Receive(ctx, &reportErr)
+		if reportErr.ErrorStr != nil {
+			return errors.New(*reportErr.ErrorStr)
+		}
+		aggregator.addReport(*reportErr.Report)
+	}
 	return nil
 }
 
-/**
-Tasks
-1. Move out methods to get batches for both scanner and fixer into utility
-2. Write unit tests for these utility functions
-3. In Scanner and Fixer just call util.GetBatches(), then iterate over batches and call activity for each batch
-4. If activity returns an error then send an error on channel
-5. If activity does not return an error then iterate over the results and for each result send on the channel
-6. Fix unit tests for workflow
-7. Review all code and post diff
- */
+// TODO: write unit tests for this
+func getCorruptedKeys(
+	ctx workflow.Context,
+	params FixerWorkflowParams,
+) (*int, *int, []CorruptedKeysEntry, error) {
+	fixerCorruptedKeysActivityParams := FixerCorruptedKeysActivityParams{
+		ScannerWorkflowWorkflowID: params.ScannerWorkflowWorkflowID,
+		ScannerWorkflowRunID: params.ScannerWorkflowWorkflowID,
+		StartingShardID: nil,
+	}
+	var minShardID *int
+	var maxShardID *int
+	var corruptKeys []CorruptedKeysEntry
+	for {
+		corruptedKeysResult := &FixerCorruptedKeysActivityResult{}
+		activityCtx := getShortActivityContext(ctx)
+		if err := workflow.ExecuteActivity(
+			activityCtx,
+			FixerCorruptedKeysActivityName,
+			fixerCorruptedKeysActivityParams).Get(ctx, &corruptedKeysResult); err != nil {
+			return nil, nil, nil, err
+		}
+		if len(corruptedKeysResult.CorruptedKeys) == 0 {
+			continue
+		}
+		corruptKeys = append(corruptKeys, corruptedKeysResult.CorruptedKeys...)
+		if corruptedKeysResult.MinShard != nil && (minShardID == nil || *minShardID > *corruptedKeysResult.MinShard) {
+			minShardID = corruptedKeysResult.MinShard
+		}
+		if corruptedKeysResult.MaxShard != nil && (maxShardID == nil || *maxShardID < *corruptedKeysResult.MaxShard) {
+			maxShardID = corruptedKeysResult.MaxShard
+		}
+		if corruptedKeysResult.ShardQueryPaginationToken.IsDone {
+			break
+		}
+		fixerCorruptedKeysActivityParams.StartingShardID = corruptedKeysResult.ShardQueryPaginationToken.NextShardID
+	}
+	return minShardID, maxShardID, corruptKeys, nil
+}

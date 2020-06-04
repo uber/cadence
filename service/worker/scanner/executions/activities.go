@@ -106,13 +106,13 @@ type (
 	// ScanShardHeartbeatDetails is the heartbeat details for scan shard
 	ScanShardHeartbeatDetails struct {
 		LastShardIndexHandled int
-		Reports               []*common.ShardScanReport
+		Reports               []common.ShardScanReport
 	}
 
 	// FixShardHeartbeatDetails is the heartbeat details for the fix shard
 	FixShardHeartbeatDetails struct {
 		LastShardIndexHandled int
-		Reports               []*common.ShardFixReport
+		Reports               []common.ShardFixReport
 	}
 )
 
@@ -140,7 +140,7 @@ func ScannerEmitMetricsActivity(
 func ScanShardActivity(
 	activityCtx context.Context,
 	params ScanShardActivityParams,
-) ([]*common.ShardScanReport, error) {
+) ([]common.ShardScanReport, error) {
 	heartbeatDetails := ScanShardHeartbeatDetails{
 		LastShardIndexHandled: -1,
 		Reports:               nil,
@@ -158,7 +158,7 @@ func ScanShardActivity(
 		}
 		heartbeatDetails = ScanShardHeartbeatDetails{
 			LastShardIndexHandled: i,
-			Reports:               append(heartbeatDetails.Reports, shardReport),
+			Reports:               append(heartbeatDetails.Reports, *shardReport),
 		}
 	}
 	return heartbeatDetails.Reports, nil
@@ -313,7 +313,7 @@ func FixerCorruptedKeysActivity(
 func FixShardActivity(
 	activityCtx context.Context,
 	params FixShardActivityParams,
-) ([]*common.ShardFixReport, error) {
+) ([]common.ShardFixReport, error) {
 	heartbeatDetails := FixShardHeartbeatDetails{
 		LastShardIndexHandled: -1,
 		Reports:               nil,
@@ -332,7 +332,7 @@ func FixShardActivity(
 		}
 		heartbeatDetails = FixShardHeartbeatDetails{
 			LastShardIndexHandled: i,
-			Reports:               append(heartbeatDetails.Reports, shardReport),
+			Reports:               append(heartbeatDetails.Reports, *shardReport),
 		}
 	}
 	return heartbeatDetails.Reports, nil
