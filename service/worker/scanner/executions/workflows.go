@@ -24,7 +24,6 @@ package executions
 
 import (
 	"errors"
-
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/metrics"
@@ -58,7 +57,6 @@ const (
 	fixShardReportChan  = "fixShardReportChan"
 
 	maxShardQueryResult = 1000
-	activityBatchSize   = 200
 )
 
 type (
@@ -124,14 +122,14 @@ type (
 	// ScanReportError is a type that is used to send either error or report on a channel.
 	// Exactly one of Report and ErrorStr should be non-nil.
 	ScanReportError struct {
-		Report   *common.ShardScanReport
+		Reports  []common.ShardScanReport
 		ErrorStr *string
 	}
 
 	// FixReportError is a type that is used to send either error or report on a channel.
 	// Exactly one of Report and ErrorStr should be non-nil.
 	FixReportError struct {
-		Report   *common.ShardFixReport
+		Reports  []common.ShardFixReport
 		ErrorStr *string
 	}
 
@@ -221,7 +219,7 @@ func ScannerWorkflow(
 			batches := getShardBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, shards, idx)
 			for _, batch := range batches {
 				activityCtx = getLongActivityContext(ctx)
-				var reports []*common.ShardScanReport
+				var reports []common.ShardScanReport
 				if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
 					Shards:                  batch,
 					ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
@@ -230,28 +228,29 @@ func ScannerWorkflow(
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, ScanReportError{
-						Report:   nil,
+						Reports:   nil,
 						ErrorStr: &errStr,
 					})
 					return
 				}
-				for _, report := range reports {
-					shardReportChan.Send(ctx, ScanReportError{
-						Report:   report,
-						ErrorStr: nil,
-					})
-				}
+				shardReportChan.Send(ctx, ScanReportError{
+					Reports: reports,
+					ErrorStr: nil,
+				})
 			}
 		})
 	}
 
-	for i := 0; i < len(shards); i++ {
+	for i := 0; i < len(shards); {
 		var reportErr ScanReportError
 		shardReportChan.Receive(ctx, &reportErr)
 		if reportErr.ErrorStr != nil {
 			return errors.New(*reportErr.ErrorStr)
 		}
-		aggregator.addReport(*reportErr.Report)
+		for _, report := range reportErr.Reports {
+			aggregator.addReport(report)
+			i++
+		}
 	}
 
 	activityCtx = getShortActivityContext(ctx)
@@ -313,36 +312,37 @@ func FixerWorkflow(
 			batches := getCorruptedKeysBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, corruptKeys.CorruptedKeys, idx)
 			for _, batch := range batches {
 				activityCtx := getLongActivityContext(ctx)
-				var reports []*common.ShardFixReport
+				var reports []common.ShardFixReport
 				if err := workflow.ExecuteActivity(activityCtx, FixerFixShardActivityName, FixShardActivityParams{
 					CorruptedKeysEntries:        batch,
 					ResolvedFixerWorkflowConfig: resolvedConfig,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, FixReportError{
-						Report:   nil,
+						Reports:   nil,
 						ErrorStr: &errStr,
 					})
 					return
 				}
-				for _, report := range reports {
-					shardReportChan.Send(ctx, FixReportError{
-						Report:   report,
-						ErrorStr: nil,
-					})
-				}
+				shardReportChan.Send(ctx, FixReportError{
+					Reports: reports,
+					ErrorStr: nil,
+				})
 			}
 		})
 	}
 
 	aggregator = newShardFixResultAggregator(corruptKeys.CorruptedKeys, *corruptKeys.MinShard, *corruptKeys.MaxShard)
-	for i := 0; i < len(corruptKeys.CorruptedKeys); i++ {
+	for i := 0; i < len(corruptKeys.CorruptedKeys); {
 		var reportErr FixReportError
 		shardReportChan.Receive(ctx, &reportErr)
 		if reportErr.ErrorStr != nil {
 			return errors.New(*reportErr.ErrorStr)
 		}
-		aggregator.addReport(*reportErr.Report)
+		for _, report := range reportErr.Reports {
+			aggregator.addReport(report)
+			i++
+		}
 	}
 	return nil
 }
@@ -381,9 +381,6 @@ func getCorruptedKeys(
 		}
 		if corruptedKeysResult.MaxShard != nil && (maxShardID == nil || *maxShardID < *corruptedKeysResult.MaxShard) {
 			maxShardID = corruptedKeysResult.MaxShard
-		}
-		if corruptedKeysResult.ShardQueryPaginationToken.IsDone {
-			break
 		}
 	}
 	return &FixerCorruptedKeysActivityResult{

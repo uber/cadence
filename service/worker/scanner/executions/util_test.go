@@ -74,7 +74,7 @@ func (s *workflowsSuite) TestResolveFixerConfig() {
 	s.Equal(ResolvedFixerWorkflowConfig{
 		Concurrency:             1000,
 		BlobstoreFlushThreshold: 1000,
-		ActivityBatchSize:       activityBatchSize,
+		ActivityBatchSize:       200,
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: true,
 			InvariantCollectionHistory:      true,

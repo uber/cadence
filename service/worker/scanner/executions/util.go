@@ -72,7 +72,7 @@ func resolveFixerConfig(overwrites FixerWorkflowConfigOverwrites) ResolvedFixerW
 	resolvedConfig := ResolvedFixerWorkflowConfig{
 		Concurrency:             25,
 		BlobstoreFlushThreshold: 1000,
-		ActivityBatchSize:       activityBatchSize,
+		ActivityBatchSize:       200,
 		InvariantCollections: InvariantCollections{
 			InvariantCollectionMutableState: true,
 			InvariantCollectionHistory:      true,
