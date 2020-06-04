@@ -77,13 +77,14 @@ type (
 
 		// other common resources
 
-		domainCache       cache.DomainCache
-		timeSource        clock.TimeSource
-		payloadSerializer persistence.PayloadSerializer
-		metricsClient     metrics.Client
-		messagingClient   messaging.Client
-		archivalMetadata  archiver.ArchivalMetadata
-		archiverProvider  provider.ArchiverProvider
+		domainCache             cache.DomainCache
+		domainMetricsScopeCache cache.DomainMetricsScopeCache
+		timeSource              clock.TimeSource
+		payloadSerializer       persistence.PayloadSerializer
+		metricsClient           metrics.Client
+		messagingClient         messaging.Client
+		archivalMetadata        archiver.ArchivalMetadata
+		archiverProvider        provider.ArchiverProvider
 
 		// membership infos
 
@@ -226,6 +227,8 @@ func New(
 		logger,
 	)
 
+	domainMetricsScopeCache := cache.NewDomainMetricsScopeCache()
+
 	frontendRawClient := clientBean.GetFrontendClient()
 	frontendClient := frontend.NewRetryableClient(
 		frontendRawClient,
@@ -284,13 +287,14 @@ func New(
 
 		// other common resources
 
-		domainCache:       domainCache,
-		timeSource:        clock.NewRealTimeSource(),
-		payloadSerializer: persistence.NewPayloadSerializer(),
-		metricsClient:     params.MetricsClient,
-		messagingClient:   params.MessagingClient,
-		archivalMetadata:  params.ArchivalMetadata,
-		archiverProvider:  params.ArchiverProvider,
+		domainCache:             domainCache,
+		domainMetricsScopeCache: domainMetricsScopeCache,
+		timeSource:              clock.NewRealTimeSource(),
+		payloadSerializer:       persistence.NewPayloadSerializer(),
+		metricsClient:           params.MetricsClient,
+		messagingClient:         params.MessagingClient,
+		archivalMetadata:        params.ArchivalMetadata,
+		archiverProvider:        params.ArchiverProvider,
 
 		// membership infos
 
@@ -419,6 +423,11 @@ func (h *Impl) GetClusterMetadata() cluster.Metadata {
 // GetDomainCache return domain cache
 func (h *Impl) GetDomainCache() cache.DomainCache {
 	return h.domainCache
+}
+
+// GetDomainMetricsScopeCache return domainMetricsScope cache
+func (h *Impl) GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache {
+	return h.domainMetricsScopeCache
 }
 
 // GetTimeSource return time source
