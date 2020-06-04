@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/service/history/constants"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -134,6 +136,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainErrRetry_ProcessNoErr()
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", taskInfo).Return(s.scopeIdx, nil).Once()
 	s.mockProcessor.On("complete", taskInfo).Once()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).Times(1)
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
 		taskInfo,
@@ -149,6 +152,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainFalse_ProcessNoErr() {
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", taskInfo).Return(s.scopeIdx, nil).Once()
 	s.mockProcessor.On("complete", taskInfo).Once()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).Times(1)
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
 		taskInfo,
@@ -163,6 +167,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessNoErr() {
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", taskInfo).Return(s.scopeIdx, nil).Once()
 	s.mockProcessor.On("complete", taskInfo).Once()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).Times(1)
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
 		taskInfo,
@@ -179,6 +184,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessErrNoErr() 
 	s.mockProcessor.On("process", taskInfo).Return(s.scopeIdx, err).Once()
 	s.mockProcessor.On("process", taskInfo).Return(s.scopeIdx, nil).Once()
 	s.mockProcessor.On("complete", taskInfo).Once()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).Times(1)
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
 		taskInfo,
