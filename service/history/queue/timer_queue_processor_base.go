@@ -346,7 +346,7 @@ func (t *timerQueueProcessorBase) processBatch() {
 		var newReadLevel task.Key
 		if nextPageToken == nil {
 			if lookAheadTask != nil {
-				newReadLevel = newTimerTaskKey(lookAheadTask.GetVisibilityTimestamp(), 0)
+				newReadLevel = minTaskKey(maxReadLevel, newTimerTaskKey(lookAheadTask.GetVisibilityTimestamp(), 0))
 			} else {
 				t.notifyNewTimer(time.Time{})
 				newReadLevel = maxReadLevel
