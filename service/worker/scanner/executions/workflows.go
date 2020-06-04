@@ -24,6 +24,7 @@ package executions
 
 import (
 	"errors"
+
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/metrics"
@@ -228,13 +229,13 @@ func ScannerWorkflow(
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, ScanReportError{
-						Reports:   nil,
+						Reports:  nil,
 						ErrorStr: &errStr,
 					})
 					return
 				}
 				shardReportChan.Send(ctx, ScanReportError{
-					Reports: reports,
+					Reports:  reports,
 					ErrorStr: nil,
 				})
 			}
@@ -319,13 +320,13 @@ func FixerWorkflow(
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, FixReportError{
-						Reports:   nil,
+						Reports:  nil,
 						ErrorStr: &errStr,
 					})
 					return
 				}
 				shardReportChan.Send(ctx, FixReportError{
-					Reports: reports,
+					Reports:  reports,
 					ErrorStr: nil,
 				})
 			}
