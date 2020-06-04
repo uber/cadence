@@ -149,18 +149,18 @@ type (
 		// NextShardID is nil if IsDone is true.
 		// It is possible to get NextShardID != nil and on the next call to get an empty result with IsDone = true.
 		NextShardID *int
-		IsDone bool
+		IsDone      bool
 	}
 
 	// ShardStatusQueryResult is the query result for ShardStatusQuery
 	ShardStatusQueryResult struct {
-		Result ShardStatusResult
+		Result                    ShardStatusResult
 		ShardQueryPaginationToken ShardQueryPaginationToken
 	}
 
 	// ShardCorruptKeysQueryResult is the query result for ShardCorruptKeysQuery
 	ShardCorruptKeysQueryResult struct {
-		Result ShardCorruptKeysResult
+		Result                    ShardCorruptKeysResult
 		ShardQueryPaginationToken ShardQueryPaginationToken
 	}
 )
@@ -253,9 +253,9 @@ func ScannerWorkflow(
 
 	activityCtx = getShortActivityContext(ctx)
 	if err := workflow.ExecuteActivity(activityCtx, ScannerEmitMetricsActivityName, ScannerEmitMetricsActivityParams{
-		ShardSuccessCount:     aggregator.successCount,
+		ShardSuccessCount:            aggregator.successCount,
 		ShardControlFlowFailureCount: aggregator.controlFlowFailureCount,
-		AggregateReportResult: aggregator.aggregation,
+		AggregateReportResult:        aggregator.aggregation,
 	}).Get(ctx, nil); err != nil {
 		return err
 	}
@@ -340,7 +340,6 @@ func FixerWorkflow(
 	//return nil
 	return nil
 }
-
 
 /**
 Tasks:

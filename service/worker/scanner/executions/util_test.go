@@ -26,18 +26,18 @@ import "github.com/uber/cadence/common"
 
 func (s *workflowsSuite) TestFlattenShards() {
 	testCases := []struct {
-		input    Shards
+		input        Shards
 		expectedList []int
-		expectedMin int
-		expectedMax int
+		expectedMin  int
+		expectedMax  int
 	}{
 		{
 			input: Shards{
 				List: []int{1, 2, 3},
 			},
 			expectedList: []int{1, 2, 3},
-			expectedMin: 1,
-			expectedMax: 3,
+			expectedMin:  1,
+			expectedMax:  3,
 		},
 		{
 			input: Shards{
@@ -47,16 +47,16 @@ func (s *workflowsSuite) TestFlattenShards() {
 				},
 			},
 			expectedList: []int{5, 6, 7, 8, 9},
-			expectedMin: 5,
-			expectedMax: 9,
+			expectedMin:  5,
+			expectedMax:  9,
 		},
 		{
 			input: Shards{
 				List: []int{90, 1, 2, 3},
 			},
 			expectedList: []int{90, 1, 2, 3},
-			expectedMin: 1,
-			expectedMax: 90,
+			expectedMin:  1,
+			expectedMax:  90,
 		},
 	}
 	for _, tc := range testCases {
@@ -82,17 +82,17 @@ func (s *workflowsSuite) TestResolveFixerConfig() {
 }
 
 func (s *workflowsSuite) TestValidateShards() {
-	testCases := []struct{
-		shards Shards
+	testCases := []struct {
+		shards    Shards
 		expectErr bool
 	}{
 		{
-			shards: Shards{},
+			shards:    Shards{},
 			expectErr: true,
 		},
 		{
 			shards: Shards{
-				List: []int{},
+				List:  []int{},
 				Range: &ShardRange{},
 			},
 			expectErr: true,

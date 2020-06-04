@@ -148,21 +148,27 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 			CloseStatus: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
 		},
 	}, nil)
-	corruptKeys := map[int]c.Keys{
-		1: {
-			UUID: "first",
+	queryResult := &ShardCorruptKeysQueryResult{
+		Result: map[int]c.Keys{
+			1: {
+				UUID: "first",
+			},
+			2: {
+				UUID: "second",
+			},
+			3: {
+				UUID: "third",
+			},
 		},
-		2: {
-			UUID: "second",
-		},
-		3: {
-			UUID: "third",
+		ShardQueryPaginationToken: ShardQueryPaginationToken{
+			NextShardID: common.IntPtr(4),
+			IsDone:      false,
 		},
 	}
-	queryResult, err := json.Marshal(corruptKeys)
+	queryResultData, err := json.Marshal(queryResult)
 	s.NoError(err)
 	s.mockResource.SDKClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&shared.QueryWorkflowResponse{
-		QueryResult: queryResult,
+		QueryResult: queryResultData,
 	}, nil)
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -174,6 +180,12 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	s.NoError(err)
 	fixerResult := &FixerCorruptedKeysActivityResult{}
 	s.NoError(fixerResultValue.Get(&fixerResult))
+	s.Equal(1, *fixerResult.MinShard)
+	s.Equal(3, *fixerResult.MaxShard)
+	s.Equal(ShardQueryPaginationToken{
+		NextShardID: common.IntPtr(4),
+		IsDone:      false,
+	}, fixerResult.ShardQueryPaginationToken)
 	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
 		ShardID: 1,
 		CorruptedKeys: c.Keys{

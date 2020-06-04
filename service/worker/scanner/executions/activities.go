@@ -25,7 +25,8 @@ package executions
 import (
 	"context"
 	"encoding/json"
-	"errors"
+
+	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
@@ -47,6 +48,11 @@ const (
 	FixerCorruptedKeysActivityName = "cadence-sys-executions-fixer-corrupted-keys-activity"
 	// FixerFixShardActivityName is the activity name for FixShardActivity
 	FixerFixShardActivityName = "cadence-sys-executions-fixer-fix-shard-activity"
+
+	// ErrScanWorkflowNotClosed indicates fix was attempted on scan workflow which was not finished
+	ErrScanWorkflowNotClosed = "scan workflow is not closed, only can run fix on output of finished scan workflow"
+	// ErrSerialization indicates a serialization or deserialization error occurred
+	ErrSerialization = "encountered serialization error"
 )
 
 type (
@@ -65,15 +71,16 @@ type (
 
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
 	ScannerEmitMetricsActivityParams struct {
-		ShardSuccessCount int
+		ShardSuccessCount            int
 		ShardControlFlowFailureCount int
-		AggregateReportResult AggregateScanReportResult
+		AggregateReportResult        AggregateScanReportResult
 	}
 
 	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityParams struct {
 		ScannerWorkflowWorkflowID string
 		ScannerWorkflowRunID      string
+		StartingShardID           *int
 	}
 
 	// FixShardActivityParams is the parameter for FixShardActivity
@@ -84,9 +91,10 @@ type (
 
 	// FixerCorruptedKeysActivityResult is the result of FixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityResult struct {
-		CorruptedKeys []CorruptedKeysEntry
-		MinShard      int
-		MaxShard      int
+		CorruptedKeys             []CorruptedKeysEntry
+		MinShard                  *int
+		MaxShard                  *int
+		ShardQueryPaginationToken ShardQueryPaginationToken
 	}
 
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
@@ -189,11 +197,10 @@ func ScannerConfigActivity(
 	return result, nil
 }
 
-// FixerCorruptedKeysActivity will check that provided scanner workflow is closed
-// get corrupt keys from it, and flatten these keys into a list. If provided scanner
-// workflow is not closed or query fails then error will be returned.
-
-// TODO: this will need to be reworked a lot
+// FixerCorruptedKeysActivity will fetch the keys of blobs from shards with corruptions from a completed scan workflow.
+// If scan workflow is not closed or if query fails activity will return an error.
+// Accepts as input the shard to start query at and returns a next page token, therefore this activity can
+// be used to do pagination.
 func FixerCorruptedKeysActivity(
 	activityCtx context.Context,
 	params FixerCorruptedKeysActivityParams,
@@ -211,7 +218,14 @@ func FixerCorruptedKeysActivity(
 		return nil, err
 	}
 	if descResp.WorkflowExecutionInfo.CloseStatus == nil {
-		return nil, errors.New("provided scan workflow is not closed, can only use finished scan")
+		return nil, cadence.NewCustomError(ErrScanWorkflowNotClosed)
+	}
+	queryArgs := PaginatedShardQueryRequest{
+		StartingShardID: params.StartingShardID,
+	}
+	queryArgsBytes, err := json.Marshal(queryArgs)
+	if err != nil {
+		return nil, cadence.NewCustomError(ErrSerialization)
 	}
 	queryResp, err := client.QueryWorkflow(activityCtx, &shared.QueryWorkflowRequest{
 		Domain: c.StringPtr(c.SystemLocalDomainName),
@@ -221,24 +235,36 @@ func FixerCorruptedKeysActivity(
 		},
 		Query: &shared.WorkflowQuery{
 			QueryType: c.StringPtr(ShardCorruptKeysQuery),
+			QueryArgs: queryArgsBytes,
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	var corruptedKeys ShardCorruptKeysResult
-	if err := json.Unmarshal(queryResp.QueryResult, &corruptedKeys); err != nil {
-		return nil, err
+	queryResult := &ShardCorruptKeysQueryResult{}
+	if err := json.Unmarshal(queryResp.QueryResult, &queryResult); err != nil {
+		return nil, cadence.NewCustomError(ErrSerialization)
 	}
 	var corrupted []CorruptedKeysEntry
-	for k, v := range corruptedKeys {
+	var minShardID *int
+	var maxShardID *int
+	for sid, keys := range queryResult.Result {
+		if minShardID == nil || *minShardID > sid {
+			minShardID = c.IntPtr(sid)
+		}
+		if maxShardID == nil || *maxShardID < sid {
+			maxShardID = c.IntPtr(sid)
+		}
 		corrupted = append(corrupted, CorruptedKeysEntry{
-			ShardID:       k,
-			CorruptedKeys: v,
+			ShardID:       sid,
+			CorruptedKeys: keys,
 		})
 	}
 	return &FixerCorruptedKeysActivityResult{
-		CorruptedKeys: corrupted,
+		CorruptedKeys:             corrupted,
+		MinShard:                  minShardID,
+		MaxShard:                  maxShardID,
+		ShardQueryPaginationToken: queryResult.ShardQueryPaginationToken,
 	}, nil
 }
 

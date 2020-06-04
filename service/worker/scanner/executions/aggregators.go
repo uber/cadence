@@ -42,12 +42,12 @@ type (
 		minShard int
 		maxShard int
 
-		reports        map[int]common.ShardScanReport
-		status         ShardStatusResult
-		aggregation    AggregateScanReportResult
-		corruptionKeys map[int]common.Keys
+		reports                 map[int]common.ShardScanReport
+		status                  ShardStatusResult
+		aggregation             AggregateScanReportResult
+		corruptionKeys          map[int]common.Keys
 		controlFlowFailureCount int
-		successCount int
+		successCount            int
 	}
 )
 
@@ -134,9 +134,9 @@ func newShardScanResultAggregator(
 		aggregation: AggregateScanReportResult{
 			CorruptionByType: make(map[common.InvariantType]int64),
 		},
-		corruptionKeys: make(map[int]common.Keys),
+		corruptionKeys:          make(map[int]common.Keys),
 		controlFlowFailureCount: 0,
-		successCount: 0,
+		successCount:            0,
 	}
 }
 
@@ -168,7 +168,7 @@ func (a *shardScanResultAggregator) getCorruptionKeys(req PaginatedShardQueryReq
 			Result: result,
 			ShardQueryPaginationToken: ShardQueryPaginationToken{
 				NextShardID: nil,
-				IsDone: true,
+				IsDone:      true,
 			},
 		}, nil
 	}
@@ -176,7 +176,7 @@ func (a *shardScanResultAggregator) getCorruptionKeys(req PaginatedShardQueryReq
 		Result: result,
 		ShardQueryPaginationToken: ShardQueryPaginationToken{
 			NextShardID: &currentShardID,
-			IsDone: false,
+			IsDone:      false,
 		},
 	}, nil
 }
@@ -272,7 +272,7 @@ func getStatusResult(
 			Result: result,
 			ShardQueryPaginationToken: ShardQueryPaginationToken{
 				NextShardID: nil,
-				IsDone: true,
+				IsDone:      true,
 			},
 		}, nil
 	}
@@ -280,7 +280,7 @@ func getStatusResult(
 		Result: result,
 		ShardQueryPaginationToken: ShardQueryPaginationToken{
 			NextShardID: &currentShardID,
-			IsDone: false,
+			IsDone:      false,
 		},
 	}, nil
 }
