@@ -58,6 +58,7 @@ const (
 	fixShardReportChan  = "fixShardReportChan"
 
 	maxShardQueryResult = 1000
+	activityBatchSize = 10
 )
 
 type (
@@ -216,27 +217,54 @@ func ScannerWorkflow(
 	for i := 0; i < resolvedConfig.Concurrency; i++ {
 		idx := i
 		workflow.Go(ctx, func(ctx workflow.Context) {
+			var batches [][]int
+			currBatch := make([]int, activityBatchSize, activityBatchSize)
 			for _, shard := range shards {
 				if shard%resolvedConfig.Concurrency == idx {
-					activityCtx = getLongActivityContext(ctx)
-					report := &common.ShardScanReport{}
-					if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
-						ShardID:                 shard,
-						ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
-						BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
-						InvariantCollections:    resolvedConfig.InvariantCollections,
-					}).Get(ctx, &report); err != nil {
-						errStr := err.Error()
-						shardReportChan.Send(ctx, ScanReportError{
-							Report:   nil,
-							ErrorStr: &errStr,
-						})
-						return
+					currBatch = append(currBatch, shard)
+					if len(currBatch) == activityBatchSize {
+						copyCurrBatch := make([]int, activityBatchSize, activityBatchSize)
+						copy(copyCurrBatch, currBatch)
+						batches = append(batches, copyCurrBatch)
+						currBatch = make([]int, activityBatchSize, activityBatchSize)
 					}
-					shardReportChan.Send(ctx, ScanReportError{
-						Report:   report,
-						ErrorStr: nil,
-					})
+				}
+			}
+			if len(currBatch) > 0 {
+				copyCurrBatch := make([]int, activityBatchSize, activityBatchSize)
+				copy(copyCurrBatch, currBatch)
+				batches = append(batches, copyCurrBatch)
+			}
+
+
+
+
+
+			for _, shard := range shards {
+				if shard%resolvedConfig.Concurrency == idx {
+					batch = append(batch, shard)
+					if len(batch) == activityBatchSize {
+						activityCtx = getLongActivityContext(ctx)
+						report := &common.ShardScanReport{}
+						if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
+							Shards:                 batch,
+							ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
+							BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
+							InvariantCollections:    resolvedConfig.InvariantCollections,
+						}).Get(ctx, &report); err != nil {
+							errStr := err.Error()
+							shardReportChan.Send(ctx, ScanReportError{
+								Report:   nil,
+								ErrorStr: &errStr,
+							})
+							return
+						}
+						shardReportChan.Send(ctx, ScanReportError{
+							Report:   report,
+							ErrorStr: nil,
+						})
+						batch = nil
+					}
 				}
 			}
 		})
@@ -342,9 +370,12 @@ func FixerWorkflow(
 }
 
 /**
-Tasks:
-- Update workflow to consume the activity changes
-- Ensure all tests pass
-- Do batching of shards in scanner to reduce history length
-- Do batching of shards in fixer to reduce history length
-*/
+Tasks
+1. Move out methods to get batches for both scanner and fixer into utility
+2. Write unit tests for these utility functions
+3. In Scanner and Fixer just call util.GetBatches(), then iterate over batches and call activity for each batch
+4. If activity returns an error then send an error on channel
+5. If activity does not return an error then iterate over the results and for each result send on the channel
+6. Fix unit tests for workflow
+7. Review all code and post diff
+ */
