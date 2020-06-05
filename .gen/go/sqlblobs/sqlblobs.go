@@ -2470,6 +2470,7 @@ type DomainInfo struct {
 	VisibilityArchivalStatus    *int16            `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI       *string           `json:"visibilityArchivalURI,omitempty"`
 	FailoverEndTime             *int64            `json:"failoverEndTime,omitempty"`
+	PreviousFailoverVersion     *int64            `json:"previousFailoverVersion,omitempty"`
 }
 
 type _Map_String_String_MapItemList map[string]string
@@ -2524,7 +2525,7 @@ func (_Map_String_String_MapItemList) Close() {}
 //   }
 func (v *DomainInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [22]wire.Field
+		fields [23]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -2704,6 +2705,14 @@ func (v *DomainInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.PreviousFailoverVersion != nil {
+		w, err = wire.NewValueI64(*(v.PreviousFailoverVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 52, Value: w}
 		i++
 	}
 
@@ -2974,6 +2983,16 @@ func (v *DomainInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 52:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.PreviousFailoverVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -2987,7 +3006,7 @@ func (v *DomainInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [22]string
+	var fields [23]string
 	i := 0
 	if v.Name != nil {
 		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
@@ -3075,6 +3094,10 @@ func (v *DomainInfo) String() string {
 	}
 	if v.FailoverEndTime != nil {
 		fields[i] = fmt.Sprintf("FailoverEndTime: %v", *(v.FailoverEndTime))
+		i++
+	}
+	if v.PreviousFailoverVersion != nil {
+		fields[i] = fmt.Sprintf("PreviousFailoverVersion: %v", *(v.PreviousFailoverVersion))
 		i++
 	}
 
@@ -3184,6 +3207,9 @@ func (v *DomainInfo) Equals(rhs *DomainInfo) bool {
 	if !_I64_EqualsPtr(v.FailoverEndTime, rhs.FailoverEndTime) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.PreviousFailoverVersion, rhs.PreviousFailoverVersion) {
+		return false
+	}
 
 	return true
 }
@@ -3270,6 +3296,9 @@ func (v *DomainInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.FailoverEndTime != nil {
 		enc.AddInt64("failoverEndTime", *v.FailoverEndTime)
+	}
+	if v.PreviousFailoverVersion != nil {
+		enc.AddInt64("previousFailoverVersion", *v.PreviousFailoverVersion)
 	}
 	return err
 }
@@ -3602,6 +3631,21 @@ func (v *DomainInfo) GetFailoverEndTime() (o int64) {
 // IsSetFailoverEndTime returns true if FailoverEndTime is not nil.
 func (v *DomainInfo) IsSetFailoverEndTime() bool {
 	return v != nil && v.FailoverEndTime != nil
+}
+
+// GetPreviousFailoverVersion returns the value of PreviousFailoverVersion if it is set or its
+// zero value if it is unset.
+func (v *DomainInfo) GetPreviousFailoverVersion() (o int64) {
+	if v != nil && v.PreviousFailoverVersion != nil {
+		return *v.PreviousFailoverVersion
+	}
+
+	return
+}
+
+// IsSetPreviousFailoverVersion returns true if PreviousFailoverVersion is not nil.
+func (v *DomainInfo) IsSetPreviousFailoverVersion() bool {
+	return v != nil && v.PreviousFailoverVersion != nil
 }
 
 type HistoryTreeInfo struct {
