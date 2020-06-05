@@ -223,23 +223,23 @@ processorPumpLoop:
 			)
 			t.notifyNewTimer(time.Time{})
 		case <-pollTimer.C:
+			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
+				t.processBatch()
+			}
 			pollTimer.Reset(backoff.JitDuration(
 				t.options.MaxPollInterval(),
 				t.options.MaxPollIntervalJitterCoefficient(),
 			))
-			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
-				t.processBatch()
-			}
 		case <-updateAckTimer.C:
-			updateAckTimer.Reset(backoff.JitDuration(
-				t.options.UpdateAckInterval(),
-				t.options.UpdateAckIntervalJitterCoefficient(),
-			))
 			processFinished, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop
 			}
+			updateAckTimer.Reset(backoff.JitDuration(
+				t.options.UpdateAckInterval(),
+				t.options.UpdateAckIntervalJitterCoefficient(),
+			))
 		case <-t.newTimerCh:
 			t.newTimeLock.Lock()
 			newTime := t.newTime
@@ -250,10 +250,6 @@ processorPumpLoop:
 			t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
 			t.timerGate.Update(newTime)
 		case <-redispatchTimer.C:
-			redispatchTimer.Reset(backoff.JitDuration(
-				t.options.RedispatchInterval(),
-				t.options.RedispatchIntervalJitterCoefficient(),
-			))
 			RedispatchTasks(
 				t.redispatchQueue,
 				t.taskProcessor,
@@ -261,12 +257,16 @@ processorPumpLoop:
 				t.metricsScope,
 				t.shutdownCh,
 			)
+			redispatchTimer.Reset(backoff.JitDuration(
+				t.options.RedispatchInterval(),
+				t.options.RedispatchIntervalJitterCoefficient(),
+			))
 		case <-splitQueueTimer.C:
+			t.splitQueue()
 			splitQueueTimer.Reset(backoff.JitDuration(
 				t.options.SplitQueueInterval(),
 				t.options.SplitQueueIntervalJitterCoefficient(),
 			))
-			t.splitQueue()
 		}
 	}
 }

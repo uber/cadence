@@ -216,28 +216,24 @@ processorPumpLoop:
 			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
 			t.notifyNewTask()
 		case <-pollTimer.C:
+			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
+				t.processBatch()
+			}
 			pollTimer.Reset(backoff.JitDuration(
 				t.options.MaxPollInterval(),
 				t.options.MaxPollIntervalJitterCoefficient(),
 			))
-			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
-				t.processBatch()
-			}
 		case <-updateAckTimer.C:
-			updateAckTimer.Reset(backoff.JitDuration(
-				t.options.UpdateAckInterval(),
-				t.options.UpdateAckIntervalJitterCoefficient(),
-			))
 			processFinished, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop
 			}
-		case <-redispatchTimer.C:
-			redispatchTimer.Reset(backoff.JitDuration(
-				t.options.RedispatchInterval(),
-				t.options.RedispatchIntervalJitterCoefficient(),
+			updateAckTimer.Reset(backoff.JitDuration(
+				t.options.UpdateAckInterval(),
+				t.options.UpdateAckIntervalJitterCoefficient(),
 			))
+		case <-redispatchTimer.C:
 			RedispatchTasks(
 				t.redispatchQueue,
 				t.taskProcessor,
@@ -245,12 +241,16 @@ processorPumpLoop:
 				t.metricsScope,
 				t.shutdownCh,
 			)
+			redispatchTimer.Reset(backoff.JitDuration(
+				t.options.RedispatchInterval(),
+				t.options.RedispatchIntervalJitterCoefficient(),
+			))
 		case <-splitQueueTimer.C:
+			t.splitQueue()
 			splitQueueTimer.Reset(backoff.JitDuration(
 				t.options.SplitQueueInterval(),
 				t.options.SplitQueueIntervalJitterCoefficient(),
 			))
-			t.splitQueue()
 		}
 	}
 }
