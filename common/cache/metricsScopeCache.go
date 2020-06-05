@@ -20,32 +20,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package cache
 
 import (
-	"github.com/uber/cadence/service/worker/scanner/executions/common"
+	"bytes"
+	"strconv"
+	"sync"
+
+	"github.com/uber/cadence/common/metrics"
 )
 
-func checkBeforeFix(
-	invariant common.Invariant,
-	execution common.Execution,
-) (*common.FixResult, *common.CheckResult) {
-	checkResult := invariant.Check(execution)
-	if checkResult.CheckResultType == common.CheckResultTypeHealthy {
-		return &common.FixResult{
-			FixResultType: common.FixResultTypeSkipped,
-			InvariantType: invariant.InvariantType(),
-			CheckResult:   checkResult,
-			Info:          "skipped fix because execution was healthy",
-		}, nil
+type domainMetricsScopeCache struct {
+	sync.RWMutex
+	scopeMap map[string]metrics.Scope
+}
+
+// NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
+func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
+	return &domainMetricsScopeCache{
+		scopeMap: make(map[string]metrics.Scope),
 	}
-	if checkResult.CheckResultType == common.CheckResultTypeFailed {
-		return &common.FixResult{
-			FixResultType: common.FixResultTypeFailed,
-			InvariantType: invariant.InvariantType(),
-			CheckResult:   checkResult,
-			Info:          "failed fix because check failed",
-		}, nil
-	}
-	return nil, &checkResult
+}
+
+// Get retrieves scope for domainID and scopeIdx
+func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
+	c.RLock()
+	defer c.RUnlock()
+
+	var buffer bytes.Buffer
+	buffer.WriteString(domainID)
+	buffer.WriteString("_")
+	buffer.WriteString(strconv.Itoa(scopeIdx))
+	key := buffer.String()
+
+	metricsScope, ok := c.scopeMap[key]
+	return metricsScope, ok
+}
+
+// Put puts map of domainID and scopeIdx to metricsScope
+func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
+	c.Lock()
+	defer c.Unlock()
+
+	var buffer bytes.Buffer
+	buffer.WriteString(domainID)
+	buffer.WriteString("_")
+	buffer.WriteString(strconv.Itoa(scopeIdx))
+	key := buffer.String()
+
+	c.scopeMap[key] = scope
 }
