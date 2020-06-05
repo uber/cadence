@@ -177,17 +177,13 @@ func getBatchIndices(
 		if i%concurrency == workerIdx {
 			currBatch = append(currBatch, i)
 			if len(currBatch) == batchSize {
-				copyCurrBatch := make([]int, batchSize, batchSize)
-				copy(copyCurrBatch, currBatch)
-				batches = append(batches, copyCurrBatch)
+				batches = append(batches, currBatch)
 				currBatch = nil
 			}
 		}
 	}
 	if len(currBatch) > 0 {
-		copyCurrBatch := make([]int, len(currBatch), len(currBatch))
-		copy(copyCurrBatch, currBatch)
-		batches = append(batches, copyCurrBatch)
+		batches = append(batches, currBatch)
 	}
 	return batches
 }
