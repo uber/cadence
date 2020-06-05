@@ -21,7 +21,10 @@
 package queue
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/uber/cadence/common/collection"
@@ -44,12 +47,20 @@ type (
 		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
 		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
 		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
-		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		QueueSplitPolicy                    ProcessingQueueSplitPolicy
 		RedispatchInterval                  dynamicconfig.DurationPropertyFn
 		RedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 		MaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
+		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
+		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+		EnableSplit                         dynamicconfig.BoolPropertyFn
+		SplitMaxLevel                       dynamicconfig.IntPropertyFn
+		EnableRandomSplitByDomainID         dynamicconfig.BoolPropertyFnWithDomainIDFilter
+		RandomSplitProbability              dynamicconfig.FloatPropertyFn
+		EnablePendingTaskSplit              dynamicconfig.BoolPropertyFn
+		PendingTaskSplitThreshold           dynamicconfig.MapPropertyFn
+		EnableStuckTaskSplit                dynamicconfig.BoolPropertyFn
+		StuckTaskSplitThreshold             dynamicconfig.MapPropertyFn
+		SplitLookAheadDurationByDomainID    dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		MetricScope                         int
 	}
 )
@@ -114,6 +125,55 @@ func RedispatchTasks(
 	}
 }
 
+func initializeSplitPolicy(
+	options *queueProcessorOptions,
+	lookAheadFunc lookAheadFunc,
+	logger log.Logger,
+) ProcessingQueueSplitPolicy {
+	if !options.EnableSplit() {
+		return nil
+	}
+
+	// note the order of policies matters, check the comment for aggregated split policy
+	var policies []ProcessingQueueSplitPolicy
+	maxNewQueueLevel := options.SplitMaxLevel()
+
+	if options.EnablePendingTaskSplit() {
+		thresholds, err := convertThresholdsFromDynamicConfig(options.PendingTaskSplitThreshold())
+		if err != nil {
+			logger.Error("Failed to convert pending task threshold", tag.Error(err))
+		}
+		policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel))
+	}
+
+	if options.EnableStuckTaskSplit() {
+		thresholds, err := convertThresholdsFromDynamicConfig(options.StuckTaskSplitThreshold())
+		if err != nil {
+			logger.Error("Failed to convert stuck task threshold", tag.Error(err))
+		}
+		policies = append(policies, NewStuckTaskSplitPolicy(
+			thresholds,
+			maxNewQueueLevel,
+		))
+	}
+
+	randomSplitProbability := options.RandomSplitProbability()
+	if randomSplitProbability != float64(0) {
+		policies = append(policies, NewRandomSplitPolicy(
+			randomSplitProbability,
+			options.EnableRandomSplitByDomainID,
+			maxNewQueueLevel,
+			lookAheadFunc,
+		))
+	}
+
+	if len(policies) == 0 {
+		return nil
+	}
+
+	return NewAggregatedSplitPolicy(policies...)
+}
+
 func splitProcessingQueueCollection(
 	processingQueueCollections []ProcessingQueueCollection,
 	splitPolicy ProcessingQueueSplitPolicy,
@@ -148,4 +208,22 @@ func splitProcessingQueueCollection(
 	})
 
 	return processingQueueCollections
+}
+
+func convertThresholdsFromDynamicConfig(
+	dcValue map[string]interface{},
+) (map[int]int, error) {
+	thresholds := make(map[int]int)
+	for key, value := range dcValue {
+		level, err := strconv.Atoi(strings.TrimSpace(key))
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert level: %v", err)
+		}
+		threshold, ok := value.(int)
+		if !ok {
+			return nil, fmt.Errorf("failed to convert threshold %v", value)
+		}
+		thresholds[level] = threshold
+	}
+	return thresholds, nil
 }
