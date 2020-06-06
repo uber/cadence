@@ -22,7 +22,6 @@ package queue
 
 import (
 	"context"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,38 +34,19 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
 
 var (
 	loadQueueTaskThrottleRetryDelay = 5 * time.Second
+
+	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
 )
 
 type (
-	maxReadLevel           func() task.Key
-	updateTransferAckLevel func(ackLevel int64) error
-	transferQueueShutdown  func() error
-
 	transferTaskKey struct {
 		taskID int64
-	}
-
-	queueProcessorOptions struct {
-		BatchSize                           dynamicconfig.IntPropertyFn
-		MaxPollRPS                          dynamicconfig.IntPropertyFn
-		MaxPollInterval                     dynamicconfig.DurationPropertyFn
-		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
-		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
-		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
-		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		QueueSplitPolicy                    ProcessingQueueSplitPolicy
-		RedispatchInterval                  dynamicconfig.DurationPropertyFn
-		RedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		MaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
-		MetricScope                         int
 	}
 
 	transferQueueProcessorBase struct {
@@ -74,11 +54,11 @@ type (
 		taskProcessor   task.Processor
 		redispatchQueue collection.Queue
 
-		options                *queueProcessorOptions
-		maxReadLevel           maxReadLevel
-		updateTransferAckLevel updateTransferAckLevel
-		transferQueueShutdown  transferQueueShutdown
-		taskInitializer        task.Initializer
+		options               *queueProcessorOptions
+		updateMaxReadLevel    updateMaxReadLevelFn
+		updateClusterAckLevel updateClusterAckLevelFn
+		queueShutdown         queueShutdownFn
+		taskInitializer       task.Initializer
 
 		logger        log.Logger
 		metricsClient metrics.Client
@@ -102,42 +82,24 @@ func newTransferQueueProcessorBase(
 	taskProcessor task.Processor,
 	redispatchQueue collection.Queue,
 	options *queueProcessorOptions,
-	maxReadLevel maxReadLevel,
-	updateTransferAckLevel updateTransferAckLevel,
-	transferQueueShutdown transferQueueShutdown,
+	updateMaxReadLevel updateMaxReadLevelFn,
+	updateClusterAckLevel updateClusterAckLevelFn,
+	queueShutdown queueShutdownFn,
 	taskInitializer task.Initializer,
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *transferQueueProcessorBase {
-	processingQueuesMap := make(map[int][]ProcessingQueue) // level -> state
-	for _, queueState := range processingQueueStates {
-		processingQueuesMap[queueState.Level()] = append(processingQueuesMap[queueState.Level()], NewProcessingQueue(
-			queueState,
-			logger,
-			metricsClient,
-		))
-	}
-	processingQueueCollections := make([]ProcessingQueueCollection, 0, len(processingQueuesMap))
-	for level, queues := range processingQueuesMap {
-		processingQueueCollections = append(processingQueueCollections, NewProcessingQueueCollection(
-			level,
-			queues,
-		))
-	}
-	sort.Slice(processingQueueCollections, func(i, j int) bool {
-		return processingQueueCollections[i].Level() < processingQueueCollections[j].Level()
-	})
 
 	return &transferQueueProcessorBase{
-		shard:                      shard,
-		taskProcessor:              taskProcessor,
-		redispatchQueue:            redispatchQueue,
-		processingQueueCollections: processingQueueCollections,
-		options:                    options,
-		maxReadLevel:               maxReadLevel,
-		updateTransferAckLevel:     updateTransferAckLevel,
-		transferQueueShutdown:      transferQueueShutdown,
-		taskInitializer:            taskInitializer,
+		shard:           shard,
+		taskProcessor:   taskProcessor,
+		redispatchQueue: redispatchQueue,
+
+		options:               options,
+		updateMaxReadLevel:    updateMaxReadLevel,
+		updateClusterAckLevel: updateClusterAckLevel,
+		queueShutdown:         queueShutdown,
+		taskInitializer:       taskInitializer,
 
 		logger:        logger.WithTags(tag.ComponentTransferQueue),
 		metricsClient: metricsClient,
@@ -152,6 +114,12 @@ func newTransferQueueProcessorBase(
 		notifyCh:     make(chan struct{}, 1),
 		status:       common.DaemonStatusInitialized,
 		shutdownCh:   make(chan struct{}),
+
+		processingQueueCollections: newProcessingQueueCollections(
+			processingQueueStates,
+			logger,
+			metricsClient,
+		),
 	}
 }
 
@@ -163,8 +131,9 @@ func (t *transferQueueProcessorBase) Start() {
 	t.logger.Info("", tag.LifeCycleStarting)
 	defer t.logger.Info("", tag.LifeCycleStarted)
 
-	t.shutdownWG.Add(1)
 	t.notifyNewTask()
+
+	t.shutdownWG.Add(1)
 	go t.processorPump()
 }
 
@@ -239,28 +208,24 @@ processorPumpLoop:
 			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
 			t.notifyNewTask()
 		case <-pollTimer.C:
+			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
+				t.processBatch()
+			}
 			pollTimer.Reset(backoff.JitDuration(
 				t.options.MaxPollInterval(),
 				t.options.MaxPollIntervalJitterCoefficient(),
 			))
-			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
-				t.processBatch()
-			}
 		case <-updateAckTimer.C:
-			updateAckTimer.Reset(backoff.JitDuration(
-				t.options.UpdateAckInterval(),
-				t.options.UpdateAckIntervalJitterCoefficient(),
-			))
 			processFinished, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop
 			}
-		case <-redispatchTimer.C:
-			redispatchTimer.Reset(backoff.JitDuration(
-				t.options.RedispatchInterval(),
-				t.options.RedispatchIntervalJitterCoefficient(),
+			updateAckTimer.Reset(backoff.JitDuration(
+				t.options.UpdateAckInterval(),
+				t.options.UpdateAckIntervalJitterCoefficient(),
 			))
+		case <-redispatchTimer.C:
 			RedispatchTasks(
 				t.redispatchQueue,
 				t.taskProcessor,
@@ -268,12 +233,16 @@ processorPumpLoop:
 				t.metricsScope,
 				t.shutdownCh,
 			)
+			redispatchTimer.Reset(backoff.JitDuration(
+				t.options.RedispatchInterval(),
+				t.options.RedispatchIntervalJitterCoefficient(),
+			))
 		case <-splitQueueTimer.C:
+			t.splitQueue()
 			splitQueueTimer.Reset(backoff.JitDuration(
 				t.options.SplitQueueInterval(),
 				t.options.SplitQueueIntervalJitterCoefficient(),
 			))
-			t.splitQueue()
 		}
 	}
 }
@@ -298,13 +267,23 @@ func (t *transferQueueProcessorBase) processBatch() {
 		t.queueCollectionsLock.RLock()
 		activeQueue := queueCollection.ActiveQueue()
 		if activeQueue == nil {
+			t.queueCollectionsLock.RUnlock()
 			continue
 		}
+
 		readLevel := activeQueue.State().ReadLevel()
-		maxLevel := activeQueue.State().MaxLevel()
+		maxReadLevel := activeQueue.State().MaxLevel()
 		t.queueCollectionsLock.RUnlock()
 
-		transferTaskInfos, more, partialRead, err := t.readTasks(readLevel, maxLevel)
+		shardMaxReadLevel := t.updateMaxReadLevel()
+		if shardMaxReadLevel.Less(maxReadLevel) {
+			maxReadLevel = shardMaxReadLevel
+			if !readLevel.Less(maxReadLevel) {
+				continue
+			}
+		}
+
+		transferTaskInfos, more, err := t.readTasks(readLevel, maxReadLevel)
 		if err != nil {
 			t.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
 			t.notifyNewTask() // re-enqueue the event
@@ -331,11 +310,19 @@ func (t *transferQueueProcessorBase) processBatch() {
 			}
 		}
 
+		var newReadLevel task.Key
+		if !more {
+			newReadLevel = maxReadLevel
+		} else {
+			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
+		}
 		t.queueCollectionsLock.Lock()
-		queueCollection.AddTasks(tasks, more || partialRead)
+		queueCollection.AddTasks(tasks, newReadLevel)
+		newActiveQueue := queueCollection.ActiveQueue()
 		t.queueCollectionsLock.Unlock()
 
-		if more {
+		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
+			// more tasks for the current active queue or the active queue has changed
 			t.notifyNewTask()
 		}
 	}
@@ -363,7 +350,7 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 
 	if minAckLevel == nil {
 		// note that only failover processor will meet this condition
-		err := t.transferQueueShutdown()
+		err := t.queueShutdown()
 		if err != nil {
 			t.logger.Error("Error shutdown queue", tag.Error(err))
 			// return error so that shutdown callback can be retried
@@ -374,7 +361,7 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 
 	// TODO: emit metrics for total # of pending tasks
 
-	if err := t.updateTransferAckLevel(minAckLevel.(*transferTaskKey).taskID); err != nil {
+	if err := t.updateClusterAckLevel(minAckLevel); err != nil {
 		t.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
 		t.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
 		return false, err
@@ -384,37 +371,10 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 }
 
 func (t *transferQueueProcessorBase) splitQueue() {
-	if t.options.QueueSplitPolicy == nil {
-		return
-	}
-
-	t.queueCollectionsLock.Lock()
-	defer t.queueCollectionsLock.Unlock()
-
-	newQueuesMap := make(map[int][]ProcessingQueue)
-	for _, queueCollection := range t.processingQueueCollections {
-		newQueues := queueCollection.Split(t.options.QueueSplitPolicy)
-		for _, newQueue := range newQueues {
-			newQueueLevel := newQueue.State().Level()
-			newQueuesMap[newQueueLevel] = append(newQueuesMap[newQueueLevel], newQueue)
-		}
-
-		if queuesToMerge, ok := newQueuesMap[queueCollection.Level()]; ok {
-			queueCollection.Merge(queuesToMerge)
-			delete(newQueuesMap, queueCollection.Level())
-		}
-	}
-
-	for level, newQueues := range newQueuesMap {
-		t.processingQueueCollections = append(t.processingQueueCollections, NewProcessingQueueCollection(
-			level,
-			newQueues,
-		))
-	}
-
-	sort.Slice(t.processingQueueCollections, func(i, j int) bool {
-		return t.processingQueueCollections[i].Level() < t.processingQueueCollections[j].Level()
-	})
+	t.processingQueueCollections = splitProcessingQueueCollection(
+		t.processingQueueCollections,
+		t.options.QueueSplitPolicy,
+	)
 }
 
 func (t *transferQueueProcessorBase) getProcessingQueueStates() []ProcessingQueueState {
@@ -434,25 +394,25 @@ func (t *transferQueueProcessorBase) getProcessingQueueStates() []ProcessingQueu
 func (t *transferQueueProcessorBase) readTasks(
 	readLevel task.Key,
 	maxReadLevel task.Key,
-) ([]*persistence.TransferTaskInfo, bool, bool, error) {
-	shardMaxReadLevel := t.maxReadLevel()
-	partialRead := false
-	if shardMaxReadLevel.Less(maxReadLevel) {
-		partialRead = true
-		maxReadLevel = shardMaxReadLevel
+) ([]*persistence.TransferTaskInfo, bool, error) {
+
+	var response *persistence.GetTransferTasksResponse
+	op := func() error {
+		var err error
+		response, err = t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
+			ReadLevel:    readLevel.(transferTaskKey).taskID,
+			MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
+			BatchSize:    t.options.BatchSize(),
+		})
+		return err
 	}
 
-	response, err := t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
-		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
-		BatchSize:    t.options.BatchSize(),
-	})
-
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
-		return nil, false, false, err
+		return nil, false, err
 	}
 
-	return response.Tasks, len(response.NextPageToken) != 0, partialRead, nil
+	return response.Tasks, len(response.NextPageToken) != 0, nil
 }
 
 func (t *transferQueueProcessorBase) submitTask(
@@ -469,49 +429,16 @@ func (t *transferQueueProcessorBase) submitTask(
 	return true
 }
 
-// RedispatchTasks should be un-exported after the queue processing logic
-// in history package is deprecated.
-func RedispatchTasks(
-	redispatchQueue collection.Queue,
-	queueTaskProcessor task.Processor,
-	logger log.Logger,
-	metricsScope metrics.Scope,
-	shutdownCh <-chan struct{},
-) {
-	queueLength := redispatchQueue.Len()
-	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
-	for i := 0; i != queueLength; i++ {
-		queueTask := redispatchQueue.Remove().(task.Task)
-		submitted, err := queueTaskProcessor.TrySubmit(queueTask)
-		if err != nil {
-			// the only reason error will be returned here is because
-			// task processor has already shutdown. Just return in this case.
-			logger.Error("failed to redispatch task", tag.Error(err))
-			return
-		}
-		if !submitted {
-			// failed to submit, enqueue again
-			redispatchQueue.Add(queueTask)
-		}
-
-		select {
-		case <-shutdownCh:
-			return
-		default:
-		}
-	}
-}
-
 func newTransferTaskKey(
 	taskID int64,
 ) task.Key {
-	return &transferTaskKey{
+	return transferTaskKey{
 		taskID: taskID,
 	}
 }
 
-func (k *transferTaskKey) Less(
+func (k transferTaskKey) Less(
 	key task.Key,
 ) bool {
-	return k.taskID < key.(*transferTaskKey).taskID
+	return k.taskID < key.(transferTaskKey).taskID
 }

@@ -34,68 +34,51 @@ type (
 )
 
 // NewInvariantManager handles running a collection of invariants according to the invariant collection provided.
-// InvariantManager takes care of ensuring invariants are run in their correct dependency order.
 func NewInvariantManager(
 	invariantCollections []common.InvariantCollection,
 	pr common.PersistenceRetryer,
 ) common.InvariantManager {
 	manager := &invariantManager{}
-	manager.invariants, manager.types = getSortedInvariants(invariantCollections, pr)
+	manager.invariants, manager.types = flattenInvariants(invariantCollections, pr)
 	return manager
 }
 
-// RunChecks runs the Check method of all managed invariants.
-// Stops on the first check which indicates corruption or failure.
-// Only returns CheckResultTypeHealthy if all managed checks indicate healthy.
+// RunChecks runs all enabled checks.
 func (i *invariantManager) RunChecks(execution common.Execution) common.ManagerCheckResult {
-	resources := &common.InvariantResourceBag{}
-	var checkResults []common.CheckResult
+	result := common.ManagerCheckResult{
+		CheckResultType:          common.CheckResultTypeHealthy,
+		DeterminingInvariantType: nil,
+		CheckResults:             nil,
+	}
 	for _, iv := range i.invariants {
-		checkResult := iv.Check(execution, resources)
-		checkResults = append(checkResults, checkResult)
-		if checkResult.CheckResultType != common.CheckResultTypeHealthy {
-			return common.ManagerCheckResult{
-				CheckResultType: checkResult.CheckResultType,
-				CheckResults:    checkResults,
-			}
+		checkResult := iv.Check(execution)
+		result.CheckResults = append(result.CheckResults, checkResult)
+		checkResultType, updated := i.nextCheckResultType(result.CheckResultType, checkResult.CheckResultType)
+		result.CheckResultType = checkResultType
+		if updated {
+			result.DeterminingInvariantType = &checkResult.InvariantType
 		}
 	}
-	return common.ManagerCheckResult{
-		CheckResultType: common.CheckResultTypeHealthy,
-		CheckResults:    checkResults,
-	}
+	return result
 }
 
-// RunFixes runs the Fix method of all managed invariants.
-// Stops on the first fix which indicates a failure.
-// Returns FixResultTypeSkipped if all invariants where skipped, if at least one was fixed returns FixResultTypeFixed.
+// RunFixes runs all enabled fixes.
 func (i *invariantManager) RunFixes(execution common.Execution) common.ManagerFixResult {
-	resources := &common.InvariantResourceBag{}
-	encounteredFix := false
-	var fixResults []common.FixResult
+	result := common.ManagerFixResult{
+		FixResultType:            common.FixResultTypeSkipped,
+		DeterminingInvariantType: nil,
+		FixResults:               nil,
+	}
 	for _, iv := range i.invariants {
-		fixResult := iv.Fix(execution, resources)
-		fixResults = append(fixResults, fixResult)
-		if fixResult.FixResultType == common.FixResultTypeFailed {
-			return common.ManagerFixResult{
-				FixResultType: common.FixResultTypeFailed,
-				FixResults:    fixResults,
-			}
-		}
-		if fixResult.FixResultType == common.FixResultTypeFixed {
-			encounteredFix = true
+		fixResult := iv.Fix(execution)
+		result.FixResults = append(result.FixResults, fixResult)
+		fixResultType, updated := i.nextFixResultType(result.FixResultType, fixResult.FixResultType)
+		result.FixResultType = fixResultType
+		if updated {
+			result.DeterminingInvariantType = &fixResult.InvariantType
 		}
 	}
-	if encounteredFix {
-		return common.ManagerFixResult{
-			FixResultType: common.FixResultTypeFixed,
-			FixResults:    fixResults,
-		}
-	}
-	return common.ManagerFixResult{
-		FixResultType: common.FixResultTypeSkipped,
-		FixResults:    fixResults,
-	}
+	return result
 }
 
 // InvariantTypes returns sorted list of all invariants that manager will run.
@@ -103,7 +86,45 @@ func (i *invariantManager) InvariantTypes() []common.InvariantType {
 	return i.types
 }
 
-func getSortedInvariants(
+func (i *invariantManager) nextFixResultType(
+	currentState common.FixResultType,
+	event common.FixResultType,
+) (common.FixResultType, bool) {
+	switch currentState {
+	case common.FixResultTypeSkipped:
+		return event, event != common.FixResultTypeSkipped
+	case common.FixResultTypeFixed:
+		if event == common.FixResultTypeFailed {
+			return event, true
+		}
+		return currentState, false
+	case common.FixResultTypeFailed:
+		return currentState, false
+	default:
+		panic("unknown FixResultType")
+	}
+}
+
+func (i *invariantManager) nextCheckResultType(
+	currentState common.CheckResultType,
+	event common.CheckResultType,
+) (common.CheckResultType, bool) {
+	switch currentState {
+	case common.CheckResultTypeHealthy:
+		return event, event != common.CheckResultTypeHealthy
+	case common.CheckResultTypeCorrupted:
+		if event == common.CheckResultTypeFailed {
+			return event, true
+		}
+		return currentState, false
+	case common.CheckResultTypeFailed:
+		return currentState, false
+	default:
+		panic("unknown CheckResultType")
+	}
+}
+
+func flattenInvariants(
 	collections []common.InvariantCollection,
 	pr common.PersistenceRetryer,
 ) ([]common.Invariant, []common.InvariantType) {
@@ -124,7 +145,7 @@ func getSortedInvariants(
 }
 
 func getHistoryCollection(pr common.PersistenceRetryer) []common.Invariant {
-	return []common.Invariant{NewHistoryExists(pr), NewValidFirstEvent(pr)}
+	return []common.Invariant{NewHistoryExists(pr)}
 }
 
 func getMutableStateCollection(pr common.PersistenceRetryer) []common.Invariant {
