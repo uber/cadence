@@ -258,7 +258,7 @@ func (d *HandlerImpl) RegisterDomain(
 			domainRequest.ReplicationConfig,
 			domainRequest.ConfigVersion,
 			domainRequest.FailoverVersion,
-			persistence.InitialPreviousFailoverVersion,
+			common.InitialPreviousFailoverVersion,
 			domainRequest.IsGlobalDomain,
 		)
 		if err != nil {

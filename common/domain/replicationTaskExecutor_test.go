@@ -572,7 +572,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(updateClusters), resp.ReplicationConfig.Clusters)
 	s.Equal(updateConfigVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(persistence.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
+	s.Equal(common.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
 	s.Equal(int64(0), resp.FailoverNotificationVersion)
 	s.Equal(notificationVersion, resp.NotificationVersion)
 }
@@ -653,7 +653,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp1.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp1.ConfigVersion)
 	s.Equal(failoverVersion, resp1.FailoverVersion)
-	s.Equal(previousFailoverVersion, resp1.PreviousFailoverVersion)
+	s.Equal(common.InitialPreviousFailoverVersion, resp1.PreviousFailoverVersion)
 
 	// success update case
 	updateOperation := replicator.DomainOperationUpdate
@@ -856,7 +856,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(persistence.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
+	s.Equal(common.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
 	s.Equal(int64(0), resp.FailoverNotificationVersion)
 	s.Equal(notificationVersion, resp.NotificationVersion)
 }
