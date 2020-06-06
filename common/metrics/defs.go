@@ -1634,6 +1634,7 @@ const (
 	CadenceErrNonDeterministicPerTaskListCounter
 	CadenceErrUnauthorizedPerTaskListCounter
 	CadenceErrAuthorizeFailedPerTaskListCounter
+	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
 
 	CadenceShardSuccessGauge
 	CadenceShardFailureGauge
