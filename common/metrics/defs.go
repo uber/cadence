@@ -1620,7 +1620,7 @@ const (
 	HistoryArchiverBlobIntegrityCheckFailedCount
 	HistoryArchiverDuplicateArchivalsCount
 
-	HistroyFailoverMarkerInsertFailure
+	HistoryFailoverMarkerInsertFailure
 
 	VisibilityArchiverArchiveNonRetryableErrorCount
 	VisibilityArchiverArchiveTransientErrorCount
@@ -2014,7 +2014,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverRunningBlobIntegrityCheckCount:             {metricName: "history_archiver_running_blob_integrity_check", metricType: Counter},
 		HistoryArchiverBlobIntegrityCheckFailedCount:              {metricName: "history_archiver_blob_integrity_check_failed", metricType: Counter},
 		HistoryArchiverDuplicateArchivalsCount:                    {metricName: "history_archiver_duplicate_archivals", metricType: Counter},
-		HistroyFailoverMarkerInsertFailure:                        {metricName: "history_failover_marker_insert_failures", metricType: Counter},
+		HistoryFailoverMarkerInsertFailure:                        {metricName: "history_failover_marker_insert_failures", metricType: Counter},
 		VisibilityArchiverArchiveNonRetryableErrorCount:           {metricName: "visibility_archiver_archive_non_retryable_error", metricType: Counter},
 		VisibilityArchiverArchiveTransientErrorCount:              {metricName: "visibility_archiver_archive_transient_error", metricType: Counter},
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
