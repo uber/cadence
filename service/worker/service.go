@@ -110,7 +110,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 	config := &Config{
 		ReplicationCfg: &replicator.Config{
-			PersistenceMaxQPS:                  dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+			PersistenceMaxQPS:                  dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 2000),
 			ReplicatorMetaTaskConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorMetaTaskConcurrency, 64),
 			ReplicatorTaskConcurrency:          dc.GetIntProperty(dynamicconfig.WorkerReplicatorTaskConcurrency, 256),
 			ReplicatorMessageConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerReplicatorMessageConcurrency, 2048),
