@@ -70,15 +70,15 @@ func (s *processingQueueSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *processingQueueSuite) TestAddTasks_WithMoreTasks() {
-	ackLevel := &testKey{ID: 1}
-	maxLevel := &testKey{ID: 10}
+func (s *processingQueueSuite) TestAddTasks() {
+	ackLevel := testKey{ID: 1}
+	maxLevel := testKey{ID: 10}
 
 	taskKeys := []task.Key{
-		&testKey{ID: 2},
-		&testKey{ID: 3},
-		&testKey{ID: 5},
-		&testKey{ID: 9},
+		testKey{ID: 2},
+		testKey{ID: 3},
+		testKey{ID: 5},
+		testKey{ID: 9},
 	}
 	tasks := make(map[task.Key]task.Task)
 	for _, key := range taskKeys {
@@ -99,60 +99,27 @@ func (s *processingQueueSuite) TestAddTasks_WithMoreTasks() {
 		make(map[task.Key]task.Task),
 	)
 
-	queue.AddTasks(tasks, true)
+	newReadLevel := testKey{ID: 10}
+	queue.AddTasks(tasks, newReadLevel)
 	s.Len(queue.outstandingTasks, len(taskKeys))
-	s.Equal(taskKeys[len(taskKeys)-1], queue.state.readLevel)
+	s.Equal(newReadLevel, queue.state.readLevel)
 
 	// add the same set of tasks again, should have no effect
-	queue.AddTasks(tasks, true)
+	queue.AddTasks(tasks, newReadLevel)
 	s.Len(queue.outstandingTasks, len(taskKeys))
-	s.Equal(taskKeys[len(taskKeys)-1], queue.state.readLevel)
+	s.Equal(newReadLevel, queue.state.readLevel)
 }
 
-func (s *processingQueueSuite) TestAddTasks_NoMoreTasks() {
-	ackLevel := &testKey{ID: 1}
-	maxLevel := &testKey{ID: 10}
+func (s *processingQueueSuite) TestUpdateAckLevel_WithPendingTasks() {
+	ackLevel := testKey{ID: 1}
+	maxLevel := testKey{ID: 10}
 
 	taskKeys := []task.Key{
-		&testKey{ID: 2},
-		&testKey{ID: 3},
-		&testKey{ID: 5},
-		&testKey{ID: 9},
-	}
-	tasks := make(map[task.Key]task.Task)
-	for _, key := range taskKeys {
-		mockTask := task.NewMockTask(s.controller)
-		mockTask.EXPECT().GetDomainID().Return("some random domainID").AnyTimes()
-		mockTask.EXPECT().GetWorkflowID().Return("some random workflowID").AnyTimes()
-		mockTask.EXPECT().GetRunID().Return("some random runID").AnyTimes()
-		mockTask.EXPECT().GetTaskType().Return(0).AnyTimes()
-		tasks[key] = mockTask
-	}
-
-	queue := s.newTestProcessingQueue(
-		0,
-		ackLevel,
-		ackLevel,
-		maxLevel,
-		NewDomainFilter(nil, true),
-		make(map[task.Key]task.Task),
-	)
-
-	queue.AddTasks(tasks, false)
-	s.Len(queue.outstandingTasks, len(taskKeys))
-	s.Equal(maxLevel, queue.state.readLevel)
-}
-
-func (s *processingQueueSuite) TestUpdateAckLevel_WithMoreTasks() {
-	ackLevel := &testKey{ID: 1}
-	maxLevel := &testKey{ID: 10}
-
-	taskKeys := []task.Key{
-		&testKey{ID: 2},
-		&testKey{ID: 3},
-		&testKey{ID: 5},
-		&testKey{ID: 8},
-		&testKey{ID: 10},
+		testKey{ID: 2},
+		testKey{ID: 3},
+		testKey{ID: 5},
+		testKey{ID: 8},
+		testKey{ID: 10},
 	}
 	taskStates := []t.State{
 		t.TaskStateAcked,
@@ -178,18 +145,19 @@ func (s *processingQueueSuite) TestUpdateAckLevel_WithMoreTasks() {
 	)
 
 	queue.UpdateAckLevel()
-	s.Equal(&testKey{ID: 3}, queue.state.ackLevel)
+	s.Equal(testKey{ID: 3}, queue.state.ackLevel)
 }
 
-func (s *processingQueueSuite) TestUpdateAckLevel_NoMoreTasks() {
-	ackLevel := &testKey{ID: 1}
-	maxLevel := &testKey{ID: 10}
+func (s *processingQueueSuite) TestUpdateAckLevel_NoPendingTasks() {
+	ackLevel := testKey{ID: 1}
+	readLevel := testKey{ID: 9}
+	maxLevel := testKey{ID: 10}
 
 	taskKeys := []task.Key{
-		&testKey{ID: 2},
-		&testKey{ID: 3},
-		&testKey{ID: 5},
-		&testKey{ID: 8},
+		testKey{ID: 2},
+		testKey{ID: 3},
+		testKey{ID: 5},
+		testKey{ID: 8},
 	}
 	taskStates := []t.State{
 		t.TaskStateAcked,
@@ -207,14 +175,14 @@ func (s *processingQueueSuite) TestUpdateAckLevel_NoMoreTasks() {
 	queue := s.newTestProcessingQueue(
 		0,
 		ackLevel,
-		maxLevel,
+		readLevel,
 		maxLevel,
 		NewDomainFilter(nil, true),
 		tasks,
 	)
 
 	queue.UpdateAckLevel()
-	s.Equal(maxLevel, queue.state.ackLevel)
+	s.Equal(readLevel, queue.state.ackLevel)
 }
 
 func (s *processingQueueSuite) TestSplit() {
@@ -227,12 +195,12 @@ func (s *processingQueueSuite) TestSplit() {
 			// test 1: no split needed
 			queue: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 3},
-				&testKey{ID: 5},
+				testKey{ID: 0},
+				testKey{ID: 3},
+				testKey{ID: 5},
 				NewDomainFilter(nil, true),
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 2}, &testKey{ID: 3}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 2}, testKey{ID: 3}},
 					[]string{"testDomain1", "testDomain1", "testDomain2"},
 				),
 			),
@@ -240,14 +208,14 @@ func (s *processingQueueSuite) TestSplit() {
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 3},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 3},
+					testKey{ID: 5},
 					NewDomainFilter(nil, true),
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 2}: task.NewMockTask(s.controller),
-						&testKey{ID: 3}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 2}: task.NewMockTask(s.controller),
+						testKey{ID: 3}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -256,24 +224,24 @@ func (s *processingQueueSuite) TestSplit() {
 			// test 2: split two domains to another level, doesn't change range
 			queue: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 5},
-				&testKey{ID: 10},
+				testKey{ID: 0},
+				testKey{ID: 5},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain1": {}, "testDomain2": {}, "testDomain3": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 2}, &testKey{ID: 3}, &testKey{ID: 5}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 2}, testKey{ID: 3}, testKey{ID: 5}},
 					[]string{"testDomain1", "testDomain1", "testDomain2", "testDomain3"},
 				),
 			),
 			policyResult: []ProcessingQueueState{
 				newProcessingQueueState(
 					1,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: false,
@@ -281,9 +249,9 @@ func (s *processingQueueSuite) TestSplit() {
 				),
 				newProcessingQueueState(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
@@ -293,30 +261,30 @@ func (s *processingQueueSuite) TestSplit() {
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 2}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 2}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					1,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 3}: task.NewMockTask(s.controller),
-						&testKey{ID: 5}: task.NewMockTask(s.controller),
+						testKey{ID: 3}: task.NewMockTask(s.controller),
+						testKey{ID: 5}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -325,24 +293,24 @@ func (s *processingQueueSuite) TestSplit() {
 			// test 3: split into multiple new levels, while keeping the existing range
 			queue: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 5},
-				&testKey{ID: 10},
+				testKey{ID: 0},
+				testKey{ID: 5},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    make(map[string]struct{}),
 					ReverseMatch: true,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 2}, &testKey{ID: 3}, &testKey{ID: 5}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 2}, testKey{ID: 3}, testKey{ID: 5}},
 					[]string{"testDomain1", "testDomain1", "testDomain2", "testDomain3"},
 				),
 			),
 			policyResult: []ProcessingQueueState{
 				newProcessingQueueState(
 					1,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}},
 						ReverseMatch: false,
@@ -350,9 +318,9 @@ func (s *processingQueueSuite) TestSplit() {
 				),
 				newProcessingQueueState(
 					2,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain3": {}},
 						ReverseMatch: false,
@@ -360,9 +328,9 @@ func (s *processingQueueSuite) TestSplit() {
 				),
 				newProcessingQueueState(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: true,
@@ -372,42 +340,42 @@ func (s *processingQueueSuite) TestSplit() {
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: true,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 2}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 2}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					1,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 3}: task.NewMockTask(s.controller),
+						testKey{ID: 3}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					2,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain3": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 5}: task.NewMockTask(s.controller),
+						testKey{ID: 5}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -416,24 +384,24 @@ func (s *processingQueueSuite) TestSplit() {
 			// test 4: change the queue range
 			queue: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 7},
-				&testKey{ID: 10},
+				testKey{ID: 0},
+				testKey{ID: 7},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    make(map[string]struct{}),
 					ReverseMatch: true,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 2}, &testKey{ID: 3}, &testKey{ID: 5}, &testKey{ID: 6}, &testKey{ID: 7}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 2}, testKey{ID: 3}, testKey{ID: 5}, testKey{ID: 6}, testKey{ID: 7}},
 					[]string{"testDomain1", "testDomain1", "testDomain2", "testDomain3", "testDomain1", "testDomain3"},
 				),
 			),
 			policyResult: []ProcessingQueueState{
 				newProcessingQueueState(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: true,
@@ -441,9 +409,9 @@ func (s *processingQueueSuite) TestSplit() {
 				),
 				newProcessingQueueState(
 					0,
-					&testKey{ID: 5},
-					&testKey{ID: 7},
-					&testKey{ID: 10},
+					testKey{ID: 5},
+					testKey{ID: 7},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    make(map[string]struct{}),
 						ReverseMatch: true,
@@ -451,9 +419,9 @@ func (s *processingQueueSuite) TestSplit() {
 				),
 				newProcessingQueueState(
 					1,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: false,
@@ -463,44 +431,44 @@ func (s *processingQueueSuite) TestSplit() {
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: true,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 2}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 2}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 5},
-					&testKey{ID: 7},
-					&testKey{ID: 10},
+					testKey{ID: 5},
+					testKey{ID: 7},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    make(map[string]struct{}),
 						ReverseMatch: true,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 6}: task.NewMockTask(s.controller),
-						&testKey{ID: 7}: task.NewMockTask(s.controller),
+						testKey{ID: 6}: task.NewMockTask(s.controller),
+						testKey{ID: 7}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					1,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}, "testDomain3": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 3}: task.NewMockTask(s.controller),
-						&testKey{ID: 5}: task.NewMockTask(s.controller),
+						testKey{ID: 3}: task.NewMockTask(s.controller),
+						testKey{ID: 5}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -527,45 +495,45 @@ func (s *processingQueueSuite) TestMerge() {
 			// test 1: no overlap in range
 			queue1: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 1},
-				&testKey{ID: 10},
+				testKey{ID: 0},
+				testKey{ID: 1},
+				testKey{ID: 10},
 				NewDomainFilter(nil, true),
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}},
+					[]task.Key{testKey{ID: 1}},
 					[]string{"testDomain1"},
 				),
 			),
 			queue2: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 10},
-				&testKey{ID: 50},
-				&testKey{ID: 100},
+				testKey{ID: 10},
+				testKey{ID: 50},
+				testKey{ID: 100},
 				NewDomainFilter(nil, true),
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 50}},
+					[]task.Key{testKey{ID: 50}},
 					[]string{"testDomain2"},
 				),
 			),
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 1},
-					&testKey{ID: 10},
+					testKey{ID: 0},
+					testKey{ID: 1},
+					testKey{ID: 10},
 					NewDomainFilter(nil, true),
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 10},
-					&testKey{ID: 50},
-					&testKey{ID: 100},
+					testKey{ID: 10},
+					testKey{ID: 50},
+					testKey{ID: 100},
 					NewDomainFilter(nil, true),
 					map[task.Key]task.Task{
-						&testKey{ID: 50}: task.NewMockTask(s.controller),
+						testKey{ID: 50}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -574,60 +542,60 @@ func (s *processingQueueSuite) TestMerge() {
 			// test 2: same ack level
 			queue1: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 7},
-				&testKey{ID: 10},
+				testKey{ID: 0},
+				testKey{ID: 7},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain1": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 4}, &testKey{ID: 7}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 4}, testKey{ID: 7}},
 					[]string{"testDomain1", "testDomain1", "testDomain1"},
 				),
 			),
 			queue2: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 3},
-				&testKey{ID: 5},
+				testKey{ID: 0},
+				testKey{ID: 3},
+				testKey{ID: 5},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain2": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 2}, &testKey{ID: 3}},
+					[]task.Key{testKey{ID: 2}, testKey{ID: 3}},
 					[]string{"testDomain2", "testDomain2"},
 				),
 			),
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 3},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 3},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}, "testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 2}: task.NewMockTask(s.controller),
-						&testKey{ID: 3}: task.NewMockTask(s.controller),
-						&testKey{ID: 4}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 2}: task.NewMockTask(s.controller),
+						testKey{ID: 3}: task.NewMockTask(s.controller),
+						testKey{ID: 4}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 5},
-					&testKey{ID: 7},
-					&testKey{ID: 10},
+					testKey{ID: 5},
+					testKey{ID: 7},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 7}: task.NewMockTask(s.controller),
+						testKey{ID: 7}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -636,61 +604,61 @@ func (s *processingQueueSuite) TestMerge() {
 			// test 3: same max level
 			queue1: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 7},
-				&testKey{ID: 10},
+				testKey{ID: 0},
+				testKey{ID: 7},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain1": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 4}, &testKey{ID: 7}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 4}, testKey{ID: 7}},
 					[]string{"testDomain1", "testDomain1", "testDomain1"},
 				),
 			),
 			queue2: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 5},
-				&testKey{ID: 9},
-				&testKey{ID: 10},
+				testKey{ID: 5},
+				testKey{ID: 9},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain2": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 6}, &testKey{ID: 8}, &testKey{ID: 9}},
+					[]task.Key{testKey{ID: 6}, testKey{ID: 8}, testKey{ID: 9}},
 					[]string{"testDomain2", "testDomain2", "testDomain2"},
 				),
 			),
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 4}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 4}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 5},
-					&testKey{ID: 7},
-					&testKey{ID: 10},
+					testKey{ID: 5},
+					testKey{ID: 7},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}, "testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 6}: task.NewMockTask(s.controller),
-						&testKey{ID: 7}: task.NewMockTask(s.controller),
-						&testKey{ID: 8}: task.NewMockTask(s.controller),
-						&testKey{ID: 9}: task.NewMockTask(s.controller),
+						testKey{ID: 6}: task.NewMockTask(s.controller),
+						testKey{ID: 7}: task.NewMockTask(s.controller),
+						testKey{ID: 8}: task.NewMockTask(s.controller),
+						testKey{ID: 9}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -699,68 +667,68 @@ func (s *processingQueueSuite) TestMerge() {
 			// test 4: one queue contain another
 			queue1: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 7},
-				&testKey{ID: 20},
+				testKey{ID: 0},
+				testKey{ID: 7},
+				testKey{ID: 20},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain1": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 4}, &testKey{ID: 7}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 4}, testKey{ID: 7}},
 					[]string{"testDomain1", "testDomain1", "testDomain1"},
 				),
 			),
 			queue2: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 5},
-				&testKey{ID: 9},
-				&testKey{ID: 10},
+				testKey{ID: 5},
+				testKey{ID: 9},
+				testKey{ID: 10},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain2": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 6}, &testKey{ID: 8}, &testKey{ID: 9}},
+					[]task.Key{testKey{ID: 6}, testKey{ID: 8}, testKey{ID: 9}},
 					[]string{"testDomain2", "testDomain2", "testDomain2"},
 				),
 			),
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 5},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 5},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 4}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 4}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 5},
-					&testKey{ID: 7},
-					&testKey{ID: 10},
+					testKey{ID: 5},
+					testKey{ID: 7},
+					testKey{ID: 10},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}, "testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 6}: task.NewMockTask(s.controller),
-						&testKey{ID: 7}: task.NewMockTask(s.controller),
-						&testKey{ID: 8}: task.NewMockTask(s.controller),
-						&testKey{ID: 9}: task.NewMockTask(s.controller),
+						testKey{ID: 6}: task.NewMockTask(s.controller),
+						testKey{ID: 7}: task.NewMockTask(s.controller),
+						testKey{ID: 8}: task.NewMockTask(s.controller),
+						testKey{ID: 9}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 10},
-					&testKey{ID: 10},
-					&testKey{ID: 20},
+					testKey{ID: 10},
+					testKey{ID: 10},
+					testKey{ID: 20},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
@@ -773,73 +741,73 @@ func (s *processingQueueSuite) TestMerge() {
 			// test 5: general case
 			queue1: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 0},
-				&testKey{ID: 3},
-				&testKey{ID: 15},
+				testKey{ID: 0},
+				testKey{ID: 3},
+				testKey{ID: 15},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain1": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 1}, &testKey{ID: 3}},
+					[]task.Key{testKey{ID: 1}, testKey{ID: 3}},
 					[]string{"testDomain1", "testDomain1"},
 				),
 			),
 			queue2: s.newTestProcessingQueue(
 				0,
-				&testKey{ID: 5},
-				&testKey{ID: 17},
-				&testKey{ID: 20},
+				testKey{ID: 5},
+				testKey{ID: 17},
+				testKey{ID: 20},
 				DomainFilter{
 					DomainIDs:    map[string]struct{}{"testDomain2": {}},
 					ReverseMatch: false,
 				},
 				s.newMockTasksForDomain(
-					[]task.Key{&testKey{ID: 6}, &testKey{ID: 8}, &testKey{ID: 9}, &testKey{ID: 17}},
+					[]task.Key{testKey{ID: 6}, testKey{ID: 8}, testKey{ID: 9}, testKey{ID: 17}},
 					[]string{"testDomain2", "testDomain2", "testDomain2", "testDomain2"},
 				),
 			),
 			expectedNewQueues: []*processingQueueImpl{
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 0},
-					&testKey{ID: 3},
-					&testKey{ID: 5},
+					testKey{ID: 0},
+					testKey{ID: 3},
+					testKey{ID: 5},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 1}: task.NewMockTask(s.controller),
-						&testKey{ID: 3}: task.NewMockTask(s.controller),
+						testKey{ID: 1}: task.NewMockTask(s.controller),
+						testKey{ID: 3}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 5},
-					&testKey{ID: 5},
-					&testKey{ID: 15},
+					testKey{ID: 5},
+					testKey{ID: 5},
+					testKey{ID: 15},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain1": {}, "testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 6}: task.NewMockTask(s.controller),
-						&testKey{ID: 8}: task.NewMockTask(s.controller),
-						&testKey{ID: 9}: task.NewMockTask(s.controller),
+						testKey{ID: 6}: task.NewMockTask(s.controller),
+						testKey{ID: 8}: task.NewMockTask(s.controller),
+						testKey{ID: 9}: task.NewMockTask(s.controller),
 					},
 				),
 				s.newTestProcessingQueue(
 					0,
-					&testKey{ID: 15},
-					&testKey{ID: 17},
-					&testKey{ID: 20},
+					testKey{ID: 15},
+					testKey{ID: 17},
+					testKey{ID: 20},
 					DomainFilter{
 						DomainIDs:    map[string]struct{}{"testDomain2": {}},
 						ReverseMatch: false,
 					},
 					map[task.Key]task.Task{
-						&testKey{ID: 17}: task.NewMockTask(s.controller),
+						testKey{ID: 17}: task.NewMockTask(s.controller),
 					},
 				),
 			},
@@ -969,6 +937,6 @@ func (s *processingQueueSuite) newMockTasksForDomain(
 	return tasks
 }
 
-func (k *testKey) Less(key task.Key) bool {
-	return k.ID < key.(*testKey).ID
+func (k testKey) Less(key task.Key) bool {
+	return k.ID < key.(testKey).ID
 }

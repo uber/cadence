@@ -26,7 +26,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -83,12 +82,12 @@ func (s *HistoryExistsSuite) TestCheck() {
 		{
 			getExecResp:    &persistence.GetWorkflowExecutionResponse{},
 			getHistoryResp: nil,
-			getHistoryErr:  gocql.ErrNotFound,
+			getHistoryErr:  &shared.EntityNotExistsError{Message: "got entity not exists error"},
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeCorrupted,
 				InvariantType:   common.HistoryExistsInvariantType,
 				Info:            "concrete execution exists but history does not exist",
-				InfoDetails:     gocql.ErrNotFound.Error(),
+				InfoDetails:     "EntityNotExistsError{Message: got entity not exists error}",
 			},
 			expectedResourcePopulated: false,
 		},
@@ -135,13 +134,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		historyManager.On("ReadHistoryBranch", mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
 		i := NewHistoryExists(common.NewPersistenceRetryer(execManager, historyManager))
-		resources := &common.InvariantResourceBag{}
-		result := i.Check(getOpenExecution(), resources)
+		result := i.Check(getOpenExecution())
 		s.Equal(tc.expectedResult, result)
-		if tc.expectedResourcePopulated {
-			s.NotNil(resources.History)
-		} else {
-			s.Nil(resources.History)
-		}
 	}
 }
