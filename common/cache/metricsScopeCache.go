@@ -25,15 +25,16 @@ package cache
 import (
 	"bytes"
 	"strconv"
-	"sync"
+	"sync/atomic"
 
 	"github.com/uber/cadence/common/metrics"
 )
 
 type domainMetricsScopeCache struct {
-	sync.RWMutex
 	scopeMap map[string]metrics.Scope
 }
+
+var cache atomic.Value
 
 // NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
 func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
@@ -44,8 +45,8 @@ func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
 
 // Get retrieves scope for domainID and scopeIdx
 func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
-	c.RLock()
-	defer c.RUnlock()
+
+	data := cache.Load().(domainMetricsScopeCache)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(domainID)
@@ -53,14 +54,14 @@ func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Sc
 	buffer.WriteString(strconv.Itoa(scopeIdx))
 	key := buffer.String()
 
-	metricsScope, ok := c.scopeMap[key]
+	metricsScope, ok := data.scopeMap[key]
 	return metricsScope, ok
 }
 
 // Put puts map of domainID and scopeIdx to metricsScope
 func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
-	c.Lock()
-	defer c.Unlock()
+
+	data := cache.Load().(domainMetricsScopeCache)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(domainID)
@@ -68,5 +69,6 @@ func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metri
 	buffer.WriteString(strconv.Itoa(scopeIdx))
 	key := buffer.String()
 
-	c.scopeMap[key] = scope
+	data.scopeMap[key] = scope
+	cache.Store(data)
 }
