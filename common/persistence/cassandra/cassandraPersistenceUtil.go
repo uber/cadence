@@ -32,6 +32,10 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
+const (
+	defaultProcessingQueueLevel = 0
+)
+
 func applyWorkflowMutationBatch(
 	batch *gocql.Batch,
 	shardID int,
@@ -1796,6 +1800,10 @@ func createShardInfo(
 			info.ClusterTransferAckLevel = v.(map[string]int64)
 		case "cluster_timer_ack_level":
 			info.ClusterTimerAckLevel = v.(map[string]time.Time)
+		case "cluster_transfer_processing_queue_state":
+			info.ClusterTransferProcessingQueueState = v.(map[string]p.ProcessingQueueState)
+		case "cluster_timer_processing_queue_state":
+			info.ClusterTimerProcessingQueueState = v.(map[string]p.ProcessingQueueState)
 		case "domain_notification_version":
 			info.DomainNotificationVersion = v.(int64)
 		case "cluster_replication_level":
@@ -1817,7 +1825,38 @@ func createShardInfo(
 		info.ClusterReplicationLevel = make(map[string]int64)
 	}
 
+	if info.ClusterTransferProcessingQueueState == nil {
+		info.ClusterTransferProcessingQueueState = map[string]p.ProcessingQueueState{}
+		for cluster, ackLevel := range info.ClusterTransferAckLevel {
+			processingQueueState := createProcessingQueueState(ackLevel)
+			info.ClusterTransferProcessingQueueState[cluster] = processingQueueState
+		}
+	}
+
+	if info.ClusterTimerProcessingQueueState == nil {
+		info.ClusterTimerProcessingQueueState = map[string]p.ProcessingQueueState{}
+		for cluster, ackLevel := range info.ClusterTimerAckLevel {
+			processingQueueState := createProcessingQueueState(ackLevel.UnixNano())
+			info.ClusterTimerProcessingQueueState[cluster] = processingQueueState
+		}
+	}
+
 	return info
+}
+
+func createProcessingQueueState(
+	ackLevel int64,
+) p.ProcessingQueueState {
+	domainFilter := &p.DomainFilter{
+		DomainIDs:    make(map[string]struct{}),
+		ReverseMatch: true,
+	}
+	return p.ProcessingQueueState{
+		Level:        defaultProcessingQueueLevel,
+		AckLevel:     ackLevel,
+		MaxLevel:     ackLevel,
+		DomainFilter: domainFilter,
+	}
 }
 
 func createWorkflowExecutionInfo(

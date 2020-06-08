@@ -242,21 +242,37 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                   int                              `json:"shard_id"`
-		Owner                     string                           `json:"owner"`
-		RangeID                   int64                            `json:"range_id"`
-		StolenSinceRenew          int                              `json:"stolen_since_renew"`
-		UpdatedAt                 time.Time                        `json:"updated_at"`
-		ReplicationAckLevel       int64                            `json:"replication_ack_level"`
-		ReplicationDLQAckLevel    map[string]int64                 `json:"replication_dlq_ack_level"`
-		TransferAckLevel          int64                            `json:"transfer_ack_level"`
-		TimerAckLevel             time.Time                        `json:"timer_ack_level"`
-		ClusterTransferAckLevel   map[string]int64                 `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel      map[string]time.Time             `json:"cluster_timer_ack_level"`
-		TransferFailoverLevels    map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
-		TimerFailoverLevels       map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel   map[string]int64                 `json:"cluster_replication_level"`
-		DomainNotificationVersion int64                            `json:"domain_notification_version"`
+		ShardID                             int                              `json:"shard_id"`
+		Owner                               string                           `json:"owner"`
+		RangeID                             int64                            `json:"range_id"`
+		StolenSinceRenew                    int                              `json:"stolen_since_renew"`
+		UpdatedAt                           time.Time                        `json:"updated_at"`
+		ReplicationAckLevel                 int64                            `json:"replication_ack_level"`
+		ReplicationDLQAckLevel              map[string]int64                 `json:"replication_dlq_ack_level"`
+		TransferAckLevel                    int64                            `json:"transfer_ack_level"`
+		TimerAckLevel                       time.Time                        `json:"timer_ack_level"`
+		ClusterTransferAckLevel             map[string]int64                 `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel                map[string]time.Time             `json:"cluster_timer_ack_level"`
+		ClusterTransferProcessingQueueState map[string]ProcessingQueueState  `json:"cluster_transfer_processing_queue_state"`
+		ClusterTimerProcessingQueueState    map[string]ProcessingQueueState  `json:"cluster_timer_processing_queue_state"`
+		TransferFailoverLevels              map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
+		TimerFailoverLevels                 map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel             map[string]int64                 `json:"cluster_replication_level"`
+		DomainNotificationVersion           int64                            `json:"domain_notification_version"`
+	}
+
+	// ProcessingQueueState contains the persisted state of a ProcessingQueue
+	ProcessingQueueState struct {
+		Level        int           `json:"processing_queue_level"`
+		AckLevel     int64         `json:"ack_level"`
+		MaxLevel     int64         `json:"max_level"`
+		DomainFilter *DomainFilter `json:"domain_filter"`
+	}
+
+	// DomainFilter describes a filter to include/exclude a set of domains in a ProcessingQueue
+	DomainFilter struct {
+		DomainIDs    map[string]struct{} `json:"domain_ids"`
+		ReverseMatch bool                `json:"reverse_match"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level

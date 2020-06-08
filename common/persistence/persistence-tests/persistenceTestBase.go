@@ -211,14 +211,38 @@ func (s *TestBase) Setup() {
 
 	s.ReadLevel = 0
 	s.ReplicationReadLevel = 0
+
+	domainFilter := &p.DomainFilter{
+		DomainIDs:    make(map[string]struct{}),
+		ReverseMatch: true,
+	}
+	transferPQS := map[string]p.ProcessingQueueState{
+		s.ClusterMetadata.GetCurrentClusterName(): {
+			Level:        0,
+			AckLevel:     0,
+			MaxLevel:     0,
+			DomainFilter: domainFilter,
+		},
+	}
+	timerPQS := map[string]p.ProcessingQueueState{
+		s.ClusterMetadata.GetCurrentClusterName(): {
+			Level:        0,
+			AckLevel:     0,
+			MaxLevel:     0,
+			DomainFilter: domainFilter,
+		},
+	}
+
 	s.ShardInfo = &p.ShardInfo{
-		ShardID:                 shardID,
-		RangeID:                 0,
-		TransferAckLevel:        0,
-		ReplicationAckLevel:     0,
-		TimerAckLevel:           time.Time{},
-		ClusterTimerAckLevel:    map[string]time.Time{clusterName: time.Time{}},
-		ClusterTransferAckLevel: map[string]int64{clusterName: 0},
+		ShardID:                             shardID,
+		RangeID:                             0,
+		TransferAckLevel:                    0,
+		ReplicationAckLevel:                 0,
+		TimerAckLevel:                       time.Time{},
+		ClusterTimerAckLevel:                map[string]time.Time{clusterName: time.Time{}},
+		ClusterTransferAckLevel:             map[string]int64{clusterName: 0},
+		ClusterTransferProcessingQueueState: transferPQS,
+		ClusterTimerProcessingQueueState:    timerPQS,
 	}
 
 	s.TaskIDGenerator = &TestTransferTaskIDGenerator{}

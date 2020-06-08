@@ -109,6 +109,8 @@ const (
 		`timer_ack_level: ?, ` +
 		`cluster_transfer_ack_level: ?, ` +
 		`cluster_timer_ack_level: ?, ` +
+		`cluster_transfer_processing_queue_state: ?, ` +
+		`cluster_timer_processing_queue_state: ?, ` +
 		`domain_notification_version: ?, ` +
 		`cluster_replication_level: ? ` +
 		`}`
@@ -968,6 +970,8 @@ func (d *cassandraPersistence) CreateShard(request *p.CreateShardRequest) error 
 		shardInfo.TimerAckLevel,
 		shardInfo.ClusterTransferAckLevel,
 		shardInfo.ClusterTimerAckLevel,
+		shardInfo.ClusterTransferProcessingQueueState,
+		shardInfo.ClusterTimerProcessingQueueState,
 		shardInfo.DomainNotificationVersion,
 		shardInfo.ClusterReplicationLevel,
 		shardInfo.RangeID)
@@ -1044,6 +1048,8 @@ func (d *cassandraPersistence) UpdateShard(request *p.UpdateShardRequest) error 
 		shardInfo.TimerAckLevel,
 		shardInfo.ClusterTransferAckLevel,
 		shardInfo.ClusterTimerAckLevel,
+		shardInfo.ClusterTransferProcessingQueueState,
+		shardInfo.ClusterTimerProcessingQueueState,
 		shardInfo.DomainNotificationVersion,
 		shardInfo.ClusterReplicationLevel,
 		shardInfo.RangeID,

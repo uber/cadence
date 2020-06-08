@@ -11,14 +11,30 @@ CREATE TYPE shard (
   transfer_ack_level          bigint, -- TO BE DEPRECATED, IN FAVOR OF cluster_transfer_ack_level
   timer_ack_level             timestamp, -- TO BE DEPRECATED, IN FAVOR OF cluster_timer_ack_level
   -- Mapping of cluster to corresponding transfer ack level
-  cluster_transfer_ack_level  map<text, bigint>,
+  cluster_transfer_ack_level  map<text, bigint>, -- TO BE DEPRECATED, IN FAVOR OF cluster_transfer_processing_queue_state
   -- Mapping of cluster to corresponding timer ack level
-  cluster_timer_ack_level     map<text, timestamp>,
+  cluster_timer_ack_level     map<text, timestamp>, -- TO BE DEPRECATED, IN FAVOR OF cluster_timer_processing_queue_state
   domain_notification_version bigint, -- the global domain change version this shard is aware of
   -- Mapping of (remote) cluster to corresponding replication level (last replicated task_id)
   cluster_replication_level   map<text, bigint>,
   -- Mapping of (remote) cluster to corresponding replication DLQ ack level (last replicated task_id)
   replication_dlq_ack_level   map<text, bigint>,
+  -- Mapping of cluster to corresponding transfer
+    cluster_transfer_processing_queue_state map<text, frozen<processing_queue_state>>,
+  -- Mapping of
+    cluster_timer_processing_queue_state map<text, frozen<processing_queue_state>>,
+);
+
+CREATE TYPE processing_queue_state (
+    processing_queue_level  int,
+    ack_level               bigint,
+    max_level               bigint,
+    domain_filter           frozen<domain_filter>,
+);
+
+CREATE TYPE domain_filter (
+    domain_ids    set<uuid>,
+    reverse_match boolean,
 );
 
 --- Workflow execution and mutable state ---
