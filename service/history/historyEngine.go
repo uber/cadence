@@ -442,13 +442,13 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			for _, nextDomain := range nextDomains {
 				domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
-				previousFailoverVersion :=nextDomain.GetPreviousFailoverVersion()
+				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
 
 				if nextDomain.IsGlobalDomain() &&
 					domainFailoverNotificationVersion >= shardNotificationVersion &&
 					domainActiveCluster != e.currentClusterName &&
 					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
-					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName{
+					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
 						VisibilityTimestamp: e.timeSource.Now(),
 						Version:             shardNotificationVersion,
