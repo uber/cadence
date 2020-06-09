@@ -32,11 +32,11 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-const flushBufferedMetricsScopeDuration = 30*time.Second
+const flushBufferedMetricsScopeDuration = 10 * time.Second
 
 type domainMetricsScopeCache struct {
 	scopeMap map[string]metrics.Scope
-	buffer *buffer
+	buffer   *buffer
 }
 
 type buffer struct {
@@ -44,8 +44,9 @@ type buffer struct {
 	bufferMap map[string]metrics.Scope
 }
 
-var cache atomic.Value
+type metricsScopeMap map[string]metrics.Scope
 
+var cache atomic.Value
 
 // NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
 func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
@@ -55,7 +56,7 @@ func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
 			bufferMap: make(map[string]metrics.Scope),
 		},
 	}
-
+	cache.Store(make(metricsScopeMap))
 	mc.flushBufferedMetricsScope()
 	return mc
 }
@@ -67,9 +68,9 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope() {
 			case <-time.After(flushBufferedMetricsScopeDuration):
 				c.buffer.Lock()
 				if len(c.buffer.bufferMap) > 0 {
-					scopeMap := make(map[string]metrics.Scope)
+					scopeMap := make(metricsScopeMap)
 
-					data := cache.Load().(map[string]metrics.Scope)
+					data := cache.Load().(metricsScopeMap)
 					// Copy everything over after atomic load
 					for key, val := range data {
 						scopeMap[key] = val
@@ -90,12 +91,18 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope() {
 }
 
 // Get retrieves scope for domainID and scopeIdx
-func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metricsScope metrics.Scope, ok bool) {
+func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
 	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
 
-	data := cache.Load().(map[string]metrics.Scope)
+	data := cache.Load().(metricsScopeMap)
 
-	metricsScope, ok = data[key]
+	if data == nil {
+		return nil, false
+	}
+
+	metricsScope, ok := data[key]
+
+	return metricsScope, ok
 }
 
 // Put puts map of domainID and scopeIdx to metricsScope

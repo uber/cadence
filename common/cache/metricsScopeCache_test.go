@@ -25,6 +25,7 @@ package cache
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -48,6 +49,8 @@ func TestGetMetricsScope(t *testing.T) {
 		mockMetricsScope := metrics.NoopScope(metrics.ServiceIdx(t.scopeID))
 		metricsCache.Put(t.domainID, t.scopeID, mockMetricsScope)
 	}
+
+	time.Sleep(11 * time.Second)
 
 	metricsScope, found := metricsCache.Get("A", 1)
 	testMetricsScope := metrics.NoopScope(metrics.ServiceIdx(1))
@@ -91,6 +94,8 @@ func TestConcurrentMetricsScopeAccess(t *testing.T) {
 
 	close(ch)
 	wg.Wait()
+
+	time.Sleep(11 * time.Second)
 
 	for i := 0; i < 1000; i++ {
 		metricsScope, found = domainMetricsScopeCache.Get("test_domain", i)
