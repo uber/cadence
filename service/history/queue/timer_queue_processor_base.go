@@ -225,18 +225,18 @@ processorPumpLoop:
 				continue processorPumpLoop
 			}
 
-			t.newTimeLock.Lock()
+			t.pollTimeLock.Lock()
 			levels := make(map[int]struct{})
 			now := t.shard.GetCurrentTime(t.clusterName)
 			for level, pollTime := range t.nextPollTime {
-				if !pollTime.Before(now) {
+				if !now.Before(pollTime) {
 					levels[level] = struct{}{}
 					delete(t.nextPollTime, level)
 				} else {
 					t.timerGate.Update(pollTime)
 				}
 			}
-			t.newTimeLock.Unlock()
+			t.pollTimeLock.Unlock()
 
 			t.processQueueCollections(levels)
 		case <-updateAckTimer.C:

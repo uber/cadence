@@ -229,7 +229,7 @@ processorPumpLoop:
 			levels := make(map[int]struct{})
 			now := t.shard.GetTimeSource().Now()
 			for level, pollTime := range t.nextPollTime {
-				if !pollTime.Before(now) {
+				if !now.Before(pollTime) {
 					levels[level] = struct{}{}
 					delete(t.nextPollTime, level)
 				} else {
