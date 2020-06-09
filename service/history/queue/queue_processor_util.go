@@ -142,19 +142,18 @@ func initializeSplitPolicy(
 		thresholds, err := convertThresholdsFromDynamicConfig(options.PendingTaskSplitThreshold())
 		if err != nil {
 			logger.Error("Failed to convert pending task threshold", tag.Error(err))
+		} else {
+			policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel))
 		}
-		policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel))
 	}
 
 	if options.EnableStuckTaskSplit() {
 		thresholds, err := convertThresholdsFromDynamicConfig(options.StuckTaskSplitThreshold())
 		if err != nil {
 			logger.Error("Failed to convert stuck task threshold", tag.Error(err))
+		} else {
+			policies = append(policies, NewStuckTaskSplitPolicy(thresholds, maxNewQueueLevel))
 		}
-		policies = append(policies, NewStuckTaskSplitPolicy(
-			thresholds,
-			maxNewQueueLevel,
-		))
 	}
 
 	randomSplitProbability := options.RandomSplitProbability()
