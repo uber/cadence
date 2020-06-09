@@ -23,6 +23,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -3493,7 +3494,10 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog
 			return err
 		}
 	}
-
+	if errors.Is(err, context.DeadlineExceeded) {
+		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
+		return err
+	}
 	wh.GetLogger().WithTags(tagsForErrorLog...).Error("Uncategorized error",
 		tag.Error(err))
 	scope.IncCounter(metrics.CadenceFailures)
