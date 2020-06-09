@@ -121,7 +121,7 @@ func NewTransferQueueProcessor(
 	)
 
 	standbyQueueProcessors := make(map[string]*transferQueueProcessorBase)
-	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryReplicator)
+	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
 	resenderLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled || clusterName == currentClusterName {
