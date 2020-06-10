@@ -1258,18 +1258,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 			}
 		}
 
-		// At this point we only know that the write was not applied.
-		// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
-		// shard to recover from such errors
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-		}
-		return nil, &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
-				request.RangeID, strings.Join(columns, ",")),
-		}
+		return nil, newShardOwnershipLostError(d.shardID, request.RangeID, previous)
 	}
 
 	return &p.CreateWorkflowExecutionResponse{}, nil
@@ -2960,18 +2949,26 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 				}
 			}
 		}
-		// At this point we only know that the write was not applied.
-		// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
-		// shard to recover from such errors
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-		}
-		return &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
-				request.RangeID, strings.Join(columns, ",")),
-		}
+		return newShardOwnershipLostError(d.shardID, request.RangeID, previous)
 	}
 	return nil
+}
+
+func newShardOwnershipLostError(
+	shardID int,
+	rangeID int64,
+	row map[string]interface{},
+) error {
+	// At this point we only know that the write was not applied.
+	// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
+	// shard to recover from such errors
+	var columns []string
+	for k, v := range row {
+		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
+	}
+	return &p.ShardOwnershipLostError{
+		ShardID: shardID,
+		Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
+			rangeID, strings.Join(columns, ",")),
+	}
 }
