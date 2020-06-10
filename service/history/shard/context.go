@@ -1195,7 +1195,12 @@ func (s *contextImpl) InsertFailoverMarkers(
 
 	var err error
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		err = s.executionManager.CreateFailoverMarkerTasks(&persistence.CreateFailoverMarkersRequest{Markers: markers})
+		err = s.executionManager.CreateFailoverMarkerTasks(
+			&persistence.CreateFailoverMarkersRequest{
+				RangeID: s.getRangeID(),
+				Markers: markers,
+			},
+		)
 		if err == nil {
 			break
 		}

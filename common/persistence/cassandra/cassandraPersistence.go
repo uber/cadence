@@ -2914,6 +2914,18 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 		}
 	}
 
+	batch.Query(templateUpdateLeaseQuery,
+		request.RangeID,
+		d.shardID,
+		rowTypeShard,
+		rowTypeShardDomainID,
+		rowTypeShardWorkflowID,
+		rowTypeShardRunID,
+		defaultVisibilityTimestamp,
+		rowTypeShardTaskID,
+		request.RangeID,
+	)
+
 	err := d.session.ExecuteBatch(batch)
 	if err != nil {
 		if isThrottlingError(err) {
