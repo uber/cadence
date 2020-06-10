@@ -1206,6 +1206,7 @@ func (s *contextImpl) InsertFailoverMarkers(
 			break
 		case *persistence.ShardOwnershipLostError:
 			// do not retry on ShardOwnershipLostError
+			s.closeShard()
 			break
 		default:
 			s.logger.Error(
