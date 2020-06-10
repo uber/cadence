@@ -83,7 +83,7 @@ func (mr *MockCoordinatorMockRecorder) Stop() *gomock.Call {
 }
 
 // NotifyFailoverMarkers mocks base method
-func (m *MockCoordinator) NotifyFailoverMarkers(shardID int, markers []*replicator.FailoverMarkerAttributes) <-chan error {
+func (m *MockCoordinator) NotifyFailoverMarkers(shardID int32, markers []*replicator.FailoverMarkerAttributes) <-chan error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NotifyFailoverMarkers", shardID, markers)
 	ret0, _ := ret[0].(<-chan error)
@@ -97,7 +97,7 @@ func (mr *MockCoordinatorMockRecorder) NotifyFailoverMarkers(shardID, markers in
 }
 
 // ReceiveFailoverMarkers mocks base method
-func (m *MockCoordinator) ReceiveFailoverMarkers(shardIDs []int, marker *replicator.FailoverMarkerAttributes) {
+func (m *MockCoordinator) ReceiveFailoverMarkers(shardIDs []int32, marker *replicator.FailoverMarkerAttributes) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "ReceiveFailoverMarkers", shardIDs, marker)
 }

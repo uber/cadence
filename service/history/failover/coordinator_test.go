@@ -23,6 +23,8 @@
 package failover
 
 import (
+	ctx "context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,11 +33,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
@@ -67,7 +71,7 @@ func (s *coordinatorSuite) SetupTest() {
 	s.mockMetadataManager = s.mockResource.MetadataMgr
 	s.historyClient = s.mockResource.HistoryClient
 	s.config = config.NewForTest()
-	s.config.NumberOfShards = 1
+	s.config.NumberOfShards = 2
 	s.config.FailoverMarkerHeartbeatInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
 	s.config.FailoverMarkerHeartbeatTimerJitterCoefficient = dynamicconfig.GetFloatPropertyFn(0.01)
 
@@ -79,7 +83,6 @@ func (s *coordinatorSuite) SetupTest() {
 		s.mockResource.GetMetricsClient(),
 		s.mockResource.GetLogger(),
 	).(*coordinatorImpl)
-	s.coordinator.Start()
 }
 
 func (s *coordinatorSuite) TearDownTest() {
@@ -89,17 +92,313 @@ func (s *coordinatorSuite) TearDownTest() {
 }
 
 func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
-	respCh := s.coordinator.NotifyFailoverMarkers(
-		1,
-		[]*replicator.FailoverMarkerAttributes{
-			{
-				DomainID:        common.StringPtr(uuid.New()),
-				FailoverVersion: common.Int64Ptr(1),
-				CreationTime:    common.Int64Ptr(1),
+	attributes := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(uuid.New()),
+		FailoverVersion: common.Int64Ptr(1),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	s.historyClient.EXPECT().NotifyFailoverMarkers(
+		ctx.Background(), &history.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*history.FailoverMarkerToken{
+				{
+					ShardIDs:       []int32{1, 2},
+					FailoverMarker: attributes,
+				},
 			},
 		},
+	).Return(nil).Times(1)
+	respCh1 := s.coordinator.NotifyFailoverMarkers(
+		1,
+		[]*replicator.FailoverMarkerAttributes{attributes},
 	)
+	respCh2 := s.coordinator.NotifyFailoverMarkers(
+		2,
+		[]*replicator.FailoverMarkerAttributes{attributes},
+	)
+	s.coordinator.Start()
+	err1 := <-respCh1
+	err2 := <-respCh2
+	s.NoError(err1)
+	s.NoError(err2)
+}
 
-	err := <-respCh
-	s.NoError(err)
+func (s *coordinatorSuite) TestNotifyRemoteCoordinator_Empty() {
+	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
+	channelsByMarker := make(map[*replicator.FailoverMarkerAttributes][]chan error)
+	s.historyClient.EXPECT().NotifyFailoverMarkers(ctx.Background(), gomock.Any()).Times(0)
+	s.coordinator.notifyRemoteCoordinator(requestByMarker, channelsByMarker)
+}
+
+func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
+
+	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
+	channelsByMarker := make(map[*replicator.FailoverMarkerAttributes][]chan error)
+	attributes := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(uuid.New()),
+		FailoverVersion: common.Int64Ptr(1),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	requestByMarker[attributes] = &receiveRequest{
+		shardIDs: []int32{1, 2, 3},
+		marker:   attributes,
+	}
+	chan1 := make(chan error, 1)
+	chan2 := make(chan error, 1)
+	chan3 := make(chan error, 1)
+	channelsByMarker[attributes] = []chan error{chan1, chan2, chan3}
+
+	s.historyClient.EXPECT().NotifyFailoverMarkers(
+		ctx.Background(), &history.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*history.FailoverMarkerToken{
+				{
+					ShardIDs:       []int32{1, 2, 3},
+					FailoverMarker: attributes,
+				},
+			},
+		},
+	).Return(nil).Times(1)
+	s.coordinator.notifyRemoteCoordinator(requestByMarker, channelsByMarker)
+	err1 := <-chan1
+	s.NoError(err1)
+	err2 := <-chan2
+	s.NoError(err2)
+	err3 := <-chan3
+	s.NoError(err3)
+	s.Equal(0, len(requestByMarker))
+	s.Equal(0, len(channelsByMarker))
+}
+
+func (s *coordinatorSuite) TestAggregateNotificationRequests() {
+	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
+	channelsByMarker := make(map[*replicator.FailoverMarkerAttributes][]chan error)
+	attributes1 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(uuid.New()),
+		FailoverVersion: common.Int64Ptr(1),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	attributes2 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(uuid.New()),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(2),
+	}
+	request1 := &notificationRequest{
+		shardID: 1,
+		markers: []*replicator.FailoverMarkerAttributes{attributes1},
+		respCh:  make(chan error, 1),
+	}
+	aggregateNotificationRequests(request1, requestByMarker, channelsByMarker)
+	request2 := &notificationRequest{
+		shardID: 2,
+		markers: []*replicator.FailoverMarkerAttributes{attributes1},
+		respCh:  make(chan error, 1),
+	}
+	aggregateNotificationRequests(request2, requestByMarker, channelsByMarker)
+	request3 := &notificationRequest{
+		shardID: 3,
+		markers: []*replicator.FailoverMarkerAttributes{attributes1, attributes2},
+		respCh:  make(chan error, 1),
+	}
+	aggregateNotificationRequests(request3, requestByMarker, channelsByMarker)
+	s.Equal(3, len(channelsByMarker[attributes1]))
+	s.Equal(1, len(channelsByMarker[attributes2]))
+	s.Equal([]int32{1, 2, 3}, requestByMarker[attributes1].shardIDs)
+	s.Equal([]int32{3}, requestByMarker[attributes2].shardIDs)
+}
+
+func (s *coordinatorSuite) TestHandleFailoverMarkers_DeleteExpiredFailoverMarker() {
+	domainID := uuid.New()
+	attributes1 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(1),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	attributes2 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	request1 := &receiveRequest{
+		shardIDs: []int32{1},
+		marker:   attributes1,
+	}
+	request2 := &receiveRequest{
+		shardIDs: []int32{2},
+		marker:   attributes2,
+	}
+
+	s.coordinator.handleFailoverMarkers(request1)
+	s.coordinator.handleFailoverMarkers(request2)
+	s.Equal(1, len(s.coordinator.recorder))
+}
+
+func (s *coordinatorSuite) TestHandleFailoverMarkers_IgnoreExpiredFailoverMarker() {
+	domainID := uuid.New()
+	attributes1 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(1),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	attributes2 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	request1 := &receiveRequest{
+		shardIDs: []int32{1},
+		marker:   attributes1,
+	}
+	request2 := &receiveRequest{
+		shardIDs: []int32{2},
+		marker:   attributes2,
+	}
+
+	s.coordinator.handleFailoverMarkers(request2)
+	s.coordinator.handleFailoverMarkers(request1)
+	s.Equal(1, len(s.coordinator.recorder))
+}
+
+func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Success() {
+	domainID := uuid.New()
+	attributes1 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	attributes2 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	request1 := &receiveRequest{
+		shardIDs: []int32{1},
+		marker:   attributes1,
+	}
+	request2 := &receiveRequest{
+		shardIDs: []int32{2},
+		marker:   attributes2,
+	}
+	info := &persistence.DomainInfo{
+		ID:          domainID,
+		Name:        uuid.New(),
+		Status:      persistence.DomainStatusRegistered,
+		Description: "some random description",
+		OwnerEmail:  "some random email",
+		Data:        nil,
+	}
+	domainConfig := &persistence.DomainConfig{
+		Retention:  1,
+		EmitMetric: true,
+	}
+	replicationConfig := &persistence.DomainReplicationConfig{
+		ActiveClusterName: "active",
+		Clusters: []*persistence.ClusterReplicationConfig{
+			{
+				"active",
+			},
+		},
+	}
+
+	s.mockMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+		NotificationVersion: 1,
+	}, nil)
+	s.mockMetadataManager.On("GetDomain", &persistence.GetDomainRequest{
+		ID: domainID,
+	}).Return(&persistence.GetDomainResponse{
+		Info:                        info,
+		Config:                      domainConfig,
+		ReplicationConfig:           replicationConfig,
+		IsGlobalDomain:              true,
+		ConfigVersion:               1,
+		FailoverVersion:             2,
+		FailoverNotificationVersion: 2,
+		FailoverEndTime:             common.Int64Ptr(1),
+		NotificationVersion:         1,
+	}, nil).Times(1)
+	s.mockMetadataManager.On("UpdateDomain", &persistence.UpdateDomainRequest{
+		Info:                        info,
+		Config:                      domainConfig,
+		ReplicationConfig:           replicationConfig,
+		ConfigVersion:               1,
+		FailoverVersion:             2,
+		FailoverNotificationVersion: 2,
+		FailoverEndTime:             nil,
+		NotificationVersion:         1,
+	}).Return(nil).Times(1)
+
+	s.coordinator.handleFailoverMarkers(request1)
+	s.coordinator.handleFailoverMarkers(request2)
+	s.Equal(0, len(s.coordinator.recorder))
+}
+
+func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Error() {
+	domainID := uuid.New()
+	attributes1 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	attributes2 := &replicator.FailoverMarkerAttributes{
+		DomainID:        common.StringPtr(domainID),
+		FailoverVersion: common.Int64Ptr(2),
+		CreationTime:    common.Int64Ptr(1),
+	}
+	request1 := &receiveRequest{
+		shardIDs: []int32{1},
+		marker:   attributes1,
+	}
+	request2 := &receiveRequest{
+		shardIDs: []int32{2},
+		marker:   attributes2,
+	}
+	info := &persistence.DomainInfo{
+		ID:          domainID,
+		Name:        uuid.New(),
+		Status:      persistence.DomainStatusRegistered,
+		Description: "some random description",
+		OwnerEmail:  "some random email",
+		Data:        nil,
+	}
+	domainConfig := &persistence.DomainConfig{
+		Retention:  1,
+		EmitMetric: true,
+	}
+	replicationConfig := &persistence.DomainReplicationConfig{
+		ActiveClusterName: "active",
+		Clusters: []*persistence.ClusterReplicationConfig{
+			{
+				"active",
+			},
+		},
+	}
+
+	s.mockMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+		NotificationVersion: 1,
+	}, nil)
+	s.mockMetadataManager.On("GetDomain", &persistence.GetDomainRequest{
+		ID: domainID,
+	}).Return(&persistence.GetDomainResponse{
+		Info:                        info,
+		Config:                      domainConfig,
+		ReplicationConfig:           replicationConfig,
+		IsGlobalDomain:              true,
+		ConfigVersion:               1,
+		FailoverVersion:             2,
+		FailoverNotificationVersion: 2,
+		FailoverEndTime:             common.Int64Ptr(1),
+		NotificationVersion:         1,
+	}, nil).Times(1)
+	s.mockMetadataManager.On("UpdateDomain", &persistence.UpdateDomainRequest{
+		Info:                        info,
+		Config:                      domainConfig,
+		ReplicationConfig:           replicationConfig,
+		ConfigVersion:               1,
+		FailoverVersion:             2,
+		FailoverNotificationVersion: 2,
+		FailoverEndTime:             nil,
+		NotificationVersion:         1,
+	}).Return(fmt.Errorf("test error")).Times(3)
+
+	s.coordinator.handleFailoverMarkers(request1)
+	s.coordinator.handleFailoverMarkers(request2)
+	s.Equal(1, len(s.coordinator.recorder))
 }

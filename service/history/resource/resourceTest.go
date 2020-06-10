@@ -33,8 +33,8 @@ type (
 	// Test is the test implementation used for testing
 	Test struct {
 		*resource.Test
-		eventCache  *events.MockCache
-		coordinator *failover.MockCoordinator
+		EventCache          *events.MockCache
+		FailoverCoordinator *failover.MockCoordinator
 	}
 )
 
@@ -46,18 +46,18 @@ func NewTest(
 	serviceMetricsIndex metrics.ServiceIdx,
 ) *Test {
 	return &Test{
-		Test:        resource.NewTest(controller, serviceMetricsIndex),
-		eventCache:  events.NewMockCache(controller),
-		coordinator: failover.NewMockCoordinator(controller),
+		Test:                resource.NewTest(controller, serviceMetricsIndex),
+		EventCache:          events.NewMockCache(controller),
+		FailoverCoordinator: failover.NewMockCoordinator(controller),
 	}
 }
 
 // GetEventCache for testing
 func (s *Test) GetEventCache() events.Cache {
-	return s.eventCache
+	return s.EventCache
 }
 
-// GetCoordinator return failover coordinator
-func (s *Test) GetCoordinator() failover.Coordinator {
-	return s.coordinator
+// GetFailoverCoordinator return failover coordinator
+func (s *Test) GetFailoverCoordinator() failover.Coordinator {
+	return s.FailoverCoordinator
 }

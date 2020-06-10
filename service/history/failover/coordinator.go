@@ -25,9 +25,11 @@
 package failover
 
 import (
+	ctx "context"
 	"sync/atomic"
 	"time"
 
+	workflow "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
@@ -48,7 +50,7 @@ const (
 	invalidMarkerDuration            = 1 * time.Hour
 	updateDomainRetryInitialInterval = 50 * time.Millisecond
 	updateDomainRetryCoefficient     = 2.0
-	updateDomainMaxRetry             = 3
+	updateDomainMaxRetry             = 2
 )
 
 type (
@@ -56,8 +58,8 @@ type (
 	Coordinator interface {
 		common.Daemon
 
-		NotifyFailoverMarkers(shardID int, markers []*replicator.FailoverMarkerAttributes) <-chan error
-		ReceiveFailoverMarkers(shardIDs []int, marker *replicator.FailoverMarkerAttributes)
+		NotifyFailoverMarkers(shardID int32, markers []*replicator.FailoverMarkerAttributes) <-chan error
+		ReceiveFailoverMarkers(shardIDs []int32, marker *replicator.FailoverMarkerAttributes)
 	}
 
 	coordinatorImpl struct {
@@ -77,20 +79,19 @@ type (
 	}
 
 	notificationRequest struct {
-		shardID int
+		shardID int32
 		markers []*replicator.FailoverMarkerAttributes
 		respCh  chan error
 	}
 
 	receiveRequest struct {
-		shardIDs []int
+		shardIDs []int32
 		marker   *replicator.FailoverMarkerAttributes
-		respCh   chan error
 	}
 
 	failoverRecord struct {
 		failoverVersion int64
-		shards          map[int]struct{}
+		shards          map[int32]struct{}
 		lastUpdatedTime time.Time
 	}
 )
@@ -105,8 +106,7 @@ func NewCoordinator(
 	logger log.Logger,
 ) Coordinator {
 
-	retryPolicy := &backoff.ExponentialRetryPolicy{}
-	retryPolicy.SetInitialInterval(updateDomainRetryInitialInterval)
+	retryPolicy := backoff.NewExponentialRetryPolicy(updateDomainRetryInitialInterval)
 	retryPolicy.SetBackoffCoefficient(updateDomainRetryCoefficient)
 	retryPolicy.SetMaximumAttempts(updateDomainMaxRetry)
 
@@ -149,7 +149,7 @@ func (c *coordinatorImpl) Stop() {
 }
 
 func (c *coordinatorImpl) NotifyFailoverMarkers(
-	shardID int,
+	shardID int32,
 	markers []*replicator.FailoverMarkerAttributes,
 ) <-chan error {
 
@@ -164,7 +164,7 @@ func (c *coordinatorImpl) NotifyFailoverMarkers(
 }
 
 func (c *coordinatorImpl) ReceiveFailoverMarkers(
-	shardIDs []int,
+	shardIDs []int32,
 	marker *replicator.FailoverMarkerAttributes,
 ) {
 
@@ -199,6 +199,7 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 	))
 	defer timer.Stop()
 	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
+	channelsByMarker := make(map[*replicator.FailoverMarkerAttributes][]chan error)
 
 	for {
 		select {
@@ -207,24 +208,30 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 		case notificationReq := <-c.notificationChan:
 			// if there is a shard movement happen, it is fine to have duplicate shard ID in the request
 			// The receiver side will de-dup the shard IDs. See: handleFailoverMarkers
-			for _, marker := range notificationReq.markers {
-				if _, ok := requestByMarker[marker]; !ok {
-					requestByMarker[marker] = &receiveRequest{
-						shardIDs: []int{},
-						marker:   marker,
-						respCh:   notificationReq.respCh,
-					}
-				}
-				req := requestByMarker[marker]
-				req.shardIDs = append(req.shardIDs, notificationReq.shardID)
-			}
+			aggregateNotificationRequests(notificationReq, requestByMarker, channelsByMarker)
 		case <-timer.C:
 			if len(requestByMarker) > 0 {
-				var err error
-				//TODO: Remote calls to send failover markers
-				for marker, request := range requestByMarker {
-					request.respCh <- err
-					close(request.respCh)
+				var tokens []*workflow.FailoverMarkerToken
+				for _, request := range requestByMarker {
+					tokens = append(tokens, &workflow.FailoverMarkerToken{
+						ShardIDs:       request.shardIDs,
+						FailoverMarker: request.marker,
+					})
+				}
+
+				err := c.historyClient.NotifyFailoverMarkers(
+					ctx.Background(),
+					&workflow.NotifyFailoverMarkersRequest{
+						FailoverMarkerTokens: tokens,
+					},
+				)
+
+				for marker := range requestByMarker {
+					for _, respCh := range channelsByMarker[marker] {
+						respCh <- err
+						close(respCh)
+						delete(channelsByMarker, marker)
+					}
 					delete(requestByMarker, marker)
 				}
 			}
@@ -262,13 +269,13 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		// initialize the failover record
 		c.recorder[marker.GetDomainID()] = &failoverRecord{
 			failoverVersion: marker.GetFailoverVersion(),
-			shards:          make(map[int]struct{}),
+			shards:          make(map[int32]struct{}),
 		}
 	}
 
 	record := c.recorder[domainID]
 	record.lastUpdatedTime = c.timeSource.Now()
-	for shardID := range request.shardIDs {
+	for _, shardID := range request.shardIDs {
 		record.shards[shardID] = struct{}{}
 	}
 
@@ -293,5 +300,59 @@ func (c *coordinatorImpl) cleanupInvalidMarkers() {
 		if c.timeSource.Now().Sub(record.lastUpdatedTime) > invalidMarkerDuration {
 			delete(c.recorder, domainID)
 		}
+	}
+}
+
+func (c *coordinatorImpl) notifyRemoteCoordinator(
+	requestByMarker map[*replicator.FailoverMarkerAttributes]*receiveRequest,
+	channelsByMarker map[*replicator.FailoverMarkerAttributes][]chan error,
+) {
+
+	if len(requestByMarker) > 0 {
+		var tokens []*workflow.FailoverMarkerToken
+		for _, request := range requestByMarker {
+			tokens = append(tokens, &workflow.FailoverMarkerToken{
+				ShardIDs:       request.shardIDs,
+				FailoverMarker: request.marker,
+			})
+		}
+
+		err := c.historyClient.NotifyFailoverMarkers(
+			ctx.Background(),
+			&workflow.NotifyFailoverMarkersRequest{
+				FailoverMarkerTokens: tokens,
+			},
+		)
+
+		for marker := range requestByMarker {
+			for _, respCh := range channelsByMarker[marker] {
+				respCh <- err
+				close(respCh)
+				delete(channelsByMarker, marker)
+			}
+			delete(requestByMarker, marker)
+		}
+	}
+}
+
+func aggregateNotificationRequests(
+	request *notificationRequest,
+	requestByMarker map[*replicator.FailoverMarkerAttributes]*receiveRequest,
+	channelsByMarker map[*replicator.FailoverMarkerAttributes][]chan error,
+) {
+
+	for _, marker := range request.markers {
+		if _, ok := requestByMarker[marker]; !ok {
+			requestByMarker[marker] = &receiveRequest{
+				shardIDs: []int32{},
+				marker:   marker,
+			}
+			channelsByMarker[marker] = []chan error{}
+		}
+		req := requestByMarker[marker]
+		req.shardIDs = append(req.shardIDs, request.shardID)
+		channels := channelsByMarker[marker]
+		channels = append(channels, request.respCh)
+		channelsByMarker[marker] = channels
 	}
 }

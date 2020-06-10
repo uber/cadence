@@ -185,9 +185,6 @@ func (h *Handler) Start() {
 		h.config,
 	)
 	h.historyEventNotifier = events.NewNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
-	if h.config.EnableGracefulFailover() {
-		h.GetCoordinator().Start()
-	}
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
@@ -204,7 +201,6 @@ func (h *Handler) Stop() {
 	}
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
-	h.GetCoordinator().Stop()
 }
 
 // PrepareToStop starts graceful traffic drain in preparation for shutdown
@@ -232,7 +228,7 @@ func (h *Handler) CreateEngine(
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
-		h.GetCoordinator(),
+		h.GetFailoverCoordinator(),
 	)
 }
 
@@ -1894,8 +1890,12 @@ func (h *Handler) NotifyFailoverMarkers(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	//TODO: wire up the function with failover coordinator
-	return &gen.BadRequestError{Message: "This method has not been implemented."}
+	for _, token := range request.GetFailoverMarkerTokens() {
+		marker := token.GetFailoverMarker()
+		h.GetLogger().Debug("Handling failover maker", tag.WorkflowDomainID(marker.GetDomainID()))
+		h.GetFailoverCoordinator().ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
+	}
+	return nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
