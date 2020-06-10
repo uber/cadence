@@ -194,8 +194,8 @@ func (c *coordinatorImpl) receiveFailoverMarkersLoop() {
 func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 
 	timer := time.NewTimer(backoff.JitDuration(
-		c.config.FailoverMarkerHeartbeatInterval(),
-		c.config.FailoverMarkerHeartbeatTimerJitterCoefficient(),
+		c.config.NotifyFailoverMarkerInterval(),
+		c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
 	))
 	defer timer.Stop()
 	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
@@ -237,8 +237,8 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 			}
 
 			timer.Reset(backoff.JitDuration(
-				c.config.FailoverMarkerHeartbeatInterval(),
-				c.config.FailoverMarkerHeartbeatTimerJitterCoefficient(),
+				c.config.NotifyFailoverMarkerInterval(),
+				c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
 			))
 		}
 	}

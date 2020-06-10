@@ -72,8 +72,8 @@ func (s *coordinatorSuite) SetupTest() {
 	s.historyClient = s.mockResource.HistoryClient
 	s.config = config.NewForTest()
 	s.config.NumberOfShards = 2
-	s.config.FailoverMarkerHeartbeatInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
-	s.config.FailoverMarkerHeartbeatTimerJitterCoefficient = dynamicconfig.GetFloatPropertyFn(0.01)
+	s.config.NotifyFailoverMarkerInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
+	s.config.NotifyFailoverMarkerTimerJitterCoefficient = dynamicconfig.GetFloatPropertyFn(0.01)
 
 	s.coordinator = NewCoordinator(
 		s.mockMetadataManager,

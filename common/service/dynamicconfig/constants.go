@@ -257,8 +257,8 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
-	FailoverMarkerHeartbeatInterval:                        "history.FailoverMarkerHeartbeatInterval",
-	FailoverMarkerHeartbeatTimerJitterCoefficient:          "history.FailoverMarkerHeartbeatTimerJitterCoefficient",
+	NotifyFailoverMarkerInterval:                           "history.FailoverMarkerHeartbeatInterval",
+	NotifyFailoverMarkerTimerJitterCoefficient:             "history.FailoverMarkerHeartbeatTimerJitterCoefficient",
 
 	WorkerPersistenceMaxQPS:                          "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                    "worker.persistenceGlobalMaxQPS",
@@ -812,10 +812,10 @@ const (
 	// ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
 	ReplicationEventsFromCurrentCluster
 
-	// FailoverMarkerHeartbeatInterval determines the frequency the failover marker heartbeat
-	FailoverMarkerHeartbeatInterval
-	// FailoverMarkerHeartbeatTimerJitterCoefficient is the jitter for failover marker heartbeat timer
-	FailoverMarkerHeartbeatTimerJitterCoefficient
+	// NotifyFailoverMarkerInterval determines the frequency to notify failover marker
+	NotifyFailoverMarkerInterval
+	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
+	NotifyFailoverMarkerTimerJitterCoefficient
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

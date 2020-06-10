@@ -231,9 +231,9 @@ type Config struct {
 	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	//Failover marker heartbeat
-	FailoverMarkerHeartbeatInterval               dynamicconfig.DurationPropertyFn
-	FailoverMarkerHeartbeatTimerJitterCoefficient dynamicconfig.FloatPropertyFn
-	EnableGracefulFailover                        dynamicconfig.BoolPropertyFn
+	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
+	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
+	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
 }
 
 const (
@@ -406,9 +406,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
 
-		FailoverMarkerHeartbeatInterval:               dc.GetDurationProperty(dynamicconfig.FailoverMarkerHeartbeatInterval, 5*time.Second),
-		FailoverMarkerHeartbeatTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.FailoverMarkerHeartbeatTimerJitterCoefficient, 0.15),
-		EnableGracefulFailover:                        dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
+		NotifyFailoverMarkerInterval:               dc.GetDurationProperty(dynamicconfig.NotifyFailoverMarkerInterval, 5*time.Second),
+		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
+		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 	}
 
 	return cfg
