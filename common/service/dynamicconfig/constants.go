@@ -257,8 +257,8 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
-	NotifyFailoverMarkerInterval:                           "history.FailoverMarkerHeartbeatInterval",
-	NotifyFailoverMarkerTimerJitterCoefficient:             "history.FailoverMarkerHeartbeatTimerJitterCoefficient",
+	NotifyFailoverMarkerInterval:                           "history.NotifyFailoverMarkerInterval",
+	NotifyFailoverMarkerTimerJitterCoefficient:             "history.NotifyFailoverMarkerTimerJitterCoefficient",
 
 	WorkerPersistenceMaxQPS:                          "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                    "worker.persistenceGlobalMaxQPS",
