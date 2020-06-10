@@ -210,32 +210,7 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 			// The receiver side will de-dup the shard IDs. See: handleFailoverMarkers
 			aggregateNotificationRequests(notificationReq, requestByMarker, channelsByMarker)
 		case <-timer.C:
-			if len(requestByMarker) > 0 {
-				var tokens []*workflow.FailoverMarkerToken
-				for _, request := range requestByMarker {
-					tokens = append(tokens, &workflow.FailoverMarkerToken{
-						ShardIDs:       request.shardIDs,
-						FailoverMarker: request.marker,
-					})
-				}
-
-				err := c.historyClient.NotifyFailoverMarkers(
-					ctx.Background(),
-					&workflow.NotifyFailoverMarkersRequest{
-						FailoverMarkerTokens: tokens,
-					},
-				)
-
-				for marker := range requestByMarker {
-					for _, respCh := range channelsByMarker[marker] {
-						respCh <- err
-						close(respCh)
-						delete(channelsByMarker, marker)
-					}
-					delete(requestByMarker, marker)
-				}
-			}
-
+			c.notifyRemoteCoordinator(requestByMarker, channelsByMarker)
 			timer.Reset(backoff.JitDuration(
 				c.config.NotifyFailoverMarkerInterval(),
 				c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
