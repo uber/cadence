@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
@@ -69,6 +70,7 @@ type (
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers replication.TaskFetchers
 		queueTaskProcessor      task.Processor
+		failoverCoordinator     failover.Coordinator
 	}
 )
 
@@ -187,6 +189,19 @@ func (h *Handler) Start() {
 	h.historyEventNotifier = events.NewNotifier(h.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
+
+	h.failoverCoordinator = failover.NewCoordinator(
+		h.GetMetadataManager(),
+		h.GetHistoryClient(),
+		h.GetTimeSource(),
+		h.config,
+		h.GetMetricsClient(),
+		h.GetLogger(),
+	)
+	if h.config.EnableGracefulFailover() {
+		h.failoverCoordinator.Start()
+	}
+
 	h.controller.Start()
 
 	h.startWG.Done()
@@ -201,6 +216,7 @@ func (h *Handler) Stop() {
 	}
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
+	h.failoverCoordinator.Stop()
 }
 
 // PrepareToStop starts graceful traffic drain in preparation for shutdown
@@ -228,7 +244,7 @@ func (h *Handler) CreateEngine(
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
-		h.GetFailoverCoordinator(),
+		h.failoverCoordinator,
 	)
 }
 
@@ -1893,7 +1909,7 @@ func (h *Handler) NotifyFailoverMarkers(
 	for _, token := range request.GetFailoverMarkerTokens() {
 		marker := token.GetFailoverMarker()
 		h.GetLogger().Debug("Handling failover maker", tag.WorkflowDomainID(marker.GetDomainID()))
-		h.GetFailoverCoordinator().ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
+		h.failoverCoordinator.ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
 	}
 	return nil
 }

@@ -89,6 +89,7 @@ func (s *coordinatorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockResource.Finish(s.T())
 	s.coordinator.Stop()
+	s.mockMetadataManager.AssertExpectations(s.T())
 }
 
 func (s *coordinatorSuite) TestNotifyFailoverMarkers() {

@@ -122,30 +122,38 @@ func NewCoordinator(
 		timeSource:       timeSource,
 		config:           config,
 		metrics:          metrics,
-		logger:           logger,
+		logger:           logger.WithTags(tag.ComponentFailoverCoordinator),
 	}
 }
 
 func (c *coordinatorImpl) Start() {
 
-	if !atomic.CompareAndSwapInt32(&c.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+	if !atomic.CompareAndSwapInt32(
+		&c.status,
+		common.DaemonStatusInitialized,
+		common.DaemonStatusStarted,
+	) {
 		return
 	}
 
 	go c.receiveFailoverMarkersLoop()
 	go c.notifyFailoverMarkerLoop()
 
-	c.logger.Info("Failover coordinator started.")
+	c.logger.Info("Failover coordinator started.", tag.LifeCycleStarted)
 }
 
 func (c *coordinatorImpl) Stop() {
 
-	if !atomic.CompareAndSwapInt32(&c.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+	if !atomic.CompareAndSwapInt32(
+		&c.status,
+		common.DaemonStatusStarted,
+		common.DaemonStatusStopped,
+	) {
 		return
 	}
 
 	close(c.shutdownChan)
-	c.logger.Info("Failover coordinator stopped.")
+	c.logger.Info("Failover coordinator stopped.", tag.LifeCycleStopped)
 }
 
 func (c *coordinatorImpl) NotifyFailoverMarkers(
