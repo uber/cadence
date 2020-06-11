@@ -21,8 +21,6 @@
 package queue
 
 import (
-	"errors"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -146,8 +144,8 @@ func (s *transferQueueProcessorBaseSuite) TestUpdateAckLevel_ProcessNotFinished(
 		),
 	}
 	updateAckLevel := int64(0)
-	updateTransferAckLevelFn := func(ackLevel int64) error {
-		updateAckLevel = ackLevel
+	updateTransferAckLevelFn := func(ackLevel task.Key) error {
+		updateAckLevel = ackLevel.(transferTaskKey).taskID
 		return nil
 	}
 
@@ -165,85 +163,221 @@ func (s *transferQueueProcessorBaseSuite) TestUpdateAckLevel_ProcessNotFinished(
 	s.Equal(int64(2), updateAckLevel)
 }
 
-func (s *transferQueueProcessorBaseSuite) TestSplitQueue() {
+func (s *transferQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_FullRead() {
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
 	processingQueueStates := []ProcessingQueueState{
 		NewProcessingQueueState(
 			0,
-			newTransferTaskKey(0),
-			newTransferTaskKey(100),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, true),
-		),
-		NewProcessingQueueState(
-			1,
-			newTransferTaskKey(0),
-			newTransferTaskKey(100),
+			ackLevel,
+			maxLevel,
 			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
 		),
 		NewProcessingQueueState(
 			0,
-			newTransferTaskKey(100),
 			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{}, true),
+			newTransferTaskKey(10000),
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
 		),
 	}
-	s.mockQueueSplitPolicy.EXPECT().Evaluate(NewProcessingQueue(processingQueueStates[0], s.logger, s.metricsClient)).Return(nil).Times(1)
-	s.mockQueueSplitPolicy.EXPECT().Evaluate(NewProcessingQueue(processingQueueStates[1], s.logger, s.metricsClient)).Return([]ProcessingQueueState{
-		NewProcessingQueueState(
-			2,
-			newTransferTaskKey(0),
-			newTransferTaskKey(100),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
-		),
-	}).Times(1)
-	s.mockQueueSplitPolicy.EXPECT().Evaluate(NewProcessingQueue(processingQueueStates[2], s.logger, s.metricsClient)).Return([]ProcessingQueueState{
-		NewProcessingQueueState(
-			0,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{"testDomain1": {}, "testDomain2": {}, "testDomain3": {}}, false),
-		),
-		NewProcessingQueueState(
-			1,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{"testDomain2": {}}, false),
-		),
-		NewProcessingQueueState(
-			2,
-			newTransferTaskKey(100),
-			newTransferTaskKey(1000),
-			NewDomainFilter(map[string]struct{}{"testDomain3": {}}, false),
-		),
-	}).Times(1)
+	taskInitializer := func(taskInfo task.Info) task.Task {
+		return task.NewTransferTask(s.mockShard, taskInfo, task.QueueTypeActiveTransfer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(10000)
+	}
+	taskInfos := []*persistence.TransferTaskInfo{
+		{
+			TaskID:   1,
+			DomainID: "testDomain1",
+		},
+		{
+			TaskID:   10,
+			DomainID: "testDomain2",
+		},
+		{
+			TaskID:   100,
+			DomainID: "testDomain1",
+		},
+	}
+	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
+	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
+		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
+	}).Return(&persistence.GetTransferTasksResponse{
+		Tasks:         taskInfos,
+		NextPageToken: nil,
+	}, nil).Once()
+
+	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 
 	processorBase := s.newTestTransferQueueProcessBase(
 		processingQueueStates,
+		updateMaxReadLevel,
 		nil,
 		nil,
-		nil,
-		nil,
+		taskInitializer,
 	)
 
-	processorBase.splitQueue()
-	s.Len(processorBase.processingQueueCollections, 3)
-	s.Len(processorBase.processingQueueCollections[0].Queues(), 2)
-	s.Len(processorBase.processingQueueCollections[1].Queues(), 1)
-	s.Len(processorBase.processingQueueCollections[2].Queues(), 2)
-	for idx := 1; idx != len(processorBase.processingQueueCollections)-1; idx++ {
-		s.Less(
-			processorBase.processingQueueCollections[idx-1].Level(),
-			processorBase.processingQueueCollections[idx].Level(),
-		)
+	processorBase.processBatch()
+
+	queueCollection := processorBase.processingQueueCollections[0]
+	s.NotNil(queueCollection.ActiveQueue())
+	s.True(taskKeyEquals(maxLevel, queueCollection.Queues()[0].State().ReadLevel()))
+
+	newTasks := false
+	select {
+	case <-processorBase.notifyCh:
+		newTasks = true
+	default:
 	}
+
+	s.True(newTasks)
 }
 
-func (s *transferQueueProcessorBaseSuite) TestReadTasks_PartialRead_NoNextPage() {
+func (s *transferQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_PartialRead() {
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
+	shardMaxLevel := newTransferTaskKey(500)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			0,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	taskInitializer := func(taskInfo task.Info) task.Task {
+		return task.NewTransferTask(s.mockShard, taskInfo, task.QueueTypeActiveTransfer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+	}
+	updateMaxReadLevel := func() task.Key {
+		return shardMaxLevel
+	}
+	taskInfos := []*persistence.TransferTaskInfo{
+		{
+			TaskID:   1,
+			DomainID: "testDomain1",
+		},
+		{
+			TaskID:   10,
+			DomainID: "testDomain2",
+		},
+		{
+			TaskID:   100,
+			DomainID: "testDomain1",
+		},
+	}
+	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
+	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: shardMaxLevel.(transferTaskKey).taskID,
+		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
+	}).Return(&persistence.GetTransferTasksResponse{
+		Tasks:         taskInfos,
+		NextPageToken: nil,
+	}, nil).Once()
+
+	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
+
+	processorBase := s.newTestTransferQueueProcessBase(
+		processingQueueStates,
+		updateMaxReadLevel,
+		nil,
+		nil,
+		taskInitializer,
+	)
+
+	processorBase.processBatch()
+
+	queueCollection := processorBase.processingQueueCollections[0]
+	s.NotNil(queueCollection.ActiveQueue())
+	s.True(taskKeyEquals(shardMaxLevel, queueCollection.Queues()[0].State().ReadLevel()))
+
+	newTasks := false
+	select {
+	case <-processorBase.notifyCh:
+		newTasks = true
+	default:
+	}
+
+	s.False(newTasks)
+}
+
+func (s *transferQueueProcessorBaseSuite) TestProcessBatch_WithNextPage() {
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			0,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	taskInitializer := func(taskInfo task.Info) task.Task {
+		return task.NewTransferTask(s.mockShard, taskInfo, task.QueueTypeActiveTransfer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(10000)
+	}
+	taskInfos := []*persistence.TransferTaskInfo{
+		{
+			TaskID:   1,
+			DomainID: "testDomain1",
+		},
+		{
+			TaskID:   10,
+			DomainID: "testDomain2",
+		},
+		{
+			TaskID:   100,
+			DomainID: "testDomain1",
+		},
+		{
+			TaskID:   500,
+			DomainID: "testDomain2",
+		},
+	}
+	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
+	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
+		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
+	}).Return(&persistence.GetTransferTasksResponse{
+		Tasks:         taskInfos,
+		NextPageToken: []byte{1, 2, 3},
+	}, nil).Once()
+
+	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
+
+	processorBase := s.newTestTransferQueueProcessBase(
+		processingQueueStates,
+		updateMaxReadLevel,
+		nil,
+		nil,
+		taskInitializer,
+	)
+
+	processorBase.processBatch()
+
+	queueCollection := processorBase.processingQueueCollections[0]
+	s.NotNil(queueCollection.ActiveQueue())
+	s.True(taskKeyEquals(newTransferTaskKey(500), queueCollection.Queues()[0].State().ReadLevel()))
+
+	newTasks := false
+	select {
+	case <-processorBase.notifyCh:
+		newTasks = true
+	default:
+	}
+
+	s.True(newTasks)
+}
+
+func (s *transferQueueProcessorBaseSuite) TestReadTasks_NoNextPage() {
 	readLevel := newTransferTaskKey(3)
 	maxReadLevel := newTransferTaskKey(100)
-	shardMaxReadLevel := newTransferTaskKey(10)
-	shardMaxReadLevelFn := func() task.Key {
-		return shardMaxReadLevel
-	}
 
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	getTransferTaskResponse := &persistence.GetTransferTasksResponse{
@@ -251,33 +385,28 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_PartialRead_NoNextPage()
 		NextPageToken: nil,
 	}
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: shardMaxReadLevel.(*transferTaskKey).taskID,
+		ReadLevel:    readLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
 	processorBase := s.newTestTransferQueueProcessBase(
 		nil,
-		shardMaxReadLevelFn,
+		nil,
 		nil,
 		nil,
 		nil,
 	)
 
-	tasks, more, partialRead, err := processorBase.readTasks(readLevel, maxReadLevel)
+	tasks, more, err := processorBase.readTasks(readLevel, maxReadLevel)
 	s.NoError(err)
 	s.Len(tasks, len(getTransferTaskResponse.Tasks))
 	s.False(more)
-	s.True(partialRead)
 }
 
-func (s *transferQueueProcessorBaseSuite) TestReadTasks_FullRead_WithNextPage() {
+func (s *transferQueueProcessorBaseSuite) TestReadTasks_WithNextPage() {
 	readLevel := newTransferTaskKey(3)
 	maxReadLevel := newTransferTaskKey(10)
-	shardMaxReadLevel := newTransferTaskKey(100)
-	shardMaxReadLevelFn := func() task.Key {
-		return shardMaxReadLevel
-	}
 
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	getTransferTaskResponse := &persistence.GetTransferTasksResponse{
@@ -285,86 +414,30 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_FullRead_WithNextPage() 
 		NextPageToken: []byte{1, 2, 3},
 	}
 	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
-		ReadLevel:    readLevel.(*transferTaskKey).taskID,
-		MaxReadLevel: maxReadLevel.(*transferTaskKey).taskID,
+		ReadLevel:    readLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
 	processorBase := s.newTestTransferQueueProcessBase(
 		nil,
-		shardMaxReadLevelFn,
+		nil,
 		nil,
 		nil,
 		nil,
 	)
 
-	tasks, more, partialRead, err := processorBase.readTasks(readLevel, maxReadLevel)
+	tasks, more, err := processorBase.readTasks(readLevel, maxReadLevel)
 	s.NoError(err)
 	s.Len(tasks, len(getTransferTaskResponse.Tasks))
 	s.True(more)
-	s.False(partialRead)
-}
-
-func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_ProcessorShutDown() {
-	numTasks := 5
-	for i := 0; i != numTasks; i++ {
-		mockTask := task.NewMockTask(s.controller)
-		s.redispatchQueue.Add(mockTask)
-	}
-
-	successfullyRedispatched := 3
-	var calls []*gomock.Call
-	for i := 0; i != successfullyRedispatched; i++ {
-		calls = append(calls, s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil))
-	}
-	calls = append(calls, s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("processor shutdown")))
-	gomock.InOrder(calls...)
-
-	shutDownCh := make(chan struct{})
-	RedispatchTasks(
-		s.redispatchQueue,
-		s.mockTaskProcessor,
-		s.logger,
-		s.metricsScope,
-		shutDownCh,
-	)
-
-	s.Equal(numTasks-successfullyRedispatched-1, s.redispatchQueue.Len())
-}
-
-func (s *transferQueueProcessorBaseSuite) TestRedispatchTask_Random() {
-	numTasks := 10
-	dispatched := 0
-	var calls []*gomock.Call
-
-	for i := 0; i != numTasks; i++ {
-		mockTask := task.NewMockTask(s.controller)
-		s.redispatchQueue.Add(mockTask)
-		submitted := false
-		if rand.Intn(2) == 0 {
-			submitted = true
-			dispatched++
-		}
-		calls = append(calls, s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(submitted, nil))
-	}
-
-	shutDownCh := make(chan struct{})
-	RedispatchTasks(
-		s.redispatchQueue,
-		s.mockTaskProcessor,
-		s.logger,
-		s.metricsScope,
-		shutDownCh,
-	)
-
-	s.Equal(numTasks-dispatched, s.redispatchQueue.Len())
 }
 
 func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessBase(
 	processingQueueStates []ProcessingQueueState,
-	maxReadLevel maxReadLevel,
-	updateTransferAckLevel updateTransferAckLevel,
-	transferQueueShutdown transferQueueShutdown,
+	maxReadLevel updateMaxReadLevelFn,
+	updateTransferAckLevel updateClusterAckLevelFn,
+	transferQueueShutdown queueShutdownFn,
 	taskInitializer task.Initializer,
 ) *transferQueueProcessorBase {
 	testConfig := s.mockShard.GetConfig()

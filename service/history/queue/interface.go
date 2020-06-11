@@ -55,7 +55,7 @@ type (
 		State() ProcessingQueueState
 		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
 		Merge(ProcessingQueue) []ProcessingQueue
-		AddTasks(map[task.Key]task.Task, bool)
+		AddTasks(map[task.Key]task.Task, task.Key)
 		UpdateAckLevel()
 		// TODO: add Offload() method
 	}
@@ -72,15 +72,15 @@ type (
 		Level() int
 		Queues() []ProcessingQueue
 		ActiveQueue() ProcessingQueue
-		AddTasks(map[task.Key]task.Task, bool)
+		AddTasks(map[task.Key]task.Task, task.Key)
 		UpdateAckLevels()
 		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
 		Merge([]ProcessingQueue)
 		// TODO: add Offload() method
 	}
 
-	// TransferQueueProcessor is the interface for transfer task queue processor
-	TransferQueueProcessor interface {
+	// Processor is the interface for task queue processor
+	Processor interface {
 		common.Daemon
 		FailoverDomain(domainIDs map[string]struct{})
 		NotifyNewTask(clusterName string, transferTasks []persistence.Task)

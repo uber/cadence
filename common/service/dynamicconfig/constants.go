@@ -147,12 +147,13 @@ var keys = map[Key]string{
 	HistoryCacheMaxSize:                                    "history.cacheMaxSize",
 	HistoryCacheTTL:                                        "history.cacheTTL",
 	HistoryShutdownDrainDuration:                           "history.shutdownDrainDuration",
-	EventsCacheInitialSize:                                 "history.eventsCacheInitialSize",
-	EventsCacheMaxSize:                                     "history.eventsCacheMaxSize",
+	EventsCacheInitialCount:                                "history.eventsCacheInitialSize",
+	EventsCacheMaxCount:                                    "history.eventsCacheMaxSize",
+	EventsCacheMaxSize:                                     "history.eventsCacheMaxSizeInBytes",
 	EventsCacheTTL:                                         "history.eventsCacheTTL",
 	EventsCacheGlobalEnable:                                "history.eventsCacheGlobalEnable",
-	EventsCacheGlobalInitialSize:                           "history.eventsCacheGlobalInitialSize",
-	EventsCacheGlobalMaxSize:                               "history.eventsCacheGlobalMaxSize",
+	EventsCacheGlobalInitialCount:                          "history.eventsCacheGlobalInitialSize",
+	EventsCacheGlobalMaxCount:                              "history.eventsCacheGlobalMaxSize",
 	AcquireShardInterval:                                   "history.acquireShardInterval",
 	AcquireShardConcurrency:                                "history.acquireShardConcurrency",
 	StandbyClusterDelay:                                    "history.standbyClusterDelay",
@@ -182,6 +183,7 @@ var keys = map[Key]string{
 	TimerProcessorRedispatchIntervalJitterCoefficient:      "history.timerProcessorRedispatchIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                   "history.timerProcessorMaxRedispatchQueueSize",
 	TimerProcessorEnablePriorityTaskProcessor:              "history.timerProcessorEnablePriorityTaskProcessor",
+	TimerProcessorEnableMultiCurosrProcessor:               "history.timerProcessorEnableMultiCursorProcessor",
 	TimerProcessorMaxTimeShift:                             "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                 "history.timerProcessorHistoryArchivalSizeLimit",
 	TimerProcessorArchivalTimeLimit:                        "history.timerProcessorArchivalTimeLimit",
@@ -256,37 +258,45 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
+	NotifyFailoverMarkerInterval:                           "history.NotifyFailoverMarkerInterval",
+	NotifyFailoverMarkerTimerJitterCoefficient:             "history.NotifyFailoverMarkerTimerJitterCoefficient",
 
-	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
-	WorkerPersistenceGlobalMaxQPS:                   "worker.persistenceGlobalMaxQPS",
-	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
-	WorkerReplicatorTaskConcurrency:                 "worker.replicatorTaskConcurrency",
-	WorkerReplicatorMessageConcurrency:              "worker.replicatorMessageConcurrency",
-	WorkerReplicatorActivityBufferRetryCount:        "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetryCount:              "worker.replicationTaskMaxRetryCount",
-	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
-	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
-	WorkerReReplicationContextTimeout:               "worker.workerReReplicationContextTimeout",
-	WorkerEnableRPCReplication:                      "worker.enableWorkerRPCReplication",
-	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
-	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
-	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
-	WorkerESProcessorBulkSize:                       "worker.ESProcessorBulkSize",
-	WorkerESProcessorFlushInterval:                  "worker.ESProcessorFlushInterval",
-	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
-	WorkerHistoryPageSize:                           "worker.WorkerHistoryPageSize",
-	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
-	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
-	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
-	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
-	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
-	WorkerTimeLimitPerArchivalIteration:             "worker.TimeLimitPerArchivalIteration",
-	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
-	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
-	TaskListScannerEnabled:                          "worker.taskListScannerEnabled",
-	HistoryScannerEnabled:                           "worker.historyScannerEnabled",
-	ExecutionsScannerEnabled:                        "worker.executionsScannerEnabled",
+	WorkerPersistenceMaxQPS:                          "worker.persistenceMaxQPS",
+	WorkerPersistenceGlobalMaxQPS:                    "worker.persistenceGlobalMaxQPS",
+	WorkerReplicatorMetaTaskConcurrency:              "worker.replicatorMetaTaskConcurrency",
+	WorkerReplicatorTaskConcurrency:                  "worker.replicatorTaskConcurrency",
+	WorkerReplicatorMessageConcurrency:               "worker.replicatorMessageConcurrency",
+	WorkerReplicatorActivityBufferRetryCount:         "worker.replicatorActivityBufferRetryCount",
+	WorkerReplicatorHistoryBufferRetryCount:          "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetryCount:               "worker.replicationTaskMaxRetryCount",
+	WorkerReplicationTaskMaxRetryDuration:            "worker.replicationTaskMaxRetryDuration",
+	WorkerReplicationTaskContextDuration:             "worker.replicationTaskContextDuration",
+	WorkerReReplicationContextTimeout:                "worker.workerReReplicationContextTimeout",
+	WorkerEnableRPCReplication:                       "worker.enableWorkerRPCReplication",
+	WorkerIndexerConcurrency:                         "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:                    "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:                     "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:                        "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:                   "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                        "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                            "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:                     "worker.WorkerTargetArchivalBlobSize",
+	WorkerArchiverConcurrency:                        "worker.ArchiverConcurrency",
+	WorkerArchivalsPerIteration:                      "worker.ArchivalsPerIteration",
+	WorkerDeterministicConstructionCheckProbability:  "worker.DeterministicConstructionCheckProbability",
+	WorkerBlobIntegrityCheckProbability:              "worker.BlobIntegrityCheckProbability",
+	WorkerTimeLimitPerArchivalIteration:              "worker.TimeLimitPerArchivalIteration",
+	WorkerThrottledLogRPS:                            "worker.throttledLogRPS",
+	ScannerPersistenceMaxQPS:                         "worker.scannerPersistenceMaxQPS",
+	TaskListScannerEnabled:                           "worker.taskListScannerEnabled",
+	HistoryScannerEnabled:                            "worker.historyScannerEnabled",
+	ExecutionsScannerEnabled:                         "worker.executionsScannerEnabled",
+	ExecutionsScannerBlobstoreFlushThreshold:         "worker.executionsScannerBlobstoreFlushThreshold",
+	ExecutionsScannerActivityBatchSize:               "worker.executionsScannerActivityBatchSize",
+	ExecutionsScannerConcurrency:                     "worker.executionsScannerConcurrency",
+	ExecutionsScannerPersistencePageSize:             "worker.executionsScannerPersistencePageSize",
+	ExecutionsScannerInvariantCollectionHistory:      "worker.executionsScannerInvariantCollectionHistory",
+	ExecutionsScannerInvariantCollectionMutableState: "worker.executionsScannerInvariantCollectionMutableState",
 }
 
 const (
@@ -493,18 +503,20 @@ const (
 	HistoryCacheTTL
 	// HistoryShutdownDrainDuration is the duration of traffic drain during shutdown
 	HistoryShutdownDrainDuration
-	// EventsCacheInitialSize is initial size of events cache
-	EventsCacheInitialSize
-	// EventsCacheMaxSize is max size of events cache
+	// EventsCacheInitialCount is initial count of events cache
+	EventsCacheInitialCount
+	// EventsCacheMaxCount is max count of events cache
+	EventsCacheMaxCount
+	// EventsCacheMaxSize is max size of events cache in bytes
 	EventsCacheMaxSize
 	// EventsCacheTTL is TTL of events cache
 	EventsCacheTTL
 	// EventsCacheGlobalEnable enables global cache over all history shards
 	EventsCacheGlobalEnable
-	// EventsCacheGlobalInitialSize is initial size of global events cache
-	EventsCacheGlobalInitialSize
-	// EventsCacheGlobalMaxSize is max size of global events cache
-	EventsCacheGlobalMaxSize
+	// EventsCacheGlobalInitialCount is initial count of global events cache
+	EventsCacheGlobalInitialCount
+	// EventsCacheGlobalMaxCount is max count of global events cache
+	EventsCacheGlobalMaxCount
 	// AcquireShardInterval is interval that timer used to acquire shard
 	AcquireShardInterval
 	// AcquireShardConcurrency is number of goroutines that can be used to acquire shards in the shard controller.
@@ -565,6 +577,8 @@ const (
 	TimerProcessorMaxRedispatchQueueSize
 	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
 	TimerProcessorEnablePriorityTaskProcessor
+	// TimerProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for timer processor
+	TimerProcessorEnableMultiCurosrProcessor
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
@@ -742,6 +756,18 @@ const (
 	HistoryScannerEnabled
 	// ExecutionsScannerEnabled indicates if executions scanner should be started as part of worker.Scanner
 	ExecutionsScannerEnabled
+	// ExecutionsScannerConcurrency indicates the concurrency of execution scanner
+	ExecutionsScannerConcurrency
+	// ExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in execution scanner
+	ExecutionsScannerBlobstoreFlushThreshold
+	// ExecutionsScannerActivityBatchSize indicates the batch size of scanner activities
+	ExecutionsScannerActivityBatchSize
+	// ExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in execution scanner
+	ExecutionsScannerPersistencePageSize
+	// ExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
+	ExecutionsScannerInvariantCollectionMutableState
+	// ExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run
+	ExecutionsScannerInvariantCollectionHistory
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
@@ -786,8 +812,13 @@ const (
 	// MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded
 	MutableStateChecksumInvalidateBefore
 
-	//ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
+	// ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
 	ReplicationEventsFromCurrentCluster
+
+	// NotifyFailoverMarkerInterval determines the frequency to notify failover marker
+	NotifyFailoverMarkerInterval
+	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
+	NotifyFailoverMarkerTimerJitterCoefficient
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
