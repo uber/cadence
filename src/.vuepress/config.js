@@ -54,7 +54,14 @@ module.exports = {
           { text: 'Cadence Web UI', link: 'https://github.com/uber/cadence-web' },
         ],
       },
-      { text: 'Docker', link: 'https://hub.docker.com/r/ubercadence/server' },
+      {
+        text: 'Docker',
+        items: [
+          { text: 'Cadence Service', link: 'https://hub.docker.com/r/ubercadence/server/tags' },
+          { text: 'Cadence CLI', link: 'https://hub.docker.com/r/ubercadence/cli/tags' },
+          { text: 'Cadence Web UI', link: 'https://hub.docker.com/r/ubercadence/web/tags' },
+        ],
+      },
     ],
     sidebar: {
       '/docs/': [
