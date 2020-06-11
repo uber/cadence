@@ -472,7 +472,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			}
 
 			if len(failoverMarkerTasks) > 0 {
-				if err := e.shard.InsertFailoverMarkers(
+				if err := e.shard.ReplicateFailoverMarkers(
 					failoverMarkerTasks,
 				); err != nil {
 					e.logger.Error("Failed to insert failover marker to replication queue.", tag.Error(err))
