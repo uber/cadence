@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -139,22 +140,21 @@ func initializeSplitPolicy(
 	maxNewQueueLevel := options.SplitMaxLevel()
 
 	if options.EnablePendingTaskSplit() {
-		thresholds, err := convertThresholdsFromDynamicConfig(options.PendingTaskSplitThreshold())
+		thresholds, err := common.ConvertDynamicConfigMapPropertyToIntMap(options.PendingTaskSplitThreshold())
 		if err != nil {
 			logger.Error("Failed to convert pending task threshold", tag.Error(err))
+		} else {
+			policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel))
 		}
-		policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel))
 	}
 
 	if options.EnableStuckTaskSplit() {
-		thresholds, err := convertThresholdsFromDynamicConfig(options.StuckTaskSplitThreshold())
+		thresholds, err := common.ConvertDynamicConfigMapPropertyToIntMap(options.StuckTaskSplitThreshold())
 		if err != nil {
 			logger.Error("Failed to convert stuck task threshold", tag.Error(err))
+		} else {
+			policies = append(policies, NewStuckTaskSplitPolicy(thresholds, maxNewQueueLevel))
 		}
-		policies = append(policies, NewStuckTaskSplitPolicy(
-			thresholds,
-			maxNewQueueLevel,
-		))
 	}
 
 	randomSplitProbability := options.RandomSplitProbability()

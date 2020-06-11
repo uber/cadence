@@ -56,6 +56,7 @@ import (
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/ndc"
 	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/queue"
@@ -114,6 +115,7 @@ type (
 		rawMatchingClient         matching.Client
 		clientChecker             client.VersionChecker
 		replicationDLQHandler     replication.DLQHandler
+		failoverCoordinator       failover.Coordinator
 	}
 )
 
@@ -172,6 +174,7 @@ func NewEngineWithShardContext(
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
+	failoverCoordinator failover.Coordinator,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -207,11 +210,12 @@ func NewEngineWithShardContext(
 			executionCache,
 			logger,
 		),
-		publicClient:       publicClient,
-		matchingClient:     matching,
-		rawMatchingClient:  rawMatchingClient,
-		queueTaskProcessor: queueTaskProcessor,
-		clientChecker:      client.NewVersionChecker(),
+		publicClient:        publicClient,
+		matchingClient:      matching,
+		rawMatchingClient:   rawMatchingClient,
+		queueTaskProcessor:  queueTaskProcessor,
+		clientChecker:       client.NewVersionChecker(),
+		failoverCoordinator: failoverCoordinator,
 	}
 	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
@@ -444,6 +448,38 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
 				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
 				e.timerProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTimeoutTask)
+			}
+
+			// handle graceful failover on active to passive
+			// make sure task processor failover the domain before inserting the failover marker
+			failoverMarkerTasks := []*persistence.FailoverMarkerTask{}
+			for _, nextDomain := range nextDomains {
+				domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
+				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
+				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
+
+				if nextDomain.IsGlobalDomain() &&
+					domainFailoverNotificationVersion >= shardNotificationVersion &&
+					domainActiveCluster != e.currentClusterName &&
+					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
+					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
+						VisibilityTimestamp: e.timeSource.Now(),
+						Version:             shardNotificationVersion,
+						DomainID:            nextDomain.GetInfo().ID,
+					})
+				}
+			}
+
+			if len(failoverMarkerTasks) > 0 {
+				if err := e.shard.InsertFailoverMarkers(
+					failoverMarkerTasks,
+				); err != nil {
+					e.logger.Error("Failed to insert failover marker to replication queue.", tag.Error(err))
+					e.metricsClient.IncCounter(metrics.HistoryFailoverMarkerScope, metrics.HistoryFailoverMarkerInsertFailure)
+					// fail this failover callback and it retries on next domain cache refresh
+					return
+				}
 			}
 
 			//nolint:errcheck

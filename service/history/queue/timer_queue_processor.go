@@ -104,7 +104,7 @@ func NewTimerQueueProcessor(
 
 	standbyQueueProcessors := make(map[string]*timerQueueProcessorBase)
 	standbyQueueTimerGates := make(map[string]RemoteTimerGate)
-	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryReplicator)
+	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
 	resenderLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled || clusterName == currentClusterName {

@@ -267,6 +267,8 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
+	NotifyFailoverMarkerInterval:                           "history.NotifyFailoverMarkerInterval",
+	NotifyFailoverMarkerTimerJitterCoefficient:             "history.NotifyFailoverMarkerTimerJitterCoefficient",
 
 	WorkerPersistenceMaxQPS:                          "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                    "worker.persistenceGlobalMaxQPS",
@@ -299,6 +301,7 @@ var keys = map[Key]string{
 	HistoryScannerEnabled:                            "worker.historyScannerEnabled",
 	ExecutionsScannerEnabled:                         "worker.executionsScannerEnabled",
 	ExecutionsScannerBlobstoreFlushThreshold:         "worker.executionsScannerBlobstoreFlushThreshold",
+	ExecutionsScannerActivityBatchSize:               "worker.executionsScannerActivityBatchSize",
 	ExecutionsScannerConcurrency:                     "worker.executionsScannerConcurrency",
 	ExecutionsScannerPersistencePageSize:             "worker.executionsScannerPersistencePageSize",
 	ExecutionsScannerInvariantCollectionHistory:      "worker.executionsScannerInvariantCollectionHistory",
@@ -784,6 +787,8 @@ const (
 	ExecutionsScannerConcurrency
 	// ExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in execution scanner
 	ExecutionsScannerBlobstoreFlushThreshold
+	// ExecutionsScannerActivityBatchSize indicates the batch size of scanner activities
+	ExecutionsScannerActivityBatchSize
 	// ExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in execution scanner
 	ExecutionsScannerPersistencePageSize
 	// ExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
@@ -834,8 +839,13 @@ const (
 	// MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded
 	MutableStateChecksumInvalidateBefore
 
-	//ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
+	// ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
 	ReplicationEventsFromCurrentCluster
+
+	// NotifyFailoverMarkerInterval determines the frequency to notify failover marker
+	NotifyFailoverMarkerInterval
+	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
+	NotifyFailoverMarkerTimerJitterCoefficient
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
