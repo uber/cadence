@@ -253,13 +253,17 @@ func (t *taskProcessor) processTaskOnce(
 	scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
 	if !found {
+		t.logger.Info("Domain Metrics cache miss")
 		domainTag, err := t.getDomainTagByID(domainID)
 		scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
 		// do not cache DomainUnknownTag
 		if err == nil {
 			t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
 		}
+	} else {
+		t.logger.Info("Domain metrics cache hit")
 	}
+
 
 	if task.shouldProcessTask {
 		scope.IncCounter(metrics.TaskRequests)
