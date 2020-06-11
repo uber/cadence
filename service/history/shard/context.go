@@ -139,7 +139,6 @@ type (
 		transferMaxReadLevel      int64
 		timerMaxReadLevelMap      map[string]time.Time // cluster -> timerMaxReadLevel
 		pendingFailoverMarkers    []*replicator.FailoverMarkerAttributes
-		lastUpdatedMarkerTime     time.Time
 
 		// exist only in memory
 		remoteClusterCurrentTime map[string]time.Time
@@ -1226,14 +1225,21 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 }
 
 func (s *contextImpl) AddingPendingFailoverMarker(
-	task *replicator.FailoverMarkerAttributes,
+	marker *replicator.FailoverMarkerAttributes,
 ) error {
+	domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
+	if err != nil {
+		return err
+	}
+	// domain is active, the marker is expired
+	if domainEntry.IsDomainActive() || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
+		return nil
+	}
+
 	s.Lock()
 	defer s.Unlock()
 
-	s.pendingFailoverMarkers = append(s.pendingFailoverMarkers, task)
-	s.lastUpdatedMarkerTime = s.GetTimeSource().Now()
-
+	s.pendingFailoverMarkers = append(s.pendingFailoverMarkers, marker)
 	if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
 		return err
 	}
@@ -1241,28 +1247,41 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 }
 
 func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
-	now := s.GetTimeSource().Now()
+
+	completedFailoverMarkers := make(map[*replicator.FailoverMarkerAttributes]struct{})
 	s.RLock()
-	shouldUpdateFailoverMarkers := len(s.pendingFailoverMarkers) > 0 && now.Sub(s.lastUpdatedMarkerTime) > failoverMarkerRetention
-	if !shouldUpdateFailoverMarkers {
-		s.RUnlock()
-		return s.pendingFailoverMarkers, nil
+	for _, marker := range s.pendingFailoverMarkers {
+		domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
+		if err != nil {
+			s.RUnlock()
+			return nil, err
+		}
+		if domainEntry.IsDomainActive() || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
+			completedFailoverMarkers[marker] = struct{}{}
+		}
 	}
 	s.RUnlock()
 
 	// clean up all pending failover tasks
-	// if there is no new in-coming failover markers within <failoverMarkerRetention> time window
-	s.Lock()
-	defer s.Unlock()
-	s.pendingFailoverMarkers = []*replicator.FailoverMarkerAttributes{}
-	s.lastUpdatedMarkerTime = now
+	if len(completedFailoverMarkers) > 0 {
+		s.Lock()
+		defer s.Unlock()
 
-	if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
-		return nil, err
+		for idx, marker := range s.pendingFailoverMarkers {
+			if _, ok := completedFailoverMarkers[marker]; ok {
+				s.pendingFailoverMarkers[idx] = s.pendingFailoverMarkers[len(s.pendingFailoverMarkers)-1]
+				s.pendingFailoverMarkers[len(s.pendingFailoverMarkers)-1] = nil
+				s.pendingFailoverMarkers = s.pendingFailoverMarkers[:len(s.pendingFailoverMarkers)-1]
+			}
+		}
+		if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
+			return nil, err
+		}
+		if err := s.updateShardInfoLocked(); err != nil {
+			return nil, err
+		}
 	}
-	if err := s.updateShardInfoLocked(); err != nil {
-		return nil, err
-	}
+
 	return s.pendingFailoverMarkers, nil
 }
 
@@ -1365,7 +1384,6 @@ func acquireShard(
 		remoteClusterCurrentTime:       remoteClusterCurrentTime,
 		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
 		pendingFailoverMarkers:         []*replicator.FailoverMarkerAttributes{},
-		lastUpdatedMarkerTime:          shardItem.Resource.GetTimeSource().Now(),
 		logger:                         shardItem.logger,
 		throttledLogger:                shardItem.throttledLogger,
 		previousShardOwnerWasDifferent: ownershipChanged,

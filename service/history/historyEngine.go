@@ -494,12 +494,6 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	)
 }
 
-func (e *historyEngineImpl) notifyPendingFailoverMarkers() {
-	for {
-
-	}
-}
-
 func (e *historyEngineImpl) createMutableState(
 	domainEntry *cache.DomainCacheEntry,
 	runID string,
