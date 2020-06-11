@@ -65,9 +65,10 @@ func (s *fifoTaskSchedulerSuite) SetupTest() {
 		loggerimpl.NewDevelopmentForTest(s.Suite),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&FIFOTaskSchedulerOptions{
-			QueueSize:   s.queueSize,
-			WorkerCount: 1,
-			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
+			QueueSize:       s.queueSize,
+			WorkerCount:     1,
+			DispatcherCount: 3,
+			RetryPolicy:     backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
 	).(*fifoTaskSchedulerImpl)
 }
