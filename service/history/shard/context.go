@@ -492,7 +492,8 @@ Create_Loop:
 				*persistence.WorkflowExecutionAlreadyStartedError,
 				*shared.ServiceBusyError,
 				*persistence.TimeoutError,
-				*shared.LimitExceededError:
+				*shared.LimitExceededError,
+				*persistence.CurrentWorkflowConditionFailedError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{

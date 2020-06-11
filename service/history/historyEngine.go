@@ -634,6 +634,11 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		prevRunID,
 		prevLastWriteVersion,
 	)
+	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok && isSignalWithStart {
+		// don't retry every 30 second
+		e.logger.Error("vancexu got CurrentWorkflowConditionFailedError", tag.WorkflowID(workflowID))
+		return nil, err
+	}
 	// handle already started error
 	if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
 
@@ -2127,6 +2132,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			}
 			// workflow exist but not running, will restart workflow then signal
 			if !mutableState.IsWorkflowExecutionRunning() {
+				e.logger.Info("signalwithstart workflow not running", tag.Value(mutableState.GetExecutionInfo().State))
 				prevMutableState = mutableState
 				break
 			}
