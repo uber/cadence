@@ -314,7 +314,7 @@ func (e *taskExecutorImpl) handleFailoverReplicationTask(
 	task *r.ReplicationTask,
 ) error {
 	failoverAttributes := task.GetFailoverMarkerAttributes()
-	return e.shard.AddFailoverMarker(failoverAttributes)
+	return e.shard.AddingPendingFailoverMarker(failoverAttributes)
 }
 
 func (e *taskExecutorImpl) filterTask(

@@ -112,7 +112,7 @@ type (
 		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
 
 		ReplicateFailoverMarkers(makers []*persistence.FailoverMarkerTask) error
-		AddFailoverMarker(*replicator.FailoverMarkerAttributes) error
+		AddingPendingFailoverMarker(*replicator.FailoverMarkerAttributes) error
 		ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error)
 	}
 
@@ -1225,7 +1225,7 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 	return err
 }
 
-func (s *contextImpl) AddFailoverMarker(
+func (s *contextImpl) AddingPendingFailoverMarker(
 	task *replicator.FailoverMarkerAttributes,
 ) error {
 	s.Lock()
@@ -1243,13 +1243,15 @@ func (s *contextImpl) AddFailoverMarker(
 func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
 	now := s.GetTimeSource().Now()
 	s.RLock()
-	shouldUpdateFailoverMarker := len(s.pendingFailoverMarkers) > 0 && now.Sub(s.lastUpdatedMarkerTime) > failoverMarkerRetention
-	if !shouldUpdateFailoverMarker {
-		defer s.RUnlock()
+	shouldUpdateFailoverMarkers := len(s.pendingFailoverMarkers) > 0 && now.Sub(s.lastUpdatedMarkerTime) > failoverMarkerRetention
+	if !shouldUpdateFailoverMarkers {
+		s.RUnlock()
 		return s.pendingFailoverMarkers, nil
 	}
 	s.RUnlock()
 
+	// clean up all pending failover tasks
+	// if there is no new in-coming failover markers within <failoverMarkerRetention> time window
 	s.Lock()
 	defer s.Unlock()
 	s.pendingFailoverMarkers = []*replicator.FailoverMarkerAttributes{}
