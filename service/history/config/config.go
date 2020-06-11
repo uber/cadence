@@ -21,7 +21,6 @@
 package config
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -309,16 +308,16 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskSchedulerType:              dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
 		TaskSchedulerWorkerCount:       dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 20),
 		TaskSchedulerQueueSize:         dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 2000),
-		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, convertIntMapToDynamicConfigValue(DefaultTaskPriorityWeight)),
+		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
 
 		QueueProcessorEnableSplit:                      dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
 		QueueProcessorSplitMaxLevel:                    dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
 		QueueProcessorEnableRandomSplitByDomainID:      dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID, false),
 		QueueProcessorRandomSplitProbability:           dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability, 0.01),
 		QueueProcessorEnablePendingTaskSplit:           dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePendingTaskSplit, false),
-		QueueProcessorPendingTaskSplitThreshold:        dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, convertIntMapToDynamicConfigValue(DefaultPendingTaskSplitThreshold)),
+		QueueProcessorPendingTaskSplitThreshold:        dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold)),
 		QueueProcessorEnableStuckTaskSplit:             dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableStuckTaskSplit, false),
-		QueueProcessorStuckTaskSplitThreshold:          dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, convertIntMapToDynamicConfigValue(DefaultStuckTaskSplitThreshold)),
+		QueueProcessorStuckTaskSplitThreshold:          dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)),
 		QueueProcessorSplitLookAheadDurationByDomainID: dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.QueueProcessorSplitLookAheadDurationByDomainID, 20*time.Minute),
 
 		TimerTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
@@ -453,14 +452,4 @@ func NewForTest() *Config {
 // GetShardID return the corresponding shard ID for a given workflow ID
 func (config *Config) GetShardID(workflowID string) int {
 	return common.WorkflowIDToHistoryShard(workflowID, config.NumberOfShards)
-}
-
-func convertIntMapToDynamicConfigValue(
-	intMap map[int]int,
-) map[string]interface{} {
-	dcValue := make(map[string]interface{})
-	for key, value := range intMap {
-		dcValue[strconv.Itoa(key)] = value
-	}
-	return dcValue
 }

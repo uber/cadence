@@ -21,12 +21,10 @@
 package queue
 
 import (
-	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -139,7 +137,7 @@ func initializeSplitPolicy(
 	maxNewQueueLevel := options.SplitMaxLevel()
 
 	if options.EnablePendingTaskSplit() {
-		thresholds, err := convertThresholdsFromDynamicConfig(options.PendingTaskSplitThreshold())
+		thresholds, err := common.ConvertDynamicConfigMapPropertyToIntMap(options.PendingTaskSplitThreshold())
 		if err != nil {
 			logger.Error("Failed to convert pending task threshold", tag.Error(err))
 		} else {
@@ -148,7 +146,7 @@ func initializeSplitPolicy(
 	}
 
 	if options.EnableStuckTaskSplit() {
-		thresholds, err := convertThresholdsFromDynamicConfig(options.StuckTaskSplitThreshold())
+		thresholds, err := common.ConvertDynamicConfigMapPropertyToIntMap(options.StuckTaskSplitThreshold())
 		if err != nil {
 			logger.Error("Failed to convert stuck task threshold", tag.Error(err))
 		} else {
@@ -207,22 +205,4 @@ func splitProcessingQueueCollection(
 	})
 
 	return processingQueueCollections
-}
-
-func convertThresholdsFromDynamicConfig(
-	dcValue map[string]interface{},
-) (map[int]int, error) {
-	thresholds := make(map[int]int)
-	for key, value := range dcValue {
-		level, err := strconv.Atoi(strings.TrimSpace(key))
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert level: %v", err)
-		}
-		threshold, ok := value.(int)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert threshold %v", value)
-		}
-		thresholds[level] = threshold
-	}
-	return thresholds, nil
 }
