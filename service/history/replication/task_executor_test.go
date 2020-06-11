@@ -166,7 +166,7 @@ func (s *taskExecutorSuite) TestFilterTask() {
 			&persistence.DomainReplicationConfig{
 				Clusters: []*persistence.ClusterReplicationConfig{
 					{
-						ClusterName: "test",
+						ClusterName: "active",
 					},
 				}},
 			0,
