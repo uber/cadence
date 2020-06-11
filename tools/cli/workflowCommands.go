@@ -203,6 +203,15 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	if c.IsSet(FlagCronSchedule) {
 		startRequest.CronSchedule = common.StringPtr(c.String(FlagCronSchedule))
 	}
+	if c.IsSet(FlagRetryAttempts) {
+		interval := int32(c.Int(FlagRetryInterval))
+		attempts := int32(c.Int(FlagRetryAttempts))
+		startRequest.RetryPolicy = &s.RetryPolicy{
+			MaximumAttempts:          common.Int32Ptr(attempts),
+			InitialIntervalInSeconds: common.Int32Ptr(interval),
+			BackoffCoefficient:       common.Float64Ptr(1.0), // no backoff
+		}
+	}
 
 	memoFields := processMemo(c)
 	if len(memoFields) != 0 {
