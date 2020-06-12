@@ -46,7 +46,7 @@ type (
 		sync.RWMutex
 
 		priorityAssigner PriorityAssigner
-		scheduler        task.Scheduler
+		hostScheduler    task.Scheduler
 		shardSchedulers  map[shard.Context]task.Scheduler
 
 		status        int32
@@ -97,7 +97,7 @@ func NewProcessor(
 
 	return &processorImpl{
 		priorityAssigner: priorityAssigner,
-		scheduler:        scheduler,
+		hostScheduler:    scheduler,
 		shardSchedulers:  make(map[shard.Context]task.Scheduler),
 		status:           common.DaemonStatusInitialized,
 		options:          options,
@@ -112,7 +112,7 @@ func (p *processorImpl) Start() {
 		return
 	}
 
-	p.scheduler.Start()
+	p.hostScheduler.Start()
 
 	p.logger.Info("Queue task processor started.")
 }
@@ -122,7 +122,7 @@ func (p *processorImpl) Stop() {
 		return
 	}
 
-	p.scheduler.Stop()
+	p.hostScheduler.Stop()
 
 	p.Lock()
 	defer p.Unlock()
@@ -159,7 +159,7 @@ func (p *processorImpl) Submit(
 		return err
 	}
 
-	submitted, err := p.scheduler.TrySubmit(task)
+	submitted, err := p.hostScheduler.TrySubmit(task)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (p *processorImpl) TrySubmit(
 		return false, err
 	}
 
-	submitted, err := p.scheduler.TrySubmit(task)
+	submitted, err := p.hostScheduler.TrySubmit(task)
 	if err != nil {
 		return false, err
 	}

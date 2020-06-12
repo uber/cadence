@@ -142,7 +142,7 @@ func (s *queueTaskProcessorSuite) TestStartStop() {
 	mockScheduler := task.NewMockScheduler(s.controller)
 	mockScheduler.EXPECT().Start().Times(1)
 	mockScheduler.EXPECT().Stop().Times(1)
-	s.processor.scheduler = mockScheduler
+	s.processor.hostScheduler = mockScheduler
 
 	for i := 0; i != 10; i++ {
 		mockShard := shard.NewTestContext(
@@ -175,7 +175,7 @@ func (s *queueTaskProcessorSuite) TestSubmit() {
 	mockShardScheduler := task.NewMockScheduler(s.controller)
 	mockShardScheduler.EXPECT().Submit(newMockQueueTaskMatcher(mockTask)).Return(nil).Times(1)
 
-	s.processor.scheduler = mockScheduler
+	s.processor.hostScheduler = mockScheduler
 	s.processor.shardSchedulers[s.mockShard] = mockShardScheduler
 
 	err := s.processor.Submit(mockTask)
@@ -201,7 +201,7 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 	mockScheduler := task.NewMockScheduler(s.controller)
 	mockScheduler.EXPECT().TrySubmit(newMockQueueTaskMatcher(mockTask)).Return(false, errTrySubmit).Times(1)
 
-	s.processor.scheduler = mockScheduler
+	s.processor.hostScheduler = mockScheduler
 
 	submitted, err := s.processor.TrySubmit(mockTask)
 	s.Equal(errTrySubmit, err)
