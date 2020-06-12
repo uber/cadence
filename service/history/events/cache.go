@@ -54,12 +54,6 @@ type (
 			eventID int64,
 			event *shared.HistoryEvent,
 		)
-		DeleteEvent(
-			domainID string,
-			workflowID string,
-			runID string,
-			eventID int64,
-		)
 	}
 
 	cacheImpl struct {
@@ -198,10 +192,7 @@ func (e *cacheImpl) GetEvent(
 	}
 
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
-	// use local id to preserve old logic before full migration to global event cache
-	if e.shardID != nil {
-		shardID = *e.shardID
-	}
+
 	event, err := e.getHistoryEventFromStore(firstEventID, eventID, branchToken, shardID)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
@@ -230,19 +221,6 @@ func (e *cacheImpl) PutEvent(
 
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	e.Put(key, event)
-}
-
-func (e *cacheImpl) DeleteEvent(
-	domainID, workflowID,
-	runID string,
-	eventID int64,
-) {
-	e.metricsClient.IncCounter(metrics.EventsCacheDeleteEventScope, metrics.CacheRequests)
-	sw := e.metricsClient.StartTimer(metrics.EventsCacheDeleteEventScope, metrics.CacheLatency)
-	defer sw.Stop()
-
-	key := newEventKey(domainID, workflowID, runID, eventID)
-	e.Delete(key)
 }
 
 func (e *cacheImpl) getHistoryEventFromStore(
