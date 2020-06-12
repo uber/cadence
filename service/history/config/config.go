@@ -21,7 +21,6 @@
 package config
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -87,6 +86,17 @@ type Config struct {
 	TaskSchedulerShardQueueSize    dynamicconfig.IntPropertyFn
 	TaskSchedulerDispatcherCount   dynamicconfig.IntPropertyFn
 	TaskSchedulerRoundRobinWeights dynamicconfig.MapPropertyFn
+
+	// QueueProcessor split policy settings
+	QueueProcessorEnableSplit                      dynamicconfig.BoolPropertyFn
+	QueueProcessorSplitMaxLevel                    dynamicconfig.IntPropertyFn
+	QueueProcessorEnableRandomSplitByDomainID      dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	QueueProcessorRandomSplitProbability           dynamicconfig.FloatPropertyFn
+	QueueProcessorEnablePendingTaskSplit           dynamicconfig.BoolPropertyFn
+	QueueProcessorPendingTaskSplitThreshold        dynamicconfig.MapPropertyFn
+	QueueProcessorEnableStuckTaskSplit             dynamicconfig.BoolPropertyFn
+	QueueProcessorStuckTaskSplitThreshold          dynamicconfig.MapPropertyFn
+	QueueProcessorSplitLookAheadDurationByDomainID dynamicconfig.DurationPropertyFnWithDomainIDFilter
 
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                                dynamicconfig.IntPropertyFn
@@ -231,8 +241,13 @@ type Config struct {
 	MutableStateChecksumVerifyProbability dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFn
 
-	//Crocess DC Replication configuration
+	//Cross DC Replication configuration
 	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	//Failover marker heartbeat
+	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
+	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
+	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
 }
 
 const (
@@ -247,13 +262,25 @@ var (
 		task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass): 100,
 		task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass):     50,
 	}
+
+	// DefaultPendingTaskSplitThreshold is the default pending task split threshold
+	DefaultPendingTaskSplitThreshold = map[int]int{ // processing queue level -> threshold for # of pending tasks per domain
+		0: 1000,
+		1: 10000,
+	}
+
+	// DefaultStuckTaskSplitThreshold is the default stuck task split threshold
+	DefaultStuckTaskSplitThreshold = map[int]int{ // processing queue level -> threshold for # of task attempts
+		0: 100,
+		1: 10000,
+	}
 )
 
 // New returns new service config with default values
 func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
-		EnableNDC:                            dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableNDC, true),
+		EnableNDC:                            dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableNDC, true),
 		RPS:                                  dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthLimit:                     dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
@@ -292,7 +319,17 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskSchedulerQueueSize:         dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 10000),
 		TaskSchedulerShardQueueSize:    dc.GetIntProperty(dynamicconfig.TaskSchedulerShardQueueSize, 200),
 		TaskSchedulerDispatcherCount:   dc.GetIntProperty(dynamicconfig.TaskSchedulerDispatcherCount, 10),
-		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, convertWeightsToDynamicConfigValue(DefaultTaskPriorityWeight)),
+		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
+
+		QueueProcessorEnableSplit:                      dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
+		QueueProcessorSplitMaxLevel:                    dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
+		QueueProcessorEnableRandomSplitByDomainID:      dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID, false),
+		QueueProcessorRandomSplitProbability:           dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability, 0.01),
+		QueueProcessorEnablePendingTaskSplit:           dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePendingTaskSplit, false),
+		QueueProcessorPendingTaskSplitThreshold:        dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold)),
+		QueueProcessorEnableStuckTaskSplit:             dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableStuckTaskSplit, false),
+		QueueProcessorStuckTaskSplitThreshold:          dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)),
+		QueueProcessorSplitLookAheadDurationByDomainID: dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.QueueProcessorSplitLookAheadDurationByDomainID, 20*time.Minute),
 
 		TimerTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
 		TimerTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.TimerTaskWorkerCount, 10),
@@ -361,8 +398,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:                   dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
-		EnableParentClosePolicy:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableParentClosePolicy, true),
+		EventEncodingType:                   dc.GetStringPropertyFilteredByDomain(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EnableParentClosePolicy:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableParentClosePolicy, true),
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
@@ -378,7 +415,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
 
 		ThrottledLogRPS:   dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS, 4),
-		EnableStickyQuery: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableStickyQuery, true),
+		EnableStickyQuery: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStickyQuery, true),
 
 		ValidSearchAttributes:             dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
 		SearchAttributesNumberOfKeysLimit: dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 100),
@@ -401,13 +438,17 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableCleanupReplicationTask:                     dc.GetBoolProperty(dynamicconfig.HistoryEnableCleanupReplicationTask, true),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery, true),
-		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, false),
+		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, false),
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount, 1),
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability, 0),
 		MutableStateChecksumVerifyProbability: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumVerifyProbability, 0),
 		MutableStateChecksumInvalidateBefore:  dc.GetFloat64Property(dynamicconfig.MutableStateChecksumInvalidateBefore, 0),
 
-		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
+		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
+
+		NotifyFailoverMarkerInterval:               dc.GetDurationProperty(dynamicconfig.NotifyFailoverMarkerInterval, 5*time.Second),
+		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
+		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 	}
 
 	return cfg
@@ -419,21 +460,11 @@ func NewForTest() *Config {
 	config := New(dc, 1, config.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
-	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, true)
+	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, true)
 	return config
 }
 
 // GetShardID return the corresponding shard ID for a given workflow ID
 func (config *Config) GetShardID(workflowID string) int {
 	return common.WorkflowIDToHistoryShard(workflowID, config.NumberOfShards)
-}
-
-func convertWeightsToDynamicConfigValue(
-	weights map[int]int,
-) map[string]interface{} {
-	weightsForDC := make(map[string]interface{})
-	for priority, weight := range weights {
-		weightsForDC[strconv.Itoa(priority)] = weight
-	}
-	return weightsForDC
 }
