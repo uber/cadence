@@ -203,13 +203,18 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	if c.IsSet(FlagCronSchedule) {
 		startRequest.CronSchedule = common.StringPtr(c.String(FlagCronSchedule))
 	}
-	if c.IsSet(FlagRetryAttempts) {
+	if c.IsSet(FlagRetryAttempts) || c.IsSet(FlagRetryExpiration) {
 		interval := int32(c.Int(FlagRetryInterval))
-		attempts := int32(c.Int(FlagRetryAttempts))
 		startRequest.RetryPolicy = &s.RetryPolicy{
-			MaximumAttempts:          common.Int32Ptr(attempts),
 			InitialIntervalInSeconds: common.Int32Ptr(interval),
 			BackoffCoefficient:       common.Float64Ptr(1.0), // no backoff
+		}
+
+		if c.IsSet(FlagRetryAttempts) {
+			startRequest.RetryPolicy.MaximumAttempts = common.Int32Ptr(int32(c.Int(FlagRetryAttempts)))
+		}
+		if c.IsSet(FlagRetryExpiration) {
+			startRequest.RetryPolicy.ExpirationIntervalInSeconds = common.Int32Ptr(int32(c.Int(FlagRetryExpiration)))
 		}
 	}
 
