@@ -23,7 +23,6 @@ package common
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -206,47 +205,8 @@ func IsKafkaTransientError(err error) bool {
 	return true
 }
 
-// IsServiceTransientError checks if the error is a retryable error.
+// IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
-	return !IsServiceNonRetryableError(err)
-}
-
-// IsServiceNonRetryableError checks if the error is a non retryable error.
-func IsServiceNonRetryableError(err error) bool {
-	switch err := err.(type) {
-	case *workflow.EntityNotExistsError:
-		return true
-	case *workflow.BadRequestError:
-		return true
-	case *workflow.DomainNotActiveError:
-		return true
-	case *workflow.WorkflowExecutionAlreadyStartedError:
-		return true
-	case *workflow.CancellationAlreadyRequestedError:
-		return true
-	case *yarpcerrors.Status:
-		if err.Code() != yarpcerrors.CodeDeadlineExceeded {
-			return true
-		}
-		return false
-	}
-
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	if errors.Is(err, context.Canceled) {
-		return true
-	}
-
-	return false
-}
-
-// IsWhitelistServiceTransientError checks if the error is a transient error.
-func IsWhitelistServiceTransientError(err error) bool {
-	if err == context.DeadlineExceeded {
-		return true
-	}
-
 	switch err.(type) {
 	case *workflow.InternalServiceError:
 		return true

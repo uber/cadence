@@ -35,11 +35,11 @@ func TestIsServiceNonRetryableError_ContextTimeout(t *testing.T) {
 	defer cancel()
 	time.Sleep(100 * time.Millisecond)
 
-	require.True(t, IsServiceNonRetryableError(ctx.Err()))
+	require.False(t, IsServiceTransientError(ctx.Err()))
 }
 
 func TestIsServiceNonRetryableError_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	require.True(t, IsServiceNonRetryableError(ctx.Err()))
+	require.False(t, IsServiceTransientError(ctx.Err()))
 }
