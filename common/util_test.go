@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsServiceNonRetryableError_ContextTimeout(t *testing.T) {
+func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	time.Sleep(100 * time.Millisecond)
@@ -38,7 +38,7 @@ func TestIsServiceNonRetryableError_ContextTimeout(t *testing.T) {
 	require.False(t, IsServiceTransientError(ctx.Err()))
 }
 
-func TestIsServiceNonRetryableError_ContextCancel(t *testing.T) {
+func TestIsServiceTransientError_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	require.False(t, IsServiceTransientError(ctx.Err()))
