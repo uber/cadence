@@ -37,10 +37,9 @@ type (
 
 	// InvariantManager represents a manager of several invariants.
 	// It can be used to run a group of invariant checks or fixes.
-	// It is responsible for running invariants in their dependency order.
 	InvariantManager interface {
-		RunChecks(Execution) CheckResult
-		RunFixes(Execution) FixResult
+		RunChecks(Execution) ManagerCheckResult
+		RunFixes(Execution) ManagerFixResult
 		InvariantTypes() []InvariantType
 	}
 
@@ -48,7 +47,7 @@ type (
 	// It can be used to check that the execution satisfies the invariant.
 	// It can also be used to fix the invariant for an execution.
 	Invariant interface {
-		Check(Execution, *InvariantResourceBag) CheckResult
+		Check(Execution) CheckResult
 		Fix(Execution) FixResult
 		InvariantType() InvariantType
 	}
@@ -59,7 +58,17 @@ type (
 		// or converting store entry to Execution will result in an error after which iterator cannot be used.
 		Next() (*Execution, error)
 		// HasNext indicates if the iterator has a next element. If HasNext is true
-		// it is guaranteed that Next will return a nil error and a non-nil ExecutionIteratorResult.
+		// it is guaranteed that Next will return a nil error and a non-nil Execution.
+		HasNext() bool
+	}
+
+	// ScanOutputIterator gets ScanOutputEntities from underlying store
+	ScanOutputIterator interface {
+		// Next returns the next ScanOutputEntity found. Any error reading from underlying store
+		// or converting store entry to ScanOutputEntity will result in an error after which iterator cannot be used.
+		Next() (*ScanOutputEntity, error)
+		// HasNext indicates if the iterator has a next element. If HasNext is true it is
+		// guaranteed that Next will return a nil error and non-nil ScanOutputEntity.
 		HasNext() bool
 	}
 

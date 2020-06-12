@@ -23,7 +23,7 @@
 package invariants
 
 import (
-	"github.com/gocql/gocql"
+	"github.com/uber/cadence/.gen/go/shared"
 
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -49,11 +49,11 @@ func NewHistoryExists(
 	}
 }
 
-func (h *historyExists) Check(execution common.Execution, resources *common.InvariantResourceBag) common.CheckResult {
+func (h *historyExists) Check(execution common.Execution) common.CheckResult {
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   execution.BranchToken,
 		MinEventID:    c.FirstEventID,
-		MaxEventID:    c.EndEventID,
+		MaxEventID:    c.FirstEventID + 1,
 		PageSize:      historyPageSize,
 		NextPageToken: nil,
 		ShardID:       c.IntPtr(execution.ShardID),
@@ -63,6 +63,7 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	if existsCheckError != nil {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
+			InvariantType:   h.InvariantType(),
 			Info:            "failed to check if concrete execution still exists",
 			InfoDetails:     existsCheckError.Error(),
 		}
@@ -70,37 +71,50 @@ func (h *historyExists) Check(execution common.Execution, resources *common.Inva
 	if !stillExists {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeHealthy,
+			InvariantType:   h.InvariantType(),
 			Info:            "determined execution was healthy because concrete execution no longer exists",
 		}
 	}
 	if readHistoryBranchErr != nil {
-		if readHistoryBranchErr == gocql.ErrNotFound {
+		switch readHistoryBranchErr.(type) {
+		case *shared.EntityNotExistsError:
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeCorrupted,
+				InvariantType:   h.InvariantType(),
 				Info:            "concrete execution exists but history does not exist",
 				InfoDetails:     readHistoryBranchErr.Error(),
 			}
-		}
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
-			Info:            "failed to verify if history exists",
-			InfoDetails:     readHistoryBranchErr.Error(),
+		default:
+			return common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				InvariantType:   h.InvariantType(),
+				Info:            "failed to verify if history exists",
+				InfoDetails:     readHistoryBranchErr.Error(),
+			}
 		}
 	}
 	if readHistoryBranchResp == nil || len(readHistoryBranchResp.HistoryEvents) == 0 {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeCorrupted,
+			InvariantType:   h.InvariantType(),
 			Info:            "concrete execution exists but got empty history",
 		}
 	}
-	resources.History = readHistoryBranchResp
 	return common.CheckResult{
 		CheckResultType: common.CheckResultTypeHealthy,
+		InvariantType:   h.InvariantType(),
 	}
 }
 
 func (h *historyExists) Fix(execution common.Execution) common.FixResult {
-	return common.DeleteExecution(&execution, h.pr)
+	fixResult, checkResult := checkBeforeFix(h, execution)
+	if fixResult != nil {
+		return *fixResult
+	}
+	fixResult = common.DeleteExecution(&execution, h.pr)
+	fixResult.CheckResult = *checkResult
+	fixResult.InvariantType = h.InvariantType()
+	return *fixResult
 }
 
 func (h *historyExists) InvariantType() common.InvariantType {

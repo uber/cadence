@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -58,9 +59,9 @@ type (
 
 		controller               *gomock.Controller
 		mockShard                *shard.TestContext
-		mockTxProcessor          *MocktransferQueueProcessor
+		mockTxProcessor          *queue.MockProcessor
+		mockTimerProcessor       *queue.MockProcessor
 		mockReplicationProcessor *MockReplicatorQueueProcessor
-		mockTimerProcessor       *MocktimerQueueProcessor
 		mockEventsCache          *events.MockCache
 		mockDomainCache          *cache.MockDomainCache
 		mockClusterMetadata      *cluster.MockMetadata
@@ -96,12 +97,12 @@ func (s *resetorSuite) SetupTest() {
 	s.shardID = shardID
 
 	s.controller = gomock.NewController(s.T())
-	s.mockTxProcessor = NewMocktransferQueueProcessor(s.controller)
+	s.mockTxProcessor = queue.NewMockProcessor(s.controller)
+	s.mockTimerProcessor = queue.NewMockProcessor(s.controller)
 	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
-	s.mockTimerProcessor = NewMocktimerQueueProcessor(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
-	s.mockTimerProcessor.EXPECT().NotifyNewTimers(gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,

@@ -83,6 +83,7 @@ type (
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
+		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
@@ -648,6 +649,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -660,6 +662,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}

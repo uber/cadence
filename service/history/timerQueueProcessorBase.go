@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -53,9 +53,6 @@ type (
 	timerQueueProcessorBase struct {
 		scope                int
 		shard                shard.Context
-		historyService       *historyEngineImpl
-		cache                *execution.Cache
-		executionManager     persistence.ExecutionManager
 		status               int32
 		shutdownWG           sync.WaitGroup
 		shutdownCh           chan struct{}
@@ -66,15 +63,14 @@ type (
 		timerFiredCount      uint64
 		timerProcessor       timerProcessor
 		timerQueueAckMgr     timerQueueAckMgr
-		timerGate            TimerGate
+		timerGate            queue.TimerGate
 		timeSource           clock.TimeSource
 		rateLimiter          quotas.Limiter
-		retryPolicy          backoff.RetryPolicy
 		lastPollTime         time.Time
 		taskProcessor        *taskProcessor // TODO: deprecate task processor, in favor of queueTaskProcessor
 		queueTaskProcessor   task.Processor
 		redispatchQueue      collection.Queue
-		queueTaskInitializer queueTaskInitializer
+		queueTaskInitializer task.Initializer
 
 		// timer notification
 		newTimerCh  chan struct{}
@@ -91,8 +87,8 @@ func newTimerQueueProcessorBase(
 	queueTaskProcessor task.Processor,
 	timerQueueAckMgr timerQueueAckMgr,
 	redispatchQueue collection.Queue,
-	queueTaskInitializer queueTaskInitializer,
-	timerGate TimerGate,
+	queueTaskInitializer task.Initializer,
+	timerGate queue.TimerGate,
 	maxPollRPS dynamicconfig.IntPropertyFn,
 	logger log.Logger,
 	metricsScope metrics.Scope,
@@ -102,7 +98,7 @@ func newTimerQueueProcessorBase(
 	config := shard.GetConfig()
 
 	var taskProcessor *taskProcessor
-	if !config.TimerProcessorEnablePriorityTaskProcessor() {
+	if queueTaskProcessor == nil || !config.TimerProcessorEnablePriorityTaskProcessor() {
 		options := taskProcessorOptions{
 			workerCount: config.TimerTaskWorkerCount(),
 			queueSize:   config.TimerTaskWorkerCount() * config.TimerTaskBatchSize(),
@@ -113,15 +109,12 @@ func newTimerQueueProcessorBase(
 	base := &timerQueueProcessorBase{
 		scope:                scope,
 		shard:                shard,
-		historyService:       historyService,
 		timerProcessor:       timerProcessor,
-		cache:                historyService.executionCache,
-		executionManager:     shard.GetExecutionManager(),
 		status:               common.DaemonStatusInitialized,
 		shutdownCh:           make(chan struct{}),
 		config:               config,
 		logger:               logger,
-		metricsClient:        historyService.metricsClient,
+		metricsClient:        shard.GetMetricsClient(),
 		metricsScope:         metricsScope,
 		timerQueueAckMgr:     timerQueueAckMgr,
 		timerGate:            timerGate,
@@ -137,7 +130,6 @@ func newTimerQueueProcessorBase(
 				return float64(maxPollRPS())
 			},
 		),
-		retryPolicy: common.CreatePersistanceRetryPolicy(),
 	}
 
 	return base
@@ -211,13 +203,13 @@ func (t *timerQueueProcessorBase) notifyNewTimers(
 	isActive := t.scope == metrics.TimerActiveQueueProcessorScope
 
 	newTime := timerTasks[0].GetVisibilityTimestamp()
-	for _, task := range timerTasks {
-		ts := task.GetVisibilityTimestamp()
+	for _, timerTask := range timerTasks {
+		ts := timerTask.GetVisibilityTimestamp()
 		if ts.Before(newTime) {
 			newTime = ts
 		}
 
-		scopeIdx := getTimerTaskMetricScope(task.GetType(), isActive)
+		scopeIdx := task.GetTimerTaskMetricScope(timerTask.GetType(), isActive)
 		t.metricsClient.IncCounter(scopeIdx, metrics.NewTimerCounter)
 	}
 
@@ -323,7 +315,7 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 			t.newTime = emptyTime
 			t.newTimeLock.Unlock()
 			// New Timer has arrived.
-			t.metricsClient.IncCounter(t.scope, metrics.NewTimerNotifyCounter)
+			t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
 			t.timerGate.Update(newTime)
 		case <-redispatchTimer.C:
 			redispatchTimer.Reset(backoff.JitDuration(
@@ -378,7 +370,7 @@ func (t *timerQueueProcessorBase) submitTask(
 			newTaskInfo(
 				t.timerProcessor,
 				taskInfo,
-				initializeLoggerForTask(t.shard.GetShardID(), taskInfo, t.logger),
+				task.InitializeLoggerForTask(t.shard.GetShardID(), taskInfo, t.logger),
 			),
 		)
 	}
@@ -400,7 +392,7 @@ func (t *timerQueueProcessorBase) redispatchTasks() {
 		return
 	}
 
-	redispatchQueueTasks(
+	queue.RedispatchTasks(
 		t.redispatchQueue,
 		t.queueTaskProcessor,
 		t.logger,
@@ -452,52 +444,4 @@ func (t *timerQueueProcessorBase) getTimerTaskType(
 		return "WorkflowBackoffTimerTask"
 	}
 	return "UnKnown"
-}
-
-func getTimerTaskMetricScope(
-	taskType int,
-	isActive bool,
-) int {
-	switch taskType {
-	case persistence.TaskTypeDecisionTimeout:
-		if isActive {
-			return metrics.TimerActiveTaskDecisionTimeoutScope
-		}
-		return metrics.TimerStandbyTaskDecisionTimeoutScope
-	case persistence.TaskTypeActivityTimeout:
-		if isActive {
-			return metrics.TimerActiveTaskActivityTimeoutScope
-		}
-		return metrics.TimerStandbyTaskActivityTimeoutScope
-	case persistence.TaskTypeUserTimer:
-		if isActive {
-			return metrics.TimerActiveTaskUserTimerScope
-		}
-		return metrics.TimerStandbyTaskUserTimerScope
-	case persistence.TaskTypeWorkflowTimeout:
-		if isActive {
-			return metrics.TimerActiveTaskWorkflowTimeoutScope
-		}
-		return metrics.TimerStandbyTaskWorkflowTimeoutScope
-	case persistence.TaskTypeDeleteHistoryEvent:
-		if isActive {
-			return metrics.TimerActiveTaskDeleteHistoryEventScope
-		}
-		return metrics.TimerStandbyTaskDeleteHistoryEventScope
-	case persistence.TaskTypeActivityRetryTimer:
-		if isActive {
-			return metrics.TimerActiveTaskActivityRetryTimerScope
-		}
-		return metrics.TimerStandbyTaskActivityRetryTimerScope
-	case persistence.TaskTypeWorkflowBackoffTimer:
-		if isActive {
-			return metrics.TimerActiveTaskWorkflowBackoffTimerScope
-		}
-		return metrics.TimerStandbyTaskWorkflowBackoffTimerScope
-	default:
-		if isActive {
-			return metrics.TimerActiveQueueProcessorScope
-		}
-		return metrics.TimerStandbyQueueProcessorScope
-	}
 }

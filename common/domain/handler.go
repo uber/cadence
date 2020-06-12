@@ -258,6 +258,7 @@ func (d *HandlerImpl) RegisterDomain(
 			domainRequest.ReplicationConfig,
 			domainRequest.ConfigVersion,
 			domainRequest.FailoverVersion,
+			common.InitialPreviousFailoverVersion,
 			domainRequest.IsGlobalDomain,
 		)
 		if err != nil {
@@ -299,7 +300,7 @@ func (d *HandlerImpl) ListDomains(
 			IsGlobalDomain:  common.BoolPtr(domain.IsGlobalDomain),
 			FailoverVersion: common.Int64Ptr(domain.FailoverVersion),
 		}
-		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = d.createResponse(ctx, domain.Info, domain.Config, domain.ReplicationConfig)
+		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = d.createResponse(domain.Info, domain.Config, domain.ReplicationConfig)
 		domains = append(domains, desc)
 	}
 
@@ -331,7 +332,7 @@ func (d *HandlerImpl) DescribeDomain(
 		IsGlobalDomain:  common.BoolPtr(resp.IsGlobalDomain),
 		FailoverVersion: common.Int64Ptr(resp.FailoverVersion),
 	}
-	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(ctx, resp.Info, resp.Config, resp.ReplicationConfig)
+	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(resp.Info, resp.Config, resp.ReplicationConfig)
 	return response, nil
 }
 
@@ -364,6 +365,7 @@ func (d *HandlerImpl) UpdateDomain(
 	isGlobalDomain := getResponse.IsGlobalDomain
 	gracefulFailoverEndTime := getResponse.FailoverEndTime
 	currentActiveCluster := replicationConfig.ActiveClusterName
+	previousFailoverVersion := getResponse.PreviousFailoverVersion
 
 	// whether history archival config changed
 	historyArchivalConfigChanged := false
@@ -493,6 +495,7 @@ func (d *HandlerImpl) UpdateDomain(
 				// force failover cleanup graceful failover state
 				gracefulFailoverEndTime = nil
 			}
+			previousFailoverVersion = failoverVersion
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
 				failoverVersion,
@@ -508,6 +511,7 @@ func (d *HandlerImpl) UpdateDomain(
 			FailoverVersion:             failoverVersion,
 			FailoverNotificationVersion: failoverNotificationVersion,
 			FailoverEndTime:             gracefulFailoverEndTime,
+			PreviousFailoverVersion:     previousFailoverVersion,
 			NotificationVersion:         notificationVersion,
 		}
 		err = d.metadataMgr.UpdateDomain(updateReq)
@@ -517,10 +521,16 @@ func (d *HandlerImpl) UpdateDomain(
 	}
 
 	if isGlobalDomain {
-		// TODO: add failover endtime to replication task
-		err = d.domainReplicator.HandleTransmissionTask(replicator.DomainOperationUpdate,
-			info, config, replicationConfig, configVersion, failoverVersion, isGlobalDomain)
-		if err != nil {
+		if err := d.domainReplicator.HandleTransmissionTask(
+			replicator.DomainOperationUpdate,
+			info,
+			config,
+			replicationConfig,
+			configVersion,
+			failoverVersion,
+			previousFailoverVersion,
+			isGlobalDomain,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -529,7 +539,7 @@ func (d *HandlerImpl) UpdateDomain(
 		IsGlobalDomain:  common.BoolPtr(isGlobalDomain),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(ctx, info, config, replicationConfig)
+	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(info, config, replicationConfig)
 
 	d.logger.Info("Update domain succeeded",
 		tag.WorkflowDomainName(info.Name),
@@ -583,7 +593,6 @@ func (d *HandlerImpl) DeprecateDomain(
 }
 
 func (d *HandlerImpl) createResponse(
-	ctx context.Context,
 	info *persistence.DomainInfo,
 	config *persistence.DomainConfig,
 	replicationConfig *persistence.DomainReplicationConfig,

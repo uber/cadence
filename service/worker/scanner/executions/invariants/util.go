@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,4 +20,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package executions
+package invariants
+
+import (
+	"github.com/uber/cadence/service/worker/scanner/executions/common"
+)
+
+func checkBeforeFix(
+	invariant common.Invariant,
+	execution common.Execution,
+) (*common.FixResult, *common.CheckResult) {
+	checkResult := invariant.Check(execution)
+	if checkResult.CheckResultType == common.CheckResultTypeHealthy {
+		return &common.FixResult{
+			FixResultType: common.FixResultTypeSkipped,
+			InvariantType: invariant.InvariantType(),
+			CheckResult:   checkResult,
+			Info:          "skipped fix because execution was healthy",
+		}, nil
+	}
+	if checkResult.CheckResultType == common.CheckResultTypeFailed {
+		return &common.FixResult{
+			FixResultType: common.FixResultTypeFailed,
+			InvariantType: invariant.InvariantType(),
+			CheckResult:   checkResult,
+			Info:          "failed fix because check failed",
+		}, nil
+	}
+	return nil, &checkResult
+}

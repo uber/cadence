@@ -384,6 +384,7 @@ type (
 		BranchToken       []byte
 		NewRunBranchToken []byte
 		ResetWorkflow     bool
+		CreationTime      int64
 
 		// TODO deprecate when NDC is fully released && migrated
 		LastReplicationInfo map[string]*ReplicationInfo
@@ -611,7 +612,6 @@ type (
 		TaskID              int64
 		VisibilityTimestamp time.Time
 		Version             int64
-		SourceCluster       string
 		DomainID            string
 	}
 
@@ -1218,6 +1218,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -1230,6 +1231,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -1474,6 +1476,12 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
+	// CreateFailoverMarkersRequest is request to create failover markers
+	CreateFailoverMarkersRequest struct {
+		RangeID int64
+		Markers []*FailoverMarkerTask
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1516,6 +1524,7 @@ type (
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
+		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)

@@ -21,7 +21,6 @@
 package config
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -59,12 +58,13 @@ type Config struct {
 
 	// EventsCache settings
 	// Change of these configs require shard restart
-	EventsCacheInitialSize       dynamicconfig.IntPropertyFn
-	EventsCacheMaxSize           dynamicconfig.IntPropertyFn
-	EventsCacheTTL               dynamicconfig.DurationPropertyFn
-	EventsCacheGlobalEnable      dynamicconfig.BoolPropertyFn
-	EventsCacheGlobalInitialSize dynamicconfig.IntPropertyFn
-	EventsCacheGlobalMaxSize     dynamicconfig.IntPropertyFn
+	EventsCacheInitialCount       dynamicconfig.IntPropertyFn
+	EventsCacheMaxCount           dynamicconfig.IntPropertyFn
+	EventsCacheMaxSize            dynamicconfig.IntPropertyFn
+	EventsCacheTTL                dynamicconfig.DurationPropertyFn
+	EventsCacheGlobalEnable       dynamicconfig.BoolPropertyFn
+	EventsCacheGlobalInitialCount dynamicconfig.IntPropertyFn
+	EventsCacheGlobalMaxCount     dynamicconfig.IntPropertyFn
 
 	// ShardController settings
 	RangeSizeBits           uint
@@ -84,6 +84,17 @@ type Config struct {
 	TaskSchedulerQueueSize         dynamicconfig.IntPropertyFn
 	TaskSchedulerRoundRobinWeights dynamicconfig.MapPropertyFn
 
+	// QueueProcessor split policy settings
+	QueueProcessorEnableSplit                      dynamicconfig.BoolPropertyFn
+	QueueProcessorSplitMaxLevel                    dynamicconfig.IntPropertyFn
+	QueueProcessorEnableRandomSplitByDomainID      dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	QueueProcessorRandomSplitProbability           dynamicconfig.FloatPropertyFn
+	QueueProcessorEnablePendingTaskSplit           dynamicconfig.BoolPropertyFn
+	QueueProcessorPendingTaskSplitThreshold        dynamicconfig.MapPropertyFn
+	QueueProcessorEnableStuckTaskSplit             dynamicconfig.BoolPropertyFn
+	QueueProcessorStuckTaskSplitThreshold          dynamicconfig.MapPropertyFn
+	QueueProcessorSplitLookAheadDurationByDomainID dynamicconfig.DurationPropertyFnWithDomainIDFilter
+
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                                dynamicconfig.IntPropertyFn
 	TimerTaskWorkerCount                              dynamicconfig.IntPropertyFn
@@ -97,10 +108,13 @@ type Config struct {
 	TimerProcessorMaxPollRPS                          dynamicconfig.IntPropertyFn
 	TimerProcessorMaxPollInterval                     dynamicconfig.DurationPropertyFn
 	TimerProcessorMaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
+	TimerProcessorSplitQueueInterval                  dynamicconfig.DurationPropertyFn
+	TimerProcessorSplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TimerProcessorRedispatchInterval                  dynamicconfig.DurationPropertyFn
 	TimerProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TimerProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TimerProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
+	TimerProcessorEnableMultiCurosrProcessor          dynamicconfig.BoolPropertyFn
 	TimerProcessorMaxTimeShift                        dynamicconfig.DurationPropertyFn
 	TimerProcessorHistoryArchivalSizeLimit            dynamicconfig.IntPropertyFn
 	TimerProcessorArchivalTimeLimit                   dynamicconfig.DurationPropertyFn
@@ -114,6 +128,8 @@ type Config struct {
 	TransferProcessorMaxPollRPS                          dynamicconfig.IntPropertyFn
 	TransferProcessorMaxPollInterval                     dynamicconfig.DurationPropertyFn
 	TransferProcessorMaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
+	TransferProcessorSplitQueueInterval                  dynamicconfig.DurationPropertyFn
+	TransferProcessorSplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorUpdateAckInterval                   dynamicconfig.DurationPropertyFn
 	TransferProcessorUpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
 	TransferProcessorCompleteTransferInterval            dynamicconfig.DurationPropertyFn
@@ -121,6 +137,7 @@ type Config struct {
 	TransferProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TransferProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
+	TransferProcessorEnableMultiCurosrProcessor          dynamicconfig.BoolPropertyFn
 	TransferProcessorVisibilityArchivalTimeLimit         dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
@@ -221,8 +238,13 @@ type Config struct {
 	MutableStateChecksumVerifyProbability dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFn
 
-	//Crocess DC Replication configuration
+	//Cross DC Replication configuration
 	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	//Failover marker heartbeat
+	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
+	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
+	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
 }
 
 const (
@@ -237,13 +259,25 @@ var (
 		task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass): 100,
 		task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass):     50,
 	}
+
+	// DefaultPendingTaskSplitThreshold is the default pending task split threshold
+	DefaultPendingTaskSplitThreshold = map[int]int{ // processing queue level -> threshold for # of pending tasks per domain
+		0: 1000,
+		1: 10000,
+	}
+
+	// DefaultStuckTaskSplitThreshold is the default stuck task split threshold
+	DefaultStuckTaskSplitThreshold = map[int]int{ // processing queue level -> threshold for # of task attempts
+		0: 100,
+		1: 10000,
+	}
 )
 
 // New returns new service config with default values
 func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
-		EnableNDC:                            dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableNDC, true),
+		EnableNDC:                            dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableNDC, true),
 		RPS:                                  dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthLimit:                     dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
@@ -260,12 +294,13 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		HistoryCacheInitialSize:              dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                  dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                      dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
-		EventsCacheInitialSize:               dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 128),
-		EventsCacheMaxSize:                   dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 512),
+		EventsCacheInitialCount:              dc.GetIntProperty(dynamicconfig.EventsCacheInitialCount, 128),
+		EventsCacheMaxCount:                  dc.GetIntProperty(dynamicconfig.EventsCacheMaxCount, 512),
+		EventsCacheMaxSize:                   dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 0),
 		EventsCacheTTL:                       dc.GetDurationProperty(dynamicconfig.EventsCacheTTL, time.Hour),
 		EventsCacheGlobalEnable:              dc.GetBoolProperty(dynamicconfig.EventsCacheGlobalEnable, false),
-		EventsCacheGlobalInitialSize:         dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 4096),
-		EventsCacheGlobalMaxSize:             dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 65536),
+		EventsCacheGlobalInitialCount:        dc.GetIntProperty(dynamicconfig.EventsCacheGlobalInitialCount, 4096),
+		EventsCacheGlobalMaxCount:            dc.GetIntProperty(dynamicconfig.EventsCacheGlobalMaxCount, 131072),
 		RangeSizeBits:                        20, // 20 bits for sequencer, 2^20 sequence number for any range
 		AcquireShardInterval:                 dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, time.Minute),
 		AcquireShardConcurrency:              dc.GetIntProperty(dynamicconfig.AcquireShardConcurrency, 1),
@@ -278,7 +313,17 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskSchedulerType:              dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
 		TaskSchedulerWorkerCount:       dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 20),
 		TaskSchedulerQueueSize:         dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 2000),
-		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, convertWeightsToDynamicConfigValue(DefaultTaskPriorityWeight)),
+		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
+
+		QueueProcessorEnableSplit:                      dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
+		QueueProcessorSplitMaxLevel:                    dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
+		QueueProcessorEnableRandomSplitByDomainID:      dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID, false),
+		QueueProcessorRandomSplitProbability:           dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability, 0.01),
+		QueueProcessorEnablePendingTaskSplit:           dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePendingTaskSplit, false),
+		QueueProcessorPendingTaskSplitThreshold:        dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold)),
+		QueueProcessorEnableStuckTaskSplit:             dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableStuckTaskSplit, false),
+		QueueProcessorStuckTaskSplitThreshold:          dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)),
+		QueueProcessorSplitLookAheadDurationByDomainID: dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.QueueProcessorSplitLookAheadDurationByDomainID, 20*time.Minute),
 
 		TimerTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
 		TimerTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.TimerTaskWorkerCount, 10),
@@ -292,10 +337,13 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TimerProcessorMaxPollRPS:                          dc.GetIntProperty(dynamicconfig.TimerProcessorMaxPollRPS, 20),
 		TimerProcessorMaxPollInterval:                     dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 5*time.Minute),
 		TimerProcessorMaxPollIntervalJitterCoefficient:    dc.GetFloat64Property(dynamicconfig.TimerProcessorMaxPollIntervalJitterCoefficient, 0.15),
+		TimerProcessorSplitQueueInterval:                  dc.GetDurationProperty(dynamicconfig.TimerProcessorSplitQueueInterval, 1*time.Minute),
+		TimerProcessorSplitQueueIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorSplitQueueIntervalJitterCoefficient, 0.15),
 		TimerProcessorRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.TimerProcessorRedispatchInterval, 1*time.Second),
 		TimerProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		TimerProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TimerProcessorMaxRedispatchQueueSize, 10000),
 		TimerProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TimerProcessorEnablePriorityTaskProcessor, false),
+		TimerProcessorEnableMultiCurosrProcessor:          dc.GetBoolProperty(dynamicconfig.TimerProcessorEnableMultiCurosrProcessor, false),
 		TimerProcessorMaxTimeShift:                        dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxTimeShift, 1*time.Second),
 		TimerProcessorHistoryArchivalSizeLimit:            dc.GetIntProperty(dynamicconfig.TimerProcessorHistoryArchivalSizeLimit, 500*1024),
 		TimerProcessorArchivalTimeLimit:                   dc.GetDurationProperty(dynamicconfig.TimerProcessorArchivalTimeLimit, 1*time.Second),
@@ -308,6 +356,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorCompleteTransferFailureRetryCount:   dc.GetIntProperty(dynamicconfig.TransferProcessorCompleteTransferFailureRetryCount, 10),
 		TransferProcessorMaxPollInterval:                     dc.GetDurationProperty(dynamicconfig.TransferProcessorMaxPollInterval, 1*time.Minute),
 		TransferProcessorMaxPollIntervalJitterCoefficient:    dc.GetFloat64Property(dynamicconfig.TransferProcessorMaxPollIntervalJitterCoefficient, 0.15),
+		TransferProcessorSplitQueueInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorSplitQueueInterval, 1*time.Minute),
+		TransferProcessorSplitQueueIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorSplitQueueIntervalJitterCoefficient, 0.15),
 		TransferProcessorUpdateAckInterval:                   dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 30*time.Second),
 		TransferProcessorUpdateAckIntervalJitterCoefficient:  dc.GetFloat64Property(dynamicconfig.TransferProcessorUpdateAckIntervalJitterCoefficient, 0.15),
 		TransferProcessorCompleteTransferInterval:            dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 60*time.Second),
@@ -315,6 +365,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		TransferProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 10000),
 		TransferProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TransferProcessorEnablePriorityTaskProcessor, false),
+		TransferProcessorEnableMultiCurosrProcessor:          dc.GetBoolProperty(dynamicconfig.TransferProcessorEnableMultiCurosrProcessor, false),
 		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 200*time.Millisecond),
 
 		ReplicatorTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
@@ -341,8 +392,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:                   dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
-		EnableParentClosePolicy:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableParentClosePolicy, true),
+		EventEncodingType:                   dc.GetStringPropertyFilteredByDomain(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EnableParentClosePolicy:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableParentClosePolicy, true),
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
@@ -358,7 +409,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
 
 		ThrottledLogRPS:   dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS, 4),
-		EnableStickyQuery: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableStickyQuery, true),
+		EnableStickyQuery: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStickyQuery, true),
 
 		ValidSearchAttributes:             dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
 		SearchAttributesNumberOfKeysLimit: dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 100),
@@ -381,13 +432,17 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableCleanupReplicationTask:                     dc.GetBoolProperty(dynamicconfig.HistoryEnableCleanupReplicationTask, true),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery, true),
-		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, false),
+		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, false),
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount, 1),
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability, 0),
 		MutableStateChecksumVerifyProbability: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumVerifyProbability, 0),
 		MutableStateChecksumInvalidateBefore:  dc.GetFloat64Property(dynamicconfig.MutableStateChecksumInvalidateBefore, 0),
 
-		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
+		ReplicationEventsFromCurrentCluster: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ReplicationEventsFromCurrentCluster, false),
+
+		NotifyFailoverMarkerInterval:               dc.GetDurationProperty(dynamicconfig.NotifyFailoverMarkerInterval, 5*time.Second),
+		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
+		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 	}
 
 	return cfg
@@ -399,21 +454,11 @@ func NewForTest() *Config {
 	config := New(dc, 1, config.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
-	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableConsistentQueryByDomain, true)
+	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, true)
 	return config
 }
 
 // GetShardID return the corresponding shard ID for a given workflow ID
 func (config *Config) GetShardID(workflowID string) int {
 	return common.WorkflowIDToHistoryShard(workflowID, config.NumberOfShards)
-}
-
-func convertWeightsToDynamicConfigValue(
-	weights map[int]int,
-) map[string]interface{} {
-	weightsForDC := make(map[string]interface{})
-	for priority, weight := range weights {
-		weightsForDC[strconv.Itoa(priority)] = weight
-	}
-	return weightsForDC
 }

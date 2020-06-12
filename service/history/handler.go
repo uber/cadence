@@ -155,14 +155,14 @@ func (h *Handler) Start() {
 			processorOptions.FifoSchedulerOptions = &t.FIFOTaskSchedulerOptions{
 				QueueSize:   h.config.TaskSchedulerQueueSize(),
 				WorkerCount: h.config.TaskSchedulerWorkerCount(),
-				RetryPolicy: common.CreatePersistanceRetryPolicy(),
+				RetryPolicy: common.CreateTaskProcessingRetryPolicy(),
 			}
 		case t.SchedulerTypeWRR:
 			processorOptions.WRRSchedulerOptions = &t.WeightedRoundRobinTaskSchedulerOptions{
 				Weights:     h.config.TaskSchedulerRoundRobinWeights,
 				QueueSize:   h.config.TaskSchedulerQueueSize(),
 				WorkerCount: h.config.TaskSchedulerWorkerCount(),
-				RetryPolicy: common.CreatePersistanceRetryPolicy(),
+				RetryPolicy: common.CreateTaskProcessingRetryPolicy(),
 			}
 		default:
 			h.GetLogger().Fatal("Unknown task scheduler type", tag.Value(schedulerType))
@@ -228,6 +228,7 @@ func (h *Handler) CreateEngine(
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
+		h.GetFailoverCoordinator(),
 	)
 }
 
@@ -1874,6 +1875,26 @@ func (h *Handler) RefreshWorkflowTasks(
 		return h.error(err, scope, domainID, workflowID)
 	}
 
+	return nil
+}
+
+// NotifyFailoverMarkers sends the failover markers to failover coordinator.
+// The coordinator decides when the failover finishes based on received failover marker.
+func (h *Handler) NotifyFailoverMarkers(
+	ctx context.Context,
+	request *hist.NotifyFailoverMarkersRequest,
+) (retError error) {
+
+	scope := metrics.HistoryNotifyFailoverMarkersScope
+	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
+	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	for _, token := range request.GetFailoverMarkerTokens() {
+		marker := token.GetFailoverMarker()
+		h.GetLogger().Debug("Handling failover maker", tag.WorkflowDomainID(marker.GetDomainID()))
+		h.GetFailoverCoordinator().ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
+	}
 	return nil
 }
 

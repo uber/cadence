@@ -1151,6 +1151,17 @@ func (s *TestBase) RangeDeleteReplicationTaskFromDLQ(
 	})
 }
 
+// CreateFailoverMarkers is a utility method to create failover markers
+func (s *TestBase) CreateFailoverMarkers(
+	markers []*p.FailoverMarkerTask,
+) error {
+
+	return s.ExecutionManager.CreateFailoverMarkerTasks(&p.CreateFailoverMarkersRequest{
+		RangeID: s.ShardInfo.RangeID,
+		Markers: markers,
+	})
+}
+
 // CompleteTransferTask is a utility method to complete a transfer task
 func (s *TestBase) CompleteTransferTask(taskID int64) error {
 

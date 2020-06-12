@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -43,7 +44,7 @@ type (
 		timerTaskFilter         task.Filter
 		logger                  log.Logger
 		metricsClient           metrics.Client
-		timerGate               RemoteTimerGate
+		timerGate               queue.RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		taskExecutor            task.Executor
 	}
@@ -53,7 +54,7 @@ func newTimerQueueStandbyProcessor(
 	shard shard.Context,
 	historyService *historyEngineImpl,
 	clusterName string,
-	taskAllocator taskAllocator,
+	taskAllocator queue.TaskAllocator,
 	historyRereplicator xdc.HistoryRereplicator,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	queueTaskProcessor task.Processor,
@@ -72,10 +73,10 @@ func newTimerQueueStandbyProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
-		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
+		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
-	timerGate := NewRemoteTimerGate()
+	timerGate := queue.NewRemoteTimerGate()
 	timerGate.SetCurrentTime(shard.GetCurrentTime(clusterName))
 	timerQueueAckMgr := newTimerQueueAckMgr(
 		metrics.TimerStandbyQueueProcessorScope,
@@ -113,10 +114,11 @@ func newTimerQueueStandbyProcessor(
 		return task.NewTimerTask(
 			shard,
 			taskInfo,
+			task.QueueTypeStandbyTimer,
 			historyService.metricsClient.Scope(
-				getTimerTaskMetricScope(taskInfo.GetTaskType(), false),
+				task.GetTimerTaskMetricScope(taskInfo.GetTaskType(), false),
 			),
-			initializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			timerTaskFilter,
 			processor.taskExecutor,
 			redispatchQueue,
@@ -204,6 +206,6 @@ func (t *timerQueueStandbyProcessorImpl) process(
 	taskInfo *taskInfo,
 ) (int, error) {
 	// TODO: task metricScope should be determined when creating taskInfo
-	metricScope := getTimerTaskMetricScope(taskInfo.task.GetTaskType(), false)
+	metricScope := task.GetTimerTaskMetricScope(taskInfo.task.GetTaskType(), false)
 	return metricScope, t.taskExecutor.Execute(taskInfo.task, taskInfo.shouldProcessTask)
 }

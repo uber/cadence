@@ -62,6 +62,7 @@ var keys = map[Key]string{
 	VisibilityArchivalStatus:            "system.visibilityArchivalStatus",
 	EnableReadFromVisibilityArchival:    "system.enableReadFromVisibilityArchival",
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
+	EnableGracefulFailover:              "system.enableGracefulFailover",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
@@ -82,32 +83,34 @@ var keys = map[Key]string{
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:             "frontend.persistenceMaxQPS",
-	FrontendPersistenceGlobalMaxQPS:       "frontend.persistenceGlobalMaxQPS",
-	FrontendVisibilityMaxPageSize:         "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:          "frontend.visibilityListMaxQPS",
-	FrontendESVisibilityListMaxQPS:        "frontend.esVisibilityListMaxQPS",
-	FrontendMaxBadBinaries:                "frontend.maxBadBinaries",
-	FrontendESIndexMaxResultWindow:        "frontend.esIndexMaxResultWindow",
-	FrontendHistoryMaxPageSize:            "frontend.historyMaxPageSize",
-	FrontendRPS:                           "frontend.rps",
-	FrontendMaxDomainRPSPerInstance:       "frontend.domainrps",
-	FrontendGlobalDomainRPS:               "frontend.globalDomainrps",
-	FrontendHistoryMgrNumConns:            "frontend.historyMgrNumConns",
-	FrontendShutdownDrainDuration:         "frontend.shutdownDrainDuration",
-	DisableListVisibilityByFilter:         "frontend.disableListVisibilityByFilter",
-	FrontendThrottledLogRPS:               "frontend.throttledLogRPS",
-	EnableClientVersionCheck:              "frontend.enableClientVersionCheck",
-	ValidSearchAttributes:                 "frontend.validSearchAttributes",
-	SendRawWorkflowHistory:                "frontend.sendRawWorkflowHistory",
-	FrontendEnableRPCReplication:          "frontend.enableRPCReplication",
-	FrontendEnableCleanupReplicationTask:  "frontend.enableCleanupReplicationTask",
-	SearchAttributesNumberOfKeysLimit:     "frontend.searchAttributesNumberOfKeysLimit",
-	SearchAttributesSizeOfValueLimit:      "frontend.searchAttributesSizeOfValueLimit",
-	SearchAttributesTotalSizeLimit:        "frontend.searchAttributesTotalSizeLimit",
-	VisibilityArchivalQueryMaxPageSize:    "frontend.visibilityArchivalQueryMaxPageSize",
-	VisibilityArchivalQueryMaxRangeInDays: "frontend.visibilityArchivalQueryMaxRangeInDays",
-	VisibilityArchivalQueryMaxQPS:         "frontend.visibilityArchivalQueryMaxQPS",
+	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
+	FrontendPersistenceGlobalMaxQPS:             "frontend.persistenceGlobalMaxQPS",
+	FrontendVisibilityMaxPageSize:               "frontend.visibilityMaxPageSize",
+	FrontendVisibilityListMaxQPS:                "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS:              "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:                      "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow:              "frontend.esIndexMaxResultWindow",
+	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
+	FrontendRPS:                                 "frontend.rps",
+	FrontendMaxDomainRPSPerInstance:             "frontend.domainrps",
+	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
+	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
+	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
+	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:                     "frontend.throttledLogRPS",
+	EnableClientVersionCheck:                    "frontend.enableClientVersionCheck",
+	ValidSearchAttributes:                       "frontend.validSearchAttributes",
+	SendRawWorkflowHistory:                      "frontend.sendRawWorkflowHistory",
+	FrontendEnableRPCReplication:                "frontend.enableRPCReplication",
+	FrontendEnableCleanupReplicationTask:        "frontend.enableCleanupReplicationTask",
+	SearchAttributesNumberOfKeysLimit:           "frontend.searchAttributesNumberOfKeysLimit",
+	SearchAttributesSizeOfValueLimit:            "frontend.searchAttributesSizeOfValueLimit",
+	SearchAttributesTotalSizeLimit:              "frontend.searchAttributesTotalSizeLimit",
+	VisibilityArchivalQueryMaxPageSize:          "frontend.visibilityArchivalQueryMaxPageSize",
+	VisibilityArchivalQueryMaxRangeInDays:       "frontend.visibilityArchivalQueryMaxRangeInDays",
+	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
+	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
+	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -144,12 +147,13 @@ var keys = map[Key]string{
 	HistoryCacheMaxSize:                                    "history.cacheMaxSize",
 	HistoryCacheTTL:                                        "history.cacheTTL",
 	HistoryShutdownDrainDuration:                           "history.shutdownDrainDuration",
-	EventsCacheInitialSize:                                 "history.eventsCacheInitialSize",
-	EventsCacheMaxSize:                                     "history.eventsCacheMaxSize",
+	EventsCacheInitialCount:                                "history.eventsCacheInitialSize",
+	EventsCacheMaxCount:                                    "history.eventsCacheMaxSize",
+	EventsCacheMaxSize:                                     "history.eventsCacheMaxSizeInBytes",
 	EventsCacheTTL:                                         "history.eventsCacheTTL",
 	EventsCacheGlobalEnable:                                "history.eventsCacheGlobalEnable",
-	EventsCacheGlobalInitialSize:                           "history.eventsCacheGlobalInitialSize",
-	EventsCacheGlobalMaxSize:                               "history.eventsCacheGlobalMaxSize",
+	EventsCacheGlobalInitialCount:                          "history.eventsCacheGlobalInitialSize",
+	EventsCacheGlobalMaxCount:                              "history.eventsCacheGlobalMaxSize",
 	AcquireShardInterval:                                   "history.acquireShardInterval",
 	AcquireShardConcurrency:                                "history.acquireShardConcurrency",
 	StandbyClusterDelay:                                    "history.standbyClusterDelay",
@@ -160,6 +164,15 @@ var keys = map[Key]string{
 	TaskSchedulerWorkerCount:                               "history.taskSchedulerWorkerCount",
 	TaskSchedulerQueueSize:                                 "history.taskSchedulerQueueSize",
 	TaskSchedulerRoundRobinWeights:                         "history.taskSchedulerRoundRobinWeight",
+	QueueProcessorEnableSplit:                              "history.queueProcessorEnableSplit",
+	QueueProcessorSplitMaxLevel:                            "history.queueProcessorSplitMaxLevel",
+	QueueProcessorEnableRandomSplitByDomainID:              "history.queueProcessorEnableRandomSplitByDomain",
+	QueueProcessorRandomSplitProbability:                   "history.queueProcessorRandomSplitProbability",
+	QueueProcessorEnablePendingTaskSplit:                   "history.queueProcessorEnablePendingTaskSplit",
+	QueueProcessorPendingTaskSplitThreshold:                "history.queueProcessorPendingTaskSplitThreshold",
+	QueueProcessorEnableStuckTaskSplit:                     "history.queueProcessorEnableStuckTaskSplit",
+	QueueProcessorStuckTaskSplitThreshold:                  "history.queueProcessorStuckTaskSplitThreshold",
+	QueueProcessorSplitLookAheadDurationByDomainID:         "history.queueProcessorSplitLookAheadDuration",
 	TimerTaskBatchSize:                                     "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                   "history.timerTaskWorkerCount",
 	TimerTaskMaxRetryCount:                                 "history.timerTaskMaxRetryCount",
@@ -173,10 +186,13 @@ var keys = map[Key]string{
 	TimerProcessorMaxPollRPS:                               "history.timerProcessorMaxPollRPS",
 	TimerProcessorMaxPollInterval:                          "history.timerProcessorMaxPollInterval",
 	TimerProcessorMaxPollIntervalJitterCoefficient:         "history.timerProcessorMaxPollIntervalJitterCoefficient",
+	TimerProcessorSplitQueueInterval:                       "history.timerProcessorSplitQueueInterval",
+	TimerProcessorSplitQueueIntervalJitterCoefficient:      "history.timerProcessorSplitQueueIntervalJitterCoefficient",
 	TimerProcessorRedispatchInterval:                       "history.timerProcessorRedispatchInterval",
 	TimerProcessorRedispatchIntervalJitterCoefficient:      "history.timerProcessorRedispatchIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                   "history.timerProcessorMaxRedispatchQueueSize",
 	TimerProcessorEnablePriorityTaskProcessor:              "history.timerProcessorEnablePriorityTaskProcessor",
+	TimerProcessorEnableMultiCurosrProcessor:               "history.timerProcessorEnableMultiCursorProcessor",
 	TimerProcessorMaxTimeShift:                             "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                 "history.timerProcessorHistoryArchivalSizeLimit",
 	TimerProcessorArchivalTimeLimit:                        "history.timerProcessorArchivalTimeLimit",
@@ -189,6 +205,8 @@ var keys = map[Key]string{
 	TransferProcessorUpdateShardTaskCount:                  "history.transferProcessorUpdateShardTaskCount",
 	TransferProcessorMaxPollInterval:                       "history.transferProcessorMaxPollInterval",
 	TransferProcessorMaxPollIntervalJitterCoefficient:      "history.transferProcessorMaxPollIntervalJitterCoefficient",
+	TransferProcessorSplitQueueInterval:                    "history.transferProcessorSplitQueueInterval",
+	TransferProcessorSplitQueueIntervalJitterCoefficient:   "history.transferProcessorSplitQueueIntervalJitterCoefficient",
 	TransferProcessorUpdateAckInterval:                     "history.transferProcessorUpdateAckInterval",
 	TransferProcessorUpdateAckIntervalJitterCoefficient:    "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 	TransferProcessorCompleteTransferInterval:              "history.transferProcessorCompleteTransferInterval",
@@ -196,6 +214,7 @@ var keys = map[Key]string{
 	TransferProcessorRedispatchIntervalJitterCoefficient:   "history.transferProcessorRedispatchIntervalJitterCoefficient",
 	TransferProcessorMaxRedispatchQueueSize:                "history.transferProcessorMaxRedispatchQueueSize",
 	TransferProcessorEnablePriorityTaskProcessor:           "history.transferProcessorEnablePriorityTaskProcessor",
+	TransferProcessorEnableMultiCurosrProcessor:            "history.transferProcessorEnableMultiCursorProcessor",
 	TransferProcessorVisibilityArchivalTimeLimit:           "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                                "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                              "history.replicatorTaskWorkerCount",
@@ -248,37 +267,45 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
+	NotifyFailoverMarkerInterval:                           "history.NotifyFailoverMarkerInterval",
+	NotifyFailoverMarkerTimerJitterCoefficient:             "history.NotifyFailoverMarkerTimerJitterCoefficient",
 
-	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
-	WorkerPersistenceGlobalMaxQPS:                   "worker.persistenceGlobalMaxQPS",
-	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
-	WorkerReplicatorTaskConcurrency:                 "worker.replicatorTaskConcurrency",
-	WorkerReplicatorMessageConcurrency:              "worker.replicatorMessageConcurrency",
-	WorkerReplicatorActivityBufferRetryCount:        "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetryCount:              "worker.replicationTaskMaxRetryCount",
-	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
-	WorkerReplicationTaskContextDuration:            "worker.replicationTaskContextDuration",
-	WorkerReReplicationContextTimeout:               "worker.workerReReplicationContextTimeout",
-	WorkerEnableRPCReplication:                      "worker.enableWorkerRPCReplication",
-	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
-	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
-	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
-	WorkerESProcessorBulkSize:                       "worker.ESProcessorBulkSize",
-	WorkerESProcessorFlushInterval:                  "worker.ESProcessorFlushInterval",
-	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
-	WorkerHistoryPageSize:                           "worker.WorkerHistoryPageSize",
-	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
-	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
-	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
-	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
-	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
-	WorkerTimeLimitPerArchivalIteration:             "worker.TimeLimitPerArchivalIteration",
-	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
-	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
-	TaskListScannerEnabled:                          "worker.taskListScannerEnabled",
-	HistoryScannerEnabled:                           "worker.historyScannerEnabled",
-	ExecutionsScannerEnabled:                        "worker.executionsScannerEnabled",
+	WorkerPersistenceMaxQPS:                          "worker.persistenceMaxQPS",
+	WorkerPersistenceGlobalMaxQPS:                    "worker.persistenceGlobalMaxQPS",
+	WorkerReplicatorMetaTaskConcurrency:              "worker.replicatorMetaTaskConcurrency",
+	WorkerReplicatorTaskConcurrency:                  "worker.replicatorTaskConcurrency",
+	WorkerReplicatorMessageConcurrency:               "worker.replicatorMessageConcurrency",
+	WorkerReplicatorActivityBufferRetryCount:         "worker.replicatorActivityBufferRetryCount",
+	WorkerReplicatorHistoryBufferRetryCount:          "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetryCount:               "worker.replicationTaskMaxRetryCount",
+	WorkerReplicationTaskMaxRetryDuration:            "worker.replicationTaskMaxRetryDuration",
+	WorkerReplicationTaskContextDuration:             "worker.replicationTaskContextDuration",
+	WorkerReReplicationContextTimeout:                "worker.workerReReplicationContextTimeout",
+	WorkerEnableRPCReplication:                       "worker.enableWorkerRPCReplication",
+	WorkerIndexerConcurrency:                         "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:                    "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:                     "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:                        "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:                   "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                        "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                            "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:                     "worker.WorkerTargetArchivalBlobSize",
+	WorkerArchiverConcurrency:                        "worker.ArchiverConcurrency",
+	WorkerArchivalsPerIteration:                      "worker.ArchivalsPerIteration",
+	WorkerDeterministicConstructionCheckProbability:  "worker.DeterministicConstructionCheckProbability",
+	WorkerBlobIntegrityCheckProbability:              "worker.BlobIntegrityCheckProbability",
+	WorkerTimeLimitPerArchivalIteration:              "worker.TimeLimitPerArchivalIteration",
+	WorkerThrottledLogRPS:                            "worker.throttledLogRPS",
+	ScannerPersistenceMaxQPS:                         "worker.scannerPersistenceMaxQPS",
+	TaskListScannerEnabled:                           "worker.taskListScannerEnabled",
+	HistoryScannerEnabled:                            "worker.historyScannerEnabled",
+	ExecutionsScannerEnabled:                         "worker.executionsScannerEnabled",
+	ExecutionsScannerBlobstoreFlushThreshold:         "worker.executionsScannerBlobstoreFlushThreshold",
+	ExecutionsScannerActivityBatchSize:               "worker.executionsScannerActivityBatchSize",
+	ExecutionsScannerConcurrency:                     "worker.executionsScannerConcurrency",
+	ExecutionsScannerPersistencePageSize:             "worker.executionsScannerPersistencePageSize",
+	ExecutionsScannerInvariantCollectionHistory:      "worker.executionsScannerInvariantCollectionHistory",
+	ExecutionsScannerInvariantCollectionMutableState: "worker.executionsScannerInvariantCollectionMutableState",
 }
 
 const (
@@ -327,6 +354,8 @@ const (
 	// EnableDomainNotActiveAutoForwarding whether enabling DC auto forwarding to active cluster
 	// for signal / start / signal with start API if domain is not active
 	EnableDomainNotActiveAutoForwarding
+	// EnableGracefulFailover whether enabling graceful failover
+	EnableGracefulFailover
 	// TransactionSizeLimit is the largest allowed transaction size to persistence
 	TransactionSizeLimit
 	// MinRetentionDays is the minimal allowed retention days for domain
@@ -411,6 +440,11 @@ const (
 	// VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query
 	VisibilityArchivalQueryMaxQPS
 
+	// DomainFailoverRefreshInterval is the domain failover refresh timer
+	DomainFailoverRefreshInterval
+	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
+	DomainFailoverRefreshTimerJitterCoefficient
+
 	// key for matching
 
 	// MatchingRPS is request rate per second for each matching host
@@ -478,18 +512,20 @@ const (
 	HistoryCacheTTL
 	// HistoryShutdownDrainDuration is the duration of traffic drain during shutdown
 	HistoryShutdownDrainDuration
-	// EventsCacheInitialSize is initial size of events cache
-	EventsCacheInitialSize
-	// EventsCacheMaxSize is max size of events cache
+	// EventsCacheInitialCount is initial count of events cache
+	EventsCacheInitialCount
+	// EventsCacheMaxCount is max count of events cache
+	EventsCacheMaxCount
+	// EventsCacheMaxSize is max size of events cache in bytes
 	EventsCacheMaxSize
 	// EventsCacheTTL is TTL of events cache
 	EventsCacheTTL
 	// EventsCacheGlobalEnable enables global cache over all history shards
 	EventsCacheGlobalEnable
-	// EventsCacheGlobalInitialSize is initial size of global events cache
-	EventsCacheGlobalInitialSize
-	// EventsCacheGlobalMaxSize is max size of global events cache
-	EventsCacheGlobalMaxSize
+	// EventsCacheGlobalInitialCount is initial count of global events cache
+	EventsCacheGlobalInitialCount
+	// EventsCacheGlobalMaxCount is max count of global events cache
+	EventsCacheGlobalMaxCount
 	// AcquireShardInterval is interval that timer used to acquire shard
 	AcquireShardInterval
 	// AcquireShardConcurrency is number of goroutines that can be used to acquire shards in the shard controller.
@@ -512,6 +548,24 @@ const (
 	TaskSchedulerQueueSize
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	TaskSchedulerRoundRobinWeights
+	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
+	QueueProcessorEnableSplit
+	// QueueProcessorSplitMaxLevel is the max processing queue level
+	QueueProcessorSplitMaxLevel
+	// QueueProcessorEnableRandomSplitByDomainID indicates whether random queue split policy should be enabled for a domain
+	QueueProcessorEnableRandomSplitByDomainID
+	// QueueProcessorRandomSplitProbability is the probability for a domain to be split to a new processing queue
+	QueueProcessorRandomSplitProbability
+	// QueueProcessorEnablePendingTaskSplit indicates whether pending task split policy should be enabled
+	QueueProcessorEnablePendingTaskSplit
+	// QueueProcessorPendingTaskSplitThreshold is the threshold for the number of pending tasks per domain
+	QueueProcessorPendingTaskSplitThreshold
+	// QueueProcessorEnableStuckTaskSplit indicates whether stuck task split policy should be enabled
+	QueueProcessorEnableStuckTaskSplit
+	// QueueProcessorStuckTaskSplitThreshold is the threshold for the number of attempts of a task
+	QueueProcessorStuckTaskSplitThreshold
+	// QueueProcessorSplitLookAheadDurationByDomainID is the look ahead duration when spliting a domain to a new processing queue
+	QueueProcessorSplitLookAheadDurationByDomainID
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	TimerTaskBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
@@ -538,6 +592,10 @@ const (
 	TimerProcessorMaxPollInterval
 	// TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
 	TimerProcessorMaxPollIntervalJitterCoefficient
+	// TimerProcessorSplitQueueInterval is the split processing queue interval for timer processor
+	TimerProcessorSplitQueueInterval
+	// TimerProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
+	TimerProcessorSplitQueueIntervalJitterCoefficient
 	// TimerProcessorRedispatchInterval is the redispatch interval for timer processor
 	TimerProcessorRedispatchInterval
 	// TimerProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
@@ -546,6 +604,8 @@ const (
 	TimerProcessorMaxRedispatchQueueSize
 	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
 	TimerProcessorEnablePriorityTaskProcessor
+	// TimerProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for timer processor
+	TimerProcessorEnableMultiCurosrProcessor
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
@@ -570,6 +630,10 @@ const (
 	TransferProcessorMaxPollInterval
 	// TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
 	TransferProcessorMaxPollIntervalJitterCoefficient
+	// TransferProcessorSplitQueueInterval is the split processing queue interval for transferQueueProcessor
+	TransferProcessorSplitQueueInterval
+	// TransferProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
+	TransferProcessorSplitQueueIntervalJitterCoefficient
 	// TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor
 	TransferProcessorUpdateAckInterval
 	// TransferProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
@@ -584,6 +648,8 @@ const (
 	TransferProcessorMaxRedispatchQueueSize
 	// TransferProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for transferQueueProcessor
 	TransferProcessorEnablePriorityTaskProcessor
+	// TransferProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for transferQueueProcessor
+	TransferProcessorEnableMultiCurosrProcessor
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	TransferProcessorVisibilityArchivalTimeLimit
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
@@ -717,6 +783,18 @@ const (
 	HistoryScannerEnabled
 	// ExecutionsScannerEnabled indicates if executions scanner should be started as part of worker.Scanner
 	ExecutionsScannerEnabled
+	// ExecutionsScannerConcurrency indicates the concurrency of execution scanner
+	ExecutionsScannerConcurrency
+	// ExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in execution scanner
+	ExecutionsScannerBlobstoreFlushThreshold
+	// ExecutionsScannerActivityBatchSize indicates the batch size of scanner activities
+	ExecutionsScannerActivityBatchSize
+	// ExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in execution scanner
+	ExecutionsScannerPersistencePageSize
+	// ExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
+	ExecutionsScannerInvariantCollectionMutableState
+	// ExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run
+	ExecutionsScannerInvariantCollectionHistory
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
@@ -761,8 +839,13 @@ const (
 	// MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded
 	MutableStateChecksumInvalidateBefore
 
-	//ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
+	// ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
 	ReplicationEventsFromCurrentCluster
+
+	// NotifyFailoverMarkerInterval determines the frequency to notify failover marker
+	NotifyFailoverMarkerInterval
+	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
+	NotifyFailoverMarkerTimerJitterCoefficient
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

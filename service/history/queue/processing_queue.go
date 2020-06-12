@@ -117,13 +117,7 @@ func newProcessingQueue(
 	if stateImpl, ok := state.(*processingQueueStateImpl); ok {
 		queue.state = stateImpl
 	} else {
-		queue.state = newProcessingQueueState(
-			state.Level(),
-			state.AckLevel(),
-			state.ReadLevel(),
-			state.MaxLevel(),
-			state.DomainFilter(),
-		)
+		queue.state = copyQueueState(state)
 	}
 
 	return queue
@@ -235,7 +229,7 @@ func (q *processingQueueImpl) Merge(
 
 func (q *processingQueueImpl) AddTasks(
 	tasks map[task.Key]task.Task,
-	more bool,
+	newReadLevel task.Key,
 ) {
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
@@ -253,14 +247,9 @@ func (q *processingQueueImpl) AddTasks(
 		}
 
 		q.outstandingTasks[key] = task
-		if q.state.readLevel.Less(key) {
-			q.state.readLevel = key
-		}
 	}
 
-	if !more {
-		q.state.readLevel = q.state.maxLevel
-	}
+	q.state.readLevel = newReadLevel
 }
 
 func (q *processingQueueImpl) UpdateAckLevel() {
@@ -282,8 +271,12 @@ func (q *processingQueueImpl) UpdateAckLevel() {
 		delete(q.outstandingTasks, key)
 	}
 
-	if len(q.outstandingTasks) == 0 && q.state.readLevel == q.state.maxLevel {
-		q.state.ackLevel = q.state.maxLevel
+	if len(q.outstandingTasks) == 0 {
+		q.state.ackLevel = q.state.readLevel
+	}
+
+	if timerKey, ok := q.state.ackLevel.(timerTaskKey); ok {
+		q.state.ackLevel = newTimerTaskKey(timerKey.visibilityTimestamp, 0)
 	}
 }
 
@@ -373,4 +366,16 @@ func maxTaskKey(
 		return key2
 	}
 	return key1
+}
+
+func copyQueueState(
+	state ProcessingQueueState,
+) *processingQueueStateImpl {
+	return newProcessingQueueState(
+		state.Level(),
+		state.AckLevel(),
+		state.ReadLevel(),
+		state.MaxLevel(),
+		state.DomainFilter(),
+	)
 }

@@ -170,6 +170,8 @@ const (
 	PersistenceDeleteReplicationTaskFromDLQScope
 	// PersistenceRangeDeleteReplicationTaskFromDLQScope tracks PersistenceRangeDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
 	PersistenceRangeDeleteReplicationTaskFromDLQScope
+	// PersistenceCreateFailoverMarkerTasksScope tracks CreateFailoverMarkerTasks calls made by service to persistence layer
+	PersistenceCreateFailoverMarkerTasksScope
 	// PersistenceGetTimerIndexTasksScope tracks GetTimerIndexTasks calls made by service to persistence layer
 	PersistenceGetTimerIndexTasksScope
 	// PersistenceCompleteTimerTaskScope tracks CompleteTimerTasks calls made by service to persistence layer
@@ -332,6 +334,8 @@ const (
 	HistoryClientMergeDLQMessagesScope
 	// HistoryClientRefreshWorkflowTasksScope tracks RPC calls to history service
 	HistoryClientRefreshWorkflowTasksScope
+	// HistoryClientNotifyFailoverMarkersScope tracks RPC calls to history service
+	HistoryClientNotifyFailoverMarkersScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -638,6 +642,9 @@ const (
 	// BlobstoreClientDirectoryExistsScope tracks DirectoryExists calls to blobstore
 	BlobstoreClientDirectoryExistsScope
 
+	// DomainFailoverScope is used in domain failover processor
+	DomainFailoverScope
+
 	NumCommonScopes
 )
 
@@ -833,6 +840,8 @@ const (
 	HistoryReapplyEventsScope
 	// HistoryRefreshWorkflowTasksScope is the scope used by refresh workflow tasks API
 	HistoryRefreshWorkflowTasksScope
+	// HistoryNotifyFailoverMarkersScope is the scope used by refresh workflow tasks API
+	HistoryNotifyFailoverMarkersScope
 	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
 	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -965,6 +974,8 @@ const (
 	ReplicationTaskCleanupScope
 	// ReplicationDLQStatsScope is scope used by all metrics emitted related to replication DLQ
 	ReplicationDLQStatsScope
+	// HistoryFailoverMarkerScope is scope used by all metrics emitted related to failover marker
+	HistoryFailoverMarkerScope
 
 	NumHistoryScopes
 )
@@ -1029,8 +1040,10 @@ const (
 	ArchiverArchivalWorkflowScope
 	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
 	TaskListScavengerScope
-	// ExecutionsScavengerScope is scope used by all metrics emitted by worker.executions.Scavenger module
-	ExecutionsScavengerScope
+	// ExecutionsScannerScope is scope used by all metrics emitted by worker.executions.Scanner module
+	ExecutionsScannerScope
+	// ExecutionsFixerScope is the scope used by all metrics emitted by worker.executions.Fixer module
+	ExecutionsFixerScope
 	// BatcherScope is scope used by all metrics emitted by worker.Batcher module
 	BatcherScope
 	// HistoryScavengerScope is scope used by all metrics emitted by worker.history.Scavenger module
@@ -1067,6 +1080,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetReplicationTasksFromDLQScope:               {operation: "GetReplicationTasksFromDLQ"},
 		PersistenceDeleteReplicationTaskFromDLQScope:             {operation: "DeleteReplicationTaskFromDLQ"},
 		PersistenceRangeDeleteReplicationTaskFromDLQScope:        {operation: "RangeDeleteReplicationTaskFromDLQ"},
+		PersistenceCreateFailoverMarkerTasksScope:                {operation: "CreateFailoverMarkerTasks"},
 		PersistenceGetTimerIndexTasksScope:                       {operation: "GetTimerIndexTasks"},
 		PersistenceCompleteTimerTaskScope:                        {operation: "CompleteTimerTask"},
 		PersistenceRangeCompleteTimerTaskScope:                   {operation: "RangeCompleteTimerTask"},
@@ -1159,6 +1173,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientPurgeDLQMessagesScope:                    {operation: "HistoryClientPurgeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientMergeDLQMessagesScope:                    {operation: "HistoryClientMergeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRefreshWorkflowTasksScope:                {operation: "HistoryClientRefreshWorkflowTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientNotifyFailoverMarkersScope:               {operation: "HistoryClientNotifyFailoverMarkersScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:                {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                    {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
@@ -1302,6 +1317,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientExistsScope:          {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+
+		DomainFailoverScope: {operation: "DomainFailover"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -1402,6 +1419,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
 		HistoryRefreshWorkflowTasksScope:                       {operation: "RefreshWorkflowTasks"},
+		HistoryNotifyFailoverMarkersScope:                      {operation: "NotifyFailoverMarkers"},
 		TaskPriorityAssignerScope:                              {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
@@ -1465,6 +1483,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
 		ReplicationTaskCleanupScope:                            {operation: "ReplicationTaskCleanup"},
 		ReplicationDLQStatsScope:                               {operation: "ReplicationDLQStats"},
+		HistoryFailoverMarkerScope:                             {operation: "FailoverMarker"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1497,7 +1516,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                      {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:          {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
-		ExecutionsScavengerScope:               {operation: "executionsscavenger"},
+		ExecutionsScannerScope:                 {operation: "ExecutionsScanner"},
+		ExecutionsFixerScope:                   {operation: "ExecutionsFixer"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
@@ -1527,6 +1547,7 @@ const (
 	CadenceErrNonDeterministicCounter
 	CadenceErrUnauthorizedCounter
 	CadenceErrAuthorizeFailedCounter
+	CadenceErrRemoteSyncMatchFailedCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -1599,6 +1620,8 @@ const (
 	HistoryArchiverBlobIntegrityCheckFailedCount
 	HistoryArchiverDuplicateArchivalsCount
 
+	HistoryFailoverMarkerInsertFailure
+
 	VisibilityArchiverArchiveNonRetryableErrorCount
 	VisibilityArchiverArchiveTransientErrorCount
 	VisibilityArchiveSuccessCount
@@ -1631,6 +1654,10 @@ const (
 	CadenceErrNonDeterministicPerTaskListCounter
 	CadenceErrUnauthorizedPerTaskListCounter
 	CadenceErrAuthorizeFailedPerTaskListCounter
+	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
+
+	CadenceShardSuccessGauge
+	CadenceShardFailureGauge
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1895,6 +1922,11 @@ const (
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
 	DomainReplicationEnqueueDLQCount
+	ScannerExecutionsGauge
+	ScannerCorruptedGauge
+	ScannerCheckFailedGauge
+	ScannerCorruptionByTypeGauge
+	ScannerCorruptedOpenExecutionGauge
 
 	NumWorkerMetrics
 )
@@ -1923,6 +1955,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrNonDeterministicCounter:                   {metricName: "cadence_errors_nondeterministic", metricType: Counter},
 		CadenceErrUnauthorizedCounter:                       {metricName: "cadence_errors_unauthorized", metricType: Counter},
 		CadenceErrAuthorizeFailedCounter:                    {metricName: "cadence_errors_authorize_failed", metricType: Counter},
+		CadenceErrRemoteSyncMatchFailedCounter:              {metricName: "cadence_errors_remote_syncmatch_failed", metricType: Counter},
 		PersistenceRequests:                                 {metricName: "persistence_requests", metricType: Counter},
 		PersistenceFailures:                                 {metricName: "persistence_errors", metricType: Counter},
 		PersistenceLatency:                                  {metricName: "persistence_latency", metricType: Timer},
@@ -1981,6 +2014,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverRunningBlobIntegrityCheckCount:             {metricName: "history_archiver_running_blob_integrity_check", metricType: Counter},
 		HistoryArchiverBlobIntegrityCheckFailedCount:              {metricName: "history_archiver_blob_integrity_check_failed", metricType: Counter},
 		HistoryArchiverDuplicateArchivalsCount:                    {metricName: "history_archiver_duplicate_archivals", metricType: Counter},
+		HistoryFailoverMarkerInsertFailure:                        {metricName: "history_failover_marker_insert_failures", metricType: Counter},
 		VisibilityArchiverArchiveNonRetryableErrorCount:           {metricName: "visibility_archiver_archive_non_retryable_error", metricType: Counter},
 		VisibilityArchiverArchiveTransientErrorCount:              {metricName: "visibility_archiver_archive_transient_error", metricType: Counter},
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
@@ -2053,6 +2087,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrAuthorizeFailedPerTaskListCounter: {
 			metricName: "cadence_errors_authorize_failed_per_tl", metricRollupName: "cadence_errors_authorize_failed", metricType: Counter,
 		},
+		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
+			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
+		},
+		CadenceShardSuccessGauge: {metricName: "cadence_shard_success", metricType: Gauge},
+		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
@@ -2303,6 +2342,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
+		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
+		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},
+		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
+		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
+		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
 	},
 }
 

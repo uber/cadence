@@ -30,26 +30,18 @@ import (
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
 
 type (
-	timerQueueProcessor interface {
-		common.Daemon
-		FailoverDomain(domainIDs map[string]struct{})
-		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
-		LockTaskProcessing()
-		UnlockTaskProcessing()
-	}
-
 	timeNow                 func() time.Time
 	updateTimerAckLevel     func(timerKey) error
 	timerQueueShutdown      func() error
@@ -57,7 +49,7 @@ type (
 		isGlobalDomainEnabled  bool
 		currentClusterName     string
 		shard                  shard.Context
-		taskAllocator          taskAllocator
+		taskAllocator          queue.TaskAllocator
 		config                 *config.Config
 		metricsClient          metrics.Client
 		historyService         *historyEngineImpl
@@ -79,11 +71,11 @@ func newTimerQueueProcessor(
 	matchingClient matching.Client,
 	queueTaskProcessor task.Processor,
 	logger log.Logger,
-) timerQueueProcessor {
+) queue.Processor {
 
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithTags(tag.ComponentTimerQueue)
-	taskAllocator := newTaskAllocator(shard)
+	taskAllocator := queue.NewTaskAllocator(shard)
 
 	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
 	for clusterName, info := range shard.GetService().GetClusterMetadata().GetAllClusterInfo() {
@@ -180,7 +172,7 @@ func (t *timerQueueProcessorImpl) Stop() {
 
 // NotifyNewTimers - Notify the processor about the new active / standby timer arrival.
 // This should be called each time new timer arrives, otherwise timers maybe fired unexpected.
-func (t *timerQueueProcessorImpl) NotifyNewTimers(
+func (t *timerQueueProcessorImpl) NotifyNewTask(
 	clusterName string,
 	timerTasks []persistence.Task,
 ) {
@@ -250,11 +242,11 @@ func (t *timerQueueProcessorImpl) FailoverDomain(
 }
 
 func (t *timerQueueProcessorImpl) LockTaskProcessing() {
-	t.taskAllocator.lock()
+	t.taskAllocator.Lock()
 }
 
 func (t *timerQueueProcessorImpl) UnlockTaskProcessing() {
-	t.taskAllocator.unlock()
+	t.taskAllocator.Unlock()
 }
 
 func (t *timerQueueProcessorImpl) completeTimersLoop() {

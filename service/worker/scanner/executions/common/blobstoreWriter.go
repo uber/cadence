@@ -36,14 +36,14 @@ type (
 	blobstoreWriter struct {
 		writer    pagination.Writer
 		uuid      string
-		extension string
+		extension Extension
 	}
 )
 
 // NewBlobstoreWriter constructs a new blobstore writer
 func NewBlobstoreWriter(
 	uuid string,
-	extension string,
+	extension Extension,
 	client blobstore.Client,
 	flushThreshold int,
 ) ExecutionWriter {
@@ -62,9 +62,10 @@ func (bw *blobstoreWriter) Add(e interface{}) error {
 	return bw.writer.Add(e)
 }
 
-// Flush flushes contents of writer to blobstore
+// Flush flushes contents of writer to blobstore.
+// Only triggers flush if page contains some contents.
 func (bw *blobstoreWriter) Flush() error {
-	return bw.writer.Flush()
+	return bw.writer.FlushIfNotEmpty()
 }
 
 // FlushedKeys returns the keys that have been successfully flushed.
@@ -83,7 +84,7 @@ func (bw *blobstoreWriter) FlushedKeys() *Keys {
 
 func getBlobstoreWriteFn(
 	uuid string,
-	extension string,
+	extension Extension,
 	client blobstore.Client,
 ) pagination.WriteFn {
 	return func(page pagination.Page) (pagination.PageToken, error) {
@@ -122,6 +123,6 @@ func getBlobstoreShouldFlushFn(
 	}
 }
 
-func pageNumberToKey(uuid string, extension string, pageNum int) string {
+func pageNumberToKey(uuid string, extension Extension, pageNum int) string {
 	return fmt.Sprintf("%v_%v.%v", uuid, pageNum, extension)
 }

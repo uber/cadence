@@ -140,13 +140,13 @@ func Open(state int) bool {
 func DeleteExecution(
 	exec *Execution,
 	pr PersistenceRetryer,
-) FixResult {
+) *FixResult {
 	if err := pr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   exec.DomainID,
 		WorkflowID: exec.WorkflowID,
 		RunID:      exec.RunID,
 	}); err != nil {
-		return FixResult{
+		return &FixResult{
 			FixResultType: FixResultTypeFailed,
 			Info:          "failed to delete concrete workflow execution",
 			InfoDetails:   err.Error(),
@@ -157,13 +157,18 @@ func DeleteExecution(
 		WorkflowID: exec.WorkflowID,
 		RunID:      exec.RunID,
 	}); err != nil {
-		return FixResult{
+		return &FixResult{
 			FixResultType: FixResultTypeFailed,
 			Info:          "failed to delete current workflow execution",
 			InfoDetails:   err.Error(),
 		}
 	}
-	return FixResult{
+	return &FixResult{
 		FixResultType: FixResultTypeFixed,
 	}
+}
+
+// InvariantTypePtr returns a pointer to InvariantType
+func InvariantTypePtr(t InvariantType) *InvariantType {
+	return &t
 }

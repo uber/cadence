@@ -132,6 +132,7 @@ CREATE TYPE replication_task (
   new_run_event_store_version        int, -- indicates which version of event store to query for new run(continueAsNew)
   new_run_branch_token               blob, -- if eventV2, then query with this token for new run(continueAsNew)
   reset_workflow             boolean, -- whether the task is for resetWorkflowExecution
+  created_time               bigint, -- task creation timestamp
 );
 
 CREATE TYPE timer_task (
@@ -404,6 +405,7 @@ CREATE TABLE domains_by_name_v2 (
   config_version                bigint, -- indicating the version of domain config, excluding the failover / change of active cluster name
   failover_version              bigint, -- indicating the version of active domain only, used for domain failover
   failover_notification_version bigint, -- indicating the last change related to domain failover
+  previous_failover_version     bigint,
   failover_end_time             bigint, -- indicating domain failover state
   notification_version          bigint,
   PRIMARY KEY (domains_partition, name)

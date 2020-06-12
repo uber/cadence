@@ -56,8 +56,10 @@ import (
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/ndc"
 	"github.com/uber/cadence/service/history/query"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
@@ -89,8 +91,8 @@ type (
 		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             persistence.VisibilityManager
-		txProcessor               transferQueueProcessor
-		timerProcessor            timerQueueProcessor
+		txProcessor               queue.Processor
+		timerProcessor            queue.Processor
 		replicator                *historyReplicator
 		nDCReplicator             ndc.HistoryReplicator
 		nDCActivityReplicator     ndc.ActivityReplicator
@@ -113,6 +115,7 @@ type (
 		rawMatchingClient         matching.Client
 		clientChecker             client.VersionChecker
 		replicationDLQHandler     replication.DLQHandler
+		failoverCoordinator       failover.Coordinator
 	}
 )
 
@@ -171,6 +174,7 @@ func NewEngineWithShardContext(
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
+	failoverCoordinator failover.Coordinator,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -201,15 +205,45 @@ func NewEngineWithShardContext(
 			shard.GetConfig().ArchiveRequestRPS,
 			shard.GetService().GetArchiverProvider(),
 		),
-		publicClient:       publicClient,
-		matchingClient:     matching,
-		rawMatchingClient:  rawMatchingClient,
-		queueTaskProcessor: queueTaskProcessor,
-		clientChecker:      client.NewVersionChecker(),
+		workflowResetter: reset.NewWorkflowResetter(
+			shard,
+			executionCache,
+			logger,
+		),
+		publicClient:        publicClient,
+		matchingClient:      matching,
+		rawMatchingClient:   rawMatchingClient,
+		queueTaskProcessor:  queueTaskProcessor,
+		clientChecker:       client.NewVersionChecker(),
+		failoverCoordinator: failoverCoordinator,
 	}
+	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
+	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
-	historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, queueTaskProcessor, logger)
-	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, queueTaskProcessor, logger)
+	if config.TransferProcessorEnableMultiCurosrProcessor() {
+		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
+			shard,
+			historyEngImpl,
+			queueTaskProcessor,
+			executionCache,
+			historyEngImpl.resetor,
+			historyEngImpl.workflowResetter,
+			historyEngImpl.archivalClient,
+		)
+	} else {
+		historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, queueTaskProcessor, logger)
+	}
+	if config.TimerProcessorEnableMultiCurosrProcessor() {
+		historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
+			shard,
+			historyEngImpl,
+			queueTaskProcessor,
+			executionCache,
+			historyEngImpl.archivalClient,
+		)
+	} else {
+		historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, queueTaskProcessor, logger)
+	}
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
 	// Only start the replicator processor if valid publisher is passed in
@@ -243,13 +277,6 @@ func NewEngineWithShardContext(
 			logger,
 		)
 	}
-	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
-	historyEngImpl.workflowResetter = reset.NewWorkflowResetter(
-		shard,
-		executionCache,
-		logger,
-	)
-	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
 	nDCHistoryResender := xdc.NewNDCHistoryResender(
 		shard.GetDomainCache(),
@@ -420,7 +447,39 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
 				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
-				e.timerProcessor.NotifyNewTimers(e.currentClusterName, fakeDecisionTimeoutTask)
+				e.timerProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTimeoutTask)
+			}
+
+			// handle graceful failover on active to passive
+			// make sure task processor failover the domain before inserting the failover marker
+			failoverMarkerTasks := []*persistence.FailoverMarkerTask{}
+			for _, nextDomain := range nextDomains {
+				domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
+				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
+				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
+
+				if nextDomain.IsGlobalDomain() &&
+					domainFailoverNotificationVersion >= shardNotificationVersion &&
+					domainActiveCluster != e.currentClusterName &&
+					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
+					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
+						VisibilityTimestamp: e.timeSource.Now(),
+						Version:             shardNotificationVersion,
+						DomainID:            nextDomain.GetInfo().ID,
+					})
+				}
+			}
+
+			if len(failoverMarkerTasks) > 0 {
+				if err := e.shard.InsertFailoverMarkers(
+					failoverMarkerTasks,
+				); err != nil {
+					e.logger.Error("Failed to insert failover marker to replication queue.", tag.Error(err))
+					e.metricsClient.IncCounter(metrics.HistoryFailoverMarkerScope, metrics.HistoryFailoverMarkerInsertFailure)
+					// fail this failover callback and it retries on next domain cache refresh
+					return
+				}
 			}
 
 			//nolint:errcheck
@@ -2364,7 +2423,7 @@ func (e *historyEngineImpl) SyncShardStatus(
 	// 3, notify the transfer (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
 	e.txProcessor.NotifyNewTask(clusterName, []persistence.Task{})
-	e.timerProcessor.NotifyNewTimers(clusterName, []persistence.Task{})
+	e.timerProcessor.NotifyNewTask(clusterName, []persistence.Task{})
 	return nil
 }
 
@@ -2698,7 +2757,7 @@ func (e *historyEngineImpl) NotifyNewTimerTasks(
 	if len(tasks) > 0 {
 		task := tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.timerProcessor.NotifyNewTimers(clusterName, tasks)
+		e.timerProcessor.NotifyNewTask(clusterName, tasks)
 	}
 }
 

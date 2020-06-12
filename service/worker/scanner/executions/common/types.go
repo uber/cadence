@@ -24,8 +24,6 @@ package common
 
 import (
 	"time"
-
-	"github.com/uber/cadence/common/persistence"
 )
 
 var (
@@ -42,29 +40,45 @@ type (
 	FixResultType string
 	// InvariantType is the type of an invariant
 	InvariantType string
+	// InvariantCollection is a type which indicates a collection of invariants
+	InvariantCollection int
+	// Extension is the type which indicates the file extension type
+	Extension string
 )
 
 const (
 	// CheckResultTypeFailed indicates a failure occurred while attempting to run check
 	CheckResultTypeFailed CheckResultType = "failed"
 	// CheckResultTypeCorrupted indicates check successfully ran and detected a corruption
-	CheckResultTypeCorrupted = "corrupted"
+	CheckResultTypeCorrupted CheckResultType = "corrupted"
 	// CheckResultTypeHealthy indicates check successfully ran and detected no corruption
-	CheckResultTypeHealthy = "healthy"
+	CheckResultTypeHealthy CheckResultType = "healthy"
 
 	// FixResultTypeSkipped indicates that fix skipped execution
 	FixResultTypeSkipped FixResultType = "skipped"
 	// FixResultTypeFixed indicates that fix successfully fixed an execution
-	FixResultTypeFixed = "fixed"
+	FixResultTypeFixed FixResultType = "fixed"
 	// FixResultTypeFailed indicates that fix attempted to fix an execution but failed to do so
-	FixResultTypeFailed = "failed"
+	FixResultTypeFailed FixResultType = "failed"
 
 	// HistoryExistsInvariantType asserts that history must exist if concrete execution exists
 	HistoryExistsInvariantType InvariantType = "history_exists"
-	// ValidFirstEventInvariantType asserts that the first event in a history must be of a specific form
-	ValidFirstEventInvariantType = "valid_first_event"
-	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
-	OpenCurrentExecution = "open_current_execution"
+	// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
+	OpenCurrentExecutionInvariantType InvariantType = "open_current_execution"
+
+	// InvariantCollectionMutableState is the collection of invariants relating to mutable state
+	InvariantCollectionMutableState InvariantCollection = 0
+	// InvariantCollectionHistory is the collection  of invariants relating to history
+	InvariantCollectionHistory InvariantCollection = 1
+
+	// SkippedExtension is the extension for files which contain skips
+	SkippedExtension Extension = "skipped"
+	// FailedExtension is the extension for files which contain failures
+	FailedExtension Extension = "failed"
+	// FixedExtension is the extension for files which contain fixes
+	FixedExtension Extension = "fixed"
+	// CorruptedExtension is the extension for files which contain corruptions
+	CorruptedExtension Extension = "corrupted"
 )
 
 // The following are types related to Invariant.
@@ -81,14 +95,10 @@ type (
 		State       int
 	}
 
-	// InvariantResourceBag is a union of resources used to pass results from one Invariant to another Invariant.
-	InvariantResourceBag struct {
-		History *persistence.ReadHistoryBranchResponse
-	}
-
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
+		InvariantType   InvariantType
 		Info            string
 		InfoDetails     string
 	}
@@ -96,8 +106,24 @@ type (
 	// FixResult is the result of running Fix.
 	FixResult struct {
 		FixResultType FixResultType
+		InvariantType InvariantType
+		CheckResult   CheckResult
 		Info          string
 		InfoDetails   string
+	}
+
+	// ManagerCheckResult is the result of running a list of checks
+	ManagerCheckResult struct {
+		CheckResultType          CheckResultType
+		DeterminingInvariantType *InvariantType
+		CheckResults             []CheckResult
+	}
+
+	// ManagerFixResult is the result of running a list of fixes
+	ManagerFixResult struct {
+		FixResultType            FixResultType
+		DeterminingInvariantType *InvariantType
+		FixResults               []FixResult
 	}
 )
 
@@ -127,20 +153,21 @@ type (
 	}
 
 	// ShardScanKeys are the keys to the blobs that were uploaded during scan.
+	// Keys can be nil if there were no uploads.
 	ShardScanKeys struct {
-		Corrupt Keys
-		Failed  Keys
+		Corrupt *Keys
+		Failed  *Keys
 	}
 
 	// ShardFixReport is the report of running Fix on a single shard
 	ShardFixReport struct {
 		ShardID int
-		Handled ShardFixHandled
+		Stats   ShardFixStats
 		Result  ShardFixResult
 	}
 
-	// ShardFixHandled indicates the executions which were handled by fix.
-	ShardFixHandled struct {
+	// ShardFixStats indicates the stats of executions that were handled by shard Fix.
+	ShardFixStats struct {
 		ExecutionCount int64
 		FixedCount     int64
 		SkippedCount   int64
@@ -155,10 +182,11 @@ type (
 	}
 
 	// ShardFixKeys are the keys to the blobs that were uploaded during fix.
+	// Keys can be nil if there were no uploads.
 	ShardFixKeys struct {
-		Skipped Keys
-		Failed  Keys
-		Fixed   Keys
+		Skipped *Keys
+		Failed  *Keys
+		Fixed   *Keys
 	}
 
 	// ControlFlowFailure indicates an error occurred which makes it impossible to
@@ -177,7 +205,7 @@ type (
 		UUID      string
 		MinPage   int
 		MaxPage   int
-		Extension string
+		Extension Extension
 	}
 )
 
@@ -186,13 +214,14 @@ type (
 	// ScanOutputEntity represents a single execution that should be durably recorded by Scan.
 	ScanOutputEntity struct {
 		Execution Execution
-		Result    CheckResult
+		Result    ManagerCheckResult
 	}
 
 	// FixOutputEntity represents a single execution that should be durably recorded by fix.
 	// It contains the ScanOutputEntity that was given as input to fix.
 	FixOutputEntity struct {
-		ScanOutputEntity ScanOutputEntity
-		Result           FixResult
+		Execution Execution
+		Input     ScanOutputEntity
+		Result    ManagerFixResult
 	}
 )
