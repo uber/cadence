@@ -25,7 +25,17 @@ module.exports = {
     nav: [
       {
         text: 'Docs',
-        link: '/docs/',
+        items: [
+          { text: 'Cadence', link: '/docs/' },
+          { text: 'Use cases', link: '/docs/use-cases/' },
+          { text: 'Concepts', link: '/docs/concepts/' },
+          { text: 'Tutorials', link: '/docs/tutorials/' },
+          { text: 'Java client', link: '/docs/java-client/' },
+          { text: 'Go client', link: '/docs/go-client/' },
+          { text: 'Command line interface', link: '/docs/cli/' },
+          { text: 'Glossary', link: '/GLOSSARY' },
+          { text: 'About', link: '/docs/about/' },
+        ],
       },
       {
         text: 'Client',
