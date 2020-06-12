@@ -54,12 +54,6 @@ type (
 			eventID int64,
 			event *shared.HistoryEvent,
 		)
-		DeleteEvent(
-			domainID string,
-			workflowID string,
-			runID string,
-			eventID int64,
-		)
 	}
 
 	cacheImpl struct {
@@ -230,19 +224,6 @@ func (e *cacheImpl) PutEvent(
 
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	e.Put(key, event)
-}
-
-func (e *cacheImpl) DeleteEvent(
-	domainID, workflowID,
-	runID string,
-	eventID int64,
-) {
-	e.metricsClient.IncCounter(metrics.EventsCacheDeleteEventScope, metrics.CacheRequests)
-	sw := e.metricsClient.StartTimer(metrics.EventsCacheDeleteEventScope, metrics.CacheLatency)
-	defer sw.Stop()
-
-	key := newEventKey(domainID, workflowID, runID, eventID)
-	e.Delete(key)
 }
 
 func (e *cacheImpl) getHistoryEventFromStore(
