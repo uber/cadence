@@ -229,6 +229,8 @@ const (
 	FlagRetryInterval                     = "retry_interval"
 	FlagRetryAttempts                     = "retry_attempts"
 	FlagRetryExpiration                   = "retry_expiration"
+	FlagRetryBackoff                      = "retry_backoff"
+	FlagRetryMaxInterval                  = "retry_max_interval"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -369,6 +371,15 @@ func getFlagsForStart() []cli.Flag {
 			Name:  FlagRetryInterval,
 			Value: 10,
 			Usage: "Optional retry interval in seconds.",
+		},
+		cli.Float64Flag{
+			Name:  FlagRetryBackoff,
+			Value: 1.0,
+			Usage: "Optional retry backoff coeficient. Must be or equal or greater than 1.",
+		},
+		cli.IntFlag{
+			Name:  FlagRetryMaxInterval,
+			Usage: "Optional retry maximum interval in seconds. If set will give an upper bound for retry interval. Must be equal or greater than retry interval.",
 		},
 	}
 }
