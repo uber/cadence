@@ -26,7 +26,7 @@ module.exports = {
       {
         text: 'Docs',
         items: [
-          { text: 'Cadence', link: '/docs/' },
+          { text: 'Cadence', link: '/docs/cadence/' },
           { text: 'Use cases', link: '/docs/use-cases/' },
           { text: 'Concepts', link: '/docs/concepts/' },
           { text: 'Tutorials', link: '/docs/tutorials/' },
@@ -77,7 +77,7 @@ module.exports = {
       '/docs/': [
         {
           title: 'Cadence',
-          path: '/docs/',
+          path: '/docs/cadence',
         },
         // Uncomment block to add test pages to navigation.
         /**
