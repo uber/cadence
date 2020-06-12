@@ -21,10 +21,7 @@
 package queue
 
 import (
-	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -208,22 +205,4 @@ func splitProcessingQueueCollection(
 	})
 
 	return processingQueueCollections
-}
-
-func convertThresholdsFromDynamicConfig(
-	dcValue map[string]interface{},
-) (map[int]int, error) {
-	thresholds := make(map[int]int)
-	for key, value := range dcValue {
-		level, err := strconv.Atoi(strings.TrimSpace(key))
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert level: %v", err)
-		}
-		threshold, ok := value.(int)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert threshold %v", value)
-		}
-		thresholds[level] = threshold
-	}
-	return thresholds, nil
 }

@@ -767,17 +767,17 @@ func ConvertIntMapToDynamicConfigMapProperty(
 func ConvertDynamicConfigMapPropertyToIntMap(
 	dcValue map[string]interface{},
 ) (map[int]int, error) {
-	thresholds := make(map[int]int)
+	intMap := make(map[int]int)
 	for key, value := range dcValue {
-		level, err := strconv.Atoi(strings.TrimSpace(key))
+		intKey, err := strconv.Atoi(strings.TrimSpace(key))
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert level: %v", err)
+			return nil, fmt.Errorf("failed to convert key %v, error: %v", key, err)
 		}
-		threshold, ok := value.(int)
+		intValue, ok := value.(int)
 		if !ok {
-			return nil, fmt.Errorf("failed to convert threshold %v", value)
+			return nil, fmt.Errorf("failed to convert value %v", value)
 		}
-		thresholds[level] = threshold
+		intMap[intKey] = intValue
 	}
-	return thresholds, nil
+	return intMap, nil
 }
