@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -334,12 +336,8 @@ func (t *timerQueueProcessorBase) processBatch() {
 			task := t.taskInitializer(taskInfo)
 			tasks[newTimerTaskKey(taskInfo.GetVisibilityTimestamp(), taskInfo.GetTaskID())] = task
 			if submitted := t.submitTask(task); !submitted {
+				// not submitted since processor has been shutdown
 				return
-			}
-			select {
-			case <-t.shutdownCh:
-				return
-			default:
 			}
 		}
 
@@ -412,12 +410,28 @@ func (t *timerQueueProcessorBase) updateAckLevel() (bool, error) {
 }
 
 func (t *timerQueueProcessorBase) splitQueue() {
+	splitPolicy := initializeSplitPolicy(
+		t.options,
+		func(key task.Key, domainID string) task.Key {
+			return newTimerTaskKey(
+				key.(timerTaskKey).visibilityTimestamp.Add(
+					t.options.SplitLookAheadDurationByDomainID(domainID),
+				),
+				0,
+			)
+		},
+		t.logger,
+	)
+	if splitPolicy == nil {
+		return
+	}
+
 	t.queueCollectionsLock.Lock()
 	defer t.queueCollectionsLock.Unlock()
 
 	t.processingQueueCollections = splitProcessingQueueCollection(
 		t.processingQueueCollections,
-		t.options.QueueSplitPolicy,
+		splitPolicy,
 	)
 }
 
@@ -560,9 +574,17 @@ func (t *timerQueueProcessorBase) submitTask(
 ) bool {
 	submitted, err := t.taskProcessor.TrySubmit(task)
 	if err != nil {
-		return false
+		select {
+		case <-t.shutdownCh:
+			// if error is due to shard shutdown
+			return false
+		default:
+			// otherwise it might be error from domain cache etc, add
+			// the task to redispatch queue so that it can be retried
+			t.logger.Error("Failed to submit task", tag.Error(err))
+		}
 	}
-	if !submitted {
+	if err != nil || !submitted {
 		t.redispatchQueue.Add(task)
 	}
 
@@ -601,4 +623,47 @@ func (k timerTaskKey) Less(
 		return k.taskID < timerKey.taskID
 	}
 	return k.visibilityTimestamp.Before(timerKey.visibilityTimestamp)
+}
+
+func newTimerQueueProcessorOptions(
+	config *config.Config,
+	isActive bool,
+	isFailover bool,
+) *queueProcessorOptions {
+	options := &queueProcessorOptions{
+		BatchSize:                           config.TimerTaskBatchSize,
+		MaxPollRPS:                          config.TimerProcessorMaxPollRPS,
+		MaxPollInterval:                     config.TimerProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:    config.TimerProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                   config.TimerProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:  config.TimerProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchInterval:                  config.TimerProcessorRedispatchInterval,
+		RedispatchIntervalJitterCoefficient: config.TimerProcessorRedispatchIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:              config.TimerProcessorMaxRedispatchQueueSize,
+		SplitQueueInterval:                  config.TimerProcessorSplitQueueInterval,
+		SplitQueueIntervalJitterCoefficient: config.TimerProcessorSplitQueueIntervalJitterCoefficient,
+	}
+
+	if isFailover {
+		// disable queue split for failover processor
+		options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
+	} else {
+		options.EnableSplit = config.QueueProcessorEnableSplit
+		options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
+		options.EnableRandomSplitByDomainID = config.QueueProcessorEnableRandomSplitByDomainID
+		options.RandomSplitProbability = config.QueueProcessorRandomSplitProbability
+		options.EnablePendingTaskSplit = config.QueueProcessorEnablePendingTaskSplit
+		options.PendingTaskSplitThreshold = config.QueueProcessorPendingTaskSplitThreshold
+		options.EnableStuckTaskSplit = config.QueueProcessorEnableStuckTaskSplit
+		options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
+		options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
+	}
+
+	if isActive {
+		options.MetricScope = metrics.TimerActiveQueueProcessorScope
+	} else {
+		options.MetricScope = metrics.TimerStandbyQueueProcessorScope
+	}
+
+	return options
 }
