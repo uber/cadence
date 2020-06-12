@@ -1227,6 +1227,7 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 func (s *contextImpl) AddingPendingFailoverMarker(
 	marker *replicator.FailoverMarkerAttributes,
 ) error {
+
 	domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
 	if err != nil {
 		return err
@@ -1260,26 +1261,28 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 			completedFailoverMarkers[marker] = struct{}{}
 		}
 	}
+
+	if len(completedFailoverMarkers) == 0 {
+		return s.pendingFailoverMarkers, nil
+	}
 	s.RUnlock()
 
 	// clean up all pending failover tasks
-	if len(completedFailoverMarkers) > 0 {
-		s.Lock()
-		defer s.Unlock()
+	s.Lock()
+	defer s.Unlock()
 
-		for idx, marker := range s.pendingFailoverMarkers {
-			if _, ok := completedFailoverMarkers[marker]; ok {
-				s.pendingFailoverMarkers[idx] = s.pendingFailoverMarkers[len(s.pendingFailoverMarkers)-1]
-				s.pendingFailoverMarkers[len(s.pendingFailoverMarkers)-1] = nil
-				s.pendingFailoverMarkers = s.pendingFailoverMarkers[:len(s.pendingFailoverMarkers)-1]
-			}
+	for idx, marker := range s.pendingFailoverMarkers {
+		if _, ok := completedFailoverMarkers[marker]; ok {
+			s.pendingFailoverMarkers[idx] = s.pendingFailoverMarkers[len(s.pendingFailoverMarkers)-1]
+			s.pendingFailoverMarkers[len(s.pendingFailoverMarkers)-1] = nil
+			s.pendingFailoverMarkers = s.pendingFailoverMarkers[:len(s.pendingFailoverMarkers)-1]
 		}
-		if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
-			return nil, err
-		}
-		if err := s.updateShardInfoLocked(); err != nil {
-			return nil, err
-		}
+	}
+	if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
+		return nil, err
+	}
+	if err := s.updateShardInfoLocked(); err != nil {
+		return nil, err
 	}
 
 	return s.pendingFailoverMarkers, nil

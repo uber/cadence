@@ -182,7 +182,7 @@ func NewEngineWithShardContext(
 	executionManager := shard.GetExecutionManager()
 	historyV2Manager := shard.GetHistoryManager()
 	executionCache := execution.NewCache(shard)
-	failoverMarkerNotifier := failover.NewMarkerNotifier(shard, failoverCoordinator)
+	failoverMarkerNotifier := failover.NewMarkerNotifier(shard, config, failoverCoordinator)
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shard,

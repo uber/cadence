@@ -26,10 +26,12 @@ package failover
 
 import (
 	"sync/atomic"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -43,6 +45,7 @@ type (
 		status              int32
 		shutdownCh          chan struct{}
 		shard               shard.Context
+		config              *config.Config
 		failoverCoordinator Coordinator
 		logger              log.Logger
 	}
@@ -51,6 +54,7 @@ type (
 // NewMarkerNotifier creates a new instance of failover marker notifier
 func NewMarkerNotifier(
 	shard shard.Context,
+	config *config.Config,
 	failoverCoordinator Coordinator,
 ) MarkerNotifier {
 
@@ -58,6 +62,7 @@ func NewMarkerNotifier(
 		status:              common.DaemonStatusInitialized,
 		shutdownCh:          make(chan struct{}, 1),
 		shard:               shard,
+		config:              config,
 		failoverCoordinator: failoverCoordinator,
 		logger:              shard.GetLogger().WithTags(tag.ComponentFailoverMarkerNotifier),
 	}
@@ -102,13 +107,17 @@ func (m *markerNotifierImpl) notifyPendingFailoverMarker() {
 				m.logger.Error("Failed to update pending failover markers in shard info.", tag.Error(err))
 			}
 
-			respCh := m.failoverCoordinator.NotifyFailoverMarkers(int32(m.shard.GetShardID()), markers)
-			select {
-			case <-m.shutdownCh:
-				return
-			case <-respCh:
-				// continue the next round to notify failover markers
+			if len(markers) > 0 {
+				respCh := m.failoverCoordinator.NotifyFailoverMarkers(int32(m.shard.GetShardID()), markers)
+				select {
+				case <-m.shutdownCh:
+					return
+				case <-respCh:
+					// continue the next round to notify failover markers
+					continue
+				}
 			}
+			time.Sleep(m.config.NotifyFailoverMarkerInterval())
 		}
 	}
 }

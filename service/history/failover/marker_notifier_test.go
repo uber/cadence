@@ -24,6 +24,7 @@ package failover
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -33,8 +34,10 @@ import (
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -44,11 +47,12 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller  *gomock.Controller
-		coordinator *MockCoordinator
-		mockShard   *shard.TestContext
-
-		markerNotifier *markerNotifierImpl
+		controller          *gomock.Controller
+		coordinator         *MockCoordinator
+		mockShard           *shard.TestContext
+		mockDomainCache     *cache.MockDomainCache
+		mockClusterMetadata *cluster.MockMetadata
+		markerNotifier      *markerNotifierImpl
 	}
 )
 
@@ -61,6 +65,8 @@ func (s *markerNotifierSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
 
+	config := config.NewForTest()
+	config.NotifyFailoverMarkerInterval = dynamicconfig.GetDurationPropertyFn(time.Millisecond)
 	s.coordinator = NewMockCoordinator(s.controller)
 	s.mockShard = shard.NewTestContext(
 		s.controller,
@@ -69,15 +75,17 @@ func (s *markerNotifierSuite) SetupTest() {
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},
-		config.NewForTest(),
+		config,
 	)
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	mockShardManager := s.mockShard.Resource.ShardMgr
 	mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
 
 	s.markerNotifier = NewMarkerNotifier(
 		s.mockShard,
+		config,
 		s.coordinator,
 	).(*markerNotifierImpl)
 }
@@ -95,6 +103,37 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker_Shutdown() {
 
 func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 	domainID := uuid.New()
+	info := &persistence.DomainInfo{
+		ID:          domainID,
+		Name:        domainID,
+		Status:      persistence.DomainStatusRegistered,
+		Description: "some random description",
+		OwnerEmail:  "some random email",
+		Data:        nil,
+	}
+	domainConfig := &persistence.DomainConfig{
+		Retention:  1,
+		EmitMetric: true,
+	}
+	replicationConfig := &persistence.DomainReplicationConfig{
+		ActiveClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
+		Clusters: []*persistence.ClusterReplicationConfig{
+			{
+				s.mockClusterMetadata.GetCurrentClusterName(),
+			},
+		},
+	}
+	endTime := common.Int64Ptr(time.Now().UnixNano())
+	domainEntry := cache.NewDomainCacheEntryForTest(
+		info,
+		domainConfig,
+		true,
+		replicationConfig,
+		1,
+		endTime,
+		s.mockClusterMetadata,
+	)
+	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
 	task := &replicator.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(1),
