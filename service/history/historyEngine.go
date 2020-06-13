@@ -210,6 +210,10 @@ func NewEngineWithShardContext(
 			executionCache,
 			logger,
 		),
+		resetor: reset.NewWorkflowResetor(
+			shard,
+			executionCache,
+			logger),
 		publicClient:        publicClient,
 		matchingClient:      matching,
 		rawMatchingClient:   rawMatchingClient,
@@ -217,7 +221,6 @@ func NewEngineWithShardContext(
 		clientChecker:       client.NewVersionChecker(),
 		failoverCoordinator: failoverCoordinator,
 	}
-	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
 	if config.TransferProcessorEnableMultiCurosrProcessor() {
