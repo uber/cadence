@@ -139,7 +139,7 @@ func (c *coordinatorImpl) Start() {
 	go c.receiveFailoverMarkersLoop()
 	go c.notifyFailoverMarkerLoop()
 
-	c.logger.Info("Failover coordinator started.", tag.LifeCycleStarted)
+	c.logger.Info("", tag.LifeCycleStarted)
 }
 
 func (c *coordinatorImpl) Stop() {
@@ -153,7 +153,7 @@ func (c *coordinatorImpl) Stop() {
 	}
 
 	close(c.shutdownChan)
-	c.logger.Info("Failover coordinator stopped.", tag.LifeCycleStopped)
+	c.logger.Info("", tag.LifeCycleStopped)
 }
 
 func (c *coordinatorImpl) NotifyFailoverMarkers(

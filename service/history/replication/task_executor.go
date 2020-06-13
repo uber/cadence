@@ -107,7 +107,7 @@ func (e *taskExecutorImpl) execute(
 		scope = metrics.HistoryReplicationV2TaskScope
 		err = e.handleHistoryReplicationTaskV2(replicationTask, forceApply)
 	case r.ReplicationTaskTypeFailoverMarker:
-		scope = metrics.HistoryReplicationV2TaskScope
+		scope = metrics.HistoryFailoverMarkerScope
 		err = e.handleFailoverReplicationTask(replicationTask)
 	default:
 		e.logger.Error("Unknown task type.")

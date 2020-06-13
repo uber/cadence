@@ -164,7 +164,6 @@ const (
 	logWarnTransferLevelDiff = 3000000 // 3 million
 	logWarnTimerLevelDiff    = time.Duration(30 * time.Minute)
 	historySizeLogThreshold  = 10 * 1024 * 1024
-	failoverMarkerRetention  = 2 * time.Minute
 )
 
 func (s *contextImpl) GetShardID() int {
