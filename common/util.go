@@ -773,9 +773,18 @@ func ConvertDynamicConfigMapPropertyToIntMap(
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert level: %v", err)
 		}
-		threshold, ok := value.(int)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert threshold %v", value)
+		var threshold int
+		switch value.(type) {
+		case float64:
+			threshold = int(value.(float64))
+		case int:
+			threshold = value.(int)
+		case int32:
+			threshold = int(value.(int32))
+		case int64:
+			threshold = int(value.(int64))
+		default:
+			return nil, fmt.Errorf("unknown threshold %v with type %T", value, value)
 		}
 		thresholds[level] = threshold
 	}
