@@ -571,17 +571,17 @@ func (e *matchingEngineImpl) ListTaskListPartitions(ctx context.Context, request
 	if err != nil {
 		return nil, err
 	}
-	resp := workflow.ListTaskListPartitionsResponse{
+	resp := &workflow.ListTaskListPartitionsResponse{
 		ActivityTaskListPartitions: activityTaskListInfo,
 		DecisionTaskListPartitions: decisionTaskListInfo,
 	}
-	return &resp, nil
+
+	return resp, nil
 }
 
 func (e *matchingEngineImpl) listTaskListPartitions(request *m.ListTaskListPartitionsRequest, taskListType int) ([]*workflow.TaskListPartitionMetadata, error) {
 	partitions, err := e.getAllPartitions(
-		request.GetDomain(),
-		*request.TaskList,
+		request,
 		taskListType,
 	)
 	if err != nil {
@@ -593,13 +593,12 @@ func (e *matchingEngineImpl) listTaskListPartitions(request *m.ListTaskListParti
 		return nil, err
 	}
 	for _, partition := range partitions {
-		if host, err := e.getHostInfo(partition); err != nil {
-			partitionHostInfo = append(partitionHostInfo,
-				&workflow.TaskListPartitionMetadata{
-					Key:           common.StringPtr(partition),
-					OwnerHostName: common.StringPtr(host),
-				})
-		}
+		host, _ := e.getHostInfo(partition)
+		partitionHostInfo = append(partitionHostInfo,
+			&workflow.TaskListPartitionMetadata{
+				Key:           common.StringPtr(partition),
+				OwnerHostName: common.StringPtr(host),
+			})
 	}
 	return partitionHostInfo, nil
 }
@@ -613,22 +612,22 @@ func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
 }
 
 func (e *matchingEngineImpl) getAllPartitions(
-	domain string,
-	taskList workflow.TaskList,
+	request *m.ListTaskListPartitionsRequest,
 	taskListType int,
 ) ([]string, error) {
 	var partitionKeys []string
-	domainID, err := e.domainCache.GetDomainID(domain)
+	domainID, err := e.domainCache.GetDomainID(request.GetDomain())
 	if err != nil {
 		return partitionKeys, err
 	}
-	taskListID, err := newTaskListID(domainID, taskList.GetName(), persistence.TaskListTypeDecision)
+	taskList := request.GetTaskList()
+	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType)
 	rootPartition := taskListID.GetRoot()
 
 	partitionKeys = append(partitionKeys, rootPartition)
 
-	nWritePartitions := e.config.GetTasksBatchSize
-	n := nWritePartitions(domain, rootPartition, taskListType)
+	nWritePartitions := e.config.NumTasklistWritePartitions
+	n := nWritePartitions(request.GetDomain(), rootPartition, taskListType)
 	if n <= 0 {
 		return partitionKeys, nil
 	}
