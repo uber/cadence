@@ -108,14 +108,7 @@ func (m *markerNotifierImpl) notifyPendingFailoverMarker() {
 			}
 
 			if len(markers) > 0 {
-				respCh := m.failoverCoordinator.NotifyFailoverMarkers(int32(m.shard.GetShardID()), markers)
-				select {
-				case <-m.shutdownCh:
-					return
-				case <-respCh:
-					// continue the next round to notify failover markers
-					continue
-				}
+				m.failoverCoordinator.NotifyFailoverMarkers(int32(m.shard.GetShardID()), markers)
 			}
 			time.Sleep(m.config.NotifyFailoverMarkerInterval())
 		}

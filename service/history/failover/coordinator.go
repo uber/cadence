@@ -58,7 +58,7 @@ type (
 	Coordinator interface {
 		common.Daemon
 
-		NotifyFailoverMarkers(shardID int32, markers []*replicator.FailoverMarkerAttributes) <-chan error
+		NotifyFailoverMarkers(shardID int32, markers []*replicator.FailoverMarkerAttributes)
 		ReceiveFailoverMarkers(shardIDs []int32, marker *replicator.FailoverMarkerAttributes)
 	}
 
@@ -81,7 +81,6 @@ type (
 	notificationRequest struct {
 		shardID int32
 		markers []*replicator.FailoverMarkerAttributes
-		respCh  chan error
 	}
 
 	receiveRequest struct {
@@ -159,16 +158,12 @@ func (c *coordinatorImpl) Stop() {
 func (c *coordinatorImpl) NotifyFailoverMarkers(
 	shardID int32,
 	markers []*replicator.FailoverMarkerAttributes,
-) <-chan error {
+) {
 
-	respCh := make(chan error, 1)
 	c.notificationChan <- &notificationRequest{
 		shardID: shardID,
 		markers: markers,
-		respCh:  respCh,
 	}
-
-	return respCh
 }
 
 func (c *coordinatorImpl) ReceiveFailoverMarkers(
@@ -207,7 +202,6 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 	))
 	defer timer.Stop()
 	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
-	channelsByMarker := make(map[*replicator.FailoverMarkerAttributes][]chan error)
 
 	for {
 		select {
@@ -216,9 +210,9 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 		case notificationReq := <-c.notificationChan:
 			// if there is a shard movement happen, it is fine to have duplicate shard ID in the request
 			// The receiver side will de-dup the shard IDs. See: handleFailoverMarkers
-			aggregateNotificationRequests(notificationReq, requestByMarker, channelsByMarker)
+			aggregateNotificationRequests(notificationReq, requestByMarker)
 		case <-timer.C:
-			c.notifyRemoteCoordinator(requestByMarker, channelsByMarker)
+			c.notifyRemoteCoordinator(requestByMarker)
 			timer.Reset(backoff.JitDuration(
 				c.config.NotifyFailoverMarkerInterval(),
 				c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
@@ -288,7 +282,6 @@ func (c *coordinatorImpl) cleanupInvalidMarkers() {
 
 func (c *coordinatorImpl) notifyRemoteCoordinator(
 	requestByMarker map[*replicator.FailoverMarkerAttributes]*receiveRequest,
-	channelsByMarker map[*replicator.FailoverMarkerAttributes][]chan error,
 ) {
 
 	if len(requestByMarker) > 0 {
@@ -300,19 +293,16 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 			})
 		}
 
-		err := c.historyClient.NotifyFailoverMarkers(
+		if err := c.historyClient.NotifyFailoverMarkers(
 			ctx.Background(),
 			&workflow.NotifyFailoverMarkersRequest{
 				FailoverMarkerTokens: tokens,
 			},
-		)
+		); err != nil {
+			c.logger.Error("Failed to notify failover markers", tag.Error(err))
+		}
 
 		for marker := range requestByMarker {
-			for _, respCh := range channelsByMarker[marker] {
-				respCh <- err
-				close(respCh)
-				delete(channelsByMarker, marker)
-			}
 			delete(requestByMarker, marker)
 		}
 	}
@@ -321,7 +311,6 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 func aggregateNotificationRequests(
 	request *notificationRequest,
 	requestByMarker map[*replicator.FailoverMarkerAttributes]*receiveRequest,
-	channelsByMarker map[*replicator.FailoverMarkerAttributes][]chan error,
 ) {
 
 	for _, marker := range request.markers {
@@ -330,12 +319,8 @@ func aggregateNotificationRequests(
 				shardIDs: []int32{},
 				marker:   marker,
 			}
-			channelsByMarker[marker] = []chan error{}
 		}
 		req := requestByMarker[marker]
 		req.shardIDs = append(req.shardIDs, request.shardID)
-		channels := channelsByMarker[marker]
-		channels = append(channels, request.respCh)
-		channelsByMarker[marker] = channels
 	}
 }
