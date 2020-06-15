@@ -221,6 +221,11 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 		}
 	}
 
+	headerFields := processHeader(c)
+	if len(headerFields) != 0 {
+		startRequest.Header = &s.Header{Fields: headerFields}
+	}
+
 	memoFields := processMemo(c)
 	if len(memoFields) != 0 {
 		startRequest.Memo = &s.Memo{Fields: memoFields}
@@ -308,6 +313,35 @@ func processSearchAttr(c *cli.Context) map[string][]byte {
 		fields[key] = val
 	}
 
+	return fields
+}
+
+func processHeader(c *cli.Context) map[string][]byte {
+	rawHeaderKey := c.String(FlagHeaderKey)
+	var headerKeys []string
+	if strings.TrimSpace(rawHeaderKey) != "" {
+		headerKeys = strings.Split(rawHeaderKey, " ")
+	}
+
+	rawHeaderValue := processJSONInputHelper(c, jsonTypeHeader)
+	var headerValues []string
+
+	var sc fastjson.Scanner
+	sc.Init(rawHeaderValue)
+	for sc.Next() {
+		headerValues = append(headerValues, sc.Value().String())
+	}
+	if err := sc.Error(); err != nil {
+		ErrorAndExit("Parse json error.", err)
+	}
+	if len(headerKeys) != len(headerValues) {
+		ErrorAndExit("Number of header keys and values are not equal.", nil)
+	}
+
+	fields := map[string][]byte{}
+	for i, key := range headerKeys {
+		fields[key] = []byte(headerValues[i])
+	}
 	return fields
 }
 

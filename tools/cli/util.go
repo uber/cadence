@@ -759,6 +759,9 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 	case jsonTypeMemo:
 		flagNameOfRawInput = FlagMemo
 		flagNameOfInputFileName = FlagMemoFile
+	case jsonTypeHeader:
+		flagNameOfRawInput = FlagHeaderValue
+		flagNameOfInputFileName = FlagHeaderFile
 	default:
 		return ""
 	}
