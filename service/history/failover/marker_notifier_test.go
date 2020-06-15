@@ -149,9 +149,10 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 		int32(s.mockShard.GetShardID()),
 		tasks,
 	).Do(
-		func(shardID int32,
+		func(
+			shardID int32,
 			markers []*replicator.FailoverMarkerAttributes,
-		) <-chan error {
+		) {
 			if count == 0 {
 				count++
 				respCh <- nil
@@ -159,9 +160,9 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 			if count == 1 {
 				close(s.markerNotifier.shutdownCh)
 			}
-			return respCh
+			return
 		},
-	).Return(respCh)
+	)
 
 	s.markerNotifier.notifyPendingFailoverMarker()
 }
