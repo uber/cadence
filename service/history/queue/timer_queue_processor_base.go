@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,20 +42,31 @@ import (
 )
 
 var (
-	loadQueueTaskThrottleRetryDelay = 5 * time.Second
-
-	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
+	maximumTimerTaskKey = newTimerTaskKey(
+		time.Unix(0, math.MaxInt64),
+		0,
+	)
 )
 
 type (
-	transferTaskKey struct {
-		taskID int64
+	timerTaskKey struct {
+		visibilityTimestamp time.Time
+		taskID              int64
 	}
 
-	transferQueueProcessorBase struct {
+	timeTaskReadProgress struct {
+		currentQueue  ProcessingQueue
+		readLevel     task.Key
+		maxReadLevel  task.Key
+		nextPageToken []byte
+	}
+
+	timerQueueProcessorBase struct {
+		clusterName     string
 		shard           shard.Context
 		taskProcessor   task.Processor
 		redispatchQueue collection.Queue
+		timerGate       TimerGate
 
 		options               *queueProcessorOptions
 		updateMaxReadLevel    updateMaxReadLevelFn
@@ -68,24 +80,28 @@ type (
 
 		rateLimiter  quotas.Limiter
 		lastPollTime time.Time
-		notifyCh     chan struct{}
 		status       int32
 		shutdownWG   sync.WaitGroup
 		shutdownCh   chan struct{}
 
-		lastSplitTime    time.Time
-		lastMaxReadLevel int64
+		// timer notification
+		newTimerCh  chan struct{}
+		newTimeLock sync.Mutex
+		newTime     time.Time
 
-		queueCollectionsLock       sync.RWMutex
-		processingQueueCollections []ProcessingQueueCollection
+		queueCollectionsLock        sync.RWMutex
+		processingQueueCollections  []ProcessingQueueCollection
+		processingQueueReadProgress map[int]timeTaskReadProgress
 	}
 )
 
-func newTransferQueueProcessorBase(
+func newTimerQueueProcessorBase(
+	clusterName string,
 	shard shard.Context,
 	processingQueueStates []ProcessingQueueState,
 	taskProcessor task.Processor,
 	redispatchQueue collection.Queue,
+	timerGate TimerGate,
 	options *queueProcessorOptions,
 	updateMaxReadLevel updateMaxReadLevelFn,
 	updateClusterAckLevel updateClusterAckLevelFn,
@@ -93,12 +109,13 @@ func newTransferQueueProcessorBase(
 	taskInitializer task.Initializer,
 	logger log.Logger,
 	metricsClient metrics.Client,
-) *transferQueueProcessorBase {
-
-	return &transferQueueProcessorBase{
+) *timerQueueProcessorBase {
+	return &timerQueueProcessorBase{
+		clusterName:     clusterName,
 		shard:           shard,
 		taskProcessor:   taskProcessor,
 		redispatchQueue: redispatchQueue,
+		timerGate:       timerGate,
 
 		options:               options,
 		updateMaxReadLevel:    updateMaxReadLevel,
@@ -106,7 +123,7 @@ func newTransferQueueProcessorBase(
 		queueShutdown:         queueShutdown,
 		taskInitializer:       taskInitializer,
 
-		logger:        logger.WithTags(tag.ComponentTransferQueue),
+		logger:        logger.WithTags(tag.ComponentTimerQueue),
 		metricsClient: metricsClient,
 		metricsScope:  metricsClient.Scope(options.MetricScope),
 
@@ -116,22 +133,20 @@ func newTransferQueueProcessorBase(
 			},
 		),
 		lastPollTime: time.Time{},
-		notifyCh:     make(chan struct{}, 1),
 		status:       common.DaemonStatusInitialized,
 		shutdownCh:   make(chan struct{}),
-
-		lastSplitTime:    time.Time{},
-		lastMaxReadLevel: 0,
+		newTimerCh:   make(chan struct{}, 1),
 
 		processingQueueCollections: newProcessingQueueCollections(
 			processingQueueStates,
 			logger,
 			metricsClient,
 		),
+		processingQueueReadProgress: make(map[int]timeTaskReadProgress),
 	}
 }
 
-func (t *transferQueueProcessorBase) Start() {
+func (t *timerQueueProcessorBase) Start() {
 	if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
@@ -139,13 +154,13 @@ func (t *transferQueueProcessorBase) Start() {
 	t.logger.Info("", tag.LifeCycleStarting)
 	defer t.logger.Info("", tag.LifeCycleStarted)
 
-	t.notifyNewTask()
+	t.notifyNewTimer(time.Time{})
 
 	t.shutdownWG.Add(1)
 	go t.processorPump()
 }
 
-func (t *transferQueueProcessorBase) Stop() {
+func (t *timerQueueProcessorBase) Stop() {
 	if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
@@ -153,6 +168,7 @@ func (t *transferQueueProcessorBase) Stop() {
 	t.logger.Info("", tag.LifeCycleStopping)
 	defer t.logger.Info("", tag.LifeCycleStopped)
 
+	t.timerGate.Close()
 	close(t.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
@@ -160,14 +176,7 @@ func (t *transferQueueProcessorBase) Stop() {
 	}
 }
 
-func (t *transferQueueProcessorBase) notifyNewTask() {
-	select {
-	case t.notifyCh <- struct{}{}:
-	default:
-	}
-}
-
-func (t *transferQueueProcessorBase) processorPump() {
+func (t *timerQueueProcessorBase) processorPump() {
 	defer t.shutdownWG.Done()
 
 	pollTimer := time.NewTimer(backoff.JitDuration(
@@ -199,13 +208,12 @@ processorPumpLoop:
 		select {
 		case <-t.shutdownCh:
 			break processorPumpLoop
-		case <-t.notifyCh:
+		case <-t.timerGate.FireChan():
 			if t.redispatchQueue.Len() <= t.options.MaxRedispatchQueueSize() {
 				t.processBatch()
 				continue
 			}
 
-			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
 			RedispatchTasks(
 				t.redispatchQueue,
 				t.taskProcessor,
@@ -213,8 +221,7 @@ processorPumpLoop:
 				t.metricsScope,
 				t.shutdownCh,
 			)
-			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
-			t.notifyNewTask()
+			t.notifyNewTimer(time.Time{})
 		case <-pollTimer.C:
 			if t.lastPollTime.Add(t.options.MaxPollInterval()).Before(t.shard.GetTimeSource().Now()) {
 				t.processBatch()
@@ -233,6 +240,15 @@ processorPumpLoop:
 				t.options.UpdateAckInterval(),
 				t.options.UpdateAckIntervalJitterCoefficient(),
 			))
+		case <-t.newTimerCh:
+			t.newTimeLock.Lock()
+			newTime := t.newTime
+			t.newTime = time.Time{}
+			t.newTimeLock.Unlock()
+
+			// New Timer has arrived.
+			t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
+			t.timerGate.Update(newTime)
 		case <-redispatchTimer.C:
 			RedispatchTasks(
 				t.redispatchQueue,
@@ -255,11 +271,11 @@ processorPumpLoop:
 	}
 }
 
-func (t *transferQueueProcessorBase) processBatch() {
+func (t *timerQueueProcessorBase) processBatch() {
 	ctx, cancel := context.WithTimeout(context.Background(), loadQueueTaskThrottleRetryDelay)
 	if err := t.rateLimiter.Wait(ctx); err != nil {
 		cancel()
-		t.notifyNewTask()
+		t.notifyNewTimer(time.Time{}) // re-enqueue the event
 		return
 	}
 	cancel()
@@ -267,11 +283,10 @@ func (t *transferQueueProcessorBase) processBatch() {
 	t.lastPollTime = t.shard.GetTimeSource().Now()
 
 	t.queueCollectionsLock.RLock()
-	processingQueueCollections := t.processingQueueCollections
+	queueCollections := t.processingQueueCollections
 	t.queueCollectionsLock.RUnlock()
 
-	// TODO: create a feedback loop to slow down loading for non-default queues (queues with level > 0)
-	for _, queueCollection := range processingQueueCollections {
+	for level, queueCollection := range queueCollections {
 		t.queueCollectionsLock.RLock()
 		activeQueue := queueCollection.ActiveQueue()
 		if activeQueue == nil {
@@ -279,34 +294,47 @@ func (t *transferQueueProcessorBase) processBatch() {
 			continue
 		}
 
+		var nextPageToken []byte
 		readLevel := activeQueue.State().ReadLevel()
 		maxReadLevel := activeQueue.State().MaxLevel()
+		lookAheadMaxLevel := activeQueue.State().MaxLevel()
+		domainFilter := activeQueue.State().DomainFilter()
 		t.queueCollectionsLock.RUnlock()
 
 		shardMaxReadLevel := t.updateMaxReadLevel()
 		if shardMaxReadLevel.Less(maxReadLevel) {
 			maxReadLevel = shardMaxReadLevel
-			if !readLevel.Less(maxReadLevel) {
-				continue
+		}
+		if progress, ok := t.processingQueueReadProgress[level]; ok {
+			if progress.currentQueue == activeQueue {
+				readLevel = progress.readLevel
+				maxReadLevel = progress.maxReadLevel
+				nextPageToken = progress.nextPageToken
 			}
+			delete(t.processingQueueReadProgress, level)
 		}
 
-		transferTaskInfos, more, err := t.readTasks(readLevel, maxReadLevel)
+		if !readLevel.Less(maxReadLevel) {
+			// notify timer gate about the min time
+			t.timerGate.Update(readLevel.(timerTaskKey).visibilityTimestamp)
+			continue
+		}
+
+		timerTaskInfos, lookAheadTask, nextPageToken, err := t.readAndFilterTasks(readLevel, maxReadLevel, nextPageToken, lookAheadMaxLevel)
 		if err != nil {
 			t.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
-			t.notifyNewTask() // re-enqueue the event
+			t.notifyNewTimer(time.Time{}) // re-enqueue the event
 			return
 		}
 
 		tasks := make(map[task.Key]task.Task)
-		domainFilter := activeQueue.State().DomainFilter()
-		for _, taskInfo := range transferTaskInfos {
+		for _, taskInfo := range timerTaskInfos {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
 				continue
 			}
 
 			task := t.taskInitializer(taskInfo)
-			tasks[newTransferTaskKey(taskInfo.GetTaskID())] = task
+			tasks[newTimerTaskKey(taskInfo.GetVisibilityTimestamp(), taskInfo.GetTaskID())] = task
 			if submitted := t.submitTask(task); !submitted {
 				// not submitted since processor has been shutdown
 				return
@@ -314,29 +342,40 @@ func (t *transferQueueProcessorBase) processBatch() {
 		}
 
 		var newReadLevel task.Key
-		if !more {
-			newReadLevel = maxReadLevel
+		if len(nextPageToken) == 0 {
+			if lookAheadTask != nil {
+				newReadLevel = minTaskKey(maxReadLevel, newTimerTaskKey(lookAheadTask.GetVisibilityTimestamp(), 0))
+			} else {
+				t.notifyNewTimer(time.Time{})
+				newReadLevel = maxReadLevel
+			}
 		} else {
-			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
+			t.notifyNewTimer(time.Time{})
+			t.processingQueueReadProgress[level] = timeTaskReadProgress{
+				currentQueue:  activeQueue,
+				readLevel:     readLevel,
+				maxReadLevel:  maxReadLevel,
+				nextPageToken: nextPageToken,
+			}
+			newReadLevel = newTimerTaskKey(timerTaskInfos[len(timerTaskInfos)-1].GetVisibilityTimestamp(), 0)
 		}
 		t.queueCollectionsLock.Lock()
 		queueCollection.AddTasks(tasks, newReadLevel)
-		newActiveQueue := queueCollection.ActiveQueue()
 		t.queueCollectionsLock.Unlock()
 
-		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
-			// more tasks for the current active queue or the active queue has changed
-			t.notifyNewTask()
+		if lookAheadTask != nil {
+			t.timerGate.Update(lookAheadTask.VisibilityTimestamp)
 		}
 	}
 }
 
-func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
+func (t *timerQueueProcessorBase) updateAckLevel() (bool, error) {
+	t.queueCollectionsLock.Lock()
+
 	// TODO: only for now, find the min ack level across all processing queues
 	// and update DB with that value.
 	// Once persistence layer is updated, we need to persist all queue states
 	// instead of only the min ack level
-	t.queueCollectionsLock.Lock()
 	var minAckLevel task.Key
 	for _, queueCollection := range t.processingQueueCollections {
 		queueCollection.UpdateAckLevels()
@@ -352,11 +391,8 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 	t.queueCollectionsLock.Unlock()
 
 	if minAckLevel == nil {
-		// note that only failover processor will meet this condition
-		err := t.queueShutdown()
-		if err != nil {
+		if err := t.queueShutdown(); err != nil {
 			t.logger.Error("Error shutdown queue", tag.Error(err))
-			// return error so that shutdown callback can be retried
 			return false, err
 		}
 		return true, nil
@@ -373,26 +409,16 @@ func (t *transferQueueProcessorBase) updateAckLevel() (bool, error) {
 	return false, nil
 }
 
-func (t *transferQueueProcessorBase) splitQueue() {
-	currentTime := t.shard.GetTimeSource().Now()
-	currentMaxReadLevel := t.updateMaxReadLevel().(transferTaskKey).taskID
-	defer func() {
-		t.lastSplitTime = currentTime
-		t.lastMaxReadLevel = currentMaxReadLevel
-	}()
-
-	if t.lastSplitTime.IsZero() {
-		// skip the first split as we can't estimate the look ahead taskID
-		return
-	}
-
-	lookAhead := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime))
-
+func (t *timerQueueProcessorBase) splitQueue() {
 	splitPolicy := initializeSplitPolicy(
 		t.options,
 		func(key task.Key, domainID string) task.Key {
-			totalLookAhead := lookAhead * int64(t.options.SplitLookAheadDurationByDomainID(domainID))
-			return newTransferTaskKey(key.(timerTaskKey).taskID + totalLookAhead)
+			return newTimerTaskKey(
+				key.(timerTaskKey).visibilityTimestamp.Add(
+					t.options.SplitLookAheadDurationByDomainID(domainID),
+				),
+				0,
+			)
 		},
 		t.logger,
 	)
@@ -409,45 +435,141 @@ func (t *transferQueueProcessorBase) splitQueue() {
 	)
 }
 
-func (t *transferQueueProcessorBase) getProcessingQueueStates() []ProcessingQueueState {
-	t.queueCollectionsLock.RLock()
-	defer t.queueCollectionsLock.RUnlock()
+func (t *timerQueueProcessorBase) readAndFilterTasks(
+	readLevel task.Key,
+	maxReadLevel task.Key,
+	nextPageToken []byte,
+	lookAheadMaxLevel task.Key,
+) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, []byte, error) {
+	timerTasks, nextPageToken, err := t.getTimerTasks(readLevel, maxReadLevel, nextPageToken, t.options.BatchSize())
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	var queueStates []ProcessingQueueState
-	for _, queueCollection := range t.processingQueueCollections {
-		for _, queue := range queueCollection.Queues() {
-			queueStates = append(queueStates, copyQueueState(queue.State()))
+	var lookAheadTask *persistence.TimerTaskInfo
+	filteredTasks := []*persistence.TimerTaskInfo{}
+
+	for _, timerTask := range timerTasks {
+		if !t.isProcessNow(timerTask.GetVisibilityTimestamp()) {
+			lookAheadTask = timerTask
+			nextPageToken = nil
+			break
+		}
+		filteredTasks = append(filteredTasks, timerTask)
+	}
+
+	if len(nextPageToken) == 0 && lookAheadTask == nil && maxReadLevel.Less(lookAheadMaxLevel) {
+		// only look ahead within the processing queue boundary
+		lookAheadTask, err = t.readLookAheadTask(maxReadLevel, lookAheadMaxLevel)
+		if err != nil {
+			return filteredTasks, nil, nil, nil
 		}
 	}
 
-	return queueStates
+	return filteredTasks, lookAheadTask, nextPageToken, nil
 }
 
-func (t *transferQueueProcessorBase) readTasks(
+func (t *timerQueueProcessorBase) readLookAheadTask(
+	lookAheadStartLevel task.Key,
+	lookAheadMaxLevel task.Key,
+) (*persistence.TimerTaskInfo, error) {
+	tasks, _, err := t.getTimerTasks(
+		lookAheadStartLevel,
+		lookAheadMaxLevel,
+		nil,
+		1,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tasks) == 1 {
+		return tasks[0], nil
+	}
+	return nil, nil
+}
+
+func (t *timerQueueProcessorBase) getTimerTasks(
 	readLevel task.Key,
 	maxReadLevel task.Key,
-) ([]*persistence.TransferTaskInfo, bool, error) {
-
-	var response *persistence.GetTransferTasksResponse
-	op := func() error {
-		var err error
-		response, err = t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
-			ReadLevel:    readLevel.(transferTaskKey).taskID,
-			MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
-			BatchSize:    t.options.BatchSize(),
-		})
-		return err
+	nextPageToken []byte,
+	batchSize int,
+) ([]*persistence.TimerTaskInfo, []byte, error) {
+	request := &persistence.GetTimerIndexTasksRequest{
+		MinTimestamp:  readLevel.(timerTaskKey).visibilityTimestamp,
+		MaxTimestamp:  maxReadLevel.(timerTaskKey).visibilityTimestamp,
+		BatchSize:     batchSize,
+		NextPageToken: nextPageToken,
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return nil, false, err
+	var err error
+	var response *persistence.GetTimerIndexTasksResponse
+	retryCount := t.shard.GetConfig().TimerProcessorGetFailureRetryCount()
+	for attempt := 0; attempt < retryCount; attempt++ {
+		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(request)
+		if err == nil {
+			return response.Timers, response.NextPageToken, nil
+		}
+		backoff := time.Duration(attempt * 100)
+		time.Sleep(backoff * time.Millisecond)
 	}
-
-	return response.Tasks, len(response.NextPageToken) != 0, nil
+	return nil, nil, err
 }
 
-func (t *transferQueueProcessorBase) submitTask(
+func (t *timerQueueProcessorBase) isProcessNow(
+	expiryTime time.Time,
+) bool {
+	if expiryTime.IsZero() {
+		// return true, but somewhere probably have bug creating empty timerTask.
+		t.logger.Warn("Timer task has timestamp zero")
+	}
+	return expiryTime.UnixNano() <= t.shard.GetCurrentTime(t.clusterName).UnixNano()
+}
+
+func (t *timerQueueProcessorBase) notifyNewTimers(
+	timerTasks []persistence.Task,
+) {
+	if len(timerTasks) == 0 {
+		return
+	}
+
+	isActive := t.options.MetricScope == metrics.TimerActiveQueueProcessorScope
+
+	minNewTime := timerTasks[0].GetVisibilityTimestamp()
+	for _, timerTask := range timerTasks {
+		ts := timerTask.GetVisibilityTimestamp()
+		if ts.Before(minNewTime) {
+			minNewTime = ts
+		}
+
+		taskScopeIdx := task.GetTimerTaskMetricScope(
+			timerTask.GetType(),
+			isActive,
+		)
+		t.metricsClient.IncCounter(taskScopeIdx, metrics.NewTimerCounter)
+	}
+
+	t.notifyNewTimer(minNewTime)
+}
+
+func (t *timerQueueProcessorBase) notifyNewTimer(
+	newTime time.Time,
+) {
+	t.newTimeLock.Lock()
+	defer t.newTimeLock.Unlock()
+
+	if t.newTime.IsZero() || newTime.Before(t.newTime) {
+		t.newTime = newTime
+		select {
+		case t.newTimerCh <- struct{}{}:
+			// Notified about new time.
+		default:
+			// Channel "full" -> drop and move on, this will happen only if service is in high load.
+		}
+	}
+}
+
+func (t *timerQueueProcessorBase) submitTask(
 	task task.Task,
 ) bool {
 	submitted, err := t.taskProcessor.TrySubmit(task)
@@ -469,37 +591,57 @@ func (t *transferQueueProcessorBase) submitTask(
 	return true
 }
 
-func newTransferTaskKey(
+func (t *timerQueueProcessorBase) getProcessingQueueStates() []ProcessingQueueState {
+	t.queueCollectionsLock.RLock()
+	defer t.queueCollectionsLock.RUnlock()
+
+	var queueStates []ProcessingQueueState
+	for _, queueCollection := range t.processingQueueCollections {
+		for _, queue := range queueCollection.Queues() {
+			queueStates = append(queueStates, copyQueueState(queue.State()))
+		}
+	}
+
+	return queueStates
+}
+
+func newTimerTaskKey(
+	visibilityTimestamp time.Time,
 	taskID int64,
 ) task.Key {
-	return transferTaskKey{
-		taskID: taskID,
+	return timerTaskKey{
+		visibilityTimestamp: visibilityTimestamp,
+		taskID:              taskID,
 	}
 }
 
-func (k transferTaskKey) Less(
+func (k timerTaskKey) Less(
 	key task.Key,
 ) bool {
-	return k.taskID < key.(transferTaskKey).taskID
+	timerKey := key.(timerTaskKey)
+	if k.visibilityTimestamp.Equal(timerKey.visibilityTimestamp) {
+		return k.taskID < timerKey.taskID
+	}
+	return k.visibilityTimestamp.Before(timerKey.visibilityTimestamp)
 }
 
-func newTransferQueueProcessorOptions(
+func newTimerQueueProcessorOptions(
 	config *config.Config,
 	isActive bool,
 	isFailover bool,
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
-		BatchSize:                           config.TransferTaskBatchSize,
-		MaxPollRPS:                          config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:                     config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:    config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                   config.TransferProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:  config.TransferProcessorUpdateAckIntervalJitterCoefficient,
-		RedispatchInterval:                  config.TransferProcessorRedispatchInterval,
-		RedispatchIntervalJitterCoefficient: config.TransferProcessorRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:              config.TransferProcessorMaxRedispatchQueueSize,
-		SplitQueueInterval:                  config.TransferProcessorSplitQueueInterval,
-		SplitQueueIntervalJitterCoefficient: config.TransferProcessorSplitQueueIntervalJitterCoefficient,
+		BatchSize:                           config.TimerTaskBatchSize,
+		MaxPollRPS:                          config.TimerProcessorMaxPollRPS,
+		MaxPollInterval:                     config.TimerProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:    config.TimerProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                   config.TimerProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:  config.TimerProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchInterval:                  config.TimerProcessorRedispatchInterval,
+		RedispatchIntervalJitterCoefficient: config.TimerProcessorRedispatchIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:              config.TimerProcessorMaxRedispatchQueueSize,
+		SplitQueueInterval:                  config.TimerProcessorSplitQueueInterval,
+		SplitQueueIntervalJitterCoefficient: config.TimerProcessorSplitQueueIntervalJitterCoefficient,
 	}
 
 	if isFailover {
@@ -518,9 +660,9 @@ func newTransferQueueProcessorOptions(
 	}
 
 	if isActive {
-		options.MetricScope = metrics.TransferActiveQueueProcessorScope
+		options.MetricScope = metrics.TimerActiveQueueProcessorScope
 	} else {
-		options.MetricScope = metrics.TransferStandbyQueueProcessorScope
+		options.MetricScope = metrics.TimerStandbyQueueProcessorScope
 	}
 
 	return options

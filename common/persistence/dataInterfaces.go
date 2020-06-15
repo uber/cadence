@@ -1218,6 +1218,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -1230,6 +1231,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -1476,6 +1478,7 @@ type (
 
 	// CreateFailoverMarkersRequest is request to create failover markers
 	CreateFailoverMarkersRequest struct {
+		RangeID int64
 		Markers []*FailoverMarkerTask
 	}
 

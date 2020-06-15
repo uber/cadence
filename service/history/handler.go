@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
-	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -146,30 +145,9 @@ func (h *Handler) Start() {
 			h.config,
 		)
 
-		schedulerType := t.SchedulerType(h.config.TaskSchedulerType())
-		processorOptions := &task.ProcessorOptions{
-			SchedulerType: schedulerType,
-		}
-		switch schedulerType {
-		case t.SchedulerTypeFIFO:
-			processorOptions.FifoSchedulerOptions = &t.FIFOTaskSchedulerOptions{
-				QueueSize:   h.config.TaskSchedulerQueueSize(),
-				WorkerCount: h.config.TaskSchedulerWorkerCount(),
-				RetryPolicy: common.CreateTaskProcessingRetryPolicy(),
-			}
-		case t.SchedulerTypeWRR:
-			processorOptions.WRRSchedulerOptions = &t.WeightedRoundRobinTaskSchedulerOptions{
-				Weights:     h.config.TaskSchedulerRoundRobinWeights,
-				QueueSize:   h.config.TaskSchedulerQueueSize(),
-				WorkerCount: h.config.TaskSchedulerWorkerCount(),
-				RetryPolicy: common.CreateTaskProcessingRetryPolicy(),
-			}
-		default:
-			h.GetLogger().Fatal("Unknown task scheduler type", tag.Value(schedulerType))
-		}
 		h.queueTaskProcessor, err = task.NewProcessor(
 			taskPriorityAssigner,
-			processorOptions,
+			h.config,
 			h.GetLogger(),
 			h.GetMetricsClient(),
 		)
@@ -228,6 +206,7 @@ func (h *Handler) CreateEngine(
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
+		h.GetFailoverCoordinator(),
 	)
 }
 
@@ -1889,8 +1868,12 @@ func (h *Handler) NotifyFailoverMarkers(
 	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
 
-	//TODO: wire up the function with failover coordinator
-	return &gen.BadRequestError{Message: "This method has not been implemented."}
+	for _, token := range request.GetFailoverMarkerTokens() {
+		marker := token.GetFailoverMarker()
+		h.GetLogger().Debug("Handling failover maker", tag.WorkflowDomainID(marker.GetDomainID()))
+		h.GetFailoverCoordinator().ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
+	}
+	return nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

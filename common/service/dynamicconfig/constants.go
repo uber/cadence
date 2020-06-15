@@ -162,8 +162,20 @@ var keys = map[Key]string{
 	TaskProcessRPS:                                         "history.taskProcessRPS",
 	TaskSchedulerType:                                      "history.taskSchedulerType",
 	TaskSchedulerWorkerCount:                               "history.taskSchedulerWorkerCount",
+	TaskSchedulerShardWorkerCount:                          "history.taskSchedulerShardWorkerCount",
 	TaskSchedulerQueueSize:                                 "history.taskSchedulerQueueSize",
+	TaskSchedulerShardQueueSize:                            "history.taskSchedulerShardQueueSize",
+	TaskSchedulerDispatcherCount:                           "history.taskSchedulerDispatcherCount",
 	TaskSchedulerRoundRobinWeights:                         "history.taskSchedulerRoundRobinWeight",
+	QueueProcessorEnableSplit:                              "history.queueProcessorEnableSplit",
+	QueueProcessorSplitMaxLevel:                            "history.queueProcessorSplitMaxLevel",
+	QueueProcessorEnableRandomSplitByDomainID:              "history.queueProcessorEnableRandomSplitByDomain",
+	QueueProcessorRandomSplitProbability:                   "history.queueProcessorRandomSplitProbability",
+	QueueProcessorEnablePendingTaskSplit:                   "history.queueProcessorEnablePendingTaskSplit",
+	QueueProcessorPendingTaskSplitThreshold:                "history.queueProcessorPendingTaskSplitThreshold",
+	QueueProcessorEnableStuckTaskSplit:                     "history.queueProcessorEnableStuckTaskSplit",
+	QueueProcessorStuckTaskSplitThreshold:                  "history.queueProcessorStuckTaskSplitThreshold",
+	QueueProcessorSplitLookAheadDurationByDomainID:         "history.queueProcessorSplitLookAheadDuration",
 	TimerTaskBatchSize:                                     "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                   "history.timerTaskWorkerCount",
 	TimerTaskMaxRetryCount:                                 "history.timerTaskMaxRetryCount",
@@ -183,6 +195,7 @@ var keys = map[Key]string{
 	TimerProcessorRedispatchIntervalJitterCoefficient:      "history.timerProcessorRedispatchIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                   "history.timerProcessorMaxRedispatchQueueSize",
 	TimerProcessorEnablePriorityTaskProcessor:              "history.timerProcessorEnablePriorityTaskProcessor",
+	TimerProcessorEnableMultiCurosrProcessor:               "history.timerProcessorEnableMultiCursorProcessor",
 	TimerProcessorMaxTimeShift:                             "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                 "history.timerProcessorHistoryArchivalSizeLimit",
 	TimerProcessorArchivalTimeLimit:                        "history.timerProcessorArchivalTimeLimit",
@@ -257,6 +270,8 @@ var keys = map[Key]string{
 	MutableStateChecksumVerifyProbability:                  "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:                   "history.mutableStateChecksumInvalidateBefore",
 	ReplicationEventsFromCurrentCluster:                    "history.ReplicationEventsFromCurrentCluster",
+	NotifyFailoverMarkerInterval:                           "history.NotifyFailoverMarkerInterval",
+	NotifyFailoverMarkerTimerJitterCoefficient:             "history.NotifyFailoverMarkerTimerJitterCoefficient",
 
 	WorkerPersistenceMaxQPS:                          "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                    "worker.persistenceGlobalMaxQPS",
@@ -289,6 +304,7 @@ var keys = map[Key]string{
 	HistoryScannerEnabled:                            "worker.historyScannerEnabled",
 	ExecutionsScannerEnabled:                         "worker.executionsScannerEnabled",
 	ExecutionsScannerBlobstoreFlushThreshold:         "worker.executionsScannerBlobstoreFlushThreshold",
+	ExecutionsScannerActivityBatchSize:               "worker.executionsScannerActivityBatchSize",
 	ExecutionsScannerConcurrency:                     "worker.executionsScannerConcurrency",
 	ExecutionsScannerPersistencePageSize:             "worker.executionsScannerPersistencePageSize",
 	ExecutionsScannerInvariantCollectionHistory:      "worker.executionsScannerInvariantCollectionHistory",
@@ -529,12 +545,36 @@ const (
 	TaskProcessRPS
 	// TaskSchedulerType is the task scheduler type for priority task processor
 	TaskSchedulerType
-	// TaskSchedulerWorkerCount is the number of workers per shard in task scheduler
+	// TaskSchedulerWorkerCount is the number of workers per host in task scheduler
 	TaskSchedulerWorkerCount
-	// TaskSchedulerQueueSize is the size of task channel size in task scheduler
+	// TaskSchedulerShardWorkerCount is the number of worker per shard in task scheduler
+	TaskSchedulerShardWorkerCount
+	// TaskSchedulerQueueSize is the size of task channel for host level task scheduler
 	TaskSchedulerQueueSize
+	// TaskSchedulerShardQueueSize is the size of task channel for shard level task scheduler
+	TaskSchedulerShardQueueSize
+	// TaskSchedulerDispatcherCount is the number of task dispatcher in task scheduler (only applies to host level task scheduler)
+	TaskSchedulerDispatcherCount
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	TaskSchedulerRoundRobinWeights
+	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
+	QueueProcessorEnableSplit
+	// QueueProcessorSplitMaxLevel is the max processing queue level
+	QueueProcessorSplitMaxLevel
+	// QueueProcessorEnableRandomSplitByDomainID indicates whether random queue split policy should be enabled for a domain
+	QueueProcessorEnableRandomSplitByDomainID
+	// QueueProcessorRandomSplitProbability is the probability for a domain to be split to a new processing queue
+	QueueProcessorRandomSplitProbability
+	// QueueProcessorEnablePendingTaskSplit indicates whether pending task split policy should be enabled
+	QueueProcessorEnablePendingTaskSplit
+	// QueueProcessorPendingTaskSplitThreshold is the threshold for the number of pending tasks per domain
+	QueueProcessorPendingTaskSplitThreshold
+	// QueueProcessorEnableStuckTaskSplit indicates whether stuck task split policy should be enabled
+	QueueProcessorEnableStuckTaskSplit
+	// QueueProcessorStuckTaskSplitThreshold is the threshold for the number of attempts of a task
+	QueueProcessorStuckTaskSplitThreshold
+	// QueueProcessorSplitLookAheadDurationByDomainID is the look ahead duration when spliting a domain to a new processing queue
+	QueueProcessorSplitLookAheadDurationByDomainID
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	TimerTaskBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
@@ -573,6 +613,8 @@ const (
 	TimerProcessorMaxRedispatchQueueSize
 	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
 	TimerProcessorEnablePriorityTaskProcessor
+	// TimerProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for timer processor
+	TimerProcessorEnableMultiCurosrProcessor
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
@@ -754,6 +796,8 @@ const (
 	ExecutionsScannerConcurrency
 	// ExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in execution scanner
 	ExecutionsScannerBlobstoreFlushThreshold
+	// ExecutionsScannerActivityBatchSize indicates the batch size of scanner activities
+	ExecutionsScannerActivityBatchSize
 	// ExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in execution scanner
 	ExecutionsScannerPersistencePageSize
 	// ExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
@@ -804,8 +848,13 @@ const (
 	// MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded
 	MutableStateChecksumInvalidateBefore
 
-	//ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
+	// ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
 	ReplicationEventsFromCurrentCluster
+
+	// NotifyFailoverMarkerInterval determines the frequency to notify failover marker
+	NotifyFailoverMarkerInterval
+	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
+	NotifyFailoverMarkerTimerJitterCoefficient
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
