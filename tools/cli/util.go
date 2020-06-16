@@ -787,6 +787,35 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 	return input
 }
 
+func processMultipleKeys(rawKey, separator string) []string {
+	var keys []string
+	if strings.TrimSpace(rawKey) != "" {
+		keys = strings.Split(rawKey, separator)
+	}
+	return keys
+}
+
+func processMultipleJSONValues(rawValue string) []string {
+	var values []string
+	var sc fastjson.Scanner
+	sc.Init(rawValue)
+	for sc.Next() {
+		values = append(values, sc.Value().String())
+	}
+	if err := sc.Error(); err != nil {
+		ErrorAndExit("Parse json error.", err)
+	}
+	return values
+}
+
+func mapFromKeysValues(keys, values []string) map[string][]byte {
+	fields := map[string][]byte{}
+	for i, key := range keys {
+		fields[key] = []byte(values[i])
+	}
+	return fields
+}
+
 // validate whether str is a valid json or multi valid json concatenated with spaces/newlines
 func validateJSONs(str string) error {
 	input := []byte(str)

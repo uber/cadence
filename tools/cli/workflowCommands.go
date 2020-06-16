@@ -39,7 +39,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
-	"github.com/valyala/fastjson"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 
@@ -317,61 +316,25 @@ func processSearchAttr(c *cli.Context) map[string][]byte {
 }
 
 func processHeader(c *cli.Context) map[string][]byte {
-	rawHeaderKey := c.String(FlagHeaderKey)
-	var headerKeys []string
-	if strings.TrimSpace(rawHeaderKey) != "" {
-		headerKeys = strings.Split(rawHeaderKey, " ")
-	}
+	headerKeys := processMultipleKeys(c.String(FlagHeaderKey), " ")
+	headerValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeHeader))
 
-	rawHeaderValue := processJSONInputHelper(c, jsonTypeHeader)
-	var headerValues []string
-
-	var sc fastjson.Scanner
-	sc.Init(rawHeaderValue)
-	for sc.Next() {
-		headerValues = append(headerValues, sc.Value().String())
-	}
-	if err := sc.Error(); err != nil {
-		ErrorAndExit("Parse json error.", err)
-	}
 	if len(headerKeys) != len(headerValues) {
 		ErrorAndExit("Number of header keys and values are not equal.", nil)
 	}
 
-	fields := map[string][]byte{}
-	for i, key := range headerKeys {
-		fields[key] = []byte(headerValues[i])
-	}
-	return fields
+	return mapFromKeysValues(headerKeys, headerValues)
 }
 
 func processMemo(c *cli.Context) map[string][]byte {
-	rawMemoKey := c.String(FlagMemoKey)
-	var memoKeys []string
-	if strings.TrimSpace(rawMemoKey) != "" {
-		memoKeys = strings.Split(rawMemoKey, " ")
-	}
+	memoKeys := processMultipleKeys(c.String(FlagMemoKey), " ")
+	memoValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeMemo))
 
-	rawMemoValue := processJSONInputHelper(c, jsonTypeMemo)
-	var memoValues []string
-
-	var sc fastjson.Scanner
-	sc.Init(rawMemoValue)
-	for sc.Next() {
-		memoValues = append(memoValues, sc.Value().String())
-	}
-	if err := sc.Error(); err != nil {
-		ErrorAndExit("Parse json error.", err)
-	}
 	if len(memoKeys) != len(memoValues) {
 		ErrorAndExit("Number of memo keys and values are not equal.", nil)
 	}
 
-	fields := map[string][]byte{}
-	for i, key := range memoKeys {
-		fields[key] = []byte(memoValues[i])
-	}
-	return fields
+	return mapFromKeysValues(memoKeys, memoValues)
 }
 
 func getPrintableMemo(memo *s.Memo) string {
