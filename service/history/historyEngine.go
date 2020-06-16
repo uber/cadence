@@ -213,7 +213,8 @@ func NewEngineWithShardContext(
 		resetor: reset.NewWorkflowResetor(
 			shard,
 			executionCache,
-			logger),
+			logger,
+		),
 		publicClient:        publicClient,
 		matchingClient:      matching,
 		rawMatchingClient:   rawMatchingClient,
