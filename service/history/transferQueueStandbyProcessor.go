@@ -137,12 +137,20 @@ func newTransferQueueStandbyProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	transferQueueTaskInitializer := func(taskInfo task.Info) task.Task {
+		var domainTag metrics.Tag
+		domainName, err := shard.GetDomainCache().GetDomainName(taskInfo.GetDomainID())
+		if err != nil {
+			domainTag = metrics.DomainUnknownTag()
+		} else {
+			domainTag = metrics.DomainTag(domainName)
+		}
 		return task.NewTransferTask(
 			shard,
 			taskInfo,
 			task.QueueTypeStandbyTransfer,
 			historyService.metricsClient.Scope(
 				task.GetTransferTaskMetricsScope(taskInfo.GetTaskType(), false),
+				domainTag,
 			),
 			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			transferTaskFilter,

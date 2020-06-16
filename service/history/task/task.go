@@ -239,6 +239,10 @@ func (t *taskBase) Execute() error {
 		return err
 	}
 
+	if t.shouldProcessTask {
+		t.scope.RecordTimer(metrics.TaskBufferLatency, time.Since(t.submitTime))
+	}
+
 	executionStartTime := t.timeSource.Now()
 
 	defer func() {

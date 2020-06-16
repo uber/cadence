@@ -104,12 +104,20 @@ func newTimerQueueActiveProcessor(
 		shard.GetConfig(),
 	)
 	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
+		var domainTag metrics.Tag
+		domainName, err := shard.GetDomainCache().GetDomainName(taskInfo.GetDomainID())
+		if err != nil {
+			domainTag = metrics.DomainUnknownTag()
+		} else {
+			domainTag = metrics.DomainTag(domainName)
+		}
 		return task.NewTimerTask(
 			shard,
 			taskInfo,
 			task.QueueTypeActiveTimer,
 			historyService.metricsClient.Scope(
 				task.GetTimerTaskMetricScope(taskInfo.GetTaskType(), true),
+				domainTag,
 			),
 			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			timerTaskFilter,
