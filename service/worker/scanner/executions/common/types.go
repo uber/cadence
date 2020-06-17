@@ -95,6 +95,7 @@ type (
 		TreeID      string
 		BranchID    string
 		State       int
+		IsConcrete  bool
 	}
 
 	// CheckResult is the result of running Check.
