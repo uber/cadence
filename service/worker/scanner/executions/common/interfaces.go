@@ -27,7 +27,7 @@ import "github.com/uber/cadence/common/persistence"
 type (
 	// PersistenceRetryer is used to retry requests to persistence
 	PersistenceRetryer interface {
-		ListConcreteExecutions(*persistence.ListConcreteExecutionsRequest) (*persistence.ListConcreteExecutionsResponse, error)
+		ListAllExecutions(*persistence.ListConcreteExecutionsRequest) (*persistence.ListConcreteExecutionsResponse, error)
 		GetWorkflowExecution(*persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
 		GetCurrentExecution(*persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse, error)
 		ReadHistoryBranch(*persistence.ReadHistoryBranchRequest) (*persistence.ReadHistoryBranchResponse, error)
@@ -49,6 +49,7 @@ type (
 	Invariant interface {
 		Check(Execution) CheckResult
 		Fix(Execution) FixResult
+		CanApply(Execution) bool
 		InvariantType() InvariantType
 	}
 

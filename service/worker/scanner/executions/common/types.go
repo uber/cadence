@@ -65,6 +65,8 @@ const (
 	HistoryExistsInvariantType InvariantType = "history_exists"
 	// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
 	OpenCurrentExecutionInvariantType InvariantType = "open_current_execution"
+	// OpenConcreteExecutionInvariantType asserts that an open current execution must have a valid concrete execution
+	OpenConcreteExecutionInvariantType InvariantType = "open_concrete_execution"
 
 	// InvariantCollectionMutableState is the collection of invariants relating to mutable state
 	InvariantCollectionMutableState InvariantCollection = 0
@@ -93,6 +95,7 @@ type (
 		TreeID      string
 		BranchID    string
 		State       int
+		IsConcrete  bool
 	}
 
 	// CheckResult is the result of running Check.

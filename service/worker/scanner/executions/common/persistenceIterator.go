@@ -72,7 +72,7 @@ func getPersistenceFetchPageFn(
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListConcreteExecutions(req)
+		resp, err := pr.ListAllExecutions(req)
 		if err != nil {
 			return pagination.Page{}, err
 		}

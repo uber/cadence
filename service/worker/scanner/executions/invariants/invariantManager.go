@@ -51,6 +51,9 @@ func (i *invariantManager) RunChecks(execution common.Execution) common.ManagerC
 		CheckResults:             nil,
 	}
 	for _, iv := range i.invariants {
+		if !iv.CanApply(execution) {
+			continue
+		}
 		checkResult := iv.Check(execution)
 		result.CheckResults = append(result.CheckResults, checkResult)
 		checkResultType, updated := i.nextCheckResultType(result.CheckResultType, checkResult.CheckResultType)
@@ -70,6 +73,9 @@ func (i *invariantManager) RunFixes(execution common.Execution) common.ManagerFi
 		FixResults:               nil,
 	}
 	for _, iv := range i.invariants {
+		if !iv.CanApply(execution) {
+			continue
+		}
 		fixResult := iv.Fix(execution)
 		result.FixResults = append(result.FixResults, fixResult)
 		fixResultType, updated := i.nextFixResultType(result.FixResultType, fixResult.FixResultType)
@@ -149,5 +155,5 @@ func getHistoryCollection(pr common.PersistenceRetryer) []common.Invariant {
 }
 
 func getMutableStateCollection(pr common.PersistenceRetryer) []common.Invariant {
-	return []common.Invariant{NewOpenCurrentExecution(pr)}
+	return []common.Invariant{NewOpenCurrentExecution(pr), NewOpenConcreteExecution(pr)}
 }

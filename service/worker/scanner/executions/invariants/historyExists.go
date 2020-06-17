@@ -117,6 +117,11 @@ func (h *historyExists) Fix(execution common.Execution) common.FixResult {
 	return *fixResult
 }
 
+func (o *historyExists) CanApply(execution common.Execution) bool {
+	// return true for concrete execution
+	return true
+}
+
 func (h *historyExists) InvariantType() common.InvariantType {
 	return common.HistoryExistsInvariantType
 }

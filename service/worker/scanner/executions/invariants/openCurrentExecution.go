@@ -114,6 +114,11 @@ func (o *openCurrentExecution) Fix(execution common.Execution) common.FixResult 
 	return *fixResult
 }
 
+func (o *openCurrentExecution) CanApply(execution common.Execution) bool {
+	// TODO return true for concrete execution
+	return true
+}
+
 func (o *openCurrentExecution) InvariantType() common.InvariantType {
 	return common.OpenCurrentExecutionInvariantType
 }
