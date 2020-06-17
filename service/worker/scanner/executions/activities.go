@@ -67,6 +67,7 @@ type (
 		ExecutionsPageSize      int
 		BlobstoreFlushThreshold int
 		InvariantCollections    InvariantCollections
+		ScanType                int
 	}
 
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
@@ -195,7 +196,8 @@ func scanShard(
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
 		collections,
-		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) })
+		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
+		params.ScanType)
 	report := scanner.Scan()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)

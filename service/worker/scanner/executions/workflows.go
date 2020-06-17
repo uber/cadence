@@ -213,36 +213,44 @@ func ScannerWorkflow(
 		return nil
 	}
 
+	scanTypes := []int{
+		common.ScanConcreteExecutions,
+		common.ScanCurrentExecutions,
+	}
+
 	shardReportChan := workflow.GetSignalChannel(ctx, scanShardReportChan)
 	for i := 0; i < resolvedConfig.Concurrency; i++ {
 		idx := i
-		workflow.Go(ctx, func(ctx workflow.Context) {
-			batches := getShardBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, shards, idx)
-			for _, batch := range batches {
-				activityCtx = getLongActivityContext(ctx)
-				var reports []common.ShardScanReport
-				if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
-					Shards:                  batch,
-					ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
-					BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
-					InvariantCollections:    resolvedConfig.InvariantCollections,
-				}).Get(ctx, &reports); err != nil {
-					errStr := err.Error()
+		for _, scanType := range scanTypes {
+			workflow.Go(ctx, func(ctx workflow.Context) {
+				batches := getShardBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, shards, idx)
+				for _, batch := range batches {
+					activityCtx = getLongActivityContext(ctx)
+					var reports []common.ShardScanReport
+					if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
+						Shards:                  batch,
+						ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
+						BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
+						InvariantCollections:    resolvedConfig.InvariantCollections,
+						ScanType:                scanType,
+					}).Get(ctx, &reports); err != nil {
+						errStr := err.Error()
+						shardReportChan.Send(ctx, ScanReportError{
+							Reports:  nil,
+							ErrorStr: &errStr,
+						})
+						return
+					}
 					shardReportChan.Send(ctx, ScanReportError{
-						Reports:  nil,
-						ErrorStr: &errStr,
+						Reports:  reports,
+						ErrorStr: nil,
 					})
-					return
 				}
-				shardReportChan.Send(ctx, ScanReportError{
-					Reports:  reports,
-					ErrorStr: nil,
-				})
-			}
-		})
+			})
+		}
 	}
 
-	for i := 0; i < len(shards); {
+	for i := 0; i < len(scanTypes)*len(shards); {
 		var reportErr ScanReportError
 		shardReportChan.Receive(ctx, &reportErr)
 		if reportErr.ErrorStr != nil {

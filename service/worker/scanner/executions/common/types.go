@@ -228,3 +228,9 @@ type (
 		Result    ManagerFixResult
 	}
 )
+
+// Scan check types.
+const (
+	ScanConcreteExecutions = iota
+	ScanCurrentExecutions
+)

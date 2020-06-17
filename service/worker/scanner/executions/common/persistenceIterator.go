@@ -23,6 +23,8 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -39,9 +41,19 @@ func NewPersistenceIterator(
 	pr PersistenceRetryer,
 	pageSize int,
 	shardID int,
+	scanType int,
 ) ExecutionIterator {
-	return &persistenceIterator{
-		itr: pagination.NewIterator(nil, getPersistenceFetchPageFn(pr, codec.NewThriftRWEncoder(), pageSize, shardID)),
+	switch scanType {
+	case ScanConcreteExecutions:
+		return &persistenceIterator{
+			itr: pagination.NewIterator(nil, getPersistenceFetchConcreteExecutionsPageFn(pr, codec.NewThriftRWEncoder(), pageSize, shardID)),
+		}
+	case ScanCurrentExecutions:
+		return &persistenceIterator{
+			itr: pagination.NewIterator(nil, getPersistenceFetchCurrentExecutionsPageFn(pr, pageSize, shardID)),
+		}
+	default:
+		panic(fmt.Sprintf("unknown scanType: %d", scanType))
 	}
 }
 
@@ -59,7 +71,7 @@ func (i *persistenceIterator) HasNext() bool {
 	return i.itr.HasNext()
 }
 
-func getPersistenceFetchPageFn(
+func getPersistenceFetchConcreteExecutionsPageFn(
 	pr PersistenceRetryer,
 	encoder *codec.ThriftRWEncoder,
 	pageSize int,
@@ -72,7 +84,7 @@ func getPersistenceFetchPageFn(
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListAllExecutions(req)
+		resp, err := pr.ListConcreteExecutions(req)
 		if err != nil {
 			return pagination.Page{}, err
 		}
@@ -107,5 +119,16 @@ func getPersistenceFetchPageFn(
 			Entities:     executions,
 		}
 		return page, nil
+	}
+}
+
+func getPersistenceFetchCurrentExecutionsPageFn(
+	pr PersistenceRetryer,
+	pageSize int,
+	shardID int,
+) pagination.FetchFn {
+	return func(token pagination.PageToken) (pagination.Page, error) {
+		// TODO same as above but for current executions
+		panic("implement me")
 	}
 }

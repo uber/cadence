@@ -50,6 +50,14 @@ func NewPersistenceRetryer(
 	}
 }
 
+// ListCurrentExecutions retries ListCurrentExecutions
+func (pr *persistenceRetryer) ListCurrentExecutions(
+	req *persistence.ListConcreteExecutionsRequest,
+) (*persistence.ListConcreteExecutionsResponse, error) {
+	// TODO same as ListConcreteExecutions below
+	panic("implement me")
+}
+
 // ListConcreteExecutions retries ListConcreteExecutions
 func (pr *persistenceRetryer) ListConcreteExecutions(
 	req *persistence.ListConcreteExecutionsRequest,

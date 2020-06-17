@@ -52,11 +52,12 @@ func NewScanner(
 	blobstoreFlushThreshold int,
 	invariantCollections []common.InvariantCollection,
 	progressReportFn func(),
+	scanType int,
 ) common.Scanner {
 	id := uuid.New()
 	return &scanner{
 		shardID:          shardID,
-		itr:              common.NewPersistenceIterator(pr, persistencePageSize, shardID),
+		itr:              common.NewPersistenceIterator(pr, persistencePageSize, shardID, scanType),
 		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, blobstoreClient, blobstoreFlushThreshold),
 		invariantManager: invariants.NewInvariantManager(invariantCollections, pr),
