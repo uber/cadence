@@ -3208,7 +3208,9 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		DomainUUID:  common.StringPtr(domainID),
 		DescRequest: request,
 	})
-	return nil, wh.error(err, scope)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
 
 	return response, nil
 }
