@@ -25,6 +25,7 @@ package history
 import (
 	ctx "context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -441,6 +442,10 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 
 	var replicationTasks []*replicator.ReplicationTask
 	readLevel := lastReadTaskID
+	replicationScope := p.metricsClient.Scope(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
+	)
 	for _, taskInfo := range taskInfoList {
 		var replicationTask *replicator.ReplicationTask
 		op := func() error {
@@ -459,23 +464,18 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
+		replicationScope.RecordTimer(
+			metrics.ReplicationTasksLag,
+			p.timeSource.Now().Sub(taskInfo.GetVisibilityTimestamp()),
+		)
 	}
 
-	// Note this is a very rough indicator of how much the remote DC is behind on this shard.
-	p.metricsClient.RecordTimer(
-		metrics.ReplicatorQueueProcessorScope,
-		metrics.ReplicationTasksLag,
-		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
-	)
-
-	p.metricsClient.RecordTimer(
-		metrics.ReplicatorQueueProcessorScope,
+	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
 		time.Duration(len(taskInfoList)),
 	)
 
-	p.metricsClient.RecordTimer(
-		metrics.ReplicatorQueueProcessorScope,
+	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturned,
 		time.Duration(len(replicationTasks)),
 	)
