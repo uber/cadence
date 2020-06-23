@@ -442,10 +442,6 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 
 	var replicationTasks []*replicator.ReplicationTask
 	readLevel := lastReadTaskID
-	replicationScope := p.metricsClient.Scope(
-		metrics.ReplicatorQueueProcessorScope,
-		metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
-	)
 	for _, taskInfo := range taskInfoList {
 		var replicationTask *replicator.ReplicationTask
 		op := func() error {
@@ -464,11 +460,17 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
-		replicationScope.RecordTimer(
-			metrics.ReplicationTasksLag,
-			p.timeSource.Now().Sub(taskInfo.GetVisibilityTimestamp()),
-		)
 	}
+
+	replicationScope := p.metricsClient.Scope(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
+	)
+
+	replicationScope.RecordTimer(
+		metrics.ReplicationTasksLag,
+		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
+	)
 
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
