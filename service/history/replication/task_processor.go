@@ -163,8 +163,6 @@ func (p *taskProcessorImpl) Stop() {
 }
 
 func (p *taskProcessorImpl) processorLoop() {
-	p.lastProcessedMessageID = p.shard.GetClusterReplicationLevel(p.sourceCluster)
-
 	defer func() {
 		p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
 	}()
