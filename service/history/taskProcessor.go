@@ -82,12 +82,13 @@ func newTaskInfo(
 	processor taskExecutor,
 	task task.Info,
 	logger log.Logger,
+	startTime time.Time,
 ) *taskInfo {
 	return &taskInfo{
 		processor:         processor,
 		task:              task,
 		attempt:           0,
-		startTime:         time.Now(), // used for metrics
+		startTime:         startTime, // used for metrics
 		logger:            logger,
 		shouldProcessTask: true,
 	}
@@ -331,6 +332,7 @@ func (t *taskProcessor) ackTaskOnce(
 		scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(task.attempt))
 		scope.RecordTimer(metrics.TaskLatency, time.Since(task.startTime))
 		scope.RecordTimer(metrics.TaskQueueLatency, time.Since(task.task.GetVisibilityTimestamp()))
+		scope.RecordTimer(metrics.TaskLoadLatency, task.startTime.Sub(task.task.GetVisibilityTimestamp()))
 	}
 }
 

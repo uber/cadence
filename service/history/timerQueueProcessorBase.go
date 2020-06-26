@@ -67,6 +67,7 @@ type (
 		timerProcessor       timerProcessor
 		timerQueueAckMgr     *timerQueueAckMgrImpl
 		timerGate            TimerGate
+		nextFireTime         time.Time
 		timeSource           clock.TimeSource
 		rateLimiter          quotas.Limiter
 		retryPolicy          backoff.RetryPolicy
@@ -126,12 +127,13 @@ func newTimerQueueProcessorBase(
 		metricsScope:       metricsScope,
 		timerQueueAckMgr:   timerQueueAckMgr,
 		timerGate:          timerGate,
+		nextFireTime:       time.Time{},
 		timeSource:         shard.GetTimeSource(),
 		newTimerCh:         make(chan struct{}, 1),
 		lastPollTime:       time.Time{},
 		taskProcessor:      taskProcessor,
 		queueTaskProcessor: queueTaskProcessor,
-		redispatchQueue:    collection.NewConcurrentQueue(),
+		// redispatchQueue:    collection.NewConcurrentQueue(),
 		redispatchNotifyCh: make(chan struct{}, 1),
 		rateLimiter: quotas.NewDynamicRateLimiter(
 			func() float64 {
@@ -353,21 +355,18 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 			go t.Stop()
 			return nil
 		case <-t.timerGate.FireChan():
-			if !t.isPriorityTaskProcessorEnabled() || t.redispatchQueue.Len() <= t.config.TimerProcessorMaxRedispatchQueueSize() {
-				lookAheadTimer, err := t.readAndFanoutTimerTasks()
-				if err != nil {
-					return err
-				}
-				if lookAheadTimer != nil {
-					t.timerGate.Update(lookAheadTimer.VisibilityTimestamp)
-				}
-				continue
+			t.metricsScope.RecordTimer(metrics.TimerGateFireLatency, t.timeSource.Now().Sub(t.nextFireTime))
+			t.nextFireTime = time.Time{}
+			lookAheadTimer, err := t.readAndFanoutTimerTasks()
+			if err != nil {
+				return err
 			}
-
-			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
-			t.redispatchTasks()
-			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
-			t.notifyNewTimer(time.Time{})
+			if lookAheadTimer != nil {
+				t.timerGate.Update(lookAheadTimer.VisibilityTimestamp)
+				if t.nextFireTime.IsZero() || lookAheadTimer.VisibilityTimestamp.Before(t.nextFireTime) {
+					t.nextFireTime = lookAheadTimer.VisibilityTimestamp
+				}
+			}
 		case <-pollTimer.C:
 			pollTimer.Reset(backoff.JitDuration(
 				t.config.TimerProcessorMaxPollInterval(),
@@ -380,6 +379,9 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 				}
 				if lookAheadTimer != nil {
 					t.timerGate.Update(lookAheadTimer.VisibilityTimestamp)
+					if t.nextFireTime.IsZero() || lookAheadTimer.VisibilityTimestamp.Before(t.nextFireTime) {
+						t.nextFireTime = lookAheadTimer.VisibilityTimestamp
+					}
 				}
 			}
 		case <-updateAckTimer.C:
@@ -400,6 +402,12 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 			// New Timer has arrived.
 			t.metricsClient.IncCounter(t.scope, metrics.NewTimerNotifyCounter)
 			t.timerGate.Update(newTime)
+			if newTime.IsZero() {
+				newTime = t.timeSource.Now()
+			}
+			if t.nextFireTime.IsZero() || newTime.Before(t.nextFireTime) {
+				t.nextFireTime = newTime
+			}
 		}
 	}
 }
@@ -420,8 +428,9 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 		return nil, err
 	}
 
+	taskStartTime := t.timeSource.Now()
 	for _, task := range timerTasks {
-		if submitted := t.submitTask(task); !submitted {
+		if submitted := t.submitTask(task, taskStartTime); !submitted {
 			// not submitted due to shard shutdown
 			return nil, nil
 		}
@@ -437,6 +446,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 
 func (t *timerQueueProcessorBase) submitTask(
 	taskInfo task.Info,
+	startTime time.Time,
 ) bool {
 	if !t.isPriorityTaskProcessorEnabled() {
 		return t.taskProcessor.addTask(
@@ -444,6 +454,7 @@ func (t *timerQueueProcessorBase) submitTask(
 				t.timerProcessor,
 				taskInfo,
 				initializeLoggerForTask(t.shard.GetShardID(), taskInfo, t.logger),
+				startTime,
 			),
 		)
 	}

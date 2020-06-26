@@ -140,7 +140,7 @@ func newQueueProcessorBase(
 		lastPollTime:       time.Time{},
 		taskProcessor:      taskProcessor,
 		queueTaskProcessor: queueTaskProcessor,
-		redispatchQueue:    collection.NewConcurrentQueue(),
+		// redispatchQueue:    collection.NewConcurrentQueue(),
 	}
 
 	if options.QueueType != task.QueueTypeReplication {
@@ -252,15 +252,7 @@ processorPumpLoop:
 			// use a separate goroutine since the caller hold the shutdownWG
 			go p.Stop()
 		case <-p.notifyCh:
-			if !p.isPriorityTaskProcessorEnabled() || p.redispatchQueue.Len() <= p.options.MaxRedispatchQueueSize() {
-				p.processBatch()
-				continue
-			}
-
-			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
-			p.redispatchTasks()
-			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
-			p.notifyNewTask()
+			p.processBatch()
 		case <-pollTimer.C:
 			pollTimer.Reset(backoff.JitDuration(
 				p.options.MaxPollInterval(),
@@ -348,8 +340,9 @@ func (p *queueProcessorBase) processBatch() {
 		return
 	}
 
+	taskStartTime := p.timeSource.Now()
 	for _, task := range tasks {
-		if submitted := p.submitTask(task); !submitted {
+		if submitted := p.submitTask(task, taskStartTime); !submitted {
 			// submitted since processor has been shutdown
 			return
 		}
@@ -366,6 +359,7 @@ func (p *queueProcessorBase) processBatch() {
 
 func (p *queueProcessorBase) submitTask(
 	taskInfo task.Info,
+	startTime time.Time,
 ) bool {
 	if !p.isPriorityTaskProcessorEnabled() {
 		return p.taskProcessor.addTask(
@@ -373,6 +367,7 @@ func (p *queueProcessorBase) submitTask(
 				p.processor,
 				taskInfo,
 				initializeLoggerForTask(p.shard.GetShardID(), taskInfo, p.logger),
+				startTime,
 			),
 		)
 	}

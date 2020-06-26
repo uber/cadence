@@ -1655,8 +1655,10 @@ const (
 	TaskBatchCompleteCounter
 	TaskProcessingLatency
 	TaskQueueLatency
+	TaskLoadLatency
 	TaskRedispatchQueuePendingTasksTimer
 
+	TimerGateFireLatency
 	TransferTaskMissingEventCounter
 
 	TransferTaskThrottledCounter
@@ -2084,6 +2086,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskLimitExceededCounter:                          {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
 		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
+		TaskLoadLatency:                                   {metricName: "task_latency_load", metricType: Timer},
+		TimerGateFireLatency:                              {metricName: "timer_gate_fire_latency", metricType: Timer},
 		TransferTaskMissingEventCounter:                   {metricName: "transfer_task_missing_event_counter", metricType: Counter},
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
 		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
