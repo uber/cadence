@@ -669,9 +669,17 @@ func (t *timerQueueProcessorBase) submitTask(
 ) (bool, error) {
 	submitted, err := t.taskProcessor.TrySubmit(task)
 	if err != nil {
-		return false, err
+		select {
+		case <-t.shutdownCh:
+			// if error is due to shard shutdown
+			return false, err
+		default:
+			// otherwise it might be error from domain cache etc, add
+			// the task to redispatch queue so that it can be retried
+			t.logger.Error("Failed to submit task", tag.Error(err))
+		}
 	}
-	if !submitted {
+	if err != nil || !submitted {
 		t.redispatchQueue.Add(task)
 		return false, nil
 	}

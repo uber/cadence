@@ -130,9 +130,10 @@ func NewTaskProcessor(
 		logger:                 shard.GetLogger(),
 		taskExecutor:           taskExecutor,
 		taskRetryPolicy:        taskRetryPolicy,
+		dlqRetryPolicy:         dlqRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,
 		requestChan:            taskFetcher.GetRequestChan(),
-		syncShardChan:          make(chan *r.SyncShardStatus),
+		syncShardChan:          make(chan *r.SyncShardStatus, 1),
 		done:                   make(chan struct{}),
 		lastProcessedMessageID: common.EmptyMessageID,
 		lastRetrievedMessageID: common.EmptyMessageID,
@@ -162,8 +163,6 @@ func (p *taskProcessorImpl) Stop() {
 }
 
 func (p *taskProcessorImpl) processorLoop() {
-	p.lastProcessedMessageID = p.shard.GetClusterReplicationLevel(p.sourceCluster)
-
 	defer func() {
 		p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
 	}()
@@ -245,8 +244,7 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 			}
 		}
 	}
-
-	p.logger.Info("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))
+	p.logger.Debug("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))
 	p.metricsClient.Scope(metrics.ReplicationTaskCleanupScope).IncCounter(metrics.ReplicationTaskCleanupCount)
 	p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope,
 		metrics.TargetClusterTag(p.currentCluster),
@@ -254,6 +252,11 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
+	// update replication queue ack level.
+	// this ack level currently use by Kafka replication
+	if err := p.shard.UpdateReplicatorAckLevel(minAckLevel); err != nil {
+		return err
+	}
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
@@ -277,14 +280,9 @@ func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *r.ReplicationMessa
 
 func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 
-	p.syncShardChan <- response.GetSyncShardStatus()
-	// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
-	// we will receive replication tasks but hasMore is false (meaning that we are always catching up).
-	// So hasMore might not be a good indicator for additional wait.
-	if len(response.ReplicationTasks) == 0 {
-		backoffDuration := p.noTaskRetrier.NextBackOff()
-		time.Sleep(backoffDuration)
-		return
+	select {
+	case p.syncShardChan <- response.GetSyncShardStatus():
+	default:
 	}
 
 	for _, replicationTask := range response.ReplicationTasks {
@@ -293,6 +291,14 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 			// Processor is shutdown. Exit without updating the checkpoint.
 			return
 		}
+	}
+
+	// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
+	// we will receive replication tasks but hasMore is false (meaning that we are always catching up).
+	// So hasMore might not be a good indicator for additional wait.
+	if len(response.ReplicationTasks) == 0 {
+		backoffDuration := p.noTaskRetrier.NextBackOff()
+		time.Sleep(backoffDuration)
 	}
 
 	p.lastProcessedMessageID = response.GetLastRetrievedMessageId()
@@ -369,6 +375,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 }
 
 func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) error {
+	startTime := time.Now()
 	scope, err := p.taskExecutor.execute(
 		p.sourceCluster,
 		replicationTask,
@@ -382,6 +389,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) 
 			metrics.ReplicationTaskFetcherScope,
 			metrics.TargetClusterTag(p.sourceCluster),
 		).IncCounter(metrics.ReplicationTasksApplied)
+		p.metricsClient.Scope(scope).RecordTimer(metrics.TaskProcessingLatency, time.Now().Sub(startTime))
 	}
 
 	return err

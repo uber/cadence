@@ -526,7 +526,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessQueueCollections_SkipRead() {
 		),
 	}
 	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
 	}
 	updateMaxReadLevel := func() task.Key {
 		return shardMaxReadLevel
@@ -573,7 +573,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_HasNextPage() {
 		),
 	}
 	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
 	}
 	updateMaxReadLevel := func() task.Key {
 		return shardMaxReadLevel
@@ -667,7 +667,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_HasLookAhead(
 		),
 	}
 	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
 	}
 	updateMaxReadLevel := func() task.Key {
 		return shardMaxReadLevel
@@ -763,7 +763,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead()
 		),
 	}
 	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, s.metricsScope, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
+		return task.NewTimerTask(s.mockShard, taskInfo, task.QueueTypeActiveTimer, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil, nil)
 	}
 	updateMaxReadLevel := func() task.Key {
 		return shardMaxReadLevel

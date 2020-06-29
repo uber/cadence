@@ -25,6 +25,7 @@ package history
 import (
 	ctx "context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -96,6 +97,7 @@ func newReplicatorQueueProcessor(
 		MaxRedispatchQueueSize:              config.ReplicatorProcessorMaxRedispatchQueueSize,
 		EnablePriorityTaskProcessor:         config.ReplicatorProcessorEnablePriorityTaskProcessor,
 		MetricScope:                         metrics.ReplicatorQueueProcessorScope,
+		QueueType:                           task.QueueTypeReplication,
 	}
 
 	logger = logger.WithTags(tag.ComponentReplicatorQueue)
@@ -105,7 +107,7 @@ func newReplicatorQueueProcessor(
 	}
 
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
-	retryPolicy.SetMaximumAttempts(10)
+	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
 
 	processor := &replicatorQueueProcessorImpl{
@@ -131,8 +133,8 @@ func newReplicatorQueueProcessor(
 		processor,
 		nil, // replicator queue processor will soon be deprecated and won't use priority task processor
 		queueAckMgr,
-		nil, // replicator queue processor will soon be deprecated and won't use redispatch queue
 		executionCache,
+		replicationTaskFilter,
 		nil, // there's no queueTask implementation for replication task
 		logger,
 		shard.GetMetricsClient().Scope(metrics.ReplicatorQueueProcessorScope),
@@ -434,6 +436,11 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		lastReadTaskID = p.shard.GetClusterReplicationLevel(pollingCluster)
 	}
 
+	replicationScope := p.metricsClient.Scope(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
+	)
+	taskGeneratedTimer := replicationScope.StartTimer(metrics.ReplicatorLatency)
 	taskInfoList, hasMore, err := p.readTasksWithBatchSize(lastReadTaskID, p.fetchTasksBatchSize)
 	if err != nil {
 		return nil, err
@@ -461,21 +468,19 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		}
 	}
 
-	// Note this is a very rough indicator of how much the remote DC is behind on this shard.
-	p.metricsClient.RecordTimer(
-		metrics.ReplicatorQueueProcessorScope,
+	taskGeneratedTimer.Stop()
+
+	replicationScope.RecordTimer(
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
 	)
 
-	p.metricsClient.RecordTimer(
-		metrics.ReplicatorQueueProcessorScope,
+	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
 		time.Duration(len(taskInfoList)),
 	)
 
-	p.metricsClient.RecordTimer(
-		metrics.ReplicatorQueueProcessorScope,
+	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturned,
 		time.Duration(len(replicationTasks)),
 	)
@@ -556,8 +561,11 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeFailoverMarker:
-		//TODO: add function to generate failover marker task
-		return nil, nil
+		task := p.generateFailoverMarkerTask(task)
+		if task != nil {
+			task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
+		}
+		return task, nil
 	default:
 		return nil, errUnknownReplicationTask
 	}
@@ -725,6 +733,21 @@ func (p *replicatorQueueProcessorImpl) generateHistoryReplicationTask(
 			return replicationTask, nil
 		},
 	)
+}
+
+func (p *replicatorQueueProcessorImpl) generateFailoverMarkerTask(
+	taskInfo *persistence.ReplicationTaskInfo,
+) *replicator.ReplicationTask {
+
+	return &replicator.ReplicationTask{
+		TaskType:     replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeFailoverMarker),
+		SourceTaskId: common.Int64Ptr(taskInfo.GetTaskID()),
+		FailoverMarkerAttributes: &replicator.FailoverMarkerAttributes{
+			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
+			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
+			CreationTime:    common.Int64Ptr(taskInfo.GetVisibilityTimestamp().UnixNano()),
+		},
+	}
 }
 
 func (p *replicatorQueueProcessorImpl) getEventsBlob(

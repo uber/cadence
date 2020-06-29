@@ -162,7 +162,10 @@ var keys = map[Key]string{
 	TaskProcessRPS:                                         "history.taskProcessRPS",
 	TaskSchedulerType:                                      "history.taskSchedulerType",
 	TaskSchedulerWorkerCount:                               "history.taskSchedulerWorkerCount",
+	TaskSchedulerShardWorkerCount:                          "history.taskSchedulerShardWorkerCount",
 	TaskSchedulerQueueSize:                                 "history.taskSchedulerQueueSize",
+	TaskSchedulerShardQueueSize:                            "history.taskSchedulerShardQueueSize",
+	TaskSchedulerDispatcherCount:                           "history.taskSchedulerDispatcherCount",
 	TaskSchedulerRoundRobinWeights:                         "history.taskSchedulerRoundRobinWeight",
 	QueueProcessorEnableSplit:                              "history.queueProcessorEnableSplit",
 	QueueProcessorSplitMaxLevel:                            "history.queueProcessorSplitMaxLevel",
@@ -218,6 +221,7 @@ var keys = map[Key]string{
 	TransferProcessorVisibilityArchivalTimeLimit:           "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                                "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                              "history.replicatorTaskWorkerCount",
+	ReplicatorReadTaskMaxRetryCount:                        "history.replicatorReadTaskMaxRetryCount",
 	ReplicatorTaskMaxRetryCount:                            "history.replicatorTaskMaxRetryCount",
 	ReplicatorProcessorMaxPollRPS:                          "history.replicatorProcessorMaxPollRPS",
 	ReplicatorProcessorUpdateShardTaskCount:                "history.replicatorProcessorUpdateShardTaskCount",
@@ -542,10 +546,16 @@ const (
 	TaskProcessRPS
 	// TaskSchedulerType is the task scheduler type for priority task processor
 	TaskSchedulerType
-	// TaskSchedulerWorkerCount is the number of workers per shard in task scheduler
+	// TaskSchedulerWorkerCount is the number of workers per host in task scheduler
 	TaskSchedulerWorkerCount
-	// TaskSchedulerQueueSize is the size of task channel size in task scheduler
+	// TaskSchedulerShardWorkerCount is the number of worker per shard in task scheduler
+	TaskSchedulerShardWorkerCount
+	// TaskSchedulerQueueSize is the size of task channel for host level task scheduler
 	TaskSchedulerQueueSize
+	// TaskSchedulerShardQueueSize is the size of task channel for shard level task scheduler
+	TaskSchedulerShardQueueSize
+	// TaskSchedulerDispatcherCount is the number of task dispatcher in task scheduler (only applies to host level task scheduler)
+	TaskSchedulerDispatcherCount
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	TaskSchedulerRoundRobinWeights
 	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
@@ -656,6 +666,8 @@ const (
 	ReplicatorTaskBatchSize
 	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor
 	ReplicatorTaskWorkerCount
+	// ReplicatorReadTaskMaxRetryCount is the number of read replication task retry time
+	ReplicatorReadTaskMaxRetryCount
 	// ReplicatorTaskMaxRetryCount is max times of retry for ReplicatorProcessor
 	ReplicatorTaskMaxRetryCount
 	// ReplicatorProcessorMaxPollRPS is max poll rate per second for ReplicatorProcessor
