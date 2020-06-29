@@ -22,16 +22,10 @@ package cassandra
 
 import (
 	"crypto/tls"
-	"strings"
-	"os"
-
 	"github.com/gocql/gocql"
+	"strings"
 
 	"github.com/uber/cadence/common/service/config"
-)
-
-const (
-	uberRegion = "UBER_REGION"
 )
 
 // NewCassandraCluster creates a cassandra cluster from a given configuration
@@ -51,11 +45,13 @@ func NewCassandraCluster(cfg config.Cassandra) *gocql.ClusterConfig {
 	if cfg.Keyspace != "" {
 		cluster.Keyspace = cfg.Keyspace
 	}
-	if cfg.Region != "" {
-		cluster.HostFilter = RegionHostFilter()
-	} else if cfg.Datacenter != "" {
+    if cfg.Datacenter != "" {
 		cluster.HostFilter = gocql.DataCentreHostFilter(cfg.Datacenter)
 	}
+	if cfg.Region != "" {
+		cluster.HostFilter = RegionHostFilter(cfg.Region)
+	}
+
 	if cfg.TLS != nil && cfg.TLS.Enabled {
 		cluster.SslOpts = &gocql.SslOptions{
 			CertPath:               cfg.TLS.CertFile,
@@ -77,15 +73,16 @@ func NewCassandraCluster(cfg config.Cassandra) *gocql.ClusterConfig {
 	return cluster
 }
 
-func RegionHostFilter() gocql.HostFilter {
+func RegionHostFilter(region string)  gocql.HostFilter {
 	return gocql.HostFilterFunc(func(host *gocql.HostInfo) bool {
-		applicationRegion := os.Getenv(uberRegion)
+		applicationRegion := region
 		if len(host.DataCenter()) < 3 {
 			return false
 		}
 		return host.DataCenter()[:3] == applicationRegion
 	})
 }
+
 
 func parseHosts(input string) []string {
 	var hosts = make([]string, 0)
