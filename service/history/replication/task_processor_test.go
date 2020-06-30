@@ -202,6 +202,8 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryReplicationTask(
 			DomainId:   common.StringPtr(domainID),
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
+			FirstEventId: common.Int64Ptr(1),
+			NextEventId: common.Int64Ptr(1),
 		},
 	}
 	request := &persistence.PutReplicationTaskToDLQRequest{
@@ -212,6 +214,8 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryReplicationTask(
 			RunID:               runID,
 			TaskType:            persistence.ReplicationTaskTypeHistory,
 			LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
+			FirstEventID:        int64(1),
+			NextEventID:         int64(2),
 		},
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", request).Return(nil)
@@ -252,7 +256,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 			RunID:        runID,
 			TaskType:     persistence.ReplicationTaskTypeHistory,
 			FirstEventID: 1,
-			NextEventID:  1,
+			NextEventID:  2,
 			Version:      1,
 		},
 	}
