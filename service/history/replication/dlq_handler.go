@@ -203,7 +203,6 @@ func (r *dlqHandlerImpl) MergeMessages(
 
 	for _, task := range tasks {
 		if _, err := r.taskExecutors[sourceCluster].execute(
-			sourceCluster,
 			task,
 			true,
 		); err != nil {

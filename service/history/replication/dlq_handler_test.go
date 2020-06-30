@@ -207,7 +207,7 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 				replicationTask,
 			},
 		}, nil)
-	s.taskExecutor.EXPECT().execute(s.sourceCluster, replicationTask, true).Return(0, nil).Times(1)
+	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
 	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ",
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    s.sourceCluster,

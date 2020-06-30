@@ -310,6 +310,7 @@ func NewEngineWithShardContext(
 			shard.GetLogger(),
 		)
 		replicationTaskExecutor := replication.NewTaskExecutor(
+			sourceCluster,
 			shard,
 			shard.GetDomainCache(),
 			nDCHistoryResender,
