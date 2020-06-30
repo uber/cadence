@@ -22,9 +22,9 @@ package cassandra
 
 import (
 	"crypto/tls"
-	"github.com/gocql/gocql"
 	"strings"
 
+	"github.com/gocql/gocql"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -45,7 +45,7 @@ func NewCassandraCluster(cfg config.Cassandra) *gocql.ClusterConfig {
 	if cfg.Keyspace != "" {
 		cluster.Keyspace = cfg.Keyspace
 	}
-    if cfg.Datacenter != "" {
+	if cfg.Datacenter != "" {
 		cluster.HostFilter = gocql.DataCentreHostFilter(cfg.Datacenter)
 	}
 	if cfg.Region != "" {
@@ -82,7 +82,6 @@ func RegionHostFilter(region string)  gocql.HostFilter {
 		return host.DataCenter()[:3] == applicationRegion
 	})
 }
-
 
 func parseHosts(input string) []string {
 	var hosts = make([]string, 0)
