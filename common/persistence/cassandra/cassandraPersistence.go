@@ -111,8 +111,8 @@ const (
 		`cluster_timer_ack_level: ?, ` +
 		`domain_notification_version: ?, ` +
 		`cluster_replication_level: ?, ` +
-		`replication_dlq_ack_level: ?,` +
-		`pending_failover_markers: ?,` +
+		`replication_dlq_ack_level: ?, ` +
+		`pending_failover_markers: ?, ` +
 		`pending_failover_markers_encoding: ? ` +
 		`}`
 
