@@ -26,11 +26,16 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/replicator"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/shard"
+)
+
+var (
+	errInvalidCluster = &workflow.BadRequestError{Message: "Invalid target cluster name."}
 )
 
 type (
@@ -57,9 +62,9 @@ type (
 	}
 
 	dlqHandlerImpl struct {
-		taskExecutor TaskExecutor
-		shard        shard.Context
-		logger       log.Logger
+		taskExecutors map[string]TaskExecutor
+		shard         shard.Context
+		logger        log.Logger
 	}
 )
 
@@ -68,13 +73,17 @@ var _ DLQHandler = (*dlqHandlerImpl)(nil)
 // NewDLQHandler initialize the replication message DLQ handler
 func NewDLQHandler(
 	shard shard.Context,
-	taskExecutor TaskExecutor,
+	taskExecutors map[string]TaskExecutor,
 ) DLQHandler {
 
+	if taskExecutors == nil {
+		panic("Failed to initialize replication DLQ handler due to nil task executors")
+	}
+
 	return &dlqHandlerImpl{
-		shard:        shard,
-		taskExecutor: taskExecutor,
-		logger:       shard.GetLogger(),
+		shard:         shard,
+		taskExecutors: taskExecutors,
+		logger:        shard.GetLogger(),
 	}
 }
 
@@ -119,7 +128,7 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	}
 
 	remoteAdminClient := r.shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster)
-	taskInfo := make([]*replicator.ReplicationTaskInfo, len(resp.Tasks))
+	taskInfo := make([]*replicator.ReplicationTaskInfo, 0, len(resp.Tasks))
 	for _, task := range resp.Tasks {
 		taskInfo = append(taskInfo, &replicator.ReplicationTaskInfo{
 			DomainID:     common.StringPtr(task.GetDomainID()),
@@ -133,16 +142,20 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 			ScheduledID:  common.Int64Ptr(task.ScheduledID),
 		})
 	}
-	dlqResponse, err := remoteAdminClient.GetDLQReplicationMessages(
-		ctx,
-		&replicator.GetDLQReplicationMessagesRequest{
-			TaskInfos: taskInfo,
-		},
-	)
-	if err != nil {
-		return nil, ackLevel, nil, err
+	response := &replicator.GetDLQReplicationMessagesResponse{}
+	if len(taskInfo) > 0 {
+		response, err = remoteAdminClient.GetDLQReplicationMessages(
+			ctx,
+			&replicator.GetDLQReplicationMessagesRequest{
+				TaskInfos: taskInfo,
+			},
+		)
+		if err != nil {
+			return nil, ackLevel, nil, err
+		}
 	}
-	return dlqResponse.ReplicationTasks, ackLevel, resp.NextPageToken, nil
+
+	return response.ReplicationTasks, ackLevel, resp.NextPageToken, nil
 }
 
 func (r *dlqHandlerImpl) PurgeMessages(
@@ -180,6 +193,10 @@ func (r *dlqHandlerImpl) MergeMessages(
 	pageToken []byte,
 ) ([]byte, error) {
 
+	if _, ok := r.taskExecutors[sourceCluster]; !ok {
+		return nil, errInvalidCluster
+	}
+
 	tasks, ackLevel, token, err := r.readMessagesWithAckLevel(
 		ctx,
 		sourceCluster,
@@ -189,8 +206,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 	)
 
 	for _, task := range tasks {
-		if _, err := r.taskExecutor.execute(
-			sourceCluster,
+		if _, err := r.taskExecutors[sourceCluster].execute(
 			task,
 			true,
 		); err != nil {
@@ -213,7 +229,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		sourceCluster,
 		lastMessageID,
 	); err != nil {
-		r.logger.Error("Failed to purge history replication message", tag.Error(err))
+		r.logger.Error("Failed to merge history replication message", tag.Error(err))
 		// The update ack level should not block the call. Ignore the error.
 	}
 	return token, nil
