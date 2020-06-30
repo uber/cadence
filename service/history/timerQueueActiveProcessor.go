@@ -26,7 +26,6 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -40,7 +39,6 @@ type (
 	timerQueueActiveProcessorImpl struct {
 		shard                   shard.Context
 		timerTaskFilter         task.Filter
-		now                     timeNow
 		logger                  log.Logger
 		metricsClient           metrics.Client
 		currentClusterName      string
@@ -85,44 +83,22 @@ func newTimerQueueActiveProcessor(
 		currentClusterName,
 	)
 
-	timerGate := NewLocalTimerGate(shard.GetTimeSource())
-
-	redispatchQueue := collection.NewConcurrentQueue()
-
 	processor := &timerQueueActiveProcessorImpl{
 		shard:              shard,
 		timerTaskFilter:    timerTaskFilter,
-		now:                timeNow,
 		logger:             logger,
 		metricsClient:      historyService.metricsClient,
 		currentClusterName: currentClusterName,
-	}
-	processor.taskExecutor = task.NewTimerActiveTaskExecutor(
-		shard,
-		historyService.archivalClient,
-		historyService.executionCache,
-		processor,
-		logger,
-		historyService.metricsClient,
-		shard.GetConfig(),
-	)
-	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(
+		taskExecutor: task.NewTimerActiveTaskExecutor(
 			shard,
-			taskInfo,
-			task.QueueTypeActiveTimer,
-			historyService.metricsClient.Scope(
-				task.GetTimerTaskMetricScope(taskInfo.GetTaskType(), true),
-			),
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			timerTaskFilter,
-			processor.taskExecutor,
-			redispatchQueue,
-			shard.GetTimeSource(),
-			shard.GetConfig().TimerTaskMaxRetryCount,
-			timerQueueAckMgr,
-		)
+			historyService.archivalClient,
+			historyService.executionCache,
+			logger,
+			historyService.metricsClient,
+			shard.GetConfig(),
+		),
 	}
+
 	processor.timerQueueProcessorBase = newTimerQueueProcessorBase(
 		metrics.TimerActiveQueueProcessorScope,
 		shard,
@@ -130,9 +106,9 @@ func newTimerQueueActiveProcessor(
 		processor,
 		queueTaskProcessor,
 		timerQueueAckMgr,
-		redispatchQueue,
-		timerQueueTaskInitializer,
-		timerGate,
+		timerTaskFilter,
+		processor.taskExecutor,
+		queue.NewLocalTimerGate(shard.GetTimeSource()),
 		shard.GetConfig().TimerProcessorMaxPollRPS,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TimerActiveQueueProcessorScope),
@@ -202,44 +178,22 @@ func newTimerQueueFailoverProcessor(
 		logger,
 	)
 
-	timerGate := NewLocalTimerGate(shard.GetTimeSource())
-
-	redispatchQueue := collection.NewConcurrentQueue()
-
 	processor := &timerQueueActiveProcessorImpl{
 		shard:              shard,
 		timerTaskFilter:    timerTaskFilter,
-		now:                timeNow,
 		logger:             logger,
 		metricsClient:      historyService.metricsClient,
 		currentClusterName: currentClusterName,
-	}
-	processor.taskExecutor = task.NewTimerActiveTaskExecutor(
-		shard,
-		historyService.archivalClient,
-		historyService.executionCache,
-		processor,
-		logger,
-		historyService.metricsClient,
-		shard.GetConfig(),
-	)
-	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(
+		taskExecutor: task.NewTimerActiveTaskExecutor(
 			shard,
-			taskInfo,
-			task.QueueTypeActiveTimer,
-			historyService.metricsClient.Scope(
-				task.GetTimerTaskMetricScope(taskInfo.GetTaskType(), true),
-			),
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			timerTaskFilter,
-			processor.taskExecutor,
-			redispatchQueue,
-			shard.GetTimeSource(),
-			shard.GetConfig().TimerTaskMaxRetryCount,
-			timerQueueAckMgr,
-		)
+			historyService.archivalClient,
+			historyService.executionCache,
+			logger,
+			historyService.metricsClient,
+			shard.GetConfig(),
+		),
 	}
+
 	processor.timerQueueProcessorBase = newTimerQueueProcessorBase(
 		metrics.TimerActiveQueueProcessorScope,
 		shard,
@@ -247,9 +201,9 @@ func newTimerQueueFailoverProcessor(
 		processor,
 		queueTaskProcessor,
 		timerQueueAckMgr,
-		redispatchQueue,
-		timerQueueTaskInitializer,
-		timerGate,
+		timerTaskFilter,
+		processor.taskExecutor,
+		queue.NewLocalTimerGate(shard.GetTimeSource()),
 		shard.GetConfig().TimerProcessorFailoverMaxPollRPS,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TimerActiveQueueProcessorScope),

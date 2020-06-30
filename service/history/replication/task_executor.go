@@ -35,16 +35,19 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 type (
 	// TaskExecutor is the executor for replication task
 	TaskExecutor interface {
-		execute(sourceCluster string, replicationTask *r.ReplicationTask, forceApply bool) (int, error)
+		execute(replicationTask *r.ReplicationTask, forceApply bool) (int, error)
 	}
 
 	taskExecutorImpl struct {
 		currentCluster      string
+		sourceCluster       string
+		shard               shard.Context
 		domainCache         cache.DomainCache
 		nDCHistoryResender  xdc.NDCHistoryResender
 		historyRereplicator xdc.HistoryRereplicator
@@ -60,7 +63,8 @@ var _ TaskExecutor = (*taskExecutorImpl)(nil)
 // NewTaskExecutor creates an replication task executor
 // The executor uses by 1) DLQ replication task handler 2) history replication task processor
 func NewTaskExecutor(
-	currentCluster string,
+	sourceCluster string,
+	shard shard.Context,
 	domainCache cache.DomainCache,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	historyRereplicator xdc.HistoryRereplicator,
@@ -69,7 +73,9 @@ func NewTaskExecutor(
 	logger log.Logger,
 ) TaskExecutor {
 	return &taskExecutorImpl{
-		currentCluster:      currentCluster,
+		currentCluster:      shard.GetClusterMetadata().GetCurrentClusterName(),
+		sourceCluster:       sourceCluster,
+		shard:               shard,
 		domainCache:         domainCache,
 		nDCHistoryResender:  nDCHistoryResender,
 		historyRereplicator: historyRereplicator,
@@ -80,7 +86,6 @@ func NewTaskExecutor(
 }
 
 func (e *taskExecutorImpl) execute(
-	sourceCluster string,
 	replicationTask *r.ReplicationTask,
 	forceApply bool,
 ) (int, error) {
@@ -96,13 +101,16 @@ func (e *taskExecutorImpl) execute(
 		err = e.handleActivityTask(replicationTask, forceApply)
 	case r.ReplicationTaskTypeHistory:
 		scope = metrics.HistoryReplicationTaskScope
-		err = e.handleHistoryReplicationTask(sourceCluster, replicationTask, forceApply)
+		err = e.handleHistoryReplicationTask(replicationTask, forceApply)
 	case r.ReplicationTaskTypeHistoryMetadata:
 		// Without kafka we should not have size limits so we don't necessary need this in the new replication scheme.
 		scope = metrics.HistoryMetadataReplicationTaskScope
 	case r.ReplicationTaskTypeHistoryV2:
 		scope = metrics.HistoryReplicationV2TaskScope
 		err = e.handleHistoryReplicationTaskV2(replicationTask, forceApply)
+	case r.ReplicationTaskTypeFailoverMarker:
+		scope = metrics.HistoryFailoverMarkerScope
+		err = e.handleFailoverReplicationTask(replicationTask)
 	default:
 		e.logger.Error("Unknown task type.")
 		scope = metrics.ReplicatorScope
@@ -195,7 +203,6 @@ func (e *taskExecutorImpl) handleActivityTask(
 
 //TODO: remove this part after 2DC deprecation
 func (e *taskExecutorImpl) handleHistoryReplicationTask(
-	sourceCluster string,
 	task *r.ReplicationTask,
 	forceApply bool,
 ) error {
@@ -207,7 +214,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTask(
 	}
 
 	request := &history.ReplicateEventsRequest{
-		SourceCluster: common.StringPtr(sourceCluster),
+		SourceCluster: common.StringPtr(e.sourceCluster),
 		DomainUUID:    attr.DomainId,
 		WorkflowExecution: &shared.WorkflowExecution{
 			WorkflowId: attr.WorkflowId,
@@ -302,6 +309,13 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	}
 
 	return e.historyEngine.ReplicateEventsV2(ctx, request)
+}
+
+func (e *taskExecutorImpl) handleFailoverReplicationTask(
+	task *r.ReplicationTask,
+) error {
+	failoverAttributes := task.GetFailoverMarkerAttributes()
+	return e.shard.AddingPendingFailoverMarker(failoverAttributes)
 }
 
 func (e *taskExecutorImpl) filterTask(

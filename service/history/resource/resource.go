@@ -21,6 +21,10 @@
 package resource
 
 import (
+	"sync/atomic"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
@@ -33,14 +37,45 @@ type Resource interface {
 	GetEventCache() events.Cache
 }
 
-// Impl contains all common resources shared across history
-type Impl struct {
+type resourceImpl struct {
+	status int32
+
 	resource.Resource
 	eventCache events.Cache
 }
 
+// Start starts all resources
+func (h *resourceImpl) Start() {
+
+	if !atomic.CompareAndSwapInt32(
+		&h.status,
+		common.DaemonStatusInitialized,
+		common.DaemonStatusStarted,
+	) {
+		return
+	}
+
+	h.Resource.Start()
+	h.GetLogger().Info("history resource started", tag.LifeCycleStarted)
+}
+
+// Stop stops all resources
+func (h *resourceImpl) Stop() {
+
+	if !atomic.CompareAndSwapInt32(
+		&h.status,
+		common.DaemonStatusStarted,
+		common.DaemonStatusStopped,
+	) {
+		return
+	}
+
+	h.Resource.Stop()
+	h.GetLogger().Info("history resource stopped", tag.LifeCycleStopped)
+}
+
 // GetEventCache return event cache
-func (h *Impl) GetEventCache() events.Cache {
+func (h *resourceImpl) GetEventCache() events.Cache {
 	return h.eventCache
 }
 
@@ -50,7 +85,7 @@ func New(
 	serviceName string,
 	config *config.Config,
 	visibilityManagerInitializer resource.VisibilityManagerInitializer,
-) (impl *Impl, retError error) {
+) (historyResource Resource, retError error) {
 	serviceResource, err := resource.New(
 		params,
 		serviceName,
@@ -63,17 +98,19 @@ func New(
 		return nil, err
 	}
 
-	impl = &Impl{
-		Resource: serviceResource,
-		eventCache: events.NewGlobalCache(
-			config.EventsCacheGlobalInitialCount(),
-			config.EventsCacheGlobalMaxCount(),
-			config.EventsCacheTTL(),
-			serviceResource.GetHistoryManager(),
-			params.Logger,
-			params.MetricsClient,
-			uint64(config.EventsCacheMaxSize()),
-		),
+	eventCache := events.NewGlobalCache(
+		config.EventsCacheGlobalInitialCount(),
+		config.EventsCacheGlobalMaxCount(),
+		config.EventsCacheTTL(),
+		serviceResource.GetHistoryManager(),
+		params.Logger,
+		params.MetricsClient,
+		uint64(config.EventsCacheMaxSize()),
+	)
+
+	historyResource = &resourceImpl{
+		Resource:   serviceResource,
+		eventCache: eventCache,
 	}
-	return impl, nil
+	return
 }

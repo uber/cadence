@@ -23,7 +23,6 @@ package history
 import (
 	"time"
 
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -44,7 +43,7 @@ type (
 		timerTaskFilter         task.Filter
 		logger                  log.Logger
 		metricsClient           metrics.Client
-		timerGate               RemoteTimerGate
+		timerGate               queue.RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		taskExecutor            task.Executor
 	}
@@ -76,7 +75,7 @@ func newTimerQueueStandbyProcessor(
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
-	timerGate := NewRemoteTimerGate()
+	timerGate := queue.NewRemoteTimerGate()
 	timerGate.SetCurrentTime(shard.GetCurrentTime(clusterName))
 	timerQueueAckMgr := newTimerQueueAckMgr(
 		metrics.TimerStandbyQueueProcessorScope,
@@ -88,8 +87,6 @@ func newTimerQueueStandbyProcessor(
 		logger,
 		clusterName,
 	)
-
-	redispatchQueue := collection.NewConcurrentQueue()
 
 	processor := &timerQueueStandbyProcessorImpl{
 		shard:           shard,
@@ -110,24 +107,6 @@ func newTimerQueueStandbyProcessor(
 		),
 	}
 
-	timerQueueTaskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(
-			shard,
-			taskInfo,
-			task.QueueTypeStandbyTimer,
-			historyService.metricsClient.Scope(
-				task.GetTimerTaskMetricScope(taskInfo.GetTaskType(), false),
-			),
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			timerTaskFilter,
-			processor.taskExecutor,
-			redispatchQueue,
-			shard.GetTimeSource(),
-			shard.GetConfig().TimerTaskMaxRetryCount,
-			timerQueueAckMgr,
-		)
-	}
-
 	processor.timerQueueProcessorBase = newTimerQueueProcessorBase(
 		metrics.TimerStandbyQueueProcessorScope,
 		shard,
@@ -135,8 +114,8 @@ func newTimerQueueStandbyProcessor(
 		processor,
 		queueTaskProcessor,
 		timerQueueAckMgr,
-		redispatchQueue,
-		timerQueueTaskInitializer,
+		timerTaskFilter,
+		processor.taskExecutor,
 		timerGate,
 		shard.GetConfig().TimerProcessorMaxPollRPS,
 		logger,

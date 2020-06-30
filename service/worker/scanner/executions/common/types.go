@@ -24,8 +24,6 @@ package common
 
 import (
 	"time"
-
-	"github.com/uber/cadence/common/persistence"
 )
 
 var (
@@ -42,7 +40,7 @@ type (
 	FixResultType string
 	// InvariantType is the type of an invariant
 	InvariantType string
-	// InvariantCollection is a type which indicates a sorted collection of invariants
+	// InvariantCollection is a type which indicates a collection of invariants
 	InvariantCollection int
 	// Extension is the type which indicates the file extension type
 	Extension string
@@ -65,8 +63,6 @@ const (
 
 	// HistoryExistsInvariantType asserts that history must exist if concrete execution exists
 	HistoryExistsInvariantType InvariantType = "history_exists"
-	// ValidFirstEventInvariantType asserts that the first event in a history must be of a specific form
-	ValidFirstEventInvariantType InvariantType = "valid_first_event"
 	// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
 	OpenCurrentExecutionInvariantType InvariantType = "open_current_execution"
 
@@ -99,11 +95,6 @@ type (
 		State       int
 	}
 
-	// InvariantResourceBag is a union of resources used to pass results from one Invariant to another Invariant.
-	InvariantResourceBag struct {
-		History *persistence.ReadHistoryBranchResponse
-	}
-
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
@@ -121,16 +112,18 @@ type (
 		InfoDetails   string
 	}
 
-	// ManagerCheckResult is the result of running a sorted list of checks
+	// ManagerCheckResult is the result of running a list of checks
 	ManagerCheckResult struct {
-		CheckResultType CheckResultType
-		CheckResults    []CheckResult
+		CheckResultType          CheckResultType
+		DeterminingInvariantType *InvariantType
+		CheckResults             []CheckResult
 	}
 
-	// ManagerFixResult is the result of running a sorted list of fixes
+	// ManagerFixResult is the result of running a list of fixes
 	ManagerFixResult struct {
-		FixResultType FixResultType
-		FixResults    []FixResult
+		FixResultType            FixResultType
+		DeterminingInvariantType *InvariantType
+		FixResults               []FixResult
 	}
 )
 

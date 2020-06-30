@@ -23,8 +23,6 @@ package task
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,10 +38,11 @@ import (
 type (
 	// WeightedRoundRobinTaskSchedulerOptions configs WRR task scheduler
 	WeightedRoundRobinTaskSchedulerOptions struct {
-		Weights     dynamicconfig.MapPropertyFn
-		QueueSize   int
-		WorkerCount int
-		RetryPolicy backoff.RetryPolicy
+		Weights         dynamicconfig.MapPropertyFn
+		QueueSize       int
+		WorkerCount     int
+		DispatcherCount int
+		RetryPolicy     backoff.RetryPolicy
 	}
 
 	weightedRoundRobinTaskSchedulerImpl struct {
@@ -79,7 +78,7 @@ func NewWeightedRoundRobinTaskScheduler(
 	metricsClient metrics.Client,
 	options *WeightedRoundRobinTaskSchedulerOptions,
 ) (Scheduler, error) {
-	weights, err := convertWeightsFromDynamicConfig(options.Weights())
+	weights, err := common.ConvertDynamicConfigMapPropertyToIntMap(options.Weights())
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +117,10 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Start() {
 
 	w.processor.Start()
 
-	w.dispatcherWG.Add(1)
-	go w.dispatcher()
+	w.dispatcherWG.Add(w.options.DispatcherCount)
+	for i := 0; i != w.options.DispatcherCount; i++ {
+		go w.dispatcher()
+	}
 	go w.updateWeights()
 
 	w.logger.Info("Weighted round robin task scheduler started.")
@@ -276,7 +277,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) updateWeights() {
 	for {
 		select {
 		case <-ticker.C:
-			weights, err := convertWeightsFromDynamicConfig(w.options.Weights())
+			weights, err := common.ConvertDynamicConfigMapPropertyToIntMap(w.options.Weights())
 			if err != nil {
 				w.logger.Error("failed to update weight for round robin task scheduler", tag.Error(err))
 			} else {
@@ -287,22 +288,4 @@ func (w *weightedRoundRobinTaskSchedulerImpl) updateWeights() {
 			return
 		}
 	}
-}
-
-func convertWeightsFromDynamicConfig(
-	weightsFromDC map[string]interface{},
-) (map[int]int, error) {
-	weights := make(map[int]int)
-	for key, value := range weightsFromDC {
-		priority, err := strconv.Atoi(strings.TrimSpace(key))
-		if err != nil {
-			return nil, err
-		}
-		weight, ok := value.(int)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert weight %v", value)
-		}
-		weights[priority] = weight
-	}
-	return weights, nil
 }

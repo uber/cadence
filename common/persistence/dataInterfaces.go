@@ -257,6 +257,7 @@ type (
 		TimerFailoverLevels       map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
 		ClusterReplicationLevel   map[string]int64                 `json:"cluster_replication_level"`
 		DomainNotificationVersion int64                            `json:"domain_notification_version"`
+		PendingFailoverMarkers    *DataBlob                        `json:"pending_failover_markers"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level
@@ -1218,6 +1219,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -1230,6 +1232,7 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
 	}
@@ -1476,6 +1479,7 @@ type (
 
 	// CreateFailoverMarkersRequest is request to create failover markers
 	CreateFailoverMarkersRequest struct {
+		RangeID int64
 		Markers []*FailoverMarkerTask
 	}
 

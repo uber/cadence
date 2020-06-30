@@ -45,7 +45,7 @@ import (
 )
 
 type (
-	shardControllerSuite struct {
+	controllerSuite struct {
 		suite.Suite
 		*require.Assertions
 
@@ -65,12 +65,12 @@ type (
 	}
 )
 
-func TestShardControllerSuite(t *testing.T) {
-	s := new(shardControllerSuite)
+func TestControllerSuite(t *testing.T) {
+	s := new(controllerSuite)
 	suite.Run(t, s)
 }
 
-func (s *shardControllerSuite) SetupTest() {
+func (s *controllerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
@@ -90,12 +90,12 @@ func (s *shardControllerSuite) SetupTest() {
 	s.shardController = NewShardController(s.mockResource, s.mockEngineFactory, s.config).(*controller)
 }
 
-func (s *shardControllerSuite) TearDownTest() {
+func (s *controllerSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockResource.Finish(s.T())
 }
 
-func (s *shardControllerSuite) TestAcquireShardSuccess() {
+func (s *controllerSuite) TestAcquireShardSuccess() {
 	numShards := 10
 	s.config.NumberOfShards = numShards
 
@@ -153,6 +153,7 @@ func (s *shardControllerSuite) TestAcquireShardSuccess() {
 					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
 					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
 					ClusterReplicationLevel: map[string]int64{},
+					ReplicationDLQAckLevel:  map[string]int64{},
 				},
 				PreviousRangeID: 5,
 			}).Return(nil).Once()
@@ -174,7 +175,7 @@ func (s *shardControllerSuite) TestAcquireShardSuccess() {
 	s.Equal(3, count)
 }
 
-func (s *shardControllerSuite) TestAcquireShardsConcurrently() {
+func (s *controllerSuite) TestAcquireShardsConcurrently() {
 	numShards := 10
 	s.config.NumberOfShards = numShards
 	s.config.AcquireShardConcurrency = func(opts ...dynamicconfig.FilterOption) int {
@@ -235,6 +236,7 @@ func (s *shardControllerSuite) TestAcquireShardsConcurrently() {
 					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
 					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
 					ClusterReplicationLevel: map[string]int64{},
+					ReplicationDLQAckLevel:  map[string]int64{},
 				},
 				PreviousRangeID: 5,
 			}).Return(nil).Once()
@@ -256,7 +258,7 @@ func (s *shardControllerSuite) TestAcquireShardsConcurrently() {
 	s.Equal(3, count)
 }
 
-func (s *shardControllerSuite) TestAcquireShardLookupFailure() {
+func (s *controllerSuite) TestAcquireShardLookupFailure() {
 	numShards := 2
 	s.config.NumberOfShards = numShards
 	for shardID := 0; shardID < numShards; shardID++ {
@@ -270,7 +272,7 @@ func (s *shardControllerSuite) TestAcquireShardLookupFailure() {
 	}
 }
 
-func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
+func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 	numShards := 2
 	s.config.NumberOfShards = numShards
 
@@ -324,6 +326,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
 				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
 				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
 				ClusterReplicationLevel: map[string]int64{},
+				ReplicationDLQAckLevel:  map[string]int64{},
 			},
 			PreviousRangeID: 5,
 		}).Return(nil).Once()
@@ -344,7 +347,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
 	}
 }
 
-func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
+func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 	numShards := 2
 	s.config.NumberOfShards = numShards
 
@@ -398,6 +401,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
 				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
 				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
 				ClusterReplicationLevel: map[string]int64{},
+				ReplicationDLQAckLevel:  map[string]int64{},
 			},
 			PreviousRangeID: 5,
 		}).Return(nil).Once()
@@ -418,7 +422,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
 	}
 }
 
-func (s *shardControllerSuite) TestHistoryEngineClosed() {
+func (s *controllerSuite) TestHistoryEngineClosed() {
 	numShards := 4
 	s.config.NumberOfShards = numShards
 	s.shardController = NewShardController(s.mockResource, s.mockEngineFactory, s.config).(*controller)
@@ -506,7 +510,7 @@ func (s *shardControllerSuite) TestHistoryEngineClosed() {
 	s.shardController.Stop()
 }
 
-func (s *shardControllerSuite) TestShardControllerClosed() {
+func (s *controllerSuite) TestShardControllerClosed() {
 	numShards := 4
 	s.config.NumberOfShards = numShards
 	s.shardController = NewShardController(s.mockResource, s.mockEngineFactory, s.config).(*controller)
@@ -554,7 +558,7 @@ func (s *shardControllerSuite) TestShardControllerClosed() {
 	workerWG.Wait()
 }
 
-func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *engine.MockEngine, currentRangeID,
+func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *engine.MockEngine, currentRangeID,
 	newRangeID int64) {
 
 	replicationAck := int64(201)
@@ -607,6 +611,7 @@ func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine
 			TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
 			TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
 			ClusterReplicationLevel: map[string]int64{},
+			ReplicationDLQAckLevel:  map[string]int64{},
 		},
 		PreviousRangeID: currentRangeID,
 	}).Return(nil).Once()

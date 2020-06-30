@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -204,40 +205,8 @@ func IsKafkaTransientError(err error) bool {
 	return true
 }
 
-// IsServiceTransientError checks if the error is a retryable error.
+// IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
-	return !IsServiceNonRetryableError(err)
-}
-
-// IsServiceNonRetryableError checks if the error is a non retryable error.
-func IsServiceNonRetryableError(err error) bool {
-	switch err := err.(type) {
-	case *workflow.EntityNotExistsError:
-		return true
-	case *workflow.BadRequestError:
-		return true
-	case *workflow.DomainNotActiveError:
-		return true
-	case *workflow.WorkflowExecutionAlreadyStartedError:
-		return true
-	case *workflow.CancellationAlreadyRequestedError:
-		return true
-	case *yarpcerrors.Status:
-		if err.Code() != yarpcerrors.CodeDeadlineExceeded {
-			return true
-		}
-		return false
-	}
-
-	return false
-}
-
-// IsWhitelistServiceTransientError checks if the error is a transient error.
-func IsWhitelistServiceTransientError(err error) bool {
-	if err == context.DeadlineExceeded {
-		return true
-	}
-
 	switch err.(type) {
 	case *workflow.InternalServiceError:
 		return true
@@ -747,4 +716,46 @@ func GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist bool) stri
 		return AdvancedVisibilityWritingModeOn
 	}
 	return AdvancedVisibilityWritingModeOff
+}
+
+// ConvertIntMapToDynamicConfigMapProperty converts a map whose key value type are both int to
+// a map value that is compatible with dynamic config's map property
+func ConvertIntMapToDynamicConfigMapProperty(
+	intMap map[int]int,
+) map[string]interface{} {
+	dcValue := make(map[string]interface{})
+	for key, value := range intMap {
+		dcValue[strconv.Itoa(key)] = value
+	}
+	return dcValue
+}
+
+// ConvertDynamicConfigMapPropertyToIntMap convert a map property from dynamic config to a map
+// whose type for both key and value are int
+func ConvertDynamicConfigMapPropertyToIntMap(
+	dcValue map[string]interface{},
+) (map[int]int, error) {
+	intMap := make(map[int]int)
+	for key, value := range dcValue {
+		intKey, err := strconv.Atoi(strings.TrimSpace(key))
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert key %v, error: %v", key, err)
+		}
+
+		var intValue int
+		switch value.(type) {
+		case float64:
+			intValue = int(value.(float64))
+		case int:
+			intValue = value.(int)
+		case int32:
+			intValue = int(value.(int32))
+		case int64:
+			intValue = int(value.(int64))
+		default:
+			return nil, fmt.Errorf("unknown value %v with type %T", value, value)
+		}
+		intMap[intKey] = intValue
+	}
+	return intMap, nil
 }
