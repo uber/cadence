@@ -80,6 +80,7 @@ type (
 		ReplicationTaskContextTimeout      dynamicconfig.DurationPropertyFn
 		ReReplicationContextTimeout        dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		EnableRPCReplication               dynamicconfig.BoolPropertyFn
+		EnableHistoryReplication           dynamicconfig.BoolPropertyFn
 	}
 )
 
@@ -145,12 +146,13 @@ func (r *Replicator) Start() error {
 		}
 	}
 
-	for _, processor := range r.processors {
-		if err := processor.Start(); err != nil {
-			return err
+	if r.config.EnableHistoryReplication() {
+		for _, processor := range r.processors {
+			if err := processor.Start(); err != nil {
+				return err
+			}
 		}
 	}
-
 	for _, domainProcessor := range r.domainProcessors {
 		domainProcessor.Start()
 	}
