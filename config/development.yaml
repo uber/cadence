@@ -1,7 +1,6 @@
 persistence:
   defaultStore: cass-default
   visibilityStore: cass-visibility
-  advancedVisibilityStore: es-visibility
   numHistoryShards: 4
   datastores:
     cass-default:
@@ -12,13 +11,6 @@ persistence:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
-    es-visibility:
-      elasticsearch:
-        url:
-          scheme: "http"
-          host: "127.0.0.1:9200"
-        indices:
-          visibility: cadence-visibility-dev
 
 ringpop:
   name: cadence
@@ -95,6 +87,8 @@ archival:
       filestore:
         fileMode: "0666"
         dirMode: "0766"
+      gstorage:
+        credentialsPath: "/tmp/gcloud/keyfile.json"
   visibility:
     status: "enabled"
     enableRead: true
@@ -124,16 +118,12 @@ kafka:
       cluster: test
     cadence-visibility-dev-dlq:
       cluster: test
-  applications:
-    visibility:
-      topic: cadence-visibility-dev
-      dlq-topic: cadence-visibility-dev-dlq
 
 publicClient:
   hostPort: "localhost:7933"
 
 dynamicConfigClient:
-  filepath: "config/dynamicconfig/development_es.yaml"
+  filepath: "config/dynamicconfig/development.yaml"
   pollInterval: "10s"
 
 blobstore:
