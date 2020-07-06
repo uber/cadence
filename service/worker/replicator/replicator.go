@@ -77,7 +77,7 @@ type (
 		ReplicationTaskContextTimeout      dynamicconfig.DurationPropertyFn
 		ReReplicationContextTimeout        dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		EnableRPCReplication               dynamicconfig.BoolPropertyFn
-		EnableHistoryReplication           dynamicconfig.BoolPropertyFn
+		EnableReplication                  dynamicconfig.BoolPropertyFn
 	}
 )
 
