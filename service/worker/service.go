@@ -121,7 +121,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			ReplicationTaskContextTimeout:      dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskContextDuration, 30*time.Second),
 			ReReplicationContextTimeout:        dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.WorkerReReplicationContextTimeout, 0*time.Second),
 			EnableRPCReplication:               dc.GetBoolProperty(dynamicconfig.WorkerEnableRPCReplication, false),
-			EnableHistoryReplication:           dc.GetBoolProperty(dynamicconfig.WorkerEnableRPCReplication, true),
+			EnableHistoryReplication:           dc.GetBoolProperty(dynamicconfig.WorkerEnableReplication, false),
 		},
 		ArchiverConfig: &archiver.Config{
 			ArchiverConcurrency:           dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
@@ -188,7 +188,7 @@ func (s *Service) Start() {
 		s.startIndexer()
 	}
 
-	if s.GetClusterMetadata().IsGlobalDomainEnabled() {
+	if s.GetClusterMetadata().IsGlobalDomainEnabled() && s.config.ReplicationCfg.EnableHistoryReplication() {
 		s.startReplicator()
 	}
 	if s.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival() {
