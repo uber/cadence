@@ -273,7 +273,7 @@ var keys = map[Key]string{
 	WorkerReplicationTaskContextDuration:             "worker.replicationTaskContextDuration",
 	WorkerReReplicationContextTimeout:                "worker.workerReReplicationContextTimeout",
 	WorkerEnableRPCReplication:                       "worker.enableWorkerRPCReplication",
-	WorkerEnableHistoryReplication:                   "worker.enableWorkerHistoryReplication",
+	WorkerEnableKafkaReplication:                     "worker.enableKafkaReplication",
 	WorkerIndexerConcurrency:                         "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                    "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                     "worker.ESProcessorBulkActions",
@@ -720,8 +720,8 @@ const (
 	WorkerReReplicationContextTimeout
 	// WorkerEnableRPCReplication is the feature flag for RPC replication
 	WorkerEnableRPCReplication
-	// WorkerEnableHistoryReplication is the feature flag for history replication
-	WorkerEnableHistoryReplication
+	// WorkerEnableKafkaReplication is the feature flag for kafka replication
+	WorkerEnableKafkaReplication
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
