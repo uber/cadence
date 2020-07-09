@@ -147,13 +147,13 @@ func ScannerEmitMetricsActivity(
 		scope.Tagged(metrics.InvariantTypeTag(string(k))).UpdateGauge(metrics.ScannerCorruptionByTypeGauge, float64(v))
 	}
 	shardStats := params.ShardDistributionStats
-	scope.UpdateGauge(metrics.ScannerShardSizeMax, float64(shardStats.Max))
-	scope.UpdateGauge(metrics.ScannerShardSizeMedian, float64(shardStats.Median))
-	scope.UpdateGauge(metrics.ScannerShardSizeMin, float64(shardStats.Min))
-	scope.UpdateGauge(metrics.ScannerShardSizeP90, float64(shardStats.P90))
-	scope.UpdateGauge(metrics.ScannerShardSizeP75, float64(shardStats.P75))
-	scope.UpdateGauge(metrics.ScannerShardSizeP25, float64(shardStats.P25))
-	scope.UpdateGauge(metrics.ScannerShardSizeP10, float64(shardStats.P10))
+	scope.UpdateGauge(metrics.ScannerShardSizeMaxGauge, float64(shardStats.Max))
+	scope.UpdateGauge(metrics.ScannerShardSizeMedianGauge, float64(shardStats.Median))
+	scope.UpdateGauge(metrics.ScannerShardSizeMinGauge, float64(shardStats.Min))
+	scope.UpdateGauge(metrics.ScannerShardSizeNinetyGauge, float64(shardStats.P90))
+	scope.UpdateGauge(metrics.ScannerShardSizeSeventyFiveGauge, float64(shardStats.P75))
+	scope.UpdateGauge(metrics.ScannerShardSizeTwentyFiveGauge, float64(shardStats.P25))
+	scope.UpdateGauge(metrics.ScannerShardSizeTenGauge, float64(shardStats.P10))
 	return nil
 }
 

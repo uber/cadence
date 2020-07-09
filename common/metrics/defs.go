@@ -1924,13 +1924,13 @@ const (
 	ScannerCheckFailedGauge
 	ScannerCorruptionByTypeGauge
 	ScannerCorruptedOpenExecutionGauge
-	ScannerShardSizeMax
-	ScannerShardSizeMedian
-	ScannerShardSizeMin
-	ScannerShardSizeP90
-	ScannerShardSizeP75
-	ScannerShardSizeP25
-	ScannerShardSizeP10
+	ScannerShardSizeMaxGauge
+	ScannerShardSizeMedianGauge
+	ScannerShardSizeMinGauge
+	ScannerShardSizeNinetyGauge
+	ScannerShardSizeSeventyFiveGauge
+	ScannerShardSizeTwentyFiveGauge
+	ScannerShardSizeTenGauge
 
 	NumWorkerMetrics
 )
@@ -2351,13 +2351,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
 		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
 		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
-		ScannerShardSizeMax:                           {metricName: "scanner_shard_size_max", metricType: Gauge},
-		ScannerShardSizeMedian:                        {metricName: "scanner_shard_size_median", metricType: Gauge},
-		ScannerShardSizeMin:                           {metricName: "scanner_shard_size_min", metricType: Gauge},
-		ScannerShardSizeP90:                           {metricName: "scanner_shard_size_p90", metricType: Gauge},
-		ScannerShardSizeP75:                           {metricName: "scanner_shard_size_p75", metricType: Gauge},
-		ScannerShardSizeP25:                           {metricName: "scanner_shard_size_p25", metricType: Gauge},
-		ScannerShardSizeP10:                           {metricName: "scanner_shard_size_max", metricType: Gauge},
+		ScannerShardSizeMaxGauge:                      {metricName: "scanner_shard_size_max", metricType: Gauge},
+		ScannerShardSizeMedianGauge:                   {metricName: "scanner_shard_size_median", metricType: Gauge},
+		ScannerShardSizeMinGauge:                      {metricName: "scanner_shard_size_min", metricType: Gauge},
+		ScannerShardSizeNinetyGauge:                   {metricName: "scanner_shard_size_ninety", metricType: Gauge},
+		ScannerShardSizeSeventyFiveGauge:              {metricName: "scanner_shard_size_seventy_five", metricType: Gauge},
+		ScannerShardSizeTwentyFiveGauge:               {metricName: "scanner_shard_size_twenty_five", metricType: Gauge},
+		ScannerShardSizeTenGauge:                      {metricName: "scanner_shard_size_ten", metricType: Gauge},
 	},
 }
 
