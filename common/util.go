@@ -74,6 +74,10 @@ const (
 	retryTaskProcessingMaxInterval     = 100 * time.Millisecond
 	retryTaskProcessingMaxAttempts     = 3
 
+	replicationInitialInterval      = 2 * time.Second
+	replicationOperationMaxInterval = 10 * time.Second
+	replicationExpirationInterval   = 30 * time.Second
+
 	contextExpireThreshold = 10 * time.Millisecond
 
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
@@ -190,6 +194,15 @@ func CreateTaskProcessingRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// CreateReplicationServiceBusyRetryPolicy creates a retry policy to handle replication service busy
+func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(replicationInitialInterval)
+	policy.SetMaximumInterval(replicationOperationMaxInterval)
+	policy.SetExpirationInterval(replicationExpirationInterval)
+
+	return policy
+}
+
 // IsPersistenceTransientError checks if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
@@ -227,6 +240,15 @@ func IsServiceTransientError(err error) bool {
 		return false
 	}
 
+	return false
+}
+
+// IsServiceBusyError checks if the error is a service busy error.
+func IsServiceBusyError(err error) bool {
+	switch err.(type) {
+	case *workflow.ServiceBusyError:
+		return true
+	}
 	return false
 }
 
