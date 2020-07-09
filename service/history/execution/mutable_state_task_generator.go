@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
@@ -102,7 +103,11 @@ type (
 	}
 )
 
-const defaultWorkflowRetentionInDays int32 = 1
+const (
+	defaultWorkflowRetentionInDays      int32   = 1
+	firstDecisionDelayJitterBase                = 3 * time.Second
+	firstDecisionDelayJitterCoefficient float64 = 0.1
+)
 
 var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
 
@@ -128,7 +133,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 
 	attr := startEvent.WorkflowExecutionStartedEventAttributes
 	firstDecisionDelayDuration := time.Duration(attr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
-
+	if firstDecisionDelayDuration > 0 {
+		firstDecisionDelayJitter := backoff.JitDuration(firstDecisionDelayJitterBase, firstDecisionDelayJitterCoefficient)
+		firstDecisionDelayDuration = firstDecisionDelayDuration + firstDecisionDelayJitter
+	}
 	executionInfo := r.mutableState.GetExecutionInfo()
 	startVersion := startEvent.GetVersion()
 
