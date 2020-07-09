@@ -132,10 +132,6 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 			ShardID:         1,
 			ExecutionsCount: 10,
 		},
-		{
-			ShardID:         2,
-			ExecutionsCount: 10,
-		},
 	}
 	s.Equal(expected, agg)
 	shardStatus, err := agg.getStatusResult(PaginatedShardQueryRequest{
