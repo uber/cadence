@@ -241,7 +241,7 @@ FilterLoop:
 
 func (t *taskProcessor) processTaskOnce(
 	notificationChan <-chan struct{},
-	task *taskInfo,
+	taskInfo *taskInfo,
 ) (metrics.Scope, error) {
 
 	select {
@@ -250,9 +250,9 @@ func (t *taskProcessor) processTaskOnce(
 	}
 
 	startTime := t.timeSource.Now()
-	scopeIdx, err := task.processor.process(task)
+	scopeIdx, err := taskInfo.processor.process(taskInfo)
 	scope := t.metricsClient.Scope(scopeIdx)
-	if task.shouldProcessTask {
+	if taskInfo.shouldProcessTask {
 		scope.IncCounter(metrics.TaskRequests)
 		scope.RecordTimer(metrics.TaskProcessingLatency, time.Since(startTime))
 	}
@@ -333,13 +333,4 @@ func (t *taskProcessor) ackTaskOnce(
 		scope.RecordTimer(metrics.TaskLatency, time.Since(task.startTime))
 		scope.RecordTimer(metrics.TaskQueueLatency, time.Since(task.task.GetVisibilityTimestamp()))
 	}
-}
-
-func (t *taskProcessor) getDomainTagByID(domainID string) metrics.Tag {
-	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
-	if err != nil {
-		t.logger.Error("Unable to get domainName", tag.Error(err))
-		return metrics.DomainUnknownTag()
-	}
-	return metrics.DomainTag(domainName)
 }

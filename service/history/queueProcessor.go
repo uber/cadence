@@ -149,9 +149,6 @@ func newQueueProcessorBase(
 				shard,
 				taskInfo,
 				options.QueueType,
-				shard.GetMetricsClient().Scope(
-					getTransferTaskMetricsScope(taskInfo.GetTaskType(), options.QueueType == task.QueueTypeActiveTransfer),
-				),
 				initializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 				taskFilter,
 				taskExecutor,

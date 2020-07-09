@@ -103,7 +103,6 @@ func NewTimerTask(
 	shard shard.Context,
 	taskInfo Info,
 	queueType QueueType,
-	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter Filter,
 	taskExecutor Executor,
@@ -117,7 +116,7 @@ func NewTimerTask(
 			shard,
 			taskInfo,
 			queueType,
-			scope,
+			GetTimerTaskMetricScope(taskInfo.GetTaskType(), queueType == QueueTypeActiveTimer),
 			logger,
 			taskFilter,
 			taskExecutor,
@@ -134,7 +133,6 @@ func NewTransferTask(
 	shard shard.Context,
 	taskInfo Info,
 	queueType QueueType,
-	scope metrics.Scope,
 	logger log.Logger,
 	taskFilter Filter,
 	taskExecutor Executor,
@@ -148,7 +146,7 @@ func NewTransferTask(
 			shard,
 			taskInfo,
 			queueType,
-			scope,
+			GetTransferTaskMetricsScope(taskInfo.GetTaskType(), queueType == QueueTypeActiveTransfer),
 			logger,
 			taskFilter,
 			taskExecutor,
@@ -162,9 +160,9 @@ func NewTransferTask(
 
 func newQueueTaskBase(
 	shard shard.Context,
-	queueTaskInfo Info,
+	taskInfo Info,
 	queueType QueueType,
-	scope metrics.Scope,
+	scopeIdx int,
 	logger log.Logger,
 	taskFilter Filter,
 	taskExecutor Executor,
@@ -172,11 +170,11 @@ func newQueueTaskBase(
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) *taskBase {
 	return &taskBase{
-		Info:          queueTaskInfo,
+		Info:          taskInfo,
 		shard:         shard,
 		state:         ctask.TaskStatePending,
 		queueType:     queueType,
-		scope:         scope,
+		scope:         GetOrCreateDomainTaggedScope(shard, scopeIdx, taskInfo.GetDomainID(), logger),
 		logger:        logger,
 		attempt:       0,
 		submitTime:    timeSource.Now(),
@@ -362,4 +360,37 @@ func (t *taskBase) GetAttempt() int {
 
 func (t *taskBase) GetQueueType() QueueType {
 	return t.queueType
+}
+
+// GetOrCreateDomainTaggedScope returns cached domain-tagged metrics scope if exists
+// otherwise, it creates a new domain-tagged scope, cache and return the scope
+func GetOrCreateDomainTaggedScope(
+	shard shard.Context,
+	scopeIdx int,
+	domainID string,
+	logger log.Logger,
+) metrics.Scope {
+	scopeCache := shard.GetService().GetDomainMetricsScopeCache()
+	scope, ok := scopeCache.Get(domainID, scopeIdx)
+	if !ok {
+		domainTag, err := getDomainTagByID(shard.GetDomainCache(), domainID)
+		scope = shard.GetMetricsClient().Scope(scopeIdx, domainTag)
+		if err == nil {
+			scopeCache.Put(domainID, scopeIdx, scope)
+		} else {
+			logger.Error("Unable to get domainName", tag.Error(err))
+		}
+	}
+	return scope
+}
+
+func getDomainTagByID(
+	domainCache cache.DomainCache,
+	domainID string,
+) (metrics.Tag, error) {
+	domainName, err := domainCache.GetDomainName(domainID)
+	if err != nil {
+		return metrics.DomainUnknownTag(), err
+	}
+	return metrics.DomainTag(domainName), nil
 }

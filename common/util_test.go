@@ -33,7 +33,7 @@ import (
 )
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) {
-	domainId := uuid.New()
+	domainID := uuid.New()
 	request := &workflow.StartWorkflowExecutionRequest{
 		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    Int32Ptr(60),
@@ -42,7 +42,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: StringPtr("@every 300s"),
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainId, request)
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
@@ -50,7 +50,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 }
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
-	domainId := uuid.New()
+	domainID := uuid.New()
 	request := &workflow.StartWorkflowExecutionRequest{
 		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    Int32Ptr(60),
@@ -58,7 +58,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainId, request)
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
