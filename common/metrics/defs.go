@@ -1924,7 +1924,13 @@ const (
 	ScannerCheckFailedGauge
 	ScannerCorruptionByTypeGauge
 	ScannerCorruptedOpenExecutionGauge
-	ScannerShardSize
+	ScannerShardSizeMax
+	ScannerShardSizeMedian
+	ScannerShardSizeMin
+	ScannerShardSizeP90
+	ScannerShardSizeP75
+	ScannerShardSizeP25
+	ScannerShardSizeP10
 
 	NumWorkerMetrics
 )
@@ -2345,7 +2351,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
 		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
 		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
-		ScannerShardSize:                              {metricName: "scanner_shard_size", metricType: Timer},
+		ScannerShardSizeMax:                           {metricName: "scanner_shard_size_max", metricType: Gauge},
+		ScannerShardSizeMedian:                        {metricName: "scanner_shard_size_median", metricType: Gauge},
+		ScannerShardSizeMin:                           {metricName: "scanner_shard_size_min", metricType: Gauge},
+		ScannerShardSizeP90:                           {metricName: "scanner_shard_size_p90", metricType: Gauge},
+		ScannerShardSizeP75:                           {metricName: "scanner_shard_size_p75", metricType: Gauge},
+		ScannerShardSizeP25:                           {metricName: "scanner_shard_size_p25", metricType: Gauge},
+		ScannerShardSizeP10:                           {metricName: "scanner_shard_size_max", metricType: Gauge},
 	},
 }
 

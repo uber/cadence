@@ -198,7 +198,9 @@ func (a *shardScanResultAggregator) getStatusResult(req PaginatedShardQueryReque
 }
 
 func (a *shardScanResultAggregator) addReport(report common.ShardScanReport) {
-	a.insertReportIntoSizes(report)
+	if report.Result.ShardScanKeys != nil {
+		a.insertReportIntoSizes(report)
+	}
 	a.reports[report.ShardID] = report
 	a.statusSummary[ShardStatusRunning]--
 	if report.Result.ControlFlowFailure != nil {

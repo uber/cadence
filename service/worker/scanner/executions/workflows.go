@@ -219,7 +219,7 @@ func ScannerWorkflow(
 	if err := workflow.SetQueryHandler(ctx, ShardStatusSummaryQuery, func() (ShardStatusSummaryResult, error) {
 		return aggregator.statusSummary, nil
 	}); err != nil {
-		return nil
+		return err
 	}
 	if err := workflow.SetQueryHandler(ctx, AggregateReportQuery, func() (AggregateScanReportResult, error) {
 		return aggregator.aggregation, nil
@@ -331,7 +331,7 @@ func FixerWorkflow(
 		}
 		return aggregator.statusSummary, nil
 	}); err != nil {
-		return nil
+		return err
 	}
 	if err := workflow.SetQueryHandler(ctx, AggregateReportQuery, func() (AggregateFixReportResult, error) {
 		if aggregator == nil {

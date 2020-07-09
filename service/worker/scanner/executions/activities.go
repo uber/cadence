@@ -25,7 +25,6 @@ package executions
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"go.uber.org/cadence"
 
@@ -148,13 +147,13 @@ func ScannerEmitMetricsActivity(
 		scope.Tagged(metrics.InvariantTypeTag(string(k))).UpdateGauge(metrics.ScannerCorruptionByTypeGauge, float64(v))
 	}
 	shardStats := params.ShardDistributionStats
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.Max))
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.Min))
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.Median))
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P90))
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P75))
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P25))
-	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P10))
+	scope.UpdateGauge(metrics.ScannerShardSizeMax, float64(shardStats.Max))
+	scope.UpdateGauge(metrics.ScannerShardSizeMedian, float64(shardStats.Median))
+	scope.UpdateGauge(metrics.ScannerShardSizeMin, float64(shardStats.Min))
+	scope.UpdateGauge(metrics.ScannerShardSizeP90, float64(shardStats.P90))
+	scope.UpdateGauge(metrics.ScannerShardSizeP75, float64(shardStats.P75))
+	scope.UpdateGauge(metrics.ScannerShardSizeP25, float64(shardStats.P25))
+	scope.UpdateGauge(metrics.ScannerShardSizeP10, float64(shardStats.P10))
 	return nil
 }
 
