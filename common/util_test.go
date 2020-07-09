@@ -35,24 +35,24 @@ import (
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) {
 	domainId := uuid.New()
 	request := &workflow.StartWorkflowExecutionRequest{
-		RetryPolicy:                         &workflow.RetryPolicy{
+		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    Int32Ptr(60),
 			ExpirationIntervalInSeconds: Int32Ptr(60),
 		},
-		CronSchedule:                        StringPtr("@every 300s"),
+		CronSchedule: StringPtr("@every 300s"),
 	}
 	now := time.Now()
 	startRequest := CreateHistoryStartWorkflowRequest(domainId, request)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
-	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60 * time.Second)
+	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
 }
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
 	domainId := uuid.New()
 	request := &workflow.StartWorkflowExecutionRequest{
-		RetryPolicy:                         &workflow.RetryPolicy{
+		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    Int32Ptr(60),
 			ExpirationIntervalInSeconds: Int32Ptr(60),
 		},
@@ -63,8 +63,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
 	delta := time.Unix(0, expirationTime).Sub(now)
-	require.True(t, delta > 58 * time.Second)
-	require.True(t, delta < 62 * time.Second)
+	require.True(t, delta > 58*time.Second)
+	require.True(t, delta < 62*time.Second)
 }
 
 func TestConvertIndexedValueTypeToThriftType(t *testing.T) {
