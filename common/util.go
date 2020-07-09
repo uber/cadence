@@ -74,9 +74,9 @@ const (
 	retryTaskProcessingMaxInterval     = 100 * time.Millisecond
 	retryTaskProcessingMaxAttempts     = 3
 
-	replicationInitialInterval      = 2 * time.Second
-	replicationOperationMaxInterval = 10 * time.Second
-	replicationExpirationInterval   = 30 * time.Second
+	replicationServiceBusyInitialInterval    = 2 * time.Second
+	replicationServiceBusyMaxInterval        = 10 * time.Second
+	replicationServiceBusyExpirationInterval = 30 * time.Second
 
 	contextExpireThreshold = 10 * time.Millisecond
 
@@ -196,9 +196,9 @@ func CreateTaskProcessingRetryPolicy() backoff.RetryPolicy {
 
 // CreateReplicationServiceBusyRetryPolicy creates a retry policy to handle replication service busy
 func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(replicationInitialInterval)
-	policy.SetMaximumInterval(replicationOperationMaxInterval)
-	policy.SetExpirationInterval(replicationExpirationInterval)
+	policy := backoff.NewExponentialRetryPolicy(replicationServiceBusyInitialInterval)
+	policy.SetMaximumInterval(replicationServiceBusyMaxInterval)
+	policy.SetExpirationInterval(replicationServiceBusyExpirationInterval)
 
 	return policy
 }

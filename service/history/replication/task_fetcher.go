@@ -221,13 +221,14 @@ func (f *taskFetcherImpl) fetchTasks() {
 			// When timer fires, we collect all the requests we have so far and attempt to send them to remote.
 			err := f.fetchAndDistributeTasks(requestByShard)
 			if err != nil {
-				timer.Reset(backoff.JitDuration(
-					f.config.ReplicationTaskFetcherErrorRetryWait(),
-					f.config.ReplicationTaskFetcherTimerJitterCoefficient(),
-				))
-				// slow down replication when source cluster is busy
 				if _, ok := err.(*shared.ServiceBusyError); ok {
+					// slow down replication when source cluster is busy
 					timer.Reset(f.config.ReplicationTaskFetcherErrorRetryWait())
+				} else {
+					timer.Reset(backoff.JitDuration(
+						f.config.ReplicationTaskFetcherErrorRetryWait(),
+						f.config.ReplicationTaskFetcherTimerJitterCoefficient(),
+					))
 				}
 			} else {
 				timer.Reset(backoff.JitDuration(

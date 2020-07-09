@@ -288,12 +288,14 @@ func NewEngineWithShardContext(
 	replicationTaskExecutors := make(map[string]replication.TaskExecutor)
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()
+		// Intentionally use the raw client to create its own retry policy
 		adminClient := shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster)
 		adminRetryableClient := admin.NewRetryableClient(
 			adminClient,
 			common.CreateReplicationServiceBusyRetryPolicy(),
 			common.IsServiceBusyError,
 		)
+		// Intentionally use the raw client to create its own retry policy
 		historyClient := shard.GetService().GetClientBean().GetHistoryClient()
 		historyRetryableClient := hc.NewRetryableClient(
 			historyClient,
