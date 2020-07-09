@@ -25,6 +25,7 @@ package executions
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"go.uber.org/cadence"
 
@@ -74,6 +75,19 @@ type (
 		ShardSuccessCount            int
 		ShardControlFlowFailureCount int
 		AggregateReportResult        AggregateScanReportResult
+		ShardDistributionStats       ShardDistributionStats
+	}
+
+	// ShardDistributionStats contains stats on the distribution of executions in shards.
+	// It is used by the ScannerEmitMetricsActivityParams.
+	ShardDistributionStats struct {
+		Max    int64
+		Median int64
+		Min    int64
+		P90    int64
+		P75    int64
+		P25    int64
+		P10    int64
 	}
 
 	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
@@ -133,6 +147,14 @@ func ScannerEmitMetricsActivity(
 	for k, v := range agg.CorruptionByType {
 		scope.Tagged(metrics.InvariantTypeTag(string(k))).UpdateGauge(metrics.ScannerCorruptionByTypeGauge, float64(v))
 	}
+	shardStats := params.ShardDistributionStats
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.Max))
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.Min))
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.Median))
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P90))
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P75))
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P25))
+	scope.RecordTimer(metrics.ScannerShardSize, time.Duration(shardStats.P10))
 	return nil
 }
 
