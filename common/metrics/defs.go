@@ -1924,6 +1924,7 @@ const (
 	ScannerCheckFailedGauge
 	ScannerCorruptionByTypeGauge
 	ScannerCorruptedOpenExecutionGauge
+	ScannerShardSize
 
 	NumWorkerMetrics
 )
@@ -2344,6 +2345,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
 		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
 		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
+		ScannerShardSize:                              {metricName: "scanner_shard_size", metricType: Timer},
 	},
 }
 
