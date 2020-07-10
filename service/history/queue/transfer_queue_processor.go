@@ -444,7 +444,7 @@ func newTransferQueueActiveProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-	emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
+	emitDomainTag := config.QueueProcessorEnableDomainTaggedMetrics()
 	taskInitializer := func(taskInfo task.Info) task.Task {
 		return task.NewTransferTask(
 			shard,
@@ -528,7 +528,7 @@ func newTransferQueueStandbyProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-	emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
+	emitDomainTag := config.QueueProcessorEnableDomainTaggedMetrics()
 	taskInitializer := func(taskInfo task.Info) task.Task {
 		return task.NewTransferTask(
 			shard,
@@ -631,7 +631,7 @@ func newTransferQueueFailoverProcessor(
 	redispatchQueue := collection.NewConcurrentQueue()
 
 	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-	emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
+	emitDomainTag := config.QueueProcessorEnableDomainTaggedMetrics()
 	taskInitializer := func(taskInfo task.Info) task.Task {
 		return task.NewTransferTask(
 			shard,
