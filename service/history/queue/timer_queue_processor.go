@@ -31,7 +31,6 @@ import (
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -414,25 +413,6 @@ func newTimerQueueActiveProcessor(
 		return nil
 	}
 
-	redispatchQueue := collection.NewConcurrentQueue()
-
-	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(
-			shard,
-			taskInfo,
-			task.QueueTypeActiveTimer,
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			taskFilter,
-			taskExecutor,
-			func(task task.Task) {
-				redispatchQueue.Add(task)
-			},
-			shard.GetTimeSource(),
-			config.TimerTaskMaxRetryCount,
-			nil,
-		)
-	}
-
 	// TODO: once persistency layer is implemented for multi-cursor queue,
 	// initialize queue states with data loaded from DB.
 	ackLevel := newTimerTaskKey(shard.GetTimerClusterAckLevel(clusterName), 0)
@@ -450,13 +430,13 @@ func newTimerQueueActiveProcessor(
 		shard,
 		processingQueueStates,
 		taskProcessor,
-		redispatchQueue,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
 		maxReadLevel,
 		updateClusterAckLevel,
 		timerQueueShutdown,
-		taskInitializer,
+		taskFilter,
+		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
@@ -496,25 +476,6 @@ func newTimerQueueStandbyProcessor(
 		return nil
 	}
 
-	redispatchQueue := collection.NewConcurrentQueue()
-
-	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(
-			shard,
-			taskInfo,
-			task.QueueTypeStandbyTimer,
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			taskFilter,
-			taskExecutor,
-			func(task task.Task) {
-				redispatchQueue.Add(task)
-			},
-			shard.GetTimeSource(),
-			config.TimerTaskMaxRetryCount,
-			nil,
-		)
-	}
-
 	// TODO: once persistency layer is implemented for multi-cursor queue,
 	// initialize queue states with data loaded from DB.
 	ackLevel := newTimerTaskKey(shard.GetTimerClusterAckLevel(clusterName), 0)
@@ -535,13 +496,13 @@ func newTimerQueueStandbyProcessor(
 		shard,
 		processingQueueStates,
 		taskProcessor,
-		redispatchQueue,
 		remoteTimerGate,
 		options,
 		maxReadLevel,
 		updateClusterAckLevel,
 		timerQueueShutdown,
-		taskInitializer,
+		taskFilter,
+		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	), remoteTimerGate
@@ -600,25 +561,6 @@ func newTimerQueueFailoverProcessor(
 		return shard.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
-	redispatchQueue := collection.NewConcurrentQueue()
-
-	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTimerTask(
-			shard,
-			taskInfo,
-			task.QueueTypeActiveTimer,
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			taskFilter,
-			taskExecutor,
-			func(task task.Task) {
-				redispatchQueue.Add(task)
-			},
-			shard.GetTimeSource(),
-			config.TimerTaskMaxRetryCount,
-			nil,
-		)
-	}
-
 	// TODO: once persistency layer is implemented for multi-cursor queue,
 	// initialize queue states with data loaded from DB.
 	processingQueueStates := []ProcessingQueueState{
@@ -635,13 +577,13 @@ func newTimerQueueFailoverProcessor(
 		shard,
 		processingQueueStates,
 		taskProcessor,
-		redispatchQueue,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
 		maxReadLevel,
 		updateClusterAckLevel,
 		timerQueueShutdown,
-		taskInitializer,
+		taskFilter,
+		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)

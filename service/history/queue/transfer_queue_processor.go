@@ -33,7 +33,6 @@ import (
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -441,25 +440,6 @@ func newTransferQueueActiveProcessor(
 		return nil
 	}
 
-	redispatchQueue := collection.NewConcurrentQueue()
-
-	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTransferTask(
-			shard,
-			taskInfo,
-			task.QueueTypeActiveTransfer,
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			taskFilter,
-			taskExecutor,
-			func(task task.Task) {
-				redispatchQueue.Add(task)
-			},
-			shard.GetTimeSource(),
-			config.TransferTaskMaxRetryCount,
-			nil,
-		)
-	}
-
 	// TODO: once persistency layer is implemented for multi-cursor queue,
 	// initialize queue states with data loaded from DB.
 	ackLevel := newTransferTaskKey(shard.GetTransferClusterAckLevel(currentClusterName))
@@ -476,12 +456,12 @@ func newTransferQueueActiveProcessor(
 		shard,
 		processingQueueStates,
 		taskProcessor,
-		redispatchQueue,
 		options,
 		maxReadLevel,
 		updateTransferAckLevel,
 		transferQueueShutdown,
-		taskInitializer,
+		taskFilter,
+		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
@@ -522,26 +502,6 @@ func newTransferQueueStandbyProcessor(
 		return nil
 	}
 
-	redispatchQueue := collection.NewConcurrentQueue()
-
-	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTransferTask(
-			shard,
-			taskInfo,
-			task.QueueTypeStandbyTransfer,
-
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			taskFilter,
-			taskExecutor,
-			func(task task.Task) {
-				redispatchQueue.Add(task)
-			},
-			shard.GetTimeSource(),
-			config.TransferTaskMaxRetryCount,
-			nil,
-		)
-	}
-
 	// TODO: once persistency layer is implemented for multi-cursor queue,
 	// initialize queue states with data loaded from DB.
 	ackLevel := newTransferTaskKey(shard.GetTransferClusterAckLevel(clusterName))
@@ -558,12 +518,12 @@ func newTransferQueueStandbyProcessor(
 		shard,
 		processingQueueStates,
 		taskProcessor,
-		redispatchQueue,
 		options,
 		maxReadLevel,
 		updateTransferAckLevel,
 		transferQueueShutdown,
-		taskInitializer,
+		taskFilter,
+		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
@@ -622,25 +582,6 @@ func newTransferQueueFailoverProcessor(
 		return shard.DeleteTransferFailoverLevel(failoverUUID)
 	}
 
-	redispatchQueue := collection.NewConcurrentQueue()
-
-	taskInitializer := func(taskInfo task.Info) task.Task {
-		return task.NewTransferTask(
-			shard,
-			taskInfo,
-			task.QueueTypeActiveTransfer,
-			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-			taskFilter,
-			taskExecutor,
-			func(task task.Task) {
-				redispatchQueue.Add(task)
-			},
-			shard.GetTimeSource(),
-			config.TransferTaskMaxRetryCount,
-			nil,
-		)
-	}
-
 	// TODO: once persistency layer is implemented for multi-cursor queue,
 	// initialize queue states with data loaded from DB.
 	processingQueueStates := []ProcessingQueueState{
@@ -656,12 +597,12 @@ func newTransferQueueFailoverProcessor(
 		shard,
 		processingQueueStates,
 		taskProcessor,
-		redispatchQueue,
 		options,
 		maxReadLevel,
 		updateTransferAckLevel,
 		transferQueueShutdown,
-		taskInitializer,
+		taskFilter,
+		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
