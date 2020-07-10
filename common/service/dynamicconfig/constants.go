@@ -164,6 +164,7 @@ var keys = map[Key]string{
 	TaskSchedulerShardQueueSize:                            "history.taskSchedulerShardQueueSize",
 	TaskSchedulerDispatcherCount:                           "history.taskSchedulerDispatcherCount",
 	TaskSchedulerRoundRobinWeights:                         "history.taskSchedulerRoundRobinWeight",
+	QueueProcessorEnableDomainTaggedMetrics:                "history.queueProcessorEnableDomainTaggedMetrics",
 	TimerTaskBatchSize:                                     "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                   "history.timerTaskWorkerCount",
 	TimerTaskMaxRetryCount:                                 "history.timerTaskMaxRetryCount",
@@ -532,6 +533,8 @@ const (
 	TaskSchedulerDispatcherCount
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	TaskSchedulerRoundRobinWeights
+	// QueueProcessorEnableDomainTaggedMetrics indicates whether task processing metrics should include domain tag
+	QueueProcessorEnableDomainTaggedMetrics
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	TimerTaskBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
