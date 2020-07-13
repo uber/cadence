@@ -112,6 +112,9 @@ func newTimerQueueProcessorBase(
 		queueType = task.QueueTypeStandbyTimer
 	}
 
+	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
+	emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
+
 	return &timerQueueProcessorBase{
 		processorBase: processorBase,
 
@@ -126,6 +129,7 @@ func newTimerQueueProcessorBase(
 				processorBase.redispatchSingleTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TimerTaskMaxRetryCount,
+				emitDomainTag,
 				nil,
 			)
 		},
