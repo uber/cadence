@@ -138,6 +138,7 @@ func newReplicatorQueueProcessor(
 		nil, // there's no queueTask implementation for replication task
 		logger,
 		shard.GetMetricsClient().Scope(metrics.ReplicatorQueueProcessorScope),
+		false,
 	)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase

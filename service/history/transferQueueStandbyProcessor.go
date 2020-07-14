@@ -145,6 +145,7 @@ func newTransferQueueStandbyProcessor(
 		processor.taskExecutor,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TransferStandbyQueueProcessorScope),
+		false,
 	)
 
 	processor.queueAckMgr = queueAckMgr

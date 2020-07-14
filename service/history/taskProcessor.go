@@ -75,6 +75,8 @@ type (
 		workerNotificationChans []chan struct{}
 		// duplicate numOfWorker from config.TimerTaskWorkerCount for dynamic config works correctly
 		numOfWorker int
+		// emit domain tag
+		emitMetricsWithDomainTag bool
 	}
 )
 
@@ -99,6 +101,7 @@ func newTaskProcessor(
 	shard shard.Context,
 	executionCache *execution.Cache,
 	logger log.Logger,
+	emitMetricsWithDomainTag bool,
 ) *taskProcessor {
 
 	workerNotificationChans := []chan struct{}{}
@@ -119,6 +122,7 @@ func newTaskProcessor(
 		workerNotificationChans: workerNotificationChans,
 		retryPolicy:             backoff.NewTwoPhaseRetryPolicy(),
 		numOfWorker:             options.workerCount,
+		emitMetricsWithDomainTag: emitMetricsWithDomainTag,
 	}
 
 	return base
@@ -258,15 +262,21 @@ func (t *taskProcessor) processTaskOnce(
 	startTime := t.timeSource.Now()
 
 	scopeIdx, err = task.processor.process(task)
-	scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
-	if !found {
-		domainTag, err := t.getDomainTagByID(domainID)
-		scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
-		// do not cache DomainUnknownTag
-		if err == nil {
-			t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
+	var scope metrics.Scope
+	if t.emitMetricsWithDomainTag {
+		scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
+
+		if !found {
+			domainTag, err := t.getDomainTagByID(domainID)
+			scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
+			// do not cache DomainUnknownTag
+			if err == nil {
+				t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
+			}
 		}
+	} else {
+		scope = t.metricsClient.Scope(scopeIdx)
 	}
 
 	if task.shouldProcessTask {
