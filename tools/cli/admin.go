@@ -20,7 +20,11 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"time"
+
+	"github.com/urfave/cli"
+)
 
 func newAdminWorkflowCommands() []cli.Command {
 	return []cli.Command{
@@ -799,6 +803,55 @@ func newDBCommands() []cli.Command {
 				AdminDBScan(c)
 			},
 		},
+		{
+			Name:    "timers",
+			Aliases: []string{"timers"},
+			Usage:   "list timers",
+			Flags: append(getDBFlags(),
+				cli.IntFlag{
+					Name:  FlagLowerShardBound,
+					Usage: "lower bound of shard to scan (inclusive)",
+					Value: 0,
+				},
+				cli.IntFlag{
+					Name:  FlagUpperShardBound,
+					Usage: "upper bound of shard to scan (exclusive)",
+					Value: 16384,
+				},
+				cli.IntFlag{
+					Name:  FlagPageSize,
+					Usage: "page size used to query db executions table",
+					Value: 500,
+				},
+				cli.IntFlag{
+					Name:  FlagConcurrency,
+					Usage: "number of threads to handle scan",
+					Value: 1000,
+				},
+				cli.StringFlag{
+					Name:  FlagStartDate,
+					Usage: "start date",
+					Value: time.Now().UTC().Format(time.RFC3339),
+				},
+				cli.StringFlag{
+					Name:  FlagEndDate,
+					Usage: "end date",
+					Value: time.Now().UTC().Add(24 * time.Hour).Format(time.RFC3339),
+				},
+				cli.StringFlag{
+					Name:  FlagDomainID,
+					Usage: "filter tasks by DomainID",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipErrorMode,
+					Usage: "Skip errors",
+				},
+			),
+			Action: func(c *cli.Context) {
+				AdminTimers(c)
+			},
+		},
+
 		{
 			Name:    "clean",
 			Aliases: []string{"clean"},

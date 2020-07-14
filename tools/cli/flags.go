@@ -234,6 +234,8 @@ const (
 	FlagHeaderKey                         = "header_key"
 	FlagHeaderValue                       = "header_value"
 	FlagHeaderFile                        = "header_file"
+	FlagStartDate                         = "start_date"
+	FlagEndDate                           = "end_date"
 )
 
 var flagsForExecution = []cli.Flag{
