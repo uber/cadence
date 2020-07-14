@@ -120,7 +120,7 @@ func newTimerQueueStandbyProcessor(
 		shard.GetConfig().TimerProcessorMaxPollRPS,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TimerStandbyQueueProcessorScope),
-		true,
+		false,
 	)
 
 	return processor
