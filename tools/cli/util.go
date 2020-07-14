@@ -671,6 +671,18 @@ func parseTimeRange(timeRange string) (time.Time, error) {
 	return res, nil
 }
 
+func parseSingleTs(ts string) (time.Time, error) {
+	var tsOut time.Time
+	var err error
+	formats := []string{"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02", "2006-01-02T15:04:05+0700", time.RFC3339}
+	for _, format := range formats {
+		if tsOut, err = time.Parse(format, ts); err == nil {
+			return tsOut, err
+		}
+	}
+	return tsOut, err
+}
+
 // parseTimeDuration parses the given time duration in either short or long convention
 // and returns the time.Duration
 // Valid values (long notation/short notation):
