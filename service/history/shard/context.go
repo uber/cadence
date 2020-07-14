@@ -502,6 +502,11 @@ Create_Loop:
 						continue Create_Loop
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
+						s.logger.Warn(
+							"Closing shard: CreateWorkflowExecution failed due to stolen shard.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
 						break Create_Loop
 					}
@@ -517,6 +522,11 @@ Create_Loop:
 					if err1 != nil {
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
+						s.logger.Warn(
+							"Closing shard: CreateWorkflowExecution failed due to unknown error.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
 						break Create_Loop
 					}
@@ -595,6 +605,11 @@ Update_Loop:
 						continue Update_Loop
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
+						s.logger.Warn(
+							"Closing shard: UpdateWorkflowExecution failed due to stolen shard.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
 						break Update_Loop
 					}
@@ -610,6 +625,11 @@ Update_Loop:
 					if err1 != nil {
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
+						s.logger.Warn(
+							"Closing shard: UpdateWorkflowExecution failed due to unknown error.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
 						break Update_Loop
 					}
@@ -683,6 +703,11 @@ Reset_Loop:
 						continue Reset_Loop
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
+						s.logger.Warn(
+							"Closing shard: ResetWorkflowExecution failed due to stolen shard.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
 						break Reset_Loop
 					}
@@ -698,6 +723,11 @@ Reset_Loop:
 					if err1 != nil {
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
+						s.logger.Warn(
+							"Closing shard: ResetWorkflowExecution failed due to unknown error.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
 						break Reset_Loop
 					}
@@ -765,7 +795,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-Reset_Loop:
+Conflict_Resolve_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
@@ -781,11 +811,16 @@ Reset_Loop:
 					// RangeID might have been renewed by the same host while this update was in flight
 					// Retry the operation if we still have the shard ownership
 					if currentRangeID != s.getRangeID() {
-						continue Reset_Loop
+						continue Conflict_Resolve_Loop
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
+						s.logger.Warn(
+							"Closing shard: ConflictResolveWorkflowExecution failed due to stolen shard.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
-						break Reset_Loop
+						break Conflict_Resolve_Loop
 					}
 				}
 			default:
@@ -799,8 +834,13 @@ Reset_Loop:
 					if err1 != nil {
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
+						s.logger.Warn(
+							"Closing shard: ConflictResolveWorkflowExecution failed due to unknown error.",
+							tag.ShardID(s.GetShardID()),
+							tag.Error(err),
+						)
 						s.closeShard()
-						break Reset_Loop
+						break Conflict_Resolve_Loop
 					}
 				}
 			}
@@ -932,10 +972,15 @@ func (s *contextImpl) renewRangeLocked(isStealing bool) error {
 	if err != nil {
 		// Shard is stolen, trigger history engine shutdown
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
+			s.logger.Warn(
+				"Closing shard: renewRangeLocked failed due to stolen shard.",
+				tag.ShardID(s.GetShardID()),
+				tag.Error(err),
+			)
 			s.closeShard()
 		} else {
 			// Failure in updating shard to grab new RangeID
-			s.logger.Error("Persistent store operation failure",
+			s.logger.Error("renewRangeLocked failed due to unknown error.",
 				tag.StoreOperationUpdateShard,
 				tag.Error(err),
 				tag.ShardRangeID(updatedShardInfo.RangeID),
@@ -987,6 +1032,11 @@ func (s *contextImpl) updateShardInfoLocked() error {
 	if err != nil {
 		// Shard is stolen, trigger history engine shutdown
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
+			s.logger.Warn(
+				"Closing shard: updateShardInfoLocked failed due to stolen shard.",
+				tag.ShardID(s.GetShardID()),
+				tag.Error(err),
+			)
 			s.closeShard()
 		}
 	} else {
