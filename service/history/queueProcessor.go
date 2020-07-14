@@ -315,10 +315,6 @@ redispatchTaskLoop:
 			}
 
 			p.redispatchTasks()
-
-			if !p.redispatchQueue.IsEmpty() {
-				p.notifyRedispatch()
-			}
 		}
 	}
 
@@ -412,6 +408,10 @@ func (p *queueProcessorBase) redispatchTasks() {
 		p.metricsScope,
 		p.shutdownCh,
 	)
+
+	if !p.redispatchQueue.IsEmpty() {
+		p.notifyRedispatch()
+	}
 }
 
 func (p *queueProcessorBase) retryTasks() {
@@ -440,7 +440,12 @@ func redispatchQueueTasks(
 	queueLength := redispatchQueue.Len()
 	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
 	for i := 0; i != queueLength; i++ {
-		queueTask := redispatchQueue.Remove().(task.Task)
+		element := redispatchQueue.Remove().(task.Task)
+		if element == nil {
+			// queue is empty, may due to concurrent redispatch on the same queue
+			return
+		}
+		queueTask := element.(task.Task)
 		submitted, err := queueTaskProcessor.TrySubmit(queueTask)
 		if err != nil {
 			// the only reason error will be returned here is because

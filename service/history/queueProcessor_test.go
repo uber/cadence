@@ -23,6 +23,7 @@ package history
 import (
 	"errors"
 	"math/rand"
+	"sync"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
@@ -101,7 +102,6 @@ func (s *queueProcessorSuite) TestRedispatchTask_ProcessorShutDown() {
 func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 	numTasks := 10
 	dispatched := 0
-	var calls []*gomock.Call
 
 	for i := 0; i != numTasks; i++ {
 		mockTask := task.NewMockTask(s.controller)
@@ -111,7 +111,7 @@ func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 			submitted = true
 			dispatched++
 		}
-		calls = append(calls, s.mockQueueTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(submitted, nil))
+		s.mockQueueTaskProcessor.EXPECT().TrySubmit(task.NewMockTaskMatcher(mockTask)).Return(submitted, nil)
 	}
 
 	shutDownCh := make(chan struct{})
@@ -124,4 +124,42 @@ func (s *queueProcessorSuite) TestRedispatchTask_Random() {
 	)
 
 	s.Equal(numTasks-dispatched, s.redispatchQueue.Len())
+}
+
+func (s *queueProcessorSuite) TestRedispatchTask_Concurrent() {
+	redispatchQueue := collection.NewConcurrentQueue()
+
+	numTasks := 10
+	concurrency := 3
+	dispatched := 0
+
+	for i := 0; i != numTasks; i++ {
+		mockTask := task.NewMockTask(s.controller)
+		redispatchQueue.Add(mockTask)
+		submitted := false
+		if rand.Intn(2) == 0 {
+			submitted = true
+			dispatched++
+		}
+		s.mockQueueTaskProcessor.EXPECT().TrySubmit(task.NewMockTaskMatcher(mockTask)).Return(submitted, nil).AnyTimes()
+	}
+
+	shutDownCh := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(concurrency)
+	for i := 0; i != concurrency; i++ {
+		go func() {
+			redispatchQueueTasks(
+				redispatchQueue,
+				s.mockQueueTaskProcessor,
+				s.logger,
+				s.metricsScope,
+				shutDownCh,
+			)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	s.Equal(numTasks-dispatched, redispatchQueue.Len())
 }
