@@ -75,6 +75,8 @@ type (
 		workerNotificationChans []chan struct{}
 		// duplicate numOfWorker from config.TimerTaskWorkerCount for dynamic config works correctly
 		numOfWorker int
+		// emit domain tag
+		emitMetricsWithDomainTag bool
 	}
 )
 
@@ -99,6 +101,7 @@ func newTaskProcessor(
 	shard shard.Context,
 	executionCache *execution.Cache,
 	logger log.Logger,
+	emitMetricsWithDomainTag bool,
 ) *taskProcessor {
 
 	workerNotificationChans := []chan struct{}{}
@@ -118,6 +121,7 @@ func newTaskProcessor(
 		workerNotificationChans: workerNotificationChans,
 		retryPolicy:             backoff.NewTwoPhaseRetryPolicy(),
 		numOfWorker:             options.workerCount,
+		emitMetricsWithDomainTag: emitMetricsWithDomainTag,
 	}
 
 	return base
@@ -255,7 +259,13 @@ func (t *taskProcessor) processTaskOnce(
 	startTime := t.timeSource.Now()
 	scopeIdx, err = taskInfo.processor.process(taskInfo)
 
-	scope := task.GetOrCreateDomainTaggedScope(t.shard, scopeIdx, taskInfo.task.GetDomainID(), t.logger)
+	var scope metrics.Scope
+	if t.emitMetricsWithDomainTag {
+		scope = task.GetOrCreateDomainTaggedScope(t.shard, scopeIdx, taskInfo.task.GetDomainID(), t.logger)
+	} else {
+		scope = t.metricsClient.Scope(scopeIdx)
+	}
+
 	if taskInfo.shouldProcessTask {
 		scope.IncCounter(metrics.TaskRequests)
 		scope.RecordTimer(metrics.TaskProcessingLatency, time.Since(startTime))

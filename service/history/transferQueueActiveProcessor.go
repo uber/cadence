@@ -148,6 +148,7 @@ func newTransferQueueActiveProcessor(
 		processor.taskExecutor,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TransferActiveQueueProcessorScope),
+		true,
 	)
 
 	processor.queueAckMgr = queueAckMgr
@@ -269,6 +270,7 @@ func newTransferQueueFailoverProcessor(
 		processor.taskExecutor,
 		logger,
 		shard.GetMetricsClient().Scope(metrics.TransferActiveQueueProcessorScope),
+		true,
 	)
 
 	processor.queueAckMgr = queueAckMgr

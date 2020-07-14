@@ -93,6 +93,7 @@ func newTimerQueueProcessorBase(
 	maxPollRPS dynamicconfig.IntPropertyFn,
 	logger log.Logger,
 	metricsScope metrics.Scope,
+	emitMetricsWithDomainTag bool,
 ) *timerQueueProcessorBase {
 
 	logger = logger.WithTags(tag.ComponentTimerQueue)
@@ -104,7 +105,7 @@ func newTimerQueueProcessorBase(
 			workerCount: config.TimerTaskWorkerCount(),
 			queueSize:   config.TimerTaskWorkerCount() * config.TimerTaskBatchSize(),
 		}
-		taskProcessor = newTaskProcessor(options, shard, historyService.executionCache, logger)
+		taskProcessor = newTaskProcessor(options, shard, historyService.executionCache, logger, emitMetricsWithDomainTag)
 	}
 
 	base := &timerQueueProcessorBase{

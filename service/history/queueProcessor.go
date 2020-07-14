@@ -104,6 +104,7 @@ func newQueueProcessorBase(
 	taskExecutor task.Executor,
 	logger log.Logger,
 	metricsScope metrics.Scope,
+	emitMetricsWithDomainTag bool,
 ) *queueProcessorBase {
 
 	var taskProcessor *taskProcessor
@@ -112,7 +113,7 @@ func newQueueProcessorBase(
 			queueSize:   options.BatchSize(),
 			workerCount: options.WorkerCount(),
 		}
-		taskProcessor = newTaskProcessor(taskProcessorOptions, shard, executionCache, logger)
+		taskProcessor = newTaskProcessor(taskProcessorOptions, shard, executionCache, logger, emitMetricsWithDomainTag)
 	}
 
 	p := &queueProcessorBase{
