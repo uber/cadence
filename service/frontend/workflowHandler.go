@@ -1828,16 +1828,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	return resp, nil
 }
 
-func getWfIDRunIDTags(wf *gen.WorkflowExecution) []tag.Tag {
-	if wf == nil {
-		return nil
-	}
-	return []tag.Tag{
-		tag.WorkflowID(wf.GetWorkflowId()),
-		tag.WorkflowRunID(wf.GetRunId()),
-	}
-}
-
 // GetWorkflowExecutionHistory - retrieves the history of workflow execution
 func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
@@ -3959,5 +3949,15 @@ func (hs HealthStatus) String() string {
 		return "ShuttingDown"
 	default:
 		return "unknown"
+	}
+}
+
+func getWfIDRunIDTags(wf *gen.WorkflowExecution) []tag.Tag {
+	if wf == nil {
+		return nil
+	}
+	return []tag.Tag{
+		tag.WorkflowID(wf.GetWorkflowId()),
+		tag.WorkflowRunID(wf.GetRunId()),
 	}
 }
