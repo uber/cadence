@@ -264,8 +264,9 @@ func (t *taskProcessor) processTaskOnce(
 	scopeIdx, err = task.processor.process(task)
 
 	var scope metrics.Scope
+	var found bool
 	if t.emitMetricsWithDomainTag {
-		scope, found := t.domainMetricsScopeCache.Get(domainID, scopeIdx)
+		scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
 		if !found {
 			domainTag, err := t.getDomainTagByID(domainID)
