@@ -251,7 +251,11 @@ func (t *taskProcessor) processTaskOnce(
 
 	startTime := t.timeSource.Now()
 	scopeIdx, err := taskInfo.processor.process(taskInfo)
-	scope := t.metricsClient.Scope(scopeIdx)
+
+
+	domainTag, _ := t.getDomainTagByID(taskInfo.task.GetDomainID())
+	scope := t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
+
 	if taskInfo.shouldProcessTask {
 		scope.IncCounter(metrics.TaskRequests)
 		scope.RecordTimer(metrics.TaskProcessingLatency, time.Since(startTime))
@@ -333,4 +337,13 @@ func (t *taskProcessor) ackTaskOnce(
 		scope.RecordTimer(metrics.TaskLatency, time.Since(task.startTime))
 		scope.RecordTimer(metrics.TaskQueueLatency, time.Since(task.task.GetVisibilityTimestamp()))
 	}
+}
+
+func (t *taskProcessor) getDomainTagByID(domainID string) (metrics.Tag, error) {
+	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		t.logger.Error("Unable to get domainName", tag.Error(err))
+		return metrics.DomainUnknownTag(), err
+	}
+	return metrics.DomainTag(domainName), nil
 }
