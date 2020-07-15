@@ -264,8 +264,6 @@ func (t *taskProcessor) processTaskOnce(
 
 	newStartTime := t.timeSource.Now()
 	var scope metrics.Scope
-
-	scope = t.metricsClient.Scope(scopeIdx).Tagged()
 	var found bool
 	if t.emitMetricsWithDomainTag {
 		scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
