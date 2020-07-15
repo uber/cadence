@@ -992,7 +992,7 @@ Retry_Loop:
 				tag.Attempt(attempt),
 			)
 			s.closeShard()
-			break
+			break Retry_Loop
 		default:
 			s.logger.Warn("UpdateShard failed with an unknown error.",
 				tag.Error(err),
@@ -1284,7 +1284,7 @@ Retry_Loop:
 				tag.Error(err),
 			)
 			s.closeShard()
-			break
+			break Retry_Loop
 		default:
 			s.logger.Error(
 				"Failed to insert the failover marker into replication queue.",
