@@ -257,17 +257,15 @@ func (t *taskProcessor) processTaskOnce(
 	var scopeIdx int
 	var err error
 
-	//domainID := task.task.GetDomainID()
 	startTime := t.timeSource.Now()
-
 	scopeIdx, err = task.processor.process(task)
 
 
 	newStartTime := t.timeSource.Now()
 
-	var scope metrics.Scope
+	//var scope metrics.Scope
 
-	scope = t.metricsClient.Scope(scopeIdx)
+	scope := t.metricsClient.Scope(scopeIdx)
 	//var found bool
 	//if t.emitMetricsWithDomainTag {
 	//	scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
