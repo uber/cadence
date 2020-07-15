@@ -513,7 +513,7 @@ Create_Loop:
 							"Closing shard: CreateWorkflowExecution failed due to stolen shard.",
 							tag.ShardID(s.GetShardID()),
 							tag.Error(err),
-							)
+						)
 						s.closeShard()
 						break Create_Loop
 					}
