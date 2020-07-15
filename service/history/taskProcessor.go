@@ -263,24 +263,30 @@ func (t *taskProcessor) processTaskOnce(
 
 	scopeIdx, err = task.processor.process(task)
 
-	var scope metrics.Scope
-	var found bool
-	if t.emitMetricsWithDomainTag {
-		scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
-		if !found {
-			domainTag, err := t.getDomainTagByID(domainID)
-			scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
-			// do not cache DomainUnknownTag
-			if err == nil {
-				t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
-			}
-		}
-	} else {
-		scope = t.metricsClient.Scope(scopeIdx)
-	}
+	newStartTime := t.timeSource.Now()
+
+	var scope metrics.Scope
+
+	scope = t.metricsClient.Scope(scopeIdx)
+	//var found bool
+	//if t.emitMetricsWithDomainTag {
+	//	scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
+	//
+	//	if !found {
+	//		domainTag, err := t.getDomainTagByID(domainID)
+	//		scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
+	//		// do not cache DomainUnknownTag
+	//		if err == nil {
+	//			t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
+	//		}
+	//	}
+	//} else {
+	//	scope = t.metricsClient.Scope(scopeIdx)
+	//}
 
 	if task.shouldProcessTask {
+		scope.RecordTimer(metrics.TestTaskProcessingLatency, time.Since(newStartTime))
 		scope.IncCounter(metrics.TaskRequests)
 		scope.RecordTimer(metrics.TaskProcessingLatency, time.Since(startTime))
 	}
