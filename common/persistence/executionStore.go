@@ -856,6 +856,12 @@ func (m *executionManagerImpl) GetReplicationTasksFromDLQ(
 	return m.persistence.GetReplicationTasksFromDLQ(request)
 }
 
+func (m *executionManagerImpl) GetReplicationTaskFromDLQ(
+	request *GetReplicationTaskFromDLQRequest,
+) (*GetReplicationTaskFromDLQResponse, error) {
+	return m.persistence.GetReplicationTaskFromDLQ(request)
+}
+
 func (m *executionManagerImpl) DeleteReplicationTaskFromDLQ(
 	request *DeleteReplicationTaskFromDLQRequest,
 ) error {

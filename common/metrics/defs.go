@@ -166,6 +166,8 @@ const (
 	PersistencePutReplicationTaskToDLQScope
 	// PersistenceGetReplicationTasksFromDLQScope tracks PersistenceGetReplicationTasksFromDLQScope calls made by service to persistence layer
 	PersistenceGetReplicationTasksFromDLQScope
+	// PersistenceGetReplicationTaskFromDLQScope tracks PersistenceGetReplicationTaskFromDLQScope calls made by service to persistence layer
+	PersistenceGetReplicationTaskFromDLQScope
 	// PersistenceDeleteReplicationTaskFromDLQScope tracks PersistenceDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
 	PersistenceDeleteReplicationTaskFromDLQScope
 	// PersistenceRangeDeleteReplicationTaskFromDLQScope tracks PersistenceRangeDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
@@ -1076,6 +1078,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceRangeCompleteReplicationTaskScope:             {operation: "RangeCompleteReplicationTask"},
 		PersistencePutReplicationTaskToDLQScope:                  {operation: "PutReplicationTaskToDLQ"},
 		PersistenceGetReplicationTasksFromDLQScope:               {operation: "GetReplicationTasksFromDLQ"},
+		PersistenceGetReplicationTaskFromDLQScope:                {operation: "GetReplicationTaskFromDLQ"},
 		PersistenceDeleteReplicationTaskFromDLQScope:             {operation: "DeleteReplicationTaskFromDLQ"},
 		PersistenceRangeDeleteReplicationTaskFromDLQScope:        {operation: "RangeDeleteReplicationTaskFromDLQ"},
 		PersistenceCreateFailoverMarkerTasksScope:                {operation: "CreateFailoverMarkerTasks"},
@@ -1803,6 +1806,8 @@ const (
 	ReplicationDLQFailed
 	ReplicationDLQMaxLevelGauge
 	ReplicationDLQAckLevelGauge
+	ReplicationDLQProbeFailed
+	ReplicationDLQNotEmptyCount
 	GetReplicationMessagesForShardLatency
 	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
@@ -2238,6 +2243,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationDLQFailed:                              {metricName: "replication_dlq_enqueue_failed", metricType: Counter},
 		ReplicationDLQMaxLevelGauge:                       {metricName: "replication_dlq_max_level", metricType: Gauge},
 		ReplicationDLQAckLevelGauge:                       {metricName: "replication_dlq_ack_level", metricType: Gauge},
+		ReplicationDLQProbeFailed:                         {metricName: "replication_dlq_probe_failed", metricType: Counter},
+		ReplicationDLQNotEmptyCount:                       {metricName: "replication_dlq_not_empty", metricType: Counter},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		GetDLQReplicationMessagesLatency:                  {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},

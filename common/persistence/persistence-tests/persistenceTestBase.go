@@ -1125,6 +1125,16 @@ func (s *TestBase) GetReplicationTasksFromDLQ(
 	})
 }
 
+// GetReplicationTaskFromDLQ is a utility method to read one replication task info
+func (s *TestBase) GetReplicationTaskFromDLQ(
+	sourceCluster string,
+) (*p.GetReplicationTaskFromDLQResponse, error) {
+
+	return s.ExecutionManager.GetReplicationTaskFromDLQ(&p.GetReplicationTaskFromDLQRequest{
+		SourceClusterName: sourceCluster,
+	})
+}
+
 // DeleteReplicationTaskFromDLQ is a utility method to delete a replication task info
 func (s *TestBase) DeleteReplicationTaskFromDLQ(
 	sourceCluster string,

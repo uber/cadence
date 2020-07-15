@@ -346,6 +346,16 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasksFromD
 	return p.persistence.GetReplicationTasksFromDLQ(request)
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTaskFromDLQ(
+	request *GetReplicationTaskFromDLQRequest,
+) (*GetReplicationTaskFromDLQResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	return p.persistence.GetReplicationTaskFromDLQ(request)
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) DeleteReplicationTaskFromDLQ(
 	request *DeleteReplicationTaskFromDLQRequest,
 ) error {

@@ -118,6 +118,9 @@ shard_id = $2 AND
 task_id > $3 AND
 task_id <= $4
 ORDER BY task_id LIMIT $5`
+	getReplicationTaskDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE 
+source_cluster_name = $1 AND
+shard_id = $2 LIMIT 1`
 
 	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, data, data_encoding`
 	createBufferedEventsQuery = `INSERT INTO buffered_events(` + bufferedEventsColumns + `)
@@ -347,6 +350,16 @@ func (pdb *db) SelectFromReplicationTasksDLQ(filter *sqlplugin.ReplicationTasksD
 		filter.MinTaskID,
 		filter.MaxTaskID,
 		filter.PageSize)
+	return rows, err
+}
+
+// SelectFromReplicationTaskDLQ reads one row from replication_tasks_dlq table
+func (pdb *db) SelectFromReplicationTaskDLQ(filter *sqlplugin.ReplicationTaskDLQFilter) ([]sqlplugin.ReplicationTasksRow, error) {
+	var rows []sqlplugin.ReplicationTasksRow
+	err := pdb.conn.Select(
+		&rows, getReplicationTaskDLQQuery,
+		filter.SourceClusterName,
+		filter.ShardID)
 	return rows, err
 }
 

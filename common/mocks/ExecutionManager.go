@@ -368,6 +368,29 @@ func (_m *ExecutionManager) GetReplicationTasksFromDLQ(request *persistence.GetR
 	return r0, r1
 }
 
+// GetReplicationTaskFromDLQ provides a mock function with given fields: request
+func (_m *ExecutionManager) GetReplicationTaskFromDLQ(request *persistence.GetReplicationTaskFromDLQRequest) (*persistence.GetReplicationTaskFromDLQResponse, error) {
+	ret := _m.Called(request)
+
+	var r0 *persistence.GetReplicationTaskFromDLQResponse
+	if rf, ok := ret.Get(0).(func(*persistence.GetReplicationTaskFromDLQRequest) *persistence.GetReplicationTaskFromDLQResponse); ok {
+		r0 = rf(request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.GetReplicationTaskFromDLQResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.GetReplicationTaskFromDLQRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteReplicationTaskFromDLQ provides a mock function with given fields: request
 func (_m *ExecutionManager) DeleteReplicationTaskFromDLQ(
 	request *persistence.DeleteReplicationTaskFromDLQRequest,

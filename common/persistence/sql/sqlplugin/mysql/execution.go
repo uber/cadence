@@ -119,6 +119,10 @@ task_id > ? AND
 task_id <= ?
 ORDER BY task_id LIMIT ?`
 
+	getReplicationTaskDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE 
+source_cluster_name = ? AND
+shard_id = ? LIMIT 1`
+
 	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, data, data_encoding`
 	createBufferedEventsQuery = `INSERT INTO buffered_events(` + bufferedEventsColumns + `)
 VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
@@ -348,6 +352,16 @@ func (mdb *db) SelectFromReplicationTasksDLQ(filter *sqlplugin.ReplicationTasksD
 		filter.MinTaskID,
 		filter.MaxTaskID,
 		filter.PageSize)
+	return rows, err
+}
+
+// SelectFromReplicationTaskDLQ reads one row from replication_tasks_dlq table
+func (mdb *db) SelectFromReplicationTaskDLQ(filter *sqlplugin.ReplicationTaskDLQFilter) ([]sqlplugin.ReplicationTasksRow, error) {
+	var rows []sqlplugin.ReplicationTasksRow
+	err := mdb.conn.Select(
+		&rows, getReplicationTaskDLQQuery,
+		filter.SourceClusterName,
+		filter.ShardID)
 	return rows, err
 }
 

@@ -1065,6 +1065,27 @@ func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 	}
 }
 
+func (m *sqlExecutionManager) GetReplicationTaskFromDLQ(
+	request *p.GetReplicationTaskFromDLQRequest,
+) (*p.GetReplicationTaskFromDLQResponse, error) {
+
+	rows, err := m.db.SelectFromReplicationTaskDLQ(&sqlplugin.ReplicationTaskDLQFilter{
+		SourceClusterName: request.SourceClusterName,
+		ShardID:           m.shardID,
+	})
+
+	switch err {
+	case nil:
+		return m.populateGetReplicationTasksResponse(rows, 0)
+	case sql.ErrNoRows:
+		return &p.GetReplicationTasksResponse{}, nil
+	default:
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
+		}
+	}
+}
+
 func (m *sqlExecutionManager) DeleteReplicationTaskFromDLQ(
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {

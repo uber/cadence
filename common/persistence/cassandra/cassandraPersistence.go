@@ -731,6 +731,15 @@ workflow_state = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
+	templateGetDLQReplicationTaskQuery = `SELECT replication ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`limit 1`
+
 	templateCompleteTransferTaskQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -2834,6 +2843,22 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 		request.ReadLevel,
 		request.MaxReadLevel,
 	).PageSize(request.BatchSize).PageState(request.NextPageToken)
+
+	return d.populateGetReplicationTasksResponse(query)
+}
+
+func (d *cassandraPersistence) GetReplicationTaskFromDLQ(
+	request *p.GetReplicationTaskFromDLQRequest,
+) (*p.GetReplicationTaskFromDLQResponse, error) {
+
+	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
+	query := d.session.Query(templateGetDLQReplicationTaskQuery,
+		d.shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		request.SourceClusterName,
+		rowTypeDLQRunID,
+	)
 
 	return d.populateGetReplicationTasksResponse(query)
 }
