@@ -257,7 +257,7 @@ func (t *taskProcessor) processTaskOnce(
 	var scopeIdx int
 	var err error
 
-	domainID := task.task.GetDomainID()
+	//domainID := task.task.GetDomainID()
 
 	startTime := t.timeSource.Now()
 
