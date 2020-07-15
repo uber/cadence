@@ -260,7 +260,7 @@ func (t *taskProcessor) processTaskOnce(
 	startTime := t.timeSource.Now()
 	scopeIdx, err = task.processor.process(task)
 
-	//domainID := task.task.GetDomainID()
+	domainID := task.task.GetDomainID()
 
 	newStartTime := t.timeSource.Now()
 
