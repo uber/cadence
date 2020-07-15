@@ -260,27 +260,27 @@ func (t *taskProcessor) processTaskOnce(
 	startTime := t.timeSource.Now()
 	scopeIdx, err = task.processor.process(task)
 
+	domainID := task.task.GetDomainID()
 
 	newStartTime := t.timeSource.Now()
+	var scope metrics.Scope
 
-	//var scope metrics.Scope
+	scope = t.metricsClient.Scope(scopeIdx).Tagged()
+	var found bool
+	if t.emitMetricsWithDomainTag {
+		scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
 
-	scope := t.metricsClient.Scope(scopeIdx)
-	//var found bool
-	//if t.emitMetricsWithDomainTag {
-	//	scope, found = t.domainMetricsScopeCache.Get(domainID, scopeIdx)
-	//
-	//	if !found {
-	//		domainTag, err := t.getDomainTagByID(domainID)
-	//		scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
-	//		// do not cache DomainUnknownTag
-	//		if err == nil {
-	//			t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
-	//		}
-	//	}
-	//} else {
-	//	scope = t.metricsClient.Scope(scopeIdx)
-	//}
+		if !found {
+			domainTag, err := t.getDomainTagByID(domainID)
+			scope = t.metricsClient.Scope(scopeIdx).Tagged(domainTag)
+			// do not cache DomainUnknownTag
+			if err == nil {
+				t.domainMetricsScopeCache.Put(domainID, scopeIdx, scope)
+			}
+		}
+	} else {
+		scope = t.metricsClient.Scope(scopeIdx)
+	}
 
 	if task.shouldProcessTask {
 		scope.RecordTimer(metrics.TestTaskProcessingLatency, time.Since(newStartTime))
