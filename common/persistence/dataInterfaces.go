@@ -1022,8 +1022,8 @@ type (
 		GetReplicationTasksRequest
 	}
 
-	// GetReplicationTaskFromDLQRequest is used to get one replication task from dlq
-	GetReplicationTaskFromDLQRequest struct {
+	// GetReplicationDLQSizeRequest is used to get one replication task from dlq
+	GetReplicationDLQSizeRequest struct {
 		SourceClusterName string
 	}
 
@@ -1043,8 +1043,10 @@ type (
 	// GetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
 	GetReplicationTasksFromDLQResponse = GetReplicationTasksResponse
 
-	// GetReplicationTaskFromDLQResponse is the response for GetReplicationTaskFromDLQ
-	GetReplicationTaskFromDLQResponse = GetReplicationTasksResponse
+	// GetReplicationDLQSizeResponse is the response for GetReplicationDLQSize
+	GetReplicationDLQSizeResponse struct {
+		Size int64
+	}
 
 	// RangeCompleteTimerTaskRequest is used to complete a range of tasks in the timer task queue
 	RangeCompleteTimerTaskRequest struct {
@@ -1531,7 +1533,7 @@ type (
 		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
 		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
-		GetReplicationTaskFromDLQ(request *GetReplicationTaskFromDLQRequest) (*GetReplicationTaskFromDLQResponse, error)
+		GetReplicationDLQSize(request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
 		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
 		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error

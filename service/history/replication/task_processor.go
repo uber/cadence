@@ -515,7 +515,7 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 		dlqMetricsEmitTimerInterval,
 		dlqMetricsEmitTimerCoefficient,
 	))
-	staticRequest := &persistence.GetReplicationTaskFromDLQRequest{
+	staticRequest := &persistence.GetReplicationDLQSizeRequest{
 		SourceClusterName: p.sourceCluster,
 	}
 	defer timer.Stop()
@@ -523,15 +523,17 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 	for {
 		select {
 		case <-timer.C:
-			resp, err := p.shard.GetExecutionManager().GetReplicationTaskFromDLQ(staticRequest)
+			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(staticRequest)
 			if err != nil {
 				p.logger.Error("failed to get one task from replication DLQ", tag.Error(err))
 				p.metricsClient.Scope(metrics.ReplicationDLQStatsScope).IncCounter(metrics.ReplicationDLQProbeFailed)
 			}
 
-			if len(resp.Tasks) > 0 {
-				p.metricsClient.Scope(metrics.ReplicationDLQStatsScope).IncCounter(metrics.ReplicationDLQNotEmptyCount)
-			}
+			p.metricsClient.Scope(
+				metrics.ReplicationDLQStatsScope,
+				metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
+			).UpdateGauge(metrics.ReplicationDLQSize, float64(resp.Size))
+
 			timer.Reset(backoff.JitDuration(
 				dlqMetricsEmitTimerInterval,
 				dlqMetricsEmitTimerCoefficient,

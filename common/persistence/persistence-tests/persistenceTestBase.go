@@ -1125,12 +1125,12 @@ func (s *TestBase) GetReplicationTasksFromDLQ(
 	})
 }
 
-// GetReplicationTaskFromDLQ is a utility method to read one replication task info
-func (s *TestBase) GetReplicationTaskFromDLQ(
+// GetReplicationDLQSize is a utility method to read replication dlq size
+func (s *TestBase) GetReplicationDLQSize(
 	sourceCluster string,
-) (*p.GetReplicationTaskFromDLQResponse, error) {
+) (*p.GetReplicationDLQSizeResponse, error) {
 
-	return s.ExecutionManager.GetReplicationTaskFromDLQ(&p.GetReplicationTaskFromDLQRequest{
+	return s.ExecutionManager.GetReplicationDLQSize(&p.GetReplicationDLQSizeRequest{
 		SourceClusterName: sourceCluster,
 	})
 }

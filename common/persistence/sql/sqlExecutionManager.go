@@ -1065,23 +1065,27 @@ func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 	}
 }
 
-func (m *sqlExecutionManager) GetReplicationTaskFromDLQ(
-	request *p.GetReplicationTaskFromDLQRequest,
-) (*p.GetReplicationTaskFromDLQResponse, error) {
+func (m *sqlExecutionManager) GetReplicationDLQSize(
+	request *p.GetReplicationDLQSizeRequest,
+) (*p.GetReplicationDLQSizeResponse, error) {
 
-	rows, err := m.db.SelectFromReplicationTaskDLQ(&sqlplugin.ReplicationTaskDLQFilter{
+	size, err := m.db.SelectFromReplicationDLQ(&sqlplugin.ReplicationTaskDLQFilter{
 		SourceClusterName: request.SourceClusterName,
 		ShardID:           m.shardID,
 	})
 
 	switch err {
 	case nil:
-		return m.populateGetReplicationTasksResponse(rows, 0)
+		return &p.GetReplicationDLQSizeResponse{
+			Size: size,
+		}, nil
 	case sql.ErrNoRows:
-		return &p.GetReplicationTasksResponse{}, nil
+		return &p.GetReplicationDLQSizeResponse{
+			Size: 0,
+		}, nil
 	default:
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
+			Message: fmt.Sprintf("GetReplicationDLQSize operation failed. Select failed: %v", err),
 		}
 	}
 }

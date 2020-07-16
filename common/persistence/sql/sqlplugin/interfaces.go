@@ -614,9 +614,9 @@ type (
 		// SelectFromReplicationTasksDLQ returns one or more rows from replication_tasks_dlq table
 		// Required filter params - {sourceClusterName, shardID, minTaskID, pageSize}
 		SelectFromReplicationTasksDLQ(filter *ReplicationTasksDLQFilter) ([]ReplicationTasksRow, error)
-		// SelectFromReplicationTasksDLQ returns one row from replication_tasks_dlq table
+		// SelectFromReplicationDLQ returns one row from replication_tasks_dlq table
 		// Required filter params - {sourceClusterName}
-		SelectFromReplicationTaskDLQ(filter *ReplicationTaskDLQFilter) ([]ReplicationTasksRow, error)
+		SelectFromReplicationDLQ(filter *ReplicationTaskDLQFilter) (int64, error)
 		// DeleteMessageFromReplicationTasksDLQ deletes one row from replication_tasks_dlq table
 		// Required filter params - {sourceClusterName, shardID, taskID}
 		DeleteMessageFromReplicationTasksDLQ(filter *ReplicationTasksDLQFilter) (sql.Result, error)
