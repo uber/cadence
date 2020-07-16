@@ -1021,6 +1021,11 @@ type (
 		GetReplicationTasksRequest
 	}
 
+	// GetReplicationDLQSizeRequest is used to get one replication task from dlq
+	GetReplicationDLQSizeRequest struct {
+		SourceClusterName string
+	}
+
 	// DeleteReplicationTaskFromDLQRequest is used to delete replication task from DLQ
 	DeleteReplicationTaskFromDLQRequest struct {
 		SourceClusterName string
@@ -1036,6 +1041,11 @@ type (
 
 	// GetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
 	GetReplicationTasksFromDLQResponse = GetReplicationTasksResponse
+
+	// GetReplicationDLQSizeResponse is the response for GetReplicationDLQSize
+	GetReplicationDLQSizeResponse struct {
+		Size int64
+	}
 
 	// RangeCompleteTimerTaskRequest is used to complete a range of tasks in the timer task queue
 	RangeCompleteTimerTaskRequest struct {
@@ -1514,6 +1524,7 @@ type (
 		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
 		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
+		GetReplicationDLQSize(request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
 		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
 
