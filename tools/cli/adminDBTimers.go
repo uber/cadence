@@ -27,12 +27,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"golang.org/x/sync/errgroup"
-
 	"github.com/gocql/gocql"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
@@ -94,7 +92,12 @@ func printTimers(
 	execStore, err := cassp.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 
 	if err != nil {
-		return errors.Wrapf(err, "cannot get execution manager for shardId %d", shardID)
+		err = errors.Wrapf(err, "cannot get execution manager for shardId %d", shardID)
+		if !skipErrMode {
+			return err
+		}
+		fmt.Println(err.Error())
+		return nil
 	}
 
 	var token []byte
@@ -114,9 +117,6 @@ func printTimers(
 		}
 
 		token = resp.NextPageToken
-		if len(resp.Timers) < 1 {
-			continue
-		}
 
 		for _, t := range resp.Timers {
 			if len(domainId) > 0 && t.DomainID != domainId {
