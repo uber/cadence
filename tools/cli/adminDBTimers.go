@@ -45,7 +45,7 @@ func AdminTimers(c *cli.Context) {
 	batchSize := c.Int(FlagBatchSize)
 	startDate := c.String(FlagStartDate)
 	endDate := c.String(FlagEndDate)
-	domainId := c.String(FlagDomainID)
+	domainID := c.String(FlagDomainID)
 	skipErrMode := c.Bool(FlagSkipErrorMode)
 
 	session := connectToCassandra(c)
@@ -73,7 +73,7 @@ func AdminTimers(c *cli.Context) {
 				<-throttle
 			}()
 
-			return printTimers(session, shardID, batchSize, st, et, domainId, skipErrMode)
+			return printTimers(session, shardID, batchSize, st, et, domainID, skipErrMode)
 		})
 	}
 
