@@ -826,7 +826,7 @@ func newDBCommands() []cli.Command {
 				cli.IntFlag{
 					Name:  FlagConcurrency,
 					Usage: "number of threads to handle scan",
-					Value: 1000,
+					Value: 200,
 				},
 				cli.StringFlag{
 					Name:  FlagStartDate,
