@@ -48,9 +48,6 @@ func AdminTimers(c *cli.Context) {
 	domainID := c.String(FlagDomainID)
 	skipErrMode := c.Bool(FlagSkipErrorMode)
 
-	session := connectToCassandra(c)
-	defer session.Close()
-
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
 
@@ -62,6 +59,9 @@ func AdminTimers(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("wrong date format for "+FlagEndDate, err)
 	}
+
+	session := connectToCassandra(c)
+	defer session.Close()
 
 	group, ctx := errgroup.WithContext(ctx)
 	throttle := make(chan struct{}, concurrency)
