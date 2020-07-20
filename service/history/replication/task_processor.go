@@ -51,6 +51,8 @@ const (
 	replicationTimeout               = 30 * time.Second
 	taskErrorRetryBackoffCoefficient = 1.2
 	dlqErrorRetryWait                = time.Second
+	dlqMetricsEmitTimerInterval      = 5 * time.Minute
+	dlqMetricsEmitTimerCoefficient   = 0.05
 )
 
 var (
@@ -149,6 +151,7 @@ func (p *taskProcessorImpl) Start() {
 	go p.processorLoop()
 	go p.syncShardStatusLoop()
 	go p.cleanupReplicationTaskLoop()
+	go p.emitDLQSizeMetricsLoop()
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
 
@@ -419,6 +422,7 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *r.Replicati
 		tag.WorkflowID(request.TaskInfo.GetWorkflowID()),
 		tag.WorkflowRunID(request.TaskInfo.GetRunID()),
 		tag.TaskID(request.TaskInfo.GetTaskID()),
+		tag.ShardID(p.shard.GetShardID()),
 	)
 
 	p.metricsClient.Scope(
@@ -504,6 +508,41 @@ func (p *taskProcessorImpl) generateDLQRequest(
 		}, nil
 	default:
 		return nil, fmt.Errorf("unknown replication task type")
+	}
+}
+
+func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
+	timer := time.NewTimer(backoff.JitDuration(
+		dlqMetricsEmitTimerInterval,
+		dlqMetricsEmitTimerCoefficient,
+	))
+	staticRequest := &persistence.GetReplicationDLQSizeRequest{
+		SourceClusterName: p.sourceCluster,
+	}
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(staticRequest)
+			if err != nil {
+				p.logger.Error("failed to get one task from replication DLQ", tag.Error(err))
+				p.metricsClient.Scope(metrics.ReplicationDLQStatsScope).IncCounter(metrics.ReplicationDLQProbeFailed)
+			}
+
+			p.metricsClient.Scope(
+				metrics.ReplicationDLQStatsScope,
+				metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
+			).UpdateGauge(metrics.ReplicationDLQSize, float64(resp.Size))
+
+			timer.Reset(backoff.JitDuration(
+				dlqMetricsEmitTimerInterval,
+				dlqMetricsEmitTimerCoefficient,
+			))
+		case <-p.done:
+			timer.Stop()
+			return
+		}
 	}
 }
 

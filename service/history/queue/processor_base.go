@@ -37,6 +37,10 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
+const (
+	warnPendingTasks = 2000
+)
+
 type (
 	updateMaxReadLevelFn    func() task.Key
 	updateClusterAckLevelFn func(task.Key) error
@@ -167,10 +171,6 @@ redispatchTaskLoop:
 			}
 
 			p.redispatchTasks()
-
-			if !p.redispatchQueue.IsEmpty() {
-				p.notifyRedispatch()
-			}
 		}
 	}
 
@@ -199,6 +199,10 @@ func (p *processorBase) redispatchTasks() {
 		p.metricsScope,
 		p.shutdownCh,
 	)
+
+	if !p.redispatchQueue.IsEmpty() {
+		p.notifyRedispatch()
+	}
 }
 
 func (p *processorBase) updateAckLevel() (bool, error) {
@@ -206,17 +210,18 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 	// and update DB with that value.
 	// Once persistence layer is updated, we need to persist all queue states
 	// instead of only the min ack level
+	p.metricsScope.IncCounter(metrics.AckLevelUpdateCounter)
 	p.queueCollectionsLock.Lock()
 	var minAckLevel task.Key
+	totalPengingTasks := 0
 	for _, queueCollection := range p.processingQueueCollections {
-		queueCollection.UpdateAckLevels()
+		ackLevel, numPendingTasks := queueCollection.UpdateAckLevels()
 
-		for _, queue := range queueCollection.Queues() {
-			if minAckLevel == nil {
-				minAckLevel = queue.State().AckLevel()
-			} else {
-				minAckLevel = minTaskKey(minAckLevel, queue.State().AckLevel())
-			}
+		totalPengingTasks += numPendingTasks
+		if minAckLevel == nil {
+			minAckLevel = ackLevel
+		} else {
+			minAckLevel = minTaskKey(minAckLevel, ackLevel)
 		}
 	}
 	p.queueCollectionsLock.Unlock()
@@ -232,7 +237,11 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 		return true, nil
 	}
 
-	// TODO: emit metrics for total # of pending tasks
+	if totalPengingTasks > warnPendingTasks {
+		p.logger.Warn("Too many pending tasks.")
+	}
+	// TODO: consider move pendingTasksTime metrics from shardInfoScope to queue processor scope
+	p.metricsClient.RecordTimer(metrics.ShardInfoScope, getPendingTasksMetricIdx(p.options.MetricScope), time.Duration(totalPengingTasks))
 
 	if err := p.updateClusterAckLevel(minAckLevel); err != nil {
 		p.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
@@ -259,7 +268,7 @@ func (p *processorBase) initializeSplitPolicy(
 		if err != nil {
 			p.logger.Error("Failed to convert pending task threshold", tag.Error(err))
 		} else {
-			policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel))
+			policies = append(policies, NewPendingTaskSplitPolicy(thresholds, lookAheadFunc, maxNewQueueLevel, p.logger, p.metricsScope))
 		}
 	}
 
@@ -268,7 +277,7 @@ func (p *processorBase) initializeSplitPolicy(
 		if err != nil {
 			p.logger.Error("Failed to convert stuck task threshold", tag.Error(err))
 		} else {
-			policies = append(policies, NewStuckTaskSplitPolicy(thresholds, maxNewQueueLevel))
+			policies = append(policies, NewStuckTaskSplitPolicy(thresholds, maxNewQueueLevel, p.logger, p.metricsScope))
 		}
 	}
 
@@ -279,6 +288,8 @@ func (p *processorBase) initializeSplitPolicy(
 			p.options.EnableRandomSplitByDomainID,
 			maxNewQueueLevel,
 			lookAheadFunc,
+			p.logger,
+			p.metricsScope,
 		))
 	}
 
@@ -407,7 +418,12 @@ func RedispatchTasks(
 	queueLength := redispatchQueue.Len()
 	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
 	for i := 0; i != queueLength; i++ {
-		queueTask := redispatchQueue.Remove().(task.Task)
+		element := redispatchQueue.Remove()
+		if element == nil {
+			// queue is empty, may due to concurrent redispatch on the same queue
+			return
+		}
+		queueTask := element.(task.Task)
 		submitted, err := taskProcessor.TrySubmit(queueTask)
 		if err != nil {
 			select {
@@ -425,5 +441,24 @@ func RedispatchTasks(
 			// failed to submit, enqueue again
 			redispatchQueue.Add(queueTask)
 		}
+	}
+}
+
+func getPendingTasksMetricIdx(
+	scopeIdx int,
+) int {
+	switch scopeIdx {
+	case metrics.TimerActiveQueueProcessorScope:
+		return metrics.ShardInfoTimerActivePendingTasksTimer
+	case metrics.TimerStandbyQueueProcessorScope:
+		return metrics.ShardInfoTimerStandbyPendingTasksTimer
+	case metrics.TransferActiveQueueProcessorScope:
+		return metrics.ShardInfoTransferActivePendingTasksTimer
+	case metrics.TransferStandbyQueueProcessorScope:
+		return metrics.ShardInfoTransferStandbyPendingTasksTimer
+	case metrics.ReplicatorQueueProcessorScope:
+		return metrics.ShardInfoReplicationPendingTasksTimer
+	default:
+		panic("unknown queue processor metric scope")
 	}
 }
