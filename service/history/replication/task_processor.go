@@ -363,7 +363,14 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 	retryTransientError := func() error {
 		return backoff.Retry(
 			func() error {
-				return p.processTaskOnce(replicationTask)
+				select {
+				case <-p.done:
+					// if the processor is stopping, skip the task
+					// the ack level will not update and the new shard owner will retry the task.
+					return nil
+				default:
+					return p.processTaskOnce(replicationTask)
+				}
 			},
 			p.taskRetryPolicy,
 			isTransientRetryableError)
