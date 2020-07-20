@@ -377,13 +377,17 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 	)
 
 	if err != nil {
-		p.logger.Error(
-			"Failed to apply replication task after retry. Putting task into DLQ.",
-			tag.TaskID(replicationTask.GetSourceTaskId()),
-			tag.Error(err),
-		)
-
-		return p.putReplicationTaskToDLQ(replicationTask)
+		select {
+		case <-p.done:
+			p.logger.Warn("Skip adding new messages to DLQ.", tag.Error(err))
+		default:
+			p.logger.Error(
+				"Failed to apply replication task after retry. Putting task into DLQ.",
+				tag.TaskID(replicationTask.GetSourceTaskId()),
+				tag.Error(err),
+			)
+			return p.putReplicationTaskToDLQ(replicationTask)
+		}
 	}
 
 	return nil
