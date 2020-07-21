@@ -83,6 +83,7 @@ func getBlobstoreFetchPageFn(
 			if len(p) == 0 {
 				continue
 			}
+			// TODO handle multiple execution types
 			soe := ScanOutputEntity{
 				Execution: &ConcreteExecution{},
 			}

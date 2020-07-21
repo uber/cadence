@@ -83,7 +83,7 @@ const (
 
 // The following are types related to Invariant.
 type (
-	// Execution is an base type for executions which should be checked or fixed.
+	// Execution is a base type for executions which should be checked or fixed.
 	Execution struct {
 		ShardID    int
 		DomainID   string
@@ -92,7 +92,7 @@ type (
 		State      int
 	}
 
-	// ConcreteExecution is an concrete execution.
+	// ConcreteExecution is a concrete execution.
 	ConcreteExecution struct {
 		BranchToken []byte
 		TreeID      string
