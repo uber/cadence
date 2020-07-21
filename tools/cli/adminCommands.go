@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -101,7 +102,7 @@ func AdminShowWorkflow(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("Failed to serialize history data.", err)
 		}
-		if err := ioutil.WriteFile(outputFileName, data, 0777); err != nil {
+		if err := ioutil.WriteFile(outputFileName, data, 0666); err != nil {
 			ErrorAndExit("Failed to export history data file.", err)
 		}
 	}
@@ -387,6 +388,21 @@ func AdminRemoveTask(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Remove task has failed", err)
 	}
+}
+
+// AdminDescribeShard describes shard by shard id
+func AdminDescribeShard(c *cli.Context) {
+	sid := getRequiredIntOption(c, FlagShardID)
+	session := connectToCassandra(c)
+	shardManager := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+
+	getShardReq := &persistence.GetShardRequest{ShardID: sid}
+	shard, err := shardManager.GetShard(getShardReq)
+	if err != nil {
+		ErrorAndExit("Failed to describe shard.", err)
+	}
+
+	prettyPrintJSONObject(shard)
 }
 
 // AdminShardManagement describes history host
