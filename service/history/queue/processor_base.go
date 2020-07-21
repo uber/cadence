@@ -26,8 +26,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -53,8 +51,6 @@ type (
 		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
 		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
 		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		RedispatchInterval                  dynamicconfig.DurationPropertyFn
-		RedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 		MaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
 		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
@@ -71,9 +67,9 @@ type (
 	}
 
 	processorBase struct {
-		shard           shard.Context
-		taskProcessor   task.Processor
-		redispatchQueue collection.Queue
+		shard         shard.Context
+		taskProcessor task.Processor
+		redispatcher  task.Redispatcher
 
 		options               *queueProcessorOptions
 		updateMaxReadLevel    updateMaxReadLevelFn
@@ -89,8 +85,6 @@ type (
 		status     int32
 		shutdownWG sync.WaitGroup
 		shutdownCh chan struct{}
-
-		redispatchNotifyCh chan struct{}
 
 		queueCollectionsLock       sync.RWMutex
 		processingQueueCollections []ProcessingQueueCollection
@@ -108,10 +102,16 @@ func newProcessorBase(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *processorBase {
+	metricsScope := metricsClient.Scope(options.MetricScope)
 	return &processorBase{
-		shard:           shard,
-		taskProcessor:   taskProcessor,
-		redispatchQueue: collection.NewConcurrentQueue(),
+		shard:         shard,
+		taskProcessor: taskProcessor,
+		redispatcher: task.NewRedispatcher(
+			taskProcessor,
+			shard.GetConfig(),
+			logger,
+			metricsScope,
+		),
 
 		options:               options,
 		updateMaxReadLevel:    updateMaxReadLevel,
@@ -120,7 +120,7 @@ func newProcessorBase(
 
 		logger:        logger,
 		metricsClient: metricsClient,
-		metricsScope:  metricsClient.Scope(options.MetricScope),
+		metricsScope:  metricsScope,
 
 		rateLimiter: quotas.NewDynamicRateLimiter(
 			func() float64 {
@@ -131,77 +131,11 @@ func newProcessorBase(
 		status:     common.DaemonStatusInitialized,
 		shutdownCh: make(chan struct{}),
 
-		redispatchNotifyCh: make(chan struct{}, 1),
-
 		processingQueueCollections: newProcessingQueueCollections(
 			processingQueueStates,
 			logger,
 			metricsClient,
 		),
-	}
-}
-
-func (p *processorBase) redispatchLoop() {
-	defer p.shutdownWG.Done()
-
-redispatchTaskLoop:
-	for {
-		select {
-		case <-p.shutdownCh:
-			break redispatchTaskLoop
-		case <-p.redispatchNotifyCh:
-			// TODO: revisit the cpu usage and gc activity caused by
-			// creating timers and reading dynamicconfig if it becomes a problem.
-			backoffTimer := time.NewTimer(backoff.JitDuration(
-				p.options.RedispatchInterval(),
-				p.options.RedispatchIntervalJitterCoefficient(),
-			))
-			select {
-			case <-p.shutdownCh:
-				backoffTimer.Stop()
-				break redispatchTaskLoop
-			case <-backoffTimer.C:
-			}
-			backoffTimer.Stop()
-
-			// drain redispatchNotifyCh again
-			select {
-			case <-p.redispatchNotifyCh:
-			default:
-			}
-
-			p.redispatchTasks()
-		}
-	}
-
-	p.logger.Info("Queue processor task redispatch loop shut down.")
-}
-
-func (p *processorBase) redispatchSingleTask(
-	task task.Task,
-) {
-	p.redispatchQueue.Add(task)
-	p.notifyRedispatch()
-}
-
-func (p *processorBase) notifyRedispatch() {
-	select {
-	case p.redispatchNotifyCh <- struct{}{}:
-	default:
-	}
-}
-
-func (p *processorBase) redispatchTasks() {
-	RedispatchTasks(
-		p.redispatchQueue,
-		p.taskProcessor,
-		p.logger,
-		p.metricsScope,
-		p.shutdownCh,
-	)
-
-	if !p.redispatchQueue.IsEmpty() {
-		p.notifyRedispatch()
 	}
 }
 
@@ -372,7 +306,7 @@ func (p *processorBase) submitTask(
 		}
 	}
 	if err != nil || !submitted {
-		p.redispatchSingleTask(task)
+		p.redispatcher.AddTask(task)
 		return false, nil
 	}
 
@@ -404,44 +338,6 @@ func newProcessingQueueCollections(
 	})
 
 	return processingQueueCollections
-}
-
-// RedispatchTasks should be un-exported after the queue processing logic
-// in history package is deprecated.
-func RedispatchTasks(
-	redispatchQueue collection.Queue,
-	taskProcessor task.Processor,
-	logger log.Logger,
-	metricsScope metrics.Scope,
-	shutdownCh <-chan struct{},
-) {
-	queueLength := redispatchQueue.Len()
-	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
-	for i := 0; i != queueLength; i++ {
-		element := redispatchQueue.Remove()
-		if element == nil {
-			// queue is empty, may due to concurrent redispatch on the same queue
-			return
-		}
-		queueTask := element.(task.Task)
-		submitted, err := taskProcessor.TrySubmit(queueTask)
-		if err != nil {
-			select {
-			case <-shutdownCh:
-				// if error is due to shard shutdown
-				return
-			default:
-				// otherwise it might be error from domain cache etc, add
-				// the task to redispatch queue so that it can be retried
-				logger.Error("failed to redispatch task", tag.Error(err))
-			}
-		}
-
-		if err != nil || !submitted {
-			// failed to submit, enqueue again
-			redispatchQueue.Add(queueTask)
-		}
-	}
 }
 
 func getPendingTasksMetricIdx(

@@ -77,15 +77,17 @@ type Config struct {
 	StandbyTaskMissingEventsDiscardDelay dynamicconfig.DurationPropertyFn
 
 	// Task process settings
-	TaskProcessRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
-	EnablePriorityTaskProcessor    dynamicconfig.BoolPropertyFn
-	TaskSchedulerType              dynamicconfig.IntPropertyFn
-	TaskSchedulerWorkerCount       dynamicconfig.IntPropertyFn
-	TaskSchedulerShardWorkerCount  dynamicconfig.IntPropertyFn
-	TaskSchedulerQueueSize         dynamicconfig.IntPropertyFn
-	TaskSchedulerShardQueueSize    dynamicconfig.IntPropertyFn
-	TaskSchedulerDispatcherCount   dynamicconfig.IntPropertyFn
-	TaskSchedulerRoundRobinWeights dynamicconfig.MapPropertyFn
+	TaskProcessRPS                          dynamicconfig.IntPropertyFnWithDomainFilter
+	EnablePriorityTaskProcessor             dynamicconfig.BoolPropertyFn
+	TaskSchedulerType                       dynamicconfig.IntPropertyFn
+	TaskSchedulerWorkerCount                dynamicconfig.IntPropertyFn
+	TaskSchedulerShardWorkerCount           dynamicconfig.IntPropertyFn
+	TaskSchedulerQueueSize                  dynamicconfig.IntPropertyFn
+	TaskSchedulerShardQueueSize             dynamicconfig.IntPropertyFn
+	TaskSchedulerDispatcherCount            dynamicconfig.IntPropertyFn
+	TaskSchedulerRoundRobinWeights          dynamicconfig.MapPropertyFn
+	TaskRedispatchInterval                  dynamicconfig.DurationPropertyFn
+	TaskRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 
 	// QueueProcessor settings
 	QueueProcessorEnableDomainTaggedMetrics        dynamicconfig.BoolPropertyFn
@@ -114,8 +116,6 @@ type Config struct {
 	TimerProcessorMaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
 	TimerProcessorSplitQueueInterval                  dynamicconfig.DurationPropertyFn
 	TimerProcessorSplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-	TimerProcessorRedispatchInterval                  dynamicconfig.DurationPropertyFn
-	TimerProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TimerProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TimerProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
 	TimerProcessorEnableMultiCurosrProcessor          dynamicconfig.BoolPropertyFn
@@ -137,8 +137,6 @@ type Config struct {
 	TransferProcessorUpdateAckInterval                   dynamicconfig.DurationPropertyFn
 	TransferProcessorUpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
 	TransferProcessorCompleteTransferInterval            dynamicconfig.DurationPropertyFn
-	TransferProcessorRedispatchInterval                  dynamicconfig.DurationPropertyFn
-	TransferProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	TransferProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	TransferProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
 	TransferProcessorEnableMultiCurosrProcessor          dynamicconfig.BoolPropertyFn
@@ -315,15 +313,17 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskMissingEventsResendDelay:  dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsResendDelay, 15*time.Minute),
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay, 25*time.Minute),
 
-		TaskProcessRPS:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
-		EnablePriorityTaskProcessor:    dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, false),
-		TaskSchedulerType:              dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
-		TaskSchedulerWorkerCount:       dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 400),
-		TaskSchedulerShardWorkerCount:  dc.GetIntProperty(dynamicconfig.TaskSchedulerShardWorkerCount, 2),
-		TaskSchedulerQueueSize:         dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 10000),
-		TaskSchedulerShardQueueSize:    dc.GetIntProperty(dynamicconfig.TaskSchedulerShardQueueSize, 200),
-		TaskSchedulerDispatcherCount:   dc.GetIntProperty(dynamicconfig.TaskSchedulerDispatcherCount, 10),
-		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
+		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
+		EnablePriorityTaskProcessor:             dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, false),
+		TaskSchedulerType:                       dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
+		TaskSchedulerWorkerCount:                dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 400),
+		TaskSchedulerShardWorkerCount:           dc.GetIntProperty(dynamicconfig.TaskSchedulerShardWorkerCount, 2),
+		TaskSchedulerQueueSize:                  dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 10000),
+		TaskSchedulerShardQueueSize:             dc.GetIntProperty(dynamicconfig.TaskSchedulerShardQueueSize, 200),
+		TaskSchedulerDispatcherCount:            dc.GetIntProperty(dynamicconfig.TaskSchedulerDispatcherCount, 10),
+		TaskSchedulerRoundRobinWeights:          dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
+		TaskRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.TaskRedispatchInterval, 5*time.Second),
+		TaskRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorSplitQueueIntervalJitterCoefficient, 0.15),
 
 		QueueProcessorEnableDomainTaggedMetrics:        dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableDomainTaggedMetrics, false),
 		QueueProcessorEnableSplit:                      dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
@@ -350,8 +350,6 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TimerProcessorMaxPollIntervalJitterCoefficient:    dc.GetFloat64Property(dynamicconfig.TimerProcessorMaxPollIntervalJitterCoefficient, 0.15),
 		TimerProcessorSplitQueueInterval:                  dc.GetDurationProperty(dynamicconfig.TimerProcessorSplitQueueInterval, 1*time.Minute),
 		TimerProcessorSplitQueueIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorSplitQueueIntervalJitterCoefficient, 0.15),
-		TimerProcessorRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.TimerProcessorRedispatchInterval, 5*time.Second),
-		TimerProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		TimerProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TimerProcessorMaxRedispatchQueueSize, 10000),
 		TimerProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TimerProcessorEnablePriorityTaskProcessor, false),
 		TimerProcessorEnableMultiCurosrProcessor:          dc.GetBoolProperty(dynamicconfig.TimerProcessorEnableMultiCurosrProcessor, false),
@@ -372,8 +370,6 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorUpdateAckInterval:                   dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 30*time.Second),
 		TransferProcessorUpdateAckIntervalJitterCoefficient:  dc.GetFloat64Property(dynamicconfig.TransferProcessorUpdateAckIntervalJitterCoefficient, 0.15),
 		TransferProcessorCompleteTransferInterval:            dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 60*time.Second),
-		TransferProcessorRedispatchInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorRedispatchInterval, 5*time.Second),
-		TransferProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		TransferProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 10000),
 		TransferProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.TransferProcessorEnablePriorityTaskProcessor, false),
 		TransferProcessorEnableMultiCurosrProcessor:          dc.GetBoolProperty(dynamicconfig.TransferProcessorEnableMultiCurosrProcessor, false),

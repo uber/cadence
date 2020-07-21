@@ -64,20 +64,18 @@ func newTransferQueueStandbyProcessor(
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		BatchSize:                           config.TransferTaskBatchSize,
-		WorkerCount:                         config.TransferTaskWorkerCount,
-		MaxPollRPS:                          config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:                     config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:    config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                   config.TransferProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:  config.TransferProcessorUpdateAckIntervalJitterCoefficient,
-		MaxRetryCount:                       config.TransferTaskMaxRetryCount,
-		RedispatchInterval:                  config.TransferProcessorRedispatchInterval,
-		RedispatchIntervalJitterCoefficient: config.TransferProcessorRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:              config.TransferProcessorMaxRedispatchQueueSize,
-		EnablePriorityTaskProcessor:         config.TransferProcessorEnablePriorityTaskProcessor,
-		MetricScope:                         metrics.TransferStandbyQueueProcessorScope,
-		QueueType:                           task.QueueTypeStandbyTransfer,
+		BatchSize:                          config.TransferTaskBatchSize,
+		WorkerCount:                        config.TransferTaskWorkerCount,
+		MaxPollRPS:                         config.TransferProcessorMaxPollRPS,
+		MaxPollInterval:                    config.TransferProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:   config.TransferProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                  config.TransferProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient: config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		MaxRetryCount:                      config.TransferTaskMaxRetryCount,
+		MaxRedispatchQueueSize:             config.TransferProcessorMaxRedispatchQueueSize,
+		EnablePriorityTaskProcessor:        config.TransferProcessorEnablePriorityTaskProcessor,
+		MetricScope:                        metrics.TransferStandbyQueueProcessorScope,
+		QueueType:                          task.QueueTypeStandbyTransfer,
 	}
 	logger = logger.WithTags(tag.ClusterName(clusterName))
 

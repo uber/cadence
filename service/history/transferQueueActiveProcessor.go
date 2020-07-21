@@ -66,20 +66,18 @@ func newTransferQueueActiveProcessor(
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		BatchSize:                           config.TransferTaskBatchSize,
-		WorkerCount:                         config.TransferTaskWorkerCount,
-		MaxPollRPS:                          config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:                     config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:    config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                   config.TransferProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:  config.TransferProcessorUpdateAckIntervalJitterCoefficient,
-		MaxRetryCount:                       config.TransferTaskMaxRetryCount,
-		RedispatchInterval:                  config.TransferProcessorRedispatchInterval,
-		RedispatchIntervalJitterCoefficient: config.TransferProcessorRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:              config.TransferProcessorMaxRedispatchQueueSize,
-		EnablePriorityTaskProcessor:         config.TransferProcessorEnablePriorityTaskProcessor,
-		MetricScope:                         metrics.TransferActiveQueueProcessorScope,
-		QueueType:                           task.QueueTypeActiveTransfer,
+		BatchSize:                          config.TransferTaskBatchSize,
+		WorkerCount:                        config.TransferTaskWorkerCount,
+		MaxPollRPS:                         config.TransferProcessorMaxPollRPS,
+		MaxPollInterval:                    config.TransferProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:   config.TransferProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                  config.TransferProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient: config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		MaxRetryCount:                      config.TransferTaskMaxRetryCount,
+		MaxRedispatchQueueSize:             config.TransferProcessorMaxRedispatchQueueSize,
+		EnablePriorityTaskProcessor:        config.TransferProcessorEnablePriorityTaskProcessor,
+		MetricScope:                        metrics.TransferActiveQueueProcessorScope,
+		QueueType:                          task.QueueTypeActiveTransfer,
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithTags(tag.ClusterName(currentClusterName))
@@ -172,20 +170,18 @@ func newTransferQueueFailoverProcessor(
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		BatchSize:                           config.TransferTaskBatchSize,
-		WorkerCount:                         config.TransferTaskWorkerCount,
-		MaxPollRPS:                          config.TransferProcessorFailoverMaxPollRPS,
-		MaxPollInterval:                     config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:    config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                   config.TransferProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:  config.TransferProcessorUpdateAckIntervalJitterCoefficient,
-		MaxRetryCount:                       config.TransferTaskMaxRetryCount,
-		RedispatchInterval:                  config.TransferProcessorRedispatchInterval,
-		RedispatchIntervalJitterCoefficient: config.TransferProcessorRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:              config.TransferProcessorMaxRedispatchQueueSize,
-		EnablePriorityTaskProcessor:         config.TransferProcessorEnablePriorityTaskProcessor,
-		MetricScope:                         metrics.TransferActiveQueueProcessorScope,
-		QueueType:                           task.QueueTypeActiveTransfer,
+		BatchSize:                          config.TransferTaskBatchSize,
+		WorkerCount:                        config.TransferTaskWorkerCount,
+		MaxPollRPS:                         config.TransferProcessorFailoverMaxPollRPS,
+		MaxPollInterval:                    config.TransferProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:   config.TransferProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                  config.TransferProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient: config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		MaxRetryCount:                      config.TransferTaskMaxRetryCount,
+		MaxRedispatchQueueSize:             config.TransferProcessorMaxRedispatchQueueSize,
+		EnablePriorityTaskProcessor:        config.TransferProcessorEnablePriorityTaskProcessor,
+		MetricScope:                        metrics.TransferActiveQueueProcessorScope,
+		QueueType:                          task.QueueTypeActiveTransfer,
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	failoverUUID := uuid.New()

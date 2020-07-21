@@ -167,6 +167,8 @@ var keys = map[Key]string{
 	TaskSchedulerShardQueueSize:                            "history.taskSchedulerShardQueueSize",
 	TaskSchedulerDispatcherCount:                           "history.taskSchedulerDispatcherCount",
 	TaskSchedulerRoundRobinWeights:                         "history.taskSchedulerRoundRobinWeight",
+	TaskRedispatchInterval:                                 "history.taskRedispatchInterval",
+	TaskRedispatchIntervalJitterCoefficient:                "history.taskRedispatchIntervalJitterCoefficient",
 	QueueProcessorEnableDomainTaggedMetrics:                "history.queueProcessorEnableDomainTaggedMetrics",
 	QueueProcessorEnableSplit:                              "history.queueProcessorEnableSplit",
 	QueueProcessorSplitMaxLevel:                            "history.queueProcessorSplitMaxLevel",
@@ -192,8 +194,6 @@ var keys = map[Key]string{
 	TimerProcessorMaxPollIntervalJitterCoefficient:         "history.timerProcessorMaxPollIntervalJitterCoefficient",
 	TimerProcessorSplitQueueInterval:                       "history.timerProcessorSplitQueueInterval",
 	TimerProcessorSplitQueueIntervalJitterCoefficient:      "history.timerProcessorSplitQueueIntervalJitterCoefficient",
-	TimerProcessorRedispatchInterval:                       "history.timerProcessorRedispatchInterval",
-	TimerProcessorRedispatchIntervalJitterCoefficient:      "history.timerProcessorRedispatchIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                   "history.timerProcessorMaxRedispatchQueueSize",
 	TimerProcessorEnablePriorityTaskProcessor:              "history.timerProcessorEnablePriorityTaskProcessor",
 	TimerProcessorEnableMultiCurosrProcessor:               "history.timerProcessorEnableMultiCursorProcessor",
@@ -214,8 +214,6 @@ var keys = map[Key]string{
 	TransferProcessorUpdateAckInterval:                     "history.transferProcessorUpdateAckInterval",
 	TransferProcessorUpdateAckIntervalJitterCoefficient:    "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 	TransferProcessorCompleteTransferInterval:              "history.transferProcessorCompleteTransferInterval",
-	TransferProcessorRedispatchInterval:                    "history.transferProcessorRedispatchInterval",
-	TransferProcessorRedispatchIntervalJitterCoefficient:   "history.transferProcessorRedispatchIntervalJitterCoefficient",
 	TransferProcessorMaxRedispatchQueueSize:                "history.transferProcessorMaxRedispatchQueueSize",
 	TransferProcessorEnablePriorityTaskProcessor:           "history.transferProcessorEnablePriorityTaskProcessor",
 	TransferProcessorEnableMultiCurosrProcessor:            "history.transferProcessorEnableMultiCursorProcessor",
@@ -562,6 +560,10 @@ const (
 	TaskSchedulerDispatcherCount
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	TaskSchedulerRoundRobinWeights
+	// TaskRedispatchInterval is the task redispatch interval
+	TaskRedispatchInterval
+	// TaskRedispatchIntervalJitterCoefficient is the task redispatch interval jitter coefficient
+	TaskRedispatchIntervalJitterCoefficient
 	// QueueProcessorEnableDomainTaggedMetrics indicates whether task processing metrics should include domain tag
 	QueueProcessorEnableDomainTaggedMetrics
 	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
@@ -612,10 +614,6 @@ const (
 	TimerProcessorSplitQueueInterval
 	// TimerProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
 	TimerProcessorSplitQueueIntervalJitterCoefficient
-	// TimerProcessorRedispatchInterval is the redispatch interval for timer processor
-	TimerProcessorRedispatchInterval
-	// TimerProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
-	TimerProcessorRedispatchIntervalJitterCoefficient
 	// TimerProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for timer processor
 	TimerProcessorMaxRedispatchQueueSize
 	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
@@ -656,10 +654,6 @@ const (
 	TransferProcessorUpdateAckIntervalJitterCoefficient
 	// TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor
 	TransferProcessorCompleteTransferInterval
-	// TransferProcessorRedispatchInterval is the redispatch interval for transferQueueProcessor
-	TransferProcessorRedispatchInterval
-	// TransferProcessorRedispatchIntervalJitterCoefficient is the redispatch interval jitter coefficient
-	TransferProcessorRedispatchIntervalJitterCoefficient
 	// TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor
 	TransferProcessorMaxRedispatchQueueSize
 	// TransferProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for transferQueueProcessor
