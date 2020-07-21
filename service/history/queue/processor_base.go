@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -338,6 +339,44 @@ func newProcessingQueueCollections(
 	})
 
 	return processingQueueCollections
+}
+
+// RedispatchTasks should be un-exported after the queue processing logic
+// in history package is deprecated.
+func RedispatchTasks(
+	redispatchQueue collection.Queue,
+	taskProcessor task.Processor,
+	logger log.Logger,
+	metricsScope metrics.Scope,
+	shutdownCh <-chan struct{},
+) {
+	queueLength := redispatchQueue.Len()
+	metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueLength))
+	for i := 0; i != queueLength; i++ {
+		element := redispatchQueue.Remove()
+		if element == nil {
+			// queue is empty, may due to concurrent redispatch on the same queue
+			return
+		}
+		queueTask := element.(task.Task)
+		submitted, err := taskProcessor.TrySubmit(queueTask)
+		if err != nil {
+			select {
+			case <-shutdownCh:
+				// if error is due to shard shutdown
+				return
+			default:
+				// otherwise it might be error from domain cache etc, add
+				// the task to redispatch queue so that it can be retried
+				logger.Error("failed to redispatch task", tag.Error(err))
+			}
+		}
+
+		if err != nil || !submitted {
+			// failed to submit, enqueue again
+			redispatchQueue.Add(queueTask)
+		}
+	}
 }
 
 func getPendingTasksMetricIdx(

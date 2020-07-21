@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -113,6 +114,21 @@ func newAdminWorkflowCommands() []cli.Command {
 
 func newAdminShardManagementCommands() []cli.Command {
 	return []cli.Command{
+		{
+			Name:    "describe",
+			Aliases: []string{"d"},
+			Usage:   "Describe shard by Id",
+			Flags: append(
+				getDBFlags(),
+				cli.IntFlag{
+					Name:  FlagShardID,
+					Usage: "The Id of the shard to describe",
+				},
+			),
+			Action: func(c *cli.Context) {
+				AdminDescribeShard(c)
+			},
+		},
 		{
 			Name:    "closeShard",
 			Aliases: []string{"clsh"},
@@ -859,7 +875,8 @@ func getDBFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:  FlagDBAddress,
-			Usage: "persistence address(right now only cassandra is supported)",
+			Value: "127.0.0.1",
+			Usage: "persistence address (right now only cassandra is fully supported)",
 		},
 		cli.IntFlag{
 			Name:  FlagDBPort,
@@ -876,6 +893,7 @@ func getDBFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  FlagKeyspace,
+			Value: "cadence",
 			Usage: "cassandra keyspace",
 		},
 		cli.BoolFlag{
