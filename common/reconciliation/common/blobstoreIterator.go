@@ -83,11 +83,13 @@ func getBlobstoreFetchPageFn(
 			if len(p) == 0 {
 				continue
 			}
-			var soe ScanOutputEntity
+			soe := ScanOutputEntity{
+				Execution: &ConcreteExecution{},
+			}
 			if err := json.Unmarshal(p, &soe); err != nil {
 				return pagination.Page{}, err
 			}
-			if err := ValidateConcreteExecution(&soe.Execution); err != nil {
+			if err := ValidateConcreteExecution(soe.Execution); err != nil {
 				return pagination.Page{}, err
 			}
 			executions = append(executions, &soe)

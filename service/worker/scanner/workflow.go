@@ -61,10 +61,6 @@ const (
 	executionsScannerWFTypeName   = "cadence-sys-executions-scanner-workflow"
 	executionsScannerTaskListName = "cadence-sys-executions-scanner-tasklist-0"
 
-	currentExecutionsScannerWFID          = "cadence-sys-current-executions-scanner"
-	currentExxecutionsScannerWFTypeName   = "cadence-sys-current-executions-scanner-workflow"
-	currentExxecutionsScannerTaskListName = "cadence-sys-current-executions-scanner-tasklist-0"
-
 	executionsFixerWFTypeName   = "cadence-sys-executions-fixer-workflow"
 	executionsFixerTaskListName = "cadence-sys-executions-fixer-tasklist-0"
 )
