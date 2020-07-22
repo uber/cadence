@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/history/config"
 )
 
 type (
@@ -152,11 +151,12 @@ func (s *redispatcherSuite) TestRedispatch_Random() {
 }
 
 func (s *redispatcherSuite) newTestRedispatcher() *redispatcherImpl {
-	config := config.NewForTest()
-	config.TaskRedispatchInterval = dynamicconfig.GetDurationPropertyFn(time.Millisecond * 50)
 	return NewRedispatcher(
 		s.mockProcessor,
-		config,
+		&RedispatcherOptions{
+			TaskRedispatchInterval:                  dynamicconfig.GetDurationPropertyFn(time.Millisecond * 50),
+			TaskRedispatchIntervalJitterCoefficient: dynamicconfig.GetFloatPropertyFn(0.15),
+		},
 		s.logger,
 		s.metricsScope,
 	).(*redispatcherImpl)

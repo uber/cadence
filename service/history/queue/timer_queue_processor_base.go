@@ -625,6 +625,8 @@ func newTimerQueueProcessorOptions(
 		MaxPollIntervalJitterCoefficient:    config.TimerProcessorMaxPollIntervalJitterCoefficient,
 		UpdateAckInterval:                   config.TimerProcessorUpdateAckInterval,
 		UpdateAckIntervalJitterCoefficient:  config.TimerProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchInterval:                  config.TaskRedispatchInterval,
+		RedispatchIntervalJitterCoefficient: config.TaskRedispatchIntervalJitterCoefficient,
 		MaxRedispatchQueueSize:              config.TimerProcessorMaxRedispatchQueueSize,
 		SplitQueueInterval:                  config.TimerProcessorSplitQueueInterval,
 		SplitQueueIntervalJitterCoefficient: config.TimerProcessorSplitQueueIntervalJitterCoefficient,

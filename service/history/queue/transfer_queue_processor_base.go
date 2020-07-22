@@ -426,6 +426,8 @@ func newTransferQueueProcessorOptions(
 		MaxPollIntervalJitterCoefficient:    config.TransferProcessorMaxPollIntervalJitterCoefficient,
 		UpdateAckInterval:                   config.TransferProcessorUpdateAckInterval,
 		UpdateAckIntervalJitterCoefficient:  config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchInterval:                  config.TaskRedispatchInterval,
+		RedispatchIntervalJitterCoefficient: config.TaskRedispatchIntervalJitterCoefficient,
 		MaxRedispatchQueueSize:              config.TransferProcessorMaxRedispatchQueueSize,
 		SplitQueueInterval:                  config.TransferProcessorSplitQueueInterval,
 		SplitQueueIntervalJitterCoefficient: config.TransferProcessorSplitQueueIntervalJitterCoefficient,

@@ -30,7 +30,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
@@ -43,11 +43,17 @@ type (
 		doneCh     chan struct{}
 	}
 
+	// RedispatcherOptions configs redispatch interval
+	RedispatcherOptions struct {
+		TaskRedispatchInterval                  dynamicconfig.DurationPropertyFn
+		TaskRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+	}
+
 	redispatcherImpl struct {
 		sync.Mutex
 
 		taskProcessor Processor
-		config        *config.Config
+		options       *RedispatcherOptions
 		logger        log.Logger
 		metricsScope  metrics.Scope
 
@@ -63,13 +69,13 @@ type (
 // NewRedispatcher creates a new task Redispatcher
 func NewRedispatcher(
 	taskProcessor Processor,
-	config *config.Config,
+	options *RedispatcherOptions,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 ) Redispatcher {
 	return &redispatcherImpl{
 		taskProcessor:   taskProcessor,
-		config:          config,
+		options:         options,
 		logger:          logger,
 		metricsScope:    metricsScope,
 		status:          common.DaemonStatusInitialized,
@@ -169,10 +175,6 @@ func (r *redispatcherImpl) redispatchLoop() {
 func (r *redispatcherImpl) redispatchTasks(
 	notification redispatchNotification,
 ) {
-	if r.isStopped() {
-		return
-	}
-
 	r.Lock()
 	defer r.Unlock()
 
@@ -185,6 +187,10 @@ func (r *redispatcherImpl) redispatchTasks(
 			r.setupTimerLocked()
 		}
 	}()
+
+	if r.isStopped() {
+		return
+	}
 
 	queueSize := r.sizeLocked()
 	r.metricsScope.RecordTimer(metrics.TaskRedispatchQueuePendingTasksTimer, time.Duration(queueSize))
@@ -245,8 +251,8 @@ func (r *redispatcherImpl) setupTimerLocked() {
 	if r.redispatchTimer == nil {
 		r.redispatchTimer = time.AfterFunc(
 			backoff.JitDuration(
-				r.config.TaskRedispatchInterval(),
-				r.config.TaskRedispatchIntervalJitterCoefficient(),
+				r.options.TaskRedispatchInterval(),
+				r.options.TaskRedispatchIntervalJitterCoefficient(),
 			),
 			func() {
 				r.Lock()

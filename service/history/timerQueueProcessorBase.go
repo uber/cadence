@@ -123,7 +123,10 @@ func newTimerQueueProcessorBase(
 		queueTaskProcessor: queueTaskProcessor,
 		redispatcher: task.NewRedispatcher(
 			queueTaskProcessor,
-			config,
+			&task.RedispatcherOptions{
+				TaskRedispatchInterval:                  config.TaskRedispatchInterval,
+				TaskRedispatchIntervalJitterCoefficient: config.TaskRedispatchIntervalJitterCoefficient,
+			},
 			logger,
 			metricsScope,
 		),
