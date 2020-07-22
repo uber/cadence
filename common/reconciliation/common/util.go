@@ -32,7 +32,7 @@ import (
 )
 
 // ValidateExecution returns an error if Execution is not valid, nil otherwise.
-func ValidateExecution(execution *Execution) error {
+func validateExecution(execution *Execution) error {
 	if execution.ShardID < 0 {
 		return fmt.Errorf("invalid ShardID: %v", execution.ShardID)
 	}
@@ -52,16 +52,11 @@ func ValidateExecution(execution *Execution) error {
 }
 
 // ValidateConcreteExecution returns an error if ConcreteExecution is not valid, nil otherwise.
-func ValidateConcreteExecution(exec interface{}) error {
-	concreteExecution, ok := exec.(*ConcreteExecution)
-	if !ok {
-		return errors.New("expected ConcreteExecution")
-	}
-	err := ValidateExecution(&concreteExecution.Execution)
+func ValidateConcreteExecution(concreteExecution *ConcreteExecution) error {
+	err := validateExecution(&concreteExecution.Execution)
 	if err != nil {
 		return err
 	}
-
 	if len(concreteExecution.BranchToken) == 0 {
 		return errors.New("empty BranchToken")
 	}
