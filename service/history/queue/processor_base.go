@@ -52,6 +52,8 @@ type (
 		MaxPollIntervalJitterCoefficient    dynamicconfig.FloatPropertyFn
 		UpdateAckInterval                   dynamicconfig.DurationPropertyFn
 		UpdateAckIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
+		RedispatchInterval                  dynamicconfig.DurationPropertyFn
+		RedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 		MaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 		SplitQueueInterval                  dynamicconfig.DurationPropertyFn
 		SplitQueueIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
@@ -109,7 +111,10 @@ func newProcessorBase(
 		taskProcessor: taskProcessor,
 		redispatcher: task.NewRedispatcher(
 			taskProcessor,
-			shard.GetConfig(),
+			&task.RedispatcherOptions{
+				TaskRedispatchInterval:                  options.RedispatchInterval,
+				TaskRedispatchIntervalJitterCoefficient: options.RedispatchIntervalJitterCoefficient,
+			},
 			logger,
 			metricsScope,
 		),

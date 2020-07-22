@@ -327,7 +327,7 @@ func (t *taskBase) HandleErr(
 func (t *taskBase) RetryErr(
 	err error,
 ) bool {
-	if err == ErrTaskRedispatch {
+	if err == ErrTaskRedispatch || err == ErrTaskRetry {
 		return false
 	}
 

@@ -133,7 +133,10 @@ func newQueueProcessorBase(
 		queueTaskProcessor: queueTaskProcessor,
 		redispatcher: task.NewRedispatcher(
 			queueTaskProcessor,
-			shard.GetConfig(),
+			&task.RedispatcherOptions{
+				TaskRedispatchInterval:                  options.RedispatchInterval,
+				TaskRedispatchIntervalJitterCoefficient: options.RedispatchIntervalJitterCoefficient,
+			},
 			logger,
 			metricsScope,
 		),
