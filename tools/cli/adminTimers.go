@@ -60,7 +60,7 @@ func AdminTimers(c *cli.Context) {
 		}
 	}
 
-	taskTypes := intSliceToMap(timerTypes)
+	taskTypes := intSliceToSet(timerTypes)
 
 	st, err := parseSingleTs(startDate)
 	if err != nil {

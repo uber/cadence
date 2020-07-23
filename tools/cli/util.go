@@ -511,7 +511,7 @@ func mapKeysToArray(m map[string]string) []string {
 	return out
 }
 
-func intSliceToMap(s []int) map[int]struct{} {
+func intSliceToSet(s []int) map[int]struct{} {
 	var ret = make(map[int]struct{}, len(s))
 	for _, v := range s {
 		ret[v] = struct{}{}
