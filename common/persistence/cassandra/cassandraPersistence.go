@@ -2079,17 +2079,17 @@ func (d *cassandraPersistence) GetConcreteExecution(request *p.GetConcreteExecut
 	if err := query.MapScan(result); err != nil {
 		if err == gocql.ErrNotFound {
 			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
-					request.WorkflowID),
+				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
+					request.WorkflowID, request.RunID),
 			}
 		} else if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetCurrentExecution operation failed. Error: %v", err),
+				Message: fmt.Sprintf("GetConcreteExecution operation failed. Error: %v", err),
 			}
 		}
 
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetCurrentExecution operation failed. Error: %v", err),
+			Message: fmt.Sprintf("GetConcreteExecution operation failed. Error: %v", err),
 		}
 	}
 	return &p.GetConcreteExecutionResponse{}, nil

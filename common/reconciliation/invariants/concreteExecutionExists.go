@@ -29,7 +29,7 @@ import (
 )
 
 type (
-	concreteExecutionExist struct {
+	concreteExecutionExists struct {
 		pr common.PersistenceRetryer
 	}
 )
@@ -38,12 +38,12 @@ type (
 func NewConcreteExecutionExists(
 	pr common.PersistenceRetryer,
 ) common.Invariant {
-	return &concreteExecutionExist{
+	return &concreteExecutionExists{
 		pr: pr,
 	}
 }
 
-func (c *concreteExecutionExist) Check(execution interface{}) common.CheckResult {
+func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResult {
 	currentExecution, ok := execution.(*common.CurrentExecution)
 	if !ok {
 		return common.CheckResult{
@@ -77,7 +77,7 @@ func (c *concreteExecutionExist) Check(execution interface{}) common.CheckResult
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeFailed,
 				InvariantType:   c.InvariantType(),
-				Info:            "failed to check if current execution exists",
+				Info:            "failed to check if concrete execution exists",
 				InfoDetails:     currentExecErr.Error(),
 			}
 		}
@@ -88,7 +88,7 @@ func (c *concreteExecutionExist) Check(execution interface{}) common.CheckResult
 	}
 }
 
-func (c *concreteExecutionExist) Fix(execution interface{}) common.FixResult {
+func (c *concreteExecutionExists) Fix(execution interface{}) common.FixResult {
 	fixResult, checkResult := checkBeforeFix(c, execution)
 	if fixResult != nil {
 		return *fixResult
@@ -97,7 +97,7 @@ func (c *concreteExecutionExist) Fix(execution interface{}) common.FixResult {
 	if err := c.pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
-		RunID:      currentExecution.RunID,
+		RunID:      currentExecution.CurrentRunID,
 	}); err != nil {
 		return common.FixResult{
 			FixResultType: common.FixResultTypeFailed,
@@ -111,6 +111,6 @@ func (c *concreteExecutionExist) Fix(execution interface{}) common.FixResult {
 	return *fixResult
 }
 
-func (o *concreteExecutionExist) InvariantType() common.InvariantType {
+func (o *concreteExecutionExists) InvariantType() common.InvariantType {
 	return common.ConcreteExecutionExistsInvariantType
 }

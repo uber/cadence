@@ -102,7 +102,7 @@ func (pr *persistenceRetryer) GetCurrentExecution(
 	return resp, nil
 }
 
-// GetCurrentExecution retries GetCurrentExecution
+// GetConcreteExecution retries GetConcreteExecution
 func (pr *persistenceRetryer) GetConcreteExecution(
 	req *persistence.GetConcreteExecutionRequest,
 ) (*persistence.GetConcreteExecutionResponse, error) {
