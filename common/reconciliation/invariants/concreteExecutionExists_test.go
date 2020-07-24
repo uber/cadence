@@ -55,13 +55,13 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		getConcreteErr  error
 		expectedResult  common.CheckResult
 	}{
-		//{
-		//	execution: getClosedCurrentExecution(),
-		//	expectedResult: common.CheckResult{
-		//		CheckResultType: common.CheckResultTypeHealthy,
-		//		InvariantType:   common.ConcreteExecutionExistsInvariantType,
-		//	},
-		//},
+		{
+			execution: getClosedCurrentExecution(),
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+				InvariantType:   common.ConcreteExecutionExistsInvariantType,
+			},
+		},
 		{
 			execution: getOpenCurrentExecution(),
 			expectedResult: common.CheckResult{
