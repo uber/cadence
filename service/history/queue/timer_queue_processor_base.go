@@ -209,7 +209,6 @@ processorPumpLoop:
 			maxRedispatchQueueSize := t.options.MaxRedispatchQueueSize()
 			if t.redispatcher.Size() > maxRedispatchQueueSize {
 				t.redispatcher.Redispatch(maxRedispatchQueueSize)
-				t.redispatcher.Redispatch(maxRedispatchQueueSize)
 				if t.redispatcher.Size() > maxRedispatchQueueSize {
 					// if redispatcher still has a large number of tasks
 					// this only happens when system is under very high load
