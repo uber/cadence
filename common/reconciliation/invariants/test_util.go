@@ -42,8 +42,8 @@ var (
 	branchToken = []byte{1, 2, 3}
 )
 
-func getOpenExecution() common.ConcreteExecution {
-	return common.ConcreteExecution{
+func getOpenExecution() *common.ConcreteExecution {
+	return &common.ConcreteExecution{
 		Execution: common.Execution{
 			ShardID:    shardID,
 			DomainID:   domainID,
@@ -57,8 +57,8 @@ func getOpenExecution() common.ConcreteExecution {
 	}
 }
 
-func getClosedExecution() common.ConcreteExecution {
-	return common.ConcreteExecution{
+func getClosedExecution() *common.ConcreteExecution {
+	return &common.ConcreteExecution{
 		Execution: common.Execution{
 			ShardID:    shardID,
 			DomainID:   domainID,

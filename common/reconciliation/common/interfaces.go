@@ -30,6 +30,7 @@ type (
 		ListConcreteExecutions(*persistence.ListConcreteExecutionsRequest) (*persistence.ListConcreteExecutionsResponse, error)
 		GetWorkflowExecution(*persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
 		GetCurrentExecution(*persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse, error)
+		GetConcreteExecution(request *persistence.GetConcreteExecutionRequest) (*persistence.GetConcreteExecutionResponse, error)
 		ReadHistoryBranch(*persistence.ReadHistoryBranchRequest) (*persistence.ReadHistoryBranchResponse, error)
 		DeleteWorkflowExecution(*persistence.DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(request *persistence.DeleteCurrentWorkflowExecutionRequest) error

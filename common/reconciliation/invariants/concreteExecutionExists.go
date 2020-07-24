@@ -23,105 +23,94 @@
 package invariants
 
 import (
-	"fmt"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
 )
 
 type (
-	openCurrentExecution struct {
+	concreteExecutionExist struct {
 		pr common.PersistenceRetryer
 	}
 )
 
-// NewOpenCurrentExecution returns a new invariant for checking open current execution
-func NewOpenCurrentExecution(
+// NewConcreteExecutionExists returns a new invariant for checking concrete execution
+func NewConcreteExecutionExists(
 	pr common.PersistenceRetryer,
 ) common.Invariant {
-	return &openCurrentExecution{
+	return &concreteExecutionExist{
 		pr: pr,
 	}
 }
 
-func (o *openCurrentExecution) Check(execution interface{}) common.CheckResult {
-	concreteExecution, ok := execution.(*common.ConcreteExecution)
+func (c *concreteExecutionExist) Check(execution interface{}) common.CheckResult {
+	currentExecution, ok := execution.(*common.CurrentExecution)
 	if !ok {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
-			InvariantType:   o.InvariantType(),
-			Info:            "failed to check: expected concrete execution",
+			InvariantType:   c.InvariantType(),
+			Info:            "failed to check: expected current execution",
 		}
 	}
-	if !common.Open(concreteExecution.State) {
+	if !common.Open(currentExecution.State) {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeHealthy,
-			InvariantType:   o.InvariantType(),
+			InvariantType:   c.InvariantType(),
 		}
 	}
-	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
-		DomainID:   concreteExecution.DomainID,
-		WorkflowID: concreteExecution.WorkflowID,
+	// by this point the corresponding concrete execution must exist and can be already closed
+	_, currentExecErr := c.pr.GetConcreteExecution(&persistence.GetConcreteExecutionRequest{
+		DomainID:   currentExecution.DomainID,
+		WorkflowID: "cadence-sys-executions-scanner",
+		RunID:      currentExecution.CurrentRunID,
 	})
-	stillOpen, stillOpenErr := common.ExecutionStillOpen(&concreteExecution.Execution, o.pr)
-	if stillOpenErr != nil {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
-			InvariantType:   o.InvariantType(),
-			Info:            "failed to check if concrete execution is still open",
-			InfoDetails:     stillOpenErr.Error(),
-		}
-	}
-	if !stillOpen {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeHealthy,
-			InvariantType:   o.InvariantType(),
-		}
-	}
 	if currentExecErr != nil {
 		switch currentExecErr.(type) {
 		case *shared.EntityNotExistsError:
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   o.InvariantType(),
+				InvariantType:   c.InvariantType(),
 				Info:            "execution is open without having current execution",
 				InfoDetails:     currentExecErr.Error(),
 			}
 		default:
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeFailed,
-				InvariantType:   o.InvariantType(),
+				InvariantType:   c.InvariantType(),
 				Info:            "failed to check if current execution exists",
 				InfoDetails:     currentExecErr.Error(),
 			}
 		}
 	}
-	if currentExecResp.RunID != concreteExecution.RunID {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeCorrupted,
-			InvariantType:   o.InvariantType(),
-			Info:            "execution is open but current points at a different execution",
-			InfoDetails:     fmt.Sprintf("current points at %v", currentExecResp.RunID),
-		}
-	}
 	return common.CheckResult{
 		CheckResultType: common.CheckResultTypeHealthy,
-		InvariantType:   o.InvariantType(),
+		InvariantType:   c.InvariantType(),
 	}
 }
 
-func (o *openCurrentExecution) Fix(execution interface{}) common.FixResult {
-	fixResult, checkResult := checkBeforeFix(o, execution)
+func (c *concreteExecutionExist) Fix(execution interface{}) common.FixResult {
+	fixResult, checkResult := checkBeforeFix(c, execution)
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = common.DeleteExecution(&execution, o.pr)
+	currentExecution, _ := execution.(*common.CurrentExecution)
+	if err := c.pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   currentExecution.DomainID,
+		WorkflowID: "cadence-sys-executions-scanner",
+		RunID:      currentExecution.RunID,
+	}); err != nil {
+		return common.FixResult{
+			FixResultType: common.FixResultTypeFailed,
+			Info:          "failed to delete current workflow execution",
+			InfoDetails:   err.Error(),
+		}
+	}
+
 	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = o.InvariantType()
+	fixResult.InvariantType = c.InvariantType()
 	return *fixResult
 }
 
-func (o *openCurrentExecution) InvariantType() common.InvariantType {
-	return common.OpenCurrentExecutionInvariantType
+func (o *concreteExecutionExist) InvariantType() common.InvariantType {
+	return common.ConcreteExecutionExistsInvariantType
 }

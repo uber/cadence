@@ -836,6 +836,12 @@ func (m *sqlExecutionManager) GetCurrentExecution(
 	}, nil
 }
 
+func (m *sqlExecutionManager) GetConcreteExecution(
+	request *p.GetConcreteExecutionRequest,
+) (*p.GetConcreteExecutionResponse, error) {
+	panic("not implemented yet")
+}
+
 func (m *sqlExecutionManager) ListConcreteExecutions(
 	_ *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {

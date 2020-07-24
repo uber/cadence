@@ -778,6 +778,12 @@ func (m *executionManagerImpl) GetCurrentExecution(
 	return m.persistence.GetCurrentExecution(request)
 }
 
+func (m *executionManagerImpl) GetConcreteExecution(
+	request *GetConcreteExecutionRequest,
+) (*GetConcreteExecutionResponse, error) {
+	return m.persistence.GetConcreteExecution(request)
+}
+
 func (m *executionManagerImpl) ListConcreteExecutions(
 	request *ListConcreteExecutionsRequest,
 ) (*ListConcreteExecutionsResponse, error) {

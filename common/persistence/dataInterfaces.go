@@ -795,6 +795,13 @@ type (
 		WorkflowID string
 	}
 
+	// GetConcreteExecutionRequest is used to check if the concrete execution exists
+	GetConcreteExecutionRequest struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
 	// ListConcreteExecutionsRequest is request to ListConcreteExecutions
 	ListConcreteExecutionsRequest struct {
 		PageSize  int
@@ -820,6 +827,10 @@ type (
 		State            int
 		CloseStatus      int
 		LastWriteVersion int64
+	}
+
+	// GetConcreteExecutionResponse is the response to GetConcreteExecution
+	GetConcreteExecutionResponse struct {
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -1521,6 +1532,7 @@ type (
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		GetConcreteExecution(request *GetConcreteExecutionRequest) (*GetConcreteExecutionResponse, error)
 
 		// Transfer task related methods
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)

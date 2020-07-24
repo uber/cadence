@@ -102,6 +102,23 @@ func (pr *persistenceRetryer) GetCurrentExecution(
 	return resp, nil
 }
 
+// GetCurrentExecution retries GetCurrentExecution
+func (pr *persistenceRetryer) GetConcreteExecution(
+	req *persistence.GetConcreteExecutionRequest,
+) (*persistence.GetConcreteExecutionResponse, error) {
+	var resp *persistence.GetConcreteExecutionResponse
+	op := func() error {
+		var err error
+		resp, err = pr.execManager.GetConcreteExecution(req)
+		return err
+	}
+	err := backoff.Retry(op, retryPolicy, common.IsPersistenceTransientError)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // ReadHistoryBranch retries ReadHistoryBranch
 func (pr *persistenceRetryer) ReadHistoryBranch(
 	req *persistence.ReadHistoryBranchRequest,
