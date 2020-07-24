@@ -85,6 +85,7 @@ type (
 	ScannerWorkflowParams struct {
 		Shards                          Shards
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
+		ScanType                        common.ScanType
 	}
 
 	// FixerWorkflowParams are the parameters to the fix workflow
@@ -196,6 +197,7 @@ var (
 	errQueryNotReady = errors.New("query is not yet ready to be handled, please try again shortly")
 )
 
+// Validate validates shard list or range
 func (s Shards) Validate() error {
 	if s.List == nil && s.Range == nil {
 		return errors.New("must provide either List or Range")
@@ -212,6 +214,7 @@ func (s Shards) Validate() error {
 	return nil
 }
 
+// Flatten flattens Shards to a list of shard IDs and finds the min/max shardID
 func (s Shards) Flatten() ([]int, int, int) {
 	shardList := s.List
 	if len(shardList) == 0 {
@@ -300,6 +303,7 @@ func ScannerWorkflow(
 					ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
 					BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
 					InvariantCollections:    resolvedConfig.InvariantCollections,
+					ScanType:                params.ScanType,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, ScanReportError{
