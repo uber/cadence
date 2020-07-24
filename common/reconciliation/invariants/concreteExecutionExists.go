@@ -61,7 +61,7 @@ func (c *concreteExecutionExist) Check(execution interface{}) common.CheckResult
 	// by this point the corresponding concrete execution must exist and can be already closed
 	_, currentExecErr := c.pr.GetConcreteExecution(&persistence.GetConcreteExecutionRequest{
 		DomainID:   currentExecution.DomainID,
-		WorkflowID: "cadence-sys-executions-scanner",
+		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
 	})
 	if currentExecErr != nil {
@@ -96,7 +96,7 @@ func (c *concreteExecutionExist) Fix(execution interface{}) common.FixResult {
 	currentExecution, _ := execution.(*common.CurrentExecution)
 	if err := c.pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   currentExecution.DomainID,
-		WorkflowID: "cadence-sys-executions-scanner",
+		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.RunID,
 	}); err != nil {
 		return common.FixResult{
