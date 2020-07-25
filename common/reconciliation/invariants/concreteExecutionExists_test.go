@@ -24,6 +24,7 @@ package invariants
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -51,19 +52,12 @@ func (s *ConcreteExecutionExistsSuite) SetupTest() {
 func (s *ConcreteExecutionExistsSuite) TestCheck() {
 	testCases := []struct {
 		execution       *common.CurrentExecution
-		getConcreteResp *persistence.GetConcreteExecutionResponse
+		getConcreteResp *persistence.IsWorkflowExecutionExistsResponse
 		getConcreteErr  error
 		expectedResult  common.CheckResult
 	}{
 		{
 			execution: getClosedCurrentExecution(),
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeHealthy,
-				InvariantType:   common.ConcreteExecutionExistsInvariantType,
-			},
-		},
-		{
-			execution: getOpenCurrentExecution(),
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
@@ -81,8 +75,19 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		},
 		{
 			execution:       getOpenCurrentExecution(),
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: false},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeCorrupted,
+				InvariantType:   common.ConcreteExecutionExistsInvariantType,
+				Info:            "execution is open without having concrete execution",
+				InfoDetails: fmt.Sprintf("concrete execution not found. WorkflowId: %v, RunId: %v",
+					workflowID, current_runID),
+			},
+		},
+		{
+			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
-			getConcreteResp: &persistence.GetConcreteExecutionResponse{},
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
@@ -92,7 +97,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
-		execManager.On("GetConcreteExecution", mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
+		execManager.On("IsWorkflowExecutionExists", mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		o := NewConcreteExecutionExists(common.NewPersistenceRetryer(execManager, nil))
 		s.Equal(tc.expectedResult, o.Check(tc.execution))
 	}

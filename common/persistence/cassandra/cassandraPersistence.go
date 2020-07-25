@@ -440,7 +440,7 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
-	templateGetConcreteExecutionQuery = `SELECT shard_id ` +
+	templateIsWorkflowExecutionExistsQuery = `SELECT shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -2063,11 +2063,9 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 	}, nil
 }
 
-// GetConcreteExecution returns empty response now if records exists and nil otherwise
-// consider to rename it IsConcreteExecutionExist if no more fields needed
-func (d *cassandraPersistence) GetConcreteExecution(request *p.GetConcreteExecutionRequest) (*p.GetConcreteExecutionResponse,
+func (d *cassandraPersistence) IsWorkflowExecutionExists(request *p.IsWorkflowExecutionExistsRequest) (*p.IsWorkflowExecutionExistsResponse,
 	error) {
-	query := d.session.Query(templateGetConcreteExecutionQuery,
+	query := d.session.Query(templateIsWorkflowExecutionExistsQuery,
 		d.shardID,
 		rowTypeExecution,
 		request.DomainID,
@@ -2079,21 +2077,18 @@ func (d *cassandraPersistence) GetConcreteExecution(request *p.GetConcreteExecut
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		if err == gocql.ErrNotFound {
-			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-					request.WorkflowID, request.RunID),
-			}
+			return &p.IsWorkflowExecutionExistsResponse{Exists: false}, nil
 		} else if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetConcreteExecution operation failed. Error: %v", err),
+				Message: fmt.Sprintf("IsWorkflowExecutionExists operation failed. Error: %v", err),
 			}
 		}
 
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetConcreteExecution operation failed. Error: %v", err),
+			Message: fmt.Sprintf("IsWorkflowExecutionExists operation failed. Error: %v", err),
 		}
 	}
-	return &p.GetConcreteExecutionResponse{}, nil
+	return &p.IsWorkflowExecutionExistsResponse{Exists: true}, nil
 }
 
 func (d *cassandraPersistence) ListConcreteExecutions(

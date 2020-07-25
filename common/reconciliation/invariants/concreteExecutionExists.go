@@ -23,7 +23,8 @@
 package invariants
 
 import (
-	"github.com/uber/cadence/.gen/go/shared"
+	"fmt"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
 )
@@ -59,27 +60,26 @@ func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResul
 		}
 	}
 	// by this point the corresponding concrete execution must exist and can be already closed
-	_, currentExecErr := c.pr.GetConcreteExecution(&persistence.GetConcreteExecutionRequest{
+	currentExecResp, currentExecErr := c.pr.IsWorkflowExecutionExists(&persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
 	})
 	if currentExecErr != nil {
-		switch currentExecErr.(type) {
-		case *shared.EntityNotExistsError:
-			return common.CheckResult{
-				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   c.InvariantType(),
-				Info:            "execution is open without having current execution",
-				InfoDetails:     currentExecErr.Error(),
-			}
-		default:
-			return common.CheckResult{
-				CheckResultType: common.CheckResultTypeFailed,
-				InvariantType:   c.InvariantType(),
-				Info:            "failed to check if concrete execution exists",
-				InfoDetails:     currentExecErr.Error(),
-			}
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeFailed,
+			InvariantType:   c.InvariantType(),
+			Info:            "failed to check if concrete execution exists",
+			InfoDetails:     currentExecErr.Error(),
+		}
+	}
+	if !currentExecResp.Exists {
+		return common.CheckResult{
+			CheckResultType: common.CheckResultTypeCorrupted,
+			InvariantType:   c.InvariantType(),
+			Info:            "execution is open without having concrete execution",
+			InfoDetails: fmt.Sprintf("concrete execution not found. WorkflowId: %v, RunId: %v",
+				currentExecution.WorkflowID, currentExecution.CurrentRunID),
 		}
 	}
 	return common.CheckResult{

@@ -836,9 +836,9 @@ func (m *sqlExecutionManager) GetCurrentExecution(
 	}, nil
 }
 
-func (m *sqlExecutionManager) GetConcreteExecution(
-	request *p.GetConcreteExecutionRequest,
-) (*p.GetConcreteExecutionResponse, error) {
+func (m *sqlExecutionManager) IsWorkflowExecutionExists(
+	request *p.IsWorkflowExecutionExistsRequest,
+) (*p.IsWorkflowExecutionExistsResponse, error) {
 	panic("not implemented yet")
 }
 

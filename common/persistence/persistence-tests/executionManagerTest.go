@@ -1890,6 +1890,34 @@ func (s *ExecutionManagerSuite) TestGetCurrentWorkflow() {
 	s.Empty(task1, "Expected empty task identifier.")
 }
 
+// IsWorkflowExecutionExists test
+func (s *ExecutionManagerSuite) TestIsWorkflowExecutionExists() {
+	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("is-concrete-execution-exists-test"),
+		RunId:      common.StringPtr("555e4054-5555-46d3-8755-e3c2db6f515"),
+	}
+
+	_, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
+	s.NoError(err0)
+
+	response, err := s.ExecutionManager.IsWorkflowExecutionExists(&p.IsWorkflowExecutionExistsRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowExecution.GetWorkflowId(),
+		RunID:      workflowExecution.GetRunId(),
+	})
+	s.NoError(err)
+	s.True(response.Exists)
+
+	response, err = s.ExecutionManager.IsWorkflowExecutionExists(&p.IsWorkflowExecutionExistsRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowExecution.GetWorkflowId(),
+		RunID:      "555e4054-5555-1111-8755-e3c2db6f515",
+	})
+	s.NoError(err)
+	s.True(!response.Exists)
+}
+
 // TestTransferTasksThroughUpdate test
 func (s *ExecutionManagerSuite) TestTransferTasksThroughUpdate() {
 	domainID := "b785a8ba-bd7d-4760-bb05-41b115f3e10a"

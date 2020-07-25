@@ -102,14 +102,14 @@ func (pr *persistenceRetryer) GetCurrentExecution(
 	return resp, nil
 }
 
-// GetConcreteExecution retries GetConcreteExecution
-func (pr *persistenceRetryer) GetConcreteExecution(
-	req *persistence.GetConcreteExecutionRequest,
-) (*persistence.GetConcreteExecutionResponse, error) {
-	var resp *persistence.GetConcreteExecutionResponse
+// IsWorkflowExecutionExists retries IsWorkflowExecutionExists
+func (pr *persistenceRetryer) IsWorkflowExecutionExists(
+	req *persistence.IsWorkflowExecutionExistsRequest,
+) (*persistence.IsWorkflowExecutionExistsResponse, error) {
+	var resp *persistence.IsWorkflowExecutionExistsResponse
 	op := func() error {
 		var err error
-		resp, err = pr.execManager.GetConcreteExecution(req)
+		resp, err = pr.execManager.IsWorkflowExecutionExists(req)
 		return err
 	}
 	err := backoff.Retry(op, retryPolicy, common.IsPersistenceTransientError)

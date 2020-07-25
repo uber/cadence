@@ -69,7 +69,7 @@ type (
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
-		GetConcreteExecution(request *GetConcreteExecutionRequest) (*GetConcreteExecutionResponse, error)
+		IsWorkflowExecutionExists(request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
 
 		// Transfer task related methods
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)

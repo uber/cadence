@@ -206,21 +206,21 @@ func (_m *ExecutionManager) GetCurrentExecution(request *persistence.GetCurrentE
 	return r0, r1
 }
 
-// GetConcreteExecution provides a mock function with given fields: request
-func (_m *ExecutionManager) GetConcreteExecution(request *persistence.GetConcreteExecutionRequest) (*persistence.GetConcreteExecutionResponse, error) {
+// IsWorkflowExecutionExists provides a mock function with given fields: request
+func (_m *ExecutionManager) IsWorkflowExecutionExists(request *persistence.IsWorkflowExecutionExistsRequest) (*persistence.IsWorkflowExecutionExistsResponse, error) {
 	ret := _m.Called(request)
 
-	var r0 *persistence.GetConcreteExecutionResponse
-	if rf, ok := ret.Get(0).(func(*persistence.GetConcreteExecutionRequest) *persistence.GetConcreteExecutionResponse); ok {
+	var r0 *persistence.IsWorkflowExecutionExistsResponse
+	if rf, ok := ret.Get(0).(func(*persistence.IsWorkflowExecutionExistsRequest) *persistence.IsWorkflowExecutionExistsResponse); ok {
 		r0 = rf(request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*persistence.GetConcreteExecutionResponse)
+			r0 = ret.Get(0).(*persistence.IsWorkflowExecutionExistsResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*persistence.GetConcreteExecutionRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(*persistence.IsWorkflowExecutionExistsRequest) error); ok {
 		r1 = rf(request)
 	} else {
 		r1 = ret.Error(1)

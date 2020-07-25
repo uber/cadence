@@ -330,15 +330,15 @@ func (p *workflowExecutionPersistenceClient) GetCurrentExecution(request *GetCur
 	return response, err
 }
 
-func (p *workflowExecutionPersistenceClient) GetConcreteExecution(request *GetConcreteExecutionRequest) (*GetConcreteExecutionResponse, error) {
-	p.metricClient.IncCounter(metrics.PersistenceGetConcreteExecutionScope, metrics.PersistenceRequests)
+func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceIsWorkflowExecutionExistsScope, metrics.PersistenceRequests)
 
-	sw := p.metricClient.StartTimer(metrics.PersistenceGetConcreteExecutionScope, metrics.PersistenceLatency)
-	response, err := p.persistence.GetConcreteExecution(request)
+	sw := p.metricClient.StartTimer(metrics.PersistenceIsWorkflowExecutionExistsScope, metrics.PersistenceLatency)
+	response, err := p.persistence.IsWorkflowExecutionExists(request)
 	sw.Stop()
 
 	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceGetConcreteExecutionScope, err)
+		p.updateErrorMetric(metrics.PersistenceIsWorkflowExecutionExistsScope, err)
 	}
 
 	return response, err
