@@ -105,12 +105,13 @@ func (c *concreteExecutionExists) Fix(execution interface{}) common.FixResult {
 			InfoDetails:   err.Error(),
 		}
 	}
-
-	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = c.InvariantType()
-	return *fixResult
+	return common.FixResult{
+		FixResultType: common.FixResultTypeFixed,
+		CheckResult:   *checkResult,
+		InvariantType: c.InvariantType(),
+	}
 }
 
-func (o *concreteExecutionExists) InvariantType() common.InvariantType {
+func (c *concreteExecutionExists) InvariantType() common.InvariantType {
 	return common.ConcreteExecutionExistsInvariantType
 }

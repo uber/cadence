@@ -28,15 +28,15 @@ import (
 )
 
 const (
-	domainID      = "test-domain-id"
-	workflowID    = "test-workflow-id"
-	runID         = "test-run-id"
-	shardID       = 0
-	treeID        = "test-tree-id"
-	branchID      = "test-branch-id"
-	openState     = persistence.WorkflowStateCreated
-	closedState   = persistence.WorkflowStateCompleted
-	current_runID = "test-current-run-id"
+	domainID     = "test-domain-id"
+	workflowID   = "test-workflow-id"
+	runID        = "test-run-id"
+	shardID      = 0
+	treeID       = "test-tree-id"
+	branchID     = "test-branch-id"
+	openState    = persistence.WorkflowStateCreated
+	closedState  = persistence.WorkflowStateCompleted
+	currentRunID = "test-current-run-id"
 )
 
 var (
@@ -82,7 +82,7 @@ func getOpenCurrentExecution() *common.CurrentExecution {
 			RunID:      runID,
 			State:      openState,
 		},
-		CurrentRunID: current_runID,
+		CurrentRunID: currentRunID,
 	}
 }
 
@@ -95,6 +95,6 @@ func getClosedCurrentExecution() *common.CurrentExecution {
 			RunID:      runID,
 			State:      closedState,
 		},
-		CurrentRunID: current_runID,
+		CurrentRunID: currentRunID,
 	}
 }

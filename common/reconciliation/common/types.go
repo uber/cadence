@@ -102,7 +102,7 @@ type (
 		Execution
 	}
 
-	// ConcreteExecution is a current execution.
+	// CurrentExecution is a current execution.
 	CurrentExecution struct {
 		CurrentRunID string
 		Execution

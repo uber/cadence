@@ -81,7 +81,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
 				Info:            "execution is open without having concrete execution",
 				InfoDetails: fmt.Sprintf("concrete execution not found. WorkflowId: %v, RunId: %v",
-					workflowID, current_runID),
+					workflowID, currentRunID),
 			},
 		},
 		{
