@@ -1895,7 +1895,7 @@ func (s *ExecutionManagerSuite) TestIsWorkflowExecutionExists() {
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("is-concrete-execution-exists-test"),
-		RunId:      common.StringPtr("555e4054-5555-46d3-8755-e3c2db6f515"),
+		RunId:      common.StringPtr("c3ff4bc6-d558-4643-83b2-037a33f45322"),
 	}
 
 	_, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
@@ -1912,7 +1912,7 @@ func (s *ExecutionManagerSuite) TestIsWorkflowExecutionExists() {
 	response, err = s.ExecutionManager.IsWorkflowExecutionExists(&p.IsWorkflowExecutionExistsRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      "555e4054-5555-1111-8755-e3c2db6f515",
+		RunID:      "c3ff4bc6-d558-4643-83b2-037a55f45322",
 	})
 	s.NoError(err)
 	s.True(!response.Exists)
