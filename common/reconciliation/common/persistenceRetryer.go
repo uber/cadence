@@ -103,7 +103,6 @@ func (pr *persistenceRetryer) GetCurrentExecution(
 }
 
 // GetConcreteExecution retries GetConcreteExecution
-// consider to rename it IsConcreteExecutionExist if no more fields needed
 func (pr *persistenceRetryer) GetConcreteExecution(
 	req *persistence.GetConcreteExecutionRequest,
 ) (*persistence.GetConcreteExecutionResponse, error) {

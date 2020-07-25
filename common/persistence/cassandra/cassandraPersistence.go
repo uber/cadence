@@ -2064,6 +2064,7 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 }
 
 // GetConcreteExecution returns empty response now if records exists and nil otherwise
+// consider to rename it IsConcreteExecutionExist if no more fields needed
 func (d *cassandraPersistence) GetConcreteExecution(request *p.GetConcreteExecutionRequest) (*p.GetConcreteExecutionResponse,
 	error) {
 	query := d.session.Query(templateGetConcreteExecutionQuery,
