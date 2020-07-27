@@ -299,6 +299,29 @@ func (t *transferQueueProcessor) FailoverDomain(
 	failoverQueueProcessor.Start()
 }
 
+func (t *transferQueueProcessor) HandleAction(action *Action) ([]*ActionResult, error) {
+	var resultChs []chan *ActionResult
+	resultCh, added := t.activeQueueProcessor.addAction(action)
+	if !added {
+		return nil, errors.New("queue shutdown")
+	}
+	resultChs = append(resultChs, resultCh)
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		resultCh, added := standbyQueueProcessor.addAction(action)
+		if !added {
+			return nil, errors.New("queue shutdown")
+		}
+		resultChs = append(resultChs, resultCh)
+	}
+
+	results := make([]*ActionResult, 0, len(resultChs))
+	for _, ch := range resultChs {
+		results = append(results, <-ch)
+	}
+
+	return results, nil
+}
+
 func (t *transferQueueProcessor) LockTaskProcessing() {
 	t.taskAllocator.Lock()
 }

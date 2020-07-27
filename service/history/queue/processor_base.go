@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -69,6 +70,11 @@ type (
 		MetricScope                         int
 	}
 
+	actionNotification struct {
+		action   *Action
+		resultCh chan *ActionResult
+	}
+
 	processorBase struct {
 		shard         shard.Context
 		taskProcessor task.Processor
@@ -85,9 +91,10 @@ type (
 
 		rateLimiter quotas.Limiter
 
-		status     int32
-		shutdownWG sync.WaitGroup
-		shutdownCh chan struct{}
+		status         int32
+		shutdownWG     sync.WaitGroup
+		shutdownCh     chan struct{}
+		actionNotifyCh chan actionNotification
 
 		queueCollectionsLock       sync.RWMutex
 		processingQueueCollections []ProcessingQueueCollection
@@ -134,8 +141,9 @@ func newProcessorBase(
 			},
 		),
 
-		status:     common.DaemonStatusInitialized,
-		shutdownCh: make(chan struct{}),
+		status:         common.DaemonStatusInitialized,
+		shutdownCh:     make(chan struct{}),
+		actionNotifyCh: make(chan actionNotification),
 
 		processingQueueCollections: newProcessingQueueCollections(
 			processingQueueStates,
@@ -280,6 +288,40 @@ func (p *processorBase) splitProcessingQueueCollection(
 	for _, queueCollections := range p.processingQueueCollections {
 		upsertPollTimeFn(queueCollections.Level(), time.Time{})
 	}
+}
+
+func (p *processorBase) addAction(action *Action) (chan *ActionResult, bool) {
+	resultCh := make(chan *ActionResult, 1)
+	select {
+	case p.actionNotifyCh <- actionNotification{
+		action:   action,
+		resultCh: resultCh,
+	}:
+		return resultCh, true
+	case <-p.shutdownCh:
+		close(resultCh)
+		return nil, false
+	}
+}
+
+func (p *processorBase) handleActionNotification(notification actionNotification) {
+	switch notification.action.actionType {
+	case actionTypeReset:
+		p.resetProcessingQueueStates()
+	default:
+		errMsg := "Unknown queue action type"
+		p.logger.Error(errMsg, tag.Error(
+			fmt.Errorf("actionType: %v", notification.action.actionType),
+		))
+		panic(errMsg)
+	}
+
+	close(notification.resultCh)
+}
+
+func (p *processorBase) resetProcessingQueueStates() {
+	p.queueCollectionsLock.Lock()
+	defer p.queueCollectionsLock.Unlock()
 }
 
 func (p *processorBase) getProcessingQueueStates() []ProcessingQueueState {

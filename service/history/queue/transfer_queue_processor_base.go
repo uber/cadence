@@ -241,6 +241,8 @@ processorPumpLoop:
 				t.options.SplitQueueInterval(),
 				t.options.SplitQueueIntervalJitterCoefficient(),
 			))
+		case notification := <-t.actionNotifyCh:
+			t.handleActionNotification(notification)
 		}
 	}
 }
