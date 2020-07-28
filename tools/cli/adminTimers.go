@@ -25,6 +25,8 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/urfave/cli"
 
@@ -36,18 +38,94 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
+type Loader interface {
+	Load() []*persistence.TimerTaskInfo
+}
+
+type Printer interface {
+	Print(timers []*persistence.TimerTaskInfo) error
+}
+type TimerPrinter struct {
+	domainID   string
+	timerTypes []int
+	loader     Loader
+	printer    Printer
+}
+
+type cassandraLoader struct {
+	ctx *cli.Context
+}
+
+type fileLoader struct {
+	ctx *cli.Context
+}
+
+type histogramPrinter struct {
+	ctx *cli.Context
+}
+
+type rawDataPrinter struct {
+	ctx *cli.Context
+}
+
+func NewCassLoader(c *cli.Context) Loader {
+	return &cassandraLoader{
+		ctx: c,
+	}
+}
+
+func NewFileLoader(c *cli.Context) Loader {
+	return &fileLoader{
+		ctx: c,
+	}
+}
+
+func NewTimerPrinter(domain string, timerTypes []int, loader Loader, printer Printer) *TimerPrinter {
+	return &TimerPrinter{
+		timerTypes: timerTypes,
+		domainID:   domain,
+		loader:     loader,
+		printer:    printer,
+	}
+}
+
+func NewHistogramPrinter(c *cli.Context) Printer {
+	return &histogramPrinter{
+		ctx: c,
+	}
+}
+
+func NewRawPrinter(c *cli.Context) Printer {
+	return &rawDataPrinter{
+		ctx: c,
+	}
+}
+
+func (tp *TimerPrinter) filter(timers []*persistence.TimerTaskInfo) []*persistence.TimerTaskInfo {
+	taskTypes := intSliceToSet(tp.timerTypes)
+
+	for i, t := range timers {
+		if len(tp.domainID) > 0 && t.DomainID != tp.domainID {
+			timers[i] = nil
+			continue
+		}
+		if _, ok := taskTypes[t.TaskType]; !ok {
+			timers[i] = nil
+			continue
+
+		}
+	}
+
+	return timers
+}
+
+func (tp *TimerPrinter) Print() error {
+	return tp.printer.Print(tp.filter(tp.loader.Load()))
+}
+
 // AdminTimers is used to list scheduled timers.
 func AdminTimers(c *cli.Context) {
-	shardID := getRequiredIntOption(c, FlagShardID)
-
-	startDate := c.String(FlagStartDate)
-	endDate := c.String(FlagEndDate)
-	rps := c.Int(FlagRPS)
-	domainID := c.String(FlagDomainID)
-	batchSize := c.Int(FlagBatchSize)
 	timerTypes := c.IntSlice(FlagTimerType)
-	skipErrMode := c.Bool(FlagSkipErrorMode)
-
 	if !c.IsSet(FlagTimerType) || (len(timerTypes) == 1 && timerTypes[0] == -1) {
 		timerTypes = []int{
 			persistence.TaskTypeDecisionTimeout,
@@ -60,7 +138,50 @@ func AdminTimers(c *cli.Context) {
 		}
 	}
 
-	taskTypes := intSliceToSet(timerTypes)
+	// setup loader
+	var loader Loader
+	if !c.IsSet(FlagInputFile) {
+		loader = NewCassLoader(c)
+	} else {
+		loader = NewFileLoader(c)
+	}
+
+	// setup printer
+	var printer Printer
+	if !c.Bool(FlagPrintRaw) {
+		printer = NewHistogramPrinter(c)
+	} else {
+		printer = NewRawPrinter(c)
+	}
+
+	tp := NewTimerPrinter(c.String(FlagDomainID), timerTypes, loader, printer)
+	tp.Print()
+}
+
+func (rp *rawDataPrinter) Print(timers []*persistence.TimerTaskInfo) error {
+	for _, t := range timers {
+		if t == nil {
+			continue
+		}
+		data, err := json.Marshal(t)
+		if err != nil {
+			if !rp.ctx.Bool(FlagSkipErrorMode) {
+				ErrorAndExit("cannot marshal timer to json", err)
+			}
+			fmt.Println(err.Error())
+		} else {
+			fmt.Println(string(data))
+		}
+	}
+	return nil
+}
+
+func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
+	rps := cl.ctx.Int(FlagRPS)
+	batchSize := cl.ctx.Int(FlagBatchSize)
+	startDate := cl.ctx.String(FlagStartDate)
+	endDate := cl.ctx.String(FlagEndDate)
+	shardID := getRequiredIntOption(cl.ctx, FlagShardID)
 
 	st, err := parseSingleTs(startDate)
 	if err != nil {
@@ -71,7 +192,7 @@ func AdminTimers(c *cli.Context) {
 		ErrorAndExit("wrong date format for "+FlagEndDate, err)
 	}
 
-	session := connectToCassandra(c)
+	session := connectToCassandra(cl.ctx)
 	defer session.Close()
 
 	limiter := quotas.NewSimpleRateLimiter(rps)
@@ -87,6 +208,8 @@ func AdminTimers(c *cli.Context) {
 		limiter,
 		logger,
 	)
+
+	var timers []*persistence.TimerTaskInfo
 
 	var token []byte
 	isFirstIteration := true
@@ -114,25 +237,42 @@ func AdminTimers(c *cli.Context) {
 		}
 
 		token = resp.NextPageToken
+		timers = append(timers, resp.Timers...)
+	}
+	return timers
+}
 
-		for _, t := range resp.Timers {
-			if len(domainID) > 0 && t.DomainID != domainID {
-				continue
-			}
+func (fl *fileLoader) Load() []*persistence.TimerTaskInfo {
+	file, err := os.Open(fl.ctx.String(FlagInputFile))
+	if err != nil {
+		ErrorAndExit("cannot open file", err)
+	}
+	var data []*persistence.TimerTaskInfo
+	dec := json.NewDecoder(file)
 
-			if _, ok := taskTypes[t.TaskType]; !ok {
-				continue
-			}
-
-			data, err := json.Marshal(t)
-			if err != nil {
-				if !skipErrMode {
-					ErrorAndExit("cannot marshal timer to json", err)
-				}
-				fmt.Println(err.Error())
-			} else {
-				fmt.Println(string(data))
+	for {
+		var timer persistence.TimerTaskInfo
+		if err := dec.Decode(&timer); err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				break
 			}
 		}
+		data = append(data, &timer)
 	}
+	return data
+}
+
+func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
+	h := NewHistorgram()
+	for _, t := range timers {
+		if t == nil {
+			continue
+		}
+		h.Add(t.VisibilityTimestamp.Format(hp.ctx.String(FlagDateFormat)))
+	}
+
+	if err := h.Print(hp.ctx.Int(FlagShardMultiplier)); err != nil {
+		return err
+	}
+	return nil
 }

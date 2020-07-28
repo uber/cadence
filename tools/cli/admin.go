@@ -175,7 +175,7 @@ func newAdminShardManagementCommands() []cli.Command {
 		},
 		{
 			Name:  "timers",
-			Usage: "get timers from multiple shards for given time range",
+			Usage: "get scheduled timers for a given time range",
 			Flags: append(getDBFlags(),
 				cli.IntFlag{
 					Name:  FlagShardID,
@@ -213,8 +213,27 @@ func newAdminShardManagementCommands() []cli.Command {
 					Value: &cli.IntSlice{-1},
 				},
 				cli.BoolFlag{
+					Name:  FlagPrintRaw,
+					Usage: "print raw data instead of histogram",
+				},
+
+				cli.BoolFlag{
 					Name:  FlagSkipErrorMode,
 					Usage: "skip errors",
+				},
+				cli.StringFlag{
+					Name:  FlagInputFile,
+					Usage: "file to use, will not connect to persistence",
+				},
+				cli.StringFlag{
+					Name:  FlagDateFormat,
+					Value: "15:04",
+					Usage: "create buckets using time format. Use Go reference time: Mon Jan 2 15:04:05 MST 2006",
+				},
+				cli.IntFlag{
+					Name:  FlagShardMultiplier,
+					Usage: "multiply timer counters for histogram",
+					Value: 16384,
 				},
 			),
 			Action: func(c *cli.Context) {

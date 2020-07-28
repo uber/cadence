@@ -237,6 +237,8 @@ const (
 	FlagHeaderFile                        = "header_file"
 	FlagStartDate                         = "start_date"
 	FlagEndDate                           = "end_date"
+	FlagDateFormat                        = "date_format"
+	FlagShardMultiplier                   = "shard_multiplier"
 )
 
 var flagsForExecution = []cli.Flag{
