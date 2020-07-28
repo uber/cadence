@@ -299,27 +299,33 @@ func (t *transferQueueProcessor) FailoverDomain(
 	failoverQueueProcessor.Start()
 }
 
-func (t *transferQueueProcessor) HandleAction(action *Action) ([]*ActionResult, error) {
-	var resultChs []chan *ActionResult
-	resultCh, added := t.activeQueueProcessor.addAction(action)
-	if !added {
-		return nil, errors.New("queue shutdown")
-	}
-	resultChs = append(resultChs, resultCh)
-	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-		resultCh, added := standbyQueueProcessor.addAction(action)
-		if !added {
-			return nil, errors.New("queue shutdown")
+func (t *transferQueueProcessor) HandleAction(clusterName string, action *Action) (*ActionResult, error) {
+	var resultNotificationCh chan actionResultNotification
+	var added bool
+	if clusterName == t.currentClusterName {
+		resultNotificationCh, added = t.activeQueueProcessor.addAction(action)
+	} else {
+		found := false
+		for standbyClusterName, standbyProcessor := range t.standbyQueueProcessors {
+			if clusterName == standbyClusterName {
+				resultNotificationCh, added = standbyProcessor.addAction(action)
+				found = true
+				break
+			}
 		}
-		resultChs = append(resultChs, resultCh)
+
+		if !found {
+			return nil, fmt.Errorf("unknown cluster name: %v", clusterName)
+		}
 	}
 
-	results := make([]*ActionResult, 0, len(resultChs))
-	for _, ch := range resultChs {
-		results = append(results, <-ch)
+	if !added {
+		return nil, errors.New("queue processor has been shutdown")
 	}
 
-	return results, nil
+	resultNotification := <-resultNotificationCh
+
+	return resultNotification.result, resultNotification.err
 }
 
 func (t *transferQueueProcessor) LockTaskProcessing() {

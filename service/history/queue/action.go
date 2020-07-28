@@ -21,33 +21,41 @@
 package queue
 
 type (
-	actionType int
+	// ActionType specifies the type of the Action
+	ActionType int
 
-	resetActionAttributes struct{}
-	resetActionResult     struct{}
-
+	// Action specifies the Action should be performed
 	Action struct {
-		actionType            actionType
-		resetActionAttributes *resetActionAttributes
+		ActionType            ActionType
+		ResetActionAttributes *ResetActionAttributes
 		// add attributes for other action types here
 	}
 
+	// ActionResult is the result for performing an Action
 	ActionResult struct {
-		actionType        actionType
-		actionErr         error
-		ResetActionResult *resetActionResult
+		ActionType        ActionType
+		ResetActionResult *ResetActionResult
 	}
+
+	// ResetActionAttributes contains the parameter for performing Reset Action
+	ResetActionAttributes struct{}
+	// ResetActionResult is the result for performing Reset Action
+	ResetActionResult struct{}
+
+	// TODO: add another Action for reading processing queue state to make
+	// the implementation of processorBase lock free
 )
 
 const (
-	actionTypeReset actionType = iota + 1
+	// ActionTypeReset is the ActionType for reseting processing queue states
+	ActionTypeReset ActionType = iota + 1
 	// add more ActionType here
 )
 
 // NewResetAction creates a new action for reseting processing queue states
 func NewResetAction() *Action {
 	return &Action{
-		actionType:            actionTypeReset,
-		resetActionAttributes: &resetActionAttributes{},
+		ActionType:            ActionTypeReset,
+		ResetActionAttributes: &ResetActionAttributes{},
 	}
 }

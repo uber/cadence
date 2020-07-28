@@ -71,8 +71,13 @@ type (
 	}
 
 	actionNotification struct {
-		action   *Action
-		resultCh chan *ActionResult
+		action               *Action
+		resultNotificationCh chan actionResultNotification
+	}
+
+	actionResultNotification struct {
+		result *ActionResult
+		err    error
 	}
 
 	processorBase struct {
@@ -290,38 +295,86 @@ func (p *processorBase) splitProcessingQueueCollection(
 	}
 }
 
-func (p *processorBase) addAction(action *Action) (chan *ActionResult, bool) {
-	resultCh := make(chan *ActionResult, 1)
+func (p *processorBase) addAction(action *Action) (chan actionResultNotification, bool) {
+	resultNotificationCh := make(chan actionResultNotification, 1)
 	select {
 	case p.actionNotifyCh <- actionNotification{
-		action:   action,
-		resultCh: resultCh,
+		action:               action,
+		resultNotificationCh: resultNotificationCh,
 	}:
-		return resultCh, true
+		return resultNotificationCh, true
 	case <-p.shutdownCh:
-		close(resultCh)
+		close(resultNotificationCh)
 		return nil, false
 	}
 }
 
-func (p *processorBase) handleActionNotification(notification actionNotification) {
-	switch notification.action.actionType {
-	case actionTypeReset:
-		p.resetProcessingQueueStates()
+func (p *processorBase) handleActionNotification(
+	notification actionNotification,
+	postActionFn func(),
+) {
+	var result *ActionResult
+	var err error
+	switch notification.action.ActionType {
+	case ActionTypeReset:
+		result, err = p.resetProcessingQueueStates()
 	default:
-		errMsg := "Unknown queue action type"
-		p.logger.Error(errMsg, tag.Error(
-			fmt.Errorf("actionType: %v", notification.action.actionType),
-		))
-		panic(errMsg)
+		err = fmt.Errorf("unknown queue action type: %v", notification.action.ActionType)
 	}
 
-	close(notification.resultCh)
+	notification.resultNotificationCh <- actionResultNotification{
+		result: result,
+		err:    err,
+	}
+
+	close(notification.resultNotificationCh)
+
+	if err == nil {
+		// only run post action when the action complete successfully
+		postActionFn()
+	}
 }
 
-func (p *processorBase) resetProcessingQueueStates() {
+func (p *processorBase) resetProcessingQueueStates() (*ActionResult, error) {
 	p.queueCollectionsLock.Lock()
 	defer p.queueCollectionsLock.Unlock()
+
+	var minAckLevel task.Key
+	for _, queueCollection := range p.processingQueueCollections {
+		ackLevel, _ := queueCollection.UpdateAckLevels()
+
+		if minAckLevel == nil {
+			minAckLevel = ackLevel
+		} else {
+			minAckLevel = minTaskKey(minAckLevel, ackLevel)
+		}
+	}
+
+	var maxReadLevel task.Key
+	switch p.options.MetricScope {
+	case metrics.TransferActiveQueueProcessorScope, metrics.TransferStandbyQueueProcessorScope:
+		maxReadLevel = maxTransferReadLevel
+	case metrics.TimerActiveQueueProcessorScope, metrics.TimerStandbyQueueProcessorScope:
+		maxReadLevel = maximumTimerTaskKey
+	}
+
+	p.processingQueueCollections = newProcessingQueueCollections(
+		[]ProcessingQueueState{
+			NewProcessingQueueState(
+				defaultProcessingQueueLevel,
+				minAckLevel,
+				maxReadLevel,
+				NewDomainFilter(nil, false),
+			),
+		},
+		p.logger,
+		p.metricsClient,
+	)
+
+	return &ActionResult{
+		ActionType:        ActionTypeReset,
+		ResetActionResult: &ResetActionResult{},
+	}, nil
 }
 
 func (p *processorBase) getProcessingQueueStates() []ProcessingQueueState {
