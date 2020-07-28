@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -621,6 +622,10 @@ func (k timerTaskKey) Less(
 		return k.taskID < timerKey.taskID
 	}
 	return k.visibilityTimestamp.Before(timerKey.visibilityTimestamp)
+}
+
+func (k timerTaskKey) String() string {
+	return fmt.Sprintf("{visibilityTimestamp: %v, taskID: %v}", k.visibilityTimestamp, k.taskID)
 }
 
 func newTimerQueueProcessorOptions(
