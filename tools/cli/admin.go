@@ -227,8 +227,12 @@ func newAdminShardManagementCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagDateFormat,
-					Value: "15:04",
-					Usage: "create buckets using time format. Use Go reference time: Mon Jan 2 15:04:05 MST 2006",
+					Usage: "create buckets using time format. Use Go reference time: Mon Jan 2 15:04:05 MST 2006. If set, --" + FlagBucketSize + " is ignored",
+				},
+				cli.StringFlag{
+					Name:  FlagBucketSize,
+					Value: "hour",
+					Usage: "group timers by time bucket. Available: day, hour, minute, second",
 				},
 				cli.IntFlag{
 					Name:  FlagShardMultiplier,

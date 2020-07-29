@@ -50,6 +50,7 @@ type TimerPrinter struct {
 	timerTypes []int
 	loader     Loader
 	printer    Printer
+	timeFormat string
 }
 
 type cassandraLoader struct {
@@ -61,7 +62,8 @@ type fileLoader struct {
 }
 
 type histogramPrinter struct {
-	ctx *cli.Context
+	ctx        *cli.Context
+	timeFormat string
 }
 
 type rawDataPrinter struct {
@@ -89,9 +91,10 @@ func NewTimerPrinter(domain string, timerTypes []int, loader Loader, printer Pri
 	}
 }
 
-func NewHistogramPrinter(c *cli.Context) Printer {
+func NewHistogramPrinter(c *cli.Context, timeFormat string) Printer {
 	return &histogramPrinter{
-		ctx: c,
+		ctx:        c,
+		timeFormat: timeFormat,
 	}
 }
 
@@ -149,7 +152,24 @@ func AdminTimers(c *cli.Context) {
 	// setup printer
 	var printer Printer
 	if !c.Bool(FlagPrintRaw) {
-		printer = NewHistogramPrinter(c)
+		var timerFormat string
+		if c.IsSet(FlagDateFormat) {
+			timerFormat = c.String(FlagDateFormat)
+		} else {
+			switch c.String(FlagBucketSize) {
+			case "day":
+				timerFormat = "2006-01-02"
+			case "hour":
+				timerFormat = "2006-01-02T15"
+			case "minute":
+				timerFormat = "2006-01-02T15:04"
+			case "second":
+				timerFormat = "2006-01-02T15:04:05"
+			default:
+				ErrorAndExit("unknown bucket size: "+c.String(FlagBucketSize), nil)
+			}
+		}
+		printer = NewHistogramPrinter(c, timerFormat)
 	} else {
 		printer = NewRawPrinter(c)
 	}
@@ -268,7 +288,7 @@ func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 		if t == nil {
 			continue
 		}
-		h.Add(t.VisibilityTimestamp.Format(hp.ctx.String(FlagDateFormat)))
+		h.Add(t.VisibilityTimestamp.Format(hp.timeFormat))
 	}
 
 	if err := h.Print(hp.ctx.Int(FlagShardMultiplier)); err != nil {
