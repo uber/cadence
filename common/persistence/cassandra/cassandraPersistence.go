@@ -440,7 +440,7 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
-	templateGetExecutionsQuery = `SELECT domain_id, workflow_id, run_id, current_run_id, workflow_state ` +
+	templateListCurrentExecutionsQuery = `SELECT domain_id, workflow_id, run_id, current_run_id, workflow_state ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ?`
@@ -2072,7 +2072,7 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	request *p.ListCurrentExecutionsRequest,
 ) (*p.ListCurrentExecutionsResponse, error) {
 	query := d.session.Query(
-		templateGetExecutionsQuery,
+		templateListCurrentExecutionsQuery,
 		d.shardID,
 		rowTypeExecution,
 	).PageSize(request.PageSize).PageState(request.PageToken)
