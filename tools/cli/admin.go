@@ -213,8 +213,8 @@ func newAdminShardManagementCommands() []cli.Command {
 					Value: &cli.IntSlice{-1},
 				},
 				cli.BoolFlag{
-					Name:  FlagPrintRaw,
-					Usage: "print raw data instead of histogram",
+					Name:  FlagPrintJSON,
+					Usage: "print raw json data instead of histogram",
 				},
 
 				cli.BoolFlag{

@@ -67,7 +67,7 @@ type histogramPrinter struct {
 	timeFormat string
 }
 
-type rawDataPrinter struct {
+type JSONPrinter struct {
 	ctx *cli.Context
 }
 
@@ -99,8 +99,8 @@ func NewHistogramPrinter(c *cli.Context, timeFormat string) Printer {
 	}
 }
 
-func NewRawPrinter(c *cli.Context) Printer {
-	return &rawDataPrinter{
+func NewJSONPrinter(c *cli.Context) Printer {
+	return &JSONPrinter{
 		ctx: c,
 	}
 }
@@ -152,7 +152,7 @@ func AdminTimers(c *cli.Context) {
 
 	// setup printer
 	var printer Printer
-	if !c.Bool(FlagPrintRaw) {
+	if !c.Bool(FlagPrintJSON) {
 		var timerFormat string
 		if c.IsSet(FlagDateFormat) {
 			timerFormat = c.String(FlagDateFormat)
@@ -172,7 +172,7 @@ func AdminTimers(c *cli.Context) {
 		}
 		printer = NewHistogramPrinter(c, timerFormat)
 	} else {
-		printer = NewRawPrinter(c)
+		printer = NewJSONPrinter(c)
 	}
 
 	reporter := NewReporter(c.String(FlagDomainID), timerTypes, loader, printer)
@@ -181,14 +181,14 @@ func AdminTimers(c *cli.Context) {
 	}
 }
 
-func (rp *rawDataPrinter) Print(timers []*persistence.TimerTaskInfo) error {
+func (jp *JSONPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 	for _, t := range timers {
 		if t == nil {
 			continue
 		}
 		data, err := json.Marshal(t)
 		if err != nil {
-			if !rp.ctx.Bool(FlagSkipErrorMode) {
+			if !jp.ctx.Bool(FlagSkipErrorMode) {
 				ErrorAndExit("cannot marshal timer to json", err)
 			}
 			fmt.Println(err.Error())
