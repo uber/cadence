@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/service/history/constants"
 	"testing"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
