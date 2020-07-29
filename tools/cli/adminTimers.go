@@ -45,7 +45,8 @@ type Loader interface {
 type Printer interface {
 	Print(timers []*persistence.TimerTaskInfo) error
 }
-type TimerPrinter struct {
+
+type Reporter struct {
 	domainID   string
 	timerTypes []int
 	loader     Loader
@@ -82,8 +83,8 @@ func NewFileLoader(c *cli.Context) Loader {
 	}
 }
 
-func NewTimerPrinter(domain string, timerTypes []int, loader Loader, printer Printer) *TimerPrinter {
-	return &TimerPrinter{
+func NewReporter(domain string, timerTypes []int, loader Loader, printer Printer) *Reporter {
+	return &Reporter{
 		timerTypes: timerTypes,
 		domainID:   domain,
 		loader:     loader,
@@ -104,11 +105,11 @@ func NewRawPrinter(c *cli.Context) Printer {
 	}
 }
 
-func (tp *TimerPrinter) filter(timers []*persistence.TimerTaskInfo) []*persistence.TimerTaskInfo {
-	taskTypes := intSliceToSet(tp.timerTypes)
+func (r *Reporter) filter(timers []*persistence.TimerTaskInfo) []*persistence.TimerTaskInfo {
+	taskTypes := intSliceToSet(r.timerTypes)
 
 	for i, t := range timers {
-		if len(tp.domainID) > 0 && t.DomainID != tp.domainID {
+		if len(r.domainID) > 0 && t.DomainID != r.domainID {
 			timers[i] = nil
 			continue
 		}
@@ -122,8 +123,8 @@ func (tp *TimerPrinter) filter(timers []*persistence.TimerTaskInfo) []*persisten
 	return timers
 }
 
-func (tp *TimerPrinter) Print() error {
-	return tp.printer.Print(tp.filter(tp.loader.Load()))
+func (r *Reporter) Report() error {
+	return r.printer.Print(r.filter(r.loader.Load()))
 }
 
 // AdminTimers is used to list scheduled timers.
@@ -174,8 +175,10 @@ func AdminTimers(c *cli.Context) {
 		printer = NewRawPrinter(c)
 	}
 
-	tp := NewTimerPrinter(c.String(FlagDomainID), timerTypes, loader, printer)
-	tp.Print()
+	reporter := NewReporter(c.String(FlagDomainID), timerTypes, loader, printer)
+	if err := reporter.Report(); err != nil {
+		ErrorAndExit("Reporter failed", err)
+	}
 }
 
 func (rp *rawDataPrinter) Print(timers []*persistence.TimerTaskInfo) error {
@@ -283,7 +286,7 @@ func (fl *fileLoader) Load() []*persistence.TimerTaskInfo {
 }
 
 func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
-	h := NewHistorgram()
+	h := NewHistogram()
 	for _, t := range timers {
 		if t == nil {
 			continue
@@ -291,8 +294,5 @@ func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 		h.Add(t.VisibilityTimestamp.Format(hp.timeFormat))
 	}
 
-	if err := h.Print(hp.ctx.Int(FlagShardMultiplier)); err != nil {
-		return err
-	}
-	return nil
+	return h.Print(hp.ctx.Int(FlagShardMultiplier))
 }
