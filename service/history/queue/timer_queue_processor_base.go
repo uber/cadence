@@ -67,10 +67,10 @@ type (
 
 		clusterName string
 
-		pollTimeLock        sync.Mutex
-		pollTimeUpdateTimer map[int]*time.Timer
-		nextPollTime        map[int]time.Time
-		timerGate           TimerGate
+		pollTimeLock sync.Mutex
+		backoffTimer map[int]*time.Timer
+		nextPollTime map[int]time.Time
+		timerGate    TimerGate
 
 		// timer notification
 		newTimerCh  chan struct{}
@@ -137,9 +137,9 @@ func newTimerQueueProcessorBase(
 
 		clusterName: clusterName,
 
-		pollTimeUpdateTimer: make(map[int]*time.Timer),
-		nextPollTime:        make(map[int]time.Time),
-		timerGate:           timerGate,
+		backoffTimer: make(map[int]*time.Timer),
+		nextPollTime: make(map[int]time.Time),
+		timerGate:    timerGate,
 
 		newTimerCh: make(chan struct{}, 1),
 
@@ -176,7 +176,7 @@ func (t *timerQueueProcessorBase) Stop() {
 	t.timerGate.Close()
 	close(t.shutdownCh)
 	t.pollTimeLock.Lock()
-	for _, timer := range t.pollTimeUpdateTimer {
+	for _, timer := range t.backoffTimer {
 		timer.Stop()
 	}
 	t.pollTimeLock.Unlock()
@@ -256,7 +256,11 @@ processorPumpLoop:
 
 			// New Timer has arrived.
 			t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
-			t.upsertPollTime(defaultProcessingQueueLevel, newTime)
+			t.queueCollectionsLock.RLock()
+			for _, queueCollection := range t.processingQueueCollections {
+				t.upsertPollTime(queueCollection.Level(), newTime)
+			}
+			t.queueCollectionsLock.RUnlock()
 		case <-splitQueueTimer.C:
 			t.splitQueue()
 			splitQueueTimer.Reset(backoff.JitDuration(
@@ -317,7 +321,7 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 			if level == defaultProcessingQueueLevel {
 				t.upsertPollTime(level, time.Time{})
 			} else {
-				t.upsertPollTimeUpdateTimer(level, nonDefaultQueueBackoffDuration)
+				t.setupBackoffTimer(level)
 			}
 			continue
 		}
@@ -330,12 +334,11 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 			continue
 		}
 
-		// set up update timer here instead of modifying pollTime directly so that the interval is w.r.t
-		// real time.
-		t.upsertPollTimeUpdateTimer(level, backoff.JitDuration(
+		// TODO: consider remove max poll interval
+		t.upsertPollTime(level, t.shard.GetCurrentTime(t.clusterName).Add(backoff.JitDuration(
 			t.options.MaxPollInterval(),
 			t.options.MaxPollIntervalJitterCoefficient(),
-		))
+		)))
 
 		tasks := make(map[task.Key]task.Task)
 		taskChFull := false
@@ -359,6 +362,9 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 		if len(nextPageToken) == 0 {
 			if lookAheadTask != nil {
 				// lookAheadTask may exist only when nextPageToken is empty
+				// notice that lookAheadTask.VisibilityTimestamp may be large than shard max read level,
+				// which means new tasks can be generated before that timestamp. This issue is solved by
+				// upsertPollTime whenever there are new tasks
 				t.upsertPollTime(level, lookAheadTask.VisibilityTimestamp)
 				newReadLevel = minTaskKey(maxReadLevel, newTimerTaskKey(lookAheadTask.GetVisibilityTimestamp(), 0))
 			} else {
@@ -368,14 +374,11 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 					// no more tasks will be generated for this processing queue, enqueue an event
 					// to process the next queue in the queue collection if exists.
 					t.upsertPollTime(level, time.Time{})
-				} else if level != defaultProcessingQueueLevel {
-					// new tasks can be still generated for this processing queue's and we need to check later.
-					// note that we only need to update the poll time for non-default queue. Poll time
-					// for default queue will be updated when notifyNewTask are called.
-					// since we are waiting for new tasks, we should use the cluster's time instead of real time. So
-					// we don't need to create an update timer here.
-					t.upsertPollTime(level, t.shard.GetCurrentTime(t.clusterName).Add(nonDefaultQueueBackoffDuration))
 				}
+				// else it means we can't find any look ahead task in the range from shard max read level
+				// to processing queue max read level, new tasks can be still generated for this processing queue's
+				// and we have no idea when that will come. Rely on notifyNewTask to trigger the next poll even for non-default queue.
+				// another option for non-default queue is that we can setup a backoff timer to check back later
 				newReadLevel = maxReadLevel
 			}
 		} else {
@@ -384,7 +387,7 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 			if level == defaultProcessingQueueLevel || !taskChFull {
 				t.upsertPollTime(level, time.Time{})
 			} else {
-				t.upsertPollTimeUpdateTimer(level, nonDefaultQueueBackoffDuration)
+				t.setupBackoffTimer(level)
 			}
 			t.processingQueueReadProgress[level] = timeTaskReadProgress{
 				currentQueue:  activeQueue,
@@ -562,33 +565,32 @@ func (t *timerQueueProcessorBase) upsertPollTime(level int, newPollTime time.Tim
 	t.pollTimeLock.Lock()
 	defer t.pollTimeLock.Unlock()
 
-	if currentPollTime, ok := t.nextPollTime[level]; !ok || newPollTime.Before(currentPollTime) {
-		if timer, ok := t.pollTimeUpdateTimer[level]; ok {
-			// there's a pending poll for this processing queue collection, cancel it
-			timer.Stop()
-			delete(t.pollTimeUpdateTimer, level)
-		}
+	if _, ok := t.backoffTimer[level]; ok {
+		// honor existing backoff timer
+		return
+	}
 
+	if currentPollTime, ok := t.nextPollTime[level]; !ok || newPollTime.Before(currentPollTime) {
 		t.nextPollTime[level] = newPollTime
 		t.timerGate.Update(newPollTime)
 	}
 }
 
-// upsertPollTimeUpdateTimer will trigger a poll for the specified processing queue collection
+// setupBackoffTimer will trigger a poll for the specified processing queue collection
 // after a certain period of (real) time. This means for standby timer, even if the cluster time
 // has not been updated, the poll will still be triggered when the timer fired. Use this function
 // for delaying the load for processing queue. If a poll should be triggered immediately
 // use upsertPollTime.
-func (t *timerQueueProcessorBase) upsertPollTimeUpdateTimer(level int, delay time.Duration) {
+func (t *timerQueueProcessorBase) setupBackoffTimer(level int) {
 	t.pollTimeLock.Lock()
 	defer t.pollTimeLock.Unlock()
 
-	if currentTimer, ok := t.pollTimeUpdateTimer[level]; ok {
-		// there's a pending poll for this processing queue collection, cancel it
-		currentTimer.Stop()
+	if _, ok := t.backoffTimer[level]; ok {
+		// honor existing backoff timer
+		return
 	}
 
-	t.pollTimeUpdateTimer[level] = time.AfterFunc(delay, func() {
+	t.backoffTimer[level] = time.AfterFunc(nonDefaultQueueBackoffDuration, func() {
 		select {
 		case <-t.shutdownCh:
 			return
@@ -600,7 +602,7 @@ func (t *timerQueueProcessorBase) upsertPollTimeUpdateTimer(level int, delay tim
 
 		t.nextPollTime[level] = time.Time{}
 		t.timerGate.Update(time.Time{})
-		delete(t.pollTimeUpdateTimer, level)
+		delete(t.backoffTimer, level)
 	})
 }
 

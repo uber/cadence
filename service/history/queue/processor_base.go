@@ -169,6 +169,11 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 	totalPengingTasks := 0
 	for _, queueCollection := range p.processingQueueCollections {
 		ackLevel, numPendingTasks := queueCollection.UpdateAckLevels()
+		if ackLevel == nil {
+			// ack level may be nil if the queueCollection doesn't contain any processing queue
+			// after updating ack levels
+			continue
+		}
 
 		totalPengingTasks += numPendingTasks
 		if minAckLevel == nil {
