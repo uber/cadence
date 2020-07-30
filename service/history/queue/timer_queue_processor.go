@@ -22,7 +22,6 @@ package queue
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -309,12 +308,15 @@ func (t *timerQueueProcessor) HandleAction(clusterName string, action *Action) (
 	}
 
 	if !added {
-		return nil, errors.New("queue processor has been shutdown")
+		return nil, errProcessorShutdown
 	}
 
-	resultNotification := <-resultNotificationCh
-
-	return resultNotification.result, resultNotification.err
+	select {
+	case resultNotification := <-resultNotificationCh:
+		return resultNotification.result, resultNotification.err
+	case <-t.shutdownChan:
+		return nil, errProcessorShutdown
+	}
 }
 
 func (t *timerQueueProcessor) LockTaskProcessing() {
