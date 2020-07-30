@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -126,7 +127,7 @@ func newTimerQueueProcessorBase(
 				task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 				taskFilter,
 				taskExecutor,
-				processorBase.redispatchSingleTask,
+				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TimerTaskMaxRetryCount,
 				emitDomainTag,
@@ -154,11 +155,12 @@ func (t *timerQueueProcessorBase) Start() {
 	t.logger.Info("", tag.LifeCycleStarting)
 	defer t.logger.Info("", tag.LifeCycleStarted)
 
+	t.redispatcher.Start()
+
 	t.notifyNewTimer(time.Time{})
 
-	t.shutdownWG.Add(2)
+	t.shutdownWG.Add(1)
 	go t.processorPump()
-	go t.redispatchLoop()
 }
 
 func (t *timerQueueProcessorBase) Stop() {
@@ -180,6 +182,8 @@ func (t *timerQueueProcessorBase) Stop() {
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
 		t.logger.Warn("", tag.LifeCycleStopTimedout)
 	}
+
+	t.redispatcher.Stop()
 }
 
 func (t *timerQueueProcessorBase) processorPump() {
@@ -203,8 +207,17 @@ processorPumpLoop:
 		case <-t.shutdownCh:
 			break processorPumpLoop
 		case <-t.timerGate.FireChan():
-			if t.redispatchQueue.Len() > t.options.MaxRedispatchQueueSize() {
-				t.redispatchTasks()
+			maxRedispatchQueueSize := t.options.MaxRedispatchQueueSize()
+			if t.redispatcher.Size() > maxRedispatchQueueSize {
+				t.redispatcher.Redispatch(maxRedispatchQueueSize)
+				if t.redispatcher.Size() > maxRedispatchQueueSize {
+					// if redispatcher still has a large number of tasks
+					// this only happens when system is under very high load
+					// we should backoff here instead of keeping submitting tasks to task processor
+					// don't call t.timerGate.Update(time.Now() + loadQueueTaskThrottleRetryDelay) as the time in
+					// standby timer processor is not real time and is managed separately
+					time.Sleep(loadQueueTaskThrottleRetryDelay)
+				}
 				t.timerGate.Update(time.Time{})
 				continue processorPumpLoop
 			}
@@ -600,6 +613,10 @@ func (k timerTaskKey) Less(
 	return k.visibilityTimestamp.Before(timerKey.visibilityTimestamp)
 }
 
+func (k timerTaskKey) String() string {
+	return fmt.Sprintf("{visibilityTimestamp: %v, taskID: %v}", k.visibilityTimestamp, k.taskID)
+}
+
 func newTimerQueueProcessorOptions(
 	config *config.Config,
 	isActive bool,
@@ -612,8 +629,7 @@ func newTimerQueueProcessorOptions(
 		MaxPollIntervalJitterCoefficient:    config.TimerProcessorMaxPollIntervalJitterCoefficient,
 		UpdateAckInterval:                   config.TimerProcessorUpdateAckInterval,
 		UpdateAckIntervalJitterCoefficient:  config.TimerProcessorUpdateAckIntervalJitterCoefficient,
-		RedispatchInterval:                  config.TimerProcessorRedispatchInterval,
-		RedispatchIntervalJitterCoefficient: config.TimerProcessorRedispatchIntervalJitterCoefficient,
+		RedispatchIntervalJitterCoefficient: config.TaskRedispatchIntervalJitterCoefficient,
 		MaxRedispatchQueueSize:              config.TimerProcessorMaxRedispatchQueueSize,
 		SplitQueueInterval:                  config.TimerProcessorSplitQueueInterval,
 		SplitQueueIntervalJitterCoefficient: config.TimerProcessorSplitQueueIntervalJitterCoefficient,
@@ -636,8 +652,10 @@ func newTimerQueueProcessorOptions(
 
 	if isActive {
 		options.MetricScope = metrics.TimerActiveQueueProcessorScope
+		options.RedispatchInterval = config.ActiveTaskRedispatchInterval
 	} else {
 		options.MetricScope = metrics.TimerStandbyQueueProcessorScope
+		options.RedispatchInterval = config.StandbyTaskRedispatchInterval
 	}
 
 	return options

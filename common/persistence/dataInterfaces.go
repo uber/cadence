@@ -353,6 +353,15 @@ type (
 		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
+	// CurrentWorkflowExecution describes a current execution record
+	CurrentWorkflowExecution struct {
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		State        int
+		CurrentRunID string
+	}
+
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
 		DomainID                string
@@ -795,6 +804,25 @@ type (
 		WorkflowID string
 	}
 
+	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
+	ListCurrentExecutionsRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListCurrentExecutionsResponse is the response to ListCurrentExecutionsRequest
+	ListCurrentExecutionsResponse struct {
+		Executions []*CurrentWorkflowExecution
+		PageToken  []byte
+	}
+
+	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
+	IsWorkflowExecutionExistsRequest struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
 	// ListConcreteExecutionsRequest is request to ListConcreteExecutions
 	ListConcreteExecutionsRequest struct {
 		PageSize  int
@@ -820,6 +848,11 @@ type (
 		State            int
 		CloseStatus      int
 		LastWriteVersion int64
+	}
+
+	// IsWorkflowExecutionExistsResponse is the response to IsWorkflowExecutionExists
+	IsWorkflowExecutionExistsResponse struct {
+		Exists bool
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -1521,6 +1554,7 @@ type (
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		IsWorkflowExecutionExists(request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
 
 		// Transfer task related methods
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
@@ -1545,6 +1579,7 @@ type (
 
 		// Scan operations
 		ListConcreteExecutions(request *ListConcreteExecutionsRequest) (*ListConcreteExecutionsResponse, error)
+		ListCurrentExecutions(request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard

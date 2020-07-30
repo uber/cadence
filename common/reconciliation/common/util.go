@@ -69,6 +69,18 @@ func ValidateConcreteExecution(concreteExecution *ConcreteExecution) error {
 	return nil
 }
 
+// ValidateCurrentExecution returns an error if CurrentExecution is not valid, nil otherwise.
+func ValidateCurrentExecution(currentExecution *CurrentExecution) error {
+	err := validateExecution(&currentExecution.Execution)
+	if err != nil {
+		return err
+	}
+	if len(currentExecution.CurrentRunID) == 0 {
+		return errors.New("empty CurrentRunID")
+	}
+	return nil
+}
+
 // GetBranchToken returns the branchToken, treeID and branchID or error on failure.
 func GetBranchToken(
 	entity *persistence.ListConcreteExecutionsEntity,
@@ -144,7 +156,7 @@ func Open(state int) bool {
 	return state == persistence.WorkflowStateCreated || state == persistence.WorkflowStateRunning
 }
 
-// Open returns true if execution state is open false if workflow is closed
+// ExecutionOpen returns true if execution state is open false if workflow is closed
 func ExecutionOpen(execution interface{}) bool {
 	return Open(getExecution(execution).State)
 }
