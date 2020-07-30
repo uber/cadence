@@ -153,7 +153,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 				ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerActivityBatchSize, 25),
 				DynamicConfigInvariantCollections: executions.DynamicConfigInvariantCollections{
 					InvariantCollectionMutableState: dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionMutableState, true),
-					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionHistory, false),
+					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory, false),
 				},
 			},
 		},

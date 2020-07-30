@@ -316,6 +316,7 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerActivityBatchSize:                "worker.currentExecutionsActivityBatchSize",
 	CurrentExecutionsScannerConcurrency:                      "worker.currentExecutionsConcurrency",
 	CurrentExecutionsScannerPersistencePageSize:              "worker.currentExecutionsPersistencePageSize",
+	CurrentExecutionsScannerInvariantCollectionHistory:       "worker.currentExecutionsScannerInvariantCollectionHistory",
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
 }
 
@@ -822,6 +823,8 @@ const (
 	CurrentExecutionsScannerActivityBatchSize
 	// CurrentExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in current executions scanner
 	CurrentExecutionsScannerPersistencePageSize
+	// CurrentExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run
+	CurrentExecutionsScannerInvariantCollectionHistory
 	// CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	CurrentExecutionsScannerInvariantCollectionMutableState
 	// EnableBatcher decides whether start batcher in our worker
