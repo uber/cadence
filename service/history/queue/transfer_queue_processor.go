@@ -56,6 +56,7 @@ const (
 
 var (
 	errUnexpectedQueueTask = errors.New("unexpected queue task")
+	errProcessorShutdown   = errors.New("queue processor has been shutdown")
 
 	maxTransferReadLevel = newTransferTaskKey(math.MaxInt64)
 )
@@ -320,12 +321,15 @@ func (t *transferQueueProcessor) HandleAction(clusterName string, action *Action
 	}
 
 	if !added {
-		return nil, errors.New("queue processor has been shutdown")
+		return nil, errProcessorShutdown
 	}
 
-	resultNotification := <-resultNotificationCh
-
-	return resultNotification.result, resultNotification.err
+	select {
+	case resultNotification := <-resultNotificationCh:
+		return resultNotification.result, resultNotification.err
+	case <-t.shutdownChan:
+		return nil, errProcessorShutdown
+	}
 }
 
 func (t *transferQueueProcessor) LockTaskProcessing() {
