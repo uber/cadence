@@ -211,11 +211,9 @@ processorPumpLoop:
 		case <-t.shutdownCh:
 			break processorPumpLoop
 		case <-t.notifyCh:
-			t.queueCollectionsLock.RLock()
 			for _, queueCollection := range t.processingQueueCollections {
 				t.upsertPollTime(queueCollection.Level(), time.Time{}, true)
 			}
-			t.queueCollectionsLock.RUnlock()
 		case <-t.nextPollTimer.FireChan():
 			maxRedispatchQueueSize := t.options.MaxRedispatchQueueSize()
 			if t.redispatcher.Size() > maxRedispatchQueueSize {
@@ -270,15 +268,9 @@ processorPumpLoop:
 }
 
 func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]struct{}) {
-	t.queueCollectionsLock.RLock()
-	processingQueueCollections := t.processingQueueCollections
-	t.queueCollectionsLock.RUnlock()
-
-	for _, queueCollection := range processingQueueCollections {
-		t.queueCollectionsLock.RLock()
+	for _, queueCollection := range t.processingQueueCollections {
 		level := queueCollection.Level()
 		if _, ok := levels[level]; !ok {
-			t.queueCollectionsLock.RUnlock()
 			continue
 		}
 
@@ -287,14 +279,12 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 			// process for this queue collection has finished
 			// it's possible that new queue will be added to this collection later though,
 			// pollTime will be updated after split/merge
-			t.queueCollectionsLock.RUnlock()
 			continue
 		}
 
 		readLevel := activeQueue.State().ReadLevel()
 		maxReadLevel := minTaskKey(activeQueue.State().MaxLevel(), t.updateMaxReadLevel())
 		domainFilter := activeQueue.State().DomainFilter()
-		t.queueCollectionsLock.RUnlock()
 
 		if !readLevel.Less(maxReadLevel) {
 			// no task need to be processed for now, wait for new task notification
@@ -353,10 +343,8 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 		} else {
 			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
 		}
-		t.queueCollectionsLock.Lock()
 		queueCollection.AddTasks(tasks, newReadLevel)
 		newActiveQueue := queueCollection.ActiveQueue()
-		t.queueCollectionsLock.Unlock()
 
 		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
 			// more tasks for the current active queue or the active queue has changed

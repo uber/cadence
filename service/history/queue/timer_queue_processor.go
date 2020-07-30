@@ -251,7 +251,18 @@ func (t *timerQueueProcessor) FailoverDomain(
 	}
 
 	maxReadLevel := time.Time{}
-	for _, queueState := range t.activeQueueProcessor.getProcessingQueueStates() {
+	actionResult, err := t.HandleAction(t.currentClusterName, NewGetStateAction())
+	if err != nil {
+		t.logger.Error("Timer Failover Failed", tag.WorkflowDomainIDs(domainIDs), tag.Error(err))
+		if err == errProcessorShutdown {
+			// processor already shutdown, we can get states directly, won't have race condition
+			actionResult = t.activeQueueProcessor.getProcessingQueueStates()
+		} else {
+			// other errors should never be returned for GetStateAction
+			panic(fmt.Sprintf("unknown error for GetStateAction: %v", err))
+		}
+	}
+	for _, queueState := range actionResult.GetStateActionResult.states {
 		queueReadLevel := queueState.ReadLevel().(timerTaskKey).visibilityTimestamp
 		if maxReadLevel.Before(queueReadLevel) {
 			maxReadLevel = queueReadLevel
@@ -280,7 +291,7 @@ func (t *timerQueueProcessor) FailoverDomain(
 
 	// NOTE: READ REF BEFORE MODIFICATION
 	// ref: historyEngine.go registerDomainFailoverCallback function
-	err := updateClusterAckLevelFn(newTimerTaskKey(minLevel, 0))
+	err = updateClusterAckLevelFn(newTimerTaskKey(minLevel, 0))
 	if err != nil {
 		t.logger.Error("Error update shard ack level", tag.Error(err))
 	}
@@ -370,13 +381,21 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 
 func (t *timerQueueProcessor) completeTimer() error {
 	newAckLevel := maximumTimerTaskKey
-	for _, queueState := range t.activeQueueProcessor.getProcessingQueueStates() {
+	actionResult, err := t.HandleAction(t.currentClusterName, NewGetStateAction())
+	if err != nil {
+		return err
+	}
+	for _, queueState := range actionResult.GetStateActionResult.states {
 		newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 	}
 
 	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			for _, queueState := range standbyQueueProcessor.getProcessingQueueStates() {
+		for standbyClusterName := range t.standbyQueueProcessors {
+			actionResult, err := t.HandleAction(standbyClusterName, NewGetStateAction())
+			if err != nil {
+				return err
+			}
+			for _, queueState := range actionResult.GetStateActionResult.states {
 				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 			}
 		}
