@@ -91,16 +91,18 @@ type Config struct {
 	TaskRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 
 	// QueueProcessor settings
-	QueueProcessorEnableDomainTaggedMetrics        dynamicconfig.BoolPropertyFn
-	QueueProcessorEnableSplit                      dynamicconfig.BoolPropertyFn
-	QueueProcessorSplitMaxLevel                    dynamicconfig.IntPropertyFn
-	QueueProcessorEnableRandomSplitByDomainID      dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	QueueProcessorRandomSplitProbability           dynamicconfig.FloatPropertyFn
-	QueueProcessorEnablePendingTaskSplit           dynamicconfig.BoolPropertyFn
-	QueueProcessorPendingTaskSplitThreshold        dynamicconfig.MapPropertyFn
-	QueueProcessorEnableStuckTaskSplit             dynamicconfig.BoolPropertyFn
-	QueueProcessorStuckTaskSplitThreshold          dynamicconfig.MapPropertyFn
-	QueueProcessorSplitLookAheadDurationByDomainID dynamicconfig.DurationPropertyFnWithDomainIDFilter
+	QueueProcessorEnableDomainTaggedMetrics            dynamicconfig.BoolPropertyFn
+	QueueProcessorEnableSplit                          dynamicconfig.BoolPropertyFn
+	QueueProcessorSplitMaxLevel                        dynamicconfig.IntPropertyFn
+	QueueProcessorEnableRandomSplitByDomainID          dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	QueueProcessorRandomSplitProbability               dynamicconfig.FloatPropertyFn
+	QueueProcessorEnablePendingTaskSplit               dynamicconfig.BoolPropertyFn
+	QueueProcessorPendingTaskSplitThreshold            dynamicconfig.MapPropertyFn
+	QueueProcessorEnableStuckTaskSplit                 dynamicconfig.BoolPropertyFn
+	QueueProcessorStuckTaskSplitThreshold              dynamicconfig.MapPropertyFn
+	QueueProcessorSplitLookAheadDurationByDomainID     dynamicconfig.DurationPropertyFnWithDomainIDFilter
+	QueueProcessorPollBackoffInterval                  dynamicconfig.DurationPropertyFn
+	QueueProcessorPollBackoffIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                                dynamicconfig.IntPropertyFn
@@ -325,16 +327,18 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskRedispatchInterval:           dc.GetDurationProperty(dynamicconfig.StandbyTaskRedispatchInterval, 30*time.Second),
 		TaskRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorSplitQueueIntervalJitterCoefficient, 0.15),
 
-		QueueProcessorEnableDomainTaggedMetrics:        dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableDomainTaggedMetrics, true),
-		QueueProcessorEnableSplit:                      dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, true),
-		QueueProcessorSplitMaxLevel:                    dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
-		QueueProcessorEnableRandomSplitByDomainID:      dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID, true),
-		QueueProcessorRandomSplitProbability:           dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability, 0.5),
-		QueueProcessorEnablePendingTaskSplit:           dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePendingTaskSplit, false),
-		QueueProcessorPendingTaskSplitThreshold:        dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold)),
-		QueueProcessorEnableStuckTaskSplit:             dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableStuckTaskSplit, false),
-		QueueProcessorStuckTaskSplitThreshold:          dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)),
-		QueueProcessorSplitLookAheadDurationByDomainID: dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.QueueProcessorSplitLookAheadDurationByDomainID, 5*time.Minute),
+		QueueProcessorEnableDomainTaggedMetrics:            dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableDomainTaggedMetrics, true),
+		QueueProcessorEnableSplit:                          dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, true),
+		QueueProcessorSplitMaxLevel:                        dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
+		QueueProcessorEnableRandomSplitByDomainID:          dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID, true),
+		QueueProcessorRandomSplitProbability:               dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability, 0.5),
+		QueueProcessorEnablePendingTaskSplit:               dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePendingTaskSplit, false),
+		QueueProcessorPendingTaskSplitThreshold:            dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold)),
+		QueueProcessorEnableStuckTaskSplit:                 dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableStuckTaskSplit, false),
+		QueueProcessorStuckTaskSplitThreshold:              dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)),
+		QueueProcessorSplitLookAheadDurationByDomainID:     dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.QueueProcessorSplitLookAheadDurationByDomainID, 5*time.Minute),
+		QueueProcessorPollBackoffInterval:                  dc.GetDurationProperty(dynamicconfig.QueueProcessorPollBackoffInterval, 5*time.Second),
+		QueueProcessorPollBackoffIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.QueueProcessorPollBackoffIntervalJitterCoefficient, 0.15),
 
 		TimerTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
 		TimerTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.TimerTaskWorkerCount, 10),

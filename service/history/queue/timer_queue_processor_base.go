@@ -218,7 +218,10 @@ processorPumpLoop:
 					// we should backoff here instead of keeping submitting tasks to task processor
 					// don't call t.timerGate.Update(time.Now() + loadQueueTaskThrottleRetryDelay) as the time in
 					// standby timer processor is not real time and is managed separately
-					time.Sleep(loadQueueTaskThrottleRetryDelay)
+					time.Sleep(backoff.JitDuration(
+						t.options.PollBackoffInterval(),
+						t.options.PollBackoffIntervalJitterCoefficient(),
+					))
 				}
 				t.timerGate.Update(time.Time{})
 				continue processorPumpLoop
@@ -592,7 +595,13 @@ func (t *timerQueueProcessorBase) setupBackoffTimer(level int) {
 		return
 	}
 
-	t.backoffTimer[level] = time.AfterFunc(nonDefaultQueueBackoffDuration, func() {
+	t.metricsScope.IncCounter(metrics.ProcessingQueueThrottledCounter)
+	t.logger.Info("Throttled processing queue", tag.QueueLevel(level))
+	backoffDuration := backoff.JitDuration(
+		t.options.PollBackoffInterval(),
+		t.options.PollBackoffIntervalJitterCoefficient(),
+	)
+	t.backoffTimer[level] = time.AfterFunc(backoffDuration, func() {
 		select {
 		case <-t.shutdownCh:
 			return
@@ -638,16 +647,18 @@ func newTimerQueueProcessorOptions(
 	isFailover bool,
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
-		BatchSize:                           config.TimerTaskBatchSize,
-		MaxPollRPS:                          config.TimerProcessorMaxPollRPS,
-		MaxPollInterval:                     config.TimerProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:    config.TimerProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                   config.TimerProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:  config.TimerProcessorUpdateAckIntervalJitterCoefficient,
-		RedispatchIntervalJitterCoefficient: config.TaskRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:              config.TimerProcessorMaxRedispatchQueueSize,
-		SplitQueueInterval:                  config.TimerProcessorSplitQueueInterval,
-		SplitQueueIntervalJitterCoefficient: config.TimerProcessorSplitQueueIntervalJitterCoefficient,
+		BatchSize:                            config.TimerTaskBatchSize,
+		MaxPollRPS:                           config.TimerProcessorMaxPollRPS,
+		MaxPollInterval:                      config.TimerProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:     config.TimerProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                    config.TimerProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:   config.TimerProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchIntervalJitterCoefficient:  config.TaskRedispatchIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:               config.TimerProcessorMaxRedispatchQueueSize,
+		SplitQueueInterval:                   config.TimerProcessorSplitQueueInterval,
+		SplitQueueIntervalJitterCoefficient:  config.TimerProcessorSplitQueueIntervalJitterCoefficient,
+		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
+		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
 	}
 
 	if isFailover {

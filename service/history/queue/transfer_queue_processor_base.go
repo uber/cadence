@@ -40,8 +40,6 @@ import (
 var (
 	loadQueueTaskThrottleRetryDelay = 5 * time.Second
 
-	nonDefaultQueueBackoffDuration = 5 * time.Second
-
 	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
 )
 
@@ -183,6 +181,15 @@ func (t *transferQueueProcessorBase) upsertPollTime(level int, newPollTime time.
 	}
 }
 
+func (t *transferQueueProcessorBase) backoffPollTime(level int) {
+	t.metricsScope.IncCounter(metrics.ProcessingQueueThrottledCounter)
+	t.logger.Info("Throttled processing queue", tag.QueueLevel(level))
+	t.upsertPollTime(level, t.shard.GetTimeSource().Now().Add(backoff.JitDuration(
+		t.options.PollBackoffInterval(),
+		t.options.PollBackoffIntervalJitterCoefficient(),
+	)), false)
+}
+
 func (t *transferQueueProcessorBase) processorPump() {
 	defer t.shutdownWG.Done()
 
@@ -218,7 +225,10 @@ processorPumpLoop:
 					// if redispatcher still has a large number of tasks
 					// this only happens when system is under very high load
 					// we should backoff here instead of keeping submitting tasks to task processor
-					time.Sleep(loadQueueTaskThrottleRetryDelay)
+					time.Sleep(backoff.JitDuration(
+						t.options.PollBackoffInterval(),
+						t.options.PollBackoffIntervalJitterCoefficient(),
+					))
 				}
 				// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
 				t.nextPollTimer.Update(time.Time{})
@@ -297,7 +307,7 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 		if err := t.rateLimiter.Wait(ctx); err != nil {
 			cancel()
 			if level != defaultProcessingQueueLevel {
-				t.upsertPollTime(level, t.shard.GetTimeSource().Now().Add(nonDefaultQueueBackoffDuration), false)
+				t.backoffPollTime(level)
 			} else {
 				t.upsertPollTime(level, time.Time{}, true)
 			}
@@ -350,8 +360,8 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 
 		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
 			// more tasks for the current active queue or the active queue has changed
-			if level != defaultProcessingQueueLevel {
-				t.upsertPollTime(level, t.shard.GetTimeSource().Now().Add(nonDefaultQueueBackoffDuration), false)
+			if level != defaultProcessingQueueLevel && taskChFull {
+				t.backoffPollTime(level)
 			} else {
 				t.upsertPollTime(level, time.Time{}, true)
 			}
@@ -443,16 +453,18 @@ func newTransferQueueProcessorOptions(
 	isFailover bool,
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
-		BatchSize:                           config.TransferTaskBatchSize,
-		MaxPollRPS:                          config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:                     config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:    config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                   config.TransferProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:  config.TransferProcessorUpdateAckIntervalJitterCoefficient,
-		RedispatchIntervalJitterCoefficient: config.TaskRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:              config.TransferProcessorMaxRedispatchQueueSize,
-		SplitQueueInterval:                  config.TransferProcessorSplitQueueInterval,
-		SplitQueueIntervalJitterCoefficient: config.TransferProcessorSplitQueueIntervalJitterCoefficient,
+		BatchSize:                            config.TransferTaskBatchSize,
+		MaxPollRPS:                           config.TransferProcessorMaxPollRPS,
+		MaxPollInterval:                      config.TransferProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:     config.TransferProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                    config.TransferProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:   config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchIntervalJitterCoefficient:  config.TaskRedispatchIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:               config.TransferProcessorMaxRedispatchQueueSize,
+		SplitQueueInterval:                   config.TransferProcessorSplitQueueInterval,
+		SplitQueueIntervalJitterCoefficient:  config.TransferProcessorSplitQueueIntervalJitterCoefficient,
+		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
+		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
 	}
 
 	if isFailover {
