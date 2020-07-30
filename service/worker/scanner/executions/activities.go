@@ -184,7 +184,7 @@ func ScanShardActivity(
 	}
 	for i := heartbeatDetails.LastShardIndexHandled + 1; i < len(params.Shards); i++ {
 		currentShardID := params.Shards[i]
-		shardReport, err := scanShard(activityCtx, params, currentShardID, heartbeatDetails, params.ScanType)
+		shardReport, err := scanShard(activityCtx, params, currentShardID, heartbeatDetails)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +201,6 @@ func scanShard(
 	params ScanShardActivityParams,
 	shardID int,
 	heartbeatDetails ScanShardHeartbeatDetails,
-	scanType common.ScanType,
 ) (*common.ShardScanReport, error) {
 	ctx := activityCtx.Value(ScanTypeScannerContextKeyMap[params.ScanType]).(ScannerContext)
 	resources := ctx.Resource
@@ -229,7 +228,7 @@ func scanShard(
 		params.BlobstoreFlushThreshold,
 		collections,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
-		scanType)
+		params.ScanType)
 	report := scanner.Scan()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
@@ -364,7 +363,7 @@ func FixShardActivity(
 	for i := heartbeatDetails.LastShardIndexHandled + 1; i < len(params.CorruptedKeysEntries); i++ {
 		currentShardID := params.CorruptedKeysEntries[i].ShardID
 		currentKeys := params.CorruptedKeysEntries[i].CorruptedKeys
-		shardReport, err := fixShard(activityCtx, params, currentShardID, currentKeys, heartbeatDetails, params.ScanType)
+		shardReport, err := fixShard(activityCtx, params, currentShardID, currentKeys, heartbeatDetails)
 		if err != nil {
 			return nil, err
 		}
@@ -382,7 +381,6 @@ func fixShard(
 	shardID int,
 	corruptedKeys common.Keys,
 	heartbeatDetails FixShardHeartbeatDetails,
-	scanType common.ScanType,
 ) (*common.ShardFixReport, error) {
 	ctx := activityCtx.Value(ScanTypeFixerContextKeyMap[params.ScanType]).(FixerContext)
 	resources := ctx.Resource
@@ -410,7 +408,7 @@ func fixShard(
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		collections,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
-		scanType)
+		params.ScanType)
 	report := fixer.Fix()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
