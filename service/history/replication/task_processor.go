@@ -541,7 +541,7 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 				dlqMetricsEmitTimerCoefficient,
 			))
 			if err != nil {
-				p.logger.Error("failed to get one task from replication DLQ", tag.Error(err))
+				p.logger.Error("failed to get replication DLQ size", tag.Error(err))
 				p.metricsClient.Scope(metrics.ReplicationDLQStatsScope).IncCounter(metrics.ReplicationDLQProbeFailed)
 			} else {
 				p.metricsClient.Scope(
