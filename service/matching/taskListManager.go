@@ -205,7 +205,6 @@ func (c *taskListManagerImpl) Stop() {
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
 	c.engine.removeTaskListManager(c.taskListID)
-	c.engine.removeTaskListManager(c.taskListID)
 	c.logger.Info("", tag.LifeCycleStopped)
 }
 
