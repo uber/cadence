@@ -791,7 +791,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead()
 	s.Empty(timerQueueProcessBase.processingQueueReadProgress)
 
 	_, ok := timerQueueProcessBase.nextPollTime[queueLevel]
-	s.False(ok)
+	s.True(ok) // this is the poll time for max poll interval
 	time.Sleep(100 * time.Millisecond)
 	select {
 	case <-timerQueueProcessBase.timerGate.FireChan():
