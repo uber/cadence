@@ -39,7 +39,7 @@ import (
 const (
 	constDomainPartition     = 0
 	domainMetadataRecordName = "cadence-domain-metadata"
-	emptyFailoverEndTime     = int64(-1)
+	emptyFailoverEndTime     = int64(0)
 )
 
 const (
@@ -428,7 +428,8 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 
 	var responseFailoverEndTime *int64
 	if failoverEndTime != emptyFailoverEndTime {
-		responseFailoverEndTime = &failoverEndTime
+		domainFailoverEndTime := failoverEndTime
+		responseFailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
 	}
 
 	return &p.InternalGetDomainResponse{
@@ -506,7 +507,8 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 			domain.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, domain.ReplicationConfig.Clusters)
 
 			if failoverEndTime != emptyFailoverEndTime {
-				domain.FailoverEndTime = &failoverEndTime
+				domainFailoverEndTime := failoverEndTime
+				domain.FailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
 			}
 			response.Domains = append(response.Domains, domain)
 		}
