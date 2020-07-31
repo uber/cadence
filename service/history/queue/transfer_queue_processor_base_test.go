@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -212,10 +211,8 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 	s.NotNil(queueCollection.ActiveQueue())
 	s.True(taskKeyEquals(shardMaxLevel, queueCollection.Queues()[0].State().ReadLevel()))
 
-	s.True(processorBase.nextPollTime[queueLevel].time.Before(processorBase.shard.GetTimeSource().Now().Add(backoff.JitDuration(
-		processorBase.options.PollBackoffInterval(),
-		processorBase.options.PollBackoffIntervalJitterCoefficient(),
-	))))
+	_, ok := processorBase.nextPollTime[queueLevel]
+	s.True(ok) // this is the poll time for max poll interval
 	time.Sleep(time.Millisecond * 100)
 	select {
 	case <-processorBase.nextPollTimer.FireChan():
