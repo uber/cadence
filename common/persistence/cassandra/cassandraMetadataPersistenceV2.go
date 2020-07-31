@@ -436,7 +436,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	var responseFailoverEndTime *int64
 	if failoverEndTime != emptyFailoverEndTime {
 		domainFailoverEndTime := failoverEndTime
-		responseFailoverEndTime = &domainFailoverEndTime
+		responseFailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
 	}
 
 	return &p.InternalGetDomainResponse{
@@ -517,7 +517,7 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 
 			if failoverEndTime != emptyFailoverEndTime {
 				domainFailoverEndTime := failoverEndTime
-				domain.FailoverEndTime = &domainFailoverEndTime
+				domain.FailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
 			}
 			response.Domains = append(response.Domains, domain)
 		}

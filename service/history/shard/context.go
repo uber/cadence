@@ -1354,7 +1354,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 		}
 	}
 	if err := s.updateFailoverMarkersInShardInfoLocked(); err != nil {
-		s.logger.Error("Failed to update failover marker in shard.", tag.Error(err), tag.ShardID(s.shardID))
+		s.logger.Error("Failed to update failover marker in shard.", tag.Error(err))
 		return nil, err
 	}
 	if err := s.updateShardInfoLocked(); err != nil {
