@@ -478,6 +478,9 @@ func (c *taskListManagerImpl) executeWithRetry(
 		c.metricScope().IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
 		c.logger.Debug(fmt.Sprintf("Stopping task list due to persistence condition failure. Err: %v", err))
 		c.Stop()
+		if c.taskListKind == s.TaskListKindSticky {
+			err = &s.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
+		}
 	}
 	return
 }

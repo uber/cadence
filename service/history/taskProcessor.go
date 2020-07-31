@@ -211,6 +211,12 @@ FilterLoop:
 				scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(task.attempt))
 				task.logger.Error("Critical error processing task, retrying.",
 					tag.Error(err), tag.OperationCritical, tag.TaskType(task.task.GetTaskType()))
+				if isStickyTaskConditionError(err) {
+					// sticky task could end up into endless loop in rare cases and
+					// cause worker keep getting decision timeout unless restart.
+					// return nil here to break the endless loop
+					return nil
+				}
 			}
 		}
 		return err
@@ -328,4 +334,12 @@ func (t *taskProcessor) ackTaskOnce(
 		scope.RecordTimer(metrics.TaskLatency, time.Since(task.startTime))
 		scope.RecordTimer(metrics.TaskQueueLatency, time.Since(task.task.GetVisibilityTimestamp()))
 	}
+}
+
+// This is error from matching engine
+func isStickyTaskConditionError(err error) bool {
+	if e, ok := err.(*workflow.InternalServiceError); ok {
+		return e.GetMessage() == common.StickyTaskConditionFailedErrorMsg
+	}
+	return false
 }
