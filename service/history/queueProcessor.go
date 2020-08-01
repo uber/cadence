@@ -252,13 +252,17 @@ processorPumpLoop:
 			// use a separate goroutine since the caller hold the shutdownWG
 			go p.Stop()
 		case <-p.notifyCh:
-			if !p.isPriorityTaskProcessorEnabled() || p.redispatchQueue.Len() <= p.options.MaxRedispatchQueueSize() {
+			maxRedispatchQueueSize := p.options.MaxRedispatchQueueSize()
+			if !p.isPriorityTaskProcessorEnabled() || p.redispatchQueue.Len() <= maxRedispatchQueueSize {
 				p.processBatch()
 				continue
 			}
 
 			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
 			p.redispatchTasks()
+			if p.redispatchQueue.Len() > maxRedispatchQueueSize {
+				time.Sleep(loadQueueTaskThrottleRetryDelay)
+			}
 			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
 			p.notifyNewTask()
 		case <-pollTimer.C:

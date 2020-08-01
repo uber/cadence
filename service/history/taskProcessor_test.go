@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -194,7 +193,7 @@ func (s *taskProcessorSuite) TestHandleTaskError_EntityNotExists() {
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_ErrTaskRetry() {
-	err := task.ErrTaskRetry
+	err := task.ErrTaskRedispatch
 	delay := time.Second
 
 	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger, s.mockShard.GetTimeSource().Now())
@@ -206,7 +205,7 @@ func (s *taskProcessorSuite) TestHandleTaskError_ErrTaskRetry() {
 	err = s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err)
 	duration := time.Since(taskInfo.startTime)
 	s.True(duration >= delay)
-	s.Equal(task.ErrTaskRetry, err)
+	s.Equal(task.ErrTaskRedispatch, err)
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_ErrTaskDiscarded() {
