@@ -26,6 +26,7 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
@@ -317,6 +318,13 @@ func (t *taskBase) HandleErr(
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
 		t.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
+		return nil
+	}
+
+	if t.attempt > t.maxRetryCount() && common.IsStickyTaskConditionError(err) {
+		// sticky task could end up into endless loop in rare cases and
+		// cause worker to keep getting decision timeout unless restart.
+		// return nil here to break the endless loop
 		return nil
 	}
 

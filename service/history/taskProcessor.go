@@ -313,7 +313,7 @@ func (t *taskProcessor) handleTaskError(
 		return nil
 	}
 
-	if taskInfo.attempt >= t.config.TimerTaskMaxRetryCount() && isStickyTaskConditionError(err) {
+	if taskInfo.attempt > t.config.TimerTaskMaxRetryCount() && common.IsStickyTaskConditionError(err) {
 		// sticky task could end up into endless loop in rare cases and
 		// cause worker to keep getting decision timeout unless restart.
 		// return nil here to break the endless loop
@@ -335,12 +335,4 @@ func (t *taskProcessor) ackTaskOnce(
 		scope.RecordTimer(metrics.TaskLatency, time.Since(task.startTime))
 		scope.RecordTimer(metrics.TaskQueueLatency, time.Since(task.task.GetVisibilityTimestamp()))
 	}
-}
-
-// This is error from matching engine
-func isStickyTaskConditionError(err error) bool {
-	if e, ok := err.(*workflow.InternalServiceError); ok {
-		return e.GetMessage() == common.StickyTaskConditionFailedErrorMsg
-	}
-	return false
 }
