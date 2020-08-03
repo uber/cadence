@@ -255,8 +255,8 @@ func (t *timerQueueProcessor) FailoverDomain(
 	if err != nil {
 		t.logger.Error("Timer Failover Failed", tag.WorkflowDomainIDs(domainIDs), tag.Error(err))
 		if err == errProcessorShutdown {
-			// processor already shutdown, we can get states directly, won't have race condition
-			actionResult = t.activeQueueProcessor.getProcessingQueueStates()
+			// processor/shard already shutdown, we don't need to create failover queue processor
+			return
 		} else {
 			// other errors should never be returned for GetStateAction
 			panic(fmt.Sprintf("unknown error for GetStateAction: %v", err))
