@@ -211,12 +211,6 @@ FilterLoop:
 				scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(task.attempt))
 				task.logger.Error("Critical error processing task, retrying.",
 					tag.Error(err), tag.OperationCritical, tag.TaskType(task.task.GetTaskType()))
-				if isStickyTaskConditionError(err) {
-					// sticky task could end up into endless loop in rare cases and
-					// cause worker keep getting decision timeout unless restart.
-					// return nil here to break the endless loop
-					return nil
-				}
 			}
 		}
 		return err
@@ -316,6 +310,13 @@ func (t *taskProcessor) handleTaskError(
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
 		taskInfo.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
+		return nil
+	}
+
+	if taskInfo.attempt >= t.config.TimerTaskMaxRetryCount() && isStickyTaskConditionError(err) {
+		// sticky task could end up into endless loop in rare cases and
+		// cause worker to keep getting decision timeout unless restart.
+		// return nil here to break the endless loop
 		return nil
 	}
 
