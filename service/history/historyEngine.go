@@ -495,7 +495,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
 						VisibilityTimestamp: e.timeSource.Now(),
-						Version:             shardNotificationVersion,
+						Version:             nextDomain.GetFailoverVersion(),
 						DomainID:            nextDomain.GetInfo().ID,
 					})
 				}
@@ -2789,6 +2789,22 @@ func (e *historyEngineImpl) NotifyNewTimerTasks(
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
 		e.timerProcessor.NotifyNewTask(clusterName, tasks)
 	}
+}
+
+func (e *historyEngineImpl) ResetTransferQueue(
+	ctx context.Context,
+	clusterName string,
+) error {
+	_, err := e.txProcessor.HandleAction(clusterName, queue.NewResetAction())
+	return err
+}
+
+func (e *historyEngineImpl) ResetTimerQueue(
+	ctx context.Context,
+	clusterName string,
+) error {
+	_, err := e.timerProcessor.HandleAction(clusterName, queue.NewResetAction())
+	return err
 }
 
 func validateStartWorkflowExecutionRequest(

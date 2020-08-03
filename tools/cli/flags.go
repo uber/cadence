@@ -194,6 +194,7 @@ const (
 	FlagTaskID                            = "task_id"
 	FlagTaskType                          = "task_type"
 	FlagTaskVisibilityTimestamp           = "task_timestamp"
+	FlagQueueType                         = "queue_type"
 	FlagStartingRPS                       = "starting_rps"
 	FlagRPS                               = "rps"
 	FlagRPSScaleUpSeconds                 = "rps_scale_up_seconds"
@@ -237,6 +238,9 @@ const (
 	FlagHeaderFile                        = "header_file"
 	FlagStartDate                         = "start_date"
 	FlagEndDate                           = "end_date"
+	FlagDateFormat                        = "date_format"
+	FlagShardMultiplier                   = "shard_multiplier"
+	FlagBucketSize                        = "bucket_size"
 )
 
 var flagsForExecution = []cli.Flag{
