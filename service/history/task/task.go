@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	ctask "github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -289,6 +290,15 @@ func (t *taskBase) HandleErr(
 	}
 
 	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		return nil
+	}
+
+	if transferTask, ok := t.Info.(*persistence.TransferTaskInfo); ok &&
+		transferTask.TaskType == persistence.TransferTaskTypeCloseExecution &&
+		err == execution.ErrMissingWorkflowStartEvent &&
+		t.shard.GetConfig().EnableDropStuckTaskByDomainID(t.Info.GetDomainID()) { // use domainID here to avoid accessing domainCache
+		t.scope.IncCounter(metrics.TransferTaskMissingEventCounter)
+		t.logger.Error("Drop close execution transfer task due to corrupted workflow history", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return nil
 	}
 
