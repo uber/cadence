@@ -30,6 +30,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 )
@@ -40,6 +41,11 @@ func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	require.False(t, IsServiceTransientError(ctx.Err()))
+}
+
+func TestIsServiceTransientError_YARPCDeadlineExceeded(t *testing.T) {
+	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
+	require.False(t, IsServiceTransientError(yarpcErr))
 }
 
 func TestIsServiceTransientError_ContextCancel(t *testing.T) {
