@@ -260,6 +260,9 @@ processorPumpLoop:
 			// New Timer has arrived.
 			t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
 			t.queueCollectionsLock.RLock()
+			// notify all queue collections as they are waiting for the notification when there's
+			// no more task to process. For non-default queue, we choose to do periodic polling
+			// in the future, then we don't need to notify them.
 			for _, queueCollection := range t.processingQueueCollections {
 				t.upsertPollTime(queueCollection.Level(), newTime)
 			}

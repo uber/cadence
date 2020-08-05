@@ -349,12 +349,23 @@ func (p *processorBase) resetProcessingQueueStates() (*ActionResult, error) {
 	var minAckLevel task.Key
 	for _, queueCollection := range p.processingQueueCollections {
 		ackLevel, _ := queueCollection.UpdateAckLevels()
+		if ackLevel == nil {
+			// ack level may be nil if the queueCollection doesn't contain any processing queue
+			// after updating ack levels
+			continue
+		}
 
 		if minAckLevel == nil {
 			minAckLevel = ackLevel
 		} else {
 			minAckLevel = minTaskKey(minAckLevel, ackLevel)
 		}
+	}
+
+	if minAckLevel == nil {
+		// reset queue can't be invoked for failover queue, so if this happens, there's must be a
+		// bug in the queue split implementation
+		p.logger.Fatal("unable to find minAckLevel during reset", tag.Value(p.processingQueueCollections))
 	}
 
 	var maxReadLevel task.Key
