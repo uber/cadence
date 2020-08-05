@@ -279,6 +279,15 @@ func (t *taskProcessor) handleTaskError(
 		return nil
 	}
 
+	if transferTask, ok := taskInfo.task.(*persistence.TransferTaskInfo); ok &&
+		transferTask.TaskType == persistence.TransferTaskTypeCloseExecution &&
+		err == execution.ErrMissingWorkflowStartEvent &&
+		t.config.EnableDropStuckTaskByDomainID(taskInfo.task.GetDomainID()) { // use domainID here to avoid accessing domainCache
+		scope.IncCounter(metrics.TransferTaskMissingEventCounter)
+		taskInfo.logger.Error("Drop close execution transfer task due to corrupted workflow history", tag.Error(err), tag.LifeCycleProcessingFailed)
+		return nil
+	}
+
 	// this is a transient error
 	if err == task.ErrTaskRedispatch {
 		scope.IncCounter(metrics.TaskStandbyRetryCounter)
@@ -310,6 +319,13 @@ func (t *taskProcessor) handleTaskError(
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
 		taskInfo.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
+		return nil
+	}
+
+	if taskInfo.attempt > t.config.TimerTaskMaxRetryCount() && common.IsStickyTaskConditionError(err) {
+		// sticky task could end up into endless loop in rare cases and
+		// cause worker to keep getting decision timeout unless restart.
+		// return nil here to break the endless loop
 		return nil
 	}
 
