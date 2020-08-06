@@ -60,6 +60,7 @@ func TestIsContextTimeoutError(t *testing.T) {
 	defer cancel()
 	time.Sleep(50 * time.Millisecond)
 	require.True(t, IsContextTimeoutError(ctx.Err()))
+	require.True(t, IsContextTimeoutError(&workflow.InternalServiceError{Message: ctx.Err().Error()}))
 
 	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
 	require.True(t, IsContextTimeoutError(yarpcErr))

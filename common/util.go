@@ -253,6 +253,10 @@ func IsServiceBusyError(err error) bool {
 
 // IsContextTimeoutError checks if the error is context timeout error
 func IsContextTimeoutError(err error) bool {
+	switch err := err.(type) {
+	case *workflow.InternalServiceError:
+		return err.Message == context.DeadlineExceeded.Error()
+	}
 	return err == context.DeadlineExceeded || yarpcerrors.IsDeadlineExceeded(err)
 }
 
