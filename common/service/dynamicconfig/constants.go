@@ -164,6 +164,9 @@ var keys = map[Key]string{
 	TaskSchedulerShardQueueSize:                            "history.taskSchedulerShardQueueSize",
 	TaskSchedulerDispatcherCount:                           "history.taskSchedulerDispatcherCount",
 	TaskSchedulerRoundRobinWeights:                         "history.taskSchedulerRoundRobinWeight",
+	ActiveTaskRedispatchInterval:                           "history.activeTaskRedispatchInterval",
+	StandbyTaskRedispatchInterval:                          "history.standbyTaskRedispatchInterval",
+	TaskRedispatchIntervalJitterCoefficient:                "history.timerProcessorRedispatchIntervalJitterCoefficient",
 	QueueProcessorEnableDomainTaggedMetrics:                "history.queueProcessorEnableDomainTaggedMetrics",
 	TimerTaskBatchSize:                                     "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                   "history.timerTaskWorkerCount",
@@ -535,6 +538,12 @@ const (
 	TaskSchedulerDispatcherCount
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	TaskSchedulerRoundRobinWeights
+	// ActiveTaskRedispatchInterval is the redispatch interval for active tasks
+	ActiveTaskRedispatchInterval
+	// StandbyTaskRedispatchInterval is the redispatch interval for standby tasks
+	StandbyTaskRedispatchInterval
+	// TaskRedispatchIntervalJitterCoefficient is task redispatch jitter coefficient
+	TaskRedispatchIntervalJitterCoefficient
 	// QueueProcessorEnableDomainTaggedMetrics indicates whether task processing metrics should include domain tag
 	QueueProcessorEnableDomainTaggedMetrics
 	// TimerTaskBatchSize is batch size for timer processor to process tasks

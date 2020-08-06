@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	ctask "github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -44,8 +45,8 @@ const (
 var (
 	// ErrTaskDiscarded is the error indicating that the timer / transfer task is pending for too long and discarded.
 	ErrTaskDiscarded = errors.New("passive task pending for too long")
-	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
-	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
+	// ErrTaskRedispatch is the error indicating that the timer / transfer task should be retried.
+	ErrTaskRedispatch = errors.New("passive task should retry due to condition in mutable state is not met")
 )
 
 type (
@@ -268,6 +269,7 @@ func (t *taskBase) HandleErr(
 
 			t.attempt++
 			if t.attempt > t.maxRetryCount() {
+				t.scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(t.attempt))
 				t.logger.Error("Critical error processing task, retrying.",
 					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
 			}
@@ -282,8 +284,17 @@ func (t *taskBase) HandleErr(
 		return nil
 	}
 
+	if transferTask, ok := t.Info.(*persistence.TransferTaskInfo); ok &&
+		transferTask.TaskType == persistence.TransferTaskTypeCloseExecution &&
+		err == execution.ErrMissingWorkflowStartEvent &&
+		t.shard.GetConfig().EnableDropStuckTaskByDomainID(t.Info.GetDomainID()) { // use domainID here to avoid accessing domainCache
+		t.scope.IncCounter(metrics.TransferTaskMissingEventCounter)
+		t.logger.Error("Drop close execution transfer task due to corrupted workflow history", tag.Error(err), tag.LifeCycleProcessingFailed)
+		return nil
+	}
+
 	// this is a transient error
-	if err == ErrTaskRetry {
+	if err == ErrTaskRedispatch {
 		t.scope.IncCounter(metrics.TaskStandbyRetryCounter)
 		return err
 	}
@@ -319,7 +330,8 @@ func (t *taskBase) HandleErr(
 func (t *taskBase) RetryErr(
 	err error,
 ) bool {
-	return true
+	// do not retry ErrTaskRedispatch
+	return err != ErrTaskRedispatch
 }
 
 func (t *taskBase) Ack() {

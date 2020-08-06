@@ -230,6 +230,12 @@ RetryProcessor:
 func (t *timerQueueProcessorBase) redispatchLoop() {
 	defer t.shutdownWG.Done()
 
+	redispatchInterval := t.config.ActiveTaskRedispatchInterval
+	if t.scope == metrics.TimerStandbyQueueProcessorScope {
+		redispatchInterval = t.config.StandbyTaskRedispatchInterval
+	}
+	redispatchJitterCoefficient := t.config.TaskRedispatchIntervalJitterCoefficient
+
 redispatchTaskLoop:
 	for {
 		select {
@@ -239,8 +245,8 @@ redispatchTaskLoop:
 			// TODO: revisit the cpu usage and gc activity caused by
 			// creating timers and reading dynamicconfig if it becomes a problem.
 			backoffTimer := time.NewTimer(backoff.JitDuration(
-				t.config.TimerProcessorRedispatchInterval(),
-				t.config.TimerProcessorRedispatchIntervalJitterCoefficient(),
+				redispatchInterval(),
+				redispatchJitterCoefficient(),
 			))
 			select {
 			case <-t.shutdownCh:
@@ -349,7 +355,8 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 			go t.Stop()
 			return nil
 		case <-t.timerGate.FireChan():
-			if !t.isPriorityTaskProcessorEnabled() || t.redispatchQueue.Len() <= t.config.TimerProcessorMaxRedispatchQueueSize() {
+			maxRedispatchQueueSize := t.config.TimerProcessorMaxRedispatchQueueSize()
+			if !t.isPriorityTaskProcessorEnabled() || t.redispatchQueue.Len() <= maxRedispatchQueueSize {
 				lookAheadTimer, err := t.readAndFanoutTimerTasks()
 				if err != nil {
 					return err
@@ -362,6 +369,9 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 
 			// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
 			t.redispatchTasks()
+			if t.redispatchQueue.Len() > maxRedispatchQueueSize {
+				time.Sleep(loadQueueTaskThrottleRetryDelay)
+			}
 			// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
 			t.notifyNewTimer(time.Time{})
 		case <-pollTimer.C:

@@ -76,15 +76,18 @@ type Config struct {
 	StandbyTaskMissingEventsDiscardDelay dynamicconfig.DurationPropertyFn
 
 	// Task process settings
-	TaskProcessRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
-	EnablePriorityTaskProcessor    dynamicconfig.BoolPropertyFn
-	TaskSchedulerType              dynamicconfig.IntPropertyFn
-	TaskSchedulerWorkerCount       dynamicconfig.IntPropertyFn
-	TaskSchedulerShardWorkerCount  dynamicconfig.IntPropertyFn
-	TaskSchedulerQueueSize         dynamicconfig.IntPropertyFn
-	TaskSchedulerShardQueueSize    dynamicconfig.IntPropertyFn
-	TaskSchedulerDispatcherCount   dynamicconfig.IntPropertyFn
-	TaskSchedulerRoundRobinWeights dynamicconfig.MapPropertyFn
+	TaskProcessRPS                          dynamicconfig.IntPropertyFnWithDomainFilter
+	EnablePriorityTaskProcessor             dynamicconfig.BoolPropertyFn
+	TaskSchedulerType                       dynamicconfig.IntPropertyFn
+	TaskSchedulerWorkerCount                dynamicconfig.IntPropertyFn
+	TaskSchedulerShardWorkerCount           dynamicconfig.IntPropertyFn
+	TaskSchedulerQueueSize                  dynamicconfig.IntPropertyFn
+	TaskSchedulerShardQueueSize             dynamicconfig.IntPropertyFn
+	TaskSchedulerDispatcherCount            dynamicconfig.IntPropertyFn
+	TaskSchedulerRoundRobinWeights          dynamicconfig.MapPropertyFn
+	ActiveTaskRedispatchInterval            dynamicconfig.DurationPropertyFn
+	StandbyTaskRedispatchInterval           dynamicconfig.DurationPropertyFn
+	TaskRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 
 	// QueueProcessor settings
 	QueueProcessorEnableDomainTaggedMetrics dynamicconfig.BoolPropertyFn
@@ -283,15 +286,18 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskMissingEventsResendDelay:  dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsResendDelay, 15*time.Minute),
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay, 25*time.Minute),
 
-		TaskProcessRPS:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
-		EnablePriorityTaskProcessor:    dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, false),
-		TaskSchedulerType:              dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
-		TaskSchedulerWorkerCount:       dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 400),
-		TaskSchedulerShardWorkerCount:  dc.GetIntProperty(dynamicconfig.TaskSchedulerShardWorkerCount, 2),
-		TaskSchedulerQueueSize:         dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 10000),
-		TaskSchedulerShardQueueSize:    dc.GetIntProperty(dynamicconfig.TaskSchedulerShardQueueSize, 200),
-		TaskSchedulerDispatcherCount:   dc.GetIntProperty(dynamicconfig.TaskSchedulerDispatcherCount, 10),
-		TaskSchedulerRoundRobinWeights: dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
+		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
+		EnablePriorityTaskProcessor:             dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, false),
+		TaskSchedulerType:                       dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
+		TaskSchedulerWorkerCount:                dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 400),
+		TaskSchedulerShardWorkerCount:           dc.GetIntProperty(dynamicconfig.TaskSchedulerShardWorkerCount, 2),
+		TaskSchedulerQueueSize:                  dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 10000),
+		TaskSchedulerShardQueueSize:             dc.GetIntProperty(dynamicconfig.TaskSchedulerShardQueueSize, 200),
+		TaskSchedulerDispatcherCount:            dc.GetIntProperty(dynamicconfig.TaskSchedulerDispatcherCount, 10),
+		TaskSchedulerRoundRobinWeights:          dc.GetMapProperty(dynamicconfig.TaskSchedulerRoundRobinWeights, common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)),
+		ActiveTaskRedispatchInterval:            dc.GetDurationProperty(dynamicconfig.ActiveTaskRedispatchInterval, 5*time.Second),
+		StandbyTaskRedispatchInterval:           dc.GetDurationProperty(dynamicconfig.StandbyTaskRedispatchInterval, 30*time.Second),
+		TaskRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TaskRedispatchIntervalJitterCoefficient, 0.15),
 
 		QueueProcessorEnableDomainTaggedMetrics: dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableDomainTaggedMetrics, false),
 
