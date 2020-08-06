@@ -24,6 +24,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -52,6 +53,22 @@ func TestIsServiceTransientError_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	require.False(t, IsServiceTransientError(ctx.Err()))
+}
+
+func TestIsContextTimeoutError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	time.Sleep(50 * time.Millisecond)
+	require.True(t, IsContextTimeoutError(ctx.Err()))
+
+	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
+	require.True(t, IsContextTimeoutError(yarpcErr))
+
+	require.False(t, IsContextTimeoutError(errors.New("some random error")))
+
+	ctx, cancel = context.WithCancel(context.Background())
+	cancel()
+	require.False(t, IsContextTimeoutError(ctx.Err()))
 }
 
 func TestConvertDynamicConfigMapPropertyToIntMap(t *testing.T) {
