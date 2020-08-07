@@ -20,10 +20,12 @@
 
 package db2
 
+import "github.com/uber/cadence/schema/mysql"
+
 // NOTE: whenever there is a new data base schema update, plz update the following versions
 
 // Version is the DB2 database release version
-const Version = "0.1"
+const Version = mysql.VisibilityVersion
 
 // VisibilityVersion is the DB2 visibility database release version
-const VisibilityVersion = "0.1"
+const VisibilityVersion = mysql.VisibilityVersion
