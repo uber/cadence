@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,17 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package db2
 
-import (
-	"os"
+// NOTE: whenever there is a new data base schema update, plz update the following versions
 
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/db2"      // needed to load db2 plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"    // needed to load mysql plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
-	"github.com/uber/cadence/tools/sql"
-)
+// Version is the DB2 database release version
+const Version = "0.1"
 
-func main() {
-	sql.RunTool(os.Args) //nolint:errcheck
-}
+// VisibilityVersion is the DB2 visibility database release version
+const VisibilityVersion = "0.1"

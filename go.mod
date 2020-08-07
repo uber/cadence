@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.38.0
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Shopify/sarama v1.23.0
+	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
 	github.com/aws/aws-sdk-go v1.25.34
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
@@ -18,19 +19,21 @@ require (
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v0.0.0-20181010231311-3f9d52f7176a
-	github.com/fatih/structtag v1.1.0 // indirect
+	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/fortytw2/leaktest v1.3.0 // indirect
+	github.com/go-delve/delve v1.5.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/golang/mock v1.3.1
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-version v1.2.0
 	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365
+	github.com/ibmdb/go_ibm_db v0.3.0
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/jonboulle/clockwork v0.1.0
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lib/pq v1.2.0
+	github.com/longquanzheng/sqlx v0.0.0-20180614180643-0dae4fefe7c0 // indirect
 	github.com/m3db/prometheus_client_golang v0.8.1
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect
@@ -49,7 +52,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1 // indirect
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.4.0
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/kafka-client v0.2.3-0.20191018205945-8b3555b395f9
@@ -60,18 +63,18 @@ require (
 	github.com/valyala/fastjson v1.4.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opencensus.io v0.22.2 // indirect
-	go.uber.org/atomic v1.5.1
+	go.uber.org/atomic v1.6.0
 	go.uber.org/cadence v0.11.3-0.20200408211929-2e8992a5ef2d
-	go.uber.org/multierr v1.3.0
+	go.uber.org/multierr v1.5.0
 	go.uber.org/net/metrics v1.2.0 // indirect
 	go.uber.org/thriftrw v1.20.2
 	go.uber.org/yarpc v1.42.0
-	go.uber.org/zap v1.12.0
+	go.uber.org/zap v1.15.0
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c // indirect
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	golang.org/x/tools v0.0.0-20200127195909-ed30b9180dd3
+	golang.org/x/tools v0.0.0-20200804234916-fec4f28ebb08
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.14.0
 	google.golang.org/appengine v1.6.1 // indirect
@@ -79,6 +82,7 @@ require (
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
 	gopkg.in/yaml.v2 v2.2.2
+	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
 
 // TODO https://github.com/uber/cadence/issues/2863

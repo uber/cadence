@@ -1,0 +1,49 @@
+version: '3'
+services:
+  db2:
+    image: ibmcom/db2
+    privileged: true
+    ports:
+      - "50000:50000"
+    environment:
+      - "DB2INST1_PASSWORD=mqpassw0rd"
+      - "DBNAME=cdb"
+      - "LICENSE=accept"
+    #volumes:
+    #  - /tmp/1:/database
+  statsd:
+    image: graphiteapp/graphite-statsd
+    ports:
+      - "8080:80"
+      - "2003:2003"
+      - "8125:8125"
+      - "8126:8126"
+  cadence:
+    image: ibm/cadence-auto
+    privileged: true
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+    environment:
+      - "DBNAME=cdb/cadence"
+      - "VISIBILITY_DBNAME=cdb/cadence_visibility"
+      - "DB=db2"
+      - "DB2_USER=db2inst1"
+      - "DB2_PWD=mqpassw0rd"
+      - "DB2_SEEDS=db2"
+      - "DB_PORT=50000"
+      - "STATSD_ENDPOINT=statsd:8125"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+    depends_on:
+      - db2
+      - statsd
+  cadence-web:
+    image: ubercadence/web:latest
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence

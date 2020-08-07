@@ -52,6 +52,16 @@ setup_postgres_schema() {
     cadence-sql-tool --plugin postgres --ep $POSTGRES_SEEDS -u $POSTGRES_USER --pw "$POSTGRES_PWD" -p $DB_PORT --db $VISIBILITY_DBNAME update-schema -d $VISIBILITY_SCHEMA_DIR
 }
 
+setup_db2_schema() {
+    SCHEMA_DIR=$CADENCE_HOME/schema/db2/cadence/versioned
+    cadence-sql-tool --plugin go_ibm_db --ep $DB2_SEEDS -u $DB2_USER --pw "$DB2_PWD" -p $DB_PORT create --db $DBNAME
+    cadence-sql-tool --plugin go_ibm_db --ep $DB2_SEEDS -u $DB2_USER --pw "$DB2_PWD" -p $DB_PORT --db $DBNAME setup-schema -v 0.0
+    cadence-sql-tool --plugin go_ibm_db --ep $DB2_SEEDS -u $DB2_USER --pw "$DB2_PWD" -p $DB_PORT --db $DBNAME update-schema -d $SCHEMA_DIR
+    VISIBILITY_SCHEMA_DIR=$CADENCE_HOME/schema/db2/visibility/versioned
+    cadence-sql-tool --plugin go_ibm_db --ep $DB2_SEEDS -u $DB2_USER --pw "$DB2_PWD" -p $DB_PORT create --db $VISIBILITY_DBNAME
+    cadence-sql-tool --plugin go_ibm_db --ep $DB2_SEEDS -u $DB2_USER --pw "$DB2_PWD" -p $DB_PORT --db $VISIBILITY_DBNAME setup-schema -v 0.0
+    cadence-sql-tool --plugin go_ibm_db --ep $DB2_SEEDS -u $DB2_USER --pw "$DB2_PWD" -p $DB_PORT --db $VISIBILITY_DBNAME update-schema -d $VISIBILITY_SCHEMA_DIR
+}
 
 setup_es_template() {
     SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/visibility/index_template.json
@@ -69,6 +79,9 @@ setup_schema() {
     elif [ "$DB" == "postgres" ]; then
         echo 'setup postgres schema'
         setup_postgres_schema
+    elif [ "$DB" == "db2" ]; then
+        echo 'setup db2 schema'
+        setup_db2_schema
     else
         echo 'setup cassandra schema'
         setup_cassandra_schema
@@ -110,6 +123,17 @@ wait_for_postgres() {
     echo 'postgres started'
 }
 
+wait_for_db2() {
+    server=`echo $DB2_SEEDS | awk -F ',' '{print $1}'`
+    nc -z $server $DB_PORT < /dev/null
+    until [ $? -eq 0 ]; do
+        echo 'waiting for db2 to start up'
+        sleep 1
+        nc -z $server $DB_PORT < /dev/null
+    done
+    sleep 60
+    echo 'db2 started'
+}
 
 wait_for_es() {
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
@@ -128,6 +152,8 @@ wait_for_db() {
         wait_for_mysql
     elif [ "$DB" == "postgres" ]; then
         wait_for_postgres
+    elif [ "$DB" == "db2" ]; then
+        wait_for_db2
     else
         wait_for_cassandra
     fi

@@ -69,6 +69,29 @@ persistence:
                 maxConns: 20
                 maxIdleConns: 20
                 maxConnLifetime: "1h"
+        {{- else if eq $db "db2" }}
+        default:
+            sql:
+                pluginName: "go_ibm_db"
+                databaseName: {{ default .Env.DBNAME "cdb/cadence" }}
+                connectAddr: "{{ default .Env.DB2_SEEDS "" }}:{{ default .Env.DB_PORT "50000" }}"
+                connectProtocol: "tcp"
+                user: {{ default .Env.DB2_USER "db2inst1" }}
+                password: {{ default .Env.DB2_PWD "" }}
+                maxConns: 20
+                maxIdleConns: 20
+                maxConnLifetime: "1h"
+        visibility:
+            sql:
+                pluginName: "go_ibm_db"
+                databaseName: {{ default .Env.VISIBILITY_DBNAME "cdb/cadence_visibility" }}
+                connectAddr: "{{ default .Env.DB2_SEEDS "" }}:{{ default .Env.DB_PORT "50000" }}"
+                connectProtocol: "tcp"
+                user: {{ default .Env.DB2_USER "db2inst1" }}
+                password: {{ default .Env.DB2_PWD "" }}
+                maxConns: 20
+                maxIdleConns: 20
+                maxConnLifetime: "1h"
         {{- end }}
         {{- if eq $es "true" }}
         es-visibility:

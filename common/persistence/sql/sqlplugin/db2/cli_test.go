@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,17 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package db2
 
 import (
-	"os"
+	"testing"
 
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/db2"      // needed to load db2 plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"    // needed to load mysql plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
-	"github.com/uber/cadence/tools/sql"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/tools/sql/clitest"
 )
 
-func main() {
-	sql.RunTool(os.Args) //nolint:errcheck
+func TestSQLConnTestSuite(t *testing.T) {
+	suite.Run(t, clitest.NewSQLConnTestSuite(PluginName))
+}
+
+func TestHandlerTestSuite(t *testing.T) {
+	suite.Run(t, clitest.NewHandlerTestSuite(PluginName))
+}
+
+func TestSetupSchemaTestSuite(t *testing.T) {
+	suite.Run(t, clitest.NewSetupSchemaTestSuite(PluginName))
+}
+
+func TestUpdateSchemaTestSuite(t *testing.T) {
+	suite.Run(t, clitest.NewUpdateSchemaTestSuite(PluginName))
+}
+
+func TestVersionTestSuite(t *testing.T) {
+	suite.Run(t, clitest.NewVersionTestSuite(PluginName))
 }

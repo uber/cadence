@@ -64,6 +64,12 @@ const (
 	PostgresPort = "POSTGRES_PORT"
 	// PostgresDefaultPort Postgres default port
 	PostgresDefaultPort = "5432"
+	// DB2Seeds address
+	DB2Seeds = "DB2_SEEDS"
+	// DB2Port number
+	DB2Port = "DB2_PORT"
+	// DB2DefaultPort number
+	DB2DefaultPort = "50000"
 )
 
 // SetupEnv setup the necessary env
@@ -201,6 +207,28 @@ func GetPostgresPort() int {
 	p, err := strconv.Atoi(port)
 	if err != nil {
 		panic(fmt.Sprintf("error getting env %v", PostgresPort))
+	}
+	return p
+}
+
+// GetDB2Address returns DB2 address
+func GetDB2Address() string {
+	addr := os.Getenv(DB2Seeds)
+	if addr == "" {
+		addr = Localhost
+	}
+	return addr
+}
+
+// GetDB2Port return DB2 server port
+func GetDB2Port() int {
+	port := os.Getenv(DB2Port)
+	if port == "" {
+		port = DB2DefaultPort
+	}
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		panic(fmt.Sprintf("error getting env %v", DB2Port))
 	}
 	return p
 }
