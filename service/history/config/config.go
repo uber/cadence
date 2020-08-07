@@ -145,7 +145,7 @@ type Config struct {
 	ReplicatorProcessorRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	ReplicatorProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	ReplicatorProcessorEnablePriorityTaskProcessor         dynamicconfig.BoolPropertyFn
-	ReplicatorProcessorFetchTasksBatchSize                 dynamicconfig.IntPropertyFn
+	ReplicatorProcessorFetchTasksBatchSize                 dynamicconfig.IntPropertyFnWithShardIDFilter
 
 	// Persistence settings
 	ExecutionMgrNumConns dynamicconfig.IntPropertyFn
@@ -351,7 +351,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicatorProcessorRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorRedispatchIntervalJitterCoefficient, 0.15),
 		ReplicatorProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxRedispatchQueueSize, 10000),
 		ReplicatorProcessorEnablePriorityTaskProcessor:         dc.GetBoolProperty(dynamicconfig.ReplicatorProcessorEnablePriorityTaskProcessor, false),
-		ReplicatorProcessorFetchTasksBatchSize:                 dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 25),
+		ReplicatorProcessorFetchTasksBatchSize:                 dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicatorTaskBatchSize, 25),
 
 		ExecutionMgrNumConns:            dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 50),
 		HistoryMgrNumConns:              dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 50),
