@@ -274,7 +274,7 @@ func (t *transferQueueProcessor) FailoverDomain(
 		// other errors should never be returned for GetStateAction
 		panic(fmt.Sprintf("unknown error for GetStateAction: %v", err))
 	}
-	for _, queueState := range actionResult.GetStateActionResult.states {
+	for _, queueState := range actionResult.GetStateActionResult.States {
 		queueReadLevel := queueState.ReadLevel().(transferTaskKey).taskID
 		if maxReadLevel < queueReadLevel {
 			maxReadLevel = queueReadLevel
@@ -399,7 +399,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 	if err != nil {
 		return err
 	}
-	for _, queueState := range actionResult.GetStateActionResult.states {
+	for _, queueState := range actionResult.GetStateActionResult.States {
 		newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 	}
 
@@ -409,7 +409,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 			if err != nil {
 				return err
 			}
-			for _, queueState := range actionResult.GetStateActionResult.states {
+			for _, queueState := range actionResult.GetStateActionResult.States {
 				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 			}
 		}

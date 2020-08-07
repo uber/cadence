@@ -261,7 +261,7 @@ func (t *timerQueueProcessor) FailoverDomain(
 		// other errors should never be returned for GetStateAction
 		panic(fmt.Sprintf("unknown error for GetStateAction: %v", err))
 	}
-	for _, queueState := range actionResult.GetStateActionResult.states {
+	for _, queueState := range actionResult.GetStateActionResult.States {
 		queueReadLevel := queueState.ReadLevel().(timerTaskKey).visibilityTimestamp
 		if maxReadLevel.Before(queueReadLevel) {
 			maxReadLevel = queueReadLevel
@@ -384,7 +384,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 	if err != nil {
 		return err
 	}
-	for _, queueState := range actionResult.GetStateActionResult.states {
+	for _, queueState := range actionResult.GetStateActionResult.States {
 		newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 	}
 
@@ -394,7 +394,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 			if err != nil {
 				return err
 			}
-			for _, queueState := range actionResult.GetStateActionResult.states {
+			for _, queueState := range actionResult.GetStateActionResult.States {
 				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 			}
 		}

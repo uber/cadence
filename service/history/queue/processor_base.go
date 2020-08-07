@@ -398,7 +398,7 @@ func (p *processorBase) getProcessingQueueStates() *ActionResult {
 	return &ActionResult{
 		ActionType: ActionTypeGetState,
 		GetStateActionResult: &GetStateActionResult{
-			states: queueStates,
+			States: queueStates,
 		},
 	}
 }

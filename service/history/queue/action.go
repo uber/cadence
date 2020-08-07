@@ -48,7 +48,7 @@ type (
 	GetStateActionAttributes struct{}
 	// GetStateActionResult is the result for performing GetState Action
 	GetStateActionResult struct {
-		states []ProcessingQueueState
+		States []ProcessingQueueState
 	}
 )
 
