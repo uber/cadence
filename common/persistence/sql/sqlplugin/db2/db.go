@@ -53,7 +53,7 @@ func (mdb *db) IsDupEntryError(err error) bool {
 }
 
 // newDB returns an instance of DB, which is a logical
-// connection to the underlying mysql database
+// connection to the underlying database
 func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbStr string) *db {
 	mdb := &db{db: xdb, tx: tx, dbStr: dbStr}
 	mdb.conn = xdb
@@ -76,6 +76,7 @@ func (mdb *db) Get(dest interface{}, query string, args ...interface{}) error {
 	stmt, _ := mdb.getContextStmt(query)
 	err := stmt.Get(dest, args...)
 	// pay price for non-cached statements
+	// as db2 driver does not support bindvars in a regular way
 	stmt.Close()
 	if err != nil {
 		fmt.Printf("Get >>>>>>>>>:  %v, %v, [dest=%v] [err=%v]\n", mdb.tx, query, args, dest, err)
