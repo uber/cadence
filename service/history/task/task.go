@@ -232,11 +232,11 @@ func (t *taskBase) Execute() error {
 	// processed as active or standby and use the corresponding
 	// task executor.
 	if t.scope == nil {
-		if t.emitDomainTag {
-			t.scope = GetOrCreateDomainTaggedScope(t.shard, t.scopeIdx, t.GetDomainID(), t.logger)
-		} else {
-			t.scope = t.shard.GetMetricsClient().Scope(t.scopeIdx)
-		}
+		//if t.emitDomainTag {
+		t.scope = GetOrCreateDomainTaggedScope(t.shard, t.scopeIdx, t.GetDomainID(), t.logger)
+		//} else {
+		//	t.scope = t.shard.GetMetricsClient().Scope(t.scopeIdx)
+		//}
 	}
 
 	var err error
