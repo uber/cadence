@@ -284,7 +284,7 @@ func (adh *AdminHandler) CloseShard(
 ) (retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
-	scope, sw := adh.startRequestProfile(metrics.AdminCloseShardTaskScope)
+	scope, sw := adh.startRequestProfile(metrics.AdminCloseShardScope)
 	defer sw.Stop()
 
 	if request == nil || request.ShardID == nil {
@@ -307,8 +307,32 @@ func (adh *AdminHandler) ResetQueue(
 	if request == nil || request.ShardID == nil || request.ClusterName == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
+	if request.GetClusterName() == "" {
+		return adh.error(errClusterNameNotSet, scope)
+	}
+
 	err := adh.GetHistoryClient().ResetQueue(ctx, request)
 	return err
+}
+
+func (adh *AdminHandler) DescribeQueue(
+	ctx context.Context,
+	request *gen.DescribeQueueRequest,
+) (resp *gen.DescribeQueueResponse, retError error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminDescribeQueueScope)
+	defer sw.Stop()
+
+	if request == nil || request.ShardID == nil || request.ClusterName == nil || request.Type == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if request.GetClusterName() == "" {
+		return nil, adh.error(errClusterNameNotSet, scope)
+	}
+
+	resp, err := adh.GetHistoryClient().DescribeQueue(ctx, request)
+	return resp, err
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host

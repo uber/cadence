@@ -790,6 +790,13 @@ func (h *Handler) ResetQueue(
 	return nil
 }
 
+func (h *Handler) DescribeQueue(
+	ctx context.Context,
+	request *gen.DescribeQueueRequest,
+) (resp *gen.DescribeQueueResponse, retError error) {
+	return nil, nil
+}
+
 // DescribeMutableState - returns the internal analysis of workflow execution state
 func (h *Handler) DescribeMutableState(
 	ctx context.Context,
