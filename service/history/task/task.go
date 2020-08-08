@@ -342,7 +342,11 @@ func (t *taskBase) Ack() {
 	if t.shouldProcessTask {
 		t.scope.RecordTimer(metrics.TaskAttemptTimer, time.Duration(t.attempt))
 		t.scope.RecordTimer(metrics.TaskLatency, time.Since(t.submitTime))
-		t.scope.RecordTimer(metrics.TaskQueueLatency, time.Since(t.GetVisibilityTimestamp()))
+		taskLatency := time.Since(t.GetVisibilityTimestamp())
+		t.scope.RecordTimer(metrics.TaskQueueLatency, taskLatency)
+		if taskLatency > time.Hour {
+			t.logger.Warn("High latency on task end-to-end latency")
+		}
 	}
 }
 
