@@ -49,7 +49,7 @@ func (mdb *db) InsertIntoShards(row *sqlplugin.ShardsRow) (sql.Result, error) {
 
 // UpdateShards updates one or more rows into shards table
 func (mdb *db) UpdateShards(row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return mdb.Exec2(updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
+	return mdb.conn.Exec(updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
 }
 
 // SelectFromShards reads one or more rows from shards table

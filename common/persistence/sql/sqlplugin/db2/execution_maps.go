@@ -108,7 +108,6 @@ func makeSetKeyInMapQry(tableName string, nonPrimaryKeyColumns []string, mapKeyN
 		strings.Join(stringMap(nonPrimaryKeyColumns, func(x string) string {
 			return "b." + strings.ToUpper(x)
 		}), ","))
-	//fmt.Printf(">>>>> Formatted query: %v", r)
 	return r
 }
 
@@ -116,7 +115,6 @@ func makeDeleteKeyInMapQry(tableName string, mapKeyName string) string {
 	r := fmt.Sprintf(deleteKeyInMapQryTemplate,
 		tableName,
 		strings.ToUpper(mapKeyName))
-	//fmt.Printf(">>>>> Formatted query: %v", r)
 	return r
 }
 
@@ -127,7 +125,6 @@ func makeGetMapQryTemplate(tableName string, nonPrimaryKeyColumns []string, mapK
 		strings.Join(stringMap(nonPrimaryKeyColumns, func(x string) string {
 			return strings.ToUpper(x)
 		}), ","))
-	//fmt.Printf(">>>>> Formatted query: %v", r)
 	return r
 }
 

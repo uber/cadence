@@ -22,7 +22,6 @@ package db2
 
 import (
 	"database/sql"
-	"fmt"
 
 	db2 "github.com/ibmdb/go_ibm_db"
 	"github.com/jmoiron/sqlx"
@@ -64,6 +63,7 @@ func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbStr string) *db {
 	return mdb
 }
 
+// Get statement created based on context
 func (mdb *db) getContextStmt(query string) (*sqlx.Stmt, error) {
 	if mdb.tx != nil {
 		return mdb.tx.Preparex(query)
@@ -78,9 +78,6 @@ func (mdb *db) Get(dest interface{}, query string, args ...interface{}) error {
 	// pay price for non-cached statements
 	// as db2 driver does not support bindvars in a regular way
 	stmt.Close()
-	if err != nil {
-		fmt.Printf("Get >>>>>>>>>:  %v, %v, [dest=%v] [err=%v]\n", mdb.tx, query, args, dest, err)
-	}
 	return err
 }
 
@@ -88,27 +85,11 @@ func (mdb *db) Select(dest interface{}, query string, args ...interface{}) error
 	stmt, _ := mdb.getContextStmt(query)
 	err := stmt.Select(dest, args...)
 	stmt.Close()
-	if err != nil {
-		fmt.Printf("[Transaction=%v]Selet >>>>>>>>>:  %v, %v, [dest=%v] [err=%v]\n", mdb.tx, query, args, dest, err)
-	}
 	return err
 }
 
 func (mdb *db) NamedExec(query string, arg interface{}) (sql.Result, error) {
 	r, err := mdb.conn.NamedExec(query, arg)
-	if err != nil {
-		fmt.Printf("[Transaction=%v]NamedExec >>>>>>>>>:  %v, %v, [err=%v]\n", mdb.tx, query, arg, err)
-	}
-	return r, err
-}
-
-func (mdb *db) Exec2(query string, args ...interface{}) (sql.Result, error) {
-	stmt, _ := mdb.getContextStmt(query)
-	r, err := stmt.Exec(args...)
-	stmt.Close()
-	if err != nil {
-		fmt.Printf("[Transaction=%v]Exec2 >>>>>>>>>:  %v, %v, [result=%v] [err=%v]\n", mdb.tx, query, args, r, err)
-	}
 	return r, err
 }
 
@@ -118,19 +99,16 @@ func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("!!!!!! Transaction START: [%v] ", xtx)
 	return newDB(mdb.db, xtx, mdb.dbStr), nil
 }
 
 // Commit commits a previously started transaction
 func (mdb *db) Commit() error {
-	//fmt.Printf("!!!!!! COMMIT: [%v] ", mdb.tx)
 	return mdb.tx.Commit()
 }
 
 // Rollback triggers rollback of a previously started transaction
 func (mdb *db) Rollback() error {
-	//fmt.Printf("!!!!!! ROLLBACK: [%v] ", mdb.tx)
 	return mdb.tx.Rollback()
 }
 
