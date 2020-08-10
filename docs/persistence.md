@@ -43,6 +43,45 @@ cp config/development_mysql.yaml config/development.yaml
 ./cadence-server start --services=frontend,matching,history,worker
 ```
 
+## DB2
+
+### Start DB2 instance
+
+`docker run -itd --name cdb --privileged=true -p 50000:50000 -e LICENSE=accept -e DB2INST1_PASSWORD=mqpassw0rd -e DBNAME=cdb ibmcom/db2`
+
+### Install cadence schema
+
+```
+cd $GOPATH/github.com/uber/cadence
+make install-schema-db2
+```
+
+### Start cadence server
+
+```
+cd $GOPATH/github.com/uber/cadence
+cp config/development_db2.yaml config/development.yaml
+```
+
+The DB2 persistence layer depends on [go_ibm_db](github.com/ibmdb/go_ibm_db). The naitive ODBC driver backend 
+has to be downloaded using GO driver [instructions](https://github.com/ibmdb/go_ibm_db#how-to-install-in-linuxmac). 
+Please make sure `CGO_CFLAGS`, `CGO_LDFLAGS`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH` are configured properly based on your environemnt. Static compilation in alpine-nase docker image requires development libraries that do not exist out of the box in alpine and bigger images have to be used. Check out `Dockerfile.db2` for more details.
+
+Before code compilation modify the following files to include db2 driver import 
+
+`_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/db2"`:
+
+1. cmd/server/main.go
+1. cmd/tools/sql/main.go
+
+the compilation must be done passing `CGO_ENABLED=1` because of DB2 ODBC backed dependencies.
+
+It's important to note that DB2 has a concept of multiple `schema` objects in the same database so schema prefix must be specified for all queries to database. So essentially schema becomes a container for cadence tables, indexes, etc. Given this concept and how Cadence code is structured the DB2 actual database must be created before Cadence sql tools start, while schema and its objects will be created automatically. The database "name" for DB2 comes in the form of "<db_name>/<db_schema>". See `docker/docker-compose-db2.yml` for more details.
+
+```
+./cadence-server start --services=frontend,matching,history,worker
+```
+
 # Configuration
 ## Common to all persistence implementations
 There are two major sub-subsystems within cadence that need persistence - cadence-core and visibility. cadence-core is

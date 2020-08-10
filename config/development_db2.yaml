@@ -6,7 +6,7 @@ persistence:
     db2-default:
       sql:
         pluginName: "go_ibm_db"
-        databaseName: "cdb"
+        databaseName: "cdb/cadence"
         connectAddr: "127.0.0.1:50000"
         connectProtocol: "tcp"
         user: "db2inst1"
@@ -17,7 +17,7 @@ persistence:
     db2-visibility:
       sql:
         pluginName: "go_ibm_db"
-        databaseName: "cdb"
+        databaseName: "cdb/cadence_visibility"
         connectAddr: "127.0.0.1:50000"
         connectProtocol: "tcp"
         user: "db2inst1"
@@ -135,4 +135,3 @@ publicClient:
 blobstore:
   filestore:
     outputDirectory: "/tmp/blobstore"
-

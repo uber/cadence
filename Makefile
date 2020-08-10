@@ -276,6 +276,15 @@ install-schema-postgres: bins
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility setup-schema -v 0.0
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
 
+install-schema-db2: bins
+	./cadence-sql-tool --ep 127.0.0.1 -p 50000 -u db2inst1 -pw mqpassw0rd --pl go_ibm_db create --db cdb/cadence
+	./cadence-sql-tool --ep 127.0.0.1 -p 50000 -u db2inst1 -pw mqpassw0rd --pl go_ibm_db --db cdb/cadence setup -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 -p 50000 -u db2inst1 -pw mqpassw0rd --pl go_ibm_db --db cdb/cadence update-schema -d ./schema/db2/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 -p 50000 -u db2inst1 -pw mqpassw0rd --pl go_ibm_db create --db cdb/cadence_visibility
+	./cadence-sql-tool --ep 127.0.0.1 -p 50000 -u db2inst1 -pw mqpassw0rd --pl go_ibm_db --db cdb/cadence_visibility setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 -p 50000 -u db2inst1 -pw mqpassw0rd --pl go_ibm_db --db cdb/cadence_visibility update-schema -d ./schema/db2/visibility/versioned
+
+
 start: bins
 	./cadence-server start
 

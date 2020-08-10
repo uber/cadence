@@ -9,8 +9,6 @@ services:
       - "DB2INST1_PASSWORD=mqpassw0rd"
       - "DBNAME=cdb"
       - "LICENSE=accept"
-    #volumes:
-    #  - /tmp/1:/database
   statsd:
     image: graphiteapp/graphite-statsd
     ports:

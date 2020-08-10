@@ -38,7 +38,7 @@ const (
 func getTestClusterOption() *pt.TestBaseOptions {
 	testUser := "db2inst1"
 	testPassword := "mqpassw0rd"
-	PluginName := "db2"
+	PluginName := "go_ibm_db"
 
 	if runtime.GOOS == "darwin" {
 		testUser = os.Getenv("USER")
