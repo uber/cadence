@@ -9,6 +9,8 @@
 .gobincache/
 .tmp/
 .vscode/
+cadence-go.code-workspace
+.project
 /vendor
 /_vendor-*
 /cadence

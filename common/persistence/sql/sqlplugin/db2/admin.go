@@ -59,7 +59,6 @@ const (
 )
 
 func (mdb *db) GetConnParts() (string, string) {
-	fmt.Printf(">>>>>>>>>> MDB str : %v", mdb.dbStr)
 	dbParts := strings.Split(mdb.dbStr, "/")
 	return dbParts[0], dbParts[1]
 }
