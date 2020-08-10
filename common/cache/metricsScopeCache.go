@@ -26,47 +26,96 @@ import (
 	"bytes"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/uber/cadence/common/metrics"
 )
 
+const flushBufferedMetricsScopeDuration = 10 * time.Second
+
 type domainMetricsScopeCache struct {
-	sync.RWMutex
 	scopeMap map[string]metrics.Scope
+	buffer   *buffer
 }
+
+type buffer struct {
+	sync.RWMutex
+	bufferMap map[string]metrics.Scope
+}
+
+type metricsScopeMap map[string]metrics.Scope
+
+var cache atomic.Value
 
 // NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
 func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
-	return &domainMetricsScopeCache{
+	mc := &domainMetricsScopeCache{
 		scopeMap: make(map[string]metrics.Scope),
+		buffer: &buffer{
+			bufferMap: make(map[string]metrics.Scope),
+		},
+	}
+	cache.Store(make(metricsScopeMap))
+	go mc.flushBufferedMetricsScope()
+	return mc
+}
+
+func (c *domainMetricsScopeCache) flushBufferedMetricsScope() {
+	for {
+		select {
+		case <-time.After(flushBufferedMetricsScopeDuration):
+			c.buffer.Lock()
+			if len(c.buffer.bufferMap) > 0 {
+				scopeMap := make(metricsScopeMap)
+
+				data := cache.Load().(metricsScopeMap)
+				// Copy everything over after atomic load
+				for key, val := range data {
+					scopeMap[key] = val
+				}
+
+				// Copy from buffered array
+				for key, val := range c.buffer.bufferMap {
+					scopeMap[key] = val
+				}
+
+				cache.Store(scopeMap)
+				c.buffer.bufferMap = make(map[string]metrics.Scope)
+			}
+			c.buffer.Unlock()
+		}
 	}
 }
 
 // Get retrieves scope for domainID and scopeIdx
 func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
-	c.RLock()
-	defer c.RUnlock()
+	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
 
-	var buffer bytes.Buffer
-	buffer.WriteString(domainID)
-	buffer.WriteString("_")
-	buffer.WriteString(strconv.Itoa(scopeIdx))
-	key := buffer.String()
+	data := cache.Load().(metricsScopeMap)
 
-	metricsScope, ok := c.scopeMap[key]
+	if data == nil {
+		return nil, false
+	}
+
+	metricsScope, ok := data[key]
+
 	return metricsScope, ok
 }
 
 // Put puts map of domainID and scopeIdx to metricsScope
 func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
-	c.Lock()
-	defer c.Unlock()
+	c.buffer.Lock()
+	defer c.buffer.Unlock()
 
+	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
+	c.buffer.bufferMap[key] = scope
+}
+
+func joinStrings(str ...string) string {
 	var buffer bytes.Buffer
-	buffer.WriteString(domainID)
-	buffer.WriteString("_")
-	buffer.WriteString(strconv.Itoa(scopeIdx))
-	key := buffer.String()
-
-	c.scopeMap[key] = scope
+	for _, s := range str {
+		buffer.WriteString(s)
+	}
+	return buffer.String()
 }
