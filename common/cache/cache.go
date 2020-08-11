@@ -130,4 +130,6 @@ type DomainMetricsScopeCache interface {
 	Get(domainID string, scopeIdx int) (metrics.Scope, bool)
 	// Put adds metrics scope for a domainID and scopeIdx
 	Put(domainID string, scopeIdx int, metricsScope metrics.Scope)
+	// Stops the metrics scope cache
+	Stop()
 }

@@ -34,42 +34,51 @@ import (
 
 const flushBufferedMetricsScopeDuration = 10 * time.Second
 
-type domainMetricsScopeCache struct {
-	scopeMap map[string]metrics.Scope
-	buffer   *buffer
-}
+type (
+	metricsScopeMap map[string]metrics.Scope
 
-type buffer struct {
-	sync.RWMutex
-	bufferMap map[string]metrics.Scope
-}
+	buffer struct {
+		sync.RWMutex
+		bufferMap metricsScopeMap
+	}
 
-type metricsScopeMap map[string]metrics.Scope
-
-var cache atomic.Value
+	domainMetricsScopeCache struct {
+		buffer   *buffer
+		cache atomic.Value
+		closeCh chan int
+	}
+)
 
 // NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
-func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
-	mc := &domainMetricsScopeCache{
-		scopeMap: make(map[string]metrics.Scope),
-		buffer: &buffer{
-			bufferMap: make(map[string]metrics.Scope),
-		},
+func NewDomainMetricsScopeCache(flushDuration ...time.Duration) DomainMetricsScopeCache {
+
+	mc := new(domainMetricsScopeCache)
+	mc.buffer = &buffer{
+		bufferMap: make(metricsScopeMap),
 	}
-	cache.Store(make(metricsScopeMap))
-	go mc.flushBufferedMetricsScope()
+	mc.closeCh = make(chan int)
+	mc.cache.Store(make(metricsScopeMap))
+
+	var refreshDuration time.Duration
+	if len(flushDuration) == 0 {
+		refreshDuration = flushBufferedMetricsScopeDuration
+	} else {
+		refreshDuration = flushDuration[0]
+	}
+
+	go mc.flushBufferedMetricsScope(refreshDuration)
 	return mc
 }
 
-func (c *domainMetricsScopeCache) flushBufferedMetricsScope() {
+func (c *domainMetricsScopeCache) flushBufferedMetricsScope(flushDuration time.Duration) {
 	for {
 		select {
-		case <-time.After(flushBufferedMetricsScopeDuration):
+		case <-time.After(flushDuration):
 			c.buffer.Lock()
 			if len(c.buffer.bufferMap) > 0 {
 				scopeMap := make(metricsScopeMap)
 
-				data := cache.Load().(metricsScopeMap)
+				data := c.cache.Load().(metricsScopeMap)
 				// Copy everything over after atomic load
 				for key, val := range data {
 					scopeMap[key] = val
@@ -80,10 +89,13 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope() {
 					scopeMap[key] = val
 				}
 
-				cache.Store(scopeMap)
-				c.buffer.bufferMap = make(map[string]metrics.Scope)
+				c.cache.Store(scopeMap)
+				c.buffer.bufferMap = make(metricsScopeMap)
 			}
 			c.buffer.Unlock()
+
+		case <- c.closeCh:
+			break
 		}
 	}
 }
@@ -92,7 +104,7 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope() {
 func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
 	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
 
-	data := cache.Load().(metricsScopeMap)
+	data := c.cache.Load().(metricsScopeMap)
 
 	if data == nil {
 		return nil, false
@@ -105,11 +117,16 @@ func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Sc
 
 // Put puts map of domainID and scopeIdx to metricsScope
 func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
+	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
+
 	c.buffer.Lock()
 	defer c.buffer.Unlock()
 
-	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
 	c.buffer.bufferMap[key] = scope
+}
+
+func (c *domainMetricsScopeCache) Stop() {
+	c.closeCh <- 0
 }
 
 func joinStrings(str ...string) string {
