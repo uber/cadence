@@ -315,6 +315,7 @@ func (adh *AdminHandler) ResetQueue(
 	return err
 }
 
+// DescribeQueue describes processing queue states
 func (adh *AdminHandler) DescribeQueue(
 	ctx context.Context,
 	request *gen.DescribeQueueRequest,

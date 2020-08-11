@@ -790,11 +790,38 @@ func (h *Handler) ResetQueue(
 	return nil
 }
 
+// DescribeQueue describes processing queue states
 func (h *Handler) DescribeQueue(
 	ctx context.Context,
 	request *gen.DescribeQueueRequest,
 ) (resp *gen.DescribeQueueResponse, retError error) {
-	return nil, nil
+
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope := metrics.HistoryDescribeQueueScope
+	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
+	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
+	if err != nil {
+		return nil, h.error(err, scope, "", "")
+	}
+
+	switch taskType := common.TaskType(request.GetType()); taskType {
+	case common.TaskTypeTransfer:
+		resp, err = engine.DescribeTransferQueue(ctx, request.GetClusterName())
+	case common.TaskTypeTimer:
+		resp, err = engine.DescribeTimerQueue(ctx, request.GetClusterName())
+	default:
+		err = errInvalidTaskType
+	}
+
+	if err != nil {
+		return nil, h.error(err, scope, "", "")
+	}
+	return resp, nil
 }
 
 // DescribeMutableState - returns the internal analysis of workflow execution state

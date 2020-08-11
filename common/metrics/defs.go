@@ -816,6 +816,8 @@ const (
 	HistoryRespondActivityTaskCanceledScope
 	// HistoryResetQueueScope tracks ResetQueue API calls received by service
 	HistoryResetQueueScope
+	// HistoryDescribeQueueScope tracks DescribeQueue API calls received by service
+	HistoryDescribeQueueScope
 	// HistoryDescribeMutabelStateScope tracks DescribeMutableState API calls received by service
 	HistoryDescribeMutabelStateScope
 	// HistoryGetMutableStateScope tracks GetMutableState API calls received by service
@@ -1434,6 +1436,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRespondActivityTaskFailedScope:                  {operation: "RespondActivityTaskFailed"},
 		HistoryRespondActivityTaskCanceledScope:                {operation: "RespondActivityTaskCanceled"},
 		HistoryResetQueueScope:                                 {operation: "ResetQueue"},
+		HistoryDescribeQueueScope:                              {operation: "DescribeQueue"},
 		HistoryDescribeMutabelStateScope:                       {operation: "DescribeMutableState"},
 		HistoryGetMutableStateScope:                            {operation: "GetMutableState"},
 		HistoryPollMutableStateScope:                           {operation: "PollMutableState"},

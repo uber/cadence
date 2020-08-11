@@ -510,6 +510,7 @@ func AdminResetQueue(c *cli.Context) {
 	fmt.Println("Reset queue state succeeded")
 }
 
+// AdminDescribeQueue describes task processing queue states
 func AdminDescribeQueue(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
