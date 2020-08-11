@@ -1,7 +1,7 @@
 
 CREATE TABLE cadence_visibility.executions_visibility (
-  domain_id            CHAR(64) NOT NULL,
-  run_id               CHAR(64) NOT NULL,
+  domain_id            VARCHAR(64) NOT NULL,
+  run_id               VARCHAR(64) NOT NULL,
   start_time           TIMESTAMP NOT NULL,
   execution_time       TIMESTAMP NOT NULL,
   workflow_id          VARCHAR(255) NOT NULL,
