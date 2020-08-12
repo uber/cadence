@@ -23,12 +23,14 @@
 package cache
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/common/metrics"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/common/metrics"
 )
 
 type domainMetricsCacheSuite struct {
@@ -46,9 +48,16 @@ func TestDomainMetricsCacheSuite(t *testing.T) {
 func (s *domainMetricsCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.metricsCache = NewDomainMetricsScopeCache(100 * time.Millisecond)
+	metricsCache := NewDomainMetricsScopeCache()
+	metricsCache.flushDuration = 100 * time.Millisecond
+	s.metricsCache = metricsCache
+
+	s.metricsCache.Start()
 }
 
+func (s *domainMetricsCacheSuite) TearDownTest() {
+	s.metricsCache.Stop()
+}
 
 func (s *domainMetricsCacheSuite) TestGetMetricsScope() {
 	var found bool
@@ -102,7 +111,7 @@ func (s *domainMetricsCacheSuite) TestGetMetricsScopeMultipleFlushLoop() {
 		{3, "E"},
 	}
 
-	for i:=0; i<3; i++ {
+	for i := 0; i < 3; i++ {
 		t := tests[i]
 		mockMetricsScope := metrics.NoopScope(metrics.ServiceIdx(t.scopeID))
 		s.metricsCache.Put(t.domainID, t.scopeID, mockMetricsScope)
@@ -110,12 +119,11 @@ func (s *domainMetricsCacheSuite) TestGetMetricsScopeMultipleFlushLoop() {
 
 	time.Sleep(110 * time.Millisecond)
 
-	for i:=3; i<len(tests); i++ {
+	for i := 3; i < len(tests); i++ {
 		t := tests[i]
 		mockMetricsScope := metrics.NoopScope(metrics.ServiceIdx(t.scopeID))
 		s.metricsCache.Put(t.domainID, t.scopeID, mockMetricsScope)
 	}
-
 
 	metricsScope, found := s.metricsCache.Get("A", 1)
 	testMetricsScope := metrics.NoopScope(metrics.ServiceIdx(1))
@@ -140,7 +148,7 @@ func (s *domainMetricsCacheSuite) TestGetMetricsScopeMultipleFlushLoop() {
 	s.NotEqual(testMetricsScope, metricsScope)
 	s.Equal(found, false)
 
-	time.Sleep(200*time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	metricsScope, found = s.metricsCache.Get("D", 5)
 	testMetricsScope = metrics.NoopScope(metrics.ServiceIdx(5))

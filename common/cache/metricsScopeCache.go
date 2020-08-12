@@ -43,30 +43,25 @@ type (
 	}
 
 	domainMetricsScopeCache struct {
-		buffer   *buffer
-		cache atomic.Value
-		closeCh chan int
+		buffer        *buffer
+		cache         atomic.Value
+		closeCh       chan struct{}
+		flushDuration time.Duration
 	}
 )
 
 // NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
-func NewDomainMetricsScopeCache(flushDuration ...time.Duration) DomainMetricsScopeCache {
+func NewDomainMetricsScopeCache() *domainMetricsScopeCache {
 
-	mc := new(domainMetricsScopeCache)
-	mc.buffer = &buffer{
-		bufferMap: make(metricsScopeMap),
+	mc := &domainMetricsScopeCache{
+		buffer: &buffer{
+			bufferMap: make(metricsScopeMap),
+		},
+		closeCh:       make(chan struct{}),
+		flushDuration: flushBufferedMetricsScopeDuration,
 	}
-	mc.closeCh = make(chan int)
+
 	mc.cache.Store(make(metricsScopeMap))
-
-	var refreshDuration time.Duration
-	if len(flushDuration) == 0 {
-		refreshDuration = flushBufferedMetricsScopeDuration
-	} else {
-		refreshDuration = flushDuration[0]
-	}
-
-	go mc.flushBufferedMetricsScope(refreshDuration)
 	return mc
 }
 
@@ -94,8 +89,8 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope(flushDuration time.D
 			}
 			c.buffer.Unlock()
 
-		case <- c.closeCh:
-			break
+		case <-c.closeCh:
+			return
 		}
 	}
 }
@@ -125,8 +120,12 @@ func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metri
 	c.buffer.bufferMap[key] = scope
 }
 
+func (c *domainMetricsScopeCache) Start() {
+	go c.flushBufferedMetricsScope(c.flushDuration)
+}
+
 func (c *domainMetricsScopeCache) Stop() {
-	c.closeCh <- 0
+	close(c.closeCh)
 }
 
 func joinStrings(str ...string) string {

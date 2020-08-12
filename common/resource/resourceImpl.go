@@ -367,6 +367,7 @@ func (h *Impl) Start() {
 	}
 	h.membershipMonitor.Start()
 	h.domainCache.Start()
+	h.domainMetricsScopeCache.Start()
 
 	hostInfo, err := h.membershipMonitor.WhoAmI()
 	if err != nil {
