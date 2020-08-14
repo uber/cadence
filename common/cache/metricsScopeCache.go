@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -82,7 +81,12 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope(flushDuration time.D
 
 				// Copy from buffered array
 				for key, val := range c.buffer.bufferMap {
-					scopeMap[key] = val
+					if _, ok := scopeMap[key]; !ok {
+						scopeMap[key] = map[int]metrics.Scope{}
+					}
+					for k, v := range val {
+						scopeMap[key][k] = v
+					}
 				}
 
 				c.cache.Store(scopeMap)
