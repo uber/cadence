@@ -32,10 +32,6 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
-const (
-	defaultProcessingQueueLevel = 0
-)
-
 func applyWorkflowMutationBatch(
 	batch *gocql.Batch,
 	shardID int,
@@ -1801,9 +1797,27 @@ func createShardInfo(
 		case "cluster_timer_ack_level":
 			info.ClusterTimerAckLevel = v.(map[string]time.Time)
 		case "cluster_transfer_processing_queue_state":
-			info.ClusterTransferProcessingQueueState = v.(map[string]p.ProcessingQueueState)
+			clusterStates := make(map[string][]p.TransferProcessingQueueState)
+			clusterStatesMap := v.(map[string][]map[string]interface{})
+			for cluster, statesMap := range clusterStatesMap {
+				var states []p.TransferProcessingQueueState
+				for _, stateMap := range statesMap {
+					states = append(states, createTransferProcessingQueueState(stateMap))
+				}
+				clusterStates[cluster] = states
+			}
+			info.ClusterTransferProcessingQueueStates = clusterStates
 		case "cluster_timer_processing_queue_state":
-			info.ClusterTimerProcessingQueueState = v.(map[string]p.ProcessingQueueState)
+			clusterStates := make(map[string][]p.TimerProcessingQueueState)
+			clusterStatesMap := v.(map[string][]map[string]interface{})
+			for cluster, statesMap := range clusterStatesMap {
+				var states []p.TimerProcessingQueueState
+				for _, stateMap := range statesMap {
+					states = append(states, createTimerProcessingQueueState(stateMap))
+				}
+				clusterStates[cluster] = states
+			}
+			info.ClusterTimerProcessingQueueStates = clusterStates
 		case "domain_notification_version":
 			info.DomainNotificationVersion = v.(int64)
 		case "cluster_replication_level":
@@ -1825,38 +1839,60 @@ func createShardInfo(
 		info.ClusterReplicationLevel = make(map[string]int64)
 	}
 
-	if info.ClusterTransferProcessingQueueState == nil {
-		info.ClusterTransferProcessingQueueState = map[string]p.ProcessingQueueState{}
-		for cluster, ackLevel := range info.ClusterTransferAckLevel {
-			processingQueueState := createProcessingQueueState(ackLevel)
-			info.ClusterTransferProcessingQueueState[cluster] = processingQueueState
-		}
-	}
-
-	if info.ClusterTimerProcessingQueueState == nil {
-		info.ClusterTimerProcessingQueueState = map[string]p.ProcessingQueueState{}
-		for cluster, ackLevel := range info.ClusterTimerAckLevel {
-			processingQueueState := createProcessingQueueState(ackLevel.UnixNano())
-			info.ClusterTimerProcessingQueueState[cluster] = processingQueueState
-		}
-	}
-
 	return info
 }
 
-func createProcessingQueueState(
-	ackLevel int64,
-) p.ProcessingQueueState {
-	domainFilter := &p.DomainFilter{
-		DomainIDs:    make(map[string]struct{}),
-		ReverseMatch: true,
+func createTransferProcessingQueueState(result map[string]interface{}) p.TransferProcessingQueueState {
+	var state p.TransferProcessingQueueState
+	for k, v := range result {
+		switch k {
+		case "processing_queue_level":
+			state.Level = v.(int)
+		case "ack_level":
+			state.AckLevel = v.(int64)
+		case "max_level":
+			state.MaxLevel = v.(int64)
+		case "domain_filter":
+			state.DomainFilter = createDomainFilter(v.(map[string]interface{}))
+		}
 	}
-	return p.ProcessingQueueState{
-		Level:        defaultProcessingQueueLevel,
-		AckLevel:     ackLevel,
-		MaxLevel:     ackLevel,
-		DomainFilter: domainFilter,
+
+	return state
+}
+
+func createTimerProcessingQueueState(result map[string]interface{}) p.TimerProcessingQueueState {
+	var state p.TimerProcessingQueueState
+	for k, v := range result {
+		switch k {
+		case "processing_queue_level":
+			state.Level = v.(int)
+		case "ack_level":
+			state.AckLevel = time.Unix(0, v.(int64))
+		case "max_level":
+			state.MaxLevel = time.Unix(0, v.(int64))
+		case "domain_filter":
+			state.DomainFilter = createDomainFilter(v.(map[string]interface{}))
+		}
 	}
+
+	return state
+}
+
+func createDomainFilter(result map[string]interface{}) *p.DomainFilter {
+	if len(result) == 0 {
+		return nil
+	}
+
+	filter := &p.DomainFilter{}
+	for k, v := range result {
+		switch k {
+		case "domain_ids":
+			filter.DomainIDs = v.(map[string]struct{})
+		case "reverse_match":
+			filter.ReverseMatch = v.(bool)
+		}
+	}
+	return filter
 }
 
 func createWorkflowExecutionInfo(

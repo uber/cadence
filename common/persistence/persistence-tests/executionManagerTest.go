@@ -5127,39 +5127,21 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	shardInfo.ClusterTimerAckLevel = map[string]time.Time{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTimerAck,
 	}
-	domainFilter := &p.DomainFilter{
-		DomainIDs:    make(map[string]struct{}),
-		ReverseMatch: true,
-	}
-	shardInfo.ClusterTransferProcessingQueueState = map[string]p.ProcessingQueueState{
-		s.ClusterMetadata.GetCurrentClusterName(): {
-			Level:        0,
-			AckLevel:     currentClusterTransferAck,
-			MaxLevel:     currentClusterTransferAck,
-			DomainFilter: domainFilter,
-		},
-	}
-	shardInfo.ClusterTimerProcessingQueueState = map[string]p.ProcessingQueueState{
-		s.ClusterMetadata.GetCurrentClusterName(): {
-			Level:        0,
-			AckLevel:     currentClusterTimerAck.UnixNano(),
-			MaxLevel:     currentClusterTimerAck.UnixNano(),
-			DomainFilter: domainFilter,
-		},
-	}
+	shardInfo.ClusterTransferProcessingQueueStates = map[string][]p.TransferProcessingQueueState{}
+	shardInfo.ClusterTimerProcessingQueueStates = map[string][]p.TimerProcessingQueueState{}
 	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], TimePrecision))
 	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.ShardInfo.TimerAckLevel.UnixNano())
-	s.Equal(shardInfo.ClusterTransferProcessingQueueState, resp.ShardInfo.ClusterTransferProcessingQueueState)
-	s.Equal(shardInfo.ClusterTimerProcessingQueueState, resp.ShardInfo.ClusterTimerProcessingQueueState)
+	s.Equal(shardInfo.ClusterTransferProcessingQueueStates, resp.ShardInfo.ClusterTransferProcessingQueueStates)
+	s.Equal(shardInfo.ClusterTimerProcessingQueueStates, resp.ShardInfo.ClusterTimerProcessingQueueStates)
 	resp.ShardInfo.TimerAckLevel = shardInfo.TimerAckLevel
 	resp.ShardInfo.UpdatedAt = shardInfo.UpdatedAt
 	resp.ShardInfo.ClusterTimerAckLevel = shardInfo.ClusterTimerAckLevel
-	resp.ShardInfo.ClusterTransferProcessingQueueState = shardInfo.ClusterTransferProcessingQueueState
-	resp.ShardInfo.ClusterTimerProcessingQueueState = shardInfo.ClusterTimerProcessingQueueState
+	resp.ShardInfo.ClusterTransferProcessingQueueStates = shardInfo.ClusterTransferProcessingQueueStates
+	resp.ShardInfo.ClusterTimerProcessingQueueStates = shardInfo.ClusterTimerProcessingQueueStates
 	s.Equal(shardInfo, resp.ShardInfo)
 }
 
@@ -5196,32 +5178,40 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestCurrentClusterName:     currentClusterTimerAck,
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
-		ClusterTransferProcessingQueueState: map[string]p.ProcessingQueueState{
+		ClusterTransferProcessingQueueStates: map[string][]p.TransferProcessingQueueState{
 			cluster.TestCurrentClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTransferAck,
-				MaxLevel:     currentClusterTransferAck,
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     currentClusterTransferAck,
+					MaxLevel:     currentClusterTransferAck,
+					DomainFilter: domainFilter,
+				},
 			},
 			cluster.TestAlternativeClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTransferAck,
-				MaxLevel:     currentClusterTransferAck,
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     alternativeClusterTransferAck,
+					MaxLevel:     alternativeClusterTransferAck,
+					DomainFilter: domainFilter,
+				},
 			},
 		},
-		ClusterTimerProcessingQueueState: map[string]p.ProcessingQueueState{
+		ClusterTimerProcessingQueueStates: map[string][]p.TimerProcessingQueueState{
 			cluster.TestCurrentClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTimerAck.UnixNano(),
-				MaxLevel:     currentClusterTimerAck.UnixNano(),
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     currentClusterTimerAck,
+					MaxLevel:     currentClusterTimerAck,
+					DomainFilter: domainFilter,
+				},
 			},
 			cluster.TestAlternativeClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTimerAck.UnixNano(),
-				MaxLevel:     currentClusterTimerAck.UnixNano(),
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     alternativeClusterTimerAck,
+					MaxLevel:     alternativeClusterTimerAck,
+					DomainFilter: domainFilter,
+				},
 			},
 		},
 		DomainNotificationVersion: domainNotificationVersion,
@@ -5237,13 +5227,13 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], TimePrecision))
 	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.ShardInfo.TimerAckLevel.UnixNano())
-	s.Equal(shardInfo.ClusterTransferProcessingQueueState, resp.ShardInfo.ClusterTransferProcessingQueueState)
-	s.Equal(shardInfo.ClusterTimerProcessingQueueState, resp.ShardInfo.ClusterTimerProcessingQueueState)
+	s.Equal(shardInfo.ClusterTransferProcessingQueueStates, resp.ShardInfo.ClusterTransferProcessingQueueStates)
+	s.Equal(shardInfo.ClusterTimerProcessingQueueStates, resp.ShardInfo.ClusterTimerProcessingQueueStates)
 	resp.ShardInfo.TimerAckLevel = shardInfo.TimerAckLevel
 	resp.ShardInfo.UpdatedAt = shardInfo.UpdatedAt
 	resp.ShardInfo.ClusterTimerAckLevel = shardInfo.ClusterTimerAckLevel
-	resp.ShardInfo.ClusterTransferProcessingQueueState = shardInfo.ClusterTransferProcessingQueueState
-	resp.ShardInfo.ClusterTimerProcessingQueueState = shardInfo.ClusterTimerProcessingQueueState
+	resp.ShardInfo.ClusterTransferProcessingQueueStates = shardInfo.ClusterTransferProcessingQueueStates
+	resp.ShardInfo.ClusterTimerProcessingQueueStates = shardInfo.ClusterTimerProcessingQueueStates
 	s.Equal(shardInfo, resp.ShardInfo)
 
 	// test update && get
@@ -5270,32 +5260,40 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestCurrentClusterName:     currentClusterTimerAck,
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
-		ClusterTransferProcessingQueueState: map[string]p.ProcessingQueueState{
+		ClusterTransferProcessingQueueStates: map[string][]p.TransferProcessingQueueState{
 			cluster.TestCurrentClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTransferAck,
-				MaxLevel:     currentClusterTransferAck,
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     currentClusterTransferAck,
+					MaxLevel:     currentClusterTransferAck,
+					DomainFilter: domainFilter,
+				},
 			},
 			cluster.TestAlternativeClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTransferAck,
-				MaxLevel:     currentClusterTransferAck,
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     alternativeClusterTransferAck,
+					MaxLevel:     alternativeClusterTransferAck,
+					DomainFilter: domainFilter,
+				},
 			},
 		},
-		ClusterTimerProcessingQueueState: map[string]p.ProcessingQueueState{
+		ClusterTimerProcessingQueueStates: map[string][]p.TimerProcessingQueueState{
 			cluster.TestCurrentClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTimerAck.UnixNano(),
-				MaxLevel:     currentClusterTimerAck.UnixNano(),
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     currentClusterTimerAck,
+					MaxLevel:     currentClusterTimerAck,
+					DomainFilter: domainFilter,
+				},
 			},
 			cluster.TestAlternativeClusterName: {
-				Level:        0,
-				AckLevel:     currentClusterTimerAck.UnixNano(),
-				MaxLevel:     currentClusterTimerAck.UnixNano(),
-				DomainFilter: domainFilter,
+				{
+					Level:        0,
+					AckLevel:     alternativeClusterTimerAck,
+					MaxLevel:     alternativeClusterTimerAck,
+					DomainFilter: domainFilter,
+				},
 			},
 		},
 		DomainNotificationVersion: domainNotificationVersion,
@@ -5313,13 +5311,13 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], TimePrecision))
 	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.ShardInfo.TimerAckLevel.UnixNano())
-	s.Equal(shardInfo.ClusterTransferProcessingQueueState, resp.ShardInfo.ClusterTransferProcessingQueueState)
-	s.Equal(shardInfo.ClusterTimerProcessingQueueState, resp.ShardInfo.ClusterTimerProcessingQueueState)
+	s.Equal(shardInfo.ClusterTransferProcessingQueueStates, resp.ShardInfo.ClusterTransferProcessingQueueStates)
+	s.Equal(shardInfo.ClusterTimerProcessingQueueStates, resp.ShardInfo.ClusterTimerProcessingQueueStates)
 	resp.ShardInfo.UpdatedAt = shardInfo.UpdatedAt
 	resp.ShardInfo.TimerAckLevel = shardInfo.TimerAckLevel
 	resp.ShardInfo.ClusterTimerAckLevel = shardInfo.ClusterTimerAckLevel
-	resp.ShardInfo.ClusterTransferProcessingQueueState = shardInfo.ClusterTransferProcessingQueueState
-	resp.ShardInfo.ClusterTimerProcessingQueueState = shardInfo.ClusterTimerProcessingQueueState
+	resp.ShardInfo.ClusterTransferProcessingQueueStates = shardInfo.ClusterTransferProcessingQueueStates
+	resp.ShardInfo.ClusterTimerProcessingQueueStates = shardInfo.ClusterTimerProcessingQueueStates
 	s.Equal(shardInfo, resp.ShardInfo)
 }
 

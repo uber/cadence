@@ -113,40 +113,24 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		shardInfo.ClusterReplicationLevel = make(map[string]int64)
 	}
 
-	if len(shardInfo.ClusterTransferProcessingQueueState) == 0 {
-		shardInfo.ClusterTransferProcessingQueueState = map[string]*sqlblobs.ProcessingQueueState{}
-		for cluster, ackLevel := range shardInfo.ClusterTransferAckLevel {
-			state := createProcessingQueueState(ackLevel)
-			shardInfo.ClusterTransferProcessingQueueState[cluster] = state
-		}
-	}
-
-	if len(shardInfo.ClusterTimerProcessingQueueState) == 0 {
-		shardInfo.ClusterTimerProcessingQueueState = map[string]*sqlblobs.ProcessingQueueState{}
-		for cluster, ackLevel := range timerAckLevel {
-			state := createProcessingQueueState(ackLevel.UnixNano())
-			shardInfo.ClusterTimerProcessingQueueState[cluster] = state
-		}
-	}
-
-	clusterTransferPQS := processingQueueStateFromBlob(shardInfo.GetClusterTransferProcessingQueueState())
-	clusterTimerPQS := processingQueueStateFromBlob(shardInfo.GetClusterTimerProcessingQueueState())
+	clusterTransferPQS := transferProcessingQueueStatesFromBlob(shardInfo.GetClusterTransferProcessingQueueStates())
+	clusterTimerPQS := timerProcessingQueueStatesFromBlob(shardInfo.GetClusterTimerProcessingQueueStates())
 
 	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
-		ShardID:                             int(row.ShardID),
-		RangeID:                             row.RangeID,
-		Owner:                               shardInfo.GetOwner(),
-		StolenSinceRenew:                    int(shardInfo.GetStolenSinceRenew()),
-		UpdatedAt:                           time.Unix(0, shardInfo.GetUpdatedAtNanos()),
-		ReplicationAckLevel:                 shardInfo.GetReplicationAckLevel(),
-		TransferAckLevel:                    shardInfo.GetTransferAckLevel(),
-		TimerAckLevel:                       time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
-		ClusterTransferAckLevel:             shardInfo.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:                timerAckLevel,
-		ClusterTransferProcessingQueueState: clusterTransferPQS,
-		ClusterTimerProcessingQueueState:    clusterTimerPQS,
-		DomainNotificationVersion:           shardInfo.GetDomainNotificationVersion(),
-		ClusterReplicationLevel:             shardInfo.ClusterReplicationLevel,
+		ShardID:                              int(row.ShardID),
+		RangeID:                              row.RangeID,
+		Owner:                                shardInfo.GetOwner(),
+		StolenSinceRenew:                     int(shardInfo.GetStolenSinceRenew()),
+		UpdatedAt:                            time.Unix(0, shardInfo.GetUpdatedAtNanos()),
+		ReplicationAckLevel:                  shardInfo.GetReplicationAckLevel(),
+		TransferAckLevel:                     shardInfo.GetTransferAckLevel(),
+		TimerAckLevel:                        time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
+		ClusterTransferAckLevel:              shardInfo.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:                 timerAckLevel,
+		ClusterTransferProcessingQueueStates: clusterTransferPQS,
+		ClusterTimerProcessingQueueStates:    clusterTimerPQS,
+		DomainNotificationVersion:            shardInfo.GetDomainNotificationVersion(),
+		ClusterReplicationLevel:              shardInfo.ClusterReplicationLevel,
 	}}
 
 	return resp, nil
@@ -232,18 +216,18 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error)
 	}
 
 	shardInfo := &sqlblobs.ShardInfo{
-		StolenSinceRenew:                    common.Int32Ptr(int32(s.StolenSinceRenew)),
-		UpdatedAtNanos:                      common.Int64Ptr(s.UpdatedAt.UnixNano()),
-		ReplicationAckLevel:                 common.Int64Ptr(s.ReplicationAckLevel),
-		TransferAckLevel:                    common.Int64Ptr(s.TransferAckLevel),
-		TimerAckLevelNanos:                  common.Int64Ptr(s.TimerAckLevel.UnixNano()),
-		ClusterTransferAckLevel:             s.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:                timerAckLevels,
-		ClusterTransferProcessingQueueState: processingQueueStatePersistenceToBlob(s.ClusterTransferProcessingQueueState),
-		ClusterTimerProcessingQueueState:    processingQueueStatePersistenceToBlob(s.ClusterTimerProcessingQueueState),
-		DomainNotificationVersion:           common.Int64Ptr(s.DomainNotificationVersion),
-		Owner:                               &s.Owner,
-		ClusterReplicationLevel:             s.ClusterReplicationLevel,
+		StolenSinceRenew:                     common.Int32Ptr(int32(s.StolenSinceRenew)),
+		UpdatedAtNanos:                       common.Int64Ptr(s.UpdatedAt.UnixNano()),
+		ReplicationAckLevel:                  common.Int64Ptr(s.ReplicationAckLevel),
+		TransferAckLevel:                     common.Int64Ptr(s.TransferAckLevel),
+		TimerAckLevelNanos:                   common.Int64Ptr(s.TimerAckLevel.UnixNano()),
+		ClusterTransferAckLevel:              s.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:                 timerAckLevels,
+		ClusterTransferProcessingQueueStates: transferProcessingQueueStatesToBlob(s.ClusterTransferProcessingQueueStates),
+		ClusterTimerProcessingQueueStates:    timerProcessingQueueStatesToBlob(s.ClusterTimerProcessingQueueStates),
+		DomainNotificationVersion:            common.Int64Ptr(s.DomainNotificationVersion),
+		Owner:                                &s.Owner,
+		ClusterReplicationLevel:              s.ClusterReplicationLevel,
 	}
 
 	blob, err := shardInfoToBlob(shardInfo)
@@ -258,59 +242,96 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error)
 	}, nil
 }
 
-func createProcessingQueueState(ackLevel int64) *sqlblobs.ProcessingQueueState {
-	domainFilter := &sqlblobs.DomainFilter{
-		DomainIDs:    []string{},
-		ReverseMatch: common.BoolPtr(true),
-	}
-	return &sqlblobs.ProcessingQueueState{
-		Level:        common.Int32Ptr(int32(0)),
-		AckLevel:     common.Int64Ptr(ackLevel),
-		MaxLevel:     common.Int64Ptr(ackLevel),
-		DomainFilter: domainFilter,
-	}
-}
-
-func processingQueueStateFromBlob(cs map[string]*sqlblobs.ProcessingQueueState) map[string]persistence.ProcessingQueueState {
-	result := make(map[string]persistence.ProcessingQueueState)
-	for cluster := range cs {
-		s := cs[cluster]
-		domainIDs := make(map[string]struct{})
-		for _, domainID := range s.GetDomainFilter().DomainIDs {
-			domainIDs[domainID] = struct{}{}
+func transferProcessingQueueStatesFromBlob(cs map[string][]*sqlblobs.ProcessingQueueState) map[string][]persistence.TransferProcessingQueueState {
+	result := make(map[string][]persistence.TransferProcessingQueueState)
+	for cluster, blobStates := range cs {
+		var states []persistence.TransferProcessingQueueState
+		for _, state := range blobStates {
+			domainFilter := domainFilterFromBlob(state.GetDomainFilter())
+			states = append(states, persistence.TransferProcessingQueueState{
+				Level:        int(state.GetLevel()),
+				AckLevel:     state.GetAckLevel(),
+				MaxLevel:     state.GetMaxLevel(),
+				DomainFilter: domainFilter,
+			})
 		}
-		domainFilter := &persistence.DomainFilter{
-			DomainIDs:    domainIDs,
-			ReverseMatch: s.GetDomainFilter().GetReverseMatch(),
-		}
-		result[cluster] = persistence.ProcessingQueueState{
-			Level:        int(s.GetLevel()),
-			AckLevel:     s.GetAckLevel(),
-			MaxLevel:     s.GetMaxLevel(),
-			DomainFilter: domainFilter,
-		}
+		result[cluster] = states
 	}
 	return result
 }
 
-func processingQueueStatePersistenceToBlob(cs map[string]persistence.ProcessingQueueState) map[string]*sqlblobs.ProcessingQueueState {
-	result := make(map[string]*sqlblobs.ProcessingQueueState)
-	for cluster := range cs {
-		s := cs[cluster]
-		domainIDs := []string{}
-		for domainID := range s.DomainFilter.DomainIDs {
-			domainIDs = append(domainIDs, domainID)
+func transferProcessingQueueStatesToBlob(cs map[string][]persistence.TransferProcessingQueueState) map[string][]*sqlblobs.ProcessingQueueState {
+	result := make(map[string][]*sqlblobs.ProcessingQueueState)
+	for cluster, states := range cs {
+		var blobStates []*sqlblobs.ProcessingQueueState
+		for _, state := range states {
+			domainFilter := domainFilterToBlob(state.DomainFilter)
+			blobStates = append(blobStates, &sqlblobs.ProcessingQueueState{
+				Level:        common.Int32Ptr(int32(state.Level)),
+				AckLevel:     common.Int64Ptr(state.AckLevel),
+				MaxLevel:     common.Int64Ptr(state.MaxLevel),
+				DomainFilter: domainFilter,
+			})
 		}
-		domainFilter := &sqlblobs.DomainFilter{
-			DomainIDs:    domainIDs,
-			ReverseMatch: &s.DomainFilter.ReverseMatch,
-		}
-		result[cluster] = &sqlblobs.ProcessingQueueState{
-			Level:        common.Int32Ptr(int32(s.Level)),
-			AckLevel:     common.Int64Ptr(int64(s.AckLevel)),
-			MaxLevel:     common.Int64Ptr(int64(s.MaxLevel)),
-			DomainFilter: domainFilter,
-		}
+		result[cluster] = blobStates
 	}
 	return result
+}
+
+func timerProcessingQueueStatesFromBlob(cs map[string][]*sqlblobs.ProcessingQueueState) map[string][]persistence.TimerProcessingQueueState {
+	result := make(map[string][]persistence.TimerProcessingQueueState)
+	for cluster, blobStates := range cs {
+		var states []persistence.TimerProcessingQueueState
+		for _, state := range blobStates {
+			domainFilter := domainFilterFromBlob(state.GetDomainFilter())
+			states = append(states, persistence.TimerProcessingQueueState{
+				Level:        int(state.GetLevel()),
+				AckLevel:     time.Unix(0, state.GetAckLevel()),
+				MaxLevel:     time.Unix(0, state.GetMaxLevel()),
+				DomainFilter: domainFilter,
+			})
+		}
+		result[cluster] = states
+	}
+	return result
+}
+
+func timerProcessingQueueStatesToBlob(cs map[string][]persistence.TimerProcessingQueueState) map[string][]*sqlblobs.ProcessingQueueState {
+	result := make(map[string][]*sqlblobs.ProcessingQueueState)
+	for cluster, states := range cs {
+		var blobStates []*sqlblobs.ProcessingQueueState
+		for _, state := range states {
+			domainFilter := domainFilterToBlob(state.DomainFilter)
+			blobStates = append(blobStates, &sqlblobs.ProcessingQueueState{
+				Level:        common.Int32Ptr(int32(state.Level)),
+				AckLevel:     common.Int64Ptr(state.AckLevel.UnixNano()),
+				MaxLevel:     common.Int64Ptr(state.MaxLevel.UnixNano()),
+				DomainFilter: domainFilter,
+			})
+		}
+		result[cluster] = blobStates
+	}
+	return result
+}
+
+func domainFilterFromBlob(f *sqlblobs.DomainFilter) *persistence.DomainFilter {
+	domainIDs := make(map[string]struct{})
+	for _, domainID := range f.DomainIDs {
+		domainIDs[domainID] = struct{}{}
+	}
+	return &persistence.DomainFilter{
+		DomainIDs:    domainIDs,
+		ReverseMatch: f.GetReverseMatch(),
+	}
+}
+
+func domainFilterToBlob(f *persistence.DomainFilter) *sqlblobs.DomainFilter {
+	domainIDs := []string{}
+	for domainID := range f.DomainIDs {
+		domainIDs = append(domainIDs, domainID)
+	}
+	return &sqlblobs.DomainFilter{
+		DomainIDs:    domainIDs,
+		ReverseMatch: &f.ReverseMatch,
+	}
 }
