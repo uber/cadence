@@ -58,7 +58,7 @@ type (
 		logger                log.Logger
 		retryPolicy           backoff.RetryPolicy
 		// This is the batch size used by pull based RPC replicator.
-		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
+		fetchTasksBatchSize   dynamicconfig.IntPropertyFnWithShardIDFilter
 		*queueProcessorBase
 		queueAckMgr
 

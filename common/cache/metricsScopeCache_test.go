@@ -48,7 +48,7 @@ func TestDomainMetricsCacheSuite(t *testing.T) {
 func (s *domainMetricsCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	metricsCache := NewDomainMetricsScopeCache()
+	metricsCache := NewDomainMetricsScopeCache().(*domainMetricsScopeCache)
 	metricsCache.flushDuration = 100 * time.Millisecond
 	s.metricsCache = metricsCache
 
@@ -184,7 +184,7 @@ func (s *domainMetricsCacheSuite) TestConcurrentMetricsScopeAccess() {
 	close(ch)
 	wg.Wait()
 
-	time.Sleep(110 * time.Millisecond)
+	time.Sleep(120 * time.Millisecond)
 
 	for i := 0; i < 1000; i++ {
 		metricsScope, found = s.metricsCache.Get("test_domain", i)

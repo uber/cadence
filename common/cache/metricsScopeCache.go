@@ -23,11 +23,11 @@
 package cache
 
 import (
-	"bytes"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/common/metrics"
 )
@@ -35,7 +35,7 @@ import (
 const flushBufferedMetricsScopeDuration = 10 * time.Second
 
 type (
-	metricsScopeMap map[string]metrics.Scope
+	metricsScopeMap map[string]map[int]metrics.Scope
 
 	buffer struct {
 		sync.RWMutex
@@ -43,6 +43,7 @@ type (
 	}
 
 	domainMetricsScopeCache struct {
+		status        int32
 		buffer        *buffer
 		cache         atomic.Value
 		closeCh       chan struct{}
@@ -51,7 +52,7 @@ type (
 )
 
 // NewDomainMetricsScopeCache constructs a new domainMetricsScopeCache
-func NewDomainMetricsScopeCache() *domainMetricsScopeCache {
+func NewDomainMetricsScopeCache() DomainMetricsScopeCache {
 
 	mc := &domainMetricsScopeCache{
 		buffer: &buffer{
@@ -97,41 +98,43 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope(flushDuration time.D
 
 // Get retrieves scope for domainID and scopeIdx
 func (c *domainMetricsScopeCache) Get(domainID string, scopeIdx int) (metrics.Scope, bool) {
-	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
-
 	data := c.cache.Load().(metricsScopeMap)
 
 	if data == nil {
 		return nil, false
 	}
 
-	metricsScope, ok := data[key]
+	m, ok := data[domainID]
+	if !ok {
+		return nil, false
+	}
+	metricsScope, ok := m[scopeIdx]
 
 	return metricsScope, ok
 }
 
 // Put puts map of domainID and scopeIdx to metricsScope
 func (c *domainMetricsScopeCache) Put(domainID string, scopeIdx int, scope metrics.Scope) {
-	key := joinStrings(domainID, "_", strconv.Itoa(scopeIdx))
-
 	c.buffer.Lock()
 	defer c.buffer.Unlock()
 
-	c.buffer.bufferMap[key] = scope
+	if c.buffer.bufferMap[domainID] == nil {
+		c.buffer.bufferMap[domainID] = map[int]metrics.Scope{}
+	}
+	c.buffer.bufferMap[domainID][scopeIdx] = scope
 }
 
 func (c *domainMetricsScopeCache) Start() {
+	if !atomic.CompareAndSwapInt32(&c.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
 	go c.flushBufferedMetricsScope(c.flushDuration)
 }
 
 func (c *domainMetricsScopeCache) Stop() {
-	close(c.closeCh)
-}
-
-func joinStrings(str ...string) string {
-	var buffer bytes.Buffer
-	for _, s := range str {
-		buffer.WriteString(s)
+	if !atomic.CompareAndSwapInt32(&c.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
 	}
-	return buffer.String()
+	close(c.closeCh)
 }
