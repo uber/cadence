@@ -76,7 +76,10 @@ func (c *domainMetricsScopeCache) flushBufferedMetricsScope(flushDuration time.D
 				data := c.cache.Load().(metricsScopeMap)
 				// Copy everything over after atomic load
 				for key, val := range data {
-					scopeMap[key] = val
+					scopeMap[key] = map[int]metrics.Scope{}
+					for k, v := range val {
+						scopeMap[key][k] = v
+					}
 				}
 
 				// Copy from buffered array
