@@ -334,12 +334,7 @@ func (t *taskProcessor) ackTaskOnce(
 		taskLatency := time.Since(task.task.GetVisibilityTimestamp())
 		scope.RecordTimer(metrics.TaskQueueLatency, taskLatency)
 		if taskLatency > 48*time.Hour {
-			task.logger.Warn(
-				"High latency on task end-to-end latency.",
-				tag.WorkflowDomainID(task.task.GetDomainID()),
-				tag.WorkflowID(task.task.GetWorkflowID()),
-				tag.WorkflowRunID(task.task.GetRunID()),
-				tag.TaskVisibilityTimestamp(task.task.GetVisibilityTimestamp().UnixNano()))
+			task.logger.Warn("High latency on task end-to-end latency.", )
 		}
 	}
 }
