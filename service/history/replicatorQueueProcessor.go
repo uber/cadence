@@ -58,7 +58,7 @@ type (
 		logger                log.Logger
 		retryPolicy           backoff.RetryPolicy
 		// This is the batch size used by pull based RPC replicator.
-		fetchTasksBatchSize   dynamicconfig.IntPropertyFnWithShardIDFilter
+		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
 		*queueProcessorBase
 		queueAckMgr
 
@@ -492,6 +492,12 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		lastReadTaskID,
 	); err != nil {
 		p.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
+	}
+
+	if err := p.shard.UpdateReplicatorAckLevel(
+		lastReadTaskID,
+	); err != nil {
+		p.logger.Error("error updating kafka replication level", tag.Error(err), tag.OperationFailed)
 	}
 
 	return &replicator.ReplicationMessages{
