@@ -344,8 +344,13 @@ func (t *taskBase) Ack() {
 		t.scope.RecordTimer(metrics.TaskLatency, time.Since(t.submitTime))
 		taskLatency := time.Since(t.GetVisibilityTimestamp())
 		t.scope.RecordTimer(metrics.TaskQueueLatency, taskLatency)
-		if taskLatency > 10 * time.Hour {
-			t.logger.Warn("High latency on task end-to-end latency.", tag.Timestamp(t.GetVisibilityTimestamp()))
+		if taskLatency > 10*time.Hour {
+			t.logger.Warn(
+				"High latency on task end-to-end latency.",
+				tag.WorkflowDomainID(t.GetDomainID()),
+				tag.WorkflowID(t.GetWorkflowID()),
+				tag.WorkflowRunID(t.GetRunID()),
+				tag.TaskVisibilityTimestamp(t.GetVisibilityTimestamp().UnixNano()))
 		}
 	}
 }
