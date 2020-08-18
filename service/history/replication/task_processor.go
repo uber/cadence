@@ -295,6 +295,7 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 	batchRequestStartTime := time.Now()
 	ctx := context.Background()
 	for _, replicationTask := range response.ReplicationTasks {
+		// TODO: move to MultiStageRateLimiter
 		_ = p.hostRateLimiter.Wait(ctx)
 		_ = p.shardRateLimiter.Wait(ctx)
 		err := p.processSingleTask(replicationTask)
