@@ -40,7 +40,7 @@ func TestGetNextDecisionTimeout(t *testing.T) {
 		defaultMaxIntervalForDecisionRetry,
 		defaultMaxIntervalForDecisionRetry,
 	}
-	for i := 0; i < 8; i++ {
+	for i := 0; i < len(expectedResult); i++ {
 		next := getNextDecisionTimeout(int64(i), defaultStartToCloseTimeout)
 		expected := expectedResult[i]
 		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
@@ -51,6 +51,6 @@ func TestGetNextDecisionTimeout(t *testing.T) {
 }
 
 func getNextBackoffRange(duration time.Duration) (time.Duration, time.Duration) {
-	rangeMin := time.Duration(0.8 * float64(duration))
+	rangeMin := time.Duration((1 - defaultJitterCoefficient) * float64(duration))
 	return rangeMin, duration
 }

@@ -108,6 +108,7 @@ const (
 	defaultWorkflowRetentionInDays      int32 = 1
 	defaultInitIntervalForDecisionRetry       = 1 * time.Minute
 	defaultMaxIntervalForDecisionRetry        = 5 * time.Minute
+	defaultJitterCoefficient                  = 0.2
 )
 
 var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
@@ -576,10 +577,10 @@ func getNextDecisionTimeout(attempt int64, defaultStartToCloseTimeout time.Durat
 
 	nextInterval := float64(defaultInitIntervalForDecisionRetry) * math.Pow(2, float64(attempt-2))
 	nextInterval = math.Min(nextInterval, float64(defaultMaxIntervalForDecisionRetry))
-	jitterPortion := int(0.2 * nextInterval)
+	jitterPortion := int(defaultJitterCoefficient * nextInterval)
 	if jitterPortion < 1 {
 		jitterPortion = 1
 	}
-	nextInterval = nextInterval*0.8 + float64(rand.Intn(jitterPortion))
+	nextInterval = nextInterval*(1-defaultJitterCoefficient) + float64(rand.Intn(jitterPortion))
 	return time.Duration(nextInterval)
 }
