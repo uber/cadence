@@ -232,8 +232,8 @@ type Config struct {
 	ReplicationTaskProcessorReadHistoryBatchSize       dynamicconfig.IntPropertyFn
 	ReplicationTaskProcessorStartWait                  dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorStartWaitJitterCoefficient dynamicconfig.FloatPropertyFnWithShardIDFilter
-	ReplicationTaskProcessorTaskProcessingWait         dynamicconfig.DurationPropertyFnWithShardIDFilter
-	ReplicationTaskProcessorQPS                        dynamicconfig.FloatPropertyFn
+	ReplicationTaskProcessorHostQPS                    dynamicconfig.FloatPropertyFn
+	ReplicationTaskProcessorShardQPS                   dynamicconfig.FloatPropertyFn
 	// TODO: those two flags are for migration. Consider remove them after the migration complete
 	EnableRPCReplication         dynamicconfig.BoolPropertyFn
 	EnableKafkaReplication       dynamicconfig.BoolPropertyFn
@@ -447,8 +447,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicationTaskProcessorReadHistoryBatchSize:       dc.GetIntProperty(dynamicconfig.ReplicationTaskProcessorReadHistoryBatchSize, 5),
 		ReplicationTaskProcessorStartWait:                  dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait, 3*time.Second),
 		ReplicationTaskProcessorStartWaitJitterCoefficient: dc.GetFloat64PropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWaitJitterCoefficient, 0.8),
-		ReplicationTaskProcessorTaskProcessingWait:         dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorTaskProcessingWait, 50*time.Millisecond),
-		ReplicationTaskProcessorQPS:                        dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorQPS, 1500),
+		ReplicationTaskProcessorHostQPS:                    dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorHostQPS, 1500),
+		ReplicationTaskProcessorShardQPS:                   dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS, 5),
 		EnableRPCReplication:                               dc.GetBoolProperty(dynamicconfig.HistoryEnableRPCReplication, false),
 		EnableKafkaReplication:                             dc.GetBoolProperty(dynamicconfig.HistoryEnableKafkaReplication, true),
 		EnableCleanupReplicationTask:                       dc.GetBoolProperty(dynamicconfig.HistoryEnableCleanupReplicationTask, true),

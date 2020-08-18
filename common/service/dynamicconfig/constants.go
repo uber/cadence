@@ -266,8 +266,8 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorReadHistoryBatchSize:          "history.ReplicationTaskProcessorReadHistoryBatchSize",
 	ReplicationTaskProcessorStartWait:                     "history.ReplicationTaskProcessorStartWait",
 	ReplicationTaskProcessorStartWaitJitterCoefficient:    "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
-	ReplicationTaskProcessorTaskProcessingWait:            "history.ReplicationTaskProcessorTaskProcessingWait",
-	ReplicationTaskProcessorQPS:                           "history.ReplicationTaskProcessorQPS",
+	ReplicationTaskProcessorHostQPS:                       "history.ReplicationTaskProcessorHostQPS",
+	ReplicationTaskProcessorShardQPS:                      "history.ReplicationTaskProcessorShardQPS",
 	HistoryEnableRPCReplication:                           "history.EnableRPCReplication",
 	HistoryEnableKafkaReplication:                         "history.EnableKafkaReplication",
 	HistoryEnableCleanupReplicationTask:                   "history.EnableCleanupReplicationTask",
@@ -876,10 +876,10 @@ const (
 	ReplicationTaskProcessorStartWait
 	// ReplicationTaskProcessorStartWaitJitterCoefficient is the jitter for batch start wait timer
 	ReplicationTaskProcessorStartWaitJitterCoefficient
-	// ReplicationTaskProcessorTaskProcessingWait is the wait time between each replication task to be processed
-	ReplicationTaskProcessorTaskProcessingWait
-	// ReplicationTaskProcessorQPS is the qps of task processing rate limiter on shard level
-	ReplicationTaskProcessorQPS
+	// ReplicationTaskProcessorHostQPS is the qps of task processing rate limiter on host level
+	ReplicationTaskProcessorHostQPS
+	// ReplicationTaskProcessorShardQPS is the qps of task processing rate limiter on shard level
+	ReplicationTaskProcessorShardQPS
 	// HistoryEnableRPCReplication is the feature flag for RPC replication
 	HistoryEnableRPCReplication
 	// HistoryEnableKafkaReplication is the migration flag for Kafka replication

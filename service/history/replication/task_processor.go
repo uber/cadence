@@ -79,7 +79,8 @@ type (
 		metricsClient     metrics.Client
 		logger            log.Logger
 		taskExecutor      TaskExecutor
-		rateLimiter       *quotas.DynamicRateLimiter
+		hostRateLimiter   *quotas.DynamicRateLimiter
+		shardRateLimiter  *quotas.DynamicRateLimiter
 
 		taskRetryPolicy backoff.RetryPolicy
 		dlqRetryPolicy  backoff.RetryPolicy
@@ -123,17 +124,20 @@ func NewTaskProcessor(
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
 	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
 	return &taskProcessorImpl{
-		currentCluster:         shard.GetClusterMetadata().GetCurrentClusterName(),
-		sourceCluster:          taskFetcher.GetSourceCluster(),
-		status:                 common.DaemonStatusInitialized,
-		shard:                  shard,
-		historyEngine:          historyEngine,
-		historySerializer:      persistence.NewPayloadSerializer(),
-		config:                 config,
-		metricsClient:          metricsClient,
-		logger:                 shard.GetLogger(),
-		taskExecutor:           taskExecutor,
-		rateLimiter:            taskFetcher.GetRateLimiter(),
+		currentCluster:    shard.GetClusterMetadata().GetCurrentClusterName(),
+		sourceCluster:     taskFetcher.GetSourceCluster(),
+		status:            common.DaemonStatusInitialized,
+		shard:             shard,
+		historyEngine:     historyEngine,
+		historySerializer: persistence.NewPayloadSerializer(),
+		config:            config,
+		metricsClient:     metricsClient,
+		logger:            shard.GetLogger(),
+		taskExecutor:      taskExecutor,
+		hostRateLimiter:   taskFetcher.GetRateLimiter(),
+		shardRateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
+			return config.ReplicationTaskProcessorShardQPS()
+		}),
 		taskRetryPolicy:        taskRetryPolicy,
 		dlqRetryPolicy:         dlqRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,
@@ -198,16 +202,7 @@ Loop:
 				tag.Counter(len(response.GetReplicationTasks())),
 			)
 
-			if p.rateLimiter.Allow() {
-				p.taskProcessingStartWait()
-			} else {
-				ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
-				err := p.rateLimiter.Wait(ctx)
-				cancel()
-				if err != nil {
-					p.logger.Error("Failed to get token from rate limiter", tag.Error(err))
-				}
-			}
+			p.taskProcessingStartWait()
 			p.processResponse(response)
 		case <-p.done:
 			return
@@ -300,13 +295,13 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 	batchRequestStartTime := time.Now()
 	ctx := context.Background()
 	for _, replicationTask := range response.ReplicationTasks {
-		p.rateLimiter.Wait(ctx)
+		_ = p.hostRateLimiter.Wait(ctx)
+		_ = p.shardRateLimiter.Wait(ctx)
 		err := p.processSingleTask(replicationTask)
 		if err != nil {
 			// Processor is shutdown. Exit without updating the checkpoint.
 			return
 		}
-		time.Sleep(p.config.ReplicationTaskProcessorTaskProcessingWait(p.shard.GetShardID()))
 	}
 
 	// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
