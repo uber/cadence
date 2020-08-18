@@ -267,6 +267,7 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorStartWait:                     "history.ReplicationTaskProcessorStartWait",
 	ReplicationTaskProcessorStartWaitJitterCoefficient:    "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
 	ReplicationTaskProcessorTaskProcessingWait:            "history.ReplicationTaskProcessorTaskProcessingWait",
+	ReplicationTaskProcessorQPS:                           "history.ReplicationTaskProcessorQPS",
 	HistoryEnableRPCReplication:                           "history.EnableRPCReplication",
 	HistoryEnableKafkaReplication:                         "history.EnableKafkaReplication",
 	HistoryEnableCleanupReplicationTask:                   "history.EnableCleanupReplicationTask",
@@ -877,6 +878,8 @@ const (
 	ReplicationTaskProcessorStartWaitJitterCoefficient
 	// ReplicationTaskProcessorTaskProcessingWait is the wait time between each replication task to be processed
 	ReplicationTaskProcessorTaskProcessingWait
+	// ReplicationTaskProcessorQPS is the qps of task processing rate limiter on shard level
+	ReplicationTaskProcessorQPS
 	// HistoryEnableRPCReplication is the feature flag for RPC replication
 	HistoryEnableRPCReplication
 	// HistoryEnableKafkaReplication is the migration flag for Kafka replication
