@@ -264,6 +264,9 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorCleanupInterval:               "history.ReplicationTaskProcessorCleanupInterval",
 	ReplicationTaskProcessorCleanupJitterCoefficient:      "history.ReplicationTaskProcessorCleanupJitterCoefficient",
 	ReplicationTaskProcessorReadHistoryBatchSize:          "history.ReplicationTaskProcessorReadHistoryBatchSize",
+	ReplicationTaskProcessorStartWait:                     "history.ReplicationTaskProcessorStartWait",
+	ReplicationTaskProcessorStartWaitJitterCoefficient:    "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
+	ReplicationTaskProcessorTaskProcessingWait:            "history.ReplicationTaskProcessorTaskProcessingWait",
 	HistoryEnableRPCReplication:                           "history.EnableRPCReplication",
 	HistoryEnableKafkaReplication:                         "history.EnableKafkaReplication",
 	HistoryEnableCleanupReplicationTask:                   "history.EnableCleanupReplicationTask",
@@ -868,6 +871,12 @@ const (
 	ReplicationTaskProcessorCleanupJitterCoefficient
 	// ReplicationTaskProcessorReadHistoryBatchSize is the batch size to read history events
 	ReplicationTaskProcessorReadHistoryBatchSize
+	// ReplicationTaskProcessorStartWait is the wait time before each task processing batch
+	ReplicationTaskProcessorStartWait
+	// ReplicationTaskProcessorStartWaitJitterCoefficient is the jitter for batch start wait timer
+	ReplicationTaskProcessorStartWaitJitterCoefficient
+	// ReplicationTaskProcessorTaskProcessingWait is the wait time between each replication task to be processed
+	ReplicationTaskProcessorTaskProcessingWait
 	// HistoryEnableRPCReplication is the feature flag for RPC replication
 	HistoryEnableRPCReplication
 	// HistoryEnableKafkaReplication is the migration flag for Kafka replication

@@ -195,11 +195,20 @@ Loop:
 				tag.Counter(len(response.GetReplicationTasks())),
 			)
 
+			p.taskProcessingStartWait()
 			p.processResponse(response)
 		case <-p.done:
 			return
 		}
 	}
+}
+
+func (p *taskProcessorImpl) taskProcessingStartWait() {
+	shardID := p.shard.GetShardID()
+	time.Sleep(backoff.JitDuration(
+		p.config.ReplicationTaskProcessorStartWait(shardID),
+		p.config.ReplicationTaskProcessorStartWaitJitterCoefficient(shardID),
+	))
 }
 
 func (p *taskProcessorImpl) cleanupReplicationTaskLoop() {
@@ -291,6 +300,7 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 			// Processor is shutdown. Exit without updating the checkpoint.
 			return
 		}
+		time.Sleep(p.config.ReplicationTaskProcessorTaskProcessingWait(p.shard.GetShardID()))
 	}
 
 	// Note here we check replication tasks instead of hasMore. The expectation is that in a steady state
