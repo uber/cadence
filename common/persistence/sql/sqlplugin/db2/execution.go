@@ -59,7 +59,6 @@ const (
 shard_id, domain_id, workflow_id, run_id, create_request_id, state, close_status, start_version, last_write_version
 FROM cadence.current_executions WHERE shard_id = ? AND domain_id = ? AND workflow_id = ?`
 
-	// significantly updated!
 	lockCurrentExecutionJoinExecutionsQuery = `SELECT
 	ce.shard_id, ce.domain_id, ce.workflow_id, ce.run_id, ce.create_request_id, ce.state, 
 	ce.close_status, ce.start_version, 
