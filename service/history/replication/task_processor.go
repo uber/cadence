@@ -203,14 +203,6 @@ Loop:
 	}
 }
 
-func (p *taskProcessorImpl) taskProcessingStartWait() {
-	shardID := p.shard.GetShardID()
-	time.Sleep(backoff.JitDuration(
-		p.config.ReplicationTaskProcessorStartWait(shardID),
-		p.config.ReplicationTaskProcessorStartWaitJitterCoefficient(shardID),
-	))
-}
-
 func (p *taskProcessorImpl) cleanupReplicationTaskLoop() {
 
 	shardID := p.shard.GetShardID()
@@ -627,4 +619,12 @@ func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 			p.metricsClient.IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)
 		}
 	}
+}
+
+func (p *taskProcessorImpl) taskProcessingStartWait() {
+	shardID := p.shard.GetShardID()
+	time.Sleep(backoff.JitDuration(
+		p.config.ReplicationTaskProcessorStartWait(shardID),
+		p.config.ReplicationTaskProcessorStartWaitJitterCoefficient(shardID),
+	))
 }
