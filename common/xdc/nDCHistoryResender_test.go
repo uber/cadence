@@ -117,6 +117,7 @@ func (s *nDCHistoryResenderSuite) SetupTest() {
 		},
 		persistence.NewPayloadSerializer(),
 		nil,
+		nil,
 		s.logger,
 	)
 }
