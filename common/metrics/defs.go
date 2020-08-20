@@ -1723,6 +1723,19 @@ const (
 	TaskBatchCompleteCounter
 	TaskProcessingLatency
 	TaskQueueLatency
+
+	TaskRequestsAllDomains
+	TaskLatencyAllDomains
+	TaskFailuresAllDomains
+	TaskDiscardedAllDomains
+	TaskAttemptTimerAllDomains
+	TaskStandbyRetryCounterAllDomains
+	TaskNotActiveCounterAllDomains
+	TaskLimitExceededCounterAllDomains
+	TaskProcessingLatencyAllDomains
+	TaskQueueLatencyAllDomains
+	TransferTaskMissingEventCounterAllDomains
+
 	TaskRedispatchQueuePendingTasksTimer
 
 	TransferTaskThrottledCounter
@@ -2162,16 +2175,29 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
 	},
 	History: {
-		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
-		TaskLatency:                                       {metricName: "task_latency", metricType: Timer},
-		TaskAttemptTimer:                                  {metricName: "task_attempt", metricType: Timer},
-		TaskFailures:                                      {metricName: "task_errors", metricType: Counter},
-		TaskDiscarded:                                     {metricName: "task_errors_discarded", metricType: Counter},
-		TaskStandbyRetryCounter:                           {metricName: "task_errors_standby_retry_counter", metricType: Counter},
-		TaskNotActiveCounter:                              {metricName: "task_errors_not_active_counter", metricType: Counter},
-		TaskLimitExceededCounter:                          {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
-		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
-		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
+		TaskRequests:             {metricName: "task_requests", metricType: Counter},
+		TaskLatency:              {metricName: "task_latency", metricType: Timer},
+		TaskAttemptTimer:         {metricName: "task_attempt", metricType: Timer},
+		TaskFailures:             {metricName: "task_errors", metricType: Counter},
+		TaskDiscarded:            {metricName: "task_errors_discarded", metricType: Counter},
+		TaskStandbyRetryCounter:  {metricName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskNotActiveCounter:     {metricName: "task_errors_not_active_counter", metricType: Counter},
+		TaskLimitExceededCounter: {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
+		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
+		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
+
+		TaskRequestsAllDomains:                    {metricName: "task_requests_all_domains", metricType: Counter},
+		TaskLatencyAllDomains:                     {metricName: "task_latency_all_domains", metricType: Timer},
+		TaskAttemptTimerAllDomains:                {metricName: "task_attempt_all_domains", metricType: Timer},
+		TaskFailuresAllDomains:                    {metricName: "task_errors_all_domains", metricType: Counter},
+		TaskDiscardedAllDomains:                   {metricName: "task_errors_discarded_all_domains", metricType: Counter},
+		TaskStandbyRetryCounterAllDomains:         {metricName: "task_errors_standby_retry_counter_all_domains", metricType: Counter},
+		TaskNotActiveCounterAllDomains:            {metricName: "task_errors_not_active_counter_all_domains", metricType: Counter},
+		TaskLimitExceededCounterAllDomains:        {metricName: "task_errors_limit_exceeded_counter_all_domains", metricType: Counter},
+		TaskProcessingLatencyAllDomains:           {metricName: "task_latency_processing_all_domains", metricType: Timer},
+		TaskQueueLatencyAllDomains:                {metricName: "task_latency_queue_all_domains", metricType: Timer},
+		TransferTaskMissingEventCounterAllDomains: {metricName: "transfer_task_missing_event_counter_all_domains", metricType: Counter},
+
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
 		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
 		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
