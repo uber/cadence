@@ -63,6 +63,7 @@ type (
 		queueAckMgr
 
 		lastShardSyncTimestamp time.Time
+		taskGenerationWait     dynamicconfig.DurationPropertyFn
 	}
 )
 
@@ -142,7 +143,7 @@ func newReplicatorQueueProcessor(
 	)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
-
+	processor.taskGenerationWait = config.ReplicationTaskGenerationWait
 	return processor
 }
 
@@ -467,6 +468,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(
 		readLevel = taskInfo.GetTaskID()
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
+			time.Sleep(p.taskGenerationWait())
 		}
 	}
 
