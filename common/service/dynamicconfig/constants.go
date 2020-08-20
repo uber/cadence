@@ -266,7 +266,7 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorStartWaitJitterCoefficient:    "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
 	ReplicationTaskProcessorHostQPS:                       "history.ReplicationTaskProcessorHostQPS",
 	ReplicationTaskProcessorShardQPS:                      "history.ReplicationTaskProcessorShardQPS",
-	ReplicationTaskGenerationWait:                         "history.ReplicationTaskGenerationWait",
+	ReplicationTaskGenerationQPS:                          "history.ReplicationTaskGenerationQPS",
 	EnableConsistentQuery:                                 "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                         "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                 "history.MaxBufferedQueryCount",
@@ -869,8 +869,8 @@ const (
 	ReplicationTaskProcessorHostQPS
 	// ReplicationTaskProcessorShardQPS is the qps of task processing rate limiter on shard level
 	ReplicationTaskProcessorShardQPS
-	//ReplicationTaskGenerationWait is the wait time between each replication task generation
-	ReplicationTaskGenerationWait
+	//ReplicationTaskGenerationQPS is the wait time between each replication task generation qps
+	ReplicationTaskGenerationQPS
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
