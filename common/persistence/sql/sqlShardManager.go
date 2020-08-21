@@ -116,20 +116,38 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		shardInfo.ReplicationDlqAckLevel = make(map[string]int64)
 	}
 
+	var transferPQS *persistence.DataBlob
+	if shardInfo.GetTransferProcessingQueueStates() != nil {
+		transferPQS = &persistence.DataBlob{
+			Encoding: common.EncodingType(shardInfo.GetTransferProcessingQueueStatesEncoding()),
+			Data: shardInfo.GetTransferProcessingQueueStates(),
+		}
+	}
+
+	var timerPQS *persistence.DataBlob
+	if shardInfo.GetTimerProcessingQueueStates() != nil {
+		timerPQS = &persistence.DataBlob{
+			Encoding: common.EncodingType(shardInfo.GetTimerProcessingQueueStatesEncoding()),
+			Data: shardInfo.GetTimerProcessingQueueStates(),
+		}
+	}
+
 	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
-		ShardID:                   int(row.ShardID),
-		RangeID:                   row.RangeID,
-		Owner:                     shardInfo.GetOwner(),
-		StolenSinceRenew:          int(shardInfo.GetStolenSinceRenew()),
-		UpdatedAt:                 time.Unix(0, shardInfo.GetUpdatedAtNanos()),
-		ReplicationAckLevel:       shardInfo.GetReplicationAckLevel(),
-		TransferAckLevel:          shardInfo.GetTransferAckLevel(),
-		TimerAckLevel:             time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
-		ClusterTransferAckLevel:   shardInfo.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:      timerAckLevel,
-		DomainNotificationVersion: shardInfo.GetDomainNotificationVersion(),
-		ClusterReplicationLevel:   shardInfo.ClusterReplicationLevel,
-		ReplicationDLQAckLevel:    shardInfo.ReplicationDlqAckLevel,
+		ShardID:                       int(row.ShardID),
+		RangeID:                       row.RangeID,
+		Owner:                         shardInfo.GetOwner(),
+		StolenSinceRenew:              int(shardInfo.GetStolenSinceRenew()),
+		UpdatedAt:                     time.Unix(0, shardInfo.GetUpdatedAtNanos()),
+		ReplicationAckLevel:           shardInfo.GetReplicationAckLevel(),
+		TransferAckLevel:              shardInfo.GetTransferAckLevel(),
+		TimerAckLevel:                 time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
+		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:          timerAckLevel,
+		TransferProcessingQueueStates: transferPQS,
+		TimerProcessingQueueStates:    timerPQS,
+		DomainNotificationVersion:     shardInfo.GetDomainNotificationVersion(),
+		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
+		ReplicationDLQAckLevel:        shardInfo.ReplicationDlqAckLevel,
 	}}
 
 	return resp, nil

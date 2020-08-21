@@ -31,16 +31,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/history"
-
-	"github.com/uber/cadence/common/checksum"
-
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/.gen/go/history"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
 )
