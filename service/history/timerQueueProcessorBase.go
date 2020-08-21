@@ -143,7 +143,7 @@ func newTimerQueueProcessorBase(
 			},
 		),
 	}
-	
+
 	base.queueTaskInitializer = func(taskInfo task.Info) task.Task {
 		return task.NewTimerTask(
 			shard,
