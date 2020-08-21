@@ -367,9 +367,7 @@ func (e *historyEngineImpl) Start() {
 	e.timerProcessor.Start()
 
 	clusterMetadata := e.shard.GetClusterMetadata()
-	if e.replicatorProcessor != nil &&
-		(clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC ||
-			e.config.EnableKafkaReplication()) {
+	if e.replicatorProcessor != nil && clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC {
 		e.replicatorProcessor.Start()
 	}
 
@@ -2805,6 +2803,45 @@ func (e *historyEngineImpl) ResetTimerQueue(
 ) error {
 	_, err := e.timerProcessor.HandleAction(clusterName, queue.NewResetAction())
 	return err
+}
+
+func (e *historyEngineImpl) DescribeTransferQueue(
+	ctx context.Context,
+	clusterName string,
+) (*workflow.DescribeQueueResponse, error) {
+	fmt.Println("described queue: shardID: ", e.shard.GetShardID())
+	return e.describeQueue(e.txProcessor, clusterName)
+}
+
+func (e *historyEngineImpl) DescribeTimerQueue(
+	ctx context.Context,
+	clusterName string,
+) (*workflow.DescribeQueueResponse, error) {
+	return e.describeQueue(e.timerProcessor, clusterName)
+}
+
+func (e *historyEngineImpl) describeQueue(
+	queueProcessor queue.Processor,
+	clusterName string,
+) (*workflow.DescribeQueueResponse, error) {
+	resp, err := queueProcessor.HandleAction(clusterName, queue.NewGetStateAction())
+	if err != nil {
+		return nil, err
+	}
+
+	serializedStates := make([]string, 0, len(resp.GetStateActionResult.States))
+	for _, state := range resp.GetStateActionResult.States {
+		serializedStates = append(serializedStates, e.serializeQueueState(state))
+	}
+	return &workflow.DescribeQueueResponse{
+		ProcessingQueueStates: serializedStates,
+	}, nil
+}
+
+func (e *historyEngineImpl) serializeQueueState(
+	state queue.ProcessingQueueState,
+) string {
+	return fmt.Sprintf("%v", state)
 }
 
 func validateStartWorkflowExecutionRequest(
