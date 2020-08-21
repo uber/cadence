@@ -1724,17 +1724,17 @@ const (
 	TaskProcessingLatency
 	TaskQueueLatency
 
-	TaskRequestsAllDomains
-	TaskLatencyAllDomains
-	TaskFailuresAllDomains
-	TaskDiscardedAllDomains
-	TaskAttemptTimerAllDomains
-	TaskStandbyRetryCounterAllDomains
-	TaskNotActiveCounterAllDomains
-	TaskLimitExceededCounterAllDomains
-	TaskProcessingLatencyAllDomains
-	TaskQueueLatencyAllDomains
-	TransferTaskMissingEventCounterAllDomains
+	TaskRequestsPerDomain
+	TaskLatencyPerDomain
+	TaskFailuresPerDomain
+	TaskDiscardedPerDomain
+	TaskAttemptTimerPerDomain
+	TaskStandbyRetryCounterPerDomain
+	TaskNotActiveCounterPerDomain
+	TaskLimitExceededCounterPerDomain
+	TaskProcessingLatencyPerDomain
+	TaskQueueLatencyPerDomain
+	TransferTaskMissingEventCounterPerDomain
 
 	TaskRedispatchQueuePendingTasksTimer
 
@@ -2186,17 +2186,19 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
 
-		TaskRequestsAllDomains:                    {metricName: "task_requests_all_domains", metricType: Counter},
-		TaskLatencyAllDomains:                     {metricName: "task_latency_all_domains", metricType: Timer},
-		TaskAttemptTimerAllDomains:                {metricName: "task_attempt_all_domains", metricType: Timer},
-		TaskFailuresAllDomains:                    {metricName: "task_errors_all_domains", metricType: Counter},
-		TaskDiscardedAllDomains:                   {metricName: "task_errors_discarded_all_domains", metricType: Counter},
-		TaskStandbyRetryCounterAllDomains:         {metricName: "task_errors_standby_retry_counter_all_domains", metricType: Counter},
-		TaskNotActiveCounterAllDomains:            {metricName: "task_errors_not_active_counter_all_domains", metricType: Counter},
-		TaskLimitExceededCounterAllDomains:        {metricName: "task_errors_limit_exceeded_counter_all_domains", metricType: Counter},
-		TaskProcessingLatencyAllDomains:           {metricName: "task_latency_processing_all_domains", metricType: Timer},
-		TaskQueueLatencyAllDomains:                {metricName: "task_latency_queue_all_domains", metricType: Timer},
-		TransferTaskMissingEventCounterAllDomains: {metricName: "transfer_task_missing_event_counter_all_domains", metricType: Counter},
+		// per domain task metrics
+
+		TaskRequestsPerDomain:                    {metricName: "task_requests_per_domain", metricRollupName: "task_requests", metricType: Counter},
+		TaskLatencyPerDomain:                     {metricName: "task_latency_per_domain", metricRollupName: "task_latency", metricType: Timer},
+		TaskAttemptTimerPerDomain:                {metricName: "task_attempt_per_domain", metricRollupName: "task_attempt", metricType: Timer},
+		TaskFailuresPerDomain:                    {metricName: "task_errors_per_domain", metricRollupName: "task_errors", metricType: Counter},
+		TaskDiscardedPerDomain:                   {metricName: "task_errors_discarded_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
+		TaskStandbyRetryCounterPerDomain:         {metricName: "task_errors_standby_retry_counter_per_domain", metricRollupName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskNotActiveCounterPerDomain:            {metricName: "task_errors_not_active_counter_per_domain", metricRollupName: "task_errors_not_active_counter", metricType: Counter},
+		TaskLimitExceededCounterPerDomain:        {metricName: "task_errors_limit_exceeded_counter_per_domain", metricRollupName: "task_errors_limit_exceeded_counter", metricType: Counter},
+		TaskProcessingLatencyPerDomain:           {metricName: "task_latency_processing_per_domain", metricRollupName: "task_errors_limit_exceeded_counter", metricType: Timer},
+		TaskQueueLatencyPerDomain:                {metricName: "task_latency_queue_per_domain", metricRollupName: "task_latency_queue", metricType: Timer},
+		TransferTaskMissingEventCounterPerDomain: {metricName: "transfer_task_missing_event_counter_per_domain", metricRollupName: "transfer_task_missing_event_counter", metricType: Counter},
 
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
 		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
