@@ -320,7 +320,9 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	if res := n.currentExecutionCheck.Check(execution); res.CheckResultType == checks.CheckResultTypeCorrupted {
+	res := n.currentExecutionCheck.Check(execution)
+	switch res.CheckResultType {
+	case checks.CheckResultTypeCorrupted:
 		n.logger.Error(
 			"Encounter corrupted workflow",
 			tag.WorkflowDomainID(domainID),
@@ -329,6 +331,9 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 		)
 		n.currentExecutionCheck.Fix(res)
 		return false
+	case checks.CheckResultTypeFailed:
+		return false
+	default:
+		return true
 	}
-	return true
 }

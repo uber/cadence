@@ -367,10 +367,22 @@ func (t *activityReplicationTask) HandleErr(
 		case resendErr == nil:
 			break
 		case resendErr == xdc.ErrSkipTask:
-			t.logger.Error("skip replication sync activity task", tag.Error(resendErr))
+			t.logger.Error(
+				"skip replication sync activity task",
+				tag.WorkflowDomainID(retryV2Err.GetDomainId()),
+				tag.WorkflowID(retryV2Err.GetWorkflowId()),
+				tag.WorkflowRunID(retryV2Err.GetRunId()),
+				tag.Error(resendErr),
+			)
 			return nil
 		default:
-			t.logger.Error("error resend history for sync activity", tag.Error(resendErr))
+			t.logger.Error(
+				"error resend history for sync activity",
+				tag.WorkflowDomainID(retryV2Err.GetDomainId()),
+				tag.WorkflowID(retryV2Err.GetWorkflowId()),
+				tag.WorkflowRunID(retryV2Err.GetRunId()),
+				tag.Error(resendErr),
+			)
 			// should return the replication error, not the resending error
 			return err
 		}
