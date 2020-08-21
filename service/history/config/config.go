@@ -92,7 +92,6 @@ type Config struct {
 	EnableDropStuckTaskByDomainID           dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
 	// QueueProcessor settings
-	QueueProcessorEnableDomainTaggedMetrics            dynamicconfig.BoolPropertyFn
 	QueueProcessorEnableSplit                          dynamicconfig.BoolPropertyFn
 	QueueProcessorSplitMaxLevel                        dynamicconfig.IntPropertyFn
 	QueueProcessorEnableRandomSplitByDomainID          dynamicconfig.BoolPropertyFnWithDomainIDFilter
@@ -234,10 +233,7 @@ type Config struct {
 	ReplicationTaskProcessorStartWaitJitterCoefficient dynamicconfig.FloatPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorHostQPS                    dynamicconfig.FloatPropertyFn
 	ReplicationTaskProcessorShardQPS                   dynamicconfig.FloatPropertyFn
-	// TODO: those two flags are for migration. Consider remove them after the migration complete
-	EnableRPCReplication         dynamicconfig.BoolPropertyFn
-	EnableKafkaReplication       dynamicconfig.BoolPropertyFn
-	EnableCleanupReplicationTask dynamicconfig.BoolPropertyFn
+	ReplicationTaskGenerationQPS                       dynamicconfig.FloatPropertyFn
 
 	// The following are used by consistent query
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
@@ -333,7 +329,6 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TimerProcessorSplitQueueIntervalJitterCoefficient, 0.15),
 		EnableDropStuckTaskByDomainID:           dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableDropStuckTaskByDomainID, false),
 
-		QueueProcessorEnableDomainTaggedMetrics:            dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableDomainTaggedMetrics, false),
 		QueueProcessorEnableSplit:                          dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
 		QueueProcessorSplitMaxLevel:                        dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
 		QueueProcessorEnableRandomSplitByDomainID:          dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID, false),
@@ -449,9 +444,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicationTaskProcessorStartWaitJitterCoefficient: dc.GetFloat64PropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWaitJitterCoefficient, 0.9),
 		ReplicationTaskProcessorHostQPS:                    dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorHostQPS, 1500),
 		ReplicationTaskProcessorShardQPS:                   dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS, 5),
-		EnableRPCReplication:                               dc.GetBoolProperty(dynamicconfig.HistoryEnableRPCReplication, false),
-		EnableKafkaReplication:                             dc.GetBoolProperty(dynamicconfig.HistoryEnableKafkaReplication, true),
-		EnableCleanupReplicationTask:                       dc.GetBoolProperty(dynamicconfig.HistoryEnableCleanupReplicationTask, true),
+		ReplicationTaskGenerationQPS:                       dc.GetFloat64Property(dynamicconfig.ReplicationTaskGenerationQPS, 100),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery, true),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, false),

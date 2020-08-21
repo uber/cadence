@@ -51,6 +51,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariants"
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
@@ -225,6 +227,11 @@ func NewEngineWithShardContext(
 		failoverMarkerNotifier: failoverMarkerNotifier,
 	}
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
+	pRetry := checks.NewPersistenceRetryer(
+		shard.GetExecutionManager(),
+		shard.GetHistoryManager(),
+	)
+	openExecutionCheck := invariants.NewOpenCurrentExecution(pRetry)
 
 	if config.TransferProcessorEnableMultiCurosrProcessor() {
 		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
@@ -235,9 +242,19 @@ func NewEngineWithShardContext(
 			historyEngImpl.resetor,
 			historyEngImpl.workflowResetter,
 			historyEngImpl.archivalClient,
+			openExecutionCheck,
 		)
 	} else {
-		historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, queueTaskProcessor, logger)
+		historyEngImpl.txProcessor = newTransferQueueProcessor(
+			shard,
+			historyEngImpl,
+			visibilityMgr,
+			matching,
+			historyClient,
+			queueTaskProcessor,
+			openExecutionCheck,
+			logger,
+		)
 	}
 	if config.TimerProcessorEnableMultiCurosrProcessor() {
 		historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
@@ -246,9 +263,17 @@ func NewEngineWithShardContext(
 			queueTaskProcessor,
 			executionCache,
 			historyEngImpl.archivalClient,
+			openExecutionCheck,
 		)
 	} else {
-		historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, queueTaskProcessor, logger)
+		historyEngImpl.timerProcessor = newTimerQueueProcessor(
+			shard,
+			historyEngImpl,
+			matching,
+			queueTaskProcessor,
+			openExecutionCheck,
+			logger,
+		)
 	}
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
@@ -310,6 +335,7 @@ func NewEngineWithShardContext(
 			},
 			shard.GetService().GetPayloadSerializer(),
 			nil,
+			openExecutionCheck,
 			shard.GetLogger(),
 		)
 		historyRereplicator := xdc.NewHistoryRereplicator(
@@ -367,9 +393,7 @@ func (e *historyEngineImpl) Start() {
 	e.timerProcessor.Start()
 
 	clusterMetadata := e.shard.GetClusterMetadata()
-	if e.replicatorProcessor != nil &&
-		(clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC ||
-			e.config.EnableKafkaReplication()) {
+	if e.replicatorProcessor != nil && clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC {
 		e.replicatorProcessor.Start()
 	}
 
@@ -2805,6 +2829,45 @@ func (e *historyEngineImpl) ResetTimerQueue(
 ) error {
 	_, err := e.timerProcessor.HandleAction(clusterName, queue.NewResetAction())
 	return err
+}
+
+func (e *historyEngineImpl) DescribeTransferQueue(
+	ctx context.Context,
+	clusterName string,
+) (*workflow.DescribeQueueResponse, error) {
+	fmt.Println("described queue: shardID: ", e.shard.GetShardID())
+	return e.describeQueue(e.txProcessor, clusterName)
+}
+
+func (e *historyEngineImpl) DescribeTimerQueue(
+	ctx context.Context,
+	clusterName string,
+) (*workflow.DescribeQueueResponse, error) {
+	return e.describeQueue(e.timerProcessor, clusterName)
+}
+
+func (e *historyEngineImpl) describeQueue(
+	queueProcessor queue.Processor,
+	clusterName string,
+) (*workflow.DescribeQueueResponse, error) {
+	resp, err := queueProcessor.HandleAction(clusterName, queue.NewGetStateAction())
+	if err != nil {
+		return nil, err
+	}
+
+	serializedStates := make([]string, 0, len(resp.GetStateActionResult.States))
+	for _, state := range resp.GetStateActionResult.States {
+		serializedStates = append(serializedStates, e.serializeQueueState(state))
+	}
+	return &workflow.DescribeQueueResponse{
+		ProcessingQueueStates: serializedStates,
+	}, nil
+}
+
+func (e *historyEngineImpl) serializeQueueState(
+	state queue.ProcessingQueueState,
+) string {
+	return fmt.Sprintf("%v", state)
 }
 
 func validateStartWorkflowExecutionRequest(
