@@ -114,7 +114,6 @@ func NewTimerTask(
 	redispatchFn func(task Task),
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-	emitDomainTag bool,
 	ackMgr TimerQueueAckMgr,
 ) Task {
 	return &timerTask{
@@ -128,7 +127,6 @@ func NewTimerTask(
 			taskExecutor,
 			timeSource,
 			maxRetryCount,
-			emitDomainTag,
 		),
 		ackMgr:       ackMgr,
 		redispatchFn: redispatchFn,
@@ -146,7 +144,6 @@ func NewTransferTask(
 	redispatchFn func(task Task),
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-	emitDomainTag bool,
 	ackMgr QueueAckMgr,
 ) Task {
 	return &transferTask{
@@ -160,7 +157,6 @@ func NewTransferTask(
 			taskExecutor,
 			timeSource,
 			maxRetryCount,
-			emitDomainTag,
 		),
 		ackMgr:       ackMgr,
 		redispatchFn: redispatchFn,
@@ -177,7 +173,6 @@ func newQueueTaskBase(
 	taskExecutor Executor,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-	emitDomainTag bool,
 ) *taskBase {
 	return &taskBase{
 		Info:          taskInfo,

@@ -101,6 +101,7 @@ func newQueueProcessorBase(
 	taskExecutor task.Executor,
 	logger log.Logger,
 	metricsScope metrics.Scope,
+	emitMetricsWithDomainTag bool,
 ) *queueProcessorBase {
 
 	var taskProcessor *taskProcessor
@@ -109,7 +110,7 @@ func newQueueProcessorBase(
 			queueSize:   options.BatchSize(),
 			workerCount: options.WorkerCount(),
 		}
-		taskProcessor = newTaskProcessor(taskProcessorOptions, shard, executionCache, logger)
+		taskProcessor = newTaskProcessor(taskProcessorOptions, shard, executionCache, logger, emitMetricsWithDomainTag)
 	}
 
 	p := &queueProcessorBase{
@@ -143,8 +144,6 @@ func newQueueProcessorBase(
 	}
 
 	if options.QueueType != task.QueueTypeReplication {
-		// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-		emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
 		p.queueTaskInitializer = func(taskInfo task.Info) task.Task {
 			return task.NewTransferTask(
 				shard,
@@ -156,7 +155,6 @@ func newQueueProcessorBase(
 				p.redispatcher.AddTask,
 				p.timeSource,
 				options.MaxRetryCount,
-				emitDomainTag,
 				p.ackMgr,
 			)
 		}
