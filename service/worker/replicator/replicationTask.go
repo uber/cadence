@@ -354,7 +354,7 @@ func (t *activityReplicationTask) HandleErr(
 		stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
 		defer stopwatch.Stop()
 
-		if resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
+		resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
 			retryV2Err.GetDomainId(),
 			retryV2Err.GetWorkflowId(),
 			retryV2Err.GetRunId(),
@@ -362,8 +362,15 @@ func (t *activityReplicationTask) HandleErr(
 			retryV2Err.StartEventVersion,
 			retryV2Err.EndEventId,
 			retryV2Err.EndEventVersion,
-		); resendErr != nil {
-			t.logger.Error("error resend history", tag.Error(resendErr))
+		)
+		switch {
+		case resendErr == nil:
+			break
+		case resendErr == xdc.ErrSkipTask:
+			t.logger.Error("skip replication sync activity task", tag.Error(resendErr))
+			return nil
+		default:
+			t.logger.Error("error resend history for sync activity", tag.Error(resendErr))
 			// should return the replication error, not the resending error
 			return err
 		}
@@ -487,7 +494,7 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	if resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
+	resendErr := t.nDCHistoryResender.SendSingleWorkflowHistory(
 		retryErr.GetDomainId(),
 		retryErr.GetWorkflowId(),
 		retryErr.GetRunId(),
@@ -495,8 +502,15 @@ func (t *historyReplicationV2Task) HandleErr(err error) error {
 		retryErr.StartEventVersion,
 		retryErr.EndEventId,
 		retryErr.EndEventVersion,
-	); resendErr != nil {
-		t.logger.Error("error resend history", tag.Error(resendErr))
+	)
+	switch {
+	case resendErr == nil:
+		break
+	case resendErr == xdc.ErrSkipTask:
+		t.logger.Error("skip replication history task", tag.Error(resendErr))
+		return nil
+	default:
+		t.logger.Error("error resend history for history event v2", tag.Error(resendErr))
 		// should return the replication error, not the resending error
 		return err
 	}

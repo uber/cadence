@@ -24,6 +24,7 @@ package xdc
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -38,6 +39,11 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	checks "github.com/uber/cadence/common/reconciliation/common"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+)
+
+var (
+	// ErrSkipTask is the error to skip task due to absence of the workflow in the source cluster
+	ErrSkipTask = errors.New("the source workflow does not exist")
 )
 
 const (
@@ -142,11 +148,13 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 		case *shared.EntityNotExistsError:
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
-			n.checkCurrentExecution(
+			if skipTask := n.fixCurrentExecution(
 				domainID,
 				workflowID,
 				runID,
-			)
+			); skipTask {
+				return ErrSkipTask
+			}
 			return err
 		default:
 			n.logger.Error("failed to get history events",
@@ -295,28 +303,32 @@ func (n *NDCHistoryResenderImpl) getHistory(
 	return response, nil
 }
 
-func (n *NDCHistoryResenderImpl) checkCurrentExecution(
+func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 	domainID string,
 	workflowID string,
 	runID string,
-) {
+) bool {
 
-	if n.currentExecutionCheck != nil {
-		execution := &checks.ConcreteExecution{
-			Execution: checks.Execution{
-				DomainID:   domainID,
-				WorkflowID: workflowID,
-				State:      persistence.WorkflowStateRunning,
-			},
-		}
-		if res := n.currentExecutionCheck.Check(execution); res.CheckResultType == checks.CheckResultTypeCorrupted {
-			n.logger.Error(
-				"Encounter corrupted workflow",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-			)
-			n.currentExecutionCheck.Fix(res)
-		}
+	if n.currentExecutionCheck == nil {
+		return false
 	}
+
+	execution := checks.ConcreteExecution{
+		Execution: checks.Execution{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			State:      persistence.WorkflowStateRunning,
+		},
+	}
+	if res := n.currentExecutionCheck.Check(execution); res.CheckResultType == checks.CheckResultTypeCorrupted {
+		n.logger.Error(
+			"Encounter corrupted workflow",
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+		)
+		n.currentExecutionCheck.Fix(res)
+		return false
+	}
+	return true
 }
