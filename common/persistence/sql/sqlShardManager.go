@@ -120,7 +120,7 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 	if shardInfo.GetTransferProcessingQueueStates() != nil {
 		transferPQS = &persistence.DataBlob{
 			Encoding: common.EncodingType(shardInfo.GetTransferProcessingQueueStatesEncoding()),
-			Data: shardInfo.GetTransferProcessingQueueStates(),
+			Data:     shardInfo.GetTransferProcessingQueueStates(),
 		}
 	}
 
@@ -128,7 +128,7 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 	if shardInfo.GetTimerProcessingQueueStates() != nil {
 		timerPQS = &persistence.DataBlob{
 			Encoding: common.EncodingType(shardInfo.GetTimerProcessingQueueStatesEncoding()),
-			Data: shardInfo.GetTimerProcessingQueueStates(),
+			Data:     shardInfo.GetTimerProcessingQueueStates(),
 		}
 	}
 
