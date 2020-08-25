@@ -600,7 +600,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 }
 
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartRetryable() {
-	wfTimeout := int32(1000)
+	wfTimeout := int32(2000)
 	attributes := &workflow.ScheduleActivityTaskDecisionAttributes{
 		ActivityId: common.StringPtr("some random activityID"),
 		ActivityType: &workflow.ActivityType{
@@ -618,7 +618,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1200), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
+			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
 			NonRetriableErrorReasons:    []string{"non-retryable error"},
 		},
 	}
@@ -680,7 +680,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1200), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
+			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
 			NonRetriableErrorReasons:    []string{"cadenceInternal:Timeout SCHEDULE_TO_START"},
 		},
 	}
