@@ -169,16 +169,15 @@ var keys = map[Key]string{
 	ActiveTaskRedispatchInterval:                          "history.activeTaskRedispatchInterval",
 	StandbyTaskRedispatchInterval:                         "history.standbyTaskRedispatchInterval",
 	TaskRedispatchIntervalJitterCoefficient:               "history.taskRedispatchIntervalJitterCoefficient",
-	QueueProcessorEnableDomainTaggedMetrics:               "history.queueProcessorEnableDomainTaggedMetrics",
 	QueueProcessorEnableSplit:                             "history.queueProcessorEnableSplit",
 	QueueProcessorSplitMaxLevel:                           "history.queueProcessorSplitMaxLevel",
-	QueueProcessorEnableRandomSplitByDomainID:             "history.queueProcessorEnableRandomSplitByDomain",
+	QueueProcessorEnableRandomSplitByDomainID:             "history.queueProcessorEnableRandomSplitByDomainID",
 	QueueProcessorRandomSplitProbability:                  "history.queueProcessorRandomSplitProbability",
 	QueueProcessorEnablePendingTaskSplit:                  "history.queueProcessorEnablePendingTaskSplit",
 	QueueProcessorPendingTaskSplitThreshold:               "history.queueProcessorPendingTaskSplitThreshold",
 	QueueProcessorEnableStuckTaskSplit:                    "history.queueProcessorEnableStuckTaskSplit",
 	QueueProcessorStuckTaskSplitThreshold:                 "history.queueProcessorStuckTaskSplitThreshold",
-	QueueProcessorSplitLookAheadDurationByDomainID:        "history.queueProcessorSplitLookAheadDuration",
+	QueueProcessorSplitLookAheadDurationByDomainID:        "history.queueProcessorSplitLookAheadDurationByDomainID",
 	QueueProcessorPollBackoffInterval:                     "history.queueProcessorPollBackoffInterval",
 	QueueProcessorPollBackoffIntervalJitterCoefficient:    "history.queueProcessorPollBackoffIntervalJitterCoefficient",
 	TimerTaskBatchSize:                                    "history.timerTaskBatchSize",
@@ -266,6 +265,7 @@ var keys = map[Key]string{
 	ReplicationTaskProcessorStartWaitJitterCoefficient:    "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
 	ReplicationTaskProcessorHostQPS:                       "history.ReplicationTaskProcessorHostQPS",
 	ReplicationTaskProcessorShardQPS:                      "history.ReplicationTaskProcessorShardQPS",
+	ReplicationTaskGenerationQPS:                          "history.ReplicationTaskGenerationQPS",
 	EnableConsistentQuery:                                 "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                         "history.EnableConsistentQueryByDomain",
 	MaxBufferedQueryCount:                                 "history.MaxBufferedQueryCount",
@@ -571,8 +571,6 @@ const (
 	StandbyTaskRedispatchInterval
 	// TaskRedispatchIntervalJitterCoefficient is the task redispatch interval jitter coefficient
 	TaskRedispatchIntervalJitterCoefficient
-	// QueueProcessorEnableDomainTaggedMetrics indicates whether task processing metrics should include domain tag
-	QueueProcessorEnableDomainTaggedMetrics
 	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
 	QueueProcessorEnableSplit
 	// QueueProcessorSplitMaxLevel is the max processing queue level
@@ -868,6 +866,8 @@ const (
 	ReplicationTaskProcessorHostQPS
 	// ReplicationTaskProcessorShardQPS is the qps of task processing rate limiter on shard level
 	ReplicationTaskProcessorShardQPS
+	//ReplicationTaskGenerationQPS is the wait time between each replication task generation qps
+	ReplicationTaskGenerationQPS
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain

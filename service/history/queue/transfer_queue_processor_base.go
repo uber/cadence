@@ -97,9 +97,6 @@ func newTransferQueueProcessorBase(
 		queueType = task.QueueTypeStandbyTransfer
 	}
 
-	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-	emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
-
 	return &transferQueueProcessorBase{
 		processorBase: processorBase,
 
@@ -114,7 +111,6 @@ func newTransferQueueProcessorBase(
 				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TransferTaskMaxRetryCount,
-				emitDomainTag,
 				nil,
 			)
 		},
@@ -377,11 +373,12 @@ func (t *transferQueueProcessorBase) splitQueue() {
 		return
 	}
 
-	lookAhead := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime))
+	// TODO: need a better way to estimate the look ahead taskID
+	lookAhead := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime).Seconds())
 
 	splitPolicy := t.initializeSplitPolicy(
 		func(key task.Key, domainID string) task.Key {
-			totalLookAhead := lookAhead * int64(t.options.SplitLookAheadDurationByDomainID(domainID))
+			totalLookAhead := lookAhead * int64(t.options.SplitLookAheadDurationByDomainID(domainID).Seconds())
 			return newTransferTaskKey(key.(transferTaskKey).taskID + totalLookAhead)
 		},
 	)

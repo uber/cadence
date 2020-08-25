@@ -282,6 +282,8 @@ const (
 	HistoryClientCloseShardScope
 	// HistoryClientResetQueueScope tracks RPC calls to history service
 	HistoryClientResetQueueScope
+	// HistoryClientDescribeQueueScope tracks RPC calls to history service
+	HistoryClientDescribeQueueScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
 	HistoryClientRecordActivityTaskHeartbeatScope
 	// HistoryClientRespondDecisionTaskCompletedScope tracks RPC calls to history service
@@ -466,6 +468,8 @@ const (
 	AdminClientRemoveTaskScope
 	// AdminClientResetQueueScope tracks RPC calls to admin service
 	AdminClientResetQueueScope
+	// AdminClientDescribeQueueScope tracks RPC calls to admin service
+	AdminClientDescribeQueueScope
 	// AdminClientDescribeHistoryHostScope tracks RPC calls to admin service
 	AdminClientDescribeHistoryHostScope
 	// AdminClientDescribeWorkflowExecutionScope tracks RPC calls to admin service
@@ -694,10 +698,12 @@ const (
 	AdminResendReplicationTasksScope
 	// AdminRemoveTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminRemoveTaskScope
-	// AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
-	AdminCloseShardTaskScope
+	// AdminCloseShardScope is the metric scope for admin.AdminCloseShardScope
+	AdminCloseShardScope
 	// AdminResetQueueScope is the metric scope for admin.AdminResetQueueScope
 	AdminResetQueueScope
+	// AdminDescribeQueueScope is the metrics scope for admin.AdminDescribeQueueScope
+	AdminDescribeQueueScope
 	// AdminReadDLQMessagesScope is the metric scope for admin.AdminReadDLQMessagesScope
 	AdminReadDLQMessagesScope
 	// AdminPurgeDLQMessagesScope is the metric scope for admin.AdminPurgeDLQMessagesScope
@@ -810,6 +816,8 @@ const (
 	HistoryRespondActivityTaskCanceledScope
 	// HistoryResetQueueScope tracks ResetQueue API calls received by service
 	HistoryResetQueueScope
+	// HistoryDescribeQueueScope tracks DescribeQueue API calls received by service
+	HistoryDescribeQueueScope
 	// HistoryDescribeMutabelStateScope tracks DescribeMutableState API calls received by service
 	HistoryDescribeMutabelStateScope
 	// HistoryGetMutableStateScope tracks GetMutableState API calls received by service
@@ -1171,6 +1179,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientRemoveTaskScope:                          {operation: "HistoryClientRemoveTask", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientCloseShardScope:                          {operation: "HistoryClientCloseShard", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientResetQueueScope:                          {operation: "HistoryClientResetQueue", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientDescribeQueueScope:                       {operation: "HistoryClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordActivityTaskHeartbeatScope:         {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRespondDecisionTaskCompletedScope:        {operation: "HistoryClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRespondDecisionTaskFailedScope:           {operation: "HistoryClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
@@ -1270,6 +1279,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientCloseShardScope:                            {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientRemoveTaskScope:                            {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientResetQueueScope:                            {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+		AdminClientDescribeQueueScope:                         {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientReadDLQMessagesScope:                       {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
@@ -1358,7 +1368,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	Frontend: {
 		// Admin API scope co-locates with with frontend
 		AdminRemoveTaskScope:                       {operation: "AdminRemoveTask"},
-		AdminCloseShardTaskScope:                   {operation: "AdminCloseShardTask"},
+		AdminCloseShardScope:                       {operation: "AdminCloseShard"},
+		AdminResetQueueScope:                       {operation: "AdminResetQueueScope"},
+		AdminDescribeQueueScope:                    {operation: "AdminDescribeQueueScope"},
 		AdminReadDLQMessagesScope:                  {operation: "AdminReadDLQMessages"},
 		AdminPurgeDLQMessagesScope:                 {operation: "AdminPurgeDLQMessages"},
 		AdminMergeDLQMessagesScope:                 {operation: "AdminMergeDLQMessages"},
@@ -1424,6 +1436,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRespondActivityTaskFailedScope:                  {operation: "RespondActivityTaskFailed"},
 		HistoryRespondActivityTaskCanceledScope:                {operation: "RespondActivityTaskCanceled"},
 		HistoryResetQueueScope:                                 {operation: "ResetQueue"},
+		HistoryDescribeQueueScope:                              {operation: "DescribeQueue"},
 		HistoryDescribeMutabelStateScope:                       {operation: "DescribeMutableState"},
 		HistoryGetMutableStateScope:                            {operation: "GetMutableState"},
 		HistoryPollMutableStateScope:                           {operation: "PollMutableState"},
@@ -1710,6 +1723,19 @@ const (
 	TaskBatchCompleteCounter
 	TaskProcessingLatency
 	TaskQueueLatency
+
+	TaskRequestsPerDomain
+	TaskLatencyPerDomain
+	TaskFailuresPerDomain
+	TaskDiscardedPerDomain
+	TaskAttemptTimerPerDomain
+	TaskStandbyRetryCounterPerDomain
+	TaskNotActiveCounterPerDomain
+	TaskLimitExceededCounterPerDomain
+	TaskProcessingLatencyPerDomain
+	TaskQueueLatencyPerDomain
+	TransferTaskMissingEventCounterPerDomain
+
 	TaskRedispatchQueuePendingTasksTimer
 
 	TransferTaskThrottledCounter
@@ -2149,16 +2175,31 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
 	},
 	History: {
-		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
-		TaskLatency:                                       {metricName: "task_latency", metricType: Timer},
-		TaskAttemptTimer:                                  {metricName: "task_attempt", metricType: Timer},
-		TaskFailures:                                      {metricName: "task_errors", metricType: Counter},
-		TaskDiscarded:                                     {metricName: "task_errors_discarded", metricType: Counter},
-		TaskStandbyRetryCounter:                           {metricName: "task_errors_standby_retry_counter", metricType: Counter},
-		TaskNotActiveCounter:                              {metricName: "task_errors_not_active_counter", metricType: Counter},
-		TaskLimitExceededCounter:                          {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
-		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
-		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
+		TaskRequests:             {metricName: "task_requests", metricType: Counter},
+		TaskLatency:              {metricName: "task_latency", metricType: Timer},
+		TaskAttemptTimer:         {metricName: "task_attempt", metricType: Timer},
+		TaskFailures:             {metricName: "task_errors", metricType: Counter},
+		TaskDiscarded:            {metricName: "task_errors_discarded", metricType: Counter},
+		TaskStandbyRetryCounter:  {metricName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskNotActiveCounter:     {metricName: "task_errors_not_active_counter", metricType: Counter},
+		TaskLimitExceededCounter: {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
+		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
+		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
+
+		// per domain task metrics
+
+		TaskRequestsPerDomain:                    {metricName: "task_requests_per_domain", metricRollupName: "task_requests", metricType: Counter},
+		TaskLatencyPerDomain:                     {metricName: "task_latency_per_domain", metricRollupName: "task_latency", metricType: Timer},
+		TaskAttemptTimerPerDomain:                {metricName: "task_attempt_per_domain", metricRollupName: "task_attempt", metricType: Timer},
+		TaskFailuresPerDomain:                    {metricName: "task_errors_per_domain", metricRollupName: "task_errors", metricType: Counter},
+		TaskDiscardedPerDomain:                   {metricName: "task_errors_discarded_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
+		TaskStandbyRetryCounterPerDomain:         {metricName: "task_errors_standby_retry_counter_per_domain", metricRollupName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskNotActiveCounterPerDomain:            {metricName: "task_errors_not_active_counter_per_domain", metricRollupName: "task_errors_not_active_counter", metricType: Counter},
+		TaskLimitExceededCounterPerDomain:        {metricName: "task_errors_limit_exceeded_counter_per_domain", metricRollupName: "task_errors_limit_exceeded_counter", metricType: Counter},
+		TaskProcessingLatencyPerDomain:           {metricName: "task_latency_processing_per_domain", metricRollupName: "task_latency_processing", metricType: Timer},
+		TaskQueueLatencyPerDomain:                {metricName: "task_latency_queue_per_domain", metricRollupName: "task_latency_queue", metricType: Timer},
+		TransferTaskMissingEventCounterPerDomain: {metricName: "transfer_task_missing_event_counter_per_domain", metricRollupName: "transfer_task_missing_event_counter", metricType: Counter},
+
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
 		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
 		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},

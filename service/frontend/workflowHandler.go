@@ -152,6 +152,7 @@ func NewWorkflowHandler(
 	resource resource.Resource,
 	config *Config,
 	replicationMessageSink messaging.Producer,
+	versionChecker client.VersionChecker,
 ) Handler {
 	return &WorkflowHandler{
 		Resource:        resource,
@@ -173,7 +174,7 @@ func NewWorkflowHandler(
 				return float64(config.MaxDomainRPSPerInstance(domain))
 			},
 		),
-		versionChecker: client.NewVersionChecker(),
+		versionChecker: versionChecker,
 		domainHandler: domain.NewHandler(
 			config.MinRetentionDays(),
 			config.MaxBadBinaries,
@@ -3326,17 +3327,8 @@ func (wh *WorkflowHandler) getRawHistory(
 				tag.WorkflowRunID(execution.GetRunId()),
 				tag.Error(err))
 		}
-
-		blob, err := wh.GetPayloadSerializer().SerializeEvent(transientDecision.ScheduledEvent, common.EncodingTypeThriftRW)
-		if err != nil {
-			return nil, nil, err
-		}
-		rawHistory = append(rawHistory, &gen.DataBlob{
-			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
-			Data:         blob.Data,
-		})
-
-		blob, err = wh.GetPayloadSerializer().SerializeEvent(transientDecision.StartedEvent, common.EncodingTypeThriftRW)
+		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(
+			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}, common.EncodingTypeThriftRW)
 		if err != nil {
 			return nil, nil, err
 		}
