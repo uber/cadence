@@ -67,7 +67,7 @@ type (
 const (
 	reservedTaskListPrefix = "/__cadence_sys/"
 
-	maximumScheduleToStartTimeoutForRetryInSeconds = 600 // 10 minutes
+	maximumScheduleToStartTimeoutForRetryInSeconds = 1800 // 30 minutes
 )
 
 func newDecisionAttrValidator(
