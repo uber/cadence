@@ -29,7 +29,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/history"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -646,7 +645,7 @@ func loadTimerProcessingQueueStates(
 
 		logger.Error("Incompatible processing queue states and ackLevel",
 			tag.Value(pStates),
-			tag.ShardTimerAcks(ackLevel.UnixNano),
+			tag.ShardTimerAcks(ackLevel),
 		)
 	}
 
@@ -658,36 +657,4 @@ func loadTimerProcessingQueueStates(
 			NewDomainFilter(nil, true),
 		),
 	}
-}
-
-func convertToPersistenceTimerProcessingQueueStates(
-	states []ProcessingQueueState,
-) []*history.ProcessingQueueState {
-	pStates := make([]*history.ProcessingQueueState, 0, len(states))
-	for _, state := range states {
-		pStates = append(pStates, &history.ProcessingQueueState{
-			Level:        common.Int32Ptr(int32(state.Level())),
-			AckLevel:     common.Int64Ptr(state.AckLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
-			MaxLevel:     common.Int64Ptr(state.MaxLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
-			DomainFilter: convertToPersistenceDomainFilter(state.DomainFilter()),
-		})
-	}
-
-	return pStates
-}
-
-func convertFromPersistenceTimerProcessingQueueStates(
-	pStates []*history.ProcessingQueueState,
-) []ProcessingQueueState {
-	states := make([]ProcessingQueueState, 0, len(pStates))
-	for _, pState := range pStates {
-		states = append(states, NewProcessingQueueState(
-			int(pState.GetLevel()),
-			newTimerTaskKey(time.Unix(0, pState.GetAckLevel()), 0),
-			newTimerTaskKey(time.Unix(0, pState.GetMaxLevel()), 0),
-			convertFromPersistenceDomainFilter(pState.DomainFilter),
-		))
-	}
-
-	return states
 }

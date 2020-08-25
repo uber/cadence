@@ -291,6 +291,9 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 		return errors.New("Empty transfer processing queue states")
 	}
 
+	if s.transferProcessingQueueStates.StatesByCluster == nil {
+		s.transferProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
+	}
 	s.transferProcessingQueueStates.StatesByCluster[cluster] = states
 	serializer := s.GetPayloadSerializer()
 	data, err := serializer.SerializeProcessingQueueStates(s.transferProcessingQueueStates, common.EncodingTypeThriftRW)
@@ -452,6 +455,9 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 		return errors.New("Empty transfer processing queue states")
 	}
 
+	if s.timerProcessingQueueStates.StatesByCluster == nil {
+		s.timerProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
+	}
 	s.timerProcessingQueueStates.StatesByCluster[cluster] = states
 	serializer := s.GetPayloadSerializer()
 	data, err := serializer.SerializeProcessingQueueStates(s.timerProcessingQueueStates, common.EncodingTypeThriftRW)
@@ -1564,9 +1570,19 @@ func acquireShard(
 	if err != nil {
 		return nil, err
 	}
+	if transferProcessingQueueStates == nil {
+		transferProcessingQueueStates = &history.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
+		}
+	}
 	timerProcessingQueueStates, err := serializer.DeserializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates)
 	if err != nil {
 		return nil, err
+	}
+	if timerProcessingQueueStates == nil {
+		timerProcessingQueueStates = &history.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
+		}
 	}
 
 	executionMgr, err := shardItem.GetExecutionManager(shardItem.shardID)
