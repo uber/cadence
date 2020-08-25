@@ -492,21 +492,9 @@ func newTransferQueueActiveProcessor(
 		return nil
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
-	ackLevel := newTransferTaskKey(shard.GetTransferClusterAckLevel(currentClusterName))
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			defaultProcessingQueueLevel,
-			ackLevel,
-			maximumTransferTaskKey,
-			NewDomainFilter(nil, true),
-		),
-	}
-
 	return newTransferQueueProcessorBase(
 		shard,
-		processingQueueStates,
+		loadTransferProcessingQueueStates(currentClusterName, shard, options, logger),
 		taskProcessor,
 		options,
 		updateMaxReadLevel,
@@ -560,21 +548,9 @@ func newTransferQueueStandbyProcessor(
 		return nil
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
-	ackLevel := newTransferTaskKey(shard.GetTransferClusterAckLevel(clusterName))
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			defaultProcessingQueueLevel,
-			ackLevel,
-			maximumTransferTaskKey,
-			NewDomainFilter(nil, true),
-		),
-	}
-
 	return newTransferQueueProcessorBase(
 		shard,
-		processingQueueStates,
+		loadTransferProcessingQueueStates(clusterName, shard, options, logger),
 		taskProcessor,
 		options,
 		updateMaxReadLevel,
@@ -641,8 +617,6 @@ func newTransferQueueFailoverProcessor(
 		return shard.DeleteTransferFailoverLevel(failoverUUID)
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
 	processingQueueStates := []ProcessingQueueState{
 		NewProcessingQueueState(
 			defaultProcessingQueueLevel,
@@ -668,28 +642,113 @@ func newTransferQueueFailoverProcessor(
 	)
 }
 
+func loadTransferProcessingQueueStates(
+	clusterName string,
+	shard shard.Context,
+	options *queueProcessorOptions,
+	logger log.Logger,
+) []ProcessingQueueState {
+	ackLevel := shard.GetTransferClusterAckLevel(clusterName)
+	if options.EnableLoadQueueStates() {
+		pStates := shard.GetTransferProcessingQueueStates(clusterName)
+		if validateProcessingQueueStates(pStates, ackLevel) {
+			return convertFromPersistenceTransferProcessingQueueStates(pStates)
+		}
+
+		logger.Error("Incompatible processing queue states and ackLevel",
+			tag.Value(pStates),
+			tag.ShardTransferAcks(ackLevel),
+		)
+	}
+
+	// LoadQueueStates is disabled or sanity check failed
+	// fallback to use ackLevel
+	return []ProcessingQueueState{
+		NewProcessingQueueState(
+			defaultProcessingQueueLevel,
+			newTransferTaskKey(ackLevel),
+			maximumTransferTaskKey,
+			NewDomainFilter(nil, true),
+		),
+	}
+}
+
 func convertToPersistenceTransferProcessingQueueStates(
 	states []ProcessingQueueState,
 ) []*history.ProcessingQueueState {
 	pStates := make([]*history.ProcessingQueueState, 0, len(states))
 	for _, state := range states {
-		domainIDs := make([]string, 0, len(state.DomainFilter().DomainIDs))
-		for domainID := range state.DomainFilter().DomainIDs {
-			domainIDs = append(domainIDs, domainID)
-		}
-
-		pState := &history.ProcessingQueueState{
-			Level:    common.Int32Ptr(int32(state.Level())),
-			AckLevel: common.Int64Ptr(state.AckLevel().(transferTaskKey).taskID),
-			MaxLevel: common.Int64Ptr(state.MaxLevel().(transferTaskKey).taskID),
-			DomainFilter: &history.DomainFilter{
-				DomainIDs:    domainIDs,
-				ReverseMatch: common.BoolPtr(state.DomainFilter().ReverseMatch),
-			},
-		}
-
-		pStates = append(pStates, pState)
+		pStates = append(pStates, &history.ProcessingQueueState{
+			Level:        common.Int32Ptr(int32(state.Level())),
+			AckLevel:     common.Int64Ptr(state.AckLevel().(transferTaskKey).taskID),
+			MaxLevel:     common.Int64Ptr(state.MaxLevel().(transferTaskKey).taskID),
+			DomainFilter: convertToPersistenceDomainFilter(state.DomainFilter()),
+		})
 	}
 
 	return pStates
+}
+
+func convertFromPersistenceTransferProcessingQueueStates(
+	pStates []*history.ProcessingQueueState,
+) []ProcessingQueueState {
+	states := make([]ProcessingQueueState, 0, len(pStates))
+	for _, pState := range pStates {
+		states = append(states, NewProcessingQueueState(
+			int(pState.GetLevel()),
+			newTransferTaskKey(pState.GetAckLevel()),
+			newTransferTaskKey(pState.GetMaxLevel()),
+			convertFromPersistenceDomainFilter(pState.DomainFilter),
+		))
+	}
+
+	return states
+}
+
+func convertToPersistenceDomainFilter(
+	domainFilter DomainFilter,
+) *history.DomainFilter {
+	domainIDs := make([]string, 0, len(domainFilter.DomainIDs))
+	for domainID := range domainFilter.DomainIDs {
+		domainIDs = append(domainIDs, domainID)
+	}
+
+	return &history.DomainFilter{
+		DomainIDs:    domainIDs,
+		ReverseMatch: common.BoolPtr(domainFilter.ReverseMatch),
+	}
+}
+
+func convertFromPersistenceDomainFilter(
+	domainFilter *history.DomainFilter,
+) DomainFilter {
+	domainIDs := make(map[string]struct{})
+	for _, domainID := range domainFilter.DomainIDs {
+		domainIDs[domainID] = struct{}{}
+	}
+
+	return NewDomainFilter(domainIDs, domainFilter.GetReverseMatch())
+}
+
+func validateProcessingQueueStates(
+	pStates []*history.ProcessingQueueState,
+	ackLevel interface{},
+) bool {
+	if len(pStates) == 0 {
+		return false
+	}
+
+	minAckLevel := pStates[0].GetAckLevel()
+	for _, pState := range pStates {
+		minAckLevel = common.MinInt64(minAckLevel, pState.GetAckLevel())
+	}
+
+	switch ackLevel := ackLevel.(type) {
+	case int64:
+		return minAckLevel == ackLevel
+	case time.Time:
+		return minAckLevel == ackLevel.UnixNano()
+	default:
+		return false
+	}
 }

@@ -460,6 +460,10 @@ func newTransferQueueProcessorOptions(
 	if isFailover {
 		// disable queue split for failover processor
 		options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
+
+		// disable persist and load processing queue states for failover processor as it will never be split
+		options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(false)
+		options.EnableLoadQueueStates = dynamicconfig.GetBoolPropertyFn(false)
 	} else {
 		options.EnableSplit = config.QueueProcessorEnableSplit
 		options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
@@ -470,6 +474,9 @@ func newTransferQueueProcessorOptions(
 		options.EnableStuckTaskSplit = config.QueueProcessorEnableStuckTaskSplit
 		options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
 		options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
+
+		options.EnablePersistQueueStates = config.QueueProcessorEnablePersistQueueStates
+		options.EnableLoadQueueStates = config.QueueProcessorEnableLoadQueueStates
 	}
 
 	if isActive {

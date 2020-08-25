@@ -473,22 +473,10 @@ func newTimerQueueActiveProcessor(
 		return nil
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
-	ackLevel := newTimerTaskKey(shard.GetTimerClusterAckLevel(clusterName), 0)
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			defaultProcessingQueueLevel,
-			ackLevel,
-			maximumTimerTaskKey,
-			NewDomainFilter(nil, true),
-		),
-	}
-
 	return newTimerQueueProcessorBase(
 		clusterName,
 		shard,
-		processingQueueStates,
+		loadTimerProcessingQueueStates(clusterName, shard, options, logger),
 		taskProcessor,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
@@ -542,25 +530,13 @@ func newTimerQueueStandbyProcessor(
 		return nil
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
-	ackLevel := newTimerTaskKey(shard.GetTimerClusterAckLevel(clusterName), 0)
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			defaultProcessingQueueLevel,
-			ackLevel,
-			maximumTimerTaskKey,
-			NewDomainFilter(nil, true),
-		),
-	}
-
 	remoteTimerGate := NewRemoteTimerGate()
 	remoteTimerGate.SetCurrentTime(shard.GetCurrentTime(clusterName))
 
 	return newTimerQueueProcessorBase(
 		clusterName,
 		shard,
-		processingQueueStates,
+		loadTimerProcessingQueueStates(clusterName, shard, options, logger),
 		taskProcessor,
 		remoteTimerGate,
 		options,
@@ -628,8 +604,6 @@ func newTimerQueueFailoverProcessor(
 		return shard.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
 	processingQueueStates := []ProcessingQueueState{
 		NewProcessingQueueState(
 			defaultProcessingQueueLevel,
@@ -657,28 +631,63 @@ func newTimerQueueFailoverProcessor(
 	)
 }
 
+func loadTimerProcessingQueueStates(
+	clusterName string,
+	shard shard.Context,
+	options *queueProcessorOptions,
+	logger log.Logger,
+) []ProcessingQueueState {
+	ackLevel := shard.GetTimerClusterAckLevel(clusterName)
+	if options.EnableLoadQueueStates() {
+		pStates := shard.GetTimerProcessingQueueStates(clusterName)
+		if validateProcessingQueueStates(pStates, ackLevel) {
+			return convertFromPersistenceTimerProcessingQueueStates(pStates)
+		}
+
+		logger.Error("Incompatible processing queue states and ackLevel",
+			tag.Value(pStates),
+			tag.ShardTimerAcks(ackLevel.UnixNano),
+		)
+	}
+
+	return []ProcessingQueueState{
+		NewProcessingQueueState(
+			defaultProcessingQueueLevel,
+			newTimerTaskKey(ackLevel, 0),
+			maximumTimerTaskKey,
+			NewDomainFilter(nil, true),
+		),
+	}
+}
+
 func convertToPersistenceTimerProcessingQueueStates(
 	states []ProcessingQueueState,
 ) []*history.ProcessingQueueState {
 	pStates := make([]*history.ProcessingQueueState, 0, len(states))
 	for _, state := range states {
-		domainIDs := make([]string, 0, len(state.DomainFilter().DomainIDs))
-		for domainID := range state.DomainFilter().DomainIDs {
-			domainIDs = append(domainIDs, domainID)
-		}
-
-		pState := &history.ProcessingQueueState{
-			Level:    common.Int32Ptr(int32(state.Level())),
-			AckLevel: common.Int64Ptr(state.AckLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
-			MaxLevel: common.Int64Ptr(state.MaxLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
-			DomainFilter: &history.DomainFilter{
-				DomainIDs:    domainIDs,
-				ReverseMatch: common.BoolPtr(state.DomainFilter().ReverseMatch),
-			},
-		}
-
-		pStates = append(pStates, pState)
+		pStates = append(pStates, &history.ProcessingQueueState{
+			Level:        common.Int32Ptr(int32(state.Level())),
+			AckLevel:     common.Int64Ptr(state.AckLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
+			MaxLevel:     common.Int64Ptr(state.MaxLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
+			DomainFilter: convertToPersistenceDomainFilter(state.DomainFilter()),
+		})
 	}
 
 	return pStates
+}
+
+func convertFromPersistenceTimerProcessingQueueStates(
+	pStates []*history.ProcessingQueueState,
+) []ProcessingQueueState {
+	states := make([]ProcessingQueueState, 0, len(pStates))
+	for _, pState := range pStates {
+		states = append(states, NewProcessingQueueState(
+			int(pState.GetLevel()),
+			newTimerTaskKey(time.Unix(0, pState.GetAckLevel()), 0),
+			newTimerTaskKey(time.Unix(0, pState.GetMaxLevel()), 0),
+			convertFromPersistenceDomainFilter(pState.DomainFilter),
+		))
+	}
+
+	return states
 }

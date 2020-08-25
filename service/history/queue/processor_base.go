@@ -69,6 +69,8 @@ type (
 		SplitLookAheadDurationByDomainID     dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		PollBackoffInterval                  dynamicconfig.DurationPropertyFn
 		PollBackoffIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+		EnablePersistQueueStates             dynamicconfig.BoolPropertyFn
+		EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
 		MetricScope                          int
 	}
 
@@ -163,10 +165,6 @@ func newProcessorBase(
 }
 
 func (p *processorBase) updateAckLevel() (bool, error) {
-	// TODO: only for now, find the min ack level across all processing queues
-	// and update DB with that value.
-	// Once persistence layer is updated, we need to persist all queue states
-	// instead of only the min ack level
 	p.metricsScope.IncCounter(metrics.AckLevelUpdateCounter)
 	var minAckLevel task.Key
 	totalPengingTasks := 0
@@ -203,10 +201,19 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 	// TODO: consider move pendingTasksTime metrics from shardInfoScope to queue processor scope
 	p.metricsClient.RecordTimer(metrics.ShardInfoScope, getPendingTasksMetricIdx(p.options.MetricScope), time.Duration(totalPengingTasks))
 
-	if err := p.updateClusterAckLevel(minAckLevel); err != nil {
-		p.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
-		p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
-		return false, err
+	if p.options.EnablePersistQueueStates() && p.updateProcessingQueueStates != nil {
+		states := p.getProcessingQueueStates().GetStateActionResult.States
+		if err := p.updateProcessingQueueStates(states); err != nil {
+			p.logger.Error("Error persisting processing queue states", tag.Error(err), tag.OperationFailed)
+			p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
+			return false, err
+		}
+	} else {
+		if err := p.updateClusterAckLevel(minAckLevel); err != nil {
+			p.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
+			p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
+			return false, err
+		}
 	}
 
 	return false, nil
