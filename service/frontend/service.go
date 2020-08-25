@@ -24,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/client"
-
 	"github.com/stretchr/testify/mock"
 
 	"github.com/uber/cadence/common"
