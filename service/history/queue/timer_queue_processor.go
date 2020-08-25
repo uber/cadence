@@ -29,6 +29,7 @@ import (
 
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/.gen/go/history"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -455,7 +456,7 @@ func newTimerQueueActiveProcessor(
 		return taskAllocator.VerifyActiveTask(timer.DomainID, timer)
 	}
 
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return newTimerTaskKey(shard.UpdateTimerMaxReadLevel(clusterName), 0)
 	}
 
@@ -463,7 +464,12 @@ func newTimerQueueActiveProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.(timerTaskKey).visibilityTimestamp)
 	}
 
-	timerQueueShutdown := func() error {
+	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
+		pStates := convertToPersistenceTimerProcessingQueueStates(states)
+		return shard.UpdateTimerProcessingQueueStates(clusterName, pStates)
+	}
+
+	queueShutdown := func() error {
 		return nil
 	}
 
@@ -486,9 +492,10 @@ func newTimerQueueActiveProcessor(
 		taskProcessor,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
-		maxReadLevel,
+		updateMaxReadLevel,
 		updateClusterAckLevel,
-		timerQueueShutdown,
+		updateProcessingQueueStates,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
@@ -518,7 +525,7 @@ func newTimerQueueStandbyProcessor(
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return newTimerTaskKey(shard.UpdateTimerMaxReadLevel(clusterName), 0)
 	}
 
@@ -526,7 +533,12 @@ func newTimerQueueStandbyProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.(timerTaskKey).visibilityTimestamp)
 	}
 
-	timerQueueShutdown := func() error {
+	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
+		pStates := convertToPersistenceTimerProcessingQueueStates(states)
+		return shard.UpdateTimerProcessingQueueStates(clusterName, pStates)
+	}
+
+	queueShutdown := func() error {
 		return nil
 	}
 
@@ -552,9 +564,10 @@ func newTimerQueueStandbyProcessor(
 		taskProcessor,
 		remoteTimerGate,
 		options,
-		maxReadLevel,
+		updateMaxReadLevel,
 		updateClusterAckLevel,
-		timerQueueShutdown,
+		updateProcessingQueueStates,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
@@ -594,7 +607,7 @@ func newTimerQueueFailoverProcessor(
 	}
 
 	maxReadLevelTaskKey := newTimerTaskKey(maxLevel, 0)
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return maxReadLevelTaskKey // this is a const
 	}
 
@@ -611,7 +624,7 @@ func newTimerQueueFailoverProcessor(
 		)
 	}
 
-	timerQueueShutdown := func() error {
+	queueShutdown := func() error {
 		return shard.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
@@ -633,12 +646,39 @@ func newTimerQueueFailoverProcessor(
 		taskProcessor,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
-		maxReadLevel,
+		updateMaxReadLevel,
 		updateClusterAckLevel,
-		timerQueueShutdown,
+		nil,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
+}
+
+func convertToPersistenceTimerProcessingQueueStates(
+	states []ProcessingQueueState,
+) []*history.ProcessingQueueState {
+	pStates := make([]*history.ProcessingQueueState, 0, len(states))
+	for _, state := range states {
+		domainIDs := make([]string, 0, len(state.DomainFilter().DomainIDs))
+		for domainID := range state.DomainFilter().DomainIDs {
+			domainIDs = append(domainIDs, domainID)
+		}
+
+		pState := &history.ProcessingQueueState{
+			Level:    common.Int32Ptr(int32(state.Level())),
+			AckLevel: common.Int64Ptr(state.AckLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
+			MaxLevel: common.Int64Ptr(state.MaxLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
+			DomainFilter: &history.DomainFilter{
+				DomainIDs:    domainIDs,
+				ReverseMatch: common.BoolPtr(state.DomainFilter().ReverseMatch),
+			},
+		}
+
+		pStates = append(pStates, pState)
+	}
+
+	return pStates
 }

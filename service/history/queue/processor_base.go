@@ -41,9 +41,10 @@ const (
 )
 
 type (
-	updateMaxReadLevelFn    func() task.Key
-	updateClusterAckLevelFn func(task.Key) error
-	queueShutdownFn         func() error
+	updateMaxReadLevelFn          func() task.Key
+	updateClusterAckLevelFn       func(task.Key) error // TODO: deprecate this in favor of updateProcessingQueueStatesFn
+	updateProcessingQueueStatesFn func([]ProcessingQueueState) error
+	queueShutdownFn               func() error
 
 	queueProcessorOptions struct {
 		BatchSize                            dynamicconfig.IntPropertyFn
@@ -86,10 +87,11 @@ type (
 		taskProcessor task.Processor
 		redispatcher  task.Redispatcher
 
-		options               *queueProcessorOptions
-		updateMaxReadLevel    updateMaxReadLevelFn
-		updateClusterAckLevel updateClusterAckLevelFn
-		queueShutdown         queueShutdownFn
+		options                     *queueProcessorOptions
+		updateMaxReadLevel          updateMaxReadLevelFn
+		updateClusterAckLevel       updateClusterAckLevelFn
+		updateProcessingQueueStates updateProcessingQueueStatesFn
+		queueShutdown               queueShutdownFn
 
 		logger        log.Logger
 		metricsClient metrics.Client
@@ -113,6 +115,7 @@ func newProcessorBase(
 	options *queueProcessorOptions,
 	updateMaxReadLevel updateMaxReadLevelFn,
 	updateClusterAckLevel updateClusterAckLevelFn,
+	updateProcessingQueueStates updateProcessingQueueStatesFn,
 	queueShutdown queueShutdownFn,
 	logger log.Logger,
 	metricsClient metrics.Client,
@@ -131,10 +134,11 @@ func newProcessorBase(
 			metricsScope,
 		),
 
-		options:               options,
-		updateMaxReadLevel:    updateMaxReadLevel,
-		updateClusterAckLevel: updateClusterAckLevel,
-		queueShutdown:         queueShutdown,
+		options:                     options,
+		updateMaxReadLevel:          updateMaxReadLevel,
+		updateClusterAckLevel:       updateClusterAckLevel,
+		updateProcessingQueueStates: updateProcessingQueueStates, // TODO: use this field
+		queueShutdown:               queueShutdown,
 
 		logger:        logger,
 		metricsClient: metricsClient,

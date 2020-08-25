@@ -144,6 +144,7 @@ func (s *processorBaseSuite) TestSplitQueue() {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	nextPollTime := make(map[int]time.Time)
@@ -196,6 +197,7 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Transfer_ProcessedFinished() {
 		processingQueueStates,
 		nil,
 		nil,
+		nil,
 		queueShutdownFn,
 	)
 
@@ -237,6 +239,7 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Tranfer_ProcessNotFinished() {
 		nil,
 		updateTransferAckLevelFn,
 		nil,
+		nil,
 	)
 
 	processFinished, err := processorBase.updateAckLevel()
@@ -273,7 +276,7 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer() {
 		return nil
 	}
 
-	timerQueueProcessBase := s.newTestProcessorBase(processingQueueStates, nil, updateTransferAckLevelFn, nil)
+	timerQueueProcessBase := s.newTestProcessorBase(processingQueueStates, nil, updateTransferAckLevelFn, nil, nil)
 	processFinished, err := timerQueueProcessBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
@@ -282,18 +285,20 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer() {
 
 func (s *processorBaseSuite) newTestProcessorBase(
 	processingQueueStates []ProcessingQueueState,
-	maxReadLevel updateMaxReadLevelFn,
-	updateTransferAckLevel updateClusterAckLevelFn,
-	transferQueueShutdown queueShutdownFn,
+	updateMaxReadLevel updateMaxReadLevelFn,
+	updateClusterAckLevel updateClusterAckLevelFn,
+	updateProcessingQueueStates updateProcessingQueueStatesFn,
+	queueShutdown queueShutdownFn,
 ) *processorBase {
 	return newProcessorBase(
 		s.mockShard,
 		processingQueueStates,
 		s.mockTaskProcessor,
 		newTransferQueueProcessorOptions(s.mockShard.GetConfig(), true, false),
-		maxReadLevel,
-		updateTransferAckLevel,
-		transferQueueShutdown,
+		updateMaxReadLevel,
+		updateClusterAckLevel,
+		updateProcessingQueueStates, // TODO: add tests for this field
+		queueShutdown,
 		s.logger,
 		s.metricsClient,
 	)

@@ -31,6 +31,7 @@ import (
 
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/.gen/go/history"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -473,16 +474,21 @@ func newTransferQueueActiveProcessor(
 		return taskAllocator.VerifyActiveTask(task.DomainID, task)
 	}
 
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return newTransferTaskKey(shard.GetTransferMaxReadLevel())
 	}
 
-	updateTransferAckLevel := func(ackLevel task.Key) error {
+	updateClusterAckLevel := func(ackLevel task.Key) error {
 		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferClusterAckLevel(currentClusterName, taskID)
 	}
 
-	transferQueueShutdown := func() error {
+	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
+		pStates := convertToPersistenceTransferProcessingQueueStates(states)
+		return shard.UpdateTransferProcessingQueueStates(currentClusterName, pStates)
+	}
+
+	queueShutdown := func() error {
 		return nil
 	}
 
@@ -503,9 +509,10 @@ func newTransferQueueActiveProcessor(
 		processingQueueStates,
 		taskProcessor,
 		options,
-		maxReadLevel,
-		updateTransferAckLevel,
-		transferQueueShutdown,
+		updateMaxReadLevel,
+		updateClusterAckLevel,
+		updateProcessingQueueStates,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
@@ -535,16 +542,21 @@ func newTransferQueueStandbyProcessor(
 		return taskAllocator.VerifyStandbyTask(clusterName, task.DomainID, task)
 	}
 
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return newTransferTaskKey(shard.GetTransferMaxReadLevel())
 	}
 
-	updateTransferAckLevel := func(ackLevel task.Key) error {
+	updateClusterAckLevel := func(ackLevel task.Key) error {
 		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferClusterAckLevel(clusterName, taskID)
 	}
 
-	transferQueueShutdown := func() error {
+	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
+		pStates := convertToPersistenceTransferProcessingQueueStates(states)
+		return shard.UpdateTransferProcessingQueueStates(clusterName, pStates)
+	}
+
+	queueShutdown := func() error {
 		return nil
 	}
 
@@ -565,9 +577,10 @@ func newTransferQueueStandbyProcessor(
 		processingQueueStates,
 		taskProcessor,
 		options,
-		maxReadLevel,
-		updateTransferAckLevel,
-		transferQueueShutdown,
+		updateMaxReadLevel,
+		updateClusterAckLevel,
+		updateProcessingQueueStates,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
@@ -606,11 +619,11 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	maxReadLevelTaskKey := newTransferTaskKey(maxLevel)
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return maxReadLevelTaskKey // this is a const
 	}
 
-	updateTransferAckLevel := func(ackLevel task.Key) error {
+	updateClusterAckLevel := func(ackLevel task.Key) error {
 		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferFailoverLevel(
 			failoverUUID,
@@ -624,7 +637,7 @@ func newTransferQueueFailoverProcessor(
 		)
 	}
 
-	transferQueueShutdown := func() error {
+	queueShutdown := func() error {
 		return shard.DeleteTransferFailoverLevel(failoverUUID)
 	}
 
@@ -639,17 +652,44 @@ func newTransferQueueFailoverProcessor(
 		),
 	}
 
-	return updateTransferAckLevel, newTransferQueueProcessorBase(
+	return updateClusterAckLevel, newTransferQueueProcessorBase(
 		shard,
 		processingQueueStates,
 		taskProcessor,
 		options,
-		maxReadLevel,
-		updateTransferAckLevel,
-		transferQueueShutdown,
+		updateMaxReadLevel,
+		updateClusterAckLevel,
+		nil,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
+}
+
+func convertToPersistenceTransferProcessingQueueStates(
+	states []ProcessingQueueState,
+) []*history.ProcessingQueueState {
+	pStates := make([]*history.ProcessingQueueState, 0, len(states))
+	for _, state := range states {
+		domainIDs := make([]string, 0, len(state.DomainFilter().DomainIDs))
+		for domainID := range state.DomainFilter().DomainIDs {
+			domainIDs = append(domainIDs, domainID)
+		}
+
+		pState := &history.ProcessingQueueState{
+			Level:    common.Int32Ptr(int32(state.Level())),
+			AckLevel: common.Int64Ptr(state.AckLevel().(transferTaskKey).taskID),
+			MaxLevel: common.Int64Ptr(state.MaxLevel().(transferTaskKey).taskID),
+			DomainFilter: &history.DomainFilter{
+				DomainIDs:    domainIDs,
+				ReverseMatch: common.BoolPtr(state.DomainFilter().ReverseMatch),
+			},
+		}
+
+		pStates = append(pStates, pState)
+	}
+
+	return pStates
 }
