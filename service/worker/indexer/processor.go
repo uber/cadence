@@ -179,8 +179,23 @@ func (p *indexProcessor) process(kafkaMsg messaging.Message) error {
 		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
 		return err
 	}
+	if !isValidMsg(indexMsg) {
+		logger.Error("Index message is not valid",
+			tag.WorkflowDomainID(indexMsg.GetDomainID()),
+			tag.WorkflowID(indexMsg.GetWorkflowID()),
+			tag.WorkflowRunID(indexMsg.GetRunID()))
+		return nil
+	}
 
 	return p.addMessageToES(indexMsg, kafkaMsg, logger)
+}
+
+func isValidMsg(msg *indexer.Message) bool {
+	s := fmt.Sprintf("%s~%s", msg.GetWorkflowID(), msg.GetRunID())
+	if len(s) >= 512 {
+		return false
+	}
+	return true
 }
 
 func (p *indexProcessor) deserialize(payload []byte) (*indexer.Message, error) {
