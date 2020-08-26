@@ -139,7 +139,7 @@ func newProcessorBase(
 		options:                     options,
 		updateMaxReadLevel:          updateMaxReadLevel,
 		updateClusterAckLevel:       updateClusterAckLevel,
-		updateProcessingQueueStates: updateProcessingQueueStates, // TODO: use this field
+		updateProcessingQueueStates: updateProcessingQueueStates,
 		queueShutdown:               queueShutdown,
 
 		logger:        logger,
