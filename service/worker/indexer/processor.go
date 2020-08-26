@@ -200,6 +200,7 @@ func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg mess
 			tag.WorkflowDomainID(indexMsg.GetDomainID()),
 			tag.WorkflowID(indexMsg.GetWorkflowID()),
 			tag.WorkflowRunID(indexMsg.GetRunID()))
+		kafkaMsg.Nack()
 		return nil
 	}
 
