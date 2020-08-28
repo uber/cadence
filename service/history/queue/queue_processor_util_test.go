@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 )
