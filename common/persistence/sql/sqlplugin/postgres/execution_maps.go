@@ -47,11 +47,8 @@ run_id = $4`
 VALUES
 (:shard_id, :domain_id, :workflow_id, :run_id, :%[4]v, %[3]v)
 ON CONFLICT (shard_id, domain_id, workflow_id, run_id, %[4]v) DO UPDATE 
-  SET shard_id = excluded.shard_id,
-      domain_id = excluded.domain_id,
-      workflow_id = excluded.workflow_id,
-	  run_id = excluded.run_id,
-      %[4]v = excluded.%[4]v `
+SET (shard_id, domain_id, workflow_id, run_id, %[4]v, %[2]v)
+= (:shard_id, :domain_id, :workflow_id, :run_id, :%[4]v, %[3]v)`
 
 	// %[2]v is the name of the key
 	deleteKeyInMapQueryTemplate = `DELETE FROM %[1]v
