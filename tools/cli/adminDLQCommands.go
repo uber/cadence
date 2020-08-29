@@ -104,9 +104,6 @@ func AdminGetDLQMessages(c *cli.Context) {
 
 // AdminPurgeDLQMessages deletes messages from DLQ
 func AdminPurgeDLQMessages(c *cli.Context) {
-	ctx, cancel := newContext(c)
-	defer cancel()
-
 	dlqType := getRequiredOption(c, FlagDLQType)
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 	lowerShardBound := c.Int(FlagLowerShardBound)
@@ -118,24 +115,24 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 
 	adminClient := cFactory.ServerAdminClient(c)
 	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
+		ctx, cancel := newContext(c)
 		if err := adminClient.PurgeDLQMessages(ctx, &replicator.PurgeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
 			ShardID:               common.Int32Ptr(int32(shardID)),
 			InclusiveEndMessageID: lastMessageID,
 		}); err != nil {
+			cancel()
 			ErrorAndExit("Failed to purge dlq", err)
 		}
+		cancel()
 		time.Sleep(10 * time.Millisecond)
-		fmt.Printf("Successfully purge DLQ Messages in %v.\n", shardID)
+		fmt.Printf("Successfully purge DLQ Messages in shard %v.\n", shardID)
 	}
 }
 
 // AdminMergeDLQMessages merges message from DLQ
 func AdminMergeDLQMessages(c *cli.Context) {
-	ctx, cancel := newContext(c)
-	defer cancel()
-
 	dlqType := getRequiredOption(c, FlagDLQType)
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 	lowerShardBound := c.Int(FlagLowerShardBound)
@@ -147,6 +144,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 
 	adminClient := cFactory.ServerAdminClient(c)
 	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
+		ctx, cancel := newContext(c)
 		request := &replicator.MergeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
@@ -167,6 +165,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 
 			request.NextPageToken = response.NextPageToken
 		}
+		cancel()
 		fmt.Printf("Successfully merged all messages in shard %v.\n", shardID)
 	}
 }
