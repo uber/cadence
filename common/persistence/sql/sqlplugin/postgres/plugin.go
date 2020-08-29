@@ -36,11 +36,8 @@ import (
 const (
 	// PluginName is the name of the plugin
 	PluginName                     = "postgres"
-	dataSourceNamePostgres         = "user=%v host=%v port=%v dbname=%v sslmode=disable %v "
-	dataSourceNamePostgresPassword = "password=%v"
+	dsnFmt = "%s://%s@%s:%s/%s"
 )
-
-var errTLSNotImplemented = errors.New("tls for postgres has not been implemented")
 
 type plugin struct{}
 
@@ -86,15 +83,7 @@ func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	}
 
 	dbName := cfg.DatabaseName
-	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
-	if dbName == "" {
-		dbName = "postgres"
-	}
-	password := ""
-	if cfg.Password != "" {
-		password = fmt.Sprintf(dataSourceNamePostgresPassword, cfg.Password)
-	}
-	db, err := sqlx.Connect(PluginName, fmt.Sprintf(dataSourceNamePostgres, cfg.User, host, port, dbName, password))
+	db, err := sqlx.Connect(PluginName, buildDSN(cfg, dbName, host, port))
 
 	if err != nil {
 		return nil, err
@@ -105,10 +94,35 @@ func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	return db, nil
 }
 
+func buildDSN(cfg *config.SQL, dbName string, host string, port string) string {
+	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
+	if dbName == "" {
+		dbName = "postgres"
+	}
+	params := url.Values{}
+	attrs := ""
+	
+	if cfg.Password != "" {
+		params.Add("password", cfg.Password)
+	}
+
+	if cfg.TLS != nil && cfg.TLS.Enabled {
+		params.Add("ssl", "true")
+		params.Add("sslmode", "require")
+		params.Add("sslrootcert", cfg.TLS.CaFile)
+		params.Add("sslkey", cfg.TLS.KeyFile)
+		params.Add("sslcert", cfg.TLS.CertFile)
+	}
+	attrs = params.Encode()
+
+	dsn := fmt.Sprintf(dsnFmt, "postgresql", cfg.User, host, port, dbName)
+	if attrs != "" {
+		dsn += "?" + attrs
+	}
+	return dsn
+}
+
 // TODO: implement postgres specific support for TLS
 func registerTLSConfig(cfg *config.SQL) error {
-	if cfg.TLS == nil || !cfg.TLS.Enabled {
-		return nil
-	}
-	return errTLSNotImplemented
+	return nil
 }
