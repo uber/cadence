@@ -25,6 +25,7 @@ package invariants
 import (
 	"fmt"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
 )
@@ -59,6 +60,11 @@ func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResul
 			InvariantType:   c.InvariantType(),
 		}
 	}
+	var runIDCheckResult *common.CheckResult
+	currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
+	if runIDCheckResult != nil {
+		return *runIDCheckResult
+	}
 	// by this point the corresponding concrete execution must exist and can be already closed
 	currentExecResp, currentExecErr := c.pr.IsWorkflowExecutionExists(&persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
@@ -89,11 +95,20 @@ func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResul
 }
 
 func (c *concreteExecutionExists) Fix(execution interface{}) common.FixResult {
-	fixResult, checkResult := checkBeforeFix(c, execution)
+	currentExecution, _ := execution.(*common.CurrentExecution)
+	var runIDCheckResult *common.CheckResult
+	currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
+	if runIDCheckResult != nil {
+		return common.FixResult{
+			FixResultType: common.FixResultTypeSkipped,
+			CheckResult:   *runIDCheckResult,
+			InvariantType: c.InvariantType(),
+		}
+	}
+	fixResult, checkResult := checkBeforeFix(c, currentExecution)
 	if fixResult != nil {
 		return *fixResult
 	}
-	currentExecution, _ := execution.(*common.CurrentExecution)
 	if err := c.pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
@@ -114,4 +129,45 @@ func (c *concreteExecutionExists) Fix(execution interface{}) common.FixResult {
 
 func (c *concreteExecutionExists) InvariantType() common.InvariantType {
 	return common.ConcreteExecutionExistsInvariantType
+}
+
+func (c *concreteExecutionExists) validateCurrentRunID(
+	currentExecution *common.CurrentExecution,
+) (*common.CurrentExecution, *common.CheckResult) {
+
+	resp, err := c.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+		DomainID:   currentExecution.DomainID,
+		WorkflowID: currentExecution.WorkflowID,
+	})
+	if err != nil {
+		switch err.(type) {
+		case *shared.EntityNotExistsError:
+			return nil, &common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+				InvariantType:   c.InvariantType(),
+				Info:            "current execution does not exist.",
+				InfoDetails:     err.Error(),
+			}
+		default:
+			return nil, &common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				InvariantType:   c.InvariantType(),
+				Info:            "failed to get current execution.",
+				InfoDetails:     err.Error(),
+			}
+		}
+	}
+
+	if len(currentExecution.CurrentRunID) == 0 {
+		currentExecution.CurrentRunID = resp.RunID
+	}
+
+	if currentExecution.CurrentRunID != resp.RunID {
+		return nil, &common.CheckResult{
+			CheckResultType: common.CheckResultTypeFailed,
+			InvariantType:   c.InvariantType(),
+			Info:            "input current run ID cannot be verified.",
+		}
+	}
+	return currentExecution, nil
 }

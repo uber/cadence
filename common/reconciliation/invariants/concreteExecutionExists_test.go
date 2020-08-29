@@ -27,10 +27,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
@@ -50,14 +52,21 @@ func (s *ConcreteExecutionExistsSuite) SetupTest() {
 }
 
 func (s *ConcreteExecutionExistsSuite) TestCheck() {
+	existsError := shared.EntityNotExistsError{}
+	unknownError := shared.BadRequestError{}
 	testCases := []struct {
 		execution       *common.CurrentExecution
 		getConcreteResp *persistence.IsWorkflowExecutionExistsResponse
 		getConcreteErr  error
+		getCurrentResp  *persistence.GetCurrentExecutionResponse
+		getCurrentErr   error
 		expectedResult  common.CheckResult
 	}{
 		{
 			execution: getClosedCurrentExecution(),
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: getClosedCurrentExecution().CurrentRunID,
+			},
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
@@ -66,6 +75,9 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		{
 			execution:      getOpenCurrentExecution(),
 			getConcreteErr: errors.New("error getting concrete execution"),
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: getOpenCurrentExecution().CurrentRunID,
+			},
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeFailed,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
@@ -76,6 +88,9 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		{
 			execution:       getOpenCurrentExecution(),
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: false},
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: getOpenCurrentExecution().CurrentRunID,
+			},
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeCorrupted,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
@@ -88,9 +103,51 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: getOpenCurrentExecution().CurrentRunID,
+			},
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
+			},
+		},
+		{
+			execution:       getOpenCurrentExecution(),
+			getConcreteErr:  nil,
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
+			getCurrentResp: &persistence.GetCurrentExecutionResponse{
+				RunID: uuid.New(),
+			},
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				InvariantType:   common.ConcreteExecutionExistsInvariantType,
+				Info:            "input current run ID cannot be verified.",
+			},
+		},
+		{
+			execution:       getOpenCurrentExecution(),
+			getConcreteErr:  nil,
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
+			getCurrentResp: nil,
+			getCurrentErr: &existsError,
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeHealthy,
+				InvariantType:   common.ConcreteExecutionExistsInvariantType,
+				Info:            "current execution does not exist.",
+				InfoDetails:     existsError.Error(),
+			},
+		},
+		{
+			execution:       getOpenCurrentExecution(),
+			getConcreteErr:  nil,
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
+			getCurrentResp: nil,
+			getCurrentErr: &unknownError,
+			expectedResult: common.CheckResult{
+				CheckResultType: common.CheckResultTypeFailed,
+				InvariantType:   common.ConcreteExecutionExistsInvariantType,
+				Info:            "failed to get current execution.",
+				InfoDetails:     unknownError.Error(),
 			},
 		},
 	}
@@ -98,6 +155,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("IsWorkflowExecutionExists", mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
+		execManager.On("GetCurrentExecution", mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
 		o := NewConcreteExecutionExists(common.NewPersistenceRetryer(execManager, nil))
 		s.Equal(tc.expectedResult, o.Check(tc.execution))
 	}
