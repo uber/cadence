@@ -128,8 +128,8 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
-			getCurrentResp: nil,
-			getCurrentErr: &existsError,
+			getCurrentResp:  nil,
+			getCurrentErr:   &existsError,
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
@@ -141,8 +141,8 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
-			getCurrentResp: nil,
-			getCurrentErr: &unknownError,
+			getCurrentResp:  nil,
+			getCurrentErr:   &unknownError,
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeFailed,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
