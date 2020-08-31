@@ -169,13 +169,14 @@ var keys = map[Key]string{
 	ActiveTaskRedispatchInterval:                          "history.activeTaskRedispatchInterval",
 	StandbyTaskRedispatchInterval:                         "history.standbyTaskRedispatchInterval",
 	TaskRedispatchIntervalJitterCoefficient:               "history.taskRedispatchIntervalJitterCoefficient",
+	StandbyTaskReReplicationContextTimeout:                "history.standbyTaskReReplicationContextTimeout",
 	QueueProcessorEnableSplit:                             "history.queueProcessorEnableSplit",
 	QueueProcessorSplitMaxLevel:                           "history.queueProcessorSplitMaxLevel",
 	QueueProcessorEnableRandomSplitByDomainID:             "history.queueProcessorEnableRandomSplitByDomainID",
 	QueueProcessorRandomSplitProbability:                  "history.queueProcessorRandomSplitProbability",
-	QueueProcessorEnablePendingTaskSplit:                  "history.queueProcessorEnablePendingTaskSplit",
+	QueueProcessorEnablePendingTaskSplitByDomainID:        "history.queueProcessorEnablePendingTaskSplitByDomainID",
 	QueueProcessorPendingTaskSplitThreshold:               "history.queueProcessorPendingTaskSplitThreshold",
-	QueueProcessorEnableStuckTaskSplit:                    "history.queueProcessorEnableStuckTaskSplit",
+	QueueProcessorEnableStuckTaskSplitByDomainID:          "history.queueProcessorEnableStuckTaskSplitByDomainID",
 	QueueProcessorStuckTaskSplitThreshold:                 "history.queueProcessorStuckTaskSplitThreshold",
 	QueueProcessorSplitLookAheadDurationByDomainID:        "history.queueProcessorSplitLookAheadDurationByDomainID",
 	QueueProcessorPollBackoffInterval:                     "history.queueProcessorPollBackoffInterval",
@@ -567,10 +568,12 @@ const (
 	TaskSchedulerRoundRobinWeights
 	// ActiveTaskRedispatchInterval is the active task redispatch interval
 	ActiveTaskRedispatchInterval
-	// StandbyTaskRedispatchInterval is the active task redispatch interval
+	// StandbyTaskRedispatchInterval is the standby task redispatch interval
 	StandbyTaskRedispatchInterval
 	// TaskRedispatchIntervalJitterCoefficient is the task redispatch interval jitter coefficient
 	TaskRedispatchIntervalJitterCoefficient
+	// StandbyTaskReReplicationContextTimeout is the context timeout for standby task re-replication
+	StandbyTaskReReplicationContextTimeout
 	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
 	QueueProcessorEnableSplit
 	// QueueProcessorSplitMaxLevel is the max processing queue level
@@ -579,12 +582,12 @@ const (
 	QueueProcessorEnableRandomSplitByDomainID
 	// QueueProcessorRandomSplitProbability is the probability for a domain to be split to a new processing queue
 	QueueProcessorRandomSplitProbability
-	// QueueProcessorEnablePendingTaskSplit indicates whether pending task split policy should be enabled
-	QueueProcessorEnablePendingTaskSplit
+	// QueueProcessorEnablePendingTaskSplitByDomainID indicates whether pending task split policy should be enabled
+	QueueProcessorEnablePendingTaskSplitByDomainID
 	// QueueProcessorPendingTaskSplitThreshold is the threshold for the number of pending tasks per domain
 	QueueProcessorPendingTaskSplitThreshold
-	// QueueProcessorEnableStuckTaskSplit indicates whether stuck task split policy should be enabled
-	QueueProcessorEnableStuckTaskSplit
+	// QueueProcessorEnableStuckTaskSplitByDomainID indicates whether stuck task split policy should be enabled
+	QueueProcessorEnableStuckTaskSplitByDomainID
 	// QueueProcessorStuckTaskSplitThreshold is the threshold for the number of attempts of a task
 	QueueProcessorStuckTaskSplitThreshold
 	// QueueProcessorSplitLookAheadDurationByDomainID is the look ahead duration when spliting a domain to a new processing queue
