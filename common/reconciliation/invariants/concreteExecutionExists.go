@@ -58,11 +58,15 @@ func (c *concreteExecutionExists) Check(
 		}
 	}
 
-	var runIDCheckResult *common.CheckResult
-	currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
-	if runIDCheckResult != nil {
-		return *runIDCheckResult
+	if len(currentExecution.CurrentRunID) == 0 {
+		// set the current run id
+		var runIDCheckResult *common.CheckResult
+		currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
+		if runIDCheckResult != nil {
+			return *runIDCheckResult
+		}
 	}
+
 	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(&persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
@@ -77,6 +81,11 @@ func (c *concreteExecutionExists) Check(
 		}
 	}
 	if !concreteExecResp.Exists {
+		//verify if the current execution exists
+		_, checkResult := c.validateCurrentRunID(currentExecution)
+		if checkResult != nil {
+			return *checkResult
+		}
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeCorrupted,
 			InvariantType:   c.InvariantType(),
@@ -97,13 +106,15 @@ func (c *concreteExecutionExists) Fix(
 
 	currentExecution, _ := execution.(*common.CurrentExecution)
 	var runIDCheckResult *common.CheckResult
-	// this is to set the current run ID prior to the check and fix operations
-	currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
-	if runIDCheckResult != nil {
-		return common.FixResult{
-			FixResultType: common.FixResultTypeSkipped,
-			CheckResult:   *runIDCheckResult,
-			InvariantType: c.InvariantType(),
+	if len(currentExecution.CurrentRunID) == 0 {
+		// this is to set the current run ID prior to the check and fix operations
+		currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
+		if runIDCheckResult != nil {
+			return common.FixResult{
+				FixResultType: common.FixResultTypeSkipped,
+				CheckResult:   *runIDCheckResult,
+				InvariantType: c.InvariantType(),
+			}
 		}
 	}
 	fixResult, checkResult := checkBeforeFix(c, currentExecution)

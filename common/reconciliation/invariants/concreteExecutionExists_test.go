@@ -120,9 +120,8 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 				RunID: uuid.New(),
 			},
 			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeFailed,
+				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
-				Info:            "input current run ID cannot be verified.",
 			},
 		},
 		{
@@ -134,14 +133,12 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			expectedResult: common.CheckResult{
 				CheckResultType: common.CheckResultTypeHealthy,
 				InvariantType:   common.ConcreteExecutionExistsInvariantType,
-				Info:            "current execution does not exist.",
-				InfoDetails:     existsError.Error(),
 			},
 		},
 		{
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
-			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: false},
 			getCurrentResp:  nil,
 			getCurrentErr:   &unknownError,
 			expectedResult: common.CheckResult{
