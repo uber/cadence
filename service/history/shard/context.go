@@ -269,12 +269,19 @@ func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*histor
 		return states
 	}
 
-	// otherwise, create default queue state based on existing ack level,
-	// which belongs to local cluster. this can happen if you add more cluster
+	var ackLevel int64
+	var ok bool
+	// if we can find corresponding ack level
+	if ackLevel, ok = s.shardInfo.ClusterTransferAckLevel[cluster]; !ok {
+		// otherwise, default to existing ack level, which belongs to local cluster
+		// this can happen if you add more cluster
+		ackLevel = s.shardInfo.TransferAckLevel
+	}
+
 	return []*history.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
-			AckLevel: common.Int64Ptr(s.shardInfo.TransferAckLevel),
+			AckLevel: common.Int64Ptr(ackLevel),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
 			DomainFilter: &history.DomainFilter{
 				ReverseMatch: common.BoolPtr(true),
@@ -433,12 +440,19 @@ func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*history.P
 		return states
 	}
 
-	// otherwise, create default queue state based on existing ack level,
-	// which belongs to local cluster. this can happen if you add more cluster
+	// if we can find corresponding ack level
+	var ackLevel time.Time
+	var ok bool
+	if ackLevel, ok = s.shardInfo.ClusterTimerAckLevel[cluster]; !ok {
+		// otherwise, default to existing ack level, which belongs to local cluster
+		// this can happen if you add more cluster
+		ackLevel = s.shardInfo.TimerAckLevel
+	}
+
 	return []*history.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
-			AckLevel: common.Int64Ptr(s.shardInfo.TimerAckLevel.UnixNano()),
+			AckLevel: common.Int64Ptr(ackLevel.UnixNano()),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
 			DomainFilter: &history.DomainFilter{
 				ReverseMatch: common.BoolPtr(true),

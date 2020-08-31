@@ -280,6 +280,15 @@ func (p *processorBase) splitProcessingQueueCollection(
 	splitPolicy ProcessingQueueSplitPolicy,
 	upsertPollTimeFn func(int, time.Time),
 ) {
+	defer func() {
+		numProcessingQueues := 0
+		for _, queueCollection := range p.processingQueueCollections {
+			numProcessingQueues += len(queueCollection.Queues())
+		}
+		p.metricsScope.RecordTimer(metrics.ProcessingQueueNumTimer, time.Duration(numProcessingQueues))
+		p.metricsScope.RecordTimer(metrics.ProcessingQueueMaxLevelTimer, time.Duration(p.processingQueueCollections[len(p.processingQueueCollections)-1].Level()))
+	}()
+
 	if splitPolicy == nil {
 		return
 	}
