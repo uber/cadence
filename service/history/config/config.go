@@ -340,8 +340,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		QueueProcessorEnableStuckTaskSplitByDomainID:       dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableStuckTaskSplitByDomainID, false),
 		QueueProcessorStuckTaskSplitThreshold:              dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)),
 		QueueProcessorSplitLookAheadDurationByDomainID:     dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.QueueProcessorSplitLookAheadDurationByDomainID, 20*time.Minute),
-		QueueProcessorPollBackoffInterval:                  dc.GetDurationProperty(dynamicconfig.QueueProcessorPollBackoffInterval, 5*time.Second),
-		QueueProcessorPollBackoffIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.QueueProcessorPollBackoffIntervalJitterCoefficient, 0.15),
+		QueueProcessorPollBackoffInterval:                  dc.GetDurationProperty(dynamicconfig.QueueProcessorPollBackoffInterval, 10*time.Second),
+		QueueProcessorPollBackoffIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.QueueProcessorPollBackoffIntervalJitterCoefficient, 0.5),
 		QueueProcessorEnablePersistQueueStates:             dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePersistQueueStates, false),
 		QueueProcessorEnableLoadQueueStates:                dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableLoadQueueStates, false),
 
