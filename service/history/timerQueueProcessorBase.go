@@ -144,8 +144,6 @@ func newTimerQueueProcessorBase(
 		),
 	}
 
-	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-	emitDomainTag := config.QueueProcessorEnableDomainTaggedMetrics()
 	base.queueTaskInitializer = func(taskInfo task.Info) task.Task {
 		return task.NewTimerTask(
 			shard,
@@ -157,7 +155,6 @@ func newTimerQueueProcessorBase(
 			base.redispatcher.AddTask,
 			shard.GetTimeSource(),
 			config.TimerTaskMaxRetryCount,
-			emitDomainTag,
 			timerQueueAckMgr,
 		)
 	}
@@ -202,7 +199,7 @@ func (t *timerQueueProcessorBase) Stop() {
 	}
 	t.redispatcher.Stop()
 
-	t.logger.Info("Timer queue processor stopped.")
+	t.logger.Debug("Timer queue processor stopped.")
 }
 
 func (t *timerQueueProcessorBase) processorPump() {
@@ -221,7 +218,7 @@ RetryProcessor:
 		}
 	}
 
-	t.logger.Info("Timer queue processor pump shutting down.")
+	t.logger.Debug("Timer queue processor pump shutting down.")
 }
 
 // NotifyNewTimers - Notify the processor about the new timer events arrival.

@@ -113,9 +113,6 @@ func newTimerQueueProcessorBase(
 		queueType = task.QueueTypeStandbyTimer
 	}
 
-	// read dynamic config only once on startup to avoid gc pressure caused by keeping reading dynamic config
-	emitDomainTag := shard.GetConfig().QueueProcessorEnableDomainTaggedMetrics()
-
 	return &timerQueueProcessorBase{
 		processorBase: processorBase,
 
@@ -130,7 +127,6 @@ func newTimerQueueProcessorBase(
 				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TimerTaskMaxRetryCount,
-				emitDomainTag,
 				nil,
 			)
 		},
@@ -152,8 +148,8 @@ func (t *timerQueueProcessorBase) Start() {
 		return
 	}
 
-	t.logger.Info("", tag.LifeCycleStarting)
-	defer t.logger.Info("", tag.LifeCycleStarted)
+	t.logger.Info("Timer queue processor state changed", tag.LifeCycleStarting)
+	defer t.logger.Info("Timer queue processor state changed", tag.LifeCycleStarted)
 
 	t.redispatcher.Start()
 
@@ -170,8 +166,8 @@ func (t *timerQueueProcessorBase) Stop() {
 		return
 	}
 
-	t.logger.Info("", tag.LifeCycleStopping)
-	defer t.logger.Info("", tag.LifeCycleStopped)
+	t.logger.Info("Timer queue processor state changed", tag.LifeCycleStopping)
+	defer t.logger.Info("Timer queue processor state changed", tag.LifeCycleStopped)
 
 	t.timerGate.Close()
 	close(t.shutdownCh)

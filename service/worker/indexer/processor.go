@@ -63,6 +63,7 @@ type indexProcessor struct {
 const (
 	esDocIDDelimiter = "~"
 	esDocType        = "_doc"
+	esDocIDSizeLimit = 512
 
 	versionTypeExternal = "external"
 )
@@ -93,21 +94,21 @@ func (p *indexProcessor) Start() error {
 		return nil
 	}
 
-	p.logger.Info("", tag.LifeCycleStarting)
+	p.logger.Info("Index processor state changed", tag.LifeCycleStarting)
 	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName, p.config.IndexerConcurrency())
 	if err != nil {
-		p.logger.Info("", tag.LifeCycleStartFailed, tag.Error(err))
+		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
 	}
 
 	if err := consumer.Start(); err != nil {
-		p.logger.Info("", tag.LifeCycleStartFailed, tag.Error(err))
+		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
 	}
 
 	esProcessor, err := NewESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger, p.metricsClient, p.msgEncoder)
 	if err != nil {
-		p.logger.Info("", tag.LifeCycleStartFailed, tag.Error(err))
+		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
 	}
 
@@ -116,7 +117,7 @@ func (p *indexProcessor) Start() error {
 	p.shutdownWG.Add(1)
 	go p.processorPump()
 
-	p.logger.Info("", tag.LifeCycleStarted)
+	p.logger.Info("Index processor state changed", tag.LifeCycleStarted)
 	return nil
 }
 
@@ -125,15 +126,15 @@ func (p *indexProcessor) Stop() {
 		return
 	}
 
-	p.logger.Info("", tag.LifeCycleStopping)
-	defer p.logger.Info("", tag.LifeCycleStopped)
+	p.logger.Info("Index processor state changed", tag.LifeCycleStopping)
+	defer p.logger.Info("Index processor state changed", tag.LifeCycleStopped)
 
 	if atomic.LoadInt32(&p.isStarted) == 1 {
 		close(p.shutdownCh)
 	}
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
-		p.logger.Info("", tag.LifeCycleStopTimedout)
+		p.logger.Info("Index processor state changed", tag.LifeCycleStopTimedout)
 	}
 }
 
@@ -192,7 +193,16 @@ func (p *indexProcessor) deserialize(payload []byte) (*indexer.Message, error) {
 }
 
 func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.Message, logger log.Logger) error {
-	docID := indexMsg.GetWorkflowID() + esDocIDDelimiter + indexMsg.GetRunID()
+	docID := generateDocID(indexMsg.GetWorkflowID(), indexMsg.GetRunID())
+	// check and skip invalid docID
+	if len(docID) >= esDocIDSizeLimit {
+		logger.Error("Index message is too long",
+			tag.WorkflowDomainID(indexMsg.GetDomainID()),
+			tag.WorkflowID(indexMsg.GetWorkflowID()),
+			tag.WorkflowRunID(indexMsg.GetRunID()))
+		kafkaMsg.Nack()
+		return nil
+	}
 
 	var keyToKafkaMsg string
 	var req elastic.BulkableRequest
@@ -288,4 +298,8 @@ func fulfillDoc(doc map[string]interface{}, msg *indexer.Message, keyToKafkaMsg 
 	doc[definition.WorkflowID] = msg.GetWorkflowID()
 	doc[definition.RunID] = msg.GetRunID()
 	doc[definition.KafkaKey] = keyToKafkaMsg
+}
+
+func generateDocID(wid, rid string) string {
+	return wid + esDocIDDelimiter + rid
 }

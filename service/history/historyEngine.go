@@ -51,6 +51,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariants"
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
@@ -225,6 +227,11 @@ func NewEngineWithShardContext(
 		failoverMarkerNotifier: failoverMarkerNotifier,
 	}
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
+	pRetry := checks.NewPersistenceRetryer(
+		shard.GetExecutionManager(),
+		shard.GetHistoryManager(),
+	)
+	openExecutionCheck := invariants.NewOpenCurrentExecution(pRetry)
 
 	if config.TransferProcessorEnableMultiCurosrProcessor() {
 		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
@@ -235,9 +242,19 @@ func NewEngineWithShardContext(
 			historyEngImpl.resetor,
 			historyEngImpl.workflowResetter,
 			historyEngImpl.archivalClient,
+			openExecutionCheck,
 		)
 	} else {
-		historyEngImpl.txProcessor = newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, queueTaskProcessor, logger)
+		historyEngImpl.txProcessor = newTransferQueueProcessor(
+			shard,
+			historyEngImpl,
+			visibilityMgr,
+			matching,
+			historyClient,
+			queueTaskProcessor,
+			openExecutionCheck,
+			logger,
+		)
 	}
 	if config.TimerProcessorEnableMultiCurosrProcessor() {
 		historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
@@ -246,9 +263,17 @@ func NewEngineWithShardContext(
 			queueTaskProcessor,
 			executionCache,
 			historyEngImpl.archivalClient,
+			openExecutionCheck,
 		)
 	} else {
-		historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, queueTaskProcessor, logger)
+		historyEngImpl.timerProcessor = newTimerQueueProcessor(
+			shard,
+			historyEngImpl,
+			matching,
+			queueTaskProcessor,
+			openExecutionCheck,
+			logger,
+		)
 	}
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
@@ -310,6 +335,7 @@ func NewEngineWithShardContext(
 			},
 			shard.GetService().GetPayloadSerializer(),
 			nil,
+			openExecutionCheck,
 			shard.GetLogger(),
 		)
 		historyRereplicator := xdc.NewHistoryRereplicator(
@@ -358,8 +384,8 @@ func NewEngineWithShardContext(
 // Make sure all the components are loaded lazily so start can return immediately.  This is important because
 // ShardController calls start sequentially for all the shards for a given host during startup.
 func (e *historyEngineImpl) Start() {
-	e.logger.Info("", tag.LifeCycleStarting)
-	defer e.logger.Info("", tag.LifeCycleStarted)
+	e.logger.Info("History engine state changed", tag.LifeCycleStarting)
+	defer e.logger.Info("History engine state changed", tag.LifeCycleStarted)
 
 	e.registerDomainFailoverCallback()
 
@@ -381,8 +407,8 @@ func (e *historyEngineImpl) Start() {
 
 // Stop the service.
 func (e *historyEngineImpl) Stop() {
-	e.logger.Info("", tag.LifeCycleStopping)
-	defer e.logger.Info("", tag.LifeCycleStopped)
+	e.logger.Info("History engine state changed", tag.LifeCycleStopping)
+	defer e.logger.Info("History engine state changed", tag.LifeCycleStopped)
 
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
@@ -1301,7 +1327,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		return nil, err
 	}
 
-	e.logger.Info("query directly through matching on sticky timed out, attempting to query on non-sticky",
+	e.logger.Debug("query directly through matching on sticky timed out, attempting to query on non-sticky",
 		tag.WorkflowDomainName(queryRequest.GetDomain()),
 		tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
 		tag.WorkflowRunID(queryRequest.Execution.GetRunId()),

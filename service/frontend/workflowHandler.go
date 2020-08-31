@@ -152,6 +152,7 @@ func NewWorkflowHandler(
 	resource resource.Resource,
 	config *Config,
 	replicationMessageSink messaging.Producer,
+	versionChecker client.VersionChecker,
 ) Handler {
 	return &WorkflowHandler{
 		Resource:        resource,
@@ -173,7 +174,7 @@ func NewWorkflowHandler(
 				return float64(config.MaxDomainRPSPerInstance(domain))
 			},
 		),
-		versionChecker: client.NewVersionChecker(),
+		versionChecker: versionChecker,
 		domainHandler: domain.NewHandler(
 			config.MinRetentionDays(),
 			config.MaxBadBinaries,
@@ -2548,7 +2549,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 				})
 		}
-		wh.GetLogger().Info("List open workflow with filter",
+		wh.GetLogger().Debug("List open workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
@@ -2559,7 +2560,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
 		}
-		wh.GetLogger().Info("List open workflow with filter",
+		wh.GetLogger().Debug("List open workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
 	} else {
 		persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutions(&baseReq)
@@ -2761,7 +2762,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 				})
 		}
-		wh.GetLogger().Info("List closed workflow with filter",
+		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
@@ -2772,7 +2773,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
 		}
-		wh.GetLogger().Info("List closed workflow with filter",
+		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
 	} else if listRequest.StatusFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
@@ -2783,7 +2784,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 				Status:                        listRequest.GetStatusFilter(),
 			})
 		}
-		wh.GetLogger().Info("List closed workflow with filter",
+		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByStatus)
 	} else {
 		persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutions(&baseReq)
