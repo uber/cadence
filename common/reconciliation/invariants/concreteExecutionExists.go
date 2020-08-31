@@ -45,7 +45,10 @@ func NewConcreteExecutionExists(
 	}
 }
 
-func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResult {
+func (c *concreteExecutionExists) Check(
+	execution interface{},
+) common.CheckResult {
+
 	currentExecution, ok := execution.(*common.CurrentExecution)
 	if !ok {
 		return common.CheckResult{
@@ -54,32 +57,26 @@ func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResul
 			Info:            "failed to check: expected current execution",
 		}
 	}
-	if !common.Open(currentExecution.State) {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeHealthy,
-			InvariantType:   c.InvariantType(),
-		}
-	}
+
 	var runIDCheckResult *common.CheckResult
 	currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
 	if runIDCheckResult != nil {
 		return *runIDCheckResult
 	}
-	// by this point the corresponding concrete execution must exist and can be already closed
-	currentExecResp, currentExecErr := c.pr.IsWorkflowExecutionExists(&persistence.IsWorkflowExecutionExistsRequest{
+	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(&persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
 	})
-	if currentExecErr != nil {
+	if concreteExecErr != nil {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
 			InvariantType:   c.InvariantType(),
 			Info:            "failed to check if concrete execution exists",
-			InfoDetails:     currentExecErr.Error(),
+			InfoDetails:     concreteExecErr.Error(),
 		}
 	}
-	if !currentExecResp.Exists {
+	if !concreteExecResp.Exists {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeCorrupted,
 			InvariantType:   c.InvariantType(),
@@ -94,9 +91,13 @@ func (c *concreteExecutionExists) Check(execution interface{}) common.CheckResul
 	}
 }
 
-func (c *concreteExecutionExists) Fix(execution interface{}) common.FixResult {
+func (c *concreteExecutionExists) Fix(
+	execution interface{},
+) common.FixResult {
+
 	currentExecution, _ := execution.(*common.CurrentExecution)
 	var runIDCheckResult *common.CheckResult
+	// this is to set the current run ID prior to the check and fix operations
 	currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
 	if runIDCheckResult != nil {
 		return common.FixResult{
