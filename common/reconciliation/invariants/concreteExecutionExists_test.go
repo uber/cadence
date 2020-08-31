@@ -64,6 +64,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 	}{
 		{
 			execution: getClosedCurrentExecution(),
+			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
 			getCurrentResp: &persistence.GetCurrentExecutionResponse{
 				RunID: getClosedCurrentExecution().CurrentRunID,
 			},
