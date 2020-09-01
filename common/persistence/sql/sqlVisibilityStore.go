@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -46,14 +45,10 @@ type (
 )
 
 // NewSQLVisibilityStore creates an instance of ExecutionStore
-func NewSQLVisibilityStore(cfg config.SQL, logger log.Logger) (p.VisibilityStore, error) {
-	db, err := NewSQLDB(&cfg)
-	if err != nil {
-		return nil, err
-	}
+func NewSQLVisibilityStore(conn sqlplugin.DB, logger log.Logger) (p.VisibilityStore, error) {
 	return &sqlVisibilityStore{
 		sqlStore: sqlStore{
-			db:     db,
+			db:     conn,
 			logger: logger,
 		},
 	}, nil

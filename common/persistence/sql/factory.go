@@ -108,7 +108,11 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 
 // NewVisibilityStore returns a visibility store
 func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
-	return NewSQLVisibilityStore(f.cfg, f.logger)
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+	return NewSQLVisibilityStore(conn, f.logger)
 }
 
 // NewQueue returns a new queue backed by sql
