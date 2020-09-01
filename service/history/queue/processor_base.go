@@ -282,11 +282,16 @@ func (p *processorBase) splitProcessingQueueCollection(
 ) {
 	defer func() {
 		numProcessingQueues := 0
+		maxProcessingQueueLevel := -1
 		for _, queueCollection := range p.processingQueueCollections {
-			numProcessingQueues += len(queueCollection.Queues())
+			size := len(queueCollection.Queues())
+			numProcessingQueues += size
+			if size != 0 && queueCollection.Level() > maxProcessingQueueLevel {
+				maxProcessingQueueLevel = queueCollection.Level()
+			}
 		}
 		p.metricsScope.RecordTimer(metrics.ProcessingQueueNumTimer, time.Duration(numProcessingQueues))
-		p.metricsScope.RecordTimer(metrics.ProcessingQueueMaxLevelTimer, time.Duration(p.processingQueueCollections[len(p.processingQueueCollections)-1].Level()))
+		p.metricsScope.RecordTimer(metrics.ProcessingQueueMaxLevelTimer, time.Duration(maxProcessingQueueLevel))
 	}()
 
 	if splitPolicy == nil {
