@@ -38,8 +38,8 @@ type sqlShardManager struct {
 	currentClusterName string
 }
 
-// newShardPersistence creates an instance of ShardManager
-func newShardPersistence(db sqlplugin.DB, currentClusterName string, log log.Logger) (persistence.ShardManager, error) {
+// NewShardPersistence creates an instance of ShardManager
+func NewShardPersistence(db sqlplugin.DB, currentClusterName string, log log.Logger) (persistence.ShardManager, error) {
 	return &sqlShardManager{
 		sqlStore: sqlStore{
 			db:     db,

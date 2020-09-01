@@ -45,7 +45,7 @@ type (
 	}
 )
 
-func newQueue(
+func NewQueue(
 	db sqlplugin.DB,
 	logger log.Logger,
 	queueType persistence.QueueType,

@@ -67,7 +67,7 @@ func (f *Factory) NewTaskStore() (p.TaskStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newTaskPersistence(conn, f.cfg.NumShards, f.logger)
+	return NewTaskPersistence(conn, f.cfg.NumShards, f.logger)
 }
 
 // NewShardStore returns a new shard store
@@ -76,7 +76,7 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newShardPersistence(conn, f.clusterName, f.logger)
+	return NewShardPersistence(conn, f.clusterName, f.logger)
 }
 
 // NewHistoryV2Store returns a new history store
@@ -85,7 +85,7 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryV2Persistence(conn, f.logger)
+	return NewHistoryV2Persistence(conn, f.logger)
 }
 
 // NewMetadataStore returns a new metadata store
@@ -94,7 +94,7 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newMetadataPersistenceV2(conn, f.clusterName, f.logger)
+	return NewMetadataPersistenceV2(conn, f.clusterName, f.logger)
 }
 
 // NewExecutionStore returns an ExecutionStore for a given shardID
@@ -118,7 +118,7 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 		return nil, err
 	}
 
-	return newQueue(conn, f.logger, queueType)
+	return NewQueue(conn, f.logger, queueType)
 }
 
 // Close closes the factory

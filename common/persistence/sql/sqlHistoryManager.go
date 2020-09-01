@@ -36,8 +36,8 @@ type sqlHistoryV2Manager struct {
 	sqlStore
 }
 
-// newHistoryV2Persistence creates an instance of HistoryManager
-func newHistoryV2Persistence(
+// NewHistoryV2Persistence creates an instance of HistoryManager
+func NewHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
 ) (p.HistoryStore, error) {

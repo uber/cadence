@@ -45,8 +45,8 @@ var (
 	minUUID = "00000000-0000-0000-0000-000000000000"
 )
 
-// newTaskPersistence creates a new instance of TaskManager
-func newTaskPersistence(db sqlplugin.DB, nShards int, log log.Logger) (persistence.TaskManager, error) {
+// NewTaskPersistence creates a new instance of TaskManager
+func NewTaskPersistence(db sqlplugin.DB, nShards int, log log.Logger) (persistence.TaskManager, error) {
 	return &sqlTaskManager{
 		sqlStore: sqlStore{
 			db:     db,
