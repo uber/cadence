@@ -176,9 +176,8 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 
 	if currentExecution.CurrentRunID != resp.RunID {
 		return nil, &common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
+			CheckResultType: common.CheckResultTypeHealthy,
 			InvariantType:   c.InvariantType(),
-			Info:            "input current run ID cannot be verified.",
 		}
 	}
 	return currentExecution, nil
