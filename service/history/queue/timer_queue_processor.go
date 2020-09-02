@@ -241,6 +241,9 @@ func (t *timerQueueProcessor) NotifyNewTask(
 func (t *timerQueueProcessor) FailoverDomain(
 	domainIDs map[string]struct{},
 ) {
+	// Failover queue is used to scan all inflight tasks, if queue processor is not
+	// started, there's no inflight task and we don't need to create a failover processor.
+	// Also the HandleAction will be blocked if queue processor processing loop is not running.
 	if atomic.LoadInt32(&t.status) != common.DaemonStatusStarted {
 		return
 	}
