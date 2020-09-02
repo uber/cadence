@@ -297,21 +297,16 @@ func (c *domainCache) RegisterDomainChangeCallback(
 	callback CallbackFn,
 ) {
 
-	c.logger.Info("try to register domain callback")
-
 	c.callbackLock.Lock()
 	c.prepareCallbacks[shard] = prepareCallback
 	c.callbacks[shard] = callback
 	c.callbackLock.Unlock()
-
-	c.logger.Info("updated callback map")
 
 	// this section is trying to make the shard catch up with domain changes
 	domains := DomainCacheEntries{}
 	for _, domain := range c.GetAllDomain() {
 		domains = append(domains, domain)
 	}
-	c.logger.Info("get all domains")
 	// we mush notify the change in a ordered fashion
 	// since history shard have to update the shard info
 	// with domain change version.

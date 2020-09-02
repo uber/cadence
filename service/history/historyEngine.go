@@ -470,16 +470,13 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 		e.shard.GetShardID(),
 		e.shard.GetDomainNotificationVersion(),
 		func() {
-			e.shard.GetLogger().Info("locking task processing")
 			e.txProcessor.LockTaskProcessing()
 			e.timerProcessor.LockTaskProcessing()
-			e.shard.GetLogger().Info("locked task processing")
 		},
 		func(prevDomains []*cache.DomainCacheEntry, nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
 				e.txProcessor.UnlockTaskProcessing()
 				e.timerProcessor.UnlockTaskProcessing()
-				e.shard.GetLogger().Info("unlocked task processing")
 			}()
 
 			if len(nextDomains) == 0 {
