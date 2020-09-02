@@ -240,6 +240,10 @@ func (t *timerQueueProcessor) NotifyNewTask(
 func (t *timerQueueProcessor) FailoverDomain(
 	domainIDs map[string]struct{},
 ) {
+	if atomic.LoadInt32(&t.status) != common.DaemonStatusStarted {
+		return
+	}
+
 	minLevel := t.shard.GetTimerClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
 	for clusterName, info := range t.shard.GetClusterMetadata().GetAllClusterInfo() {
