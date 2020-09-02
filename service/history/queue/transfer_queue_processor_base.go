@@ -381,6 +381,10 @@ func (t *transferQueueProcessorBase) splitQueue() {
 	splitPolicy := t.initializeSplitPolicy(
 		func(key task.Key, domainID string) task.Key {
 			totalLookAhead := lookAhead * int64(t.options.SplitLookAheadDurationByDomainID(domainID).Seconds())
+			totalLookAhead = common.MinInt64(totalLookAhead, 2^20)
+			if totalLookAhead < 0 {
+				totalLookAhead = 0
+			}
 			return newTransferTaskKey(key.(transferTaskKey).taskID + totalLookAhead)
 		},
 	)
