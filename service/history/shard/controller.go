@@ -155,7 +155,6 @@ func (c *controller) Start() {
 	}
 
 	c.acquireShards()
-	c.logger.Info("Acquired shards")
 	c.shutdownWG.Add(1)
 	go c.shardManagementPump()
 
@@ -163,7 +162,6 @@ func (c *controller) Start() {
 	if err != nil {
 		c.logger.Error("Error adding listener", tag.Error(err))
 	}
-	c.logger.Info("Added Listener")
 
 	c.logger.Info("Shard controller state changed", tag.LifeCycleStarted)
 }
@@ -381,18 +379,15 @@ func (c *controller) acquireShards() {
 					return
 				}
 				info, err := c.GetHistoryServiceResolver().Lookup(string(shardID))
-				c.logger.Info("look up shardID finished")
 				if err != nil {
 					c.logger.Error("Error looking up host for shardID", tag.Error(err), tag.OperationFailed, tag.ShardID(shardID))
 				} else {
 					if info.Identity() == c.GetHostInfo().Identity() {
-						c.logger.Info("try to get engine")
 						_, err1 := c.GetEngineForShard(shardID)
 						if err1 != nil {
 							c.metricsScope.IncCounter(metrics.GetEngineForShardErrorCounter)
 							c.logger.Error("Unable to create history shard engine", tag.Error(err1), tag.OperationFailed, tag.ShardID(shardID))
 						}
-						c.logger.Info("created engine")
 					}
 				}
 			}
