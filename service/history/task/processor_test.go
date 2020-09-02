@@ -193,7 +193,7 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 	mockTask := NewMockTask(s.controller)
 	s.mockPriorityAssigner.EXPECT().Assign(NewMockTaskMatcher(mockTask)).Return(nil).Times(1)
 
-	errTrySubmit := errors.New("some randome error")
+	errTrySubmit := errors.New("some random error")
 	mockScheduler := task.NewMockScheduler(s.controller)
 	mockScheduler.EXPECT().TrySubmit(NewMockTaskMatcher(mockTask)).Return(false, errTrySubmit).Times(1)
 
@@ -205,7 +205,7 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 }
 
 func (s *queueTaskProcessorSuite) TestNewSchedulerOptions_UnknownSchedulerType() {
-	options, err := newSchedulerOptions(0, 100, 10, 1, nil)
+	options, err := newSchedulerOptions(0, 100, 10, 1, nil, nil)
 	s.Error(err)
 	s.Nil(options)
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -43,6 +44,7 @@ type (
 		WorkerCount     int
 		DispatcherCount int
 		RetryPolicy     backoff.RetryPolicy
+		RateLimiter     quotas.Limiter
 	}
 
 	weightedRoundRobinTaskSchedulerImpl struct {
@@ -102,6 +104,7 @@ func NewWeightedRoundRobinTaskScheduler(
 				QueueSize:   wRRTaskProcessorQueueSize,
 				WorkerCount: options.WorkerCount,
 				RetryPolicy: options.RetryPolicy,
+				RateLimiter: options.RateLimiter,
 			},
 		),
 	}
