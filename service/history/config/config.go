@@ -77,6 +77,7 @@ type Config struct {
 	StandbyTaskMissingEventsDiscardDelay dynamicconfig.DurationPropertyFn
 
 	// Task process settings
+	TaskProcessGlobalRPS                    dynamicconfig.IntPropertyFn
 	TaskProcessRPS                          dynamicconfig.IntPropertyFnWithDomainFilter
 	EnablePriorityTaskProcessor             dynamicconfig.BoolPropertyFn
 	TaskSchedulerType                       dynamicconfig.IntPropertyFn
@@ -317,7 +318,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskMissingEventsResendDelay:  dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsResendDelay, 15*time.Minute),
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay, 25*time.Minute),
 
-		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
+		TaskProcessGlobalRPS:                    dc.GetIntProperty(dynamicconfig.TaskProcessGlobalRPS, 2000),
+		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 400),
 		EnablePriorityTaskProcessor:             dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, true),
 		TaskSchedulerType:                       dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
 		TaskSchedulerWorkerCount:                dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 30),

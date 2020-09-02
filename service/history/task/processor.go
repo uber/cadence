@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
@@ -74,6 +75,7 @@ func NewProcessor(
 		config.TaskSchedulerWorkerCount(),
 		config.TaskSchedulerDispatcherCount(),
 		config.TaskSchedulerRoundRobinWeights,
+		config.TaskProcessGlobalRPS,
 	)
 	if err != nil {
 		return nil, err
@@ -88,6 +90,7 @@ func NewProcessor(
 			shardWorkerCount,
 			1,
 			config.TaskSchedulerRoundRobinWeights,
+			nil,
 		)
 		if err != nil {
 			return nil, err
@@ -263,6 +266,7 @@ func newSchedulerOptions(
 	workerCount int,
 	dispatcherCount int,
 	weights dynamicconfig.MapPropertyFn,
+	processRPS dynamicconfig.IntPropertyFn,
 ) (*schedulerOptions, error) {
 	options := &schedulerOptions{
 		schedulerType: task.SchedulerType(schedulerType),
@@ -275,6 +279,13 @@ func newSchedulerOptions(
 			DispatcherCount: dispatcherCount,
 			RetryPolicy:     common.CreateTaskProcessingRetryPolicy(),
 		}
+		if processRPS != nil {
+			options.fifoSchedulerOptions.RateLimiter = quotas.NewDynamicRateLimiter(
+				func() float64 {
+					return float64(processRPS())
+				},
+			)
+		}
 	case task.SchedulerTypeWRR:
 		options.wrrSchedulerOptions = &task.WeightedRoundRobinTaskSchedulerOptions{
 			Weights:         weights,
@@ -282,6 +293,13 @@ func newSchedulerOptions(
 			WorkerCount:     workerCount,
 			DispatcherCount: dispatcherCount,
 			RetryPolicy:     common.CreateTaskProcessingRetryPolicy(),
+		}
+		if processRPS != nil {
+			options.wrrSchedulerOptions.RateLimiter = quotas.NewDynamicRateLimiter(
+				func() float64 {
+					return float64(processRPS())
+				},
+			)
 		}
 	default:
 		return nil, fmt.Errorf("unknown task scheduler type: %v", schedulerType)

@@ -158,6 +158,7 @@ var keys = map[Key]string{
 	StandbyClusterDelay:                                   "history.standbyClusterDelay",
 	StandbyTaskMissingEventsResendDelay:                   "history.standbyTaskMissingEventsResendDelay",
 	StandbyTaskMissingEventsDiscardDelay:                  "history.standbyTaskMissingEventsDiscardDelay",
+	TaskProcessGlobalRPS:                                  "history.taskProcessGlobalRPS",
 	TaskProcessRPS:                                        "history.taskProcessRPS",
 	TaskSchedulerType:                                     "history.taskSchedulerType",
 	TaskSchedulerWorkerCount:                              "history.taskSchedulerWorkerCount",
@@ -551,7 +552,9 @@ const (
 	// StandbyTaskMissingEventsDiscardDelay is the amount of time standby cluster's will wait (if events are missing)
 	// before discarding the task
 	StandbyTaskMissingEventsDiscardDelay
-	// TaskProcessRPS is the task processing rate per second for each domain
+	// TaskProcessGlobalRPS is the task processing rate per second for each host
+	TaskProcessGlobalRPS
+	// TaskProcessRPS is the task processing rate per second for each domain before being throttled
 	TaskProcessRPS
 	// TaskSchedulerType is the task scheduler type for priority task processor
 	TaskSchedulerType

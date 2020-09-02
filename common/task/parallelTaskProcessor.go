@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -30,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas"
 )
 
 type (
@@ -38,6 +40,7 @@ type (
 		QueueSize   int
 		WorkerCount int
 		RetryPolicy backoff.RetryPolicy
+		RateLimiter quotas.Limiter
 	}
 
 	parallelTaskProcessorImpl struct {
@@ -123,6 +126,10 @@ func (p *parallelTaskProcessorImpl) taskWorker() {
 }
 
 func (p *parallelTaskProcessorImpl) executeTask(task Task) {
+	if p.options.RateLimiter != nil {
+		p.options.RateLimiter.Wait(context.Background())
+	}
+
 	sw := p.metricsScope.StartTimer(metrics.ParallelTaskTaskProcessingLatency)
 	defer sw.Stop()
 
