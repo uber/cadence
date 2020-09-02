@@ -1429,7 +1429,7 @@ Retry_Loop:
 	if len(markers) > 0 {
 		s.logger.Info("Added failover marker", tag.ShardID(s.shardID))
 		s.GetMetricsClient().RecordTimer(
-			metrics.GracefulFailoverLatency,
+			metrics.HistoryFailoverMarkerScope,
 			metrics.GracefulFailoverMarkerCreateLatency,
 			s.GetTimeSource().Now().Sub(markers[0].GetVisibilityTimestamp()),
 		)

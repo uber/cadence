@@ -580,7 +580,7 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(
 		}
 		latency := p.timeSource.Now().Sub(time.Unix(0, task.GetFailoverMarkerAttributes().GetCreationTime()))
 		p.metricsClient.RecordTimer(
-			metrics.GracefulFailoverLatency,
+			metrics.HistoryFailoverMarkerScope,
 			metrics.GracefulFailoverReplicationLatency,
 			latency,
 		)
