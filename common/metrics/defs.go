@@ -1903,6 +1903,8 @@ const (
 	MutableStateChecksumMismatch
 	MutableStateChecksumInvalidated
 	GracefulFailoverLatency
+	GracefulFailoverMarkerCreateLatency
+	GracefulFailoverReplicationLatency
 	FailoverMarkerReplicationLatency
 
 	NumHistoryMetrics
@@ -2366,6 +2368,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
 		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
 		GracefulFailoverLatency:                           {metricName: "graceful_failover_latency", metricType: Timer},
+		GracefulFailoverMarkerCreateLatency:               {metricName: "graceful_failover_create_latency", metricType: Timer},
+		GracefulFailoverReplicationLatency:                {metricName: "graceful_failover_replication_latency", metricType: Timer},
 		FailoverMarkerReplicationLatency:                  {metricName: "failover_marker_replication_latency", metricType: Timer},
 	},
 	Matching: {

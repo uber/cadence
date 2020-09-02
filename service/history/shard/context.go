@@ -1397,6 +1397,9 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 	var err error
 Retry_Loop:
 	for attempt := int32(0); attempt < conditionalRetryCount; attempt++ {
+		if len(markers) > 0 && markers[0].GetTaskID() <= 0 {
+			s.logger.Error("failed to assign task id.")
+		}
 		err = s.executionManager.CreateFailoverMarkerTasks(
 			&persistence.CreateFailoverMarkersRequest{
 				RangeID: s.getRangeID(),
@@ -1422,6 +1425,14 @@ Retry_Loop:
 				tag.Attempt(attempt),
 			)
 		}
+	}
+	if len(markers) > 0 {
+		s.logger.Info("Added failover marker", tag.ShardID(s.shardID))
+		s.GetMetricsClient().RecordTimer(
+			metrics.GracefulFailoverLatency,
+			metrics.GracefulFailoverMarkerCreateLatency,
+			s.GetTimeSource().Now().Sub(markers[0].GetVisibilityTimestamp()),
+		)
 	}
 	return err
 }

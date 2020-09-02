@@ -578,6 +578,15 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(
 		if task != nil {
 			task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
 		}
+		latency := p.timeSource.Now().Sub(time.Unix(0, task.GetFailoverMarkerAttributes().GetCreationTime()))
+		p.metricsClient.RecordTimer(
+			metrics.GracefulFailoverLatency,
+			metrics.GracefulFailoverReplicationLatency,
+			latency,
+		)
+		if latency > 120*time.Second {
+			p.logger.Info("Failover marker replication too slow.", tag.ShardID(p.shard.GetShardID()))
+		}
 		return task, nil
 	default:
 		return nil, errUnknownReplicationTask
@@ -758,7 +767,7 @@ func (p *replicatorQueueProcessorImpl) generateFailoverMarkerTask(
 		FailoverMarkerAttributes: &replicator.FailoverMarkerAttributes{
 			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
-			CreationTime:    common.Int64Ptr(taskInfo.GetVisibilityTimestamp().UnixNano()),
+			CreationTime:    common.Int64Ptr(taskInfo.CreationTime),
 		},
 	}
 }
