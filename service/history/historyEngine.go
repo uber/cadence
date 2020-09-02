@@ -387,10 +387,10 @@ func (e *historyEngineImpl) Start() {
 	e.logger.Info("History engine state changed", tag.LifeCycleStarting)
 	defer e.logger.Info("History engine state changed", tag.LifeCycleStarted)
 
-	e.registerDomainFailoverCallback()
-
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
+
+	e.registerDomainFailoverCallback()
 
 	clusterMetadata := e.shard.GetClusterMetadata()
 	if e.replicatorProcessor != nil && clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC {
