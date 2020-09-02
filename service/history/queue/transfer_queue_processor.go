@@ -253,9 +253,9 @@ func (t *transferQueueProcessor) NotifyNewTask(
 func (t *transferQueueProcessor) FailoverDomain(
 	domainIDs map[string]struct{},
 ) {
-	if atomic.LoadInt32(&t.status) != common.DaemonStatusStarted {
-		return
-	}
+	// if atomic.LoadInt32(&t.status) != common.DaemonStatusStarted {
+	// 	return
+	// }
 
 	minLevel := t.shard.GetTransferClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
