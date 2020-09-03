@@ -322,7 +322,7 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 
 		tasks := make(map[task.Key]task.Task)
 		taskChFull := false
-		for _, taskInfo := range transferTaskInfos {
+		for idx, taskInfo := range transferTaskInfos {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
 				continue
 			}
@@ -336,6 +336,12 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 				return
 			}
 			taskChFull = taskChFull || !submitted
+			if level != defaultProcessingQueueLevel && taskChFull && idx != len(transferTaskInfos)-1 {
+				// stop submitting and buffering new tasks
+				more = true
+				transferTaskInfos = transferTaskInfos[:idx+1]
+				break
+			}
 		}
 
 		var newReadLevel task.Key

@@ -337,7 +337,8 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 
 		tasks := make(map[task.Key]task.Task)
 		taskChFull := false
-		for _, taskInfo := range timerTaskInfos {
+		taskTruncated := false
+		for idx, taskInfo := range timerTaskInfos {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
 				continue
 			}
@@ -351,10 +352,16 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 				return
 			}
 			taskChFull = taskChFull || !submitted
+			if level != defaultProcessingQueueLevel && taskChFull && idx != len(timerTaskInfos)-1 && idx != 0 && !timerTaskInfos[idx].GetVisibilityTimestamp().Equal(timerTaskInfos[idx-1].GetVisibilityTimestamp()) {
+				// stop submitting and buffering new tasks
+				taskTruncated = true
+				timerTaskInfos = timerTaskInfos[:idx+1]
+				break
+			}
 		}
 
 		var newReadLevel task.Key
-		if len(nextPageToken) == 0 {
+		if !taskTruncated && len(nextPageToken) == 0 {
 			newReadLevel = maxReadLevel
 			if lookAheadTask != nil {
 				// lookAheadTask may exist only when nextPageToken is empty
@@ -375,11 +382,13 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 			} else {
 				t.setupBackoffTimer(level)
 			}
-			t.processingQueueReadProgress[level] = timeTaskReadProgress{
-				currentQueue:  activeQueue,
-				readLevel:     readLevel,
-				maxReadLevel:  maxReadLevel,
-				nextPageToken: nextPageToken,
+			if !taskTruncated {
+				t.processingQueueReadProgress[level] = timeTaskReadProgress{
+					currentQueue:  activeQueue,
+					readLevel:     readLevel,
+					maxReadLevel:  maxReadLevel,
+					nextPageToken: nextPageToken,
+				}
 			}
 			newReadLevel = newTimerTaskKey(timerTaskInfos[len(timerTaskInfos)-1].GetVisibilityTimestamp(), 0)
 		}
