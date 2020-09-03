@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -56,7 +55,6 @@ type (
 
 		currentCluster      string
 		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
 		config              *config.Config
 		historyClient       *historyservicetest.MockClient
 		mockDomainCache     *cache.MockDomainCache
@@ -110,8 +108,6 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.nDCHistoryResender = xdc.NewMockNDCHistoryResender(s.controller)
 	s.historyRereplicator = &xdc.MockHistoryRereplicator{}
 
-	s.mockEngine = engine.NewMockEngine(s.controller)
-
 	s.historyClient = historyservicetest.NewMockClient(s.controller)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
@@ -122,7 +118,7 @@ func (s *taskExecutorSuite) SetupTest() {
 		s.mockDomainCache,
 		s.nDCHistoryResender,
 		s.historyRereplicator,
-		s.mockEngine,
+		s.historyClient,
 		metricsClient,
 		s.mockShard.GetLogger(),
 	).(*taskExecutorImpl)
@@ -213,7 +209,7 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 		RunId:      common.StringPtr(runID),
 	}
 
-	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
+	s.historyClient.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
 }
@@ -240,7 +236,7 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_HistoryReplicationTask() {
 		ForceBufferEvents: common.BoolPtr(false),
 	}
 
-	s.mockEngine.EXPECT().ReplicateEvents(gomock.Any(), request).Return(nil).Times(1)
+	s.historyClient.EXPECT().ReplicateEvents(gomock.Any(), request).Return(nil).Times(1)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
 }
@@ -265,7 +261,7 @@ func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 		},
 	}
 
-	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(nil).Times(1)
+	s.historyClient.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(nil).Times(1)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
 }

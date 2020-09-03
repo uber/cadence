@@ -29,13 +29,13 @@ import (
 	"github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	historyClient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/xdc"
-	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -52,7 +52,7 @@ type (
 		domainCache         cache.DomainCache
 		nDCHistoryResender  xdc.NDCHistoryResender
 		historyRereplicator xdc.HistoryRereplicator
-		historyEngine       engine.Engine
+		historyClient       historyClient.Client
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -69,7 +69,7 @@ func NewTaskExecutor(
 	domainCache cache.DomainCache,
 	nDCHistoryResender xdc.NDCHistoryResender,
 	historyRereplicator xdc.HistoryRereplicator,
-	historyEngine engine.Engine,
+	historyClient historyClient.Client,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) TaskExecutor {
@@ -80,7 +80,7 @@ func NewTaskExecutor(
 		domainCache:         domainCache,
 		nDCHistoryResender:  nDCHistoryResender,
 		historyRereplicator: historyRereplicator,
-		historyEngine:       historyEngine,
+		historyClient:       historyClient,
 		metricsClient:       metricsClient,
 		logger:              logger,
 	}
@@ -152,7 +152,7 @@ func (e *taskExecutorImpl) handleActivityTask(
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
-	err = e.historyEngine.SyncActivity(ctx, request)
+	err = e.historyClient.SyncActivity(ctx, request)
 	// Handle resend error
 	retryV2Err, okV2 := e.convertRetryTaskV2Error(err)
 	//TODO: remove handling retry error v1 after 2DC deprecation
@@ -219,7 +219,7 @@ func (e *taskExecutorImpl) handleActivityTask(
 		}
 	}
 	// should try again after back fill the history
-	return e.historyEngine.SyncActivity(ctx, request)
+	return e.historyClient.SyncActivity(ctx, request)
 }
 
 //TODO: remove this part after 2DC deprecation
@@ -254,7 +254,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTask(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 
-	err = e.historyEngine.ReplicateEvents(ctx, request)
+	err = e.historyClient.ReplicateEvents(ctx, request)
 	retryErr, ok := e.convertRetryTaskError(err)
 	if !ok || retryErr.GetRunId() == "" {
 		return err
@@ -278,7 +278,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTask(
 		return err
 	}
 
-	return e.historyEngine.ReplicateEvents(ctx, request)
+	return e.historyClient.ReplicateEvents(ctx, request)
 }
 
 func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
@@ -308,11 +308,12 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 
-	err = e.historyEngine.ReplicateEventsV2(ctx, request)
+	err = e.historyClient.ReplicateEventsV2(ctx, request)
 	retryErr, ok := e.convertRetryTaskV2Error(err)
 	if !ok {
 		return err
 	}
+	e.logger.Error("Encounter resend error", tag.Error(retryErr))
 	e.metricsClient.IncCounter(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientRequests)
 	resendStopWatch := e.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer resendStopWatch.Stop()
@@ -349,7 +350,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 		return err
 	}
 
-	return e.historyEngine.ReplicateEventsV2(ctx, request)
+	return e.historyClient.ReplicateEventsV2(ctx, request)
 }
 
 func (e *taskExecutorImpl) handleFailoverReplicationTask(

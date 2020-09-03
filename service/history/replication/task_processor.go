@@ -414,6 +414,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) 
 		false)
 
 	if err != nil {
+		p.logger.Error("Failed to replication task.", tag.Error(err))
 		p.updateFailureMetric(scope, err)
 	} else {
 		p.logger.Debug("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))

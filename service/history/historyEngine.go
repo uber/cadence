@@ -356,7 +356,7 @@ func NewEngineWithShardContext(
 			shard.GetDomainCache(),
 			nDCHistoryResender,
 			historyRereplicator,
-			historyEngImpl,
+			shard.GetService().GetHistoryClient(),
 			shard.GetMetricsClient(),
 			shard.GetLogger(),
 		)
