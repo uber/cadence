@@ -51,7 +51,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
 	"github.com/uber/cadence/common/reconciliation/invariants"
 	sconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/xdc"
@@ -227,9 +226,10 @@ func NewEngineWithShardContext(
 		failoverMarkerNotifier: failoverMarkerNotifier,
 	}
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
-	pRetry := checks.NewPersistenceRetryer(
+	pRetry := persistence.NewPersistenceRetryer(
 		shard.GetExecutionManager(),
 		shard.GetHistoryManager(),
+		common.CreatePersistenceRetryPolicy(),
 	)
 	openExecutionCheck := invariants.NewConcreteExecutionExists(pRetry)
 
