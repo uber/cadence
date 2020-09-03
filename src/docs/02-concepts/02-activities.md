@@ -10,7 +10,7 @@ Fault-oblivious stateful :workflow: code is the core abstraction of Cadence. But
 Instead they orchestrate execution of :activity:activities:. In its simplest form, a Cadence :activity: is a function or an object method in one of the supported languages.
 Cadence does not recover :activity: state in case of failures. Therefore an :activity: function is allowed to contain any code without restrictions.
 
-:activity:Activities: are invoked asynchronously though :task_list:task_lists:. A :task_list: is essentially a queue used to store an :activity_task: until it is picked up by an available :worker:. The :worker: processes an :activity: by invoking its implementation function. When the function returns, the :worker: reports the result back to the Cadence service which in turn notifies the :workflow: about completion. It is possible to implement an :activity: fully asynchronously by completing it from a different process.
+:activity:Activities: are invoked asynchronously through :task_list:task_lists:. A :task_list: is essentially a queue used to store an :activity_task: until it is picked up by an available :worker:. The :worker: processes an :activity: by invoking its implementation function. When the function returns, the :worker: reports the result back to the Cadence service which in turn notifies the :workflow: about completion. It is possible to implement an :activity: fully asynchronously by completing it from a different process.
 
 ## Timeouts
 
