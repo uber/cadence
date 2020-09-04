@@ -3142,6 +3142,13 @@ func (e *historyEngineImpl) ReapplyEvents(
 
 	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
 	if err != nil {
+		domainEntry, err2 := e.shard.GetDomainCache().GetDomainByID(domainUUID)
+		if err2 != nil {
+			return err2
+		}
+		if domainEntry.IsDomainPendingActive() {
+			return nil
+		}
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
