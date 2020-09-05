@@ -7,3 +7,12 @@ system.minRetentionDays:
 history.EnableConsistentQueryByDomain:
 - value: true
   constraints: {}
+history.queueProcessorEnablePendingTaskSplitByDomainID:
+- value: false
+- value: true
+  constraints:
+    domainID: a4423a05-4b0a-46aa-b9ea-15f5b31d0b01
+history.queueProcessorPollBackoffInterval:
+- value: 100ms
+history.taskSchedulerQueueSize:
+- value: 10000

@@ -120,6 +120,10 @@ func newProcessingQueue(
 		queue.state = copyQueueState(state)
 	}
 
+	if queue.state.readLevel.Less(queue.state.ackLevel) {
+		panic(fmt.Sprintf("ack level larger than readlevel on creation!"))
+	}
+
 	return queue
 }
 
@@ -224,6 +228,12 @@ func (q *processingQueueImpl) Merge(
 		q1.state.domainFilter.Merge(q2.state.domainFilter),
 	))
 
+	for _, state := range newQueueStates {
+		if state.ReadLevel().Less(state.AckLevel()) {
+			panic(fmt.Sprintf("on merge!!! q1 state: %v, q2 state: %v", q1.state, q2.state))
+		}
+	}
+
 	return splitProcessingQueue([]*processingQueueImpl{q1, q2}, newQueueStates, q.logger, q.metricsClient)
 }
 
@@ -231,6 +241,11 @@ func (q *processingQueueImpl) AddTasks(
 	tasks map[task.Key]task.Task,
 	newReadLevel task.Key,
 ) {
+	// TODO: ensure newReadLevel is >= current readLevel and >= all task keys
+	if newReadLevel.Less(q.state.readLevel) {
+		panic(fmt.Sprintf("read level go back!"))
+	}
+
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
 			q.logger.Debug(fmt.Sprintf("Skipping task: %+v. DomainID: %v, WorkflowID: %v, RunID: %v, Type: %v",
@@ -277,6 +292,11 @@ func (q *processingQueueImpl) UpdateAckLevel() (task.Key, int) {
 
 	if timerKey, ok := q.state.ackLevel.(timerTaskKey); ok {
 		q.state.ackLevel = newTimerTaskKey(timerKey.visibilityTimestamp, 0)
+	}
+
+	// TODO: ensure ack level is <= read level
+	if q.state.readLevel.Less(q.state.ackLevel) {
+		panic(fmt.Sprintf("ack level larger than readlevel!"))
 	}
 
 	return q.state.ackLevel, len(q.outstandingTasks)

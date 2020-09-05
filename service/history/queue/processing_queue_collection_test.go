@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -612,6 +613,105 @@ func (s *processingQueueCollectionSuite) TestMerge() {
 				),
 			},
 		},
+		// {
+		// 	currentQueueStates: []ProcessingQueueState{
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 10},
+		// 			testKey{ID: 15},
+		// 			testKey{ID: 20},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain1": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 30},
+		// 			testKey{ID: 40},
+		// 			testKey{ID: 50},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain2": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 60},
+		// 			testKey{ID: 65},
+		// 			testKey{ID: 70},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain2": {}}},
+		// 		),
+		// 	},
+		// 	incomingQueueStates: []ProcessingQueueState{
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 0},
+		// 			testKey{ID: 5},
+		// 			testKey{ID: 15},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain3": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 18},
+		// 			testKey{ID: 18},
+		// 			testKey{ID: 100},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain3": {}}},
+		// 		),
+		// 	},
+		// 	expectedActiveQueueState: newProcessingQueueState(
+		// 		s.level,
+		// 		testKey{ID: 0},
+		// 		testKey{ID: 5},
+		// 		testKey{ID: 8},
+		// 		DomainFilter{DomainIDs: map[string]struct{}{"domain1": {}}},
+		// 	),
+		// 	expectedNewQueueStates: []ProcessingQueueState{
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 0},
+		// 			testKey{ID: 5},
+		// 			testKey{ID: 8},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain1": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 8},
+		// 			testKey{ID: 8},
+		// 			testKey{ID: 10},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain1": {}, "domain3": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 10},
+		// 			testKey{ID: 20},
+		// 			testKey{ID: 20},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain3": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 20},
+		// 			testKey{ID: 20},
+		// 			testKey{ID: 30},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain2": {}, "domain3": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 30},
+		// 			testKey{ID: 35},
+		// 			testKey{ID: 50},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain3": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 60},
+		// 			testKey{ID: 75},
+		// 			testKey{ID: 70},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain2": {}}},
+		// 		),
+		// 		newProcessingQueueState(
+		// 			s.level,
+		// 			testKey{ID: 80},
+		// 			testKey{ID: 90},
+		// 			testKey{ID: 100},
+		// 			DomainFilter{DomainIDs: map[string]struct{}{"domain3": {}}},
+		// 		),
+		// 	},
+		// },
 	}
 
 	for _, tc := range testCases {
@@ -629,6 +729,10 @@ func (s *processingQueueCollectionSuite) TestMerge() {
 
 		queueCollection := NewProcessingQueueCollection(s.level, queues).(*processingQueueCollection)
 		queueCollection.Merge(incomingQueues)
+
+		for _, queue := range queueCollection.Queues() {
+			fmt.Println(queue.State())
+		}
 
 		if tc.expectedActiveQueueState != nil {
 			s.Equal(tc.expectedActiveQueueState, queueCollection.ActiveQueue().State())

@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/uber/cadence/common/log"
@@ -422,6 +423,13 @@ func splitQueueHelper(
 			queueImpl.state.maxLevel,
 			queueImpl.state.domainFilter.copy(),
 		))
+	}
+
+	// TODO: add check for ack <= read <= max read
+	for _, state := range newQueueStates {
+		if state.ReadLevel().Less(state.AckLevel()) {
+			panic(fmt.Sprintf("on split!!! current state: %v, newMaxLevel: %v", queueImpl.State(), newMaxLevel))
+		}
 	}
 
 	return newQueueStates

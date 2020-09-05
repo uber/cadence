@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/uber/cadence/service/history/task"
@@ -145,16 +146,22 @@ func (c *processingQueueCollection) Merge(
 		newQueues = append(newQueues, mergedQueues[:len(mergedQueues)-1]...)
 
 		lastMergedQueue := mergedQueues[len(mergedQueues)-1]
-		if currentQueueIdx+1 == len(c.queues) ||
-			!c.queues[currentQueueIdx+1].State().AckLevel().Less(lastMergedQueue.State().MaxLevel()) {
+		overlapWithCurrentQueue := currentQueueIdx+1 != len(c.queues) &&
+			c.queues[currentQueueIdx+1].State().AckLevel().Less(lastMergedQueue.State().MaxLevel())
+		overlapWithImcomingQueue := incomingQueueIdx+1 != len(incomingQueues) &&
+			incomingQueues[incomingQueueIdx+1].State().AckLevel().Less(lastMergedQueue.State().MaxLevel())
 
+		if !overlapWithCurrentQueue && !overlapWithImcomingQueue {
 			newQueues = append(newQueues, lastMergedQueue)
 			incomingQueueIdx++
-		} else {
+			currentQueueIdx++
+		} else if overlapWithCurrentQueue {
 			incomingQueues[incomingQueueIdx] = lastMergedQueue
+			currentQueueIdx++
+		} else {
+			c.queues[currentQueueIdx] = lastMergedQueue
+			incomingQueueIdx++
 		}
-
-		currentQueueIdx++
 	}
 
 	if incomingQueueIdx < len(incomingQueues) {
@@ -166,6 +173,16 @@ func (c *processingQueueCollection) Merge(
 	}
 
 	c.queues = newQueues
+
+	for idx := range c.queues[1:] {
+		if c.queues[idx+1].State().AckLevel().Less(c.queues[idx].State().MaxLevel()) {
+			str := ""
+			for _, q := range c.queues {
+				str += fmt.Sprintf("%v ", q)
+			}
+			panic("invalid result after merge: " + str)
+		}
+	}
 
 	c.resetActiveQueue()
 }
