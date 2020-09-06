@@ -1772,8 +1772,8 @@ func (s *ExecutionManagerSuite) TestDeleteWorkflow() {
 // TestDeleteCurrentWorkflow test
 func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	if s.ExecutionManager.GetName() != "cassandra" {
+		//"this test is only applicable for cassandra (uses TTL based deletes)"
 		return
-		//s.T().Skip("this test is only applicable for cassandra (uses TTL based deletes)")
 	}
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
