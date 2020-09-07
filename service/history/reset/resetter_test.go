@@ -312,7 +312,7 @@ func (s *workflowResetterSuite) TestGenerateBranchToken() {
 		ShardID:         common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
 
-	newBranchToken, err := s.workflowResetter.generateBranchToken(
+	newBranchToken, err := s.workflowResetter.forkAndGenerateBranchToken(
 		s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
 	)
 	s.NoError(err)
