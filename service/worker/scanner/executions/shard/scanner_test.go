@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/uber/cadence/common/pagination"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -55,9 +57,10 @@ func (s *ScannerSuite) TearDownTest() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(nil, errors.New("iterator error")).Times(1)
+
 	scanner := &scanner{
 		shardID:          0,
 		itr:              mockItr,
@@ -79,7 +82,7 @@ func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 5
@@ -120,7 +123,7 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&common.ConcreteExecution{}, nil).Times(1)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
@@ -153,7 +156,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&common.ConcreteExecution{}, nil).Times(1)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
@@ -186,7 +189,7 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
 	failedWriter := common.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(errors.New("failed writer flush failed")).Times(1)
@@ -213,7 +216,7 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
 	corruptedWriter := common.NewMockExecutionWriter(s.controller)
 	corruptedWriter.EXPECT().Flush().Return(errors.New("corrupted writer flush failed")).Times(1)
@@ -243,7 +246,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
 }
 
 func (s *ScannerSuite) TestScan_Success() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 10

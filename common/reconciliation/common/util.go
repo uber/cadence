@@ -51,36 +51,6 @@ func validateExecution(execution *Execution) error {
 	return nil
 }
 
-// ValidateConcreteExecution returns an error if ConcreteExecution is not valid, nil otherwise.
-func ValidateConcreteExecution(concreteExecution *ConcreteExecution) error {
-	err := validateExecution(&concreteExecution.Execution)
-	if err != nil {
-		return err
-	}
-	if len(concreteExecution.BranchToken) == 0 {
-		return errors.New("empty BranchToken")
-	}
-	if len(concreteExecution.TreeID) == 0 {
-		return errors.New("empty TreeID")
-	}
-	if len(concreteExecution.BranchID) == 0 {
-		return errors.New("empty BranchID")
-	}
-	return nil
-}
-
-// ValidateCurrentExecution returns an error if CurrentExecution is not valid, nil otherwise.
-func ValidateCurrentExecution(currentExecution *CurrentExecution) error {
-	err := validateExecution(&currentExecution.Execution)
-	if err != nil {
-		return err
-	}
-	if len(currentExecution.CurrentRunID) == 0 {
-		return errors.New("empty CurrentRunID")
-	}
-	return nil
-}
-
 // GetBranchToken returns the branchToken, treeID and branchID or error on failure.
 func GetBranchToken(
 	entity *persistence.ListConcreteExecutionsEntity,

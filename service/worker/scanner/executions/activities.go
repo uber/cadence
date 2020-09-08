@@ -55,16 +55,16 @@ const (
 	ErrSerialization = "encountered serialization error"
 )
 
-var scanTypePrefixMap = map[common.ScanType]string{
-	common.ConcreteExecutionType: "", // leave it empty for now to be backwards compatible
-	common.CurrentExecutionType:  "current_executions_",
+var scanTypePrefixMap = map[shard.ScanType]string{
+	shard.ConcreteExecutionType: "", // leave it empty for now to be backwards compatible
+	shard.CurrentExecutionType:  "current_executions_",
 }
 
 type (
 	// ScannerConfigActivityParams is the parameter for ScannerConfigActivity
 	ScannerConfigActivityParams struct {
 		Overwrites ScannerWorkflowConfigOverwrites
-		ScanType   common.ScanType
+		ScanType   shard.ScanType
 	}
 
 	// ScanShardActivityParams is the parameter for ScanShardActivity
@@ -73,7 +73,7 @@ type (
 		ExecutionsPageSize      int
 		BlobstoreFlushThreshold int
 		InvariantCollections    InvariantCollections
-		ScanType                common.ScanType
+		ScanType                shard.ScanType
 	}
 
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
@@ -82,7 +82,7 @@ type (
 		ShardControlFlowFailureCount int
 		AggregateReportResult        AggregateScanReportResult
 		ShardDistributionStats       ShardDistributionStats
-		ScanType                     common.ScanType
+		ScanType                     shard.ScanType
 	}
 
 	// ShardDistributionStats contains stats on the distribution of executions in shards.
@@ -102,14 +102,14 @@ type (
 		ScannerWorkflowWorkflowID string
 		ScannerWorkflowRunID      string
 		StartingShardID           *int
-		ScanType                  common.ScanType
+		ScanType                  shard.ScanType
 	}
 
 	// FixShardActivityParams is the parameter for FixShardActivity
 	FixShardActivityParams struct {
 		CorruptedKeysEntries        []CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
-		ScanType                    common.ScanType
+		ScanType                    shard.ScanType
 	}
 
 	// FixerCorruptedKeysActivityResult is the result of FixerCorruptedKeysActivity
@@ -219,17 +219,21 @@ func scanShard(
 	if params.InvariantCollections.InvariantCollectionMutableState {
 		collections = append(collections, common.InvariantCollectionMutableState)
 	}
+
 	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
-	scanner := shard.NewScanner(
-		shardID,
-		pr,
-		params.ExecutionsPageSize,
-		resources.GetBlobstoreClient(),
-		params.BlobstoreFlushThreshold,
-		collections,
-		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
-		params.ScanType)
-	report := scanner.Scan()
+
+	scannerParams := shard.ScannerParams{
+		Retryer:                 pr,
+		PersistencePageSize:     params.ExecutionsPageSize,
+		BlobstoreClient:         resources.GetBlobstoreClient(),
+		BlobstoreFlushThreshold: params.BlobstoreFlushThreshold,
+		InvariantCollections:    collections,
+		ProgressReportFn:        func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
+	}
+
+	scanner := params.ScanType.ToScanner()
+	report := scanner(scannerParams).Scan()
+
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 	}

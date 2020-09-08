@@ -25,6 +25,8 @@ package executions
 import (
 	"errors"
 
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
+
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/metrics"
@@ -69,15 +71,15 @@ const (
 )
 
 // ScanTypeScannerContextKeyMap maps execution type to the context key used by scanner
-var ScanTypeScannerContextKeyMap = map[common.ScanType]interface{}{
-	common.ConcreteExecutionType: ConcreteScannerContextKey,
-	common.CurrentExecutionType:  CurrentScannerContextKey,
+var ScanTypeScannerContextKeyMap = map[shard.ScanType]interface{}{
+	shard.ConcreteExecutionType: ConcreteScannerContextKey,
+	shard.CurrentExecutionType:  CurrentScannerContextKey,
 }
 
 // ScanTypeFixerContextKeyMap maps execution type to the context key used by fixer
-var ScanTypeFixerContextKeyMap = map[common.ScanType]interface{}{
-	common.ConcreteExecutionType: ConcreteFixerContextKey,
-	common.CurrentExecutionType:  CurrentFixerContextKey,
+var ScanTypeFixerContextKeyMap = map[shard.ScanType]interface{}{
+	shard.ConcreteExecutionType: ConcreteFixerContextKey,
+	shard.CurrentExecutionType:  CurrentFixerContextKey,
 }
 
 type (
@@ -101,7 +103,7 @@ type (
 	ScannerWorkflowParams struct {
 		Shards                          Shards
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
-		ScanType                        common.ScanType
+		ScanType                        shard.ScanType
 	}
 
 	// FixerWorkflowParams are the parameters to the fix workflow
@@ -109,7 +111,7 @@ type (
 		ScannerWorkflowWorkflowID     string
 		ScannerWorkflowRunID          string
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
-		ScanType                      common.ScanType
+		ScanType                      shard.ScanType
 	}
 
 	// Shards identify the shards that should be scanned.

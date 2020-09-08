@@ -64,7 +64,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScannerConfigActivity() {
 		Shards: Shards{
 			List: []int{1, 2, 3},
 		},
-		ScanType: c.ConcreteExecutionType,
+		ScanType: ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Equal("got error getting config", env.GetWorkflowError().Error())
@@ -79,7 +79,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success_Disabled() {
 		Shards: Shards{
 			List: []int{1, 2, 3},
 		},
-		ScanType: c.ConcreteExecutionType,
+		ScanType: ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -155,7 +155,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 
 	env.ExecuteWorkflow(ScannerWorkflow, ScannerWorkflowParams{
 		Shards:   shards,
-		ScanType: c.ConcreteExecutionType,
+		ScanType: ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -319,7 +319,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 	}
 	env.ExecuteWorkflow(ScannerWorkflow, ScannerWorkflowParams{
 		Shards:   shards,
-		ScanType: c.ConcreteExecutionType,
+		ScanType: ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Equal("scan shard activity got error", env.GetWorkflowError().Error())
@@ -427,7 +427,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		env.OnActivity(FixerFixShardActivityName, mock.Anything, FixShardActivityParams{
 			CorruptedKeysEntries:        corruptedKeys,
 			ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
-			ScanType:                    c.ConcreteExecutionType,
+			ScanType:                    ConcreteExecutionType,
 		}).Return(reports, nil)
 	}
 
@@ -435,7 +435,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		ScannerWorkflowWorkflowID:     "test_wid",
 		ScannerWorkflowRunID:          "test_rid",
 		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,
-		ScanType:                      c.ConcreteExecutionType,
+		ScanType:                      ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -587,7 +587,7 @@ func (s *workflowsSuite) TestGetCorruptedKeys_Success() {
 	env.ExecuteWorkflow(getCorruptedKeys, FixerWorkflowParams{
 		ScannerWorkflowWorkflowID: "test_wid",
 		ScannerWorkflowRunID:      "test_rid",
-		ScanType:                  c.ConcreteExecutionType,
+		ScanType:                  ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -635,7 +635,7 @@ func (s *workflowsSuite) TestGetCorruptedKeys_Error() {
 	env.ExecuteWorkflow(getCorruptedKeys, FixerWorkflowParams{
 		ScannerWorkflowWorkflowID: "test_wid",
 		ScannerWorkflowRunID:      "test_rid",
-		ScanType:                  c.ConcreteExecutionType,
+		ScanType:                  ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Error(env.GetWorkflowError())

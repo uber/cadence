@@ -23,6 +23,7 @@
 package common
 
 import (
+	"errors"
 	"time"
 )
 
@@ -115,7 +116,6 @@ type (
 		Info            string
 		InfoDetails     string
 	}
-
 	// FixResult is the result of running Fix.
 	FixResult struct {
 		FixResultType FixResultType
@@ -239,14 +239,33 @@ type (
 	}
 )
 
-type (
-	// ScanType is the enum for representing different entity types to scan
-	ScanType int
-)
+// Validate returns an error if ConcreteExecution is not valid, nil otherwise.
+func (ce *ConcreteExecution) Validate() error {
+	err := validateExecution(&ce.Execution)
+	if err != nil {
+		return err
+	}
+	if len(ce.BranchToken) == 0 {
+		return errors.New("empty BranchToken")
+	}
+	if len(ce.TreeID) == 0 {
+		return errors.New("empty TreeID")
+	}
+	if len(ce.BranchID) == 0 {
+		return errors.New("empty BranchID")
+	}
+	return nil
 
-const (
-	// ConcreteExecutionType concrete execution entity
-	ConcreteExecutionType ScanType = iota
-	// CurrentExecutionType current execution entity
-	CurrentExecutionType
-)
+}
+
+// Validate returns an error if CurrentExecution is not valid, nil otherwise.
+func (curre *CurrentExecution) Validate() error {
+	err := validateExecution(&curre.Execution)
+	if err != nil {
+		return err
+	}
+	if len(curre.CurrentRunID) == 0 {
+		return errors.New("empty CurrentRunID")
+	}
+	return nil
+}

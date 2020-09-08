@@ -83,7 +83,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			params: ScannerConfigActivityParams{
 				Overwrites: ScannerWorkflowConfigOverwrites{},
-				ScanType:   c.ConcreteExecutionType,
+				ScanType:   ConcreteExecutionType,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
 				Enabled:                 true,
@@ -118,7 +118,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 						InvariantCollectionHistory:      true,
 					},
 				},
-				ScanType: c.ConcreteExecutionType,
+				ScanType: ConcreteExecutionType,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
 				Enabled:                 false,
@@ -137,7 +137,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 	for _, tc := range testCases {
 		env := s.NewTestActivityEnvironment()
 		env.SetWorkerOptions(worker.Options{
-			BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeScannerContextKeyMap[c.ConcreteExecutionType], ScannerContext{
+			BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeScannerContextKeyMap[ConcreteExecutionType], ScannerContext{
 				ScannerWorkflowDynamicConfig: tc.scannerWorkflowDynamicConfig,
 			}),
 		})
@@ -179,7 +179,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	}, nil)
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeFixerContextKeyMap[c.ConcreteExecutionType], FixerContext{
+		BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeFixerContextKeyMap[ConcreteExecutionType], FixerContext{
 			Resource: s.mockResource,
 		}),
 	})

@@ -191,7 +191,7 @@ func (s *UtilSuite) TestValidateExecution() {
 	}
 
 	for _, tc := range testCases {
-		err := ValidateConcreteExecution(tc.execution)
+		err := tc.execution.Validate()
 		if tc.expectError {
 			s.Error(err)
 		} else {

@@ -85,6 +85,11 @@ func (pr *persistenceRetryer) GetWorkflowExecution(
 	return resp, nil
 }
 
+// GetShardID return shard id
+func (pr *persistenceRetryer) GetShardID() int {
+	return pr.execManager.GetShardID()
+}
+
 // GetCurrentExecution retries GetCurrentExecution
 func (pr *persistenceRetryer) GetCurrentExecution(
 	req *persistence.GetCurrentExecutionRequest,

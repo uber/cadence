@@ -28,10 +28,10 @@
 package common
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	persistence "github.com/uber/cadence/common/persistence"
+	common "github.com/uber/cadence/common/reconciliation/common"
+	reflect "reflect"
 )
 
 // MockPersistenceRetryer is a mock of PersistenceRetryer interface
@@ -175,6 +175,20 @@ func (mr *MockPersistenceRetryerMockRecorder) DeleteCurrentWorkflowExecution(req
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCurrentWorkflowExecution", reflect.TypeOf((*MockPersistenceRetryer)(nil).DeleteCurrentWorkflowExecution), request)
 }
 
+// GetShardID mocks base method
+func (m *MockPersistenceRetryer) GetShardID() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShardID")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetShardID indicates an expected call of GetShardID
+func (mr *MockPersistenceRetryerMockRecorder) GetShardID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardID", reflect.TypeOf((*MockPersistenceRetryer)(nil).GetShardID))
+}
+
 // MockInvariantManager is a mock of InvariantManager interface
 type MockInvariantManager struct {
 	ctrl     *gomock.Controller
@@ -199,10 +213,10 @@ func (m *MockInvariantManager) EXPECT() *MockInvariantManagerMockRecorder {
 }
 
 // RunChecks mocks base method
-func (m *MockInvariantManager) RunChecks(arg0 interface{}) ManagerCheckResult {
+func (m *MockInvariantManager) RunChecks(arg0 interface{}) common.ManagerCheckResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunChecks", arg0)
-	ret0, _ := ret[0].(ManagerCheckResult)
+	ret0, _ := ret[0].(common.ManagerCheckResult)
 	return ret0
 }
 
@@ -213,10 +227,10 @@ func (mr *MockInvariantManagerMockRecorder) RunChecks(arg0 interface{}) *gomock.
 }
 
 // RunFixes mocks base method
-func (m *MockInvariantManager) RunFixes(arg0 interface{}) ManagerFixResult {
+func (m *MockInvariantManager) RunFixes(arg0 interface{}) common.ManagerFixResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunFixes", arg0)
-	ret0, _ := ret[0].(ManagerFixResult)
+	ret0, _ := ret[0].(common.ManagerFixResult)
 	return ret0
 }
 
@@ -224,20 +238,6 @@ func (m *MockInvariantManager) RunFixes(arg0 interface{}) ManagerFixResult {
 func (mr *MockInvariantManagerMockRecorder) RunFixes(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunFixes", reflect.TypeOf((*MockInvariantManager)(nil).RunFixes), arg0)
-}
-
-// InvariantTypes mocks base method
-func (m *MockInvariantManager) InvariantTypes() []InvariantType {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvariantTypes")
-	ret0, _ := ret[0].([]InvariantType)
-	return ret0
-}
-
-// InvariantTypes indicates an expected call of InvariantTypes
-func (mr *MockInvariantManagerMockRecorder) InvariantTypes() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvariantTypes", reflect.TypeOf((*MockInvariantManager)(nil).InvariantTypes))
 }
 
 // MockInvariant is a mock of Invariant interface
@@ -264,10 +264,10 @@ func (m *MockInvariant) EXPECT() *MockInvariantMockRecorder {
 }
 
 // Check mocks base method
-func (m *MockInvariant) Check(arg0 interface{}) CheckResult {
+func (m *MockInvariant) Check(arg0 interface{}) common.CheckResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Check", arg0)
-	ret0, _ := ret[0].(CheckResult)
+	ret0, _ := ret[0].(common.CheckResult)
 	return ret0
 }
 
@@ -278,10 +278,10 @@ func (mr *MockInvariantMockRecorder) Check(arg0 interface{}) *gomock.Call {
 }
 
 // Fix mocks base method
-func (m *MockInvariant) Fix(arg0 interface{}) FixResult {
+func (m *MockInvariant) Fix(arg0 interface{}) common.FixResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fix", arg0)
-	ret0, _ := ret[0].(FixResult)
+	ret0, _ := ret[0].(common.FixResult)
 	return ret0
 }
 
@@ -292,10 +292,10 @@ func (mr *MockInvariantMockRecorder) Fix(arg0 interface{}) *gomock.Call {
 }
 
 // InvariantType mocks base method
-func (m *MockInvariant) InvariantType() InvariantType {
+func (m *MockInvariant) InvariantType() common.InvariantType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvariantType")
-	ret0, _ := ret[0].(InvariantType)
+	ret0, _ := ret[0].(common.InvariantType)
 	return ret0
 }
 
@@ -381,10 +381,10 @@ func (m *MockScanOutputIterator) EXPECT() *MockScanOutputIteratorMockRecorder {
 }
 
 // Next mocks base method
-func (m *MockScanOutputIterator) Next() (*ScanOutputEntity, error) {
+func (m *MockScanOutputIterator) Next() (*common.ScanOutputEntity, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Next")
-	ret0, _ := ret[0].(*ScanOutputEntity)
+	ret0, _ := ret[0].(*common.ScanOutputEntity)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -461,10 +461,10 @@ func (mr *MockExecutionWriterMockRecorder) Flush() *gomock.Call {
 }
 
 // FlushedKeys mocks base method
-func (m *MockExecutionWriter) FlushedKeys() *Keys {
+func (m *MockExecutionWriter) FlushedKeys() *common.Keys {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FlushedKeys")
-	ret0, _ := ret[0].(*Keys)
+	ret0, _ := ret[0].(*common.Keys)
 	return ret0
 }
 
@@ -498,10 +498,10 @@ func (m *MockScanner) EXPECT() *MockScannerMockRecorder {
 }
 
 // Scan mocks base method
-func (m *MockScanner) Scan() ShardScanReport {
+func (m *MockScanner) Scan() common.ShardScanReport {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Scan")
-	ret0, _ := ret[0].(ShardScanReport)
+	ret0, _ := ret[0].(common.ShardScanReport)
 	return ret0
 }
 
@@ -535,10 +535,10 @@ func (m *MockFixer) EXPECT() *MockFixerMockRecorder {
 }
 
 // Fix mocks base method
-func (m *MockFixer) Fix() ShardFixReport {
+func (m *MockFixer) Fix() common.ShardFixReport {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fix")
-	ret0, _ := ret[0].(ShardFixReport)
+	ret0, _ := ret[0].(common.ShardFixReport)
 	return ret0
 }
 

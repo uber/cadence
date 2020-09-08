@@ -53,16 +53,27 @@ func NewFixer(
 	blobstoreFlushThreshold int,
 	invariantCollections []common.InvariantCollection,
 	progressReportFn func(),
-	scanType common.ScanType,
+	scanType ScanType,
 ) common.Fixer {
 	id := uuid.New()
+
+	var ivs []common.Invariant
+	for _, collection := range invariantCollections {
+		switch collection {
+		case common.InvariantCollectionHistory:
+			ivs = append(ivs, []common.Invariant{invariants.NewHistoryExists(pr)}...)
+		case common.InvariantCollectionMutableState:
+			ivs = append(ivs, []common.Invariant{invariants.NewOpenCurrentExecution(pr)}...)
+		}
+	}
+
 	return &fixer{
 		shardID:          shardID,
-		itr:              common.NewBlobstoreIterator(blobstoreClient, keys, scanType),
+		itr:              common.NewBlobstoreIterator(blobstoreClient, keys, scanType.ToBlobstoreEntity()),
 		skippedWriter:    common.NewBlobstoreWriter(id, common.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
 		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		fixedWriter:      common.NewBlobstoreWriter(id, common.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariants.NewInvariantManager(invariantCollections, pr, scanType),
+		invariantManager: invariants.NewInvariantManager(ivs),
 		progressReportFn: progressReportFn,
 	}
 }

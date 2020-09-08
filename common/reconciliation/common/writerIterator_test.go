@@ -59,8 +59,9 @@ func (s *WriterIteratorSuite) SetupTest() {
 }
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
-	pr := NewPersistenceRetryer(getMockExecutionManager(10, 10), nil)
-	pItr := NewPersistenceIterator(pr, executionPageSize, testShardID, ConcreteExecutionType)
+	f := func(token pagination.PageToken) (pagination.Page, error) { return pagination.Page{}, nil }
+	pItr := pagination.NewIterator(nil, f)
+
 	uuid := "uuid"
 	extension := Extension("test")
 	outputDir, err := ioutil.TempDir("", "TestWriterIterator")
@@ -92,7 +93,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 	s.Equal(0, flushedKeys.MinPage)
 	s.Equal(9, flushedKeys.MaxPage)
 	s.Equal(Extension("test"), flushedKeys.Extension)
-	blobstoreItr := NewBlobstoreIterator(blobstore, *flushedKeys, ConcreteExecutionType)
+	blobstoreItr := NewBlobstoreIterator(blobstore, *flushedKeys, &ConcreteExecution{})
 	i := 0
 	s.True(blobstoreItr.HasNext())
 	for blobstoreItr.HasNext() {

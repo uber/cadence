@@ -37,6 +37,7 @@ type (
 		ReadHistoryBranch(*persistence.ReadHistoryBranchRequest) (*persistence.ReadHistoryBranchResponse, error)
 		DeleteWorkflowExecution(*persistence.DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(request *persistence.DeleteCurrentWorkflowExecutionRequest) error
+		GetShardID() int
 	}
 
 	// InvariantManager represents a manager of several invariants.
@@ -44,7 +45,6 @@ type (
 	InvariantManager interface {
 		RunChecks(interface{}) ManagerCheckResult
 		RunFixes(interface{}) ManagerFixResult
-		InvariantTypes() []InvariantType
 	}
 
 	// Invariant represents an invariant of a single execution.

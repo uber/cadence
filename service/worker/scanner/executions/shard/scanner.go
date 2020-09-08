@@ -25,45 +25,20 @@ package shard
 import (
 	"fmt"
 
-	"github.com/pborman/uuid"
-
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/invariants"
 )
 
 type (
 	scanner struct {
 		shardID          int
-		itr              common.ExecutionIterator
+		itr              pagination.Iterator
 		failedWriter     common.ExecutionWriter
 		corruptedWriter  common.ExecutionWriter
 		invariantManager common.InvariantManager
 		progressReportFn func()
 	}
 )
-
-// NewScanner constructs a new scanner
-func NewScanner(
-	shardID int,
-	pr common.PersistenceRetryer,
-	persistencePageSize int,
-	blobstoreClient blobstore.Client,
-	blobstoreFlushThreshold int,
-	invariantCollections []common.InvariantCollection,
-	progressReportFn func(),
-	scanType common.ScanType,
-) common.Scanner {
-	id := uuid.New()
-	return &scanner{
-		shardID:          shardID,
-		itr:              common.NewPersistenceIterator(pr, persistencePageSize, shardID, scanType),
-		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
-		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariants.NewInvariantManager(invariantCollections, pr, scanType),
-		progressReportFn: progressReportFn,
-	}
-}
 
 // Scan scans over all executions in shard and runs invariant checks per execution.
 func (s *scanner) Scan() common.ShardScanReport {
