@@ -30,7 +30,6 @@ package common
 import (
 	gomock "github.com/golang/mock/gomock"
 	persistence "github.com/uber/cadence/common/persistence"
-	common "github.com/uber/cadence/common/reconciliation/common"
 	reflect "reflect"
 )
 
@@ -213,10 +212,10 @@ func (m *MockInvariantManager) EXPECT() *MockInvariantManagerMockRecorder {
 }
 
 // RunChecks mocks base method
-func (m *MockInvariantManager) RunChecks(arg0 interface{}) common.ManagerCheckResult {
+func (m *MockInvariantManager) RunChecks(arg0 interface{}) ManagerCheckResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunChecks", arg0)
-	ret0, _ := ret[0].(common.ManagerCheckResult)
+	ret0, _ := ret[0].(ManagerCheckResult)
 	return ret0
 }
 
@@ -227,10 +226,10 @@ func (mr *MockInvariantManagerMockRecorder) RunChecks(arg0 interface{}) *gomock.
 }
 
 // RunFixes mocks base method
-func (m *MockInvariantManager) RunFixes(arg0 interface{}) common.ManagerFixResult {
+func (m *MockInvariantManager) RunFixes(arg0 interface{}) ManagerFixResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunFixes", arg0)
-	ret0, _ := ret[0].(common.ManagerFixResult)
+	ret0, _ := ret[0].(ManagerFixResult)
 	return ret0
 }
 
@@ -264,10 +263,10 @@ func (m *MockInvariant) EXPECT() *MockInvariantMockRecorder {
 }
 
 // Check mocks base method
-func (m *MockInvariant) Check(arg0 interface{}) common.CheckResult {
+func (m *MockInvariant) Check(arg0 interface{}) CheckResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Check", arg0)
-	ret0, _ := ret[0].(common.CheckResult)
+	ret0, _ := ret[0].(CheckResult)
 	return ret0
 }
 
@@ -278,10 +277,10 @@ func (mr *MockInvariantMockRecorder) Check(arg0 interface{}) *gomock.Call {
 }
 
 // Fix mocks base method
-func (m *MockInvariant) Fix(arg0 interface{}) common.FixResult {
+func (m *MockInvariant) Fix(arg0 interface{}) FixResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fix", arg0)
-	ret0, _ := ret[0].(common.FixResult)
+	ret0, _ := ret[0].(FixResult)
 	return ret0
 }
 
@@ -292,10 +291,10 @@ func (mr *MockInvariantMockRecorder) Fix(arg0 interface{}) *gomock.Call {
 }
 
 // InvariantType mocks base method
-func (m *MockInvariant) InvariantType() common.InvariantType {
+func (m *MockInvariant) InvariantType() InvariantType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvariantType")
-	ret0, _ := ret[0].(common.InvariantType)
+	ret0, _ := ret[0].(InvariantType)
 	return ret0
 }
 
@@ -381,10 +380,10 @@ func (m *MockScanOutputIterator) EXPECT() *MockScanOutputIteratorMockRecorder {
 }
 
 // Next mocks base method
-func (m *MockScanOutputIterator) Next() (*common.ScanOutputEntity, error) {
+func (m *MockScanOutputIterator) Next() (*ScanOutputEntity, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Next")
-	ret0, _ := ret[0].(*common.ScanOutputEntity)
+	ret0, _ := ret[0].(*ScanOutputEntity)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -461,10 +460,10 @@ func (mr *MockExecutionWriterMockRecorder) Flush() *gomock.Call {
 }
 
 // FlushedKeys mocks base method
-func (m *MockExecutionWriter) FlushedKeys() *common.Keys {
+func (m *MockExecutionWriter) FlushedKeys() *Keys {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FlushedKeys")
-	ret0, _ := ret[0].(*common.Keys)
+	ret0, _ := ret[0].(*Keys)
 	return ret0
 }
 
@@ -498,10 +497,10 @@ func (m *MockScanner) EXPECT() *MockScannerMockRecorder {
 }
 
 // Scan mocks base method
-func (m *MockScanner) Scan() common.ShardScanReport {
+func (m *MockScanner) Scan() ShardScanReport {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Scan")
-	ret0, _ := ret[0].(common.ShardScanReport)
+	ret0, _ := ret[0].(ShardScanReport)
 	return ret0
 }
 
@@ -535,10 +534,10 @@ func (m *MockFixer) EXPECT() *MockFixerMockRecorder {
 }
 
 // Fix mocks base method
-func (m *MockFixer) Fix() common.ShardFixReport {
+func (m *MockFixer) Fix() ShardFixReport {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Fix")
-	ret0, _ := ret[0].(common.ShardFixReport)
+	ret0, _ := ret[0].(ShardFixReport)
 	return ret0
 }
 
