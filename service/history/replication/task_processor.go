@@ -290,11 +290,11 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 
 	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
 	batchRequestStartTime := time.Now()
-	ctx := context.Background()
+	//ctx := context.Background()
 	for _, replicationTask := range response.ReplicationTasks {
 		// TODO: move to MultiStageRateLimiter
-		_ = p.hostRateLimiter.Wait(ctx)
-		_ = p.shardRateLimiter.Wait(ctx)
+		//_ = p.hostRateLimiter.Wait(ctx)
+		//_ = p.shardRateLimiter.Wait(ctx)
 		err := p.processSingleTask(replicationTask)
 		if err != nil {
 			// Processor is shutdown. Exit without updating the checkpoint.
@@ -414,6 +414,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) 
 		false)
 
 	if err != nil {
+		p.logger.Error("Failed to replication task.", tag.Error(err))
 		p.updateFailureMetric(scope, err)
 	} else {
 		p.logger.Debug("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
