@@ -428,7 +428,7 @@ func splitQueueHelper(
 	// TODO: add check for ack <= read <= max read
 	for _, state := range newQueueStates {
 		if state.ReadLevel().Less(state.AckLevel()) {
-			panic(fmt.Sprintf("on split!!! current state: %v, newMaxLevel: %v", queueImpl.State(), newMaxLevel))
+			panic(fmt.Sprintf("potential code bug on split. current state: %v, newMaxLevel: %v", queueImpl.State(), newMaxLevel))
 		}
 	}
 

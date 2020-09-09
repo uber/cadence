@@ -230,7 +230,7 @@ func (q *processingQueueImpl) Merge(
 
 	for _, state := range newQueueStates {
 		if state.ReadLevel().Less(state.AckLevel()) {
-			panic(fmt.Sprintf("on merge!!! q1 state: %v, q2 state: %v", q1.state, q2.state))
+			panic(fmt.Sprintf("potential code bug on merge q1 state: %v, q2 state: %v", q1.state, q2.state))
 		}
 	}
 
@@ -243,13 +243,15 @@ func (q *processingQueueImpl) AddTasks(
 ) {
 	// TODO: ensure newReadLevel is >= current readLevel and >= all task keys
 	if newReadLevel.Less(q.state.readLevel) {
-		panic(fmt.Sprintf("read level go back!"))
+		panic(fmt.Sprintf("read level move backward!"))
 	}
 
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
 			q.logger.Debug(fmt.Sprintf("Skipping task: %+v. DomainID: %v, WorkflowID: %v, RunID: %v, Type: %v",
 				key, task.GetDomainID(), task.GetWorkflowID(), task.GetRunID(), task.GetTaskType()))
+			// TODO: this means task has been submitted before, we should mark the task state accordingly and
+			// do not submit this task again in transfer/timer queue processor base
 			continue
 		}
 
@@ -278,6 +280,14 @@ func (q *processingQueueImpl) UpdateAckLevel() (task.Key, int) {
 	})
 
 	for _, key := range keys {
+		if q.state.readLevel.Less(key) {
+			// this can happen as during merge read level can move backward
+			// besides that for time task key, readLevel is expected to be less than task key
+			// as the taskID for read level is always 0. This means we can potentially buffer
+			// more timer tasks in memory. If this becomes a problem, we can change this logic.
+			break
+		}
+
 		if q.outstandingTasks[key].State() != t.TaskStateAcked {
 			break
 		}
