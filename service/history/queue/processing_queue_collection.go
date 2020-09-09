@@ -174,13 +174,15 @@ func (c *processingQueueCollection) Merge(
 
 	c.queues = newQueues
 
-	for idx := range c.queues[1:] {
-		if c.queues[idx+1].State().AckLevel().Less(c.queues[idx].State().MaxLevel()) {
-			str := ""
-			for _, q := range c.queues {
-				str += fmt.Sprintf("%v ", q)
+	if len(c.queues) != 0 {
+		for idx := range c.queues[1:] {
+			if c.queues[idx+1].State().AckLevel().Less(c.queues[idx].State().MaxLevel()) {
+				str := ""
+				for _, q := range c.queues {
+					str += fmt.Sprintf("%v ", q)
+				}
+				panic("invalid result after merge: " + str)
 			}
-			panic("invalid result after merge: " + str)
 		}
 	}
 
