@@ -28,7 +28,6 @@ import (
 
 type (
 	persistenceIterator struct {
-		pf  PersistenceFetcher
 		itr pagination.Iterator
 	}
 )
@@ -36,12 +35,9 @@ type (
 // NewPersistenceIterator returns a new paginated iterator over persistence
 func NewPersistenceIterator(
 	pf PersistenceFetcher,
-
 ) ExecutionIterator {
-	pi := &persistenceIterator{
-		pf: pf,
-	}
-	pi.itr = pagination.NewIterator(nil, pi.fetch)
+	pi := &persistenceIterator{}
+	pi.itr = pagination.NewIterator(nil, pf.Fetch)
 	return pi
 }
 
@@ -58,30 +54,4 @@ func (pi *persistenceIterator) Next() (interface{}, error) {
 // HasNext returns true if there is another execution, false otherwise.
 func (pi *persistenceIterator) HasNext() bool {
 	return pi.itr.HasNext()
-}
-
-func (pi *persistenceIterator) fetch(token pagination.PageToken) (pagination.Page, error) {
-
-	var pageToken interface{}
-
-	if token != nil {
-		pageToken = token.([]byte)
-	}
-	resp, err := pi.pf.Fetch(pageToken)
-	var a []pagination.Entity
-	for _, i := range resp {
-		a = append(a, i.(pagination.Entity))
-	}
-
-	page := pagination.Page{
-		CurrentToken: token,
-		NextToken:    nextToken,
-		Entities:     a,
-	}
-
-	if err != nil {
-		return pagination.Page{}, err
-	}
-	return resp, nil
-
 }

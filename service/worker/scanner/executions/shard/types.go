@@ -24,6 +24,7 @@ package shard
 
 import (
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
 	"github.com/uber/cadence/common/reconciliation/invariants"
 )
@@ -52,8 +53,8 @@ func (st ScanType) ToBlobstoreEntity() common.BlobstoreEntity {
 }
 
 // ToInvariants returns list of invariants to be checked
-func (st ScanType) ToInvariants(collections []common.InvariantCollection) []func(retryer common.PersistenceRetryer) common.Invariant {
-	var fns []func(retryer common.PersistenceRetryer) common.Invariant
+func (st ScanType) ToInvariants(collections []common.InvariantCollection) []func(retryer persistence.Retryer) common.Invariant {
+	var fns []func(retryer persistence.Retryer) common.Invariant
 	switch st {
 	case ConcreteExecutionType:
 		for _, collection := range collections {
@@ -92,10 +93,10 @@ func (st ScanType) ToScanner() func(ScannerParams) common.Scanner {
 
 // ScannerParams holds list of arguments used when creating a Scanner
 type ScannerParams struct {
-	Retryer                 common.PersistenceRetryer
+	Retryer                 persistence.Retryer
 	PersistencePageSize     int
 	BlobstoreClient         blobstore.Client
 	BlobstoreFlushThreshold int
-	InvariantCollections    []common.InvariantCollection
+	Invariants              []common.Invariant
 	ProgressReportFn        func()
 }

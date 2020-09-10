@@ -37,6 +37,7 @@ type Retryer interface {
 	ReadHistoryBranch(*ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
 	DeleteWorkflowExecution(*DeleteWorkflowExecutionRequest) error
 	DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
+	GetShardID() int
 }
 
 type (

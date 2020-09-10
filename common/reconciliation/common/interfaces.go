@@ -24,24 +24,9 @@
 
 package common
 
-import (
-	"github.com/uber/cadence/common/persistence"
-)
+import "github.com/uber/cadence/common/pagination"
 
 type (
-	// PersistenceRetryer is used to retry requests to persistence
-	PersistenceRetryer interface {
-		ListConcreteExecutions(*persistence.ListConcreteExecutionsRequest) (*persistence.ListConcreteExecutionsResponse, error)
-		ListCurrentExecutions(request *persistence.ListCurrentExecutionsRequest) (*persistence.ListCurrentExecutionsResponse, error)
-		GetWorkflowExecution(*persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
-		GetCurrentExecution(*persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse, error)
-		IsWorkflowExecutionExists(request *persistence.IsWorkflowExecutionExistsRequest) (*persistence.IsWorkflowExecutionExistsResponse, error)
-		ReadHistoryBranch(*persistence.ReadHistoryBranchRequest) (*persistence.ReadHistoryBranchResponse, error)
-		DeleteWorkflowExecution(*persistence.DeleteWorkflowExecutionRequest) error
-		DeleteCurrentWorkflowExecution(request *persistence.DeleteCurrentWorkflowExecutionRequest) error
-		GetShardID() int
-	}
-
 	// InvariantManager represents a manager of several invariants.
 	// It can be used to run a group of invariant checks or fixes.
 	InvariantManager interface {
@@ -69,8 +54,7 @@ type (
 	}
 
 	PersistenceFetcher interface {
-		Fetch(token interface{}) ([]interface{}, error)
-		ToEntity()
+		Fetch(token pagination.PageToken) (pagination.Page, error)
 	}
 
 	// ScanOutputIterator gets ScanOutputEntities from underlying store

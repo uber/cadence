@@ -222,13 +222,17 @@ func scanShard(
 	}
 
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
+	var ivs []common.Invariant
+	for _, fn := range params.ScanType.ToInvariants(collections) {
+		ivs = append(ivs, fn(pr))
+	}
 
 	scannerParams := shard.ScannerParams{
 		Retryer:                 pr,
 		PersistencePageSize:     params.ExecutionsPageSize,
 		BlobstoreClient:         resources.GetBlobstoreClient(),
 		BlobstoreFlushThreshold: params.BlobstoreFlushThreshold,
-		InvariantCollections:    collections,
+		Invariants:              ivs,
 		ProgressReportFn:        func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 	}
 
