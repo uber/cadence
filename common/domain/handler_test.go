@@ -22,6 +22,7 @@ package domain
 
 import (
 	"context"
+
 	"log"
 	"os"
 	"testing"
@@ -41,7 +42,8 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/cassandra"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -49,7 +51,7 @@ import (
 type (
 	domainHandlerCommonSuite struct {
 		suite.Suite
-		persistencetests.TestBase
+		pt.TestBase
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
@@ -65,6 +67,23 @@ type (
 
 var nowInt64 = time.Now().UnixNano()
 
+// NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
+func NewTestBaseWithCassandra(options *pt.TestBaseOptions) pt.TestBase {
+	if options.DBName == "" {
+		options.DBName = "test_" + pt.GenerateRandomDBName(10)
+	}
+	testCluster := cassandra.NewTestCluster(
+		options.DBName,
+		options.DBUsername,
+		options.DBPassword,
+		options.DBHost,
+		options.DBPort,
+		options.SchemaDir,
+	)
+
+	return pt.NewTestBase(options, testCluster)
+}
+
 func TestDomainHandlerCommonSuite(t *testing.T) {
 	s := new(domainHandlerCommonSuite)
 	suite.Run(t, s)
@@ -75,7 +94,7 @@ func (s *domainHandlerCommonSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = NewTestBaseWithCassandra(&pt.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true, true),
 	})
 	s.TestBase.Setup()

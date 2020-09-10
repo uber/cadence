@@ -69,7 +69,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(false, false),
 	})
 	s.TestBase.Setup()
