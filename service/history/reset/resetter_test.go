@@ -191,7 +191,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		gomock.Any(),
 		execution.TransactionPolicyActive,
 	).Return(resetSnapshot, resetEventsSeq, nil).Times(1)
-	resetContext.EXPECT().PersistFirstWorkflowEvents(resetEventsSeq[0]).Return(resetEventsSize, nil).Times(1)
+	resetContext.EXPECT().PersistNonFirstWorkflowEvents(resetEventsSeq[0]).Return(resetEventsSize, nil).Times(1)
 	resetContext.EXPECT().CreateWorkflowExecution(
 		resetSnapshot,
 		resetEventsSize,
