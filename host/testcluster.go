@@ -21,6 +21,7 @@
 package host
 
 import (
+	"github.com/uber/cadence/common/persistence/cassandra"
 	"io/ioutil"
 	"os"
 
@@ -133,7 +134,15 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		options.Persistence.SchemaDir = ops.SchemaDir
 	}
 	options.Persistence.ClusterMetadata = clusterMetadata
-	testBase := persistencetests.NewTestBase(&options.Persistence)
+	testCluster := cassandra.NewTestCluster(
+		options.Persistence.DBName,
+		options.Persistence.DBUsername,
+		options.Persistence.DBPassword,
+		options.Persistence.DBHost,
+		options.Persistence.DBPort,
+		options.Persistence.SchemaDir,
+	)
+	testBase := persistencetests.NewTestBase(&options.Persistence, testCluster)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
