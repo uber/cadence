@@ -285,6 +285,11 @@ func (r *workflowResetterImpl) persistToDB(
 	if err != nil {
 		return err
 	}
+	if len(resetWorkflowEventsSeq) != 1{
+		return &shared.InternalServiceError{
+			Message: "there should be EXACTLY one batch of events for reset",
+		}
+	}
 	resetHistorySize, err := resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
