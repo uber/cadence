@@ -28,6 +28,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
+
+	"github.com/uber/cadence/common/codec"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -59,8 +63,9 @@ func (s *WriterIteratorSuite) SetupTest() {
 }
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
-	f := func(token pagination.PageToken) (pagination.Page, error) { return pagination.Page{}, nil }
-	pItr := pagination.NewIterator(nil, f)
+
+	pr := NewPersistenceRetryer(getMockExecutionManager(10, 10), nil)
+	pItr := pagination.NewIterator(nil, shard.GetConcreteExecutionsPersistenceFetchPageFn(pr, codec.NewThriftRWEncoder(), executionPageSize))
 
 	uuid := "uuid"
 	extension := Extension("test")
@@ -70,9 +75,9 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 	cfg := &config.FileBlobstore{
 		OutputDirectory: outputDir,
 	}
-	blobstore, err := filestore.NewFilestoreClient(cfg)
+	client, err := filestore.NewFilestoreClient(cfg)
 	s.NoError(err)
-	blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstore, 10)
+	blobstoreWriter := NewBlobstoreWriter(uuid, extension, client, 10)
 	var outputs []*ScanOutputEntity
 	for pItr.HasNext() {
 		exec, err := pItr.Next()
@@ -93,7 +98,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 	s.Equal(0, flushedKeys.MinPage)
 	s.Equal(9, flushedKeys.MaxPage)
 	s.Equal(Extension("test"), flushedKeys.Extension)
-	blobstoreItr := NewBlobstoreIterator(blobstore, *flushedKeys, &ConcreteExecution{})
+	blobstoreItr := NewBlobstoreIterator(client, *flushedKeys, &ConcreteExecution{})
 	i := 0
 	s.True(blobstoreItr.HasNext())
 	for blobstoreItr.HasNext() {
@@ -122,6 +127,7 @@ func getMockExecutionManager(pages int, countPerPage int) persistence.ExecutionM
 			resp.PageToken = nil
 		}
 		execManager.On("ListConcreteExecutions", req).Return(resp, nil)
+		execManager.On("GetShardID").Return(testShardID)
 	}
 	return execManager
 }

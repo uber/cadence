@@ -109,17 +109,16 @@ func getBlobstoreFetchPageFn(
 }
 
 func deserialize(data []byte, entity BlobstoreEntity) (*ScanOutputEntity, error) {
+	soe := &ScanOutputEntity{
+		Execution: entity,
+	}
 
-	if err := json.Unmarshal(data, entity); err != nil {
+	if err := json.Unmarshal(data, soe); err != nil {
 		return nil, err
 	}
 
-	if err := entity.Validate(); err != nil {
+	if err := soe.Execution.(BlobstoreEntity).Validate(); err != nil {
 		return nil, err
 	}
-	soe := ScanOutputEntity{
-		Execution: &entity,
-	}
-
-	return &soe, nil
+	return soe, nil
 }

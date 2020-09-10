@@ -25,14 +25,14 @@ package shard
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/pagination"
+	"github.com/pborman/uuid"
 	"github.com/uber/cadence/common/reconciliation/common"
 )
 
 type (
-	scanner struct {
+	Scanner struct {
 		shardID          int
-		itr              pagination.Iterator
+		itr              common.ExecutionIterator
 		failedWriter     common.ExecutionWriter
 		corruptedWriter  common.ExecutionWriter
 		invariantManager common.InvariantManager
@@ -40,8 +40,18 @@ type (
 	}
 )
 
+func NewScannerConfig(params ScannerParams) Scanner {
+	id := uuid.New()
+	return Scanner{
+		shardID:          params.Retryer.GetShardID(),
+		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
+		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
+		progressReportFn: params.ProgressReportFn,
+	}
+}
+
 // Scan scans over all executions in shard and runs invariant checks per execution.
-func (s *scanner) Scan() common.ShardScanReport {
+func (s *Scanner) Scan() common.ShardScanReport {
 	result := common.ShardScanReport{
 		ShardID: s.shardID,
 		Stats: common.ShardScanStats{

@@ -40,7 +40,7 @@ const (
 	CurrentExecutionType
 )
 
-// ToBlobstoreEntity picks struct depending on scanner type
+// ToBlobstoreEntity picks struct depending on Scanner type
 func (st ScanType) ToBlobstoreEntity() common.BlobstoreEntity {
 	switch st {
 	case ConcreteExecutionType:
@@ -90,7 +90,7 @@ func (st ScanType) ToScanner() func(ScannerParams) common.Scanner {
 	}
 }
 
-// ScannerParams holds list of arguments used when creating a scanner
+// ScannerParams holds list of arguments used when creating a Scanner
 type ScannerParams struct {
 	Retryer                 common.PersistenceRetryer
 	PersistencePageSize     int

@@ -32,7 +32,75 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariants"
 )
 
-// NewConcreteExecutionScanner returns a scanner which scans concrete executions
+type Fetcher struct {
+	pageSize int
+	pr       common.PersistenceRetryer
+}
+
+func NewFetcher(pr common.PersistenceRetryer, pageSize int) common.PersistenceFetcher {
+	return &Fetcher{
+		pr:       pr,
+		pageSize: pageSize,
+	}
+}
+
+func (f Fetcher) Fetch(token interface{}) ([]interface{}, error) {
+	req := &persistence.ListConcreteExecutionsRequest{
+		PageSize: f.pageSize,
+	}
+
+	if token != nil {
+		req.PageToken = token.([]byte)
+	}
+
+	resp, err := f.pr.ListConcreteExecutions(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var executions []pagination.Entity
+
+	for i, e := range resp.Executions {
+		branchToken, treeID, branchID, err := common.GetBranchToken(e, codec.NewThriftRWEncoder())
+		if err != nil {
+			return nil, err
+		}
+		concreteExec := &common.ConcreteExecution{
+			BranchToken: branchToken,
+			TreeID:      treeID,
+			BranchID:    branchID,
+			Execution: common.Execution{
+				ShardID:    f.pr.GetShardID(),
+				DomainID:   e.ExecutionInfo.DomainID,
+				WorkflowID: e.ExecutionInfo.WorkflowID,
+				RunID:      e.ExecutionInfo.RunID,
+				State:      e.ExecutionInfo.State,
+			},
+		}
+		if err := concreteExec.Validate(); err != nil {
+			return nil, err
+		}
+		executions[i] = concreteExec
+	}
+
+	var nextToken interface{} = resp.PageToken
+	if len(resp.PageToken) == 0 {
+		nextToken = nil
+	}
+	page := pagination.Page{
+		CurrentToken: token,
+		NextToken:    nextToken,
+		Entities:     executions,
+	}
+	return executions, nil
+
+}
+
+func (f Fetcher) ToEntity() {
+	panic("implement me")
+}
+
+// NewConcreteExecutionScanner returns a Scanner which scans concrete executions
 func NewConcreteExecutionScanner(
 	params ScannerParams,
 ) common.Scanner {
@@ -44,9 +112,13 @@ func NewConcreteExecutionScanner(
 		ivs = append(ivs, fn(pr))
 	}
 
-	return &scanner{
+	fetcher := NewFetcher(pr, params.PersistencePageSize)
+
+	iterator := common.NewPersistenceIterator(fetcher)
+
+	return &Scanner{
 		shardID:          pr.GetShardID(),
-		itr:              pagination.NewIterator(nil, getConcreteExecutionsPersistenceFetchPageFn(pr, codec.NewThriftRWEncoder(), params.PersistencePageSize)),
+		itr:              iterator,
 		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
 		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
 		invariantManager: invariants.NewInvariantManager(ivs),
@@ -54,7 +126,7 @@ func NewConcreteExecutionScanner(
 	}
 }
 
-func getConcreteExecutionsPersistenceFetchPageFn(
+func GetConcreteExecutionsPersistenceFetchPageFn(
 	pr common.PersistenceRetryer,
 	encoder *codec.ThriftRWEncoder,
 	pageSize int,

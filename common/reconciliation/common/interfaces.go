@@ -24,7 +24,9 @@
 
 package common
 
-import "github.com/uber/cadence/common/persistence"
+import (
+	"github.com/uber/cadence/common/persistence"
+)
 
 type (
 	// PersistenceRetryer is used to retry requests to persistence
@@ -64,6 +66,11 @@ type (
 		// HasNext indicates if the iterator has a next element. If HasNext is true
 		// it is guaranteed that Next will return a nil error and a non-nil Execution.
 		HasNext() bool
+	}
+
+	PersistenceFetcher interface {
+		Fetch(token interface{}) ([]interface{}, error)
+		ToEntity()
 	}
 
 	// ScanOutputIterator gets ScanOutputEntities from underlying store

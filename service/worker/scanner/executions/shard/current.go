@@ -23,33 +23,26 @@
 package shard
 
 import (
-	"github.com/pborman/uuid"
-
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/invariants"
 )
 
-// NewCurrentExecutionScanner returns a scanner which scans current executions
+// NewCurrentExecutionScanner returns a Scanner which scans current executions
 func NewCurrentExecutionScanner(
 	params ScannerParams,
 ) common.Scanner {
-	id := uuid.New()
+
+	config := NewScannerConfig(params)
 
 	var ivs []common.Invariant
 	for _, fn := range CurrentExecutionType.ToInvariants(params.InvariantCollections) {
 		ivs = append(ivs, fn(params.Retryer))
 	}
 
-	return &scanner{
-		shardID:          params.Retryer.GetShardID(),
-		itr:              pagination.NewIterator(nil, getCurrentExecutionsPersistenceFetchPageFn(params.Retryer, params.PersistencePageSize)),
-		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
-		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
-		invariantManager: invariants.NewInvariantManager(ivs),
-		progressReportFn: params.ProgressReportFn,
-	}
+	config.itr = pagination.NewIterator(nil, getCurrentExecutionsPersistenceFetchPageFn(params.Retryer, params.PersistencePageSize))
+
+	return &config
 }
 
 func getCurrentExecutionsPersistenceFetchPageFn(
