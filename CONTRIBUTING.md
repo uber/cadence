@@ -7,7 +7,7 @@ This doc is intended for contributors to `cadence` server (hopefully that's you!
 ## Development Environment
 
 * Golang. Install on OS X with `brew install go`. 
->Note: If running into any compiling issue, make sure you are on a too old version of Golang. 
+>Note: If running into any compiling issue, make sure you upgrade to the latest stable version of Golang. 
 
 ## Checking out the code
 
