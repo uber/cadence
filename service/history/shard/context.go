@@ -1165,13 +1165,24 @@ func (s *contextImpl) updateMaxReadLevelLocked(rl int64) {
 }
 
 func (s *contextImpl) updateShardInfoLocked() error {
+	return s.persistShardInfoLocked(false)
+}
+
+func (s *contextImpl) forceUpdateShardInfoLocked() error {
+	return s.persistShardInfoLocked(true)
+}
+
+func (s *contextImpl) persistShardInfoLocked(
+	isForced bool,
+) error {
+
 	if s.isClosed() {
 		return ErrShardClosed
 	}
 
 	var err error
 	now := clock.NewRealTimeSource().Now()
-	if s.lastUpdated.Add(s.config.ShardUpdateMinInterval()).After(now) {
+	if !isForced && s.lastUpdated.Add(s.config.ShardUpdateMinInterval()).After(now) {
 		return nil
 	}
 	updatedShardInfo := copyShardInfo(s.shardInfo)
@@ -1459,7 +1470,7 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 		s.logger.Error("Failed to add failover marker.", tag.Error(err))
 		return err
 	}
-	return s.updateShardInfoLocked()
+	return s.forceUpdateShardInfoLocked()
 }
 
 func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
