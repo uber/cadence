@@ -75,7 +75,7 @@ func GetBranchToken(
 // Returns error on failure to confirm.
 func ExecutionStillOpen(
 	exec *Execution,
-	pr PersistenceRetryer,
+	pr persistence.Retryer,
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
@@ -100,7 +100,7 @@ func ExecutionStillOpen(
 // Returns error on failure to confirm.
 func ExecutionStillExists(
 	exec *Execution,
-	pr PersistenceRetryer,
+	pr persistence.Retryer,
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
@@ -147,7 +147,7 @@ func getExecution(execution interface{}) *Execution {
 // current execution conditionally on matching runID.
 func DeleteExecution(
 	exec interface{},
-	pr PersistenceRetryer,
+	pr persistence.Retryer,
 ) *FixResult {
 	execution := getExecution(exec)
 	if err := pr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{

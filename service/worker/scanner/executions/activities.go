@@ -33,6 +33,7 @@ import (
 
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
 	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
@@ -220,7 +221,7 @@ func scanShard(
 		collections = append(collections, common.InvariantCollectionMutableState)
 	}
 
-	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
+	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 
 	scannerParams := shard.ScannerParams{
 		Retryer:                 pr,
@@ -403,7 +404,7 @@ func fixShard(
 	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionMutableState {
 		collections = append(collections, common.InvariantCollectionMutableState)
 	}
-	pr := common.NewPersistenceRetryer(execManager, resources.GetHistoryManager())
+	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 	fixer := shard.NewFixer(
 		shardID,
 		pr,

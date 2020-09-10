@@ -28,14 +28,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
-
-	"github.com/uber/cadence/common/codec"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/pagination"
@@ -63,10 +60,8 @@ func (s *WriterIteratorSuite) SetupTest() {
 }
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
-
-	pr := NewPersistenceRetryer(getMockExecutionManager(10, 10), nil)
-	pItr := pagination.NewIterator(nil, shard.GetConcreteExecutionsPersistenceFetchPageFn(pr, codec.NewThriftRWEncoder(), executionPageSize))
-
+	pr := persistence.NewPersistenceRetryer(getMockExecutionManager(10, 10), nil, common.CreatePersistenceRetryPolicy())
+	pItr := NewPersistenceIterator(pr, executionPageSize, testShardID, ConcreteExecutionType)
 	uuid := "uuid"
 	extension := Extension("test")
 	outputDir, err := ioutil.TempDir("", "TestWriterIterator")
