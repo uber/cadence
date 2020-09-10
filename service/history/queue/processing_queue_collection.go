@@ -145,16 +145,22 @@ func (c *processingQueueCollection) Merge(
 		newQueues = append(newQueues, mergedQueues[:len(mergedQueues)-1]...)
 
 		lastMergedQueue := mergedQueues[len(mergedQueues)-1]
-		if currentQueueIdx+1 == len(c.queues) ||
-			!c.queues[currentQueueIdx+1].State().AckLevel().Less(lastMergedQueue.State().MaxLevel()) {
+		overlapWithCurrentQueue := currentQueueIdx+1 != len(c.queues) &&
+			c.queues[currentQueueIdx+1].State().AckLevel().Less(lastMergedQueue.State().MaxLevel())
+		overlapWithIncomingQueue := incomingQueueIdx+1 != len(incomingQueues) &&
+			incomingQueues[incomingQueueIdx+1].State().AckLevel().Less(lastMergedQueue.State().MaxLevel())
 
+		if !overlapWithCurrentQueue && !overlapWithIncomingQueue {
 			newQueues = append(newQueues, lastMergedQueue)
 			incomingQueueIdx++
-		} else {
+			currentQueueIdx++
+		} else if overlapWithCurrentQueue {
 			incomingQueues[incomingQueueIdx] = lastMergedQueue
+			currentQueueIdx++
+		} else {
+			c.queues[currentQueueIdx] = lastMergedQueue
+			incomingQueueIdx++
 		}
-
-		currentQueueIdx++
 	}
 
 	if incomingQueueIdx < len(incomingQueues) {
