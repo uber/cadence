@@ -253,6 +253,8 @@ func (q *processingQueueImpl) AddTasks(
 
 	for key, task := range tasks {
 		if _, loaded := q.outstandingTasks[key]; loaded {
+			// TODO: this means the task has been submitted before, we should mark the task state accordingly and
+			// do not submit this task again in transfer/timer queue processor base
 			q.logger.Debug(fmt.Sprintf("Skipping task: %+v. DomainID: %v, WorkflowID: %v, RunID: %v, Type: %v",
 				key, task.GetDomainID(), task.GetWorkflowID(), task.GetRunID(), task.GetTaskType()))
 			continue
@@ -283,6 +285,14 @@ func (q *processingQueueImpl) UpdateAckLevel() (task.Key, int) {
 	})
 
 	for _, key := range keys {
+		if q.state.readLevel.Less(key) {
+			// this can happen as during merge read level can move backward
+			// besides that for time task key, readLevel is expected to be less than task key
+			// as the taskID for read level is always 0. This means we can potentially buffer
+			// more timer tasks in memory. If this becomes a problem, we can change this logic.
+			break
+		}
+
 		if q.outstandingTasks[key].State() != t.TaskStateAcked {
 			break
 		}
