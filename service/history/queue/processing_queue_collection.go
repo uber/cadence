@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/uber/cadence/service/history/task"
@@ -172,6 +173,17 @@ func (c *processingQueueCollection) Merge(
 	}
 
 	c.queues = newQueues
+
+	// make sure the result is ordered and disjoint
+	for idx := 0; idx != len(c.queues)-1; idx++ {
+		if c.queues[idx+1].State().AckLevel().Less(c.queues[idx].State().MaxLevel()) {
+			errMsg := ""
+			for _, q := range c.queues {
+				errMsg += fmt.Sprintf("%v ", q)
+			}
+			panic("invalid processing queue merge result: " + errMsg)
+		}
+	}
 
 	c.resetActiveQueue()
 }
