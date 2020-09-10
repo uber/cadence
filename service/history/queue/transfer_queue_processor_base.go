@@ -493,6 +493,7 @@ func newTransferQueueProcessorOptions(
 		options.MetricScope = metrics.TransferActiveQueueProcessorScope
 		options.RedispatchInterval = config.ActiveTaskRedispatchInterval
 	} else {
+		options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
 		options.MetricScope = metrics.TransferStandbyQueueProcessorScope
 		options.RedispatchInterval = config.StandbyTaskRedispatchInterval
 	}

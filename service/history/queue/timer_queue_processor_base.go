@@ -674,6 +674,7 @@ func newTimerQueueProcessorOptions(
 		options.MetricScope = metrics.TimerActiveQueueProcessorScope
 		options.RedispatchInterval = config.ActiveTaskRedispatchInterval
 	} else {
+		options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
 		options.MetricScope = metrics.TimerStandbyQueueProcessorScope
 		options.RedispatchInterval = config.StandbyTaskRedispatchInterval
 	}
