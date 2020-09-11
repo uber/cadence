@@ -27,7 +27,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
@@ -39,8 +40,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/types"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -79,7 +78,7 @@ type (
 		historyReplicationFn  nDCHistoryReplicationFn
 		serializer            persistence.PayloadSerializer
 		rereplicationTimeout  dynamicconfig.DurationPropertyFnWithDomainIDFilter
-		currentExecutionCheck invariant.Invariant
+		currentExecutionCheck check.Invariant
 		logger                log.Logger
 	}
 
@@ -96,7 +95,7 @@ func NewNDCHistoryResender(
 	historyReplicationFn nDCHistoryReplicationFn,
 	serializer persistence.PayloadSerializer,
 	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
-	currentExecutionCheck invariant.Invariant,
+	currentExecutionCheck check.Invariant,
 	logger log.Logger,
 ) *NDCHistoryResenderImpl {
 
@@ -314,8 +313,8 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 	if n.currentExecutionCheck == nil {
 		return false
 	}
-	execution := &types.CurrentExecution{
-		Execution: types.Execution{
+	execution := &entity.CurrentExecution{
+		Execution: entity.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			State:      persistence.WorkflowStateRunning,
@@ -323,7 +322,7 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 	}
 	res := n.currentExecutionCheck.Check(execution)
 	switch res.CheckResultType {
-	case checks.CheckResultTypeCorrupted:
+	case check.CheckResultTypeCorrupted:
 		n.logger.Error(
 			"Encounter corrupted workflow",
 			tag.WorkflowDomainID(domainID),
@@ -332,7 +331,7 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 		)
 		n.currentExecutionCheck.Fix(execution)
 		return false
-	case checks.CheckResultTypeFailed:
+	case check.CheckResultTypeFailed:
 		return false
 	default:
 		return true

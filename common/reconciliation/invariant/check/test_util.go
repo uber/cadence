@@ -20,11 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariant
+package check
 
 import (
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/types"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 const (
@@ -43,9 +43,9 @@ var (
 	branchToken = []byte{1, 2, 3}
 )
 
-func getOpenConcreteExecution() *types.ConcreteExecution {
-	return &types.ConcreteExecution{
-		Execution: types.Execution{
+func getOpenConcreteExecution() *entity.ConcreteExecution {
+	return &entity.ConcreteExecution{
+		Execution: entity.Execution{
 			ShardID:    shardID,
 			DomainID:   domainID,
 			WorkflowID: workflowID,
@@ -58,9 +58,9 @@ func getOpenConcreteExecution() *types.ConcreteExecution {
 	}
 }
 
-func getClosedConcreteExecution() *types.ConcreteExecution {
-	return &types.ConcreteExecution{
-		Execution: types.Execution{
+func getClosedConcreteExecution() *entity.ConcreteExecution {
+	return &entity.ConcreteExecution{
+		Execution: entity.Execution{
 			ShardID:    shardID,
 			DomainID:   domainID,
 			WorkflowID: workflowID,
@@ -73,9 +73,9 @@ func getClosedConcreteExecution() *types.ConcreteExecution {
 	}
 }
 
-func getOpenCurrentExecution() *types.CurrentExecution {
-	return &types.CurrentExecution{
-		Execution: types.Execution{
+func getOpenCurrentExecution() *entity.CurrentExecution {
+	return &entity.CurrentExecution{
+		Execution: entity.Execution{
 			ShardID:    shardID,
 			DomainID:   domainID,
 			WorkflowID: workflowID,
@@ -86,9 +86,9 @@ func getOpenCurrentExecution() *types.CurrentExecution {
 	}
 }
 
-func getClosedCurrentExecution() *types.CurrentExecution {
-	return &types.CurrentExecution{
-		Execution: types.Execution{
+func getClosedCurrentExecution() *entity.CurrentExecution {
+	return &entity.CurrentExecution{
+		Execution: entity.Execution{
 			ShardID:    shardID,
 			DomainID:   domainID,
 			WorkflowID: workflowID,

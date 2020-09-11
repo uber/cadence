@@ -27,14 +27,15 @@ import (
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/types"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
+// ConcreteExecution is used to retrieve Concrete executions.
 func ConcreteExecution(retryer persistence.Retryer, pageSize int) pagination.Iterator {
-	return pagination.NewIterator(nil, GetConcreteExecutions(retryer, pageSize, codec.NewThriftRWEncoder()))
+	return pagination.NewIterator(nil, getConcreteExecutions(retryer, pageSize, codec.NewThriftRWEncoder()))
 }
 
-func GetConcreteExecutions(
+func getConcreteExecutions(
 	pr persistence.Retryer,
 	pageSize int,
 	encoder *codec.ThriftRWEncoder,
@@ -56,11 +57,11 @@ func GetConcreteExecutions(
 			if err != nil {
 				return pagination.Page{}, err
 			}
-			concreteExec := &types.ConcreteExecution{
+			concreteExec := &entity.ConcreteExecution{
 				BranchToken: branchToken,
 				TreeID:      treeID,
 				BranchID:    branchID,
-				Execution: types.Execution{
+				Execution: entity.Execution{
 					ShardID:    pr.GetShardID(),
 					DomainID:   e.ExecutionInfo.DomainID,
 					WorkflowID: e.ExecutionInfo.WorkflowID,

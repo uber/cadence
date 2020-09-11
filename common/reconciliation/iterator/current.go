@@ -25,9 +25,10 @@ package iterator
 import (
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/types"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
+// CurrentExecution is used to retrieve Concrete executions.
 func CurrentExecution(retryer persistence.Retryer, pageSize int) pagination.Iterator {
 	return pagination.NewIterator(nil, getCurrentExecution(retryer, pageSize))
 }
@@ -49,9 +50,9 @@ func getCurrentExecution(
 		}
 		executions := make([]pagination.Entity, len(resp.Executions), len(resp.Executions))
 		for i, e := range resp.Executions {
-			currentExec := &types.CurrentExecution{
+			currentExec := &entity.CurrentExecution{
 				CurrentRunID: e.CurrentRunID,
-				Execution: types.Execution{
+				Execution: entity.Execution{
 					ShardID:    pr.GetShardID(),
 					DomainID:   e.DomainID,
 					WorkflowID: e.WorkflowID,

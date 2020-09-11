@@ -23,28 +23,28 @@
 package invariant
 
 import (
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
 )
 
 type (
 	invariantManager struct {
-		invariants []Invariant
+		invariants []check.Invariant
 	}
 )
 
 // NewInvariantManager handles running a collection of invariants according to the invariant collection provided.
 func NewInvariantManager(
-	invariants []Invariant,
-) InvariantManager {
+	invariants []check.Invariant,
+) Manager {
 	return &invariantManager{
 		invariants: invariants,
 	}
 }
 
 // RunChecks runs all enabled checks.
-func (i *invariantManager) RunChecks(execution interface{}) common.ManagerCheckResult {
-	result := common.ManagerCheckResult{
-		CheckResultType:          common.CheckResultTypeHealthy,
+func (i *invariantManager) RunChecks(execution interface{}) check.ManagerCheckResult {
+	result := check.ManagerCheckResult{
+		CheckResultType:          check.CheckResultTypeHealthy,
 		DeterminingInvariantType: nil,
 		CheckResults:             nil,
 	}
@@ -61,9 +61,9 @@ func (i *invariantManager) RunChecks(execution interface{}) common.ManagerCheckR
 }
 
 // RunFixes runs all enabled fixes.
-func (i *invariantManager) RunFixes(execution interface{}) common.ManagerFixResult {
-	result := common.ManagerFixResult{
-		FixResultType:            common.FixResultTypeSkipped,
+func (i *invariantManager) RunFixes(execution interface{}) check.ManagerFixResult {
+	result := check.ManagerFixResult{
+		FixResultType:            check.FixResultTypeSkipped,
 		DeterminingInvariantType: nil,
 		FixResults:               nil,
 	}
@@ -80,18 +80,18 @@ func (i *invariantManager) RunFixes(execution interface{}) common.ManagerFixResu
 }
 
 func (i *invariantManager) nextFixResultType(
-	currentState common.FixResultType,
-	event common.FixResultType,
-) (common.FixResultType, bool) {
+	currentState check.FixResultType,
+	event check.FixResultType,
+) (check.FixResultType, bool) {
 	switch currentState {
-	case common.FixResultTypeSkipped:
-		return event, event != common.FixResultTypeSkipped
-	case common.FixResultTypeFixed:
-		if event == common.FixResultTypeFailed {
+	case check.FixResultTypeSkipped:
+		return event, event != check.FixResultTypeSkipped
+	case check.FixResultTypeFixed:
+		if event == check.FixResultTypeFailed {
 			return event, true
 		}
 		return currentState, false
-	case common.FixResultTypeFailed:
+	case check.FixResultTypeFailed:
 		return currentState, false
 	default:
 		panic("unknown FixResultType")
@@ -99,36 +99,27 @@ func (i *invariantManager) nextFixResultType(
 }
 
 func (i *invariantManager) nextCheckResultType(
-	currentState common.CheckResultType,
-	event common.CheckResultType,
-) (common.CheckResultType, bool) {
+	currentState check.CheckResultType,
+	event check.CheckResultType,
+) (check.CheckResultType, bool) {
 	switch currentState {
-	case common.CheckResultTypeHealthy:
-		return event, event != common.CheckResultTypeHealthy
-	case common.CheckResultTypeCorrupted:
-		if event == common.CheckResultTypeFailed {
+	case check.CheckResultTypeHealthy:
+		return event, event != check.CheckResultTypeHealthy
+	case check.CheckResultTypeCorrupted:
+		if event == check.CheckResultTypeFailed {
 			return event, true
 		}
 		return currentState, false
-	case common.CheckResultTypeFailed:
+	case check.CheckResultTypeFailed:
 		return currentState, false
 	default:
 		panic("unknown CheckResultType")
 	}
 }
 
-// InvariantManager represents a manager of several invariants.
+// Manager represents a manager of several invariants.
 // It can be used to run a group of invariant checks or fixes.
-type InvariantManager interface {
-	RunChecks(interface{}) common.ManagerCheckResult
-	RunFixes(interface{}) common.ManagerFixResult
-}
-
-// Invariant represents an invariant of a single execution.
-// It can be used to check that the execution satisfies the invariant.
-// It can also be used to fix the invariant for an execution.
-type Invariant interface {
-	Check(interface{}) common.CheckResult
-	Fix(interface{}) common.FixResult
-	InvariantType() common.InvariantType
+type Manager interface {
+	RunChecks(interface{}) check.ManagerCheckResult
+	RunFixes(interface{}) check.ManagerFixResult
 }

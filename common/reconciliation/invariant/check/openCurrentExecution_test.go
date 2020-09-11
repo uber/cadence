@@ -20,13 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariant
+package check
 
 import (
 	"errors"
 	"testing"
-
-	"github.com/uber/cadence/common/reconciliation/types"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -36,7 +34,7 @@ import (
 	c2 "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 type OpenCurrentExecutionSuite struct {
@@ -54,26 +52,26 @@ func (s *OpenCurrentExecutionSuite) SetupTest() {
 
 func (s *OpenCurrentExecutionSuite) TestCheck() {
 	testCases := []struct {
-		execution       *types.ConcreteExecution
+		execution       *entity.ConcreteExecution
 		getCurrentResp  *persistence.GetCurrentExecutionResponse
 		getCurrentErr   error
 		getConcreteResp *persistence.GetWorkflowExecutionResponse
 		getConcreteErr  error
-		expectedResult  common.CheckResult
+		expectedResult  CheckResult
 	}{
 		{
 			execution: getClosedConcreteExecution(),
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeHealthy,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeHealthy,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 			},
 		},
 		{
 			execution:      getOpenConcreteExecution(),
 			getConcreteErr: errors.New("got error checking if concrete is open"),
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeFailed,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeFailed,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 				Info:            "failed to check if concrete execution is still open",
 				InfoDetails:     "got error checking if concrete is open",
 			},
@@ -88,9 +86,9 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 				},
 			},
 			getConcreteErr: nil,
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeHealthy,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeHealthy,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 			},
 		},
 		{
@@ -104,9 +102,9 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			},
 			getConcreteErr: nil,
 			getCurrentErr:  &shared.EntityNotExistsError{},
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeCorrupted,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 				Info:            "execution is open without having current execution",
 				InfoDetails:     "EntityNotExistsError{Message: }",
 			},
@@ -122,9 +120,9 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			},
 			getConcreteErr: nil,
 			getCurrentErr:  errors.New("error getting current execution"),
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeFailed,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeFailed,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 				Info:            "failed to check if current execution exists",
 				InfoDetails:     "error getting current execution",
 			},
@@ -143,9 +141,9 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			getCurrentResp: &persistence.GetCurrentExecutionResponse{
 				RunID: "not-equal",
 			},
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeCorrupted,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 				Info:            "execution is open but current points at a different execution",
 				InfoDetails:     "current points at not-equal",
 			},
@@ -164,9 +162,9 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			getCurrentResp: &persistence.GetCurrentExecutionResponse{
 				RunID: runID,
 			},
-			expectedResult: common.CheckResult{
-				CheckResultType: common.CheckResultTypeHealthy,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+			expectedResult: CheckResult{
+				CheckResultType: CheckResultTypeHealthy,
+				InvariantType:   OpenCurrentExecutionInvariantType,
 			},
 		},
 	}
@@ -229,7 +227,7 @@ func (s *UtilSuite) TestExecutionStillOpen() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		pr := persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy())
-		open, err := ExecutionStillOpen(&types.Execution{}, pr)
+		open, err := ExecutionStillOpen(&entity.Execution{}, pr)
 		if tc.expectError {
 			s.Error(err)
 		} else {
@@ -287,7 +285,7 @@ func (s *UtilSuite) TestExecutionStillExists() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		pr := persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy())
-		exists, err := ExecutionStillExists(&types.Execution{}, pr)
+		exists, err := ExecutionStillExists(&entity.Execution{}, pr)
 		if tc.expectError {
 			s.Error(err)
 		} else {
@@ -305,27 +303,27 @@ func (s *UtilSuite) TestDeleteExecution() {
 	testCases := []struct {
 		deleteConcreteErr error
 		deleteCurrentErr  error
-		expectedFixResult *common.FixResult
+		expectedFixResult *FixResult
 	}{
 		{
 			deleteConcreteErr: errors.New("error deleting concrete execution"),
-			expectedFixResult: &common.FixResult{
-				FixResultType: common.FixResultTypeFailed,
+			expectedFixResult: &FixResult{
+				FixResultType: FixResultTypeFailed,
 				Info:          "failed to delete concrete workflow execution",
 				InfoDetails:   "error deleting concrete execution",
 			},
 		},
 		{
 			deleteCurrentErr: errors.New("error deleting current execution"),
-			expectedFixResult: &common.FixResult{
-				FixResultType: common.FixResultTypeFailed,
+			expectedFixResult: &FixResult{
+				FixResultType: FixResultTypeFailed,
 				Info:          "failed to delete current workflow execution",
 				InfoDetails:   "error deleting current execution",
 			},
 		},
 		{
-			expectedFixResult: &common.FixResult{
-				FixResultType: common.FixResultTypeFixed,
+			expectedFixResult: &FixResult{
+				FixResultType: FixResultTypeFixed,
 			},
 		},
 	}
@@ -337,7 +335,7 @@ func (s *UtilSuite) TestDeleteExecution() {
 			execManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(tc.deleteCurrentErr).Once()
 		}
 		pr := persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy())
-		result := DeleteExecution(&types.ConcreteExecution{}, pr)
+		result := DeleteExecution(&entity.ConcreteExecution{}, pr)
 		s.Equal(tc.expectedFixResult, result)
 	}
 }

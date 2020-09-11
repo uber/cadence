@@ -20,19 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariant
+package check
 
 import (
 	"github.com/uber/cadence/.gen/go/shared"
-
-	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/types"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 const (
 	historyPageSize = 1
+
+	// HistoryExistsInvariantType asserts that history must exist if concrete execution exists
+	HistoryExistsInvariantType InvariantType = "history_exists"
 )
 
 type (
@@ -50,36 +51,36 @@ func NewHistoryExists(
 	}
 }
 
-func (h *historyExists) Check(execution interface{}) common.CheckResult {
-	concreteExecution, ok := execution.(*types.ConcreteExecution)
+func (h *historyExists) Check(execution interface{}) CheckResult {
+	concreteExecution, ok := execution.(*entity.ConcreteExecution)
 	if !ok {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
 			InvariantType:   h.InvariantType(),
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,
-		MinEventID:    c.FirstEventID,
-		MaxEventID:    c.FirstEventID + 1,
+		MinEventID:    common.FirstEventID,
+		MaxEventID:    common.FirstEventID + 1,
 		PageSize:      historyPageSize,
 		NextPageToken: nil,
-		ShardID:       c.IntPtr(concreteExecution.ShardID),
+		ShardID:       common.IntPtr(concreteExecution.ShardID),
 	}
 	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(readHistoryBranchReq)
 	stillExists, existsCheckError := ExecutionStillExists(&concreteExecution.Execution, h.pr)
 	if existsCheckError != nil {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
 			InvariantType:   h.InvariantType(),
 			Info:            "failed to check if concrete execution still exists",
 			InfoDetails:     existsCheckError.Error(),
 		}
 	}
 	if !stillExists {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeHealthy,
+		return CheckResult{
+			CheckResultType: CheckResultTypeHealthy,
 			InvariantType:   h.InvariantType(),
 			Info:            "determined execution was healthy because concrete execution no longer exists",
 		}
@@ -87,15 +88,15 @@ func (h *historyExists) Check(execution interface{}) common.CheckResult {
 	if readHistoryBranchErr != nil {
 		switch readHistoryBranchErr.(type) {
 		case *shared.EntityNotExistsError:
-			return common.CheckResult{
-				CheckResultType: common.CheckResultTypeCorrupted,
+			return CheckResult{
+				CheckResultType: CheckResultTypeCorrupted,
 				InvariantType:   h.InvariantType(),
 				Info:            "concrete execution exists but history does not exist",
 				InfoDetails:     readHistoryBranchErr.Error(),
 			}
 		default:
-			return common.CheckResult{
-				CheckResultType: common.CheckResultTypeFailed,
+			return CheckResult{
+				CheckResultType: CheckResultTypeFailed,
 				InvariantType:   h.InvariantType(),
 				Info:            "failed to verify if history exists",
 				InfoDetails:     readHistoryBranchErr.Error(),
@@ -103,19 +104,19 @@ func (h *historyExists) Check(execution interface{}) common.CheckResult {
 		}
 	}
 	if readHistoryBranchResp == nil || len(readHistoryBranchResp.HistoryEvents) == 0 {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeCorrupted,
+		return CheckResult{
+			CheckResultType: CheckResultTypeCorrupted,
 			InvariantType:   h.InvariantType(),
 			Info:            "concrete execution exists but got empty history",
 		}
 	}
-	return common.CheckResult{
-		CheckResultType: common.CheckResultTypeHealthy,
+	return CheckResult{
+		CheckResultType: CheckResultTypeHealthy,
 		InvariantType:   h.InvariantType(),
 	}
 }
 
-func (h *historyExists) Fix(execution interface{}) common.FixResult {
+func (h *historyExists) Fix(execution interface{}) FixResult {
 	fixResult, checkResult := checkBeforeFix(h, execution)
 	if fixResult != nil {
 		return *fixResult
@@ -126,6 +127,6 @@ func (h *historyExists) Fix(execution interface{}) common.FixResult {
 	return *fixResult
 }
 
-func (h *historyExists) InvariantType() common.InvariantType {
-	return common.HistoryExistsInvariantType
+func (h *historyExists) InvariantType() InvariantType {
+	return HistoryExistsInvariantType
 }

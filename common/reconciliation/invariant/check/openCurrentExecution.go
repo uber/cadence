@@ -20,17 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariant
+package check
 
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/reconciliation/types"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
+
+// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
+const OpenCurrentExecutionInvariantType InvariantType = "open_current_execution"
 
 type (
 	openCurrentExecution struct {
@@ -47,18 +48,18 @@ func NewOpenCurrentExecution(
 	}
 }
 
-func (o *openCurrentExecution) Check(execution interface{}) common.CheckResult {
-	concreteExecution, ok := execution.(*types.ConcreteExecution)
+func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
+	concreteExecution, ok := execution.(*entity.ConcreteExecution)
 	if !ok {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
 			InvariantType:   o.InvariantType(),
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
 	if !Open(concreteExecution.State) {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeHealthy,
+		return CheckResult{
+			CheckResultType: CheckResultTypeHealthy,
 			InvariantType:   o.InvariantType(),
 		}
 	}
@@ -68,31 +69,31 @@ func (o *openCurrentExecution) Check(execution interface{}) common.CheckResult {
 	})
 	stillOpen, stillOpenErr := ExecutionStillOpen(&concreteExecution.Execution, o.pr)
 	if stillOpenErr != nil {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeFailed,
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
 			InvariantType:   o.InvariantType(),
 			Info:            "failed to check if concrete execution is still open",
 			InfoDetails:     stillOpenErr.Error(),
 		}
 	}
 	if !stillOpen {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeHealthy,
+		return CheckResult{
+			CheckResultType: CheckResultTypeHealthy,
 			InvariantType:   o.InvariantType(),
 		}
 	}
 	if currentExecErr != nil {
 		switch currentExecErr.(type) {
 		case *shared.EntityNotExistsError:
-			return common.CheckResult{
-				CheckResultType: common.CheckResultTypeCorrupted,
+			return CheckResult{
+				CheckResultType: CheckResultTypeCorrupted,
 				InvariantType:   o.InvariantType(),
 				Info:            "execution is open without having current execution",
 				InfoDetails:     currentExecErr.Error(),
 			}
 		default:
-			return common.CheckResult{
-				CheckResultType: common.CheckResultTypeFailed,
+			return CheckResult{
+				CheckResultType: CheckResultTypeFailed,
 				InvariantType:   o.InvariantType(),
 				Info:            "failed to check if current execution exists",
 				InfoDetails:     currentExecErr.Error(),
@@ -100,20 +101,20 @@ func (o *openCurrentExecution) Check(execution interface{}) common.CheckResult {
 		}
 	}
 	if currentExecResp.RunID != concreteExecution.RunID {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeCorrupted,
+		return CheckResult{
+			CheckResultType: CheckResultTypeCorrupted,
 			InvariantType:   o.InvariantType(),
 			Info:            "execution is open but current points at a different execution",
 			InfoDetails:     fmt.Sprintf("current points at %v", currentExecResp.RunID),
 		}
 	}
-	return common.CheckResult{
-		CheckResultType: common.CheckResultTypeHealthy,
+	return CheckResult{
+		CheckResultType: CheckResultTypeHealthy,
 		InvariantType:   o.InvariantType(),
 	}
 }
 
-func (o *openCurrentExecution) Fix(execution interface{}) common.FixResult {
+func (o *openCurrentExecution) Fix(execution interface{}) FixResult {
 	fixResult, checkResult := checkBeforeFix(o, execution)
 	if fixResult != nil {
 		return *fixResult
@@ -124,8 +125,8 @@ func (o *openCurrentExecution) Fix(execution interface{}) common.FixResult {
 	return *fixResult
 }
 
-func (o *openCurrentExecution) InvariantType() common.InvariantType {
-	return common.OpenCurrentExecutionInvariantType
+func (o *openCurrentExecution) InvariantType() InvariantType {
+	return OpenCurrentExecutionInvariantType
 }
 
 // ExecutionOpen returns true if execution state is open false if workflow is closed
@@ -134,11 +135,11 @@ func ExecutionOpen(execution interface{}) bool {
 }
 
 // getExecution returns base Execution
-func getExecution(execution interface{}) *types.Execution {
+func getExecution(execution interface{}) *entity.Execution {
 	switch e := execution.(type) {
-	case *types.CurrentExecution:
+	case *entity.CurrentExecution:
 		return &e.Execution
-	case *types.ConcreteExecution:
+	case *entity.ConcreteExecution:
 		return &e.Execution
 	default:
 		panic("unexpected execution type")
@@ -150,15 +151,15 @@ func getExecution(execution interface{}) *types.Execution {
 func DeleteExecution(
 	exec interface{},
 	pr persistence.Retryer,
-) *common.FixResult {
+) *FixResult {
 	execution := getExecution(exec)
 	if err := pr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
 	}); err != nil {
-		return &common.FixResult{
-			FixResultType: common.FixResultTypeFailed,
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
 			Info:          "failed to delete concrete workflow execution",
 			InfoDetails:   err.Error(),
 		}
@@ -168,21 +169,21 @@ func DeleteExecution(
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
 	}); err != nil {
-		return &common.FixResult{
-			FixResultType: common.FixResultTypeFailed,
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
 			Info:          "failed to delete current workflow execution",
 			InfoDetails:   err.Error(),
 		}
 	}
-	return &common.FixResult{
-		FixResultType: common.FixResultTypeFixed,
+	return &FixResult{
+		FixResultType: FixResultTypeFixed,
 	}
 }
 
 // ExecutionStillOpen returns true if execution in persistence exists and is open, false otherwise.
 // Returns error on failure to confirm.
 func ExecutionStillOpen(
-	exec *types.Execution,
+	exec *entity.Execution,
 	pr persistence.Retryer,
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
@@ -207,7 +208,7 @@ func ExecutionStillOpen(
 // ExecutionStillExists returns true if execution still exists in persistence, false otherwise.
 // Returns error on failure to confirm.
 func ExecutionStillExists(
-	exec *types.Execution,
+	exec *entity.Execution,
 	pr persistence.Retryer,
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{

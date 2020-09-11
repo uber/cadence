@@ -29,18 +29,19 @@ import (
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
+	"github.com/uber/cadence/common/reconciliation/store"
 )
 
 type (
 	fixer struct {
 		shardID          int
-		itr              common.ScanOutputIterator
-		skippedWriter    common.ExecutionWriter
-		failedWriter     common.ExecutionWriter
-		fixedWriter      common.ExecutionWriter
-		invariantManager invariant.InvariantManager
+		itr              store.ScanOutputIterator
+		skippedWriter    store.ExecutionWriter
+		failedWriter     store.ExecutionWriter
+		fixedWriter      store.ExecutionWriter
+		invariantManager invariant.Manager
 		progressReportFn func()
 	}
 )
@@ -50,45 +51,45 @@ func NewFixer(
 	shardID int,
 	pr persistence.Retryer,
 	blobstoreClient blobstore.Client,
-	keys common.Keys,
+	keys store.Keys,
 	blobstoreFlushThreshold int,
-	invariantCollections []common.InvariantCollection,
+	invariantCollections []check.InvariantCollection,
 	progressReportFn func(),
 	scanType ScanType,
-) common.Fixer {
+) Fixer {
 	id := uuid.New()
 
-	var ivs []invariant.Invariant
+	var ivs []check.Invariant
 	for _, collection := range invariantCollections {
 		switch collection {
-		case common.InvariantCollectionHistory:
-			ivs = append(ivs, []invariant.Invariant{invariant.NewHistoryExists(pr)}...)
-		case common.InvariantCollectionMutableState:
-			ivs = append(ivs, []invariant.Invariant{invariant.NewOpenCurrentExecution(pr)}...)
+		case check.InvariantCollectionHistory:
+			ivs = append(ivs, []check.Invariant{check.NewHistoryExists(pr)}...)
+		case check.InvariantCollectionMutableState:
+			ivs = append(ivs, []check.Invariant{check.NewOpenCurrentExecution(pr)}...)
 		}
 	}
 
 	return &fixer{
 		shardID:          shardID,
-		itr:              common.NewBlobstoreIterator(blobstoreClient, keys, scanType.ToBlobstoreEntity()),
-		skippedWriter:    common.NewBlobstoreWriter(id, common.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
-		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
-		fixedWriter:      common.NewBlobstoreWriter(id, common.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
+		itr:              store.NewBlobstoreIterator(blobstoreClient, keys, scanType.ToBlobstoreEntity()),
+		skippedWriter:    store.NewBlobstoreWriter(id, store.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
+		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
+		fixedWriter:      store.NewBlobstoreWriter(id, store.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
 		invariantManager: invariant.NewInvariantManager(ivs),
 		progressReportFn: progressReportFn,
 	}
 }
 
 // Fix scans over all executions in shard and runs invariant fixes per execution.
-func (f *fixer) Fix() common.ShardFixReport {
-	result := common.ShardFixReport{
+func (f *fixer) Fix() FixReport {
+	result := FixReport{
 		ShardID: f.shardID,
 	}
 	for f.itr.HasNext() {
 		f.progressReportFn()
 		soe, err := f.itr.Next()
 		if err != nil {
-			result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+			result.Result.ControlFlowFailure = &ControlFlowFailure{
 				Info:        "blobstore iterator returned error",
 				InfoDetails: err.Error(),
 			}
@@ -96,33 +97,33 @@ func (f *fixer) Fix() common.ShardFixReport {
 		}
 		fixResult := f.invariantManager.RunFixes(soe.Execution)
 		result.Stats.ExecutionCount++
-		foe := common.FixOutputEntity{
+		foe := store.FixOutputEntity{
 			Execution: soe.Execution,
 			Input:     *soe,
 			Result:    fixResult,
 		}
 		switch fixResult.FixResultType {
-		case common.FixResultTypeFixed:
+		case check.FixResultTypeFixed:
 			if err := f.fixedWriter.Add(foe); err != nil {
-				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+				result.Result.ControlFlowFailure = &ControlFlowFailure{
 					Info:        "blobstore add failed for fixed execution fix",
 					InfoDetails: err.Error(),
 				}
 				return result
 			}
 			result.Stats.FixedCount++
-		case common.FixResultTypeSkipped:
+		case check.FixResultTypeSkipped:
 			if err := f.skippedWriter.Add(foe); err != nil {
-				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+				result.Result.ControlFlowFailure = &ControlFlowFailure{
 					Info:        "blobstore add failed for skipped execution fix",
 					InfoDetails: err.Error(),
 				}
 				return result
 			}
 			result.Stats.SkippedCount++
-		case common.FixResultTypeFailed:
+		case check.FixResultTypeFailed:
 			if err := f.failedWriter.Add(foe); err != nil {
-				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+				result.Result.ControlFlowFailure = &ControlFlowFailure{
 					Info:        "blobstore add failed for failed execution fix",
 					InfoDetails: err.Error(),
 				}
@@ -134,27 +135,27 @@ func (f *fixer) Fix() common.ShardFixReport {
 		}
 	}
 	if err := f.fixedWriter.Flush(); err != nil {
-		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+		result.Result.ControlFlowFailure = &ControlFlowFailure{
 			Info:        "failed to flush for fixed execution fixes",
 			InfoDetails: err.Error(),
 		}
 		return result
 	}
 	if err := f.skippedWriter.Flush(); err != nil {
-		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+		result.Result.ControlFlowFailure = &ControlFlowFailure{
 			Info:        "failed to flush for skipped execution fixes",
 			InfoDetails: err.Error(),
 		}
 		return result
 	}
 	if err := f.failedWriter.Flush(); err != nil {
-		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+		result.Result.ControlFlowFailure = &ControlFlowFailure{
 			Info:        "failed to flush for failed execution fixes",
 			InfoDetails: err.Error(),
 		}
 		return result
 	}
-	result.Result.ShardFixKeys = &common.ShardFixKeys{
+	result.Result.ShardFixKeys = &FixKeys{
 		Fixed:   f.fixedWriter.FlushedKeys(),
 		Failed:  f.failedWriter.FlushedKeys(),
 		Skipped: f.skippedWriter.FlushedKeys(),

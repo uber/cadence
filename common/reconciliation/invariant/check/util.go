@@ -20,18 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package shard
+package check
 
-import (
-	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/iterator"
-)
-
-// NewConcreteExecutionScanner returns a Scanner which scans concrete executions
-func NewConcreteExecutionScanner(
-	params ScannerParams,
-) common.Scanner {
-	scannerConfig := NewScannerConfig(params)
-	scannerConfig.itr = iterator.ConcreteExecution(params.Retryer, params.PersistencePageSize)
-	return &scannerConfig
+func checkBeforeFix(
+	invariant Invariant,
+	execution interface{},
+) (*FixResult, *CheckResult) {
+	checkResult := invariant.Check(execution)
+	if checkResult.CheckResultType == CheckResultTypeHealthy {
+		return &FixResult{
+			FixResultType: FixResultTypeSkipped,
+			InvariantType: invariant.InvariantType(),
+			CheckResult:   checkResult,
+			Info:          "skipped fix because execution was healthy",
+		}, nil
+	}
+	if checkResult.CheckResultType == CheckResultTypeFailed {
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
+			InvariantType: invariant.InvariantType(),
+			CheckResult:   checkResult,
+			Info:          "failed fix because check failed",
+		}, nil
+	}
+	return nil, &checkResult
 }

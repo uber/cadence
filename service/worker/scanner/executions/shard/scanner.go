@@ -28,38 +28,41 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common/pagination"
-	"github.com/uber/cadence/common/reconciliation/common"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
+	"github.com/uber/cadence/common/reconciliation/store"
 )
 
 type (
-	Scanner struct {
+	scanner struct {
 		shardID          int
 		itr              pagination.Iterator
-		failedWriter     common.ExecutionWriter
-		corruptedWriter  common.ExecutionWriter
-		invariantManager invariant.InvariantManager
+		failedWriter     store.ExecutionWriter
+		corruptedWriter  store.ExecutionWriter
+		invariantManager invariant.Manager
 		progressReportFn func()
 	}
 )
 
-func NewScannerConfig(params ScannerParams) Scanner {
+// NewScanner configures and returns Scanner.
+func NewScanner(params ScannerParams) Scanner {
 	id := uuid.New()
-	return Scanner{
+	return &scanner{
+		itr:              params.Iterator,
 		invariantManager: invariant.NewInvariantManager(params.Invariants),
 		shardID:          params.Retryer.GetShardID(),
-		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
-		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
+		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
+		corruptedWriter:  store.NewBlobstoreWriter(id, store.CorruptedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
 		progressReportFn: params.ProgressReportFn,
 	}
 }
 
 // Scan scans over all executions in shard and runs invariant checks per execution.
-func (s *Scanner) Scan() common.ShardScanReport {
-	result := common.ShardScanReport{
+func (s *scanner) Scan() ScanReport {
+	result := ScanReport{
 		ShardID: s.shardID,
-		Stats: common.ShardScanStats{
-			CorruptionByType: make(map[common.InvariantType]int64),
+		Stats: ScanStats{
+			CorruptionByType: make(map[check.InvariantType]int64),
 		},
 	}
 
@@ -67,7 +70,7 @@ func (s *Scanner) Scan() common.ShardScanReport {
 		s.progressReportFn()
 		exec, err := s.itr.Next()
 		if err != nil {
-			result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+			result.Result.ControlFlowFailure = &ControlFlowFailure{
 				Info:        "persistence iterator returned error",
 				InfoDetails: err.Error(),
 			}
@@ -76,14 +79,14 @@ func (s *Scanner) Scan() common.ShardScanReport {
 		checkResult := s.invariantManager.RunChecks(exec)
 		result.Stats.ExecutionsCount++
 		switch checkResult.CheckResultType {
-		case common.CheckResultTypeHealthy:
+		case check.CheckResultTypeHealthy:
 			// do nothing if execution is healthy
-		case common.CheckResultTypeCorrupted:
-			if err := s.corruptedWriter.Add(common.ScanOutputEntity{
+		case check.CheckResultTypeCorrupted:
+			if err := s.corruptedWriter.Add(store.ScanOutputEntity{
 				Execution: exec,
 				Result:    checkResult,
 			}); err != nil {
-				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+				result.Result.ControlFlowFailure = &ControlFlowFailure{
 					Info:        "blobstore add failed for corrupted execution check",
 					InfoDetails: err.Error(),
 				}
@@ -91,15 +94,15 @@ func (s *Scanner) Scan() common.ShardScanReport {
 			}
 			result.Stats.CorruptedCount++
 			result.Stats.CorruptionByType[*checkResult.DeterminingInvariantType]++
-			if invariant.ExecutionOpen(exec) {
+			if check.ExecutionOpen(exec) {
 				result.Stats.CorruptedOpenExecutionCount++
 			}
-		case common.CheckResultTypeFailed:
-			if err := s.failedWriter.Add(common.ScanOutputEntity{
+		case check.CheckResultTypeFailed:
+			if err := s.failedWriter.Add(store.ScanOutputEntity{
 				Execution: exec,
 				Result:    checkResult,
 			}); err != nil {
-				result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+				result.Result.ControlFlowFailure = &ControlFlowFailure{
 					Info:        "blobstore add failed for failed execution check",
 					InfoDetails: err.Error(),
 				}
@@ -112,21 +115,21 @@ func (s *Scanner) Scan() common.ShardScanReport {
 	}
 
 	if err := s.failedWriter.Flush(); err != nil {
-		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+		result.Result.ControlFlowFailure = &ControlFlowFailure{
 			Info:        "failed to flush for failed execution checks",
 			InfoDetails: err.Error(),
 		}
 		return result
 	}
 	if err := s.corruptedWriter.Flush(); err != nil {
-		result.Result.ControlFlowFailure = &common.ControlFlowFailure{
+		result.Result.ControlFlowFailure = &ControlFlowFailure{
 			Info:        "failed to flush for corrupted execution checks",
 			InfoDetails: err.Error(),
 		}
 		return result
 	}
 
-	result.Result.ShardScanKeys = &common.ShardScanKeys{
+	result.Result.ShardScanKeys = &ScanKeys{
 		Corrupt: s.corruptedWriter.FlushedKeys(),
 		Failed:  s.failedWriter.FlushedKeys(),
 	}

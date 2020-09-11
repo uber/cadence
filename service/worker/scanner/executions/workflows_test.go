@@ -26,6 +26,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/activity"
@@ -131,8 +133,8 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 						ExecutionsCount:  10,
 						CorruptedCount:   2,
 						CheckFailedCount: 1,
-						CorruptionByType: map[c.InvariantType]int64{
-							c.HistoryExistsInvariantType: 1,
+						CorruptionByType: map[check.InvariantType]int64{
+							check.HistoryExistsInvariantType: 1,
 						},
 						CorruptedOpenExecutionCount: 0,
 					},
@@ -168,8 +170,8 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 		ExecutionsCount:  240,
 		CorruptedCount:   48,
 		CheckFailedCount: 24,
-		CorruptionByType: map[c.InvariantType]int64{
-			c.HistoryExistsInvariantType: 24,
+		CorruptionByType: map[check.InvariantType]int64{
+			check.HistoryExistsInvariantType: 24,
 		},
 	}, agg)
 
@@ -197,8 +199,8 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 					ExecutionsCount:  10,
 					CorruptedCount:   2,
 					CheckFailedCount: 1,
-					CorruptionByType: map[c.InvariantType]int64{
-						c.HistoryExistsInvariantType: 1,
+					CorruptionByType: map[check.InvariantType]int64{
+						check.HistoryExistsInvariantType: 1,
 					},
 					CorruptedOpenExecutionCount: 0,
 				},

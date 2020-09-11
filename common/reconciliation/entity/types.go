@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package types
+package entity
 
 import (
 	"errors"
@@ -43,6 +43,7 @@ type BlobstoreEntity interface {
 	Clone() BlobstoreEntity
 }
 
+// Clone will return a new ConcreteExecution
 func (ConcreteExecution) Clone() BlobstoreEntity {
 	return &ConcreteExecution{}
 }
@@ -53,6 +54,7 @@ type CurrentExecution struct {
 	Execution
 }
 
+// Clone will return a new CurrentExecution
 func (CurrentExecution) Clone() BlobstoreEntity {
 	return &CurrentExecution{}
 }

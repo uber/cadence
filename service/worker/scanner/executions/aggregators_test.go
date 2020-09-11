@@ -25,6 +25,8 @@ package executions
 import (
 	"math/rand"
 
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
+
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/reconciliation/common"
 )
@@ -41,7 +43,7 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 			3: ShardStatusRunning,
 		},
 		aggregation: AggregateScanReportResult{
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[check.InvariantType]int64),
 		},
 		corruptionKeys: make(map[int]common.Keys),
 		statusSummary: map[ShardStatus]int{
@@ -64,9 +66,9 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 			ExecutionsCount:  10,
 			CorruptedCount:   3,
 			CheckFailedCount: 1,
-			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType:        2,
-				common.OpenCurrentExecutionInvariantType: 1,
+			CorruptionByType: map[check.InvariantType]int64{
+				check.HistoryExistsInvariantType:        2,
+				check.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},
@@ -92,9 +94,9 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	expected.aggregation.ExecutionsCount = 10
 	expected.aggregation.CorruptedCount = 3
 	expected.aggregation.CheckFailedCount = 1
-	expected.aggregation.CorruptionByType = map[common.InvariantType]int64{
-		common.HistoryExistsInvariantType:        2,
-		common.OpenCurrentExecutionInvariantType: 1,
+	expected.aggregation.CorruptionByType = map[check.InvariantType]int64{
+		check.HistoryExistsInvariantType:        2,
+		check.OpenCurrentExecutionInvariantType: 1,
 	}
 	expected.aggregation.CorruptedOpenExecutionCount = 1
 	expected.corruptionKeys = map[int]common.Keys{
@@ -112,9 +114,9 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 			ExecutionsCount:  10,
 			CorruptedCount:   3,
 			CheckFailedCount: 1,
-			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType:        2,
-				common.OpenCurrentExecutionInvariantType: 1,
+			CorruptionByType: map[check.InvariantType]int64{
+				check.HistoryExistsInvariantType:        2,
+				check.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},

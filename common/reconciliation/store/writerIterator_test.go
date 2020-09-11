@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package common
+package store
 
 import (
 	"fmt"
@@ -37,8 +37,8 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/iterator"
-	"github.com/uber/cadence/common/reconciliation/types"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -96,7 +96,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 	s.Equal(0, flushedKeys.MinPage)
 	s.Equal(9, flushedKeys.MaxPage)
 	s.Equal(Extension("test"), flushedKeys.Extension)
-	blobstoreItr := NewBlobstoreIterator(client, *flushedKeys, &types.ConcreteExecution{})
+	blobstoreItr := NewBlobstoreIterator(client, *flushedKeys, &entity.ConcreteExecution{})
 	i := 0
 	s.True(blobstoreItr.HasNext())
 

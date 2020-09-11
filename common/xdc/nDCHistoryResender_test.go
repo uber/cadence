@@ -42,8 +42,8 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/types"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
 )
 
 type (
@@ -359,7 +359,7 @@ func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
 	workflowID1 := uuid.New()
 	workflowID2 := uuid.New()
 	runID := uuid.New()
-	invariantMock := checks.NewMockInvariant(s.controller)
+	invariantMock := check.NewMockInvariant(s.controller)
 	s.rereplicator = NewNDCHistoryResender(
 		s.mockDomainCache,
 		s.mockAdminClient,
@@ -371,27 +371,27 @@ func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
 		invariantMock,
 		s.logger,
 	)
-	execution1 := &types.CurrentExecution{
-		Execution: types.Execution{
+	execution1 := &entity.CurrentExecution{
+		Execution: entity.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID1,
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	execution2 := &types.CurrentExecution{
-		Execution: types.Execution{
+	execution2 := &entity.CurrentExecution{
+		Execution: entity.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID2,
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	invariantMock.EXPECT().Check(execution1).Return(checks.CheckResult{
-		CheckResultType: checks.CheckResultTypeCorrupted,
+	invariantMock.EXPECT().Check(execution1).Return(check.CheckResult{
+		CheckResultType: check.CheckResultTypeCorrupted,
 	}).Times(1)
-	invariantMock.EXPECT().Check(execution2).Return(checks.CheckResult{
-		CheckResultType: checks.CheckResultTypeHealthy,
+	invariantMock.EXPECT().Check(execution2).Return(check.CheckResult{
+		CheckResultType: check.CheckResultTypeHealthy,
 	}).Times(1)
-	invariantMock.EXPECT().Fix(gomock.Any()).Return(checks.FixResult{}).Times(1)
+	invariantMock.EXPECT().Fix(gomock.Any()).Return(check.FixResult{}).Times(1)
 
 	skipTask := s.rereplicator.fixCurrentExecution(domainID, workflowID1, runID)
 	s.False(skipTask)

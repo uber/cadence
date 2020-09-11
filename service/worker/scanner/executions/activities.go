@@ -26,8 +26,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -36,7 +34,8 @@ import (
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant/check"
+	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
@@ -126,19 +125,19 @@ type (
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
 	CorruptedKeysEntry struct {
 		ShardID       int
-		CorruptedKeys common.Keys
+		CorruptedKeys store.Keys
 	}
 
 	// ScanShardHeartbeatDetails is the heartbeat details for scan shard
 	ScanShardHeartbeatDetails struct {
 		LastShardIndexHandled int
-		Reports               []common.ShardScanReport
+		Reports               []shard.ScanReport
 	}
 
 	// FixShardHeartbeatDetails is the heartbeat details for the fix shard
 	FixShardHeartbeatDetails struct {
 		LastShardIndexHandled int
-		Reports               []common.ShardFixReport
+		Reports               []shard.FixReport
 	}
 )
 
@@ -175,7 +174,7 @@ func ScannerEmitMetricsActivity(
 func ScanShardActivity(
 	activityCtx context.Context,
 	params ScanShardActivityParams,
-) ([]common.ShardScanReport, error) {
+) ([]shard.ScanReport, error) {
 	heartbeatDetails := ScanShardHeartbeatDetails{
 		LastShardIndexHandled: -1,
 		Reports:               nil,
@@ -204,7 +203,7 @@ func scanShard(
 	params ScanShardActivityParams,
 	shardID int,
 	heartbeatDetails ScanShardHeartbeatDetails,
-) (*common.ShardScanReport, error) {
+) (*shard.ScanReport, error) {
 	ctx := activityCtx.Value(ScanTypeScannerContextKeyMap[params.ScanType]).(ScannerContext)
 	resources := ctx.Resource
 	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(scanTypePrefixMap[params.ScanType] + ScannerScanShardActivityName))
@@ -215,31 +214,33 @@ func scanShard(
 		scope.IncCounter(metrics.CadenceFailures)
 		return nil, err
 	}
-	var collections []common.InvariantCollection
+	var collections []check.InvariantCollection
 	if params.InvariantCollections.InvariantCollectionHistory {
-		collections = append(collections, common.InvariantCollectionHistory)
+		collections = append(collections, check.InvariantCollectionHistory)
 	}
 	if params.InvariantCollections.InvariantCollectionMutableState {
-		collections = append(collections, common.InvariantCollectionMutableState)
+		collections = append(collections, check.InvariantCollectionMutableState)
 	}
 
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
-	var ivs []invariant.Invariant
+
+	var ivs []check.Invariant
 	for _, fn := range params.ScanType.ToInvariants(collections) {
 		ivs = append(ivs, fn(pr))
 	}
 
+	iterator := params.ScanType.ToIterator()
+
 	scannerParams := shard.ScannerParams{
+		Iterator:                iterator(pr, params.ExecutionsPageSize),
 		Retryer:                 pr,
-		PersistencePageSize:     params.ExecutionsPageSize,
 		BlobstoreClient:         resources.GetBlobstoreClient(),
 		BlobstoreFlushThreshold: params.BlobstoreFlushThreshold,
 		Invariants:              ivs,
 		ProgressReportFn:        func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 	}
 
-	scanner := params.ScanType.ToScanner()
-	report := scanner(scannerParams).Scan()
+	report := shard.NewScanner(scannerParams).Scan()
 
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
@@ -361,7 +362,7 @@ func FixerCorruptedKeysActivity(
 func FixShardActivity(
 	activityCtx context.Context,
 	params FixShardActivityParams,
-) ([]common.ShardFixReport, error) {
+) ([]shard.FixReport, error) {
 	heartbeatDetails := FixShardHeartbeatDetails{
 		LastShardIndexHandled: -1,
 		Reports:               nil,
@@ -390,9 +391,9 @@ func fixShard(
 	activityCtx context.Context,
 	params FixShardActivityParams,
 	shardID int,
-	corruptedKeys common.Keys,
+	corruptedKeys store.Keys,
 	heartbeatDetails FixShardHeartbeatDetails,
-) (*common.ShardFixReport, error) {
+) (*shard.FixReport, error) {
 	ctx := activityCtx.Value(ScanTypeFixerContextKeyMap[params.ScanType]).(FixerContext)
 	resources := ctx.Resource
 	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(FixerFixShardActivityName))
@@ -403,12 +404,12 @@ func fixShard(
 		scope.IncCounter(metrics.CadenceFailures)
 		return nil, err
 	}
-	var collections []common.InvariantCollection
+	var collections []check.InvariantCollection
 	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionHistory {
-		collections = append(collections, common.InvariantCollectionHistory)
+		collections = append(collections, check.InvariantCollectionHistory)
 	}
 	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionMutableState {
-		collections = append(collections, common.InvariantCollectionMutableState)
+		collections = append(collections, check.InvariantCollectionMutableState)
 	}
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 	fixer := shard.NewFixer(
