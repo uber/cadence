@@ -21,7 +21,8 @@
 package task
 
 const (
-	numBitsPerLevel = 3
+	// NumBitsPerLevel is the number of bits used for each priority level
+	NumBitsPerLevel = 3
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 
 const (
 	// HighPriorityClass is the priority class for high priority tasks
-	HighPriorityClass = iota << numBitsPerLevel
+	HighPriorityClass = iota << NumBitsPerLevel
 	// DefaultPriorityClass is the priority class for default priority tasks
 	DefaultPriorityClass
 	// LowPriorityClass is the priority class for low priority tasks

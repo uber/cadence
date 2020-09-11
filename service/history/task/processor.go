@@ -49,6 +49,7 @@ type (
 		priorityAssigner PriorityAssigner
 		hostScheduler    task.Scheduler
 		shardSchedulers  map[shard.Context]task.Scheduler
+		rateLimiter      quotas.Limiter
 
 		status        int32
 		options       *schedulerOptions
@@ -75,7 +76,7 @@ func NewProcessor(
 		config.TaskSchedulerWorkerCount(),
 		config.TaskSchedulerDispatcherCount(),
 		config.TaskSchedulerRoundRobinWeights,
-		config.TaskProcessGlobalRPS,
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -106,11 +107,14 @@ func NewProcessor(
 		priorityAssigner: priorityAssigner,
 		hostScheduler:    scheduler,
 		shardSchedulers:  make(map[shard.Context]task.Scheduler),
-		status:           common.DaemonStatusInitialized,
-		options:          options,
-		shardOptions:     shardOptions,
-		logger:           logger,
-		metricsClient:    metricsClient,
+		rateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
+			return float64(config.TaskProcessGlobalRPS())
+		}),
+		status:        common.DaemonStatusInitialized,
+		options:       options,
+		shardOptions:  shardOptions,
+		logger:        logger,
+		metricsClient: metricsClient,
 	}, nil
 }
 
@@ -166,6 +170,11 @@ func (p *processorImpl) Submit(
 		return err
 	}
 
+	// if !isHighPriorityTask(task.Priority()) {
+	// 	// for throttled tasks, block on the ratelimiter
+	// 	p.rateLimiter.Wait(context.Background())
+	// }
+
 	submitted, err := p.hostScheduler.TrySubmit(task)
 	if err != nil {
 		return err
@@ -194,6 +203,11 @@ func (p *processorImpl) TrySubmit(
 	if err := p.priorityAssigner.Assign(task); err != nil {
 		return false, err
 	}
+
+	// if !isHighPriorityTask(task.Priority()) && !p.rateLimiter.Allow() {
+	// 	// for throttled tasks, block on the ratelimiter
+	// 	return false, nil
+	// }
 
 	submitted, err := p.hostScheduler.TrySubmit(task)
 	if err != nil {
@@ -333,4 +347,10 @@ func createTaskScheduler(
 	}
 
 	return scheduler, err
+}
+
+func isHighPriorityTask(
+	priority int,
+) bool {
+	return (priority >> task.NumBitsPerLevel) == task.HighPriorityClass
 }

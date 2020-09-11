@@ -163,6 +163,7 @@ func (s *queueTaskProcessorSuite) TestStartStop() {
 func (s *queueTaskProcessorSuite) TestSubmit() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetShard().Return(s.mockShard).Times(1)
+	mockTask.EXPECT().Priority().Return(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)).MaxTimes(1)
 	s.mockPriorityAssigner.EXPECT().Assign(NewMockTaskMatcher(mockTask)).Return(nil).Times(1)
 
 	mockScheduler := task.NewMockScheduler(s.controller)
@@ -191,6 +192,8 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_AssignPriorityFailed() {
 
 func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 	mockTask := NewMockTask(s.controller)
+	mockTask.EXPECT().Priority().Return(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)).MaxTimes(1)
+
 	s.mockPriorityAssigner.EXPECT().Assign(NewMockTaskMatcher(mockTask)).Return(nil).Times(1)
 
 	errTrySubmit := errors.New("some random error")
@@ -204,15 +207,66 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 	s.False(submitted)
 }
 
+// func (s *queueTaskProcessorSuite) TestTrySubmit_Throttled() {
+// 	mockScheduler := task.NewMockScheduler(s.controller)
+// 	s.processor.hostScheduler = mockScheduler
+
+// 	for i := 0; i != 11; i++ {
+// 		mockTask := NewMockTask(s.controller)
+// 		mockTask.EXPECT().Priority().Return(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)).Times(1)
+
+// 		s.mockPriorityAssigner.EXPECT().Assign(NewMockTaskMatcher(mockTask)).Return(nil).Times(1)
+
+// 		mockScheduler.EXPECT().TrySubmit(NewMockTaskMatcher(mockTask)).Return(true, nil).MaxTimes(1)
+
+// 		submitted, err := s.processor.TrySubmit(mockTask)
+
+// 		s.NoError(err)
+// 		if i != 10 {
+// 			s.True(submitted)
+// 		} else {
+// 			s.False(submitted)
+// 		}
+// 	}
+// }
+
 func (s *queueTaskProcessorSuite) TestNewSchedulerOptions_UnknownSchedulerType() {
 	options, err := newSchedulerOptions(0, 100, 10, 1, nil, nil)
 	s.Error(err)
 	s.Nil(options)
 }
 
+func (s *queueTaskProcessorSuite) TestIsHighPriorityTask() {
+	testCases := []struct {
+		priority       int
+		isHighPriority bool
+	}{
+		{
+			priority:       task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass),
+			isHighPriority: false,
+		},
+		{
+			priority:       task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass),
+			isHighPriority: false,
+		},
+		{
+			priority:       task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass),
+			isHighPriority: true,
+		}, {
+			priority:       task.GetTaskPriority(task.HighPriorityClass, task.LowPrioritySubclass),
+			isHighPriority: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Equal(tc.isHighPriority, isHighPriorityTask(tc.priority))
+	}
+}
+
 func (s *queueTaskProcessorSuite) newTestQueueTaskProcessor() *processorImpl {
 	config := config.NewForTest()
 	config.TaskSchedulerShardWorkerCount = dynamicconfig.GetIntPropertyFn(1)
+	config.TaskProcessGlobalRPS = dynamicconfig.GetIntPropertyFn(10)
 	processor, err := NewProcessor(
 		s.mockPriorityAssigner,
 		config,
