@@ -21,10 +21,10 @@
 package postgres
 
 import (
-	"errors"
 	"fmt"
 	"net"
-
+	"net/url"
+	
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 
@@ -35,8 +35,8 @@ import (
 
 const (
 	// PluginName is the name of the plugin
-	PluginName                     = "postgres"
-	dsnFmt = "%s://%s@%s:%s/%s"
+	PluginName = "postgres"
+	dsnFmt = "postgres://%s@%s:%s/%s"
 )
 
 type plugin struct{}
@@ -72,7 +72,7 @@ func (d *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
-	err := registerTLSConfig(cfg)
+	sslParams, err := registerTLSConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -82,47 +82,57 @@ func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("invalid connect address, it must be in host:port format, %v, err: %v", cfg.ConnectAddr, err)
 	}
 
-	dbName := cfg.DatabaseName
-	db, err := sqlx.Connect(PluginName, buildDSN(cfg, dbName, host, port))
-
+	db, err := sqlx.Connect(PluginName, buildDSN(cfg, host, port, sslParams))
 	if err != nil {
 		return nil, err
 	}
-
+	if cfg.MaxConns > 0 {
+		db.SetMaxOpenConns(cfg.MaxConns)
+	}
+	if cfg.MaxIdleConns > 0 {
+		db.SetMaxIdleConns(cfg.MaxIdleConns)
+	}
+	if cfg.MaxConnLifetime > 0 {
+		db.SetConnMaxLifetime(cfg.MaxConnLifetime)
+	}
+	
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
 	return db, nil
 }
 
-func buildDSN(cfg *config.SQL, dbName string, host string, port string) string {
+func buildDSN(cfg *config.SQL, host string, port string, sslParams url.Values) string {
+	generateCredentialString := func(user, password string) string {
+		userPass := cfg.User
+		if cfg.Password != "" {
+			userPass += ":" + cfg.PluginName
+		}
+		return userPass
+	}
+
+	dbName := cfg.DatabaseName
 	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
 	if dbName == "" {
 		dbName = "postgres"
 	}
-	params := url.Values{}
-	attrs := ""
-	
-	if cfg.Password != "" {
-		params.Add("password", cfg.Password)
-	}
 
-	if cfg.TLS != nil && cfg.TLS.Enabled {
-		params.Add("ssl", "true")
-		params.Add("sslmode", "require")
-		params.Add("sslrootcert", cfg.TLS.CaFile)
-		params.Add("sslkey", cfg.TLS.KeyFile)
-		params.Add("sslcert", cfg.TLS.CertFile)
-	}
-	attrs = params.Encode()
-
-	dsn := fmt.Sprintf(dsnFmt, "postgresql", cfg.User, host, port, dbName)
-	if attrs != "" {
+	dsn := fmt.Sprintf(dsnFmt, generateCredentialString(cfg.User, cfg.Password), host, port, dbName)
+	if attrs := sslParams.Encode(); attrs != "" {
 		dsn += "?" + attrs
 	}
 	return dsn
 }
 
-// TODO: implement postgres specific support for TLS
-func registerTLSConfig(cfg *config.SQL) error {
-	return nil
+func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {
+	sslParams = url.Values{}
+	if cfg.TLS != nil && cfg.TLS.Enabled {
+		sslParams.Set("ssl", "true")
+		sslParams.Set("sslmode", "require")
+		sslParams.Set("sslrootcert", cfg.TLS.CaFile)
+		sslParams.Set("sslkey", cfg.TLS.KeyFile)
+		sslParams.Set("sslcert", cfg.TLS.CertFile)
+	} else {
+		sslParams.Set("sslmode", "disable")
+	}
+	return
 }
