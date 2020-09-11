@@ -24,24 +24,7 @@
 
 package common
 
-import "github.com/uber/cadence/common/pagination"
-
 type (
-	// InvariantManager represents a manager of several invariants.
-	// It can be used to run a group of invariant checks or fixes.
-	InvariantManager interface {
-		RunChecks(interface{}) ManagerCheckResult
-		RunFixes(interface{}) ManagerFixResult
-	}
-
-	// Invariant represents an invariant of a single execution.
-	// It can be used to check that the execution satisfies the invariant.
-	// It can also be used to fix the invariant for an execution.
-	Invariant interface {
-		Check(interface{}) CheckResult
-		Fix(interface{}) FixResult
-		InvariantType() InvariantType
-	}
 
 	// ExecutionIterator gets Executions from underlying store.
 	ExecutionIterator interface {
@@ -51,10 +34,6 @@ type (
 		// HasNext indicates if the iterator has a next element. If HasNext is true
 		// it is guaranteed that Next will return a nil error and a non-nil Execution.
 		HasNext() bool
-	}
-
-	PersistenceFetcher interface {
-		Fetch(token pagination.PageToken) (pagination.Page, error)
 	}
 
 	// ScanOutputIterator gets ScanOutputEntities from underlying store

@@ -26,7 +26,8 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/invariants"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/types"
 )
 
 type (
@@ -42,27 +43,27 @@ const (
 )
 
 // ToBlobstoreEntity picks struct depending on Scanner type
-func (st ScanType) ToBlobstoreEntity() common.BlobstoreEntity {
+func (st ScanType) ToBlobstoreEntity() types.BlobstoreEntity {
 	switch st {
 	case ConcreteExecutionType:
-		return &common.ConcreteExecution{}
+		return &types.ConcreteExecution{}
 	case CurrentExecutionType:
-		return &common.CurrentExecution{}
+		return &types.CurrentExecution{}
 	}
 	panic("unknown scan type")
 }
 
 // ToInvariants returns list of invariants to be checked
-func (st ScanType) ToInvariants(collections []common.InvariantCollection) []func(retryer persistence.Retryer) common.Invariant {
-	var fns []func(retryer persistence.Retryer) common.Invariant
+func (st ScanType) ToInvariants(collections []common.InvariantCollection) []func(retryer persistence.Retryer) invariant.Invariant {
+	var fns []func(retryer persistence.Retryer) invariant.Invariant
 	switch st {
 	case ConcreteExecutionType:
 		for _, collection := range collections {
 			switch collection {
 			case common.InvariantCollectionHistory:
-				fns = append(fns, invariants.NewHistoryExists)
+				fns = append(fns, invariant.NewHistoryExists)
 			case common.InvariantCollectionMutableState:
-				fns = append(fns, invariants.NewOpenCurrentExecution)
+				fns = append(fns, invariant.NewOpenCurrentExecution)
 			}
 		}
 		return fns
@@ -70,7 +71,7 @@ func (st ScanType) ToInvariants(collections []common.InvariantCollection) []func
 		for _, collection := range collections {
 			switch collection {
 			case common.InvariantCollectionMutableState:
-				fns = append(fns, invariants.NewConcreteExecutionExists)
+				fns = append(fns, invariant.NewConcreteExecutionExists)
 			}
 		}
 		return fns
@@ -97,6 +98,6 @@ type ScannerParams struct {
 	PersistencePageSize     int
 	BlobstoreClient         blobstore.Client
 	BlobstoreFlushThreshold int
-	Invariants              []common.Invariant
+	Invariants              []invariant.Invariant
 	ProgressReportFn        func()
 }

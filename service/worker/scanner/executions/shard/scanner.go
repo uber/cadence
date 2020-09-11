@@ -26,9 +26,10 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/invariants"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 )
 
 type (
@@ -37,7 +38,7 @@ type (
 		itr              pagination.Iterator
 		failedWriter     common.ExecutionWriter
 		corruptedWriter  common.ExecutionWriter
-		invariantManager common.InvariantManager
+		invariantManager invariant.InvariantManager
 		progressReportFn func()
 	}
 )
@@ -45,7 +46,7 @@ type (
 func NewScannerConfig(params ScannerParams) Scanner {
 	id := uuid.New()
 	return Scanner{
-		invariantManager: invariants.NewInvariantManager(params.Invariants),
+		invariantManager: invariant.NewInvariantManager(params.Invariants),
 		shardID:          params.Retryer.GetShardID(),
 		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
 		corruptedWriter:  common.NewBlobstoreWriter(id, common.CorruptedExtension, params.BlobstoreClient, params.BlobstoreFlushThreshold),
@@ -90,7 +91,7 @@ func (s *Scanner) Scan() common.ShardScanReport {
 			}
 			result.Stats.CorruptedCount++
 			result.Stats.CorruptionByType[*checkResult.DeterminingInvariantType]++
-			if common.ExecutionOpen(exec) {
+			if invariant.ExecutionOpen(exec) {
 				result.Stats.CorruptedOpenExecutionCount++
 			}
 		case common.CheckResultTypeFailed:

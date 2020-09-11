@@ -26,6 +26,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/uber/cadence/common/reconciliation/invariant"
+
 	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -222,7 +224,7 @@ func scanShard(
 	}
 
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
-	var ivs []common.Invariant
+	var ivs []invariant.Invariant
 	for _, fn := range params.ScanType.ToInvariants(collections) {
 		ivs = append(ivs, fn(pr))
 	}

@@ -30,7 +30,7 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/invariants"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 )
 
 type (
@@ -40,7 +40,7 @@ type (
 		skippedWriter    common.ExecutionWriter
 		failedWriter     common.ExecutionWriter
 		fixedWriter      common.ExecutionWriter
-		invariantManager common.InvariantManager
+		invariantManager invariant.InvariantManager
 		progressReportFn func()
 	}
 )
@@ -58,13 +58,13 @@ func NewFixer(
 ) common.Fixer {
 	id := uuid.New()
 
-	var ivs []common.Invariant
+	var ivs []invariant.Invariant
 	for _, collection := range invariantCollections {
 		switch collection {
 		case common.InvariantCollectionHistory:
-			ivs = append(ivs, []common.Invariant{invariants.NewHistoryExists(pr)}...)
+			ivs = append(ivs, []invariant.Invariant{invariant.NewHistoryExists(pr)}...)
 		case common.InvariantCollectionMutableState:
-			ivs = append(ivs, []common.Invariant{invariants.NewOpenCurrentExecution(pr)}...)
+			ivs = append(ivs, []invariant.Invariant{invariant.NewOpenCurrentExecution(pr)}...)
 		}
 	}
 
@@ -74,7 +74,7 @@ func NewFixer(
 		skippedWriter:    common.NewBlobstoreWriter(id, common.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
 		failedWriter:     common.NewBlobstoreWriter(id, common.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		fixedWriter:      common.NewBlobstoreWriter(id, common.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariants.NewInvariantManager(ivs),
+		invariantManager: invariant.NewInvariantManager(ivs),
 		progressReportFn: progressReportFn,
 	}
 }

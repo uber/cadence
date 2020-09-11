@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/types"
 )
 
 type FixerSuite struct {
@@ -306,31 +307,31 @@ func (s *FixerSuite) TestFix_Success() {
 		switch iteratorCallNumber {
 		case 0, 1, 2, 3:
 			return &common.ScanOutputEntity{
-				Execution: common.Execution{
+				Execution: types.Execution{
 					DomainID: "skipped",
 				},
 			}, nil
 		case 4, 5:
 			return &common.ScanOutputEntity{
-				Execution: common.Execution{
+				Execution: types.Execution{
 					DomainID: "history_missing",
 				},
 			}, nil
 		case 6:
 			return &common.ScanOutputEntity{
-				Execution: common.Execution{
+				Execution: types.Execution{
 					DomainID: "first_history_event",
 				},
 			}, nil
 		case 7:
 			return &common.ScanOutputEntity{
-				Execution: common.Execution{
+				Execution: types.Execution{
 					DomainID: "orphan_execution",
 				},
 			}, nil
 		case 8, 9:
 			return &common.ScanOutputEntity{
-				Execution: common.Execution{
+				Execution: types.Execution{
 					DomainID: "failed",
 				},
 			}, nil
@@ -339,7 +340,7 @@ func (s *FixerSuite) TestFix_Success() {
 		}
 	}).Times(10)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(common.Execution{
+	mockInvariantManager.EXPECT().RunFixes(types.Execution{
 		DomainID: "skipped",
 	}).Return(common.ManagerFixResult{
 		FixResultType: common.FixResultTypeSkipped,
@@ -357,7 +358,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(4)
-	mockInvariantManager.EXPECT().RunFixes(common.Execution{
+	mockInvariantManager.EXPECT().RunFixes(types.Execution{
 		DomainID: "history_missing",
 	}).Return(common.ManagerFixResult{
 		FixResultType: common.FixResultTypeFixed,
@@ -369,7 +370,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(2)
-	mockInvariantManager.EXPECT().RunFixes(common.Execution{
+	mockInvariantManager.EXPECT().RunFixes(types.Execution{
 		DomainID: "first_history_event",
 	}).Return(common.ManagerFixResult{
 		FixResultType: common.FixResultTypeFixed,
@@ -384,7 +385,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunFixes(common.Execution{
+	mockInvariantManager.EXPECT().RunFixes(types.Execution{
 		DomainID: "orphan_execution",
 		State:    persistence.WorkflowStateCreated,
 	}).Return(common.ManagerFixResult{
@@ -404,7 +405,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunFixes(common.Execution{
+	mockInvariantManager.EXPECT().RunFixes(types.Execution{
 		DomainID: "failed",
 	}).Return(common.ManagerFixResult{
 		FixResultType: common.FixResultTypeFailed,
@@ -419,11 +420,11 @@ func (s *FixerSuite) TestFix_Success() {
 
 	mockFixedWriter := common.NewMockExecutionWriter(s.controller)
 	mockFixedWriter.EXPECT().Add(common.FixOutputEntity{
-		Execution: common.Execution{
+		Execution: types.Execution{
 			DomainID: "history_missing",
 		},
 		Input: common.ScanOutputEntity{
-			Execution: common.Execution{
+			Execution: types.Execution{
 				DomainID: "history_missing",
 			},
 		},
@@ -439,11 +440,11 @@ func (s *FixerSuite) TestFix_Success() {
 		},
 	}).Times(2)
 	mockFixedWriter.EXPECT().Add(common.FixOutputEntity{
-		Execution: common.Execution{
+		Execution: types.Execution{
 			DomainID: "first_history_event",
 		},
 		Input: common.ScanOutputEntity{
-			Execution: common.Execution{
+			Execution: types.Execution{
 				DomainID: "first_history_event",
 			},
 		},
@@ -462,11 +463,11 @@ func (s *FixerSuite) TestFix_Success() {
 		},
 	}).Times(1)
 	mockFixedWriter.EXPECT().Add(common.FixOutputEntity{
-		Execution: common.Execution{
+		Execution: types.Execution{
 			DomainID: "orphan_execution",
 		},
 		Input: common.ScanOutputEntity{
-			Execution: common.Execution{
+			Execution: types.Execution{
 				DomainID: "orphan_execution",
 			},
 		},
@@ -490,11 +491,11 @@ func (s *FixerSuite) TestFix_Success() {
 	}).Times(1)
 	mockFailedWriter := common.NewMockExecutionWriter(s.controller)
 	mockFailedWriter.EXPECT().Add(common.FixOutputEntity{
-		Execution: common.Execution{
+		Execution: types.Execution{
 			DomainID: "failed",
 		},
 		Input: common.ScanOutputEntity{
-			Execution: common.Execution{
+			Execution: types.Execution{
 				DomainID: "failed",
 			},
 		},
@@ -511,11 +512,11 @@ func (s *FixerSuite) TestFix_Success() {
 	}).Times(2)
 	mockSkippedWriter := common.NewMockExecutionWriter(s.controller)
 	mockSkippedWriter.EXPECT().Add(common.FixOutputEntity{
-		Execution: common.Execution{
+		Execution: types.Execution{
 			DomainID: "skipped",
 		},
 		Input: common.ScanOutputEntity{
-			Execution: common.Execution{
+			Execution: types.Execution{
 				DomainID: "skipped",
 			},
 		},

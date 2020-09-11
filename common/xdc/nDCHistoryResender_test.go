@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/types"
 )
 
 type (
@@ -370,15 +371,15 @@ func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
 		invariantMock,
 		s.logger,
 	)
-	execution1 := &checks.CurrentExecution{
-		Execution: checks.Execution{
+	execution1 := &types.CurrentExecution{
+		Execution: types.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID1,
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	execution2 := &checks.CurrentExecution{
-		Execution: checks.Execution{
+	execution2 := &types.CurrentExecution{
+		Execution: types.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID2,
 			State:      persistence.WorkflowStateRunning,

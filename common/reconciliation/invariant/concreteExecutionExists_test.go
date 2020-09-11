@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
 	"errors"
@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/types"
 )
 
 type ConcreteExecutionExistsSuite struct {
@@ -56,7 +57,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 	existsError := shared.EntityNotExistsError{}
 	unknownError := shared.BadRequestError{}
 	testCases := []struct {
-		execution       *common.CurrentExecution
+		execution       *types.CurrentExecution
 		getConcreteResp *persistence.IsWorkflowExecutionExistsResponse
 		getConcreteErr  error
 		getCurrentResp  *persistence.GetCurrentExecutionResponse

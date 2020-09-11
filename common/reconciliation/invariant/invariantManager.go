@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
 	"github.com/uber/cadence/common/reconciliation/common"
@@ -28,14 +28,14 @@ import (
 
 type (
 	invariantManager struct {
-		invariants []common.Invariant
+		invariants []Invariant
 	}
 )
 
 // NewInvariantManager handles running a collection of invariants according to the invariant collection provided.
 func NewInvariantManager(
-	invariants []common.Invariant,
-) common.InvariantManager {
+	invariants []Invariant,
+) InvariantManager {
 	return &invariantManager{
 		invariants: invariants,
 	}
@@ -115,4 +115,20 @@ func (i *invariantManager) nextCheckResultType(
 	default:
 		panic("unknown CheckResultType")
 	}
+}
+
+// InvariantManager represents a manager of several invariants.
+// It can be used to run a group of invariant checks or fixes.
+type InvariantManager interface {
+	RunChecks(interface{}) common.ManagerCheckResult
+	RunFixes(interface{}) common.ManagerFixResult
+}
+
+// Invariant represents an invariant of a single execution.
+// It can be used to check that the execution satisfies the invariant.
+// It can also be used to fix the invariant for an execution.
+type Invariant interface {
+	Check(interface{}) common.CheckResult
+	Fix(interface{}) common.FixResult
+	InvariantType() common.InvariantType
 }

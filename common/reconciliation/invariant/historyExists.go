@@ -20,108 +20,112 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
-	"fmt"
-
 	"github.com/uber/cadence/.gen/go/shared"
+
+	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/types"
+)
+
+const (
+	historyPageSize = 1
 )
 
 type (
-	openCurrentExecution struct {
+	historyExists struct {
 		pr persistence.Retryer
 	}
 )
 
-// NewOpenCurrentExecution returns a new invariant for checking open current execution
-func NewOpenCurrentExecution(
+// NewHistoryExists returns a new history exists invariant
+func NewHistoryExists(
 	pr persistence.Retryer,
-) common.Invariant {
-	return &openCurrentExecution{
+) Invariant {
+	return &historyExists{
 		pr: pr,
 	}
 }
 
-func (o *openCurrentExecution) Check(execution interface{}) common.CheckResult {
-	concreteExecution, ok := execution.(*common.ConcreteExecution)
+func (h *historyExists) Check(execution interface{}) common.CheckResult {
+	concreteExecution, ok := execution.(*types.ConcreteExecution)
 	if !ok {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
-			InvariantType:   o.InvariantType(),
+			InvariantType:   h.InvariantType(),
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
-	if !common.Open(concreteExecution.State) {
-		return common.CheckResult{
-			CheckResultType: common.CheckResultTypeHealthy,
-			InvariantType:   o.InvariantType(),
-		}
+	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
+		BranchToken:   concreteExecution.BranchToken,
+		MinEventID:    c.FirstEventID,
+		MaxEventID:    c.FirstEventID + 1,
+		PageSize:      historyPageSize,
+		NextPageToken: nil,
+		ShardID:       c.IntPtr(concreteExecution.ShardID),
 	}
-	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
-		DomainID:   concreteExecution.DomainID,
-		WorkflowID: concreteExecution.WorkflowID,
-	})
-	stillOpen, stillOpenErr := common.ExecutionStillOpen(&concreteExecution.Execution, o.pr)
-	if stillOpenErr != nil {
+	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(readHistoryBranchReq)
+	stillExists, existsCheckError := ExecutionStillExists(&concreteExecution.Execution, h.pr)
+	if existsCheckError != nil {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
-			InvariantType:   o.InvariantType(),
-			Info:            "failed to check if concrete execution is still open",
-			InfoDetails:     stillOpenErr.Error(),
+			InvariantType:   h.InvariantType(),
+			Info:            "failed to check if concrete execution still exists",
+			InfoDetails:     existsCheckError.Error(),
 		}
 	}
-	if !stillOpen {
+	if !stillExists {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeHealthy,
-			InvariantType:   o.InvariantType(),
+			InvariantType:   h.InvariantType(),
+			Info:            "determined execution was healthy because concrete execution no longer exists",
 		}
 	}
-	if currentExecErr != nil {
-		switch currentExecErr.(type) {
+	if readHistoryBranchErr != nil {
+		switch readHistoryBranchErr.(type) {
 		case *shared.EntityNotExistsError:
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   o.InvariantType(),
-				Info:            "execution is open without having current execution",
-				InfoDetails:     currentExecErr.Error(),
+				InvariantType:   h.InvariantType(),
+				Info:            "concrete execution exists but history does not exist",
+				InfoDetails:     readHistoryBranchErr.Error(),
 			}
 		default:
 			return common.CheckResult{
 				CheckResultType: common.CheckResultTypeFailed,
-				InvariantType:   o.InvariantType(),
-				Info:            "failed to check if current execution exists",
-				InfoDetails:     currentExecErr.Error(),
+				InvariantType:   h.InvariantType(),
+				Info:            "failed to verify if history exists",
+				InfoDetails:     readHistoryBranchErr.Error(),
 			}
 		}
 	}
-	if currentExecResp.RunID != concreteExecution.RunID {
+	if readHistoryBranchResp == nil || len(readHistoryBranchResp.HistoryEvents) == 0 {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeCorrupted,
-			InvariantType:   o.InvariantType(),
-			Info:            "execution is open but current points at a different execution",
-			InfoDetails:     fmt.Sprintf("current points at %v", currentExecResp.RunID),
+			InvariantType:   h.InvariantType(),
+			Info:            "concrete execution exists but got empty history",
 		}
 	}
 	return common.CheckResult{
 		CheckResultType: common.CheckResultTypeHealthy,
-		InvariantType:   o.InvariantType(),
+		InvariantType:   h.InvariantType(),
 	}
 }
 
-func (o *openCurrentExecution) Fix(execution interface{}) common.FixResult {
-	fixResult, checkResult := checkBeforeFix(o, execution)
+func (h *historyExists) Fix(execution interface{}) common.FixResult {
+	fixResult, checkResult := checkBeforeFix(h, execution)
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = common.DeleteExecution(&execution, o.pr)
+	fixResult = DeleteExecution(&execution, h.pr)
 	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = o.InvariantType()
+	fixResult.InvariantType = h.InvariantType()
 	return *fixResult
 }
 
-func (o *openCurrentExecution) InvariantType() common.InvariantType {
-	return common.OpenCurrentExecutionInvariantType
+func (h *historyExists) InvariantType() common.InvariantType {
+	return common.HistoryExistsInvariantType
 }

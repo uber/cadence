@@ -20,14 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
 	"github.com/uber/cadence/common/reconciliation/common"
 )
 
 func checkBeforeFix(
-	invariant common.Invariant,
+	invariant Invariant,
 	execution interface{},
 ) (*common.FixResult, *common.CheckResult) {
 	checkResult := invariant.Check(execution)

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
 	"fmt"
@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/types"
 )
 
 type (
@@ -39,7 +40,7 @@ type (
 // NewConcreteExecutionExists returns a new invariant for checking concrete execution
 func NewConcreteExecutionExists(
 	pr persistence.Retryer,
-) common.Invariant {
+) Invariant {
 	return &concreteExecutionExists{
 		pr: pr,
 	}
@@ -49,7 +50,7 @@ func (c *concreteExecutionExists) Check(
 	execution interface{},
 ) common.CheckResult {
 
-	currentExecution, ok := execution.(*common.CurrentExecution)
+	currentExecution, ok := execution.(*types.CurrentExecution)
 	if !ok {
 		return common.CheckResult{
 			CheckResultType: common.CheckResultTypeFailed,
@@ -104,7 +105,7 @@ func (c *concreteExecutionExists) Fix(
 	execution interface{},
 ) common.FixResult {
 
-	currentExecution, _ := execution.(*common.CurrentExecution)
+	currentExecution, _ := execution.(*types.CurrentExecution)
 	var runIDCheckResult *common.CheckResult
 	if len(currentExecution.CurrentRunID) == 0 {
 		// this is to set the current run ID prior to the check and fix operations
@@ -144,8 +145,8 @@ func (c *concreteExecutionExists) InvariantType() common.InvariantType {
 }
 
 func (c *concreteExecutionExists) validateCurrentRunID(
-	currentExecution *common.CurrentExecution,
-) (*common.CurrentExecution, *common.CheckResult) {
+	currentExecution *types.CurrentExecution,
+) (*types.CurrentExecution, *common.CheckResult) {
 
 	resp, err := c.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
 		DomainID:   currentExecution.DomainID,

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
 	"testing"
@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/types"
 )
 
 type InvariantManagerSuite struct {
@@ -226,7 +227,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 	}
 
 	for _, tc := range testCases {
-		invariants := make([]common.Invariant, len(tc.checkResults), len(tc.checkResults))
+		invariants := make([]Invariant, len(tc.checkResults), len(tc.checkResults))
 		for i := 0; i < len(tc.checkResults); i++ {
 			mockInvariant := common.NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Check(gomock.Any()).Return(tc.checkResults[i])
@@ -235,7 +236,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 		manager := &invariantManager{
 			invariants: invariants,
 		}
-		s.Equal(tc.expected, manager.RunChecks(common.Execution{}))
+		s.Equal(tc.expected, manager.RunChecks(types.Execution{}))
 	}
 }
 
@@ -635,7 +636,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 	}
 
 	for _, tc := range testCases {
-		invariants := make([]common.Invariant, len(tc.fixResults), len(tc.fixResults))
+		invariants := make([]Invariant, len(tc.fixResults), len(tc.fixResults))
 		for i := 0; i < len(tc.fixResults); i++ {
 			mockInvariant := common.NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Fix(gomock.Any()).Return(tc.fixResults[i])
@@ -644,6 +645,6 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 		manager := &invariantManager{
 			invariants: invariants,
 		}
-		s.Equal(tc.expected, manager.RunFixes(common.Execution{}))
+		s.Equal(tc.expected, manager.RunFixes(types.Execution{}))
 	}
 }

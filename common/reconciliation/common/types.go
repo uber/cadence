@@ -23,7 +23,6 @@
 package common
 
 import (
-	"errors"
 	"time"
 )
 
@@ -86,29 +85,6 @@ const (
 
 // The following are types related to Invariant.
 type (
-	// Execution is a base type for executions which should be checked or fixed.
-	Execution struct {
-		ShardID    int
-		DomainID   string
-		WorkflowID string
-		RunID      string
-		State      int
-	}
-
-	// ConcreteExecution is a concrete execution.
-	ConcreteExecution struct {
-		BranchToken []byte
-		TreeID      string
-		BranchID    string
-		Execution
-	}
-
-	// CurrentExecution is a current execution.
-	CurrentExecution struct {
-		CurrentRunID string
-		Execution
-	}
-
 	// CheckResult is the result of running Check.
 	CheckResult struct {
 		CheckResultType CheckResultType
@@ -239,33 +215,7 @@ type (
 	}
 )
 
-// Validate returns an error if ConcreteExecution is not valid, nil otherwise.
-func (ce *ConcreteExecution) Validate() error {
-	err := validateExecution(&ce.Execution)
-	if err != nil {
-		return err
-	}
-	if len(ce.BranchToken) == 0 {
-		return errors.New("empty BranchToken")
-	}
-	if len(ce.TreeID) == 0 {
-		return errors.New("empty TreeID")
-	}
-	if len(ce.BranchID) == 0 {
-		return errors.New("empty BranchID")
-	}
-	return nil
-
-}
-
-// Validate returns an error if CurrentExecution is not valid, nil otherwise.
-func (curre *CurrentExecution) Validate() error {
-	err := validateExecution(&curre.Execution)
-	if err != nil {
-		return err
-	}
-	if len(curre.CurrentRunID) == 0 {
-		return errors.New("empty CurrentRunID")
-	}
-	return nil
+// InvariantTypePtr returns a pointer to InvariantType
+func InvariantTypePtr(t InvariantType) *InvariantType {
+	return &t
 }
