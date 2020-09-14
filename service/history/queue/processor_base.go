@@ -308,7 +308,7 @@ func (p *processorBase) splitProcessingQueueCollection(
 
 func (p *processorBase) emitProcessingQueueMetrics() {
 	numProcessingQueues := 0
-	maxProcessingQueueLevel := -1
+	maxProcessingQueueLevel := 0
 	for _, queueCollection := range p.processingQueueCollections {
 		size := len(queueCollection.Queues())
 		numProcessingQueues += size
