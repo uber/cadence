@@ -22,6 +22,11 @@
 
 package invariant
 
+import (
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
+)
+
 func checkBeforeFix(
 	invariant Invariant,
 	execution interface{},
@@ -44,4 +49,60 @@ func checkBeforeFix(
 		}, nil
 	}
 	return nil, &checkResult
+}
+
+// Open returns true if workflow state is open false if workflow is closed
+func Open(state int) bool {
+	return state == persistence.WorkflowStateCreated || state == persistence.WorkflowStateRunning
+}
+
+// ExecutionOpen returns true if execution state is open false if workflow is closed
+func ExecutionOpen(execution interface{}) bool {
+	return Open(getExecution(execution).State)
+}
+
+// getExecution returns base Execution
+func getExecution(execution interface{}) *entity.Execution {
+	switch e := execution.(type) {
+	case *entity.CurrentExecution:
+		return &e.Execution
+	case *entity.ConcreteExecution:
+		return &e.Execution
+	default:
+		panic("unexpected execution type")
+	}
+}
+
+// DeleteExecution deletes concrete execution and
+// current execution conditionally on matching runID.
+func DeleteExecution(
+	exec interface{},
+	pr persistence.Retryer,
+) *FixResult {
+	execution := getExecution(exec)
+	if err := pr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   execution.DomainID,
+		WorkflowID: execution.WorkflowID,
+		RunID:      execution.RunID,
+	}); err != nil {
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
+			Info:          "failed to delete concrete workflow execution",
+			InfoDetails:   err.Error(),
+		}
+	}
+	if err := pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   execution.DomainID,
+		WorkflowID: execution.WorkflowID,
+		RunID:      execution.RunID,
+	}); err != nil {
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
+			Info:          "failed to delete current workflow execution",
+			InfoDetails:   err.Error(),
+		}
+	}
+	return &FixResult{
+		FixResultType: FixResultTypeFixed,
+	}
 }

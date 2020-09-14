@@ -25,16 +25,13 @@ package shard
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/pagination"
-
-	"github.com/uber/cadence/common/reconciliation/store"
-
-	"github.com/uber/cadence/common/persistence"
-
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/pagination"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
 )
 
 type (
@@ -61,6 +58,11 @@ func NewScanner(
 ) Scanner {
 	id := uuid.New()
 
+	var ivs []invariant.Invariant
+	for _, fn := range scanType.ToInvariants(invariantCollections) {
+		ivs = append(ivs, fn(pr))
+	}
+
 	iterator := scanType.ToIterator()
 
 	return &scanner{
@@ -68,7 +70,7 @@ func NewScanner(
 		itr:              iterator(pr, persistencePageSize),
 		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		corruptedWriter:  store.NewBlobstoreWriter(id, store.CorruptedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariant.NewInvariantManager(invariantCollections, pr, scanType),
+		invariantManager: invariant.NewInvariantManager(ivs),
 		progressReportFn: progressReportFn,
 	}
 }

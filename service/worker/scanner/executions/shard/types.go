@@ -31,6 +31,18 @@ import (
 	"github.com/uber/cadence/common/reconciliation/store"
 )
 
+const (
+	// ConcreteExecutionType concrete execution entity
+	ConcreteExecutionType ScanType = iota
+	// CurrentExecutionType current execution entity
+	CurrentExecutionType
+)
+
+type (
+	// ScanType is the enum for representing different entity types to scan
+	ScanType int
+)
+
 // The following are serializable types that represent the reports returns by Scan and Fix.
 type (
 	// ScanReport is the report of running Scan on a single shard.
@@ -103,18 +115,6 @@ type (
 	}
 )
 
-type (
-	// ScanType is the enum for representing different entity types to scan
-	ScanType int
-)
-
-const (
-	// ConcreteExecutionType concrete execution entity
-	ConcreteExecutionType ScanType = iota
-	// CurrentExecutionType current execution entity
-	CurrentExecutionType
-)
-
 // Scanner is used to scan over all executions in a shard. It is responsible for three things:
 // 1. Checking invariants for each execution.
 // 2. Recording corruption and failures to durable store.
@@ -150,6 +150,33 @@ func (st ScanType) ToIterator() func(retryer persistence.Retryer, pageSize int) 
 		return iterator.ConcreteExecution
 	case CurrentExecutionType:
 		return iterator.CurrentExecution
+	default:
+		panic("unknown scan type")
+	}
+}
+
+// ToInvariants returns list of invariants to be checked
+func (st ScanType) ToInvariants(collections []invariant.Collection) []func(retryer persistence.Retryer) invariant.Invariant {
+	var fns []func(retryer persistence.Retryer) invariant.Invariant
+	switch st {
+	case ConcreteExecutionType:
+		for _, collection := range collections {
+			switch collection {
+			case invariant.InvariantCollectionHistory:
+				fns = append(fns, invariant.NewHistoryExists)
+			case invariant.InvariantCollectionMutableState:
+				fns = append(fns, invariant.NewOpenCurrentExecution)
+			}
+		}
+		return fns
+	case CurrentExecutionType:
+		for _, collection := range collections {
+			switch collection {
+			case invariant.InvariantCollectionMutableState:
+				fns = append(fns, invariant.NewConcreteExecutionExists)
+			}
+		}
+		return fns
 	default:
 		panic("unknown scan type")
 	}

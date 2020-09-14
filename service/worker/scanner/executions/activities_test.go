@@ -27,8 +27,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -38,9 +36,10 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
-	c "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 type activitiesSuite struct {
@@ -158,7 +157,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 		},
 	}, nil)
 	queryResult := &ShardCorruptKeysQueryResult{
-		Result: map[int]c.Keys{
+		Result: map[int]store.Keys{
 			1: {
 				UUID: "first",
 			},
@@ -197,19 +196,19 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	}, fixerResult.ShardQueryPaginationToken)
 	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
 		ShardID: 1,
-		CorruptedKeys: c.Keys{
+		CorruptedKeys: store.Keys{
 			UUID: "first",
 		},
 	})
 	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
 		ShardID: 2,
-		CorruptedKeys: c.Keys{
+		CorruptedKeys: store.Keys{
 			UUID: "second",
 		},
 	})
 	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
 		ShardID: 3,
-		CorruptedKeys: c.Keys{
+		CorruptedKeys: store.Keys{
 			UUID: "third",
 		},
 	})

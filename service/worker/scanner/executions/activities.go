@@ -26,8 +26,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -36,7 +34,8 @@ import (
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
@@ -126,7 +125,7 @@ type (
 	// CorruptedKeysEntry is a pair of shardID and corrupted keys
 	CorruptedKeysEntry struct {
 		ShardID       int
-		CorruptedKeys common.Keys
+		CorruptedKeys store.Keys
 	}
 
 	// ScanShardHeartbeatDetails is the heartbeat details for scan shard
@@ -382,7 +381,7 @@ func fixShard(
 	activityCtx context.Context,
 	params FixShardActivityParams,
 	shardID int,
-	corruptedKeys common.Keys,
+	corruptedKeys store.Keys,
 	heartbeatDetails FixShardHeartbeatDetails,
 ) (*shard.FixReport, error) {
 	ctx := activityCtx.Value(ScanTypeFixerContextKeyMap[params.ScanType]).(FixerContext)

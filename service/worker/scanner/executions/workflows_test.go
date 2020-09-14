@@ -26,10 +26,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
-
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/activity"
@@ -37,7 +33,9 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common"
-	c "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 type workflowsSuite struct {
@@ -142,7 +140,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 					},
 					Result: shard.ScanResult{
 						ShardScanKeys: &shard.ScanKeys{
-							Corrupt: &c.Keys{
+							Corrupt: &store.Keys{
 								UUID:    "test_uuid",
 								MinPage: 0,
 								MaxPage: 10,
@@ -208,7 +206,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 				},
 				Result: shard.ScanResult{
 					ShardScanKeys: &shard.ScanKeys{
-						Corrupt: &c.Keys{
+						Corrupt: &store.Keys{
 							UUID:    "test_uuid",
 							MinPage: 0,
 							MaxPage: 10,
@@ -259,10 +257,10 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	s.NoError(err)
 	var shardCorruptKeysResult *ShardCorruptKeysQueryResult
 	s.NoError(corruptionKeysValue.Get(&shardCorruptKeysResult))
-	expectedCorrupted := make(map[int]c.Keys)
+	expectedCorrupted := make(map[int]store.Keys)
 	for i := 0; i < 30; i++ {
 		if i != 0 && i != 1 && i != 2 && i != 15 && i != 16 && i != 17 {
-			expectedCorrupted[i] = c.Keys{
+			expectedCorrupted[i] = store.Keys{
 				UUID:    "test_uuid",
 				MinPage: 0,
 				MaxPage: 10,
@@ -303,13 +301,13 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 			err = errors.New("scan shard activity got error")
 		} else {
 			err = nil
-			for _, shard := range batch {
-				reports = append(reports, shard.ShardScanReport{
-					ShardID: shard,
-					Stats: shard.ShardScanStats{
+			for _, s := range batch {
+				reports = append(reports, shard.ScanReport{
+					ShardID: s,
+					Stats: shard.ScanStats{
 						ExecutionsCount: 10,
 					},
-					Result: shard.ShardScanResult{
+					Result: shard.ScanResult{
 						ControlFlowFailure: &shard.ControlFlowFailure{
 							Info: "got control flow failure",
 						},
@@ -390,37 +388,37 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 			})
 		}
 		var reports []shard.FixReport
-		for i, shard := range batch {
+		for i, s := range batch {
 			if i == 0 {
-				reports = append(reports, shard.ShardFixReport{
-					ShardID: shard,
-					Stats: shard.ShardFixStats{
+				reports = append(reports, shard.FixReport{
+					ShardID: s,
+					Stats: shard.FixStats{
 						ExecutionCount: 10,
 					},
-					Result: shard.ShardFixResult{
+					Result: shard.FixResult{
 						ControlFlowFailure: &shard.ControlFlowFailure{
 							Info: "got control flow failure",
 						},
 					},
 				})
 			} else {
-				reports = append(reports, shard.ShardFixReport{
-					ShardID: shard,
-					Stats: shard.ShardFixStats{
+				reports = append(reports, shard.FixReport{
+					ShardID: s,
+					Stats: shard.FixStats{
 						ExecutionCount: 10,
 						FixedCount:     2,
 						SkippedCount:   1,
 						FailedCount:    1,
 					},
-					Result: shard.ShardFixResult{
-						ShardFixKeys: &shard.ShardFixKeys{
-							Skipped: &c.Keys{
+					Result: shard.FixResult{
+						ShardFixKeys: &shard.FixKeys{
+							Skipped: &store.Keys{
 								UUID: "skipped_keys",
 							},
-							Failed: &c.Keys{
+							Failed: &store.Keys{
 								UUID: "failed_keys",
 							},
-							Fixed: &c.Keys{
+							Fixed: &store.Keys{
 								UUID: "fixed_keys",
 							},
 						},
@@ -483,13 +481,13 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 				},
 				Result: shard.FixResult{
 					ShardFixKeys: &shard.FixKeys{
-						Skipped: &c.Keys{
+						Skipped: &store.Keys{
 							UUID: "skipped_keys",
 						},
-						Failed: &c.Keys{
+						Failed: &store.Keys{
 							UUID: "failed_keys",
 						},
-						Fixed: &c.Keys{
+						Fixed: &store.Keys{
 							UUID: "fixed_keys",
 						},
 					},

@@ -27,16 +27,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
 )
 
 type ScannerSuite struct {
@@ -59,7 +58,7 @@ func (s *ScannerSuite) TearDownTest() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(nil, errors.New("iterator error")).Times(1)
 	scanner := &scanner{
@@ -83,7 +82,7 @@ func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 5
@@ -97,7 +96,7 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 		}
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(4)
@@ -124,14 +123,14 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeCorrupted,
 	}).Times(1)
-	corruptedWriter := common.NewMockExecutionWriter(s.controller)
+	corruptedWriter := store.NewMockExecutionWriter(s.controller)
 	corruptedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("corrupted writer add failed")).Times(1)
 	scanner := &scanner{
 		shardID:          0,
@@ -157,14 +156,14 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeFailed,
 	}).Times(1)
-	failedWriter := common.NewMockExecutionWriter(s.controller)
+	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("failed writer add failed")).Times(1)
 	scanner := &scanner{
 		shardID:          0,
@@ -190,9 +189,9 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
-	failedWriter := common.NewMockExecutionWriter(s.controller)
+	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(errors.New("failed writer flush failed")).Times(1)
 	scanner := &scanner{
 		shardID:          0,
@@ -217,11 +216,11 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
 }
 
 func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
-	corruptedWriter := common.NewMockExecutionWriter(s.controller)
+	corruptedWriter := store.NewMockExecutionWriter(s.controller)
 	corruptedWriter.EXPECT().Flush().Return(errors.New("corrupted writer flush failed")).Times(1)
-	failedWriter := common.NewMockExecutionWriter(s.controller)
+	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(nil).Times(1)
 	scanner := &scanner{
 		shardID:          0,
@@ -247,7 +246,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
 }
 
 func (s *ScannerSuite) TestScan_Success() {
-	mockItr := common.NewMockExecutionIterator(s.controller)
+	mockItr := pagination.NewMockIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 10
@@ -287,7 +286,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			panic("should not get here")
 		}
 	}).Times(10)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
 		Execution: entity.Execution{
 			DomainID: "healthy",
@@ -302,7 +301,7 @@ func (s *ScannerSuite) TestScan_Success() {
 		},
 	}).Return(invariant.ManagerCheckResult{
 		CheckResultType:          invariant.CheckResultTypeCorrupted,
-		DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+		DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
 		CheckResults: []invariant.CheckResult{
 			{
 				CheckResultType: invariant.CheckResultTypeCorrupted,
@@ -317,7 +316,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			State:    persistence.WorkflowStateCreated,
 		}}).Return(invariant.ManagerCheckResult{
 		CheckResultType:          invariant.CheckResultTypeCorrupted,
-		DeterminingInvariantType: invariant.InvariantTypePtr(invariant.OpenCurrentExecutionInvariantType),
+		DeterminingInvariantType: invariant.TypePtr(invariant.OpenCurrentExecutionInvariantType),
 		CheckResults: []invariant.CheckResult{
 			{
 				CheckResultType: invariant.CheckResultTypeHealthy,
@@ -335,7 +334,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			DomainID: "failed",
 		}}).Return(invariant.ManagerCheckResult{
 		CheckResultType:          invariant.CheckResultTypeFailed,
-		DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+		DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
 		CheckResults: []invariant.CheckResult{
 			{
 				CheckResultType: invariant.CheckResultTypeFailed,
@@ -345,8 +344,8 @@ func (s *ScannerSuite) TestScan_Success() {
 		},
 	}).Times(2)
 
-	mockCorruptedWriter := common.NewMockExecutionWriter(s.controller)
-	mockCorruptedWriter.EXPECT().Add(common.ScanOutputEntity{
+	mockCorruptedWriter := store.NewMockExecutionWriter(s.controller)
+	mockCorruptedWriter.EXPECT().Add(store.ScanOutputEntity{
 		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "history_missing",
@@ -354,7 +353,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			}},
 		Result: invariant.ManagerCheckResult{
 			CheckResultType:          invariant.CheckResultTypeCorrupted,
-			DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+			DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
 			CheckResults: []invariant.CheckResult{
 				{
 					CheckResultType: invariant.CheckResultTypeCorrupted,
@@ -364,7 +363,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			},
 		},
 	}).Times(3)
-	mockCorruptedWriter.EXPECT().Add(common.ScanOutputEntity{
+	mockCorruptedWriter.EXPECT().Add(store.ScanOutputEntity{
 		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "orphan_execution",
@@ -372,7 +371,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			}},
 		Result: invariant.ManagerCheckResult{
 			CheckResultType:          invariant.CheckResultTypeCorrupted,
-			DeterminingInvariantType: invariant.InvariantTypePtr(invariant.OpenCurrentExecutionInvariantType),
+			DeterminingInvariantType: invariant.TypePtr(invariant.OpenCurrentExecutionInvariantType),
 			CheckResults: []invariant.CheckResult{
 				{
 					CheckResultType: invariant.CheckResultTypeHealthy,
@@ -386,15 +385,15 @@ func (s *ScannerSuite) TestScan_Success() {
 			},
 		},
 	}).Times(1)
-	mockFailedWriter := common.NewMockExecutionWriter(s.controller)
-	mockFailedWriter.EXPECT().Add(common.ScanOutputEntity{
+	mockFailedWriter := store.NewMockExecutionWriter(s.controller)
+	mockFailedWriter.EXPECT().Add(store.ScanOutputEntity{
 		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "failed",
 			}},
 		Result: invariant.ManagerCheckResult{
 			CheckResultType:          invariant.CheckResultTypeFailed,
-			DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+			DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
 			CheckResults: []invariant.CheckResult{
 				{
 					CheckResultType: invariant.CheckResultTypeFailed,
@@ -406,8 +405,8 @@ func (s *ScannerSuite) TestScan_Success() {
 	}).Times(2)
 	mockCorruptedWriter.EXPECT().Flush().Return(nil)
 	mockFailedWriter.EXPECT().Flush().Return(nil)
-	mockCorruptedWriter.EXPECT().FlushedKeys().Return(&common.Keys{UUID: "corrupt_keys_uuid"})
-	mockFailedWriter.EXPECT().FlushedKeys().Return(&common.Keys{UUID: "failed_keys_uuid"})
+	mockCorruptedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "corrupt_keys_uuid"})
+	mockFailedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "failed_keys_uuid"})
 
 	scanner := &scanner{
 		shardID:          0,
@@ -432,8 +431,8 @@ func (s *ScannerSuite) TestScan_Success() {
 		},
 		Result: ScanResult{
 			ShardScanKeys: &ScanKeys{
-				Corrupt: &common.Keys{UUID: "corrupt_keys_uuid"},
-				Failed:  &common.Keys{UUID: "failed_keys_uuid"},
+				Corrupt: &store.Keys{UUID: "corrupt_keys_uuid"},
+				Failed:  &store.Keys{UUID: "failed_keys_uuid"},
 			},
 		},
 	}, result)

@@ -25,10 +25,9 @@ package invariant
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 type (

@@ -20,12 +20,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination mocks.go -self_package github.com/uber/cadence/common/reconciliation/store
+
 package store
 
 import (
 	"time"
 
 	"github.com/uber/cadence/common/reconciliation/invariant"
+)
+
+const (
+	// SkippedExtension is the extension for files which contain skips
+	SkippedExtension Extension = "skipped"
+	// FailedExtension is the extension for files which contain failures
+	FailedExtension Extension = "failed"
+	// FixedExtension is the extension for files which contain fixes
+	FixedExtension Extension = "fixed"
+	// CorruptedExtension is the extension for files which contain corruptions
+	CorruptedExtension Extension = "corrupted"
 )
 
 var (
@@ -84,15 +97,4 @@ type (
 		Flush() error
 		FlushedKeys() *Keys
 	}
-)
-
-const (
-	// SkippedExtension is the extension for files which contain skips
-	SkippedExtension Extension = "skipped"
-	// FailedExtension is the extension for files which contain failures
-	FailedExtension Extension = "failed"
-	// FixedExtension is the extension for files which contain fixes
-	FixedExtension Extension = "fixed"
-	// CorruptedExtension is the extension for files which contain corruptions
-	CorruptedExtension Extension = "corrupted"
 )

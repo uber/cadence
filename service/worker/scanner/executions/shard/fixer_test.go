@@ -27,16 +27,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
 )
 
 type FixerSuite struct {
@@ -59,7 +57,7 @@ func (s *FixerSuite) TearDownTest() {
 }
 
 func (s *FixerSuite) TestFix_Failure_FirstIteratorError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(nil, errors.New("iterator error")).Times(1)
 	fixer := &fixer{
@@ -80,25 +78,25 @@ func (s *FixerSuite) TestFix_Failure_FirstIteratorError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_NonFirstError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 5
 	}).Times(5)
-	mockItr.EXPECT().Next().DoAndReturn(func() (*common.ScanOutputEntity, error) {
+	mockItr.EXPECT().Next().DoAndReturn(func() (*store.ScanOutputEntity, error) {
 		defer func() {
 			iteratorCallNumber++
 		}()
 		if iteratorCallNumber < 4 {
-			return &common.ScanOutputEntity{}, nil
+			return &store.ScanOutputEntity{}, nil
 		}
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 	}).Times(4)
-	fixedWriter := common.NewMockExecutionWriter(s.controller)
+	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Add(gomock.Any()).Return(nil).Times(4)
 	fixer := &fixer{
 		shardID:          0,
@@ -124,14 +122,14 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&common.ScanOutputEntity{}, nil).Times(1)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeSkipped,
 	}).Times(1)
-	skippedWriter := common.NewMockExecutionWriter(s.controller)
+	skippedWriter := store.NewMockExecutionWriter(s.controller)
 	skippedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("skipped writer error")).Times(1)
 	fixer := &fixer{
 		shardID:          0,
@@ -156,14 +154,14 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&common.ScanOutputEntity{}, nil).Times(1)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFailed,
 	}).Times(1)
-	failedWriter := common.NewMockExecutionWriter(s.controller)
+	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("failed writer error")).Times(1)
 	fixer := &fixer{
 		shardID:          0,
@@ -188,14 +186,14 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&common.ScanOutputEntity{}, nil).Times(1)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 	}).Times(1)
-	fixedWriter := common.NewMockExecutionWriter(s.controller)
+	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("fixed writer error")).Times(1)
 	fixer := &fixer{
 		shardID:          0,
@@ -220,9 +218,9 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_FixedWriterFlushError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
-	fixedWriter := common.NewMockExecutionWriter(s.controller)
+	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Flush().Return(errors.New("fix writer flush failed")).Times(1)
 	fixer := &fixer{
 		shardID:          0,
@@ -243,11 +241,11 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterFlushError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_SkippedWriterFlushError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
-	fixedWriter := common.NewMockExecutionWriter(s.controller)
+	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Flush().Return(nil)
-	skippedWriter := common.NewMockExecutionWriter(s.controller)
+	skippedWriter := store.NewMockExecutionWriter(s.controller)
 	skippedWriter.EXPECT().Flush().Return(errors.New("skip writer flush failed")).Times(1)
 	fixer := &fixer{
 		shardID:          0,
@@ -269,13 +267,13 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterFlushError() {
 }
 
 func (s *FixerSuite) TestFix_Failure_FailedWriterFlushError() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(false).Times(1)
-	fixedWriter := common.NewMockExecutionWriter(s.controller)
+	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Flush().Return(nil)
-	skippedWriter := common.NewMockExecutionWriter(s.controller)
+	skippedWriter := store.NewMockExecutionWriter(s.controller)
 	skippedWriter.EXPECT().Flush().Return(nil).Times(1)
-	failedWriter := common.NewMockExecutionWriter(s.controller)
+	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Flush().Return(errors.New("fail writer flush failed")).Times(1)
 	fixer := &fixer{
 		shardID:          0,
@@ -298,42 +296,42 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterFlushError() {
 }
 
 func (s *FixerSuite) TestFix_Success() {
-	mockItr := common.NewMockScanOutputIterator(s.controller)
+	mockItr := store.NewMockScanOutputIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 10
 	}).Times(11)
-	mockItr.EXPECT().Next().DoAndReturn(func() (*common.ScanOutputEntity, error) {
+	mockItr.EXPECT().Next().DoAndReturn(func() (*store.ScanOutputEntity, error) {
 		defer func() {
 			iteratorCallNumber++
 		}()
 		switch iteratorCallNumber {
 		case 0, 1, 2, 3:
-			return &common.ScanOutputEntity{
+			return &store.ScanOutputEntity{
 				Execution: entity.Execution{
 					DomainID: "skipped",
 				},
 			}, nil
 		case 4, 5:
-			return &common.ScanOutputEntity{
+			return &store.ScanOutputEntity{
 				Execution: entity.Execution{
 					DomainID: "history_missing",
 				},
 			}, nil
 		case 6:
-			return &common.ScanOutputEntity{
+			return &store.ScanOutputEntity{
 				Execution: entity.Execution{
 					DomainID: "first_history_event",
 				},
 			}, nil
 		case 7:
-			return &common.ScanOutputEntity{
+			return &store.ScanOutputEntity{
 				Execution: entity.Execution{
 					DomainID: "orphan_execution",
 				},
 			}, nil
 		case 8, 9:
-			return &common.ScanOutputEntity{
+			return &store.ScanOutputEntity{
 				Execution: entity.Execution{
 					DomainID: "failed",
 				},
@@ -342,7 +340,7 @@ func (s *FixerSuite) TestFix_Success() {
 			panic("should not get here")
 		}
 	}).Times(10)
-	mockInvariantManager := common.NewMockInvariantManager(s.controller)
+	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(entity.Execution{
 		DomainID: "skipped",
 	}).Return(invariant.ManagerFixResult{
@@ -421,12 +419,12 @@ func (s *FixerSuite) TestFix_Success() {
 		},
 	}).Times(2)
 
-	mockFixedWriter := common.NewMockExecutionWriter(s.controller)
-	mockFixedWriter.EXPECT().Add(common.FixOutputEntity{
+	mockFixedWriter := store.NewMockExecutionWriter(s.controller)
+	mockFixedWriter.EXPECT().Add(store.FixOutputEntity{
 		Execution: entity.Execution{
 			DomainID: "history_missing",
 		},
-		Input: common.ScanOutputEntity{
+		Input: store.ScanOutputEntity{
 			Execution: entity.Execution{
 				DomainID: "history_missing",
 			},
@@ -442,11 +440,11 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(2)
-	mockFixedWriter.EXPECT().Add(common.FixOutputEntity{
+	mockFixedWriter.EXPECT().Add(store.FixOutputEntity{
 		Execution: entity.Execution{
 			DomainID: "first_history_event",
 		},
-		Input: common.ScanOutputEntity{
+		Input: store.ScanOutputEntity{
 			Execution: entity.Execution{
 				DomainID: "first_history_event",
 			},
@@ -465,11 +463,11 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockFixedWriter.EXPECT().Add(common.FixOutputEntity{
+	mockFixedWriter.EXPECT().Add(store.FixOutputEntity{
 		Execution: entity.Execution{
 			DomainID: "orphan_execution",
 		},
-		Input: common.ScanOutputEntity{
+		Input: store.ScanOutputEntity{
 			Execution: entity.Execution{
 				DomainID: "orphan_execution",
 			},
@@ -492,12 +490,12 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockFailedWriter := common.NewMockExecutionWriter(s.controller)
-	mockFailedWriter.EXPECT().Add(common.FixOutputEntity{
+	mockFailedWriter := store.NewMockExecutionWriter(s.controller)
+	mockFailedWriter.EXPECT().Add(store.FixOutputEntity{
 		Execution: entity.Execution{
 			DomainID: "failed",
 		},
-		Input: common.ScanOutputEntity{
+		Input: store.ScanOutputEntity{
 			Execution: entity.Execution{
 				DomainID: "failed",
 			},
@@ -513,12 +511,12 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(2)
-	mockSkippedWriter := common.NewMockExecutionWriter(s.controller)
-	mockSkippedWriter.EXPECT().Add(common.FixOutputEntity{
+	mockSkippedWriter := store.NewMockExecutionWriter(s.controller)
+	mockSkippedWriter.EXPECT().Add(store.FixOutputEntity{
 		Execution: entity.Execution{
 			DomainID: "skipped",
 		},
-		Input: common.ScanOutputEntity{
+		Input: store.ScanOutputEntity{
 			Execution: entity.Execution{
 				DomainID: "skipped",
 			},
@@ -543,9 +541,9 @@ func (s *FixerSuite) TestFix_Success() {
 	mockSkippedWriter.EXPECT().Flush().Return(nil)
 	mockFailedWriter.EXPECT().Flush().Return(nil)
 	mockFixedWriter.EXPECT().Flush().Return(nil)
-	mockSkippedWriter.EXPECT().FlushedKeys().Return(&common.Keys{UUID: "skipped_keys_uuid"})
-	mockFailedWriter.EXPECT().FlushedKeys().Return(&common.Keys{UUID: "failed_keys_uuid"})
-	mockFixedWriter.EXPECT().FlushedKeys().Return(&common.Keys{UUID: "fixed_keys_uuid"})
+	mockSkippedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "skipped_keys_uuid"})
+	mockFailedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "failed_keys_uuid"})
+	mockFixedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "fixed_keys_uuid"})
 
 	fixer := &fixer{
 		shardID:          0,
@@ -567,9 +565,9 @@ func (s *FixerSuite) TestFix_Success() {
 		},
 		Result: FixResult{
 			ShardFixKeys: &FixKeys{
-				Fixed:   &common.Keys{UUID: "fixed_keys_uuid"},
-				Failed:  &common.Keys{UUID: "failed_keys_uuid"},
-				Skipped: &common.Keys{UUID: "skipped_keys_uuid"},
+				Fixed:   &store.Keys{UUID: "fixed_keys_uuid"},
+				Failed:  &store.Keys{UUID: "failed_keys_uuid"},
+				Skipped: &store.Keys{UUID: "skipped_keys_uuid"},
 			},
 		},
 	}, result)

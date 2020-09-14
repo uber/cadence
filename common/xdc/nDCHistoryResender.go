@@ -27,10 +27,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -41,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 

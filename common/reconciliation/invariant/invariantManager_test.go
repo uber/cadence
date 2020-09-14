@@ -25,13 +25,11 @@ package invariant
 import (
 	"testing"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 type InvariantManagerSuite struct {
@@ -82,7 +80,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 			},
 			expected: ManagerCheckResult{
 				CheckResultType:          CheckResultTypeFailed,
-				DeterminingInvariantType: InvariantTypePtr("second"),
+				DeterminingInvariantType: TypePtr("second"),
 				CheckResults: []CheckResult{
 					{
 						CheckResultType: CheckResultTypeHealthy,
@@ -116,7 +114,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 			},
 			expected: ManagerCheckResult{
 				CheckResultType:          CheckResultTypeCorrupted,
-				DeterminingInvariantType: InvariantTypePtr("second"),
+				DeterminingInvariantType: TypePtr("second"),
 				CheckResults: []CheckResult{
 					{
 						CheckResultType: CheckResultTypeHealthy,
@@ -196,7 +194,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 			},
 			expected: ManagerCheckResult{
 				CheckResultType:          CheckResultTypeFailed,
-				DeterminingInvariantType: InvariantTypePtr("third"),
+				DeterminingInvariantType: TypePtr("third"),
 				CheckResults: []CheckResult{
 					{
 						CheckResultType: CheckResultTypeHealthy,
@@ -230,7 +228,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 	for _, tc := range testCases {
 		invariants := make([]Invariant, len(tc.checkResults), len(tc.checkResults))
 		for i := 0; i < len(tc.checkResults); i++ {
-			mockInvariant := common.NewMockInvariant(s.controller)
+			mockInvariant := NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Check(gomock.Any()).Return(tc.checkResults[i])
 			invariants[i] = mockInvariant
 		}
@@ -281,7 +279,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 			expected: ManagerFixResult{
 				FixResultType:            FixResultTypeFailed,
-				DeterminingInvariantType: InvariantTypePtr("second"),
+				DeterminingInvariantType: TypePtr("second"),
 				FixResults: []FixResult{
 					{
 						FixResultType: FixResultTypeFixed,
@@ -400,7 +398,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 			expected: ManagerFixResult{
 				FixResultType:            FixResultTypeFixed,
-				DeterminingInvariantType: InvariantTypePtr("second"),
+				DeterminingInvariantType: TypePtr("second"),
 				FixResults: []FixResult{
 					{
 						FixResultType: FixResultTypeSkipped,
@@ -487,7 +485,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 			expected: ManagerFixResult{
 				FixResultType:            FixResultTypeFailed,
-				DeterminingInvariantType: InvariantTypePtr("forth"),
+				DeterminingInvariantType: TypePtr("forth"),
 				FixResults: []FixResult{
 					{
 						FixResultType: FixResultTypeSkipped,
@@ -585,7 +583,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 			expected: ManagerFixResult{
 				FixResultType:            FixResultTypeFailed,
-				DeterminingInvariantType: InvariantTypePtr("second"),
+				DeterminingInvariantType: TypePtr("second"),
 				FixResults: []FixResult{
 					{
 						FixResultType: FixResultTypeSkipped,
@@ -639,7 +637,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 	for _, tc := range testCases {
 		invariants := make([]Invariant, len(tc.fixResults), len(tc.fixResults))
 		for i := 0; i < len(tc.fixResults); i++ {
-			mockInvariant := common.NewMockInvariant(s.controller)
+			mockInvariant := NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Fix(gomock.Any()).Return(tc.fixResults[i])
 			invariants[i] = mockInvariant
 		}

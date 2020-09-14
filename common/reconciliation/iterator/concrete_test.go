@@ -25,12 +25,11 @@ package iterator
 import (
 	"testing"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -49,12 +48,16 @@ func TestPersistenceSuite(t *testing.T) {
 	suite.Run(t, new(PersistenceSuite))
 }
 
+func (p *PersistenceSuite) SetupTest() {
+	p.Assertions = require.New(p.T())
+}
+
 type PersistenceSuite struct {
 	*require.Assertions
 	suite.Suite
 }
 
-func (s *PersistenceSuite) TestGetBranchToken() {
+func (p *PersistenceSuite) TestGetBranchToken() {
 	encoder := codec.NewThriftRWEncoder()
 	testCases := []struct {
 		entity      *persistence.ListConcreteExecutionsEntity
@@ -66,7 +69,7 @@ func (s *PersistenceSuite) TestGetBranchToken() {
 		{
 			entity: &persistence.ListConcreteExecutionsEntity{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: s.getValidBranchToken(encoder),
+					BranchToken: p.getValidBranchToken(encoder),
 				},
 			},
 			expectError: false,
@@ -132,25 +135,25 @@ func (s *PersistenceSuite) TestGetBranchToken() {
 	for _, tc := range testCases {
 		branchToken, treeID, branchID, err := GetBranchToken(tc.entity, encoder)
 		if tc.expectError {
-			s.Error(err)
-			s.Nil(branchToken)
-			s.Empty(treeID)
-			s.Empty(branchID)
+			p.Error(err)
+			p.Nil(branchToken)
+			p.Empty(treeID)
+			p.Empty(branchID)
 		} else {
-			s.NoError(err)
-			s.Equal(tc.branchToken, branchToken)
-			s.Equal(tc.treeID, treeID)
-			s.Equal(tc.branchID, branchID)
+			p.NoError(err)
+			p.Equal(tc.branchToken, branchToken)
+			p.Equal(tc.treeID, treeID)
+			p.Equal(tc.branchID, branchID)
 		}
 	}
 }
 
-func (s *PersistenceSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {
+func (p *PersistenceSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {
 	hb := &shared.HistoryBranch{
 		TreeID:   common.StringPtr(treeID),
 		BranchID: common.StringPtr(branchID),
 	}
 	bytes, err := encoder.Encode(hb)
-	s.NoError(err)
+	p.NoError(err)
 	return bytes
 }

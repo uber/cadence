@@ -27,10 +27,9 @@ import (
 	"context"
 	"encoding/json"
 
-	entity2 "github.com/uber/cadence/common/reconciliation/entity"
-
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/pagination"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 type (
@@ -43,7 +42,7 @@ type (
 func NewBlobstoreIterator(
 	client blobstore.Client,
 	keys Keys,
-	entity entity2.Entity,
+	entity entity.Entity,
 ) ScanOutputIterator {
 	return &blobstoreIterator{
 		itr: pagination.NewIterator(keys.MinPage, getBlobstoreFetchPageFn(client, keys, entity)),
@@ -67,7 +66,7 @@ func (i *blobstoreIterator) HasNext() bool {
 func getBlobstoreFetchPageFn(
 	client blobstore.Client,
 	keys Keys,
-	entity entity2.Entity,
+	entity entity.Entity,
 ) pagination.FetchFn {
 	return func(token pagination.PageToken) (pagination.Page, error) {
 		index := token.(int)
@@ -105,16 +104,16 @@ func getBlobstoreFetchPageFn(
 	}
 }
 
-func deserialize(data []byte, entity entity2.Entity) (*ScanOutputEntity, error) {
+func deserialize(data []byte, blob entity.Entity) (*ScanOutputEntity, error) {
 	soe := &ScanOutputEntity{
-		Execution: entity.Clone(),
+		Execution: blob.Clone(),
 	}
 
 	if err := json.Unmarshal(data, soe); err != nil {
 		return nil, err
 	}
 
-	if err := soe.Execution.(entity2.Entity).Validate(); err != nil {
+	if err := soe.Execution.(entity.Entity).Validate(); err != nil {
 		return nil, err
 	}
 	return soe, nil

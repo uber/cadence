@@ -27,8 +27,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -38,6 +36,7 @@ import (
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
 type ConcreteExecutionExistsSuite struct {

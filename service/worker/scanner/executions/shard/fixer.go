@@ -25,13 +25,12 @@ package shard
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/reconciliation/store"
-
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
 )
 
 type (
@@ -58,13 +57,19 @@ func NewFixer(
 	scanType ScanType,
 ) Fixer {
 	id := uuid.New()
+
+	var ivs []invariant.Invariant
+	for _, fn := range scanType.ToInvariants(invariantCollections) {
+		ivs = append(ivs, fn(pr))
+	}
+
 	return &fixer{
 		shardID:          shardID,
-		itr:              store.NewBlobstoreIterator(blobstoreClient, keys, scanType),
+		itr:              store.NewBlobstoreIterator(blobstoreClient, keys, scanType.ToBlobstoreEntity()),
 		skippedWriter:    store.NewBlobstoreWriter(id, store.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
 		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		fixedWriter:      store.NewBlobstoreWriter(id, store.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariant.NewInvariantManager(invariantCollections, pr, scanType),
+		invariantManager: invariant.NewInvariantManager(ivs),
 		progressReportFn: progressReportFn,
 	}
 }

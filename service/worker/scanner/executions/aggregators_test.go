@@ -25,12 +25,10 @@ package executions
 import (
 	"math/rand"
 
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
-
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	c "github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 func (s *workflowsSuite) TestShardScanResultAggregator() {
@@ -47,7 +45,7 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 		aggregation: AggregateScanReportResult{
 			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		corruptionKeys: make(map[int]common.Keys),
+		corruptionKeys: make(map[int]store.Keys),
 		statusSummary: map[ShardStatus]int{
 			ShardStatusRunning:            3,
 			ShardStatusControlFlowFailure: 0,
@@ -76,7 +74,7 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 		},
 		Result: shard.ScanResult{
 			ShardScanKeys: &shard.ScanKeys{
-				Corrupt: &common.Keys{
+				Corrupt: &store.Keys{
 					UUID: "test_uuid",
 				},
 			},
@@ -101,7 +99,7 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 		invariant.OpenCurrentExecutionInvariantType: 1,
 	}
 	expected.aggregation.CorruptedOpenExecutionCount = 1
-	expected.corruptionKeys = map[int]common.Keys{
+	expected.corruptionKeys = map[int]store.Keys{
 		1: {
 			UUID: "test_uuid",
 		},
@@ -159,7 +157,7 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	})
 	s.NoError(err)
 	s.Equal(&ShardCorruptKeysQueryResult{
-		Result: map[int]common.Keys{
+		Result: map[int]store.Keys{
 			1: {
 				UUID: "test_uuid",
 			},
@@ -205,7 +203,7 @@ func (s *workflowsSuite) TestShardFixResultAggregator() {
 		},
 		Result: shard.FixResult{
 			ShardFixKeys: &shard.FixKeys{
-				Fixed: &common.Keys{
+				Fixed: &store.Keys{
 					UUID: "test_uuid",
 				},
 			},

@@ -25,11 +25,9 @@ package executions
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/reconciliation/store"
-
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
-
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/reconciliation/store"
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 type (

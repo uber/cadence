@@ -25,10 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/reconciliation/entity"
-
-	"github.com/uber/cadence/common/reconciliation/invariant"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -46,7 +42,8 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 )
 
 type (
@@ -362,7 +359,7 @@ func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
 	workflowID1 := uuid.New()
 	workflowID2 := uuid.New()
 	runID := uuid.New()
-	invariantMock := checks.NewMockInvariant(s.controller)
+	invariantMock := invariant.NewMockInvariant(s.controller)
 	s.rereplicator = NewNDCHistoryResender(
 		s.mockDomainCache,
 		s.mockAdminClient,

@@ -24,8 +24,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
-
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
@@ -41,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 const (
