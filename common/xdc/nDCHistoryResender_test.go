@@ -25,6 +25,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/reconciliation/entity"
+
+	"github.com/uber/cadence/common/reconciliation/invariant"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -370,27 +374,27 @@ func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
 		invariantMock,
 		s.logger,
 	)
-	execution1 := &checks.CurrentExecution{
-		Execution: checks.Execution{
+	execution1 := &entity.CurrentExecution{
+		Execution: entity.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID1,
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	execution2 := &checks.CurrentExecution{
-		Execution: checks.Execution{
+	execution2 := &entity.CurrentExecution{
+		Execution: entity.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID2,
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	invariantMock.EXPECT().Check(execution1).Return(checks.CheckResult{
-		CheckResultType: checks.CheckResultTypeCorrupted,
+	invariantMock.EXPECT().Check(execution1).Return(invariant.CheckResult{
+		CheckResultType: invariant.CheckResultTypeCorrupted,
 	}).Times(1)
-	invariantMock.EXPECT().Check(execution2).Return(checks.CheckResult{
-		CheckResultType: checks.CheckResultTypeHealthy,
+	invariantMock.EXPECT().Check(execution2).Return(invariant.CheckResult{
+		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(1)
-	invariantMock.EXPECT().Fix(gomock.Any()).Return(checks.FixResult{}).Times(1)
+	invariantMock.EXPECT().Fix(gomock.Any()).Return(invariant.FixResult{}).Times(1)
 
 	skipTask := s.rereplicator.fixCurrentExecution(domainID, workflowID1, runID)
 	s.False(skipTask)

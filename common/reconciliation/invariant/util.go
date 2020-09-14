@@ -20,28 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
-
-import (
-	"github.com/uber/cadence/common/reconciliation/common"
-)
+package invariant
 
 func checkBeforeFix(
-	invariant common.Invariant,
+	invariant Invariant,
 	execution interface{},
-) (*common.FixResult, *common.CheckResult) {
+) (*FixResult, *CheckResult) {
 	checkResult := invariant.Check(execution)
-	if checkResult.CheckResultType == common.CheckResultTypeHealthy {
-		return &common.FixResult{
-			FixResultType: common.FixResultTypeSkipped,
+	if checkResult.CheckResultType == CheckResultTypeHealthy {
+		return &FixResult{
+			FixResultType: FixResultTypeSkipped,
 			InvariantType: invariant.InvariantType(),
 			CheckResult:   checkResult,
 			Info:          "skipped fix because execution was healthy",
 		}, nil
 	}
-	if checkResult.CheckResultType == common.CheckResultTypeFailed {
-		return &common.FixResult{
-			FixResultType: common.FixResultTypeFailed,
+	if checkResult.CheckResultType == CheckResultTypeFailed {
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
 			InvariantType: invariant.InvariantType(),
 			CheckResult:   checkResult,
 			Info:          "failed fix because check failed",

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package common
+package entity
 
 import (
 	"errors"
@@ -32,9 +32,9 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 )
 
 const (
@@ -45,18 +45,13 @@ const (
 	branchID   = "test-branch-id"
 )
 
-var (
-	validBranchToken   = []byte{89, 11, 0, 10, 0, 0, 0, 12, 116, 101, 115, 116, 45, 116, 114, 101, 101, 45, 105, 100, 11, 0, 20, 0, 0, 0, 14, 116, 101, 115, 116, 45, 98, 114, 97, 110, 99, 104, 45, 105, 100, 0}
-	invalidBranchToken = []byte("invalid")
-)
+func TestUtilSuite(t *testing.T) {
+	suite.Run(t, new(UtilSuite))
+}
 
 type UtilSuite struct {
 	*require.Assertions
 	suite.Suite
-}
-
-func TestUtilSuite(t *testing.T) {
-	suite.Run(t, new(UtilSuite))
 }
 
 func (s *UtilSuite) SetupTest() {
@@ -200,97 +195,6 @@ func (s *UtilSuite) TestValidateExecution() {
 	}
 }
 
-func (s *UtilSuite) TestGetBranchToken() {
-	encoder := codec.NewThriftRWEncoder()
-	testCases := []struct {
-		entity      *persistence.ListConcreteExecutionsEntity
-		expectError bool
-		branchToken []byte
-		treeID      string
-		branchID    string
-	}{
-		{
-			entity: &persistence.ListConcreteExecutionsEntity{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: s.getValidBranchToken(encoder),
-				},
-			},
-			expectError: false,
-			branchToken: validBranchToken,
-			treeID:      treeID,
-			branchID:    branchID,
-		},
-		{
-			entity: &persistence.ListConcreteExecutionsEntity{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: invalidBranchToken,
-				},
-				VersionHistories: &persistence.VersionHistories{
-					CurrentVersionHistoryIndex: 1,
-					Histories: []*persistence.VersionHistory{
-						{
-							BranchToken: invalidBranchToken,
-						},
-						{
-							BranchToken: validBranchToken,
-						},
-					},
-				},
-			},
-			expectError: false,
-			branchToken: validBranchToken,
-			treeID:      treeID,
-			branchID:    branchID,
-		},
-		{
-			entity: &persistence.ListConcreteExecutionsEntity{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: invalidBranchToken,
-				},
-				VersionHistories: &persistence.VersionHistories{
-					CurrentVersionHistoryIndex: 1,
-					Histories: []*persistence.VersionHistory{
-						{
-							BranchToken: validBranchToken,
-						},
-						{
-							BranchToken: invalidBranchToken,
-						},
-					},
-				},
-			},
-			expectError: true,
-		},
-		{
-			entity: &persistence.ListConcreteExecutionsEntity{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: invalidBranchToken,
-				},
-				VersionHistories: &persistence.VersionHistories{
-					CurrentVersionHistoryIndex: 0,
-					Histories:                  []*persistence.VersionHistory{},
-				},
-			},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		branchToken, treeID, branchID, err := GetBranchToken(tc.entity, encoder)
-		if tc.expectError {
-			s.Error(err)
-			s.Nil(branchToken)
-			s.Empty(treeID)
-			s.Empty(branchID)
-		} else {
-			s.NoError(err)
-			s.Equal(tc.branchToken, branchToken)
-			s.Equal(tc.treeID, treeID)
-			s.Equal(tc.branchID, branchID)
-		}
-	}
-}
-
 func (s *UtilSuite) TestExecutionStillOpen() {
 	testCases := []struct {
 		getExecResp *persistence.GetWorkflowExecutionResponse
@@ -340,7 +244,7 @@ func (s *UtilSuite) TestExecutionStillOpen() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		open, err := ExecutionStillOpen(&Execution{}, pr)
+		open, err := invariant.ExecutionStillOpen(&Execution{}, pr)
 		if tc.expectError {
 			s.Error(err)
 		} else {
@@ -385,7 +289,7 @@ func (s *UtilSuite) TestExecutionStillExists() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		exists, err := ExecutionStillExists(&Execution{}, pr)
+		exists, err := invariant.ExecutionStillExists(&Execution{}, pr)
 		if tc.expectError {
 			s.Error(err)
 		} else {
@@ -403,27 +307,27 @@ func (s *UtilSuite) TestDeleteExecution() {
 	testCases := []struct {
 		deleteConcreteErr error
 		deleteCurrentErr  error
-		expectedFixResult *FixResult
+		expectedFixResult *invariant.FixResult
 	}{
 		{
 			deleteConcreteErr: errors.New("error deleting concrete execution"),
-			expectedFixResult: &FixResult{
-				FixResultType: FixResultTypeFailed,
+			expectedFixResult: &invariant.FixResult{
+				FixResultType: invariant.FixResultTypeFailed,
 				Info:          "failed to delete concrete workflow execution",
 				InfoDetails:   "error deleting concrete execution",
 			},
 		},
 		{
 			deleteCurrentErr: errors.New("error deleting current execution"),
-			expectedFixResult: &FixResult{
-				FixResultType: FixResultTypeFailed,
+			expectedFixResult: &invariant.FixResult{
+				FixResultType: invariant.FixResultTypeFailed,
 				Info:          "failed to delete current workflow execution",
 				InfoDetails:   "error deleting current execution",
 			},
 		},
 		{
-			expectedFixResult: &FixResult{
-				FixResultType: FixResultTypeFixed,
+			expectedFixResult: &invariant.FixResult{
+				FixResultType: invariant.FixResultTypeFixed,
 			},
 		},
 	}
@@ -435,17 +339,7 @@ func (s *UtilSuite) TestDeleteExecution() {
 			execManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(tc.deleteCurrentErr).Once()
 		}
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		result := DeleteExecution(&ConcreteExecution{}, pr)
+		result := invariant.DeleteExecution(&ConcreteExecution{}, pr)
 		s.Equal(tc.expectedFixResult, result)
 	}
-}
-
-func (s *UtilSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {
-	hb := &shared.HistoryBranch{
-		TreeID:   common.StringPtr(treeID),
-		BranchID: common.StringPtr(branchID),
-	}
-	bytes, err := encoder.Encode(hb)
-	s.NoError(err)
-	return bytes
 }

@@ -26,6 +26,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
+
+	"github.com/uber/cadence/common/reconciliation/invariant"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/activity"
@@ -64,7 +68,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScannerConfigActivity() {
 		Shards: Shards{
 			List: []int{1, 2, 3},
 		},
-		ScanType: c.ConcreteExecutionType,
+		ScanType: shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Equal("got error getting config", env.GetWorkflowError().Error())
@@ -79,7 +83,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success_Disabled() {
 		Shards: Shards{
 			List: []int{1, 2, 3},
 		},
-		ScanType: c.ConcreteExecutionType,
+		ScanType: shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -110,34 +114,34 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 	}
 
 	for _, batch := range batches {
-		var reports []c.ShardScanReport
+		var reports []shard.ScanReport
 		for i := range batch {
 			if i == 0 {
-				reports = append(reports, c.ShardScanReport{
+				reports = append(reports, shard.ScanReport{
 					ShardID: batch[i],
-					Stats: c.ShardScanStats{
+					Stats: shard.ScanStats{
 						ExecutionsCount: 10,
 					},
-					Result: c.ShardScanResult{
-						ControlFlowFailure: &c.ControlFlowFailure{
+					Result: shard.ScanResult{
+						ControlFlowFailure: &shard.ControlFlowFailure{
 							Info: "got control flow failure",
 						},
 					},
 				})
 			} else {
-				reports = append(reports, c.ShardScanReport{
+				reports = append(reports, shard.ScanReport{
 					ShardID: batch[i],
-					Stats: c.ShardScanStats{
+					Stats: shard.ScanStats{
 						ExecutionsCount:  10,
 						CorruptedCount:   2,
 						CheckFailedCount: 1,
-						CorruptionByType: map[c.InvariantType]int64{
-							c.HistoryExistsInvariantType: 1,
+						CorruptionByType: map[invariant.Name]int64{
+							invariant.HistoryExistsInvariantType: 1,
 						},
 						CorruptedOpenExecutionCount: 0,
 					},
-					Result: c.ShardScanResult{
-						ShardScanKeys: &c.ShardScanKeys{
+					Result: shard.ScanResult{
+						ShardScanKeys: &shard.ScanKeys{
 							Corrupt: &c.Keys{
 								UUID:    "test_uuid",
 								MinPage: 0,
@@ -155,7 +159,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 
 	env.ExecuteWorkflow(ScannerWorkflow, ScannerWorkflowParams{
 		Shards:   shards,
-		ScanType: c.ConcreteExecutionType,
+		ScanType: shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -168,42 +172,42 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 		ExecutionsCount:  240,
 		CorruptedCount:   48,
 		CheckFailedCount: 24,
-		CorruptionByType: map[c.InvariantType]int64{
-			c.HistoryExistsInvariantType: 24,
+		CorruptionByType: map[invariant.Name]int64{
+			invariant.HistoryExistsInvariantType: 24,
 		},
 	}, agg)
 
 	for i := 0; i < 30; i++ {
 		shardReportValue, err := env.QueryWorkflow(ShardReportQuery, i)
 		s.NoError(err)
-		var shardReport *c.ShardScanReport
+		var shardReport *shard.ScanReport
 		s.NoError(shardReportValue.Get(&shardReport))
 		if i == 0 || i == 1 || i == 2 || i == 15 || i == 16 || i == 17 {
-			s.Equal(&c.ShardScanReport{
+			s.Equal(&shard.ScanReport{
 				ShardID: i,
-				Stats: c.ShardScanStats{
+				Stats: shard.ScanStats{
 					ExecutionsCount: 10,
 				},
-				Result: c.ShardScanResult{
-					ControlFlowFailure: &c.ControlFlowFailure{
+				Result: shard.ScanResult{
+					ControlFlowFailure: &shard.ControlFlowFailure{
 						Info: "got control flow failure",
 					},
 				},
 			}, shardReport)
 		} else {
-			s.Equal(&c.ShardScanReport{
+			s.Equal(&shard.ScanReport{
 				ShardID: i,
-				Stats: c.ShardScanStats{
+				Stats: shard.ScanStats{
 					ExecutionsCount:  10,
 					CorruptedCount:   2,
 					CheckFailedCount: 1,
-					CorruptionByType: map[c.InvariantType]int64{
-						c.HistoryExistsInvariantType: 1,
+					CorruptionByType: map[invariant.Name]int64{
+						invariant.HistoryExistsInvariantType: 1,
 					},
 					CorruptedOpenExecutionCount: 0,
 				},
-				Result: c.ShardScanResult{
-					ShardScanKeys: &c.ShardScanKeys{
+				Result: shard.ScanResult{
+					ShardScanKeys: &shard.ScanKeys{
 						Corrupt: &c.Keys{
 							UUID:    "test_uuid",
 							MinPage: 0,
@@ -292,7 +296,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 	}
 
 	for i, batch := range batches {
-		var reports []c.ShardScanReport
+		var reports []shard.ScanReport
 		var err error
 		if i == len(batches)-1 {
 			reports = nil
@@ -300,13 +304,13 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 		} else {
 			err = nil
 			for _, shard := range batch {
-				reports = append(reports, c.ShardScanReport{
+				reports = append(reports, shard.ShardScanReport{
 					ShardID: shard,
-					Stats: c.ShardScanStats{
+					Stats: shard.ShardScanStats{
 						ExecutionsCount: 10,
 					},
-					Result: c.ShardScanResult{
-						ControlFlowFailure: &c.ControlFlowFailure{
+					Result: shard.ShardScanResult{
+						ControlFlowFailure: &shard.ControlFlowFailure{
 							Info: "got control flow failure",
 						},
 					},
@@ -319,7 +323,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 	}
 	env.ExecuteWorkflow(ScannerWorkflow, ScannerWorkflowParams{
 		Shards:   shards,
-		ScanType: c.ConcreteExecutionType,
+		ScanType: shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Equal("scan shard activity got error", env.GetWorkflowError().Error())
@@ -385,31 +389,31 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 				ShardID: shard,
 			})
 		}
-		var reports []c.ShardFixReport
+		var reports []shard.FixReport
 		for i, shard := range batch {
 			if i == 0 {
-				reports = append(reports, c.ShardFixReport{
+				reports = append(reports, shard.ShardFixReport{
 					ShardID: shard,
-					Stats: c.ShardFixStats{
+					Stats: shard.ShardFixStats{
 						ExecutionCount: 10,
 					},
-					Result: c.ShardFixResult{
-						ControlFlowFailure: &c.ControlFlowFailure{
+					Result: shard.ShardFixResult{
+						ControlFlowFailure: &shard.ControlFlowFailure{
 							Info: "got control flow failure",
 						},
 					},
 				})
 			} else {
-				reports = append(reports, c.ShardFixReport{
+				reports = append(reports, shard.ShardFixReport{
 					ShardID: shard,
-					Stats: c.ShardFixStats{
+					Stats: shard.ShardFixStats{
 						ExecutionCount: 10,
 						FixedCount:     2,
 						SkippedCount:   1,
 						FailedCount:    1,
 					},
-					Result: c.ShardFixResult{
-						ShardFixKeys: &c.ShardFixKeys{
+					Result: shard.ShardFixResult{
+						ShardFixKeys: &shard.ShardFixKeys{
 							Skipped: &c.Keys{
 								UUID: "skipped_keys",
 							},
@@ -427,7 +431,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		env.OnActivity(FixerFixShardActivityName, mock.Anything, FixShardActivityParams{
 			CorruptedKeysEntries:        corruptedKeys,
 			ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
-			ScanType:                    c.ConcreteExecutionType,
+			ScanType:                    shard.ConcreteExecutionType,
 		}).Return(reports, nil)
 	}
 
@@ -435,7 +439,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		ScannerWorkflowWorkflowID:     "test_wid",
 		ScannerWorkflowRunID:          "test_rid",
 		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,
-		ScanType:                      c.ConcreteExecutionType,
+		ScanType:                      shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -454,31 +458,31 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	for i := 0; i < 30; i++ {
 		shardReportValue, err := env.QueryWorkflow(ShardReportQuery, i)
 		s.NoError(err)
-		var shardReport *c.ShardFixReport
+		var shardReport *shard.FixReport
 		s.NoError(shardReportValue.Get(&shardReport))
 		if i == 0 || i == 1 || i == 2 || i == 15 || i == 16 || i == 17 {
-			s.Equal(&c.ShardFixReport{
+			s.Equal(&shard.FixReport{
 				ShardID: i,
-				Stats: c.ShardFixStats{
+				Stats: shard.FixStats{
 					ExecutionCount: 10,
 				},
-				Result: c.ShardFixResult{
-					ControlFlowFailure: &c.ControlFlowFailure{
+				Result: shard.FixResult{
+					ControlFlowFailure: &shard.ControlFlowFailure{
 						Info: "got control flow failure",
 					},
 				},
 			}, shardReport)
 		} else {
-			s.Equal(&c.ShardFixReport{
+			s.Equal(&shard.FixReport{
 				ShardID: i,
-				Stats: c.ShardFixStats{
+				Stats: shard.FixStats{
 					ExecutionCount: 10,
 					FixedCount:     2,
 					FailedCount:    1,
 					SkippedCount:   1,
 				},
-				Result: c.ShardFixResult{
-					ShardFixKeys: &c.ShardFixKeys{
+				Result: shard.FixResult{
+					ShardFixKeys: &shard.FixKeys{
 						Skipped: &c.Keys{
 							UUID: "skipped_keys",
 						},
@@ -587,7 +591,7 @@ func (s *workflowsSuite) TestGetCorruptedKeys_Success() {
 	env.ExecuteWorkflow(getCorruptedKeys, FixerWorkflowParams{
 		ScannerWorkflowWorkflowID: "test_wid",
 		ScannerWorkflowRunID:      "test_rid",
-		ScanType:                  c.ConcreteExecutionType,
+		ScanType:                  shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -635,7 +639,7 @@ func (s *workflowsSuite) TestGetCorruptedKeys_Error() {
 	env.ExecuteWorkflow(getCorruptedKeys, FixerWorkflowParams{
 		ScannerWorkflowWorkflowID: "test_wid",
 		ScannerWorkflowRunID:      "test_rid",
-		ScanType:                  c.ConcreteExecutionType,
+		ScanType:                  shard.ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Error(env.GetWorkflowError())

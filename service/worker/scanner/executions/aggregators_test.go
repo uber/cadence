@@ -25,6 +25,10 @@ package executions
 import (
 	"math/rand"
 
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
+
+	"github.com/uber/cadence/common/reconciliation/invariant"
+
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/reconciliation/common"
 )
@@ -34,14 +38,14 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	expected := &shardScanResultAggregator{
 		minShard: 1,
 		maxShard: 3,
-		reports:  map[int]common.ShardScanReport{},
+		reports:  map[int]shard.ScanReport{},
 		status: map[int]ShardStatus{
 			1: ShardStatusRunning,
 			2: ShardStatusRunning,
 			3: ShardStatusRunning,
 		},
 		aggregation: AggregateScanReportResult{
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
 		corruptionKeys: make(map[int]common.Keys),
 		statusSummary: map[ShardStatus]int{
@@ -58,20 +62,20 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	report, err = agg.getReport(5)
 	s.Nil(report)
 	s.Equal("shard 5 is not included in shards which will be processed", err.Error())
-	firstReport := common.ShardScanReport{
+	firstReport := shard.ScanReport{
 		ShardID: 1,
-		Stats: common.ShardScanStats{
+		Stats: shard.ScanStats{
 			ExecutionsCount:  10,
 			CorruptedCount:   3,
 			CheckFailedCount: 1,
-			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType:        2,
-				common.OpenCurrentExecutionInvariantType: 1,
+			CorruptionByType: map[invariant.Name]int64{
+				invariant.HistoryExistsInvariantType:        2,
+				invariant.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},
-		Result: common.ShardScanResult{
-			ShardScanKeys: &common.ShardScanKeys{
+		Result: shard.ScanResult{
+			ShardScanKeys: &shard.ScanKeys{
 				Corrupt: &common.Keys{
 					UUID: "test_uuid",
 				},
@@ -92,9 +96,9 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	expected.aggregation.ExecutionsCount = 10
 	expected.aggregation.CorruptedCount = 3
 	expected.aggregation.CheckFailedCount = 1
-	expected.aggregation.CorruptionByType = map[common.InvariantType]int64{
-		common.HistoryExistsInvariantType:        2,
-		common.OpenCurrentExecutionInvariantType: 1,
+	expected.aggregation.CorruptionByType = map[invariant.Name]int64{
+		invariant.HistoryExistsInvariantType:        2,
+		invariant.OpenCurrentExecutionInvariantType: 1,
 	}
 	expected.aggregation.CorruptedOpenExecutionCount = 1
 	expected.corruptionKeys = map[int]common.Keys{
@@ -106,20 +110,20 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	report, err = agg.getReport(1)
 	s.NoError(err)
 	s.Equal(firstReport, *report)
-	secondReport := common.ShardScanReport{
+	secondReport := shard.ScanReport{
 		ShardID: 2,
-		Stats: common.ShardScanStats{
+		Stats: shard.ScanStats{
 			ExecutionsCount:  10,
 			CorruptedCount:   3,
 			CheckFailedCount: 1,
-			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType:        2,
-				common.OpenCurrentExecutionInvariantType: 1,
+			CorruptionByType: map[invariant.Name]int64{
+				invariant.HistoryExistsInvariantType:        2,
+				invariant.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{},
+		Result: shard.ScanResult{
+			ControlFlowFailure: &shard.ControlFlowFailure{},
 		},
 	}
 	agg.addReport(secondReport)
@@ -172,7 +176,7 @@ func (s *workflowsSuite) TestShardFixResultAggregator() {
 	expected := &shardFixResultAggregator{
 		minShard: 1,
 		maxShard: 3,
-		reports:  map[int]common.ShardFixReport{},
+		reports:  map[int]shard.FixReport{},
 		status: map[int]ShardStatus{
 			1: ShardStatusRunning,
 			2: ShardStatusRunning,
@@ -192,15 +196,15 @@ func (s *workflowsSuite) TestShardFixResultAggregator() {
 	report, err = agg.getReport(5)
 	s.Nil(report)
 	s.Equal("shard 5 is not included in shards which will be processed", err.Error())
-	firstReport := common.ShardFixReport{
+	firstReport := shard.FixReport{
 		ShardID: 1,
-		Stats: common.ShardFixStats{
+		Stats: shard.FixStats{
 			ExecutionCount: 10,
 			FixedCount:     3,
 			FailedCount:    1,
 		},
-		Result: common.ShardFixResult{
-			ShardFixKeys: &common.ShardFixKeys{
+		Result: shard.FixResult{
+			ShardFixKeys: &shard.FixKeys{
 				Fixed: &common.Keys{
 					UUID: "test_uuid",
 				},
@@ -219,15 +223,15 @@ func (s *workflowsSuite) TestShardFixResultAggregator() {
 	report, err = agg.getReport(1)
 	s.NoError(err)
 	s.Equal(firstReport, *report)
-	secondReport := common.ShardFixReport{
+	secondReport := shard.FixReport{
 		ShardID: 2,
-		Stats: common.ShardFixStats{
+		Stats: shard.FixStats{
 			ExecutionCount: 10,
 			FixedCount:     3,
 			FailedCount:    1,
 		},
-		Result: common.ShardFixResult{
-			ControlFlowFailure: &common.ControlFlowFailure{},
+		Result: shard.FixResult{
+			ControlFlowFailure: &shard.ControlFlowFailure{},
 		},
 	}
 	agg.addReport(secondReport)
@@ -528,10 +532,10 @@ func (s *workflowsSuite) TestGetShardSizeQueryResult() {
 }
 
 func (s *workflowsSuite) TestInsertReportIntoSizes() {
-	randomReport := func() common.ShardScanReport {
-		return common.ShardScanReport{
+	randomReport := func() shard.ScanReport {
+		return shard.ScanReport{
 			ShardID: 0,
-			Stats: common.ShardScanStats{
+			Stats: shard.ScanStats{
 				ExecutionsCount: int64(rand.Intn(10)),
 			},
 		}

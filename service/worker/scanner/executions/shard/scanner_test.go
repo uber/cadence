@@ -27,6 +27,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/uber/cadence/common/reconciliation/entity"
+
+	"github.com/uber/cadence/common/reconciliation/invariant"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -64,13 +68,13 @@ func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
-			CorruptionByType: make(map[common.InvariantType]int64),
+		Stats: ScanStats{
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{
+		Result: ScanResult{
+			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "persistence iterator returned error",
 				InfoDetails: "iterator error",
 			},
@@ -84,18 +88,18 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 5
 	}).Times(5)
-	mockItr.EXPECT().Next().DoAndReturn(func() (*common.ConcreteExecution, error) {
+	mockItr.EXPECT().Next().DoAndReturn(func() (*entity.ConcreteExecution, error) {
 		defer func() {
 			iteratorCallNumber++
 		}()
 		if iteratorCallNumber < 4 {
-			return &common.ConcreteExecution{}, nil
+			return &entity.ConcreteExecution{}, nil
 		}
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(common.ManagerCheckResult{
-		CheckResultType: common.CheckResultTypeHealthy,
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
+		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(4)
 	scanner := &scanner{
 		shardID:          0,
@@ -104,14 +108,14 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
+		Stats: ScanStats{
 			ExecutionsCount:  4,
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{
+		Result: ScanResult{
+			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "persistence iterator returned error",
 				InfoDetails: "iterator got error on: 4",
 			},
@@ -122,10 +126,10 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 	mockItr := common.NewMockExecutionIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&common.ConcreteExecution{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(common.ManagerCheckResult{
-		CheckResultType: common.CheckResultTypeCorrupted,
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
+		CheckResultType: invariant.CheckResultTypeCorrupted,
 	}).Times(1)
 	corruptedWriter := common.NewMockExecutionWriter(s.controller)
 	corruptedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("corrupted writer add failed")).Times(1)
@@ -137,14 +141,14 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
+		Stats: ScanStats{
 			ExecutionsCount:  1,
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{
+		Result: ScanResult{
+			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore add failed for corrupted execution check",
 				InfoDetails: "corrupted writer add failed",
 			},
@@ -155,10 +159,10 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 	mockItr := common.NewMockExecutionIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&common.ConcreteExecution{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(common.ManagerCheckResult{
-		CheckResultType: common.CheckResultTypeFailed,
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
+		CheckResultType: invariant.CheckResultTypeFailed,
 	}).Times(1)
 	failedWriter := common.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("failed writer add failed")).Times(1)
@@ -170,14 +174,14 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
+		Stats: ScanStats{
 			ExecutionsCount:  1,
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{
+		Result: ScanResult{
+			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore add failed for failed execution check",
 				InfoDetails: "failed writer add failed",
 			},
@@ -197,14 +201,14 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
+		Stats: ScanStats{
 			ExecutionsCount:  0,
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{
+		Result: ScanResult{
+			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "failed to flush for failed execution checks",
 				InfoDetails: "failed writer flush failed",
 			},
@@ -227,14 +231,14 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
+		Stats: ScanStats{
 			ExecutionsCount:  0,
-			CorruptionByType: make(map[common.InvariantType]int64),
+			CorruptionByType: make(map[invariant.Name]int64),
 		},
-		Result: common.ShardScanResult{
-			ControlFlowFailure: &common.ControlFlowFailure{
+		Result: ScanResult{
+			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "failed to flush for corrupted execution checks",
 				InfoDetails: "corrupted writer flush failed",
 			},
@@ -248,34 +252,34 @@ func (s *ScannerSuite) TestScan_Success() {
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
 		return iteratorCallNumber < 10
 	}).Times(11)
-	mockItr.EXPECT().Next().DoAndReturn(func() (*common.ConcreteExecution, error) {
+	mockItr.EXPECT().Next().DoAndReturn(func() (*entity.ConcreteExecution, error) {
 		defer func() {
 			iteratorCallNumber++
 		}()
 		switch iteratorCallNumber {
 		case 0, 1, 2, 3:
-			return &common.ConcreteExecution{
-				Execution: common.Execution{
+			return &entity.ConcreteExecution{
+				Execution: entity.Execution{
 					DomainID: "healthy",
 				},
 			}, nil
 		case 4, 5, 6:
-			return &common.ConcreteExecution{
-				Execution: common.Execution{
+			return &entity.ConcreteExecution{
+				Execution: entity.Execution{
 					DomainID: "history_missing",
 					State:    persistence.WorkflowStateCompleted,
 				},
 			}, nil
 		case 7:
-			return &common.ConcreteExecution{
-				Execution: common.Execution{
+			return &entity.ConcreteExecution{
+				Execution: entity.Execution{
 					DomainID: "orphan_execution",
 					State:    persistence.WorkflowStateCreated,
 				},
 			}, nil
 		case 8, 9:
-			return &common.ConcreteExecution{
-				Execution: common.Execution{
+			return &entity.ConcreteExecution{
+				Execution: entity.Execution{
 					DomainID: "failed",
 				},
 			}, nil
@@ -284,58 +288,58 @@ func (s *ScannerSuite) TestScan_Success() {
 		}
 	}).Times(10)
 	mockInvariantManager := common.NewMockInvariantManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(&common.ConcreteExecution{
-		Execution: common.Execution{
+	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+		Execution: entity.Execution{
 			DomainID: "healthy",
 		},
-	}).Return(common.ManagerCheckResult{
-		CheckResultType: common.CheckResultTypeHealthy,
+	}).Return(invariant.ManagerCheckResult{
+		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(4)
-	mockInvariantManager.EXPECT().RunChecks(&common.ConcreteExecution{
-		Execution: common.Execution{
+	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+		Execution: entity.Execution{
 			DomainID: "history_missing",
 			State:    persistence.WorkflowStateCompleted,
 		},
-	}).Return(common.ManagerCheckResult{
-		CheckResultType:          common.CheckResultTypeCorrupted,
-		DeterminingInvariantType: common.InvariantTypePtr(common.HistoryExistsInvariantType),
-		CheckResults: []common.CheckResult{
+	}).Return(invariant.ManagerCheckResult{
+		CheckResultType:          invariant.CheckResultTypeCorrupted,
+		DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+		CheckResults: []invariant.CheckResult{
 			{
-				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   common.HistoryExistsInvariantType,
+				CheckResultType: invariant.CheckResultTypeCorrupted,
+				InvariantType:   invariant.HistoryExistsInvariantType,
 				Info:            "history did not exist",
 			},
 		},
 	}).Times(3)
-	mockInvariantManager.EXPECT().RunChecks(&common.ConcreteExecution{
-		Execution: common.Execution{
+	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+		Execution: entity.Execution{
 			DomainID: "orphan_execution",
 			State:    persistence.WorkflowStateCreated,
-		}}).Return(common.ManagerCheckResult{
-		CheckResultType:          common.CheckResultTypeCorrupted,
-		DeterminingInvariantType: common.InvariantTypePtr(common.OpenCurrentExecutionInvariantType),
-		CheckResults: []common.CheckResult{
+		}}).Return(invariant.ManagerCheckResult{
+		CheckResultType:          invariant.CheckResultTypeCorrupted,
+		DeterminingInvariantType: invariant.InvariantTypePtr(invariant.OpenCurrentExecutionInvariantType),
+		CheckResults: []invariant.CheckResult{
 			{
-				CheckResultType: common.CheckResultTypeHealthy,
-				InvariantType:   common.HistoryExistsInvariantType,
+				CheckResultType: invariant.CheckResultTypeHealthy,
+				InvariantType:   invariant.HistoryExistsInvariantType,
 			},
 			{
-				CheckResultType: common.CheckResultTypeCorrupted,
-				InvariantType:   common.OpenCurrentExecutionInvariantType,
+				CheckResultType: invariant.CheckResultTypeCorrupted,
+				InvariantType:   invariant.OpenCurrentExecutionInvariantType,
 				Info:            "execution was orphan",
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunChecks(&common.ConcreteExecution{
-		Execution: common.Execution{
+	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+		Execution: entity.Execution{
 			DomainID: "failed",
-		}}).Return(common.ManagerCheckResult{
-		CheckResultType:          common.CheckResultTypeFailed,
-		DeterminingInvariantType: common.InvariantTypePtr(common.HistoryExistsInvariantType),
-		CheckResults: []common.CheckResult{
+		}}).Return(invariant.ManagerCheckResult{
+		CheckResultType:          invariant.CheckResultTypeFailed,
+		DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+		CheckResults: []invariant.CheckResult{
 			{
-				CheckResultType: common.CheckResultTypeFailed,
-				InvariantType:   common.HistoryExistsInvariantType,
+				CheckResultType: invariant.CheckResultTypeFailed,
+				InvariantType:   invariant.HistoryExistsInvariantType,
 				Info:            "failed to check if history exists",
 			},
 		},
@@ -343,40 +347,40 @@ func (s *ScannerSuite) TestScan_Success() {
 
 	mockCorruptedWriter := common.NewMockExecutionWriter(s.controller)
 	mockCorruptedWriter.EXPECT().Add(common.ScanOutputEntity{
-		Execution: &common.ConcreteExecution{
-			Execution: common.Execution{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
 				DomainID: "history_missing",
 				State:    persistence.WorkflowStateCompleted,
 			}},
-		Result: common.ManagerCheckResult{
-			CheckResultType:          common.CheckResultTypeCorrupted,
-			DeterminingInvariantType: common.InvariantTypePtr(common.HistoryExistsInvariantType),
-			CheckResults: []common.CheckResult{
+		Result: invariant.ManagerCheckResult{
+			CheckResultType:          invariant.CheckResultTypeCorrupted,
+			DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+			CheckResults: []invariant.CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeCorrupted,
-					InvariantType:   common.HistoryExistsInvariantType,
+					CheckResultType: invariant.CheckResultTypeCorrupted,
+					InvariantType:   invariant.HistoryExistsInvariantType,
 					Info:            "history did not exist",
 				},
 			},
 		},
 	}).Times(3)
 	mockCorruptedWriter.EXPECT().Add(common.ScanOutputEntity{
-		Execution: &common.ConcreteExecution{
-			Execution: common.Execution{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
 				DomainID: "orphan_execution",
 				State:    persistence.WorkflowStateCreated,
 			}},
-		Result: common.ManagerCheckResult{
-			CheckResultType:          common.CheckResultTypeCorrupted,
-			DeterminingInvariantType: common.InvariantTypePtr(common.OpenCurrentExecutionInvariantType),
-			CheckResults: []common.CheckResult{
+		Result: invariant.ManagerCheckResult{
+			CheckResultType:          invariant.CheckResultTypeCorrupted,
+			DeterminingInvariantType: invariant.InvariantTypePtr(invariant.OpenCurrentExecutionInvariantType),
+			CheckResults: []invariant.CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.HistoryExistsInvariantType,
+					CheckResultType: invariant.CheckResultTypeHealthy,
+					InvariantType:   invariant.HistoryExistsInvariantType,
 				},
 				{
-					CheckResultType: common.CheckResultTypeCorrupted,
-					InvariantType:   common.OpenCurrentExecutionInvariantType,
+					CheckResultType: invariant.CheckResultTypeCorrupted,
+					InvariantType:   invariant.OpenCurrentExecutionInvariantType,
 					Info:            "execution was orphan",
 				},
 			},
@@ -384,17 +388,17 @@ func (s *ScannerSuite) TestScan_Success() {
 	}).Times(1)
 	mockFailedWriter := common.NewMockExecutionWriter(s.controller)
 	mockFailedWriter.EXPECT().Add(common.ScanOutputEntity{
-		Execution: &common.ConcreteExecution{
-			Execution: common.Execution{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
 				DomainID: "failed",
 			}},
-		Result: common.ManagerCheckResult{
-			CheckResultType:          common.CheckResultTypeFailed,
-			DeterminingInvariantType: common.InvariantTypePtr(common.HistoryExistsInvariantType),
-			CheckResults: []common.CheckResult{
+		Result: invariant.ManagerCheckResult{
+			CheckResultType:          invariant.CheckResultTypeFailed,
+			DeterminingInvariantType: invariant.InvariantTypePtr(invariant.HistoryExistsInvariantType),
+			CheckResults: []invariant.CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeFailed,
-					InvariantType:   common.HistoryExistsInvariantType,
+					CheckResultType: invariant.CheckResultTypeFailed,
+					InvariantType:   invariant.HistoryExistsInvariantType,
 					Info:            "failed to check if history exists",
 				},
 			},
@@ -414,20 +418,20 @@ func (s *ScannerSuite) TestScan_Success() {
 		progressReportFn: func() {},
 	}
 	result := scanner.Scan()
-	s.Equal(common.ShardScanReport{
+	s.Equal(ScanReport{
 		ShardID: 0,
-		Stats: common.ShardScanStats{
+		Stats: ScanStats{
 			ExecutionsCount:  10,
 			CorruptedCount:   4,
 			CheckFailedCount: 2,
-			CorruptionByType: map[common.InvariantType]int64{
-				common.HistoryExistsInvariantType:        3,
-				common.OpenCurrentExecutionInvariantType: 1,
+			CorruptionByType: map[invariant.Name]int64{
+				invariant.HistoryExistsInvariantType:        3,
+				invariant.OpenCurrentExecutionInvariantType: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},
-		Result: common.ShardScanResult{
-			ShardScanKeys: &common.ShardScanKeys{
+		Result: ScanResult{
+			ShardScanKeys: &ScanKeys{
 				Corrupt: &common.Keys{UUID: "corrupt_keys_uuid"},
 				Failed:  &common.Keys{UUID: "failed_keys_uuid"},
 			},

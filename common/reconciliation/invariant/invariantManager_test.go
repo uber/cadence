@@ -20,10 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package invariant
 
 import (
 	"testing"
+
+	"github.com/uber/cadence/common/reconciliation/entity"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -53,44 +55,44 @@ func (s *InvariantManagerSuite) TearDownTest() {
 
 func (s *InvariantManagerSuite) TestRunChecks() {
 	testCases := []struct {
-		checkResults []common.CheckResult
-		expected     common.ManagerCheckResult
+		checkResults []CheckResult
+		expected     ManagerCheckResult
 	}{
 		{
 			checkResults: nil,
-			expected: common.ManagerCheckResult{
-				CheckResultType: common.CheckResultTypeHealthy,
+			expected: ManagerCheckResult{
+				CheckResultType: CheckResultTypeHealthy,
 				CheckResults:    nil,
 			},
 		},
 		{
-			checkResults: []common.CheckResult{
+			checkResults: []CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.InvariantType("first"),
+					CheckResultType: CheckResultTypeHealthy,
+					InvariantType:   Name("first"),
 					Info:            "invariant 1 info",
 					InfoDetails:     "invariant 1 info details",
 				},
 				{
-					CheckResultType: common.CheckResultTypeFailed,
-					InvariantType:   common.InvariantType("second"),
+					CheckResultType: CheckResultTypeFailed,
+					InvariantType:   Name("second"),
 					Info:            "invariant 2 info",
 					InfoDetails:     "invariant 2 info details",
 				},
 			},
-			expected: common.ManagerCheckResult{
-				CheckResultType:          common.CheckResultTypeFailed,
-				DeterminingInvariantType: common.InvariantTypePtr("second"),
-				CheckResults: []common.CheckResult{
+			expected: ManagerCheckResult{
+				CheckResultType:          CheckResultTypeFailed,
+				DeterminingInvariantType: InvariantTypePtr("second"),
+				CheckResults: []CheckResult{
 					{
-						CheckResultType: common.CheckResultTypeHealthy,
-						InvariantType:   common.InvariantType("first"),
+						CheckResultType: CheckResultTypeHealthy,
+						InvariantType:   Name("first"),
 						Info:            "invariant 1 info",
 						InfoDetails:     "invariant 1 info details",
 					},
 					{
-						CheckResultType: common.CheckResultTypeFailed,
-						InvariantType:   common.InvariantType("second"),
+						CheckResultType: CheckResultTypeFailed,
+						InvariantType:   Name("second"),
 						Info:            "invariant 2 info",
 						InfoDetails:     "invariant 2 info details",
 					},
@@ -98,33 +100,33 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 			},
 		},
 		{
-			checkResults: []common.CheckResult{
+			checkResults: []CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.InvariantType("first"),
+					CheckResultType: CheckResultTypeHealthy,
+					InvariantType:   Name("first"),
 					Info:            "invariant 1 info",
 					InfoDetails:     "invariant 1 info details",
 				},
 				{
-					CheckResultType: common.CheckResultTypeCorrupted,
-					InvariantType:   common.InvariantType("second"),
+					CheckResultType: CheckResultTypeCorrupted,
+					InvariantType:   Name("second"),
 					Info:            "invariant 2 info",
 					InfoDetails:     "invariant 2 info details",
 				},
 			},
-			expected: common.ManagerCheckResult{
-				CheckResultType:          common.CheckResultTypeCorrupted,
-				DeterminingInvariantType: common.InvariantTypePtr("second"),
-				CheckResults: []common.CheckResult{
+			expected: ManagerCheckResult{
+				CheckResultType:          CheckResultTypeCorrupted,
+				DeterminingInvariantType: InvariantTypePtr("second"),
+				CheckResults: []CheckResult{
 					{
-						CheckResultType: common.CheckResultTypeHealthy,
-						InvariantType:   common.InvariantType("first"),
+						CheckResultType: CheckResultTypeHealthy,
+						InvariantType:   Name("first"),
 						Info:            "invariant 1 info",
 						InfoDetails:     "invariant 1 info details",
 					},
 					{
-						CheckResultType: common.CheckResultTypeCorrupted,
-						InvariantType:   common.InvariantType("second"),
+						CheckResultType: CheckResultTypeCorrupted,
+						InvariantType:   Name("second"),
 						Info:            "invariant 2 info",
 						InfoDetails:     "invariant 2 info details",
 					},
@@ -132,33 +134,33 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 			},
 		},
 		{
-			checkResults: []common.CheckResult{
+			checkResults: []CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.InvariantType("first"),
+					CheckResultType: CheckResultTypeHealthy,
+					InvariantType:   Name("first"),
 					Info:            "invariant 1 info",
 					InfoDetails:     "invariant 1 info details",
 				},
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.InvariantType("second"),
+					CheckResultType: CheckResultTypeHealthy,
+					InvariantType:   Name("second"),
 					Info:            "invariant 2 info",
 					InfoDetails:     "invariant 2 info details",
 				},
 			},
-			expected: common.ManagerCheckResult{
-				CheckResultType:          common.CheckResultTypeHealthy,
+			expected: ManagerCheckResult{
+				CheckResultType:          CheckResultTypeHealthy,
 				DeterminingInvariantType: nil,
-				CheckResults: []common.CheckResult{
+				CheckResults: []CheckResult{
 					{
-						CheckResultType: common.CheckResultTypeHealthy,
-						InvariantType:   common.InvariantType("first"),
+						CheckResultType: CheckResultTypeHealthy,
+						InvariantType:   Name("first"),
 						Info:            "invariant 1 info",
 						InfoDetails:     "invariant 1 info details",
 					},
 					{
-						CheckResultType: common.CheckResultTypeHealthy,
-						InvariantType:   common.InvariantType("second"),
+						CheckResultType: CheckResultTypeHealthy,
+						InvariantType:   Name("second"),
 						Info:            "invariant 2 info",
 						InfoDetails:     "invariant 2 info details",
 					},
@@ -166,57 +168,57 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 			},
 		},
 		{
-			checkResults: []common.CheckResult{
+			checkResults: []CheckResult{
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.InvariantType("first"),
+					CheckResultType: CheckResultTypeHealthy,
+					InvariantType:   Name("first"),
 					Info:            "invariant 1 info",
 					InfoDetails:     "invariant 1 info details",
 				},
 				{
-					CheckResultType: common.CheckResultTypeCorrupted,
-					InvariantType:   common.InvariantType("second"),
+					CheckResultType: CheckResultTypeCorrupted,
+					InvariantType:   Name("second"),
 					Info:            "invariant 2 info",
 					InfoDetails:     "invariant 2 info details",
 				},
 				{
-					CheckResultType: common.CheckResultTypeFailed,
-					InvariantType:   common.InvariantType("third"),
+					CheckResultType: CheckResultTypeFailed,
+					InvariantType:   Name("third"),
 					Info:            "invariant 3 info",
 					InfoDetails:     "invariant 3 info details",
 				},
 				{
-					CheckResultType: common.CheckResultTypeHealthy,
-					InvariantType:   common.InvariantType("forth"),
+					CheckResultType: CheckResultTypeHealthy,
+					InvariantType:   Name("forth"),
 					Info:            "invariant 4 info",
 					InfoDetails:     "invariant 4 info details",
 				},
 			},
-			expected: common.ManagerCheckResult{
-				CheckResultType:          common.CheckResultTypeFailed,
-				DeterminingInvariantType: common.InvariantTypePtr("third"),
-				CheckResults: []common.CheckResult{
+			expected: ManagerCheckResult{
+				CheckResultType:          CheckResultTypeFailed,
+				DeterminingInvariantType: InvariantTypePtr("third"),
+				CheckResults: []CheckResult{
 					{
-						CheckResultType: common.CheckResultTypeHealthy,
-						InvariantType:   common.InvariantType("first"),
+						CheckResultType: CheckResultTypeHealthy,
+						InvariantType:   Name("first"),
 						Info:            "invariant 1 info",
 						InfoDetails:     "invariant 1 info details",
 					},
 					{
-						CheckResultType: common.CheckResultTypeCorrupted,
-						InvariantType:   common.InvariantType("second"),
+						CheckResultType: CheckResultTypeCorrupted,
+						InvariantType:   Name("second"),
 						Info:            "invariant 2 info",
 						InfoDetails:     "invariant 2 info details",
 					},
 					{
-						CheckResultType: common.CheckResultTypeFailed,
-						InvariantType:   common.InvariantType("third"),
+						CheckResultType: CheckResultTypeFailed,
+						InvariantType:   Name("third"),
 						Info:            "invariant 3 info",
 						InfoDetails:     "invariant 3 info details",
 					},
 					{
-						CheckResultType: common.CheckResultTypeHealthy,
-						InvariantType:   common.InvariantType("forth"),
+						CheckResultType: CheckResultTypeHealthy,
+						InvariantType:   Name("forth"),
 						Info:            "invariant 4 info",
 						InfoDetails:     "invariant 4 info details",
 					},
@@ -226,7 +228,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 	}
 
 	for _, tc := range testCases {
-		invariants := make([]common.Invariant, len(tc.checkResults), len(tc.checkResults))
+		invariants := make([]Invariant, len(tc.checkResults), len(tc.checkResults))
 		for i := 0; i < len(tc.checkResults); i++ {
 			mockInvariant := common.NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Check(gomock.Any()).Return(tc.checkResults[i])
@@ -235,30 +237,30 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 		manager := &invariantManager{
 			invariants: invariants,
 		}
-		s.Equal(tc.expected, manager.RunChecks(common.Execution{}))
+		s.Equal(tc.expected, manager.RunChecks(entity.Execution{}))
 	}
 }
 
 func (s *InvariantManagerSuite) TestRunFixes() {
 	testCases := []struct {
-		fixResults []common.FixResult
-		expected   common.ManagerFixResult
+		fixResults []FixResult
+		expected   ManagerFixResult
 	}{
 		{
 			fixResults: nil,
-			expected: common.ManagerFixResult{
-				FixResultType:            common.FixResultTypeSkipped,
+			expected: ManagerFixResult{
+				FixResultType:            FixResultTypeSkipped,
 				DeterminingInvariantType: nil,
 				FixResults:               nil,
 			},
 		},
 		{
-			fixResults: []common.FixResult{
+			fixResults: []FixResult{
 				{
-					FixResultType: common.FixResultTypeFixed,
-					InvariantType: common.InvariantType("first"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFixed,
+					InvariantType: Name("first"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 1 check info",
 						InfoDetails:     "invariant 1 check info details",
 					},
@@ -266,10 +268,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 1 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeFailed,
-					InvariantType: common.InvariantType("second"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFailed,
+					InvariantType: Name("second"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 2 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -277,15 +279,15 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 2 info details",
 				},
 			},
-			expected: common.ManagerFixResult{
-				FixResultType:            common.FixResultTypeFailed,
-				DeterminingInvariantType: common.InvariantTypePtr("second"),
-				FixResults: []common.FixResult{
+			expected: ManagerFixResult{
+				FixResultType:            FixResultTypeFailed,
+				DeterminingInvariantType: InvariantTypePtr("second"),
+				FixResults: []FixResult{
 					{
-						FixResultType: common.FixResultTypeFixed,
-						InvariantType: common.InvariantType("first"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFixed,
+						InvariantType: Name("first"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 1 check info",
 							InfoDetails:     "invariant 1 check info details",
 						},
@@ -293,10 +295,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 1 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeFailed,
-						InvariantType: common.InvariantType("second"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFailed,
+						InvariantType: Name("second"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 2 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -307,12 +309,12 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 		},
 		{
-			fixResults: []common.FixResult{
+			fixResults: []FixResult{
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("first"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("first"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 1 check info",
 						InfoDetails:     "invariant 1 check info details",
 					},
@@ -320,10 +322,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 1 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("second"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("second"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 2 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -331,15 +333,15 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 2 info details",
 				},
 			},
-			expected: common.ManagerFixResult{
-				FixResultType:            common.FixResultTypeSkipped,
+			expected: ManagerFixResult{
+				FixResultType:            FixResultTypeSkipped,
 				DeterminingInvariantType: nil,
-				FixResults: []common.FixResult{
+				FixResults: []FixResult{
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("first"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("first"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 1 check info",
 							InfoDetails:     "invariant 1 check info details",
 						},
@@ -347,10 +349,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 1 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("second"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("second"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 2 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -361,12 +363,12 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 		},
 		{
-			fixResults: []common.FixResult{
+			fixResults: []FixResult{
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("first"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("first"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 1 check info",
 						InfoDetails:     "invariant 1 check info details",
 					},
@@ -374,10 +376,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 1 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeFixed,
-					InvariantType: common.InvariantType("second"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFixed,
+					InvariantType: Name("second"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 2 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -385,10 +387,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 2 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("third"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("third"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 3 check info",
 						InfoDetails:     "invariant 3 check info details",
 					},
@@ -396,15 +398,15 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 3 info details",
 				},
 			},
-			expected: common.ManagerFixResult{
-				FixResultType:            common.FixResultTypeFixed,
-				DeterminingInvariantType: common.InvariantTypePtr("second"),
-				FixResults: []common.FixResult{
+			expected: ManagerFixResult{
+				FixResultType:            FixResultTypeFixed,
+				DeterminingInvariantType: InvariantTypePtr("second"),
+				FixResults: []FixResult{
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("first"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("first"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 1 check info",
 							InfoDetails:     "invariant 1 check info details",
 						},
@@ -412,10 +414,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 1 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeFixed,
-						InvariantType: common.InvariantType("second"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFixed,
+						InvariantType: Name("second"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 2 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -423,10 +425,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 2 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("third"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("third"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 3 check info",
 							InfoDetails:     "invariant 3 check info details",
 						},
@@ -437,12 +439,12 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 		},
 		{
-			fixResults: []common.FixResult{
+			fixResults: []FixResult{
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("first"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("first"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 1 check info",
 						InfoDetails:     "invariant 1 check info details",
 					},
@@ -450,10 +452,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 1 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeFixed,
-					InvariantType: common.InvariantType("second"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFixed,
+					InvariantType: Name("second"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 2 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -461,10 +463,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 2 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("third"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("third"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 3 check info",
 						InfoDetails:     "invariant 3 check info details",
 					},
@@ -472,10 +474,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 3 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeFailed,
-					InvariantType: common.InvariantType("forth"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFailed,
+					InvariantType: Name("forth"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 4 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -483,15 +485,15 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 4 info details",
 				},
 			},
-			expected: common.ManagerFixResult{
-				FixResultType:            common.FixResultTypeFailed,
-				DeterminingInvariantType: common.InvariantTypePtr("forth"),
-				FixResults: []common.FixResult{
+			expected: ManagerFixResult{
+				FixResultType:            FixResultTypeFailed,
+				DeterminingInvariantType: InvariantTypePtr("forth"),
+				FixResults: []FixResult{
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("first"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("first"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 1 check info",
 							InfoDetails:     "invariant 1 check info details",
 						},
@@ -499,10 +501,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 1 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeFixed,
-						InvariantType: common.InvariantType("second"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFixed,
+						InvariantType: Name("second"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 2 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -510,10 +512,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 2 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("third"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("third"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 3 check info",
 							InfoDetails:     "invariant 3 check info details",
 						},
@@ -521,10 +523,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 3 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeFailed,
-						InvariantType: common.InvariantType("forth"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFailed,
+						InvariantType: Name("forth"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 4 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -535,12 +537,12 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 			},
 		},
 		{
-			fixResults: []common.FixResult{
+			fixResults: []FixResult{
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("first"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("first"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 1 check info",
 						InfoDetails:     "invariant 1 check info details",
 					},
@@ -548,10 +550,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 1 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeFailed,
-					InvariantType: common.InvariantType("second"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFailed,
+					InvariantType: Name("second"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 4 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -559,10 +561,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 4 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeFixed,
-					InvariantType: common.InvariantType("third"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeCorrupted,
+					FixResultType: FixResultTypeFixed,
+					InvariantType: Name("third"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeCorrupted,
 						Info:            "invariant 2 check info",
 						InfoDetails:     "invariant 2 check info details",
 					},
@@ -570,10 +572,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 2 info details",
 				},
 				{
-					FixResultType: common.FixResultTypeSkipped,
-					InvariantType: common.InvariantType("forth"),
-					CheckResult: common.CheckResult{
-						CheckResultType: common.CheckResultTypeHealthy,
+					FixResultType: FixResultTypeSkipped,
+					InvariantType: Name("forth"),
+					CheckResult: CheckResult{
+						CheckResultType: CheckResultTypeHealthy,
 						Info:            "invariant 3 check info",
 						InfoDetails:     "invariant 3 check info details",
 					},
@@ -581,15 +583,15 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 					InfoDetails: "invariant 3 info details",
 				},
 			},
-			expected: common.ManagerFixResult{
-				FixResultType:            common.FixResultTypeFailed,
-				DeterminingInvariantType: common.InvariantTypePtr("second"),
-				FixResults: []common.FixResult{
+			expected: ManagerFixResult{
+				FixResultType:            FixResultTypeFailed,
+				DeterminingInvariantType: InvariantTypePtr("second"),
+				FixResults: []FixResult{
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("first"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("first"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 1 check info",
 							InfoDetails:     "invariant 1 check info details",
 						},
@@ -597,10 +599,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 1 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeFailed,
-						InvariantType: common.InvariantType("second"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFailed,
+						InvariantType: Name("second"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 4 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -608,10 +610,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 4 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeFixed,
-						InvariantType: common.InvariantType("third"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeCorrupted,
+						FixResultType: FixResultTypeFixed,
+						InvariantType: Name("third"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeCorrupted,
 							Info:            "invariant 2 check info",
 							InfoDetails:     "invariant 2 check info details",
 						},
@@ -619,10 +621,10 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 						InfoDetails: "invariant 2 info details",
 					},
 					{
-						FixResultType: common.FixResultTypeSkipped,
-						InvariantType: common.InvariantType("forth"),
-						CheckResult: common.CheckResult{
-							CheckResultType: common.CheckResultTypeHealthy,
+						FixResultType: FixResultTypeSkipped,
+						InvariantType: Name("forth"),
+						CheckResult: CheckResult{
+							CheckResultType: CheckResultTypeHealthy,
 							Info:            "invariant 3 check info",
 							InfoDetails:     "invariant 3 check info details",
 						},
@@ -635,7 +637,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 	}
 
 	for _, tc := range testCases {
-		invariants := make([]common.Invariant, len(tc.fixResults), len(tc.fixResults))
+		invariants := make([]Invariant, len(tc.fixResults), len(tc.fixResults))
 		for i := 0; i < len(tc.fixResults); i++ {
 			mockInvariant := common.NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Fix(gomock.Any()).Return(tc.fixResults[i])
@@ -644,6 +646,6 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 		manager := &invariantManager{
 			invariants: invariants,
 		}
-		s.Equal(tc.expected, manager.RunFixes(common.Execution{}))
+		s.Equal(tc.expected, manager.RunFixes(entity.Execution{}))
 	}
 }
