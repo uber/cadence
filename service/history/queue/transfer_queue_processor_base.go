@@ -379,6 +379,7 @@ func (t *transferQueueProcessorBase) splitQueue() {
 		numTasksPerMinute := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime).Seconds()) * int64(time.Minute.Seconds())
 
 		if t.estimatedTasksPerMinute == 0 {
+			// set the initial value for the estimation
 			t.estimatedTasksPerMinute = numTasksPerMinute
 		} else {
 			t.estimatedTasksPerMinute = int64(numTasksEstimationDecay*float64(t.estimatedTasksPerMinute) + (1-numTasksEstimationDecay)*float64(numTasksPerMinute))
@@ -393,6 +394,9 @@ func (t *transferQueueProcessorBase) splitQueue() {
 	splitPolicy := t.initializeSplitPolicy(
 		func(key task.Key, domainID string) task.Key {
 			totalLookAhead := t.estimatedTasksPerMinute * int64(t.options.SplitLookAheadDurationByDomainID(domainID).Minutes())
+			if totalLookAhead < 0 {
+				totalLookAhead = 0
+			}
 			return newTransferTaskKey(key.(transferTaskKey).taskID + totalLookAhead)
 		},
 	)

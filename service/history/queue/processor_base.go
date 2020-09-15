@@ -268,6 +268,8 @@ func (p *processorBase) splitProcessingQueueCollection(
 	splitPolicy ProcessingQueueSplitPolicy,
 	upsertPollTimeFn func(int, time.Time),
 ) {
+	defer p.emitProcessingQueueMetrics()
+
 	if splitPolicy == nil {
 		return
 	}
@@ -311,6 +313,20 @@ func (p *processorBase) splitProcessingQueueCollection(
 	for _, queueCollections := range p.processingQueueCollections {
 		upsertPollTimeFn(queueCollections.Level(), time.Time{})
 	}
+}
+
+func (p *processorBase) emitProcessingQueueMetrics() {
+	numProcessingQueues := 0
+	maxProcessingQueueLevel := 0
+	for _, queueCollection := range p.processingQueueCollections {
+		size := len(queueCollection.Queues())
+		numProcessingQueues += size
+		if size != 0 && queueCollection.Level() > maxProcessingQueueLevel {
+			maxProcessingQueueLevel = queueCollection.Level()
+		}
+	}
+	p.metricsScope.RecordTimer(metrics.ProcessingQueueNumTimer, time.Duration(numProcessingQueues))
+	p.metricsScope.RecordTimer(metrics.ProcessingQueueMaxLevelTimer, time.Duration(maxProcessingQueueLevel))
 }
 
 func (p *processorBase) addAction(action *Action) (chan actionResultNotification, bool) {
