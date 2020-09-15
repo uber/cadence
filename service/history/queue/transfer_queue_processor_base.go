@@ -374,8 +374,10 @@ func (t *transferQueueProcessorBase) splitQueue() {
 		t.lastMaxReadLevel = currentMaxReadLevel
 	}()
 
-	if currentMaxReadLevel-t.lastMaxReadLevel < 2<<t.shard.GetConfig().RangeSizeBits {
+	if currentMaxReadLevel-t.lastMaxReadLevel < 2<<(t.shard.GetConfig().RangeSizeBits-1) {
 		// only update the estimation when rangeID is not renewed
+		// note the threshold here is only an estimation. If the read level increased too much
+		// we will drop that data point.
 		numTasksPerMinute := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime).Seconds()) * int64(time.Minute.Seconds())
 
 		if t.estimatedTasksPerMinute == 0 {
@@ -394,9 +396,8 @@ func (t *transferQueueProcessorBase) splitQueue() {
 	splitPolicy := t.initializeSplitPolicy(
 		func(key task.Key, domainID string) task.Key {
 			totalLookAhead := t.estimatedTasksPerMinute * int64(t.options.SplitLookAheadDurationByDomainID(domainID).Minutes())
-			if totalLookAhead < 0 {
-				totalLookAhead = 0
-			}
+			// ensure the above calculation doesn't overflow and cap the maximun look ahead interval
+			totalLookAhead = common.MaxInt64(common.MinInt64(totalLookAhead, 2<<t.shard.GetConfig().RangeSizeBits), 0)
 			return newTransferTaskKey(key.(transferTaskKey).taskID + totalLookAhead)
 		},
 	)
