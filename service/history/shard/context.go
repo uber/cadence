@@ -1329,7 +1329,7 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 		s.logger.Error("Failed to add failover marker.", tag.Error(err))
 		return err
 	}
-	return s.forceUpdateShardInfoLocked()
+	return s.updateShardInfoLocked()
 }
 
 func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
