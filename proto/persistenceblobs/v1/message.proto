@@ -883,7 +883,7 @@ message WorkflowExecutionInfo {
     int64 initiated_id = 6;
     int64 completion_event_batch_id = 7;
     HistoryEvent completion_event = 8;
-    string task_queue = 9;
+    string task_list = 9;
     string workflow_type_name = 10;
     google.protobuf.Duration workflow_execution_timeout = 11 [(gogoproto.stdduration) = true];
     google.protobuf.Duration workflow_run_timeout = 12 [(gogoproto.stdduration) = true];
@@ -906,7 +906,7 @@ message WorkflowExecutionInfo {
     google.protobuf.Timestamp workflow_task_original_scheduled_time = 30 [(gogoproto.stdtime) = true];
     string workflow_task_request_id = 31;
     string cancel_request_id = 32;
-    string sticky_task_queue = 33;
+    string sticky_task_list = 33;
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration sticky_schedule_to_start_timeout = 34 [(gogoproto.stdduration) = true];
