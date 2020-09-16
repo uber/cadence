@@ -28,8 +28,9 @@
 package invariant
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockInvariant is a mock of Invariant interface
@@ -84,9 +85,9 @@ func (mr *MockInvariantMockRecorder) Fix(arg0 interface{}) *gomock.Call {
 }
 
 // InvariantType mocks base method
-func (m *MockInvariant) InvariantType() Name {
+func (m *MockInvariant) Name() Name {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvariantType")
+	ret := m.ctrl.Call(m, "Name")
 	ret0, _ := ret[0].(Name)
 	return ret0
 }
@@ -94,7 +95,7 @@ func (m *MockInvariant) InvariantType() Name {
 // InvariantType indicates an expected call of InvariantType
 func (mr *MockInvariantMockRecorder) InvariantType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvariantType", reflect.TypeOf((*MockInvariant)(nil).InvariantType))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockInvariant)(nil).Name))
 }
 
 // MockManager is a mock of Manager interface

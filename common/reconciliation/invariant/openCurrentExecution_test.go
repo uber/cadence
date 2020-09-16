@@ -63,7 +63,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			execution: getClosedConcreteExecution(),
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 			},
 		},
 		{
@@ -71,7 +71,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			getConcreteErr: errors.New("got error checking if concrete is open"),
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 				Info:            "failed to check if concrete execution is still open",
 				InfoDetails:     "got error checking if concrete is open",
 			},
@@ -88,7 +88,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			getConcreteErr: nil,
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 			},
 		},
 		{
@@ -104,7 +104,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			getCurrentErr:  &shared.EntityNotExistsError{},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 				Info:            "execution is open without having current execution",
 				InfoDetails:     "EntityNotExistsError{Message: }",
 			},
@@ -122,7 +122,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			getCurrentErr:  errors.New("error getting current execution"),
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 				Info:            "failed to check if current execution exists",
 				InfoDetails:     "error getting current execution",
 			},
@@ -143,7 +143,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 				Info:            "execution is open but current points at a different execution",
 				InfoDetails:     "current points at not-equal",
 			},
@@ -164,7 +164,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   OpenCurrentExecutionInvariantType,
+				InvariantName:   OpenCurrentExecution,
 			},
 		},
 	}

@@ -134,7 +134,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 						CorruptedCount:   2,
 						CheckFailedCount: 1,
 						CorruptionByType: map[invariant.Name]int64{
-							invariant.HistoryExistsInvariantType: 1,
+							invariant.HistoryExists: 1,
 						},
 						CorruptedOpenExecutionCount: 0,
 					},
@@ -171,7 +171,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 		CorruptedCount:   48,
 		CheckFailedCount: 24,
 		CorruptionByType: map[invariant.Name]int64{
-			invariant.HistoryExistsInvariantType: 24,
+			invariant.HistoryExists: 24,
 		},
 	}, agg)
 
@@ -200,7 +200,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success() {
 					CorruptedCount:   2,
 					CheckFailedCount: 1,
 					CorruptionByType: map[invariant.Name]int64{
-						invariant.HistoryExistsInvariantType: 1,
+						invariant.HistoryExists: 1,
 					},
 					CorruptedOpenExecutionCount: 0,
 				},

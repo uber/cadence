@@ -39,17 +39,17 @@ const (
 	// FixResultTypeFailed indicates that fix attempted to fix an execution but failed to do so
 	FixResultTypeFailed FixResultType = "failed"
 
-	// HistoryExistsInvariantType asserts that history must exist if concrete execution exists
-	HistoryExistsInvariantType Name = "history_exists"
-	// OpenCurrentExecutionInvariantType asserts that an open concrete execution must have a valid current execution
-	OpenCurrentExecutionInvariantType Name = "open_current_execution"
-	// ConcreteExecutionExistsInvariantType asserts that an open current execution must have a valid concrete execution
-	ConcreteExecutionExistsInvariantType Name = "concrete_execution_exists"
+	// HistoryExists asserts that history must exist if concrete execution exists
+	HistoryExists Name = "history_exists"
+	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
+	OpenCurrentExecution Name = "open_current_execution"
+	// ConcreteExecutionExists asserts that an open current execution must have a valid concrete execution
+	ConcreteExecutionExists Name = "concrete_execution_exists"
 
-	// InvariantCollectionMutableState is the collection of invariants relating to mutable state
-	InvariantCollectionMutableState Collection = 0
-	// InvariantCollectionHistory is the collection  of invariants relating to history
-	InvariantCollectionHistory Collection = 1
+	// CollectionMutableState is the collection of invariants relating to mutable state
+	CollectionMutableState Collection = 0
+	// CollectionHistory is the collection  of invariants relating to history
+	CollectionHistory Collection = 1
 )
 
 type (
@@ -72,7 +72,7 @@ type (
 type Invariant interface {
 	Check(interface{}) CheckResult
 	Fix(interface{}) FixResult
-	InvariantType() Name
+	Name() Name
 }
 
 // Manager represents a manager of several invariants.
@@ -99,7 +99,7 @@ type ManagerFixResult struct {
 // CheckResult is the result of running Check.
 type CheckResult struct {
 	CheckResultType CheckResultType
-	InvariantType   Name
+	InvariantName   Name
 	Info            string
 	InfoDetails     string
 }
@@ -113,7 +113,7 @@ type FixResult struct {
 	InfoDetails   string
 }
 
-// TypePtr returns a pointer to Name
-func TypePtr(t Name) *Name {
+// NamePtr returns a pointer to Name
+func NamePtr(t Name) *Name {
 	return &t
 }

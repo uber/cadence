@@ -216,10 +216,10 @@ func scanShard(
 	}
 	var collections []invariant.Collection
 	if params.InvariantCollections.InvariantCollectionHistory {
-		collections = append(collections, invariant.InvariantCollectionHistory)
+		collections = append(collections, invariant.CollectionHistory)
 	}
 	if params.InvariantCollections.InvariantCollectionMutableState {
-		collections = append(collections, invariant.InvariantCollectionMutableState)
+		collections = append(collections, invariant.CollectionMutableState)
 	}
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 	scanner := shard.NewScanner(
@@ -396,10 +396,10 @@ func fixShard(
 	}
 	var collections []invariant.Collection
 	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionHistory {
-		collections = append(collections, invariant.InvariantCollectionHistory)
+		collections = append(collections, invariant.CollectionHistory)
 	}
 	if params.ResolvedFixerWorkflowConfig.InvariantCollections.InvariantCollectionMutableState {
-		collections = append(collections, invariant.InvariantCollectionMutableState)
+		collections = append(collections, invariant.CollectionMutableState)
 	}
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 	fixer := shard.NewFixer(

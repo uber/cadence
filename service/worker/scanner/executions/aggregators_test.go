@@ -67,8 +67,8 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 			CorruptedCount:   3,
 			CheckFailedCount: 1,
 			CorruptionByType: map[invariant.Name]int64{
-				invariant.HistoryExistsInvariantType:        2,
-				invariant.OpenCurrentExecutionInvariantType: 1,
+				invariant.HistoryExists:        2,
+				invariant.OpenCurrentExecution: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},
@@ -95,8 +95,8 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 	expected.aggregation.CorruptedCount = 3
 	expected.aggregation.CheckFailedCount = 1
 	expected.aggregation.CorruptionByType = map[invariant.Name]int64{
-		invariant.HistoryExistsInvariantType:        2,
-		invariant.OpenCurrentExecutionInvariantType: 1,
+		invariant.HistoryExists:        2,
+		invariant.OpenCurrentExecution: 1,
 	}
 	expected.aggregation.CorruptedOpenExecutionCount = 1
 	expected.corruptionKeys = map[int]store.Keys{
@@ -115,8 +115,8 @@ func (s *workflowsSuite) TestShardScanResultAggregator() {
 			CorruptedCount:   3,
 			CheckFailedCount: 1,
 			CorruptionByType: map[invariant.Name]int64{
-				invariant.HistoryExistsInvariantType:        2,
-				invariant.OpenCurrentExecutionInvariantType: 1,
+				invariant.HistoryExists:        2,
+				invariant.OpenCurrentExecution: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},

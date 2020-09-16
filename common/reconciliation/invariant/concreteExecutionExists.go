@@ -53,7 +53,7 @@ func (c *concreteExecutionExists) Check(
 	if !ok {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
-			InvariantType:   c.InvariantType(),
+			InvariantName:   c.Name(),
 			Info:            "failed to check: expected current execution",
 		}
 	}
@@ -75,7 +75,7 @@ func (c *concreteExecutionExists) Check(
 	if concreteExecErr != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
-			InvariantType:   c.InvariantType(),
+			InvariantName:   c.Name(),
 			Info:            "failed to check if concrete execution exists",
 			InfoDetails:     concreteExecErr.Error(),
 		}
@@ -88,7 +88,7 @@ func (c *concreteExecutionExists) Check(
 		}
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
-			InvariantType:   c.InvariantType(),
+			InvariantName:   c.Name(),
 			Info:            "execution is open without having concrete execution",
 			InfoDetails: fmt.Sprintf("concrete execution not found. WorkflowId: %v, RunId: %v",
 				currentExecution.WorkflowID, currentExecution.CurrentRunID),
@@ -96,7 +96,7 @@ func (c *concreteExecutionExists) Check(
 	}
 	return CheckResult{
 		CheckResultType: CheckResultTypeHealthy,
-		InvariantType:   c.InvariantType(),
+		InvariantName:   c.Name(),
 	}
 }
 
@@ -113,7 +113,7 @@ func (c *concreteExecutionExists) Fix(
 			return FixResult{
 				FixResultType: FixResultTypeSkipped,
 				CheckResult:   *runIDCheckResult,
-				InvariantType: c.InvariantType(),
+				InvariantType: c.Name(),
 			}
 		}
 	}
@@ -135,12 +135,12 @@ func (c *concreteExecutionExists) Fix(
 	return FixResult{
 		FixResultType: FixResultTypeFixed,
 		CheckResult:   *checkResult,
-		InvariantType: c.InvariantType(),
+		InvariantType: c.Name(),
 	}
 }
 
-func (c *concreteExecutionExists) InvariantType() Name {
-	return ConcreteExecutionExistsInvariantType
+func (c *concreteExecutionExists) Name() Name {
+	return ConcreteExecutionExists
 }
 
 func (c *concreteExecutionExists) validateCurrentRunID(
@@ -156,14 +156,14 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 		case *shared.EntityNotExistsError:
 			return nil, &CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   c.InvariantType(),
+				InvariantName:   c.Name(),
 				Info:            "current execution does not exist.",
 				InfoDetails:     err.Error(),
 			}
 		default:
 			return nil, &CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   c.InvariantType(),
+				InvariantName:   c.Name(),
 				Info:            "failed to get current execution.",
 				InfoDetails:     err.Error(),
 			}
@@ -177,7 +177,7 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 	if currentExecution.CurrentRunID != resp.RunID {
 		return nil, &CheckResult{
 			CheckResultType: CheckResultTypeHealthy,
-			InvariantType:   c.InvariantType(),
+			InvariantName:   c.Name(),
 		}
 	}
 	return currentExecution, nil

@@ -50,14 +50,14 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 	if !ok {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
-			InvariantType:   o.InvariantType(),
+			InvariantName:   o.Name(),
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
 	if !Open(concreteExecution.State) {
 		return CheckResult{
 			CheckResultType: CheckResultTypeHealthy,
-			InvariantType:   o.InvariantType(),
+			InvariantName:   o.Name(),
 		}
 	}
 	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
@@ -68,7 +68,7 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 	if stillOpenErr != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
-			InvariantType:   o.InvariantType(),
+			InvariantName:   o.Name(),
 			Info:            "failed to check if concrete execution is still open",
 			InfoDetails:     stillOpenErr.Error(),
 		}
@@ -76,7 +76,7 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 	if !stillOpen {
 		return CheckResult{
 			CheckResultType: CheckResultTypeHealthy,
-			InvariantType:   o.InvariantType(),
+			InvariantName:   o.Name(),
 		}
 	}
 	if currentExecErr != nil {
@@ -84,14 +84,14 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 		case *shared.EntityNotExistsError:
 			return CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   o.InvariantType(),
+				InvariantName:   o.Name(),
 				Info:            "execution is open without having current execution",
 				InfoDetails:     currentExecErr.Error(),
 			}
 		default:
 			return CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   o.InvariantType(),
+				InvariantName:   o.Name(),
 				Info:            "failed to check if current execution exists",
 				InfoDetails:     currentExecErr.Error(),
 			}
@@ -100,14 +100,14 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 	if currentExecResp.RunID != concreteExecution.RunID {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
-			InvariantType:   o.InvariantType(),
+			InvariantName:   o.Name(),
 			Info:            "execution is open but current points at a different execution",
 			InfoDetails:     fmt.Sprintf("current points at %v", currentExecResp.RunID),
 		}
 	}
 	return CheckResult{
 		CheckResultType: CheckResultTypeHealthy,
-		InvariantType:   o.InvariantType(),
+		InvariantName:   o.Name(),
 	}
 }
 
@@ -118,12 +118,12 @@ func (o *openCurrentExecution) Fix(execution interface{}) FixResult {
 	}
 	fixResult = DeleteExecution(&execution, o.pr)
 	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = o.InvariantType()
+	fixResult.InvariantType = o.Name()
 	return *fixResult
 }
 
-func (o *openCurrentExecution) InvariantType() Name {
-	return OpenCurrentExecutionInvariantType
+func (o *openCurrentExecution) Name() Name {
+	return OpenCurrentExecution
 }
 
 // ExecutionStillOpen returns true if execution in persistence exists and is open, false otherwise.

@@ -301,11 +301,11 @@ func (s *ScannerSuite) TestScan_Success() {
 		},
 	}).Return(invariant.ManagerCheckResult{
 		CheckResultType:          invariant.CheckResultTypeCorrupted,
-		DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
+		DeterminingInvariantType: invariant.NamePtr(invariant.HistoryExists),
 		CheckResults: []invariant.CheckResult{
 			{
 				CheckResultType: invariant.CheckResultTypeCorrupted,
-				InvariantType:   invariant.HistoryExistsInvariantType,
+				InvariantName:   invariant.HistoryExists,
 				Info:            "history did not exist",
 			},
 		},
@@ -316,15 +316,15 @@ func (s *ScannerSuite) TestScan_Success() {
 			State:    persistence.WorkflowStateCreated,
 		}}).Return(invariant.ManagerCheckResult{
 		CheckResultType:          invariant.CheckResultTypeCorrupted,
-		DeterminingInvariantType: invariant.TypePtr(invariant.OpenCurrentExecutionInvariantType),
+		DeterminingInvariantType: invariant.NamePtr(invariant.OpenCurrentExecution),
 		CheckResults: []invariant.CheckResult{
 			{
 				CheckResultType: invariant.CheckResultTypeHealthy,
-				InvariantType:   invariant.HistoryExistsInvariantType,
+				InvariantName:   invariant.HistoryExists,
 			},
 			{
 				CheckResultType: invariant.CheckResultTypeCorrupted,
-				InvariantType:   invariant.OpenCurrentExecutionInvariantType,
+				InvariantName:   invariant.OpenCurrentExecution,
 				Info:            "execution was orphan",
 			},
 		},
@@ -334,11 +334,11 @@ func (s *ScannerSuite) TestScan_Success() {
 			DomainID: "failed",
 		}}).Return(invariant.ManagerCheckResult{
 		CheckResultType:          invariant.CheckResultTypeFailed,
-		DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
+		DeterminingInvariantType: invariant.NamePtr(invariant.HistoryExists),
 		CheckResults: []invariant.CheckResult{
 			{
 				CheckResultType: invariant.CheckResultTypeFailed,
-				InvariantType:   invariant.HistoryExistsInvariantType,
+				InvariantName:   invariant.HistoryExists,
 				Info:            "failed to check if history exists",
 			},
 		},
@@ -353,11 +353,11 @@ func (s *ScannerSuite) TestScan_Success() {
 			}},
 		Result: invariant.ManagerCheckResult{
 			CheckResultType:          invariant.CheckResultTypeCorrupted,
-			DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
+			DeterminingInvariantType: invariant.NamePtr(invariant.HistoryExists),
 			CheckResults: []invariant.CheckResult{
 				{
 					CheckResultType: invariant.CheckResultTypeCorrupted,
-					InvariantType:   invariant.HistoryExistsInvariantType,
+					InvariantName:   invariant.HistoryExists,
 					Info:            "history did not exist",
 				},
 			},
@@ -371,15 +371,15 @@ func (s *ScannerSuite) TestScan_Success() {
 			}},
 		Result: invariant.ManagerCheckResult{
 			CheckResultType:          invariant.CheckResultTypeCorrupted,
-			DeterminingInvariantType: invariant.TypePtr(invariant.OpenCurrentExecutionInvariantType),
+			DeterminingInvariantType: invariant.NamePtr(invariant.OpenCurrentExecution),
 			CheckResults: []invariant.CheckResult{
 				{
 					CheckResultType: invariant.CheckResultTypeHealthy,
-					InvariantType:   invariant.HistoryExistsInvariantType,
+					InvariantName:   invariant.HistoryExists,
 				},
 				{
 					CheckResultType: invariant.CheckResultTypeCorrupted,
-					InvariantType:   invariant.OpenCurrentExecutionInvariantType,
+					InvariantName:   invariant.OpenCurrentExecution,
 					Info:            "execution was orphan",
 				},
 			},
@@ -393,11 +393,11 @@ func (s *ScannerSuite) TestScan_Success() {
 			}},
 		Result: invariant.ManagerCheckResult{
 			CheckResultType:          invariant.CheckResultTypeFailed,
-			DeterminingInvariantType: invariant.TypePtr(invariant.HistoryExistsInvariantType),
+			DeterminingInvariantType: invariant.NamePtr(invariant.HistoryExists),
 			CheckResults: []invariant.CheckResult{
 				{
 					CheckResultType: invariant.CheckResultTypeFailed,
-					InvariantType:   invariant.HistoryExistsInvariantType,
+					InvariantName:   invariant.HistoryExists,
 					Info:            "failed to check if history exists",
 				},
 			},
@@ -424,8 +424,8 @@ func (s *ScannerSuite) TestScan_Success() {
 			CorruptedCount:   4,
 			CheckFailedCount: 2,
 			CorruptionByType: map[invariant.Name]int64{
-				invariant.HistoryExistsInvariantType:        3,
-				invariant.OpenCurrentExecutionInvariantType: 1,
+				invariant.HistoryExists:        3,
+				invariant.OpenCurrentExecution: 1,
 			},
 			CorruptedOpenExecutionCount: 1,
 		},

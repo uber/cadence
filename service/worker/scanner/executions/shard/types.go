@@ -162,9 +162,9 @@ func (st ScanType) ToInvariants(collections []invariant.Collection) []func(retry
 	case ConcreteExecutionType:
 		for _, collection := range collections {
 			switch collection {
-			case invariant.InvariantCollectionHistory:
+			case invariant.CollectionHistory:
 				fns = append(fns, invariant.NewHistoryExists)
-			case invariant.InvariantCollectionMutableState:
+			case invariant.CollectionMutableState:
 				fns = append(fns, invariant.NewOpenCurrentExecution)
 			}
 		}
@@ -172,7 +172,7 @@ func (st ScanType) ToInvariants(collections []invariant.Collection) []func(retry
 	case CurrentExecutionType:
 		for _, collection := range collections {
 			switch collection {
-			case invariant.InvariantCollectionMutableState:
+			case invariant.CollectionMutableState:
 				fns = append(fns, invariant.NewConcreteExecutionExists)
 			}
 		}

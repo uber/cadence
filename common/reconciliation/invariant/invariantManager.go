@@ -50,7 +50,7 @@ func (i *invariantManager) RunChecks(execution interface{}) ManagerCheckResult {
 		checkResultType, updated := i.nextCheckResultType(result.CheckResultType, checkResult.CheckResultType)
 		result.CheckResultType = checkResultType
 		if updated {
-			result.DeterminingInvariantType = &checkResult.InvariantType
+			result.DeterminingInvariantType = &checkResult.InvariantName
 		}
 	}
 	return result

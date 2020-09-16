@@ -53,7 +53,7 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 	if !ok {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
-			InvariantType:   h.InvariantType(),
+			InvariantName:   h.Name(),
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
@@ -70,7 +70,7 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 	if existsCheckError != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
-			InvariantType:   h.InvariantType(),
+			InvariantName:   h.Name(),
 			Info:            "failed to check if concrete execution still exists",
 			InfoDetails:     existsCheckError.Error(),
 		}
@@ -78,7 +78,7 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 	if !stillExists {
 		return CheckResult{
 			CheckResultType: CheckResultTypeHealthy,
-			InvariantType:   h.InvariantType(),
+			InvariantName:   h.Name(),
 			Info:            "determined execution was healthy because concrete execution no longer exists",
 		}
 	}
@@ -87,14 +87,14 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 		case *shared.EntityNotExistsError:
 			return CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   h.InvariantType(),
+				InvariantName:   h.Name(),
 				Info:            "concrete execution exists but history does not exist",
 				InfoDetails:     readHistoryBranchErr.Error(),
 			}
 		default:
 			return CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   h.InvariantType(),
+				InvariantName:   h.Name(),
 				Info:            "failed to verify if history exists",
 				InfoDetails:     readHistoryBranchErr.Error(),
 			}
@@ -103,13 +103,13 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 	if readHistoryBranchResp == nil || len(readHistoryBranchResp.HistoryEvents) == 0 {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
-			InvariantType:   h.InvariantType(),
+			InvariantName:   h.Name(),
 			Info:            "concrete execution exists but got empty history",
 		}
 	}
 	return CheckResult{
 		CheckResultType: CheckResultTypeHealthy,
-		InvariantType:   h.InvariantType(),
+		InvariantName:   h.Name(),
 	}
 }
 
@@ -120,12 +120,12 @@ func (h *historyExists) Fix(execution interface{}) FixResult {
 	}
 	fixResult = DeleteExecution(&execution, h.pr)
 	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = h.InvariantType()
+	fixResult.InvariantType = h.Name()
 	return *fixResult
 }
 
-func (h *historyExists) InvariantType() Name {
-	return HistoryExistsInvariantType
+func (h *historyExists) Name() Name {
+	return HistoryExists
 }
 
 // ExecutionStillExists returns true if execution still exists in persistence, false otherwise.

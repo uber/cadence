@@ -63,7 +63,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			getHistoryResp: &persistence.ReadHistoryBranchResponse{},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   HistoryExistsInvariantType,
+				InvariantName:   HistoryExists,
 				Info:            "failed to check if concrete execution still exists",
 				InfoDetails:     "got error checking workflow exists",
 			},
@@ -74,7 +74,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			getHistoryResp: &persistence.ReadHistoryBranchResponse{},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   HistoryExistsInvariantType,
+				InvariantName:   HistoryExists,
 				Info:            "determined execution was healthy because concrete execution no longer exists",
 			},
 			expectedResourcePopulated: false,
@@ -85,7 +85,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			getHistoryErr:  &shared.EntityNotExistsError{Message: "got entity not exists error"},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   HistoryExistsInvariantType,
+				InvariantName:   HistoryExists,
 				Info:            "concrete execution exists but history does not exist",
 				InfoDetails:     "EntityNotExistsError{Message: got entity not exists error}",
 			},
@@ -97,7 +97,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			getHistoryErr:  errors.New("error fetching history"),
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   HistoryExistsInvariantType,
+				InvariantName:   HistoryExists,
 				Info:            "failed to verify if history exists",
 				InfoDetails:     "error fetching history",
 			},
@@ -108,7 +108,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			getHistoryResp: nil,
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   HistoryExistsInvariantType,
+				InvariantName:   HistoryExists,
 				Info:            "concrete execution exists but got empty history",
 			},
 			expectedResourcePopulated: false,
@@ -122,7 +122,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   HistoryExistsInvariantType,
+				InvariantName:   HistoryExists,
 			},
 			expectedResourcePopulated: true,
 		},

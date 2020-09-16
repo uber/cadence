@@ -35,7 +35,7 @@ func checkBeforeFix(
 	if checkResult.CheckResultType == CheckResultTypeHealthy {
 		return &FixResult{
 			FixResultType: FixResultTypeSkipped,
-			InvariantType: invariant.InvariantType(),
+			InvariantType: invariant.Name(),
 			CheckResult:   checkResult,
 			Info:          "skipped fix because execution was healthy",
 		}, nil
@@ -43,7 +43,7 @@ func checkBeforeFix(
 	if checkResult.CheckResultType == CheckResultTypeFailed {
 		return &FixResult{
 			FixResultType: FixResultTypeFailed,
-			InvariantType: invariant.InvariantType(),
+			InvariantType: invariant.Name(),
 			CheckResult:   checkResult,
 			Info:          "failed fix because check failed",
 		}, nil

@@ -71,7 +71,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 			},
 		},
 		{
@@ -82,7 +82,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 				Info:            "failed to check if concrete execution exists",
 				InfoDetails:     "error getting concrete execution",
 			},
@@ -95,7 +95,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 				Info:            "execution is open without having concrete execution",
 				InfoDetails: fmt.Sprintf("concrete execution not found. WorkflowId: %v, RunId: %v",
 					workflowID, currentRunID),
@@ -110,7 +110,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 			},
 		},
 		{
@@ -122,7 +122,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 			},
 		},
 		{
@@ -133,7 +133,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			getCurrentErr:   &existsError,
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 			},
 		},
 		{
@@ -144,7 +144,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			getCurrentErr:   &unknownError,
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeFailed,
-				InvariantType:   ConcreteExecutionExistsInvariantType,
+				InvariantName:   ConcreteExecutionExists,
 				Info:            "failed to get current execution.",
 				InfoDetails:     unknownError.Error(),
 			},
