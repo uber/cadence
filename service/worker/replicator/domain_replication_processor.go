@@ -154,7 +154,7 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 		return
 	}
 
-	p.logger.Debug("Successfully fetched domain replication tasks.", tag.Counter(len(response.Messages.ReplicationTasks)))
+	p.logger.Info("Successfully fetched domain replication tasks.", tag.Counter(len(response.Messages.ReplicationTasks)))
 
 	for taskIndex := range response.Messages.ReplicationTasks {
 		task := response.Messages.ReplicationTasks[taskIndex]
