@@ -1419,6 +1419,7 @@ func ResetWorkflow(c *cli.Context) {
 			ErrorAndExit("getResetEventIDByType failed", err)
 		}
 	}
+	fmt.Println(resetBaseRunID, decisionFinishID, err)
 	resp, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
 		WorkflowExecution: &shared.WorkflowExecution{
@@ -1782,7 +1783,7 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domai
 }
 
 func getLastDecisionCompletedID(ctx context.Context, domain, wid, rid string, eventVersion int64, adminClient adminserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
-	// resetBaseRunID = rid
+	resetBaseRunID = rid
 	// req := &shared.GetWorkflowExecutionHistoryRequest{
 	// 	Domain: common.StringPtr(domain),
 	// 	Execution: &shared.WorkflowExecution{
