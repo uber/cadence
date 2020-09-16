@@ -1743,6 +1743,8 @@ const (
 
 	TransferTaskMissingEventCounter
 
+	ProcessingQueueNumTimer
+	ProcessingQueueMaxLevelTimer
 	ProcessingQueuePendingTaskSplitCounter
 	ProcessingQueueStuckTaskSplitCounter
 	ProcessingQueueSelectedDomainSplitCounter
@@ -1750,6 +1752,7 @@ const (
 	ProcessingQueueThrottledCounter
 
 	ActivityE2ELatency
+	ActiveClusterGauge
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
 	DecisionTypeScheduleActivityCounter
@@ -2185,6 +2188,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskLimitExceededCounter: {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
 		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
+		ActiveClusterGauge:       {metricName: "active_cluster", metricType: Gauge},
 
 		// per domain task metrics
 
@@ -2205,6 +2209,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
 		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
 		TransferTaskMissingEventCounter:                   {metricName: "transfer_task_missing_event_counter", metricType: Counter},
+		ProcessingQueueNumTimer:                           {metricName: "processing_queue_num", metricType: Timer},
+		ProcessingQueueMaxLevelTimer:                      {metricName: "processing_queue_max_level", metricType: Timer},
 		ProcessingQueuePendingTaskSplitCounter:            {metricName: "processing_queue_pending_task_split_counter", metricType: Counter},
 		ProcessingQueueStuckTaskSplitCounter:              {metricName: "processing_queue_stuck_task_split_counter", metricType: Counter},
 		ProcessingQueueSelectedDomainSplitCounter:         {metricName: "processing_queue_selected_domain_split_counter", metricType: Counter},
