@@ -258,6 +258,10 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
 				},
+				cli.Int64Flag{
+					Name:  FlagEndEventVersion,
+					Usage: "End event version",
+				},
 			},
 			Action: func(c *cli.Context) {
 				ResetWorkflow(c)
@@ -321,6 +325,10 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
+				},
+				cli.Int64Flag{
+					Name:  FlagEndEventVersion,
+					Usage: "End event version",
 				},
 			},
 			Action: func(c *cli.Context) {

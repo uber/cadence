@@ -42,7 +42,11 @@ import (
 	"github.com/urfave/cli"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -1405,12 +1409,12 @@ func ResetWorkflow(c *cli.Context) {
 	defer cancel()
 
 	frontendClient := cFactory.ServerFrontendClient(c)
-
+	adminClient := cFactory.ServerAdminClient(c)
 	resetBaseRunID := rid
 	decisionFinishID := eventID
 	var err error
 	if resetType != "" {
-		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, domain, wid, rid, frontendClient)
+		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, domain, wid, rid, frontendClient, adminClient)
 		if err != nil {
 			ErrorAndExit("getResetEventIDByType failed", err)
 		}
@@ -1633,6 +1637,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	defer cancel()
 
 	frontendClient := cFactory.ServerFrontendClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
@@ -1671,7 +1676,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 		}
 	}
 
-	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, domain, wid, rid, frontendClient)
+	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, domain, wid, rid, frontendClient, adminClient)
 	if err != nil {
 		return printErrorAndReturn("getResetEventIDByType failed", err)
 	}
@@ -1746,11 +1751,11 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 	return false, nil
 }
 
-func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
+func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domain, wid, rid string, frontendClient workflowserviceclient.Interface, adminClient adminserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
 	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case "LastDecisionCompleted":
-		resetBaseRunID, decisionFinishID, err = getLastDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
+		resetBaseRunID, decisionFinishID, err = getLastDecisionCompletedID(ctx, domain, wid, rid, getRequiredInt64Option(c, FlagEndEventVersion), adminClient)
 		if err != nil {
 			return
 		}
@@ -1776,24 +1781,47 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domai
 	return
 }
 
-func getLastDecisionCompletedID(ctx context.Context, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
-	resetBaseRunID = rid
-	req := &shared.GetWorkflowExecutionHistoryRequest{
+func getLastDecisionCompletedID(ctx context.Context, domain, wid, rid string, eventVersion int64, adminClient adminserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
+	// resetBaseRunID = rid
+	// req := &shared.GetWorkflowExecutionHistoryRequest{
+	// 	Domain: common.StringPtr(domain),
+	// 	Execution: &shared.WorkflowExecution{
+	// 		WorkflowId: common.StringPtr(wid),
+	// 		RunId:      common.StringPtr(rid),
+	// 	},
+	// 	MaximumPageSize: common.Int32Ptr(1000),
+	// 	NextPageToken:   nil,
+	// }
+	req := &admin.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
 			RunId:      common.StringPtr(rid),
 		},
+		StartEventId:      common.Int64Ptr(0),
+		StartEventVersion: common.Int64Ptr(eventVersion),
+		// EndEventId:      common.Int64Ptr(common.EndEventID),
+		// EndEventVersion: common.Int64Ptr(eventVersion),
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
 	}
 
 	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		resp, err := adminClient.GetWorkflowExecutionRawHistoryV2(ctx, req)
 		if err != nil {
 			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
-		for _, e := range resp.GetHistory().GetEvents() {
+
+		allEvents := &shared.History{}
+		for _, blob := range resp.HistoryBatches {
+			historyBatch, err := DeserializeBatchEvents(blob)
+			if err != nil {
+				return "", 0, printErrorAndReturn("DeserializeBatchEvents failed", err)
+			}
+			allEvents.Events = append(allEvents.Events, historyBatch...)
+		}
+
+		for _, e := range allEvents.GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
 				decisionFinishID = e.GetEventId()
 			}
@@ -2000,3 +2028,96 @@ func ObserveHistoryWithID(c *cli.Context) {
 
 	printWorkflowProgress(c, wid, rid)
 }
+
+func DeserializeBatchEvents(data *shared.DataBlob) ([]*shared.HistoryEvent, error) {
+	if data == nil {
+		return nil, nil
+	}
+	var events []*shared.HistoryEvent
+	if data != nil && len(data.Data) == 0 {
+		return events, nil
+	}
+	err := deserialize(data, &events)
+	return events, err
+}
+
+func deserialize(data *shared.DataBlob, target interface{}) error {
+	if data == nil {
+		return nil
+	}
+	if len(data.Data) == 0 {
+		return errors.New("DeserializeEvent empty data")
+	}
+	var err error
+
+	switch *(data.EncodingType) {
+	case shared.EncodingTypeThriftRW:
+		err = thriftrwDecode(data.Data, target)
+	case shared.EncodingTypeJSON: // For backward-compatibility
+		err = json.Unmarshal(data.Data, target)
+
+	}
+
+	if err != nil {
+		return fmt.Errorf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.EncodingType, err.Error())
+	}
+	return nil
+}
+
+func thriftrwDecode(data []byte, target interface{}) error {
+	switch target := target.(type) {
+	case *[]*shared.HistoryEvent:
+		history := shared.History{Events: *target}
+		if err := Decode(data, &history); err != nil {
+			return err
+		}
+		*target = history.Events
+		return nil
+	case *shared.HistoryEvent:
+		return Decode(data, target)
+	case *shared.Memo:
+		return Decode(data, target)
+	case *shared.ResetPoints:
+		return Decode(data, target)
+	case *shared.BadBinaries:
+		return Decode(data, target)
+	case *shared.VersionHistories:
+		return Decode(data, target)
+	default:
+		return nil
+	}
+}
+
+// Decode decode the object
+func Decode(binary []byte, val ThriftObject) error {
+	if len(binary) < 1 {
+		return MissingBinaryEncodingVersion
+	}
+
+	version := binary[0]
+	if version != preambleVersion0 {
+		return InvalidBinaryEncodingVersion
+	}
+
+	reader := bytes.NewReader(binary[1:])
+	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
+	if err != nil {
+		return err
+	}
+
+	return val.FromWire(wireVal)
+}
+
+type ThriftObject interface {
+	FromWire(w wire.Value) error
+	ToWire() (wire.Value, error)
+}
+
+var (
+	// MissingBinaryEncodingVersion indicate that the encoding version is missing
+	MissingBinaryEncodingVersion = &shared.BadRequestError{Message: "Missing binary encoding version."}
+	// InvalidBinaryEncodingVersion indicate that the encoding version is incorrect
+	InvalidBinaryEncodingVersion = &shared.BadRequestError{Message: "Invalid binary encoding version."}
+	// MsgPayloadNotThriftEncoded indicate message is not thrift encoded
+	MsgPayloadNotThriftEncoded = &shared.BadRequestError{Message: "Message payload is not thrift encoded."}
+)
