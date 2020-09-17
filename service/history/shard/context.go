@@ -1329,7 +1329,7 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 		s.logger.Error("Failed to add failover marker.", tag.Error(err))
 		return err
 	}
-	return s.updateShardInfoLocked()
+	return s.forceUpdateShardInfoLocked()
 }
 
 func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
@@ -1343,7 +1343,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 			return nil, err
 		}
 		if domainEntry.IsDomainActive() || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
-			completedFailoverMarkers[marker] = struct{}{}
+			delete(completedFailoverMarkers, marker)
 		}
 	}
 
