@@ -665,8 +665,12 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		domainID,
 		workflowID,
 	)
+	getLockContext.Err()
 	if err != nil {
-		return nil, ErrConcurrentStartRequest
+		if err == context.DeadlineExceeded {
+			return nil, ErrConcurrentStartRequest
+		}
+		return nil, err
 	}
 	defer func() { currentRelease(retError) }()
 
