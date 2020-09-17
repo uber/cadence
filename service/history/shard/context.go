@@ -1343,7 +1343,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 			return nil, err
 		}
 		if domainEntry.IsDomainActive() || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
-			delete(completedFailoverMarkers, marker)
+			completedFailoverMarkers[marker] = struct{}{}
 		}
 	}
 
