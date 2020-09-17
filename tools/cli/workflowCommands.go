@@ -1766,7 +1766,7 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domai
 			return
 		}
 	case "FirstDecisionCompleted":
-		resetBaseRunID, decisionFinishID, err = getFirstDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
+		resetBaseRunID, decisionFinishID, err = getFirstDecisionCompletedID(ctx, domain, wid, rid, getRequiredInt64Option(c, FlagEndEventVersion), adminClient)
 		if err != nil {
 			return
 		}
@@ -1867,24 +1867,47 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 	return
 }
 
-func getFirstDecisionCompletedID(ctx context.Context, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
+func getFirstDecisionCompletedID(ctx context.Context, domain, wid, rid string, eventVersion int64, adminClient adminserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
 	resetBaseRunID = rid
-	req := &shared.GetWorkflowExecutionHistoryRequest{
+	// req := &shared.GetWorkflowExecutionHistoryRequest{
+	// 	Domain: common.StringPtr(domain),
+	// 	Execution: &shared.WorkflowExecution{
+	// 		WorkflowId: common.StringPtr(wid),
+	// 		RunId:      common.StringPtr(rid),
+	// 	},
+	// 	MaximumPageSize: common.Int32Ptr(1000),
+	// 	NextPageToken:   nil,
+	// }
+	req := &admin.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
 			RunId:      common.StringPtr(rid),
 		},
+		StartEventId:      common.Int64Ptr(0),
+		StartEventVersion: common.Int64Ptr(eventVersion),
+		// EndEventId:      common.Int64Ptr(common.EndEventID),
+		// EndEventVersion: common.Int64Ptr(eventVersion),
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
 	}
 
 	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		resp, err := adminClient.GetWorkflowExecutionRawHistoryV2(ctx, req)
 		if err != nil {
 			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
-		for _, e := range resp.GetHistory().GetEvents() {
+
+		allEvents := &shared.History{}
+		for _, blob := range resp.HistoryBatches {
+			historyBatch, err := DeserializeBatchEvents(blob)
+			if err != nil {
+				return "", 0, printErrorAndReturn("DeserializeBatchEvents failed", err)
+			}
+			allEvents.Events = append(allEvents.Events, historyBatch...)
+		}
+
+		for _, e := range allEvents.GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
 				decisionFinishID = e.GetEventId()
 				return resetBaseRunID, decisionFinishID, nil
