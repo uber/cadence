@@ -21,6 +21,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -986,7 +987,10 @@ func (d *cassandraPersistence) GetShardID() int {
 	return d.shardID
 }
 
-func (d *cassandraPersistence) CreateShard(request *p.CreateShardRequest) error {
+func (d *cassandraPersistence) CreateShard(
+	_ context.Context,
+	request *p.CreateShardRequest,
+) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
 	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
@@ -1045,7 +1049,10 @@ func (d *cassandraPersistence) CreateShard(request *p.CreateShardRequest) error 
 	return nil
 }
 
-func (d *cassandraPersistence) GetShard(request *p.GetShardRequest) (*p.GetShardResponse, error) {
+func (d *cassandraPersistence) GetShard(
+	_ context.Context,
+	request *p.GetShardRequest,
+) (*p.GetShardResponse, error) {
 	shardID := request.ShardID
 	query := d.session.Query(templateGetShardQuery,
 		shardID,
@@ -1078,7 +1085,10 @@ func (d *cassandraPersistence) GetShard(request *p.GetShardRequest) (*p.GetShard
 	return &p.GetShardResponse{ShardInfo: info}, nil
 }
 
-func (d *cassandraPersistence) UpdateShard(request *p.UpdateShardRequest) error {
+func (d *cassandraPersistence) UpdateShard(
+	_ context.Context,
+	request *p.UpdateShardRequest,
+) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
 	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
@@ -1145,6 +1155,7 @@ func (d *cassandraPersistence) UpdateShard(request *p.UpdateShardRequest) error 
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecution(
+	_ context.Context,
 	request *p.InternalCreateWorkflowExecutionRequest,
 ) (*p.CreateWorkflowExecutionResponse, error) {
 
@@ -1323,7 +1334,10 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (
+func (d *cassandraPersistence) GetWorkflowExecution(
+	_ context.Context,
+	request *p.GetWorkflowExecutionRequest,
+) (
 	*p.InternalGetWorkflowExecutionResponse, error) {
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
@@ -1428,7 +1442,10 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
-func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) UpdateWorkflowExecution(
+	_ context.Context,
+	request *p.InternalUpdateWorkflowExecutionRequest,
+) error {
 
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
@@ -1575,7 +1592,10 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 }
 
 //TODO: update query with version histories
-func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) ResetWorkflowExecution(
+	_ context.Context,
+	request *p.InternalResetWorkflowExecutionRequest,
+) error {
 
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
@@ -1699,7 +1719,10 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	return nil
 }
 
-func (d *cassandraPersistence) ConflictResolveWorkflowExecution(request *p.InternalConflictResolveWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
+	_ context.Context,
+	request *p.InternalConflictResolveWorkflowExecutionRequest,
+) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
 	currentWorkflow := request.CurrentWorkflowMutation
@@ -1974,7 +1997,7 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 	runID string,
 ) error {
 
-	if resp, err := d.GetCurrentExecution(&p.GetCurrentExecutionRequest{
+	if resp, err := d.GetCurrentExecution(context.TODO(), &p.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
@@ -1992,7 +2015,10 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 	return nil
 }
 
-func (d *cassandraPersistence) DeleteWorkflowExecution(request *p.DeleteWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) DeleteWorkflowExecution(
+	_ context.Context,
+	request *p.DeleteWorkflowExecutionRequest,
+) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
 		d.shardID,
 		rowTypeExecution,
@@ -2017,7 +2043,10 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *p.DeleteWorkflow
 	return nil
 }
 
-func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(request *p.DeleteCurrentWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
+	_ context.Context,
+	request *p.DeleteCurrentWorkflowExecutionRequest,
+) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
 		d.shardID,
 		rowTypeExecution,
@@ -2043,7 +2072,10 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(request *p.DeleteC
 	return nil
 }
 
-func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutionRequest) (*p.GetCurrentExecutionResponse,
+func (d *cassandraPersistence) GetCurrentExecution(
+	_ context.Context,
+	request *p.GetCurrentExecutionRequest,
+) (*p.GetCurrentExecutionResponse,
 	error) {
 	query := d.session.Query(templateGetCurrentExecutionQuery,
 		d.shardID,
@@ -2085,6 +2117,7 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 }
 
 func (d *cassandraPersistence) ListCurrentExecutions(
+	_ context.Context,
 	request *p.ListCurrentExecutionsRequest,
 ) (*p.ListCurrentExecutionsResponse, error) {
 	query := d.session.Query(
@@ -2128,8 +2161,10 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	return response, nil
 }
 
-func (d *cassandraPersistence) IsWorkflowExecutionExists(request *p.IsWorkflowExecutionExistsRequest) (*p.IsWorkflowExecutionExistsResponse,
-	error) {
+func (d *cassandraPersistence) IsWorkflowExecutionExists(
+	_ context.Context,
+	request *p.IsWorkflowExecutionExistsRequest,
+) (*p.IsWorkflowExecutionExistsResponse, error) {
 	query := d.session.Query(templateIsWorkflowExecutionExistsQuery,
 		d.shardID,
 		rowTypeExecution,
@@ -2157,6 +2192,7 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(request *p.IsWorkflowEx
 }
 
 func (d *cassandraPersistence) ListConcreteExecutions(
+	_ context.Context,
 	request *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
 	query := d.session.Query(
@@ -2199,7 +2235,10 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	return response, nil
 }
 
-func (d *cassandraPersistence) GetTransferTasks(request *p.GetTransferTasksRequest) (*p.GetTransferTasksResponse, error) {
+func (d *cassandraPersistence) GetTransferTasks(
+	_ context.Context,
+	request *p.GetTransferTasksRequest,
+) (*p.GetTransferTasksResponse, error) {
 
 	// Reading transfer tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetTransferTasksQuery,
@@ -2243,6 +2282,7 @@ func (d *cassandraPersistence) GetTransferTasks(request *p.GetTransferTasksReque
 }
 
 func (d *cassandraPersistence) GetReplicationTasks(
+	_ context.Context,
 	request *p.GetReplicationTasksRequest,
 ) (*p.GetReplicationTasksResponse, error) {
 
@@ -2293,7 +2333,10 @@ func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 	return response, nil
 }
 
-func (d *cassandraPersistence) CompleteTransferTask(request *p.CompleteTransferTaskRequest) error {
+func (d *cassandraPersistence) CompleteTransferTask(
+	_ context.Context,
+	request *p.CompleteTransferTaskRequest,
+) error {
 	query := d.session.Query(templateCompleteTransferTaskQuery,
 		d.shardID,
 		rowTypeTransferTask,
@@ -2318,7 +2361,10 @@ func (d *cassandraPersistence) CompleteTransferTask(request *p.CompleteTransferT
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTransferTask(request *p.RangeCompleteTransferTaskRequest) error {
+func (d *cassandraPersistence) RangeCompleteTransferTask(
+	_ context.Context,
+	request *p.RangeCompleteTransferTaskRequest,
+) error {
 	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
 		d.shardID,
 		rowTypeTransferTask,
@@ -2345,7 +2391,10 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(request *p.RangeComplet
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteReplicationTask(request *p.CompleteReplicationTaskRequest) error {
+func (d *cassandraPersistence) CompleteReplicationTask(
+	_ context.Context,
+	request *p.CompleteReplicationTaskRequest,
+) error {
 	query := d.session.Query(templateCompleteReplicationTaskQuery,
 		d.shardID,
 		rowTypeReplicationTask,
@@ -2371,6 +2420,7 @@ func (d *cassandraPersistence) CompleteReplicationTask(request *p.CompleteReplic
 }
 
 func (d *cassandraPersistence) RangeCompleteReplicationTask(
+	_ context.Context,
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
@@ -2399,7 +2449,10 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteTimerTask(request *p.CompleteTimerTaskRequest) error {
+func (d *cassandraPersistence) CompleteTimerTask(
+	_ context.Context,
+	request *p.CompleteTimerTaskRequest,
+) error {
 	ts := p.UnixNanoToDBTimestamp(request.VisibilityTimestamp.UnixNano())
 	query := d.session.Query(templateCompleteTimerTaskQuery,
 		d.shardID,
@@ -2425,7 +2478,10 @@ func (d *cassandraPersistence) CompleteTimerTask(request *p.CompleteTimerTaskReq
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTimerTask(request *p.RangeCompleteTimerTaskRequest) error {
+func (d *cassandraPersistence) RangeCompleteTimerTask(
+	_ context.Context,
+	request *p.RangeCompleteTimerTaskRequest,
+) error {
 	start := p.UnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
 	end := p.UnixNanoToDBTimestamp(request.ExclusiveEndTimestamp.UnixNano())
 	query := d.session.Query(templateRangeCompleteTimerTaskQuery,
@@ -2454,7 +2510,10 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(request *p.RangeCompleteTi
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*p.LeaseTaskListResponse, error) {
+func (d *cassandraPersistence) LeaseTaskList(
+	_ context.Context,
+	request *p.LeaseTaskListRequest,
+) (*p.LeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
@@ -2558,7 +2617,10 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) (*p.UpdateTaskListResponse, error) {
+func (d *cassandraPersistence) UpdateTaskList(
+	_ context.Context,
+	request *p.UpdateTaskListRequest,
+) (*p.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
@@ -2635,13 +2697,19 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 	return &p.UpdateTaskListResponse{}, nil
 }
 
-func (d *cassandraPersistence) ListTaskList(request *p.ListTaskListRequest) (*p.ListTaskListResponse, error) {
+func (d *cassandraPersistence) ListTaskList(
+	_ context.Context,
+	request *p.ListTaskListRequest,
+) (*p.ListTaskListResponse, error) {
 	return nil, &workflow.InternalServiceError{
 		Message: fmt.Sprintf("unsupported operation"),
 	}
 }
 
-func (d *cassandraPersistence) DeleteTaskList(request *p.DeleteTaskListRequest) error {
+func (d *cassandraPersistence) DeleteTaskList(
+	_ context.Context,
+	request *p.DeleteTaskListRequest,
+) error {
 	query := d.session.Query(templateDeleteTaskListQuery,
 		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
 	previous := make(map[string]interface{})
@@ -2665,7 +2733,10 @@ func (d *cassandraPersistence) DeleteTaskList(request *p.DeleteTaskListRequest) 
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.CreateTasksResponse, error) {
+func (d *cassandraPersistence) CreateTasks(
+	_ context.Context,
+	request *p.CreateTasksRequest,
+) (*p.CreateTasksResponse, error) {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	domainID := request.TaskListInfo.DomainID
 	taskList := request.TaskListInfo.Name
@@ -2749,7 +2820,10 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) GetTasks(request *p.GetTasksRequest) (*p.GetTasksResponse, error) {
+func (d *cassandraPersistence) GetTasks(
+	_ context.Context,
+	request *p.GetTasksRequest,
+) (*p.GetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
 		return nil, &workflow.InternalServiceError{
 			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
@@ -2803,7 +2877,10 @@ PopulateTasks:
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) CompleteTask(request *p.CompleteTaskRequest) error {
+func (d *cassandraPersistence) CompleteTask(
+	_ context.Context,
+	request *p.CompleteTaskRequest,
+) error {
 	tli := request.TaskList
 	query := d.session.Query(templateCompleteTaskQuery,
 		tli.DomainID,
@@ -2830,7 +2907,10 @@ func (d *cassandraPersistence) CompleteTask(request *p.CompleteTaskRequest) erro
 // CompleteTasksLessThan deletes all tasks less than or equal to the given task id. This API ignores the
 // Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
 // be returned to the caller
-func (d *cassandraPersistence) CompleteTasksLessThan(request *p.CompleteTasksLessThanRequest) (int, error) {
+func (d *cassandraPersistence) CompleteTasksLessThan(
+	_ context.Context,
+	request *p.CompleteTasksLessThanRequest,
+) (int, error) {
 	query := d.session.Query(templateCompleteTasksLessThanQuery,
 		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
 	err := query.Exec()
@@ -2847,8 +2927,10 @@ func (d *cassandraPersistence) CompleteTasksLessThan(request *p.CompleteTasksLes
 	return p.UnknownNumRowsAffected, nil
 }
 
-func (d *cassandraPersistence) GetTimerIndexTasks(request *p.GetTimerIndexTasksRequest) (*p.GetTimerIndexTasksResponse,
-	error) {
+func (d *cassandraPersistence) GetTimerIndexTasks(
+	_ context.Context,
+	request *p.GetTimerIndexTasksRequest,
+) (*p.GetTimerIndexTasksResponse, error) {
 	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
 	minTimestamp := p.UnixNanoToDBTimestamp(request.MinTimestamp.UnixNano())
 	maxTimestamp := p.UnixNanoToDBTimestamp(request.MaxTimestamp.UnixNano())
@@ -2896,7 +2978,10 @@ func (d *cassandraPersistence) GetTimerIndexTasks(request *p.GetTimerIndexTasksR
 	return response, nil
 }
 
-func (d *cassandraPersistence) PutReplicationTaskToDLQ(request *p.PutReplicationTaskToDLQRequest) error {
+func (d *cassandraPersistence) PutReplicationTaskToDLQ(
+	_ context.Context,
+	request *p.PutReplicationTaskToDLQRequest,
+) error {
 	task := request.TaskInfo
 
 	// Use source cluster name as the workflow id for replication dlq
@@ -2941,6 +3026,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(request *p.PutReplication
 }
 
 func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
+	_ context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
 ) (*p.GetReplicationTasksFromDLQResponse, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
@@ -2959,6 +3045,7 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 }
 
 func (d *cassandraPersistence) GetReplicationDLQSize(
+	_ context.Context,
 	request *p.GetReplicationDLQSizeRequest,
 ) (*p.GetReplicationDLQSizeResponse, error) {
 
@@ -2990,6 +3077,7 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 }
 
 func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
+	_ context.Context,
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
@@ -3018,6 +3106,7 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 }
 
 func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
+	_ context.Context,
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
@@ -3047,6 +3136,7 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 }
 
 func (d *cassandraPersistence) CreateFailoverMarkerTasks(
+	_ context.Context,
 	request *p.CreateFailoverMarkersRequest,
 ) error {
 

@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -45,13 +46,13 @@ type (
 	MetadataStore interface {
 		Closeable
 		GetName() string
-		CreateDomain(request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
-		GetDomain(request *GetDomainRequest) (*InternalGetDomainResponse, error)
-		UpdateDomain(request *InternalUpdateDomainRequest) error
-		DeleteDomain(request *DeleteDomainRequest) error
-		DeleteDomainByName(request *DeleteDomainByNameRequest) error
-		ListDomains(request *ListDomainsRequest) (*InternalListDomainsResponse, error)
-		GetMetadata() (*GetMetadataResponse, error)
+		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomain(ctx context.Context, request *GetDomainRequest) (*InternalGetDomainResponse, error)
+		UpdateDomain(ctx context.Context, request *InternalUpdateDomainRequest) error
+		DeleteDomain(ctx context.Context, request *DeleteDomainRequest) error
+		DeleteDomainByName(ctx context.Context, request *DeleteDomainByNameRequest) error
+		ListDomains(ctx context.Context, request *ListDomainsRequest) (*InternalListDomainsResponse, error)
+		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
 	}
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
@@ -60,41 +61,41 @@ type (
 		GetName() string
 		GetShardID() int
 		//The below three APIs are related to serialization/deserialization
-		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *InternalUpdateWorkflowExecutionRequest) error
-		ConflictResolveWorkflowExecution(request *InternalConflictResolveWorkflowExecutionRequest) error
-		ResetWorkflowExecution(request *InternalResetWorkflowExecutionRequest) error
+		GetWorkflowExecution(ctx context.Context, request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
+		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error
+		ResetWorkflowExecution(ctx context.Context, request *InternalResetWorkflowExecutionRequest) error
 
-		CreateWorkflowExecution(request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
-		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
-		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
-		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
-		IsWorkflowExecutionExists(request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
+		CreateWorkflowExecution(ctx context.Context, request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(ctx context.Context, request *DeleteCurrentWorkflowExecutionRequest) error
+		GetCurrentExecution(ctx context.Context, request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		IsWorkflowExecutionExists(ctx context.Context, request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
 
 		// Transfer task related methods
-		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
-		CompleteTransferTask(request *CompleteTransferTaskRequest) error
-		RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error
+		GetTransferTasks(ctx context.Context, request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
+		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
+		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
 
 		// Replication task related methods
-		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
-		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
-		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
-		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
-		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
-		GetReplicationDLQSize(request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
-		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
-		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
-		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error
+		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
+		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
+		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) error
+		PutReplicationTaskToDLQ(ctx context.Context, request *PutReplicationTaskToDLQRequest) error
+		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
+		GetReplicationDLQSize(ctx context.Context, request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
+		DeleteReplicationTaskFromDLQ(ctx context.Context, request *DeleteReplicationTaskFromDLQRequest) error
+		RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) error
+		CreateFailoverMarkerTasks(ctx context.Context, request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
-		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
-		CompleteTimerTask(request *CompleteTimerTaskRequest) error
-		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+		GetTimerIndexTasks(ctx context.Context, request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
+		CompleteTimerTask(ctx context.Context, request *CompleteTimerTaskRequest) error
+		RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) error
 
 		// Scan related methods
-		ListConcreteExecutions(request *ListConcreteExecutionsRequest) (*InternalListConcreteExecutionsResponse, error)
-		ListCurrentExecutions(request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
+		ListConcreteExecutions(ctx context.Context, request *ListConcreteExecutionsRequest) (*InternalListConcreteExecutionsResponse, error)
+		ListCurrentExecutions(ctx context.Context, request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
 	}
 
 	// HistoryStore is to manager workflow history events
@@ -106,54 +107,54 @@ type (
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 
 		// AppendHistoryNodes add(or override) a node to a history branch
-		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
+		AppendHistoryNodes(ctx context.Context, request *InternalAppendHistoryNodesRequest) error
 		// ReadHistoryBranch returns history node data for a branch
-		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
+		ReadHistoryBranch(ctx context.Context, request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
-		ForkHistoryBranch(request *InternalForkHistoryBranchRequest) (*InternalForkHistoryBranchResponse, error)
+		ForkHistoryBranch(ctx context.Context, request *InternalForkHistoryBranchRequest) (*InternalForkHistoryBranchResponse, error)
 		// DeleteHistoryBranch removes a branch
-		DeleteHistoryBranch(request *InternalDeleteHistoryBranchRequest) error
+		DeleteHistoryBranch(ctx context.Context, request *InternalDeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
-		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		GetHistoryTree(ctx context.Context, request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 		// GetAllHistoryTreeBranches returns all branches of all trees
-		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
+		GetAllHistoryTreeBranches(ctx context.Context, request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// VisibilityStore is the store interface for visibility
 	VisibilityStore interface {
 		Closeable
 		GetName() string
-		RecordWorkflowExecutionStarted(request *InternalRecordWorkflowExecutionStartedRequest) error
-		RecordWorkflowExecutionClosed(request *InternalRecordWorkflowExecutionClosedRequest) error
-		UpsertWorkflowExecution(request *InternalUpsertWorkflowExecutionRequest) error
-		ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
-		GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
-		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
-		ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
-		ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
-		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
+		RecordWorkflowExecutionStarted(ctx context.Context, request *InternalRecordWorkflowExecutionStartedRequest) error
+		RecordWorkflowExecutionClosed(ctx context.Context, request *InternalRecordWorkflowExecutionClosedRequest) error
+		UpsertWorkflowExecution(ctx context.Context, request *InternalUpsertWorkflowExecutionRequest) error
+		ListOpenWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByType(ctx context.Context, request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByType(ctx context.Context, request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByWorkflowID(ctx context.Context, request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *ListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
+		GetClosedWorkflowExecution(ctx context.Context, request *GetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
+		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
 	// Queue is a store to enqueue and get messages
 	Queue interface {
 		Closeable
-		EnqueueMessage(messagePayload []byte) error
-		ReadMessages(lastMessageID int64, maxCount int) ([]*QueueMessage, error)
-		DeleteMessagesBefore(messageID int64) error
-		UpdateAckLevel(messageID int64, clusterName string) error
-		GetAckLevels() (map[string]int64, error)
-		EnqueueMessageToDLQ(messagePayload []byte) (int64, error)
-		ReadMessagesFromDLQ(firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
-		DeleteMessageFromDLQ(messageID int64) error
-		RangeDeleteMessagesFromDLQ(firstMessageID int64, lastMessageID int64) error
-		UpdateDLQAckLevel(messageID int64, clusterName string) error
-		GetDLQAckLevels() (map[string]int64, error)
+		EnqueueMessage(ctx context.Context, messagePayload []byte) error
+		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error)
+		DeleteMessagesBefore(ctx context.Context, messageID int64) error
+		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetAckLevels(ctx context.Context) (map[string]int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
+		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
+		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
+		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
 	}
 
 	// QueueMessage is the message that stores in the queue

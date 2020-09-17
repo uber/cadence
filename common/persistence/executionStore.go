@@ -21,6 +21,8 @@
 package persistence
 
 import (
+	"context"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -65,7 +67,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 	request *GetWorkflowExecutionRequest,
 ) (*GetWorkflowExecutionResponse, error) {
 
-	response, err := m.persistence.GetWorkflowExecution(request)
+	response, err := m.persistence.GetWorkflowExecution(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +327,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 		NewWorkflowSnapshot:    serializedNewWorkflowSnapshot,
 	}
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
-	err1 := m.persistence.UpdateWorkflowExecution(newRequest)
+	err1 := m.persistence.UpdateWorkflowExecution(context.TODO(), newRequest)
 	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, err1
 }
 
@@ -544,7 +546,7 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 		//  basically should use CurrentWorkflowMutation instead
 		CurrentWorkflowCAS: request.CurrentWorkflowCAS,
 	}
-	return m.persistence.ConflictResolveWorkflowExecution(newRequest)
+	return m.persistence.ConflictResolveWorkflowExecution(context.TODO(), newRequest)
 }
 
 func (m *executionManagerImpl) ResetWorkflowExecution(
@@ -576,7 +578,7 @@ func (m *executionManagerImpl) ResetWorkflowExecution(
 
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
 	}
-	return m.persistence.ResetWorkflowExecution(newRequest)
+	return m.persistence.ResetWorkflowExecution(context.TODO(), newRequest)
 }
 
 func (m *executionManagerImpl) CreateWorkflowExecution(
@@ -601,7 +603,7 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
 	}
 
-	return m.persistence.CreateWorkflowExecution(newRequest)
+	return m.persistence.CreateWorkflowExecution(context.TODO(), newRequest)
 }
 
 func (m *executionManagerImpl) SerializeWorkflowMutation(
@@ -763,37 +765,37 @@ func (m *executionManagerImpl) DeserializeVersionHistories(
 func (m *executionManagerImpl) DeleteWorkflowExecution(
 	request *DeleteWorkflowExecutionRequest,
 ) error {
-	return m.persistence.DeleteWorkflowExecution(request)
+	return m.persistence.DeleteWorkflowExecution(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) DeleteCurrentWorkflowExecution(
 	request *DeleteCurrentWorkflowExecutionRequest,
 ) error {
-	return m.persistence.DeleteCurrentWorkflowExecution(request)
+	return m.persistence.DeleteCurrentWorkflowExecution(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) GetCurrentExecution(
 	request *GetCurrentExecutionRequest,
 ) (*GetCurrentExecutionResponse, error) {
-	return m.persistence.GetCurrentExecution(request)
+	return m.persistence.GetCurrentExecution(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) ListCurrentExecutions(
 	request *ListCurrentExecutionsRequest,
 ) (*ListCurrentExecutionsResponse, error) {
-	return m.persistence.ListCurrentExecutions(request)
+	return m.persistence.ListCurrentExecutions(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) IsWorkflowExecutionExists(
 	request *IsWorkflowExecutionExistsRequest,
 ) (*IsWorkflowExecutionExistsResponse, error) {
-	return m.persistence.IsWorkflowExecutionExists(request)
+	return m.persistence.IsWorkflowExecutionExists(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) ListConcreteExecutions(
 	request *ListConcreteExecutionsRequest,
 ) (*ListConcreteExecutionsResponse, error) {
-	response, err := m.persistence.ListConcreteExecutions(request)
+	response, err := m.persistence.ListConcreteExecutions(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -822,93 +824,93 @@ func (m *executionManagerImpl) ListConcreteExecutions(
 func (m *executionManagerImpl) GetTransferTasks(
 	request *GetTransferTasksRequest,
 ) (*GetTransferTasksResponse, error) {
-	return m.persistence.GetTransferTasks(request)
+	return m.persistence.GetTransferTasks(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) CompleteTransferTask(
 	request *CompleteTransferTaskRequest,
 ) error {
-	return m.persistence.CompleteTransferTask(request)
+	return m.persistence.CompleteTransferTask(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) RangeCompleteTransferTask(
 	request *RangeCompleteTransferTaskRequest,
 ) error {
-	return m.persistence.RangeCompleteTransferTask(request)
+	return m.persistence.RangeCompleteTransferTask(context.TODO(), request)
 }
 
 // Replication task related methods
 func (m *executionManagerImpl) GetReplicationTasks(
 	request *GetReplicationTasksRequest,
 ) (*GetReplicationTasksResponse, error) {
-	return m.persistence.GetReplicationTasks(request)
+	return m.persistence.GetReplicationTasks(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) CompleteReplicationTask(
 	request *CompleteReplicationTaskRequest,
 ) error {
-	return m.persistence.CompleteReplicationTask(request)
+	return m.persistence.CompleteReplicationTask(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) RangeCompleteReplicationTask(
 	request *RangeCompleteReplicationTaskRequest,
 ) error {
-	return m.persistence.RangeCompleteReplicationTask(request)
+	return m.persistence.RangeCompleteReplicationTask(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) PutReplicationTaskToDLQ(
 	request *PutReplicationTaskToDLQRequest,
 ) error {
-	return m.persistence.PutReplicationTaskToDLQ(request)
+	return m.persistence.PutReplicationTaskToDLQ(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) GetReplicationTasksFromDLQ(
 	request *GetReplicationTasksFromDLQRequest,
 ) (*GetReplicationTasksFromDLQResponse, error) {
-	return m.persistence.GetReplicationTasksFromDLQ(request)
+	return m.persistence.GetReplicationTasksFromDLQ(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) GetReplicationDLQSize(
 	request *GetReplicationDLQSizeRequest,
 ) (*GetReplicationDLQSizeResponse, error) {
-	return m.persistence.GetReplicationDLQSize(request)
+	return m.persistence.GetReplicationDLQSize(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) DeleteReplicationTaskFromDLQ(
 	request *DeleteReplicationTaskFromDLQRequest,
 ) error {
-	return m.persistence.DeleteReplicationTaskFromDLQ(request)
+	return m.persistence.DeleteReplicationTaskFromDLQ(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) RangeDeleteReplicationTaskFromDLQ(
 	request *RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
-	return m.persistence.RangeDeleteReplicationTaskFromDLQ(request)
+	return m.persistence.RangeDeleteReplicationTaskFromDLQ(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) CreateFailoverMarkerTasks(
 	request *CreateFailoverMarkersRequest,
 ) error {
-	return m.persistence.CreateFailoverMarkerTasks(request)
+	return m.persistence.CreateFailoverMarkerTasks(context.TODO(), request)
 }
 
 // Timer related methods.
 func (m *executionManagerImpl) GetTimerIndexTasks(
 	request *GetTimerIndexTasksRequest,
 ) (*GetTimerIndexTasksResponse, error) {
-	return m.persistence.GetTimerIndexTasks(request)
+	return m.persistence.GetTimerIndexTasks(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) CompleteTimerTask(
 	request *CompleteTimerTaskRequest,
 ) error {
-	return m.persistence.CompleteTimerTask(request)
+	return m.persistence.CompleteTimerTask(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) RangeCompleteTimerTask(
 	request *RangeCompleteTimerTaskRequest,
 ) error {
-	return m.persistence.RangeCompleteTimerTask(request)
+	return m.persistence.RangeCompleteTimerTask(context.TODO(), request)
 }
 
 func (m *executionManagerImpl) Close() {

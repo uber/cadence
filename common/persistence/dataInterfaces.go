@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -1537,9 +1538,9 @@ type (
 	ShardManager interface {
 		Closeable
 		GetName() string
-		CreateShard(request *CreateShardRequest) error
-		GetShard(request *GetShardRequest) (*GetShardResponse, error)
-		UpdateShard(request *UpdateShardRequest) error
+		CreateShard(ctx context.Context, request *CreateShardRequest) error
+		GetShard(ctx context.Context, request *GetShardRequest) (*GetShardResponse, error)
+		UpdateShard(ctx context.Context, request *UpdateShardRequest) error
 	}
 
 	// ExecutionManager is used to manage workflow executions
@@ -1594,13 +1595,13 @@ type (
 	TaskManager interface {
 		Closeable
 		GetName() string
-		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
-		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
-		ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error)
-		DeleteTaskList(request *DeleteTaskListRequest) error
-		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
-		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
-		CompleteTask(request *CompleteTaskRequest) error
+		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
+		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
+		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
+		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
 		// CompleteTasksLessThan completes tasks less than or equal to the given task id
 		// This API takes a limit parameter which specifies the count of maxRows that
 		// can be deleted. This parameter may be ignored by the underlying storage, but
@@ -1610,7 +1611,7 @@ type (
 		// On success, this method returns:
 		//  - number of rows actually deleted, if limit is honored
 		//  - UnknownNumRowsDeleted, when all rows below value are deleted
-		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
+		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
 	}
 
 	// HistoryManager is used to manager workflow history events

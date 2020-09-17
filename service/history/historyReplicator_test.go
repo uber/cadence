@@ -2054,7 +2054,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	errRet := &shared.InternalServiceError{}
 	// the test above already assert the create workflow request, so here just use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet)
-	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil) // this is called when err is returned, and shard will try to update
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil) // this is called when err is returned, and shard will try to update
 
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(

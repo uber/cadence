@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -52,6 +53,7 @@ func newHistoryV2Persistence(
 
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *sqlHistoryV2Manager) AppendHistoryNodes(
+	_ context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
 
@@ -138,6 +140,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 
 // ReadHistoryBranch returns history node data for a branch
 func (m *sqlHistoryV2Manager) ReadHistoryBranch(
+	_ context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
 
@@ -280,6 +283,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 //       8[8,9]
 //
 func (m *sqlHistoryV2Manager) ForkHistoryBranch(
+	_ context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
@@ -353,6 +357,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 
 // DeleteHistoryBranch removes a branch
 func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
+	_ context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
 
@@ -365,7 +370,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := m.GetHistoryTree(&p.GetHistoryTreeRequest{
+	rsp, err := m.GetHistoryTree(context.TODO(), &p.GetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: common.IntPtr(request.ShardID),
 	})
@@ -428,6 +433,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 }
 
 func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
+	_ context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 
@@ -438,6 +444,7 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 
 // GetHistoryTree returns all branch information of a tree
 func (m *sqlHistoryV2Manager) GetHistoryTree(
+	_ context.Context,
 	request *p.GetHistoryTreeRequest,
 ) (*p.GetHistoryTreeResponse, error) {
 

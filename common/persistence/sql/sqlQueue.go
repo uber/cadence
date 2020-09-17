@@ -21,11 +21,10 @@
 package sql
 
 import (
+	"context"
 	"fmt"
 
 	"database/sql"
-
-	"go.uber.org/cadence/.gen/go/shared"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -61,6 +60,7 @@ func newQueue(
 }
 
 func (q *sqlQueue) EnqueueMessage(
+	_ context.Context,
 	messagePayload []byte,
 ) error {
 
@@ -84,6 +84,7 @@ func (q *sqlQueue) EnqueueMessage(
 }
 
 func (q *sqlQueue) ReadMessages(
+	_ context.Context,
 	lastMessageID int64,
 	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
@@ -110,6 +111,7 @@ func newQueueRow(
 }
 
 func (q *sqlQueue) DeleteMessagesBefore(
+	_ context.Context,
 	messageID int64,
 ) error {
 
@@ -123,6 +125,7 @@ func (q *sqlQueue) DeleteMessagesBefore(
 }
 
 func (q *sqlQueue) UpdateAckLevel(
+	_ context.Context,
 	messageID int64,
 	clusterName string,
 ) error {
@@ -166,11 +169,14 @@ func (q *sqlQueue) UpdateAckLevel(
 	return nil
 }
 
-func (q *sqlQueue) GetAckLevels() (map[string]int64, error) {
+func (q *sqlQueue) GetAckLevels(
+	_ context.Context,
+) (map[string]int64, error) {
 	return q.db.GetAckLevels(q.queueType, false)
 }
 
 func (q *sqlQueue) EnqueueMessageToDLQ(
+	_ context.Context,
 	messagePayload []byte,
 ) (int64, error) {
 
@@ -195,6 +201,7 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 }
 
 func (q *sqlQueue) ReadMessagesFromDLQ(
+	_ context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 	pageSize int,
@@ -204,7 +211,7 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 	if pageToken != nil && len(pageToken) != 0 {
 		lastReadMessageID, err := deserializePageToken(pageToken)
 		if err != nil {
-			return nil, nil, &shared.InternalServiceError{
+			return nil, nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", pageToken)}
 		}
 		firstMessageID = lastReadMessageID
@@ -231,6 +238,7 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 }
 
 func (q *sqlQueue) DeleteMessageFromDLQ(
+	_ context.Context,
 	messageID int64,
 ) error {
 
@@ -244,6 +252,7 @@ func (q *sqlQueue) DeleteMessageFromDLQ(
 }
 
 func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
+	_ context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
@@ -258,6 +267,7 @@ func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
 }
 
 func (q *sqlQueue) UpdateDLQAckLevel(
+	_ context.Context,
 	messageID int64,
 	clusterName string,
 ) error {
@@ -301,7 +311,9 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 	return nil
 }
 
-func (q *sqlQueue) GetDLQAckLevels() (map[string]int64, error) {
+func (q *sqlQueue) GetDLQAckLevels(
+	_ context.Context,
+) (map[string]int64, error) {
 
 	return q.db.GetAckLevels(q.getDLQTypeFromQueueType(), false)
 }

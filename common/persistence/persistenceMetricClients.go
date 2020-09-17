@@ -21,6 +21,8 @@
 package persistence
 
 import (
+	"context"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -146,11 +148,14 @@ func (p *shardPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *shardPersistenceClient) CreateShard(request *CreateShardRequest) error {
+func (p *shardPersistenceClient) CreateShard(
+	ctx context.Context,
+	request *CreateShardRequest,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceCreateShardScope, metrics.PersistenceLatency)
-	err := p.persistence.CreateShard(request)
+	err := p.persistence.CreateShard(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -161,11 +166,13 @@ func (p *shardPersistenceClient) CreateShard(request *CreateShardRequest) error 
 }
 
 func (p *shardPersistenceClient) GetShard(
-	request *GetShardRequest) (*GetShardResponse, error) {
+	ctx context.Context,
+	request *GetShardRequest,
+) (*GetShardResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetShardScope, metrics.PersistenceLatency)
-	response, err := p.persistence.GetShard(request)
+	response, err := p.persistence.GetShard(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -175,11 +182,14 @@ func (p *shardPersistenceClient) GetShard(
 	return response, err
 }
 
-func (p *shardPersistenceClient) UpdateShard(request *UpdateShardRequest) error {
+func (p *shardPersistenceClient) UpdateShard(
+	ctx context.Context,
+	request *UpdateShardRequest,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateShardScope, metrics.PersistenceLatency)
-	err := p.persistence.UpdateShard(request)
+	err := p.persistence.UpdateShard(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -625,11 +635,14 @@ func (p *taskPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *taskPersistenceClient) CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error) {
+func (p *taskPersistenceClient) CreateTasks(
+	ctx context.Context,
+	request *CreateTasksRequest,
+) (*CreateTasksResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceCreateTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceCreateTaskScope, metrics.PersistenceLatency)
-	response, err := p.persistence.CreateTasks(request)
+	response, err := p.persistence.CreateTasks(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -639,11 +652,14 @@ func (p *taskPersistenceClient) CreateTasks(request *CreateTasksRequest) (*Creat
 	return response, err
 }
 
-func (p *taskPersistenceClient) GetTasks(request *GetTasksRequest) (*GetTasksResponse, error) {
+func (p *taskPersistenceClient) GetTasks(
+	ctx context.Context,
+	request *GetTasksRequest,
+) (*GetTasksResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetTasksScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetTasksScope, metrics.PersistenceLatency)
-	response, err := p.persistence.GetTasks(request)
+	response, err := p.persistence.GetTasks(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -653,11 +669,14 @@ func (p *taskPersistenceClient) GetTasks(request *GetTasksRequest) (*GetTasksRes
 	return response, err
 }
 
-func (p *taskPersistenceClient) CompleteTask(request *CompleteTaskRequest) error {
+func (p *taskPersistenceClient) CompleteTask(
+	ctx context.Context,
+	request *CompleteTaskRequest,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceCompleteTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.CompleteTask(request)
+	err := p.persistence.CompleteTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -667,10 +686,13 @@ func (p *taskPersistenceClient) CompleteTask(request *CompleteTaskRequest) error
 	return err
 }
 
-func (p *taskPersistenceClient) CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error) {
+func (p *taskPersistenceClient) CompleteTasksLessThan(
+	ctx context.Context,
+	request *CompleteTasksLessThanRequest,
+) (int, error) {
 	p.metricClient.IncCounter(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceLatency)
-	result, err := p.persistence.CompleteTasksLessThan(request)
+	result, err := p.persistence.CompleteTasksLessThan(ctx, request)
 	sw.Stop()
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceCompleteTasksLessThanScope, err)
@@ -678,11 +700,14 @@ func (p *taskPersistenceClient) CompleteTasksLessThan(request *CompleteTasksLess
 	return result, err
 }
 
-func (p *taskPersistenceClient) LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {
+func (p *taskPersistenceClient) LeaseTaskList(
+	ctx context.Context,
+	request *LeaseTaskListRequest,
+) (*LeaseTaskListResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceLeaseTaskListScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceLeaseTaskListScope, metrics.PersistenceLatency)
-	response, err := p.persistence.LeaseTaskList(request)
+	response, err := p.persistence.LeaseTaskList(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -692,10 +717,13 @@ func (p *taskPersistenceClient) LeaseTaskList(request *LeaseTaskListRequest) (*L
 	return response, err
 }
 
-func (p *taskPersistenceClient) ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error) {
+func (p *taskPersistenceClient) ListTaskList(
+	ctx context.Context,
+	request *ListTaskListRequest,
+) (*ListTaskListResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceListTaskListScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceListTaskListScope, metrics.PersistenceLatency)
-	response, err := p.persistence.ListTaskList(request)
+	response, err := p.persistence.ListTaskList(ctx, request)
 	sw.Stop()
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceListTaskListScope, err)
@@ -703,10 +731,13 @@ func (p *taskPersistenceClient) ListTaskList(request *ListTaskListRequest) (*Lis
 	return response, err
 }
 
-func (p *taskPersistenceClient) DeleteTaskList(request *DeleteTaskListRequest) error {
+func (p *taskPersistenceClient) DeleteTaskList(
+	ctx context.Context,
+	request *DeleteTaskListRequest,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteTaskListScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteTaskListScope, metrics.PersistenceLatency)
-	err := p.persistence.DeleteTaskList(request)
+	err := p.persistence.DeleteTaskList(ctx, request)
 	sw.Stop()
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceDeleteTaskListScope, err)
@@ -714,11 +745,14 @@ func (p *taskPersistenceClient) DeleteTaskList(request *DeleteTaskListRequest) e
 	return err
 }
 
-func (p *taskPersistenceClient) UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
+func (p *taskPersistenceClient) UpdateTaskList(
+	ctx context.Context,
+	request *UpdateTaskListRequest,
+) (*UpdateTaskListResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateTaskListScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateTaskListScope, metrics.PersistenceLatency)
-	response, err := p.persistence.UpdateTaskList(request)
+	response, err := p.persistence.UpdateTaskList(ctx, request)
 	sw.Stop()
 
 	if err != nil {
@@ -1232,11 +1266,11 @@ func (p *historyV2PersistenceClient) updateErrorMetric(scope int, err error) {
 	}
 }
 
-func (p *queuePersistenceClient) EnqueueMessage(message []byte) error {
+func (p *queuePersistenceClient) EnqueueMessage(ctx context.Context, message []byte) error {
 	p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceLatency)
-	err := p.persistence.EnqueueMessage(message)
+	err := p.persistence.EnqueueMessage(ctx, message)
 	sw.Stop()
 
 	if err != nil {
@@ -1246,11 +1280,11 @@ func (p *queuePersistenceClient) EnqueueMessage(message []byte) error {
 	return err
 }
 
-func (p *queuePersistenceClient) ReadMessages(lastMessageID int64, maxCount int) ([]*QueueMessage, error) {
+func (p *queuePersistenceClient) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error) {
 	p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceLatency)
-	result, err := p.persistence.ReadMessages(lastMessageID, maxCount)
+	result, err := p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 	sw.Stop()
 
 	if err != nil {
@@ -1260,11 +1294,11 @@ func (p *queuePersistenceClient) ReadMessages(lastMessageID int64, maxCount int)
 	return result, err
 }
 
-func (p *queuePersistenceClient) UpdateAckLevel(messageID int64, clusterName string) error {
+func (p *queuePersistenceClient) UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateAckLevelScope, metrics.PersistenceLatency)
-	err := p.persistence.UpdateAckLevel(messageID, clusterName)
+	err := p.persistence.UpdateAckLevel(ctx, messageID, clusterName)
 	sw.Stop()
 
 	if err != nil {
@@ -1274,11 +1308,11 @@ func (p *queuePersistenceClient) UpdateAckLevel(messageID int64, clusterName str
 	return err
 }
 
-func (p *queuePersistenceClient) GetAckLevels() (map[string]int64, error) {
+func (p *queuePersistenceClient) GetAckLevels(ctx context.Context) (map[string]int64, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetAckLevelScope, metrics.PersistenceLatency)
-	result, err := p.persistence.GetAckLevels()
+	result, err := p.persistence.GetAckLevels(ctx)
 	sw.Stop()
 
 	if err != nil {
@@ -1288,11 +1322,11 @@ func (p *queuePersistenceClient) GetAckLevels() (map[string]int64, error) {
 	return result, err
 }
 
-func (p *queuePersistenceClient) DeleteMessagesBefore(messageID int64) error {
+func (p *queuePersistenceClient) DeleteMessagesBefore(ctx context.Context, messageID int64) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessagesScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteQueueMessagesScope, metrics.PersistenceLatency)
-	err := p.persistence.DeleteMessagesBefore(messageID)
+	err := p.persistence.DeleteMessagesBefore(ctx, messageID)
 	sw.Stop()
 
 	if err != nil {
@@ -1302,11 +1336,11 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(messageID int64) error {
 	return err
 }
 
-func (p *queuePersistenceClient) EnqueueMessageToDLQ(message []byte) (int64, error) {
+func (p *queuePersistenceClient) EnqueueMessageToDLQ(ctx context.Context, message []byte) (int64, error) {
 	p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageToDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceEnqueueMessageToDLQScope, metrics.PersistenceLatency)
-	messageID, err := p.persistence.EnqueueMessageToDLQ(message)
+	messageID, err := p.persistence.EnqueueMessageToDLQ(ctx, message)
 	sw.Stop()
 
 	if err != nil {
@@ -1316,11 +1350,11 @@ func (p *queuePersistenceClient) EnqueueMessageToDLQ(message []byte) (int64, err
 	return messageID, err
 }
 
-func (p *queuePersistenceClient) ReadMessagesFromDLQ(firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error) {
+func (p *queuePersistenceClient) ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error) {
 	p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceReadQueueMessagesFromDLQScope, metrics.PersistenceLatency)
-	result, token, err := p.persistence.ReadMessagesFromDLQ(firstMessageID, lastMessageID, pageSize, pageToken)
+	result, token, err := p.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 	sw.Stop()
 
 	if err != nil {
@@ -1330,11 +1364,11 @@ func (p *queuePersistenceClient) ReadMessagesFromDLQ(firstMessageID int64, lastM
 	return result, token, err
 }
 
-func (p *queuePersistenceClient) DeleteMessageFromDLQ(messageID int64) error {
+func (p *queuePersistenceClient) DeleteMessageFromDLQ(ctx context.Context, messageID int64) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessageFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteQueueMessageFromDLQScope, metrics.PersistenceLatency)
-	err := p.persistence.DeleteMessageFromDLQ(messageID)
+	err := p.persistence.DeleteMessageFromDLQ(ctx, messageID)
 	sw.Stop()
 
 	if err != nil {
@@ -1344,11 +1378,11 @@ func (p *queuePersistenceClient) DeleteMessageFromDLQ(messageID int64) error {
 	return err
 }
 
-func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(firstMessageID int64, lastMessageID int64) error {
+func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error {
 	p.metricClient.IncCounter(metrics.PersistenceRangeDeleteMessagesFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeDeleteMessagesFromDLQScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeDeleteMessagesFromDLQ(firstMessageID, lastMessageID)
+	err := p.persistence.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
 	sw.Stop()
 
 	if err != nil {
@@ -1358,11 +1392,11 @@ func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(firstMessageID int64
 	return err
 }
 
-func (p *queuePersistenceClient) UpdateDLQAckLevel(messageID int64, clusterName string) error {
+func (p *queuePersistenceClient) UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceLatency)
-	err := p.persistence.UpdateDLQAckLevel(messageID, clusterName)
+	err := p.persistence.UpdateDLQAckLevel(ctx, messageID, clusterName)
 	sw.Stop()
 
 	if err != nil {
@@ -1372,11 +1406,11 @@ func (p *queuePersistenceClient) UpdateDLQAckLevel(messageID int64, clusterName 
 	return err
 }
 
-func (p *queuePersistenceClient) GetDLQAckLevels() (map[string]int64, error) {
+func (p *queuePersistenceClient) GetDLQAckLevels(ctx context.Context) (map[string]int64, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetDLQAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetDLQAckLevelScope, metrics.PersistenceLatency)
-	result, err := p.persistence.GetDLQAckLevels()
+	result, err := p.persistence.GetDLQAckLevels(ctx)
 	sw.Stop()
 
 	if err != nil {

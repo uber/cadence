@@ -111,7 +111,10 @@ func (v *esVisibilityStore) GetName() string {
 	return esPersistenceName
 }
 
-func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRecordWorkflowExecutionStartedRequest) error {
+func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
+	_ context.Context,
+	request *p.InternalRecordWorkflowExecutionStartedRequest,
+) error {
 	v.checkProducer()
 	msg := getVisibilityMessage(
 		request.DomainUUID,
@@ -129,7 +132,10 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRe
 	return v.producer.Publish(msg)
 }
 
-func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRecordWorkflowExecutionClosedRequest) error {
+func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
+	_ context.Context,
+	request *p.InternalRecordWorkflowExecutionClosedRequest,
+) error {
 	v.checkProducer()
 	msg := getVisibilityMessageForCloseExecution(
 		request.DomainUUID,
@@ -150,7 +156,10 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRec
 	return v.producer.Publish(msg)
 }
 
-func (v *esVisibilityStore) UpsertWorkflowExecution(request *p.InternalUpsertWorkflowExecutionRequest) error {
+func (v *esVisibilityStore) UpsertWorkflowExecution(
+	_ context.Context,
+	request *p.InternalUpsertWorkflowExecutionRequest,
+) error {
 	v.checkProducer()
 	msg := getVisibilityMessage(
 		request.DomainUUID,
@@ -169,7 +178,9 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(request *p.InternalUpsertWor
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutions(
-	request *p.ListWorkflowExecutionsRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
 		return nil, err
@@ -192,7 +203,9 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutions(
-	request *p.ListWorkflowExecutionsRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -216,7 +229,9 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
-	request *p.ListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsByTypeRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -241,7 +256,9 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
-	request *p.ListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsByTypeRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -266,7 +283,9 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -291,7 +310,9 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -316,7 +337,9 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
-	request *p.ListClosedWorkflowExecutionsByStatusRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListClosedWorkflowExecutionsByStatusRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -341,7 +364,9 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 }
 
 func (v *esVisibilityStore) GetClosedWorkflowExecution(
-	request *p.GetClosedWorkflowExecutionRequest) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
+	_ context.Context,
+	request *p.GetClosedWorkflowExecutionRequest,
+) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 
 	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
 	existClosedStatusQuery := elastic.NewExistsQuery(es.CloseStatus)
@@ -375,7 +400,10 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 	return response, nil
 }
 
-func (v *esVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDeleteWorkflowExecutionRequest) error {
+func (v *esVisibilityStore) DeleteWorkflowExecution(
+	_ context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
 	v.checkProducer()
 	msg := getVisibilityMessageForDeletion(
 		request.DomainID,
@@ -387,7 +415,9 @@ func (v *esVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDeleteW
 }
 
 func (v *esVisibilityStore) ListWorkflowExecutions(
-	request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsRequestV2,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	checkPageSize(request)
 
@@ -413,7 +443,9 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 }
 
 func (v *esVisibilityStore) ScanWorkflowExecutions(
-	request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	_ context.Context,
+	request *p.ListWorkflowExecutionsRequestV2,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	checkPageSize(request)
 
@@ -449,7 +481,10 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 	return v.getScanWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, searchResult.ScrollId, isLastPage)
 }
 
-func (v *esVisibilityStore) CountWorkflowExecutions(request *p.CountWorkflowExecutionsRequest) (
+func (v *esVisibilityStore) CountWorkflowExecutions(
+	_ context.Context,
+	request *p.CountWorkflowExecutionsRequest,
+) (
 	*p.CountWorkflowExecutionsResponse, error) {
 
 	queryDSL, err := getESQueryDSLForCount(request)

@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -5222,7 +5223,7 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
-	s.Nil(s.ShardMgr.CreateShard(createRequest))
+	s.Nil(s.ShardMgr.CreateShard(context.Background(), createRequest))
 
 	shardInfo.ClusterTransferAckLevel = map[string]int64{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTransferAck,
@@ -5230,7 +5231,7 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	shardInfo.ClusterTimerAckLevel = map[string]time.Time{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTimerAck,
 	}
-	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(context.Background(), &p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
@@ -5295,8 +5296,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
-	s.Nil(s.ShardMgr.CreateShard(createRequest))
-	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
+	s.Nil(s.ShardMgr.CreateShard(context.Background(), createRequest))
+	resp, err := s.ShardMgr.GetShard(context.Background(), &p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
@@ -5364,9 +5365,9 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		ShardInfo:       shardInfo,
 		PreviousRangeID: rangeID,
 	}
-	s.Nil(s.ShardMgr.UpdateShard(updateRequest))
+	s.Nil(s.ShardMgr.UpdateShard(context.Background(), updateRequest))
 
-	resp, err = s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
+	resp, err = s.ShardMgr.GetShard(context.Background(), &p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))

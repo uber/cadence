@@ -21,6 +21,8 @@
 package persistence
 
 import (
+	"context"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/quotas"
@@ -152,30 +154,39 @@ func (p *shardRateLimitedPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *shardRateLimitedPersistenceClient) CreateShard(request *CreateShardRequest) error {
+func (p *shardRateLimitedPersistenceClient) CreateShard(
+	ctx context.Context,
+	request *CreateShardRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CreateShard(request)
+	err := p.persistence.CreateShard(ctx, request)
 	return err
 }
 
-func (p *shardRateLimitedPersistenceClient) GetShard(request *GetShardRequest) (*GetShardResponse, error) {
+func (p *shardRateLimitedPersistenceClient) GetShard(
+	ctx context.Context,
+	request *GetShardRequest,
+) (*GetShardResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetShard(request)
+	response, err := p.persistence.GetShard(ctx, request)
 	return response, err
 }
 
-func (p *shardRateLimitedPersistenceClient) UpdateShard(request *UpdateShardRequest) error {
+func (p *shardRateLimitedPersistenceClient) UpdateShard(
+	ctx context.Context,
+	request *UpdateShardRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.UpdateShard(request)
+	err := p.persistence.UpdateShard(ctx, request)
 	return err
 }
 
@@ -438,70 +449,94 @@ func (p *taskRateLimitedPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *taskRateLimitedPersistenceClient) CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error) {
+func (p *taskRateLimitedPersistenceClient) CreateTasks(
+	ctx context.Context,
+	request *CreateTasksRequest,
+) (*CreateTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.CreateTasks(request)
+	response, err := p.persistence.CreateTasks(ctx, request)
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) GetTasks(request *GetTasksRequest) (*GetTasksResponse, error) {
+func (p *taskRateLimitedPersistenceClient) GetTasks(
+	ctx context.Context,
+	request *GetTasksRequest,
+) (*GetTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetTasks(request)
+	response, err := p.persistence.GetTasks(ctx, request)
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) CompleteTask(request *CompleteTaskRequest) error {
+func (p *taskRateLimitedPersistenceClient) CompleteTask(
+	ctx context.Context,
+	request *CompleteTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CompleteTask(request)
+	err := p.persistence.CompleteTask(ctx, request)
 	return err
 }
 
-func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error) {
+func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(
+	ctx context.Context,
+	request *CompleteTasksLessThanRequest,
+) (int, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return 0, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.CompleteTasksLessThan(request)
+	return p.persistence.CompleteTasksLessThan(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {
+func (p *taskRateLimitedPersistenceClient) LeaseTaskList(
+	ctx context.Context,
+	request *LeaseTaskListRequest,
+) (*LeaseTaskListResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.LeaseTaskList(request)
+	response, err := p.persistence.LeaseTaskList(ctx, request)
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
+func (p *taskRateLimitedPersistenceClient) UpdateTaskList(
+	ctx context.Context,
+	request *UpdateTaskListRequest,
+) (*UpdateTaskListResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.UpdateTaskList(request)
+	response, err := p.persistence.UpdateTaskList(ctx, request)
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error) {
+func (p *taskRateLimitedPersistenceClient) ListTaskList(
+	ctx context.Context,
+	request *ListTaskListRequest,
+) (*ListTaskListResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.ListTaskList(request)
+	return p.persistence.ListTaskList(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) DeleteTaskList(request *DeleteTaskListRequest) error {
+func (p *taskRateLimitedPersistenceClient) DeleteTaskList(
+	ctx context.Context,
+	request *DeleteTaskListRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
-	return p.persistence.DeleteTaskList(request)
+	return p.persistence.DeleteTaskList(ctx, request)
 }
 
 func (p *taskRateLimitedPersistenceClient) Close() {
@@ -792,91 +827,91 @@ func (p *historyV2RateLimitedPersistenceClient) GetAllHistoryTreeBranches(reques
 	return response, err
 }
 
-func (p *queueRateLimitedPersistenceClient) EnqueueMessage(message []byte) error {
+func (p *queueRateLimitedPersistenceClient) EnqueueMessage(ctx context.Context, message []byte) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.EnqueueMessage(message)
+	return p.persistence.EnqueueMessage(ctx, message)
 }
 
-func (p *queueRateLimitedPersistenceClient) ReadMessages(lastMessageID int64, maxCount int) ([]*QueueMessage, error) {
+func (p *queueRateLimitedPersistenceClient) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.ReadMessages(lastMessageID, maxCount)
+	return p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 }
 
-func (p *queueRateLimitedPersistenceClient) UpdateAckLevel(messageID int64, clusterName string) error {
+func (p *queueRateLimitedPersistenceClient) UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.UpdateAckLevel(messageID, clusterName)
+	return p.persistence.UpdateAckLevel(ctx, messageID, clusterName)
 }
 
-func (p *queueRateLimitedPersistenceClient) GetAckLevels() (map[string]int64, error) {
+func (p *queueRateLimitedPersistenceClient) GetAckLevels(ctx context.Context) (map[string]int64, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.GetAckLevels()
+	return p.persistence.GetAckLevels(ctx)
 }
 
-func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(messageID int64) error {
+func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(ctx context.Context, messageID int64) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.DeleteMessagesBefore(messageID)
+	return p.persistence.DeleteMessagesBefore(ctx, messageID)
 }
 
-func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(message []byte) (int64, error) {
+func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(ctx context.Context, message []byte) (int64, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return emptyMessageID, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.EnqueueMessageToDLQ(message)
+	return p.persistence.EnqueueMessageToDLQ(ctx, message)
 }
 
-func (p *queueRateLimitedPersistenceClient) ReadMessagesFromDLQ(firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error) {
+func (p *queueRateLimitedPersistenceClient) ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.ReadMessagesFromDLQ(firstMessageID, lastMessageID, pageSize, pageToken)
+	return p.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 }
 
-func (p *queueRateLimitedPersistenceClient) RangeDeleteMessagesFromDLQ(firstMessageID int64, lastMessageID int64) error {
+func (p *queueRateLimitedPersistenceClient) RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.RangeDeleteMessagesFromDLQ(firstMessageID, lastMessageID)
+	return p.persistence.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
 }
-func (p *queueRateLimitedPersistenceClient) UpdateDLQAckLevel(messageID int64, clusterName string) error {
+func (p *queueRateLimitedPersistenceClient) UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.UpdateDLQAckLevel(messageID, clusterName)
+	return p.persistence.UpdateDLQAckLevel(ctx, messageID, clusterName)
 }
 
-func (p *queueRateLimitedPersistenceClient) GetDLQAckLevels() (map[string]int64, error) {
+func (p *queueRateLimitedPersistenceClient) GetDLQAckLevels(ctx context.Context) (map[string]int64, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.GetDLQAckLevels()
+	return p.persistence.GetDLQAckLevels(ctx)
 }
 
-func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(messageID int64) error {
+func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(ctx context.Context, messageID int64) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.DeleteMessageFromDLQ(messageID)
+	return p.persistence.DeleteMessageFromDLQ(ctx, messageID)
 }
 
 func (p *queueRateLimitedPersistenceClient) Close() {

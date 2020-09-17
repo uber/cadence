@@ -47,7 +47,7 @@ func retryListConcreteExecutions(
 	op := func() error {
 		var err error
 		preconditionForDBCall(totalDBRequests, limiter)
-		resp, err = execStore.ListConcreteExecutions(req)
+		resp, err = execStore.ListConcreteExecutions(context.TODO(), req)
 		return err
 	}
 
@@ -75,7 +75,7 @@ func retryGetWorkflowExecution(
 	op := func() error {
 		var err error
 		preconditionForDBCall(totalDBRequests, limiter)
-		resp, err = execStore.GetWorkflowExecution(req)
+		resp, err = execStore.GetWorkflowExecution(context.TODO(), req)
 		return err
 	}
 
@@ -96,7 +96,7 @@ func retryGetCurrentExecution(
 	op := func() error {
 		var err error
 		preconditionForDBCall(totalDBRequests, limiter)
-		resp, err = execStore.GetCurrentExecution(req)
+		resp, err = execStore.GetCurrentExecution(context.TODO(), req)
 		return err
 	}
 
@@ -117,7 +117,7 @@ func retryReadHistoryBranch(
 	op := func() error {
 		var err error
 		preconditionForDBCall(totalDBRequests, limiter)
-		resp, err = historyStore.ReadHistoryBranch(req)
+		resp, err = historyStore.ReadHistoryBranch(context.TODO(), req)
 		return err
 	}
 
@@ -136,7 +136,7 @@ func retryDeleteWorkflowExecution(
 ) error {
 	op := func() error {
 		preconditionForDBCall(totalDBRequests, limiter)
-		return execStore.DeleteWorkflowExecution(req)
+		return execStore.DeleteWorkflowExecution(context.TODO(), req)
 	}
 
 	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
@@ -154,7 +154,7 @@ func retryDeleteCurrentWorkflowExecution(
 ) error {
 	op := func() error {
 		preconditionForDBCall(totalDBRequests, limiter)
-		return execStore.DeleteCurrentWorkflowExecution(req)
+		return execStore.DeleteCurrentWorkflowExecution(context.TODO(), req)
 	}
 
 	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)

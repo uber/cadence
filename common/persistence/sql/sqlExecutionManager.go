@@ -22,6 +22,7 @@ package sql
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -90,6 +91,7 @@ func (m *sqlExecutionManager) GetShardID() int {
 }
 
 func (m *sqlExecutionManager) CreateWorkflowExecution(
+	_ context.Context,
 	request *p.InternalCreateWorkflowExecutionRequest,
 ) (response *p.CreateWorkflowExecutionResponse, err error) {
 
@@ -209,6 +211,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 }
 
 func (m *sqlExecutionManager) GetWorkflowExecution(
+	_ context.Context,
 	request *p.GetWorkflowExecutionRequest,
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
@@ -438,6 +441,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 }
 
 func (m *sqlExecutionManager) UpdateWorkflowExecution(
+	_ context.Context,
 	request *p.InternalUpdateWorkflowExecutionRequest,
 ) error {
 
@@ -546,6 +550,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 }
 
 func (m *sqlExecutionManager) ResetWorkflowExecution(
+	_ context.Context,
 	request *p.InternalResetWorkflowExecutionRequest,
 ) error {
 
@@ -633,6 +638,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 }
 
 func (m *sqlExecutionManager) ConflictResolveWorkflowExecution(
+	_ context.Context,
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
 
@@ -775,6 +781,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 }
 
 func (m *sqlExecutionManager) DeleteWorkflowExecution(
+	_ context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
 
@@ -794,6 +801,7 @@ func (m *sqlExecutionManager) DeleteWorkflowExecution(
 // runID. The following code will delete the row from current_executions if and only if the runID is
 // same as the one we are trying to delete here
 func (m *sqlExecutionManager) DeleteCurrentWorkflowExecution(
+	_ context.Context,
 	request *p.DeleteCurrentWorkflowExecutionRequest,
 ) error {
 
@@ -809,6 +817,7 @@ func (m *sqlExecutionManager) DeleteCurrentWorkflowExecution(
 }
 
 func (m *sqlExecutionManager) GetCurrentExecution(
+	_ context.Context,
 	request *p.GetCurrentExecutionRequest,
 ) (*p.GetCurrentExecutionResponse, error) {
 
@@ -835,24 +844,28 @@ func (m *sqlExecutionManager) GetCurrentExecution(
 }
 
 func (m *sqlExecutionManager) ListCurrentExecutions(
+	_ context.Context,
 	_ *p.ListCurrentExecutionsRequest,
 ) (*p.ListCurrentExecutionsResponse, error) {
 	return nil, &workflow.InternalServiceError{Message: "Not yet implemented"}
 }
 
 func (m *sqlExecutionManager) IsWorkflowExecutionExists(
+	_ context.Context,
 	request *p.IsWorkflowExecutionExistsRequest,
 ) (*p.IsWorkflowExecutionExistsResponse, error) {
 	panic("not implemented yet")
 }
 
 func (m *sqlExecutionManager) ListConcreteExecutions(
+	_ context.Context,
 	_ *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
 	return nil, &workflow.InternalServiceError{Message: "Not yet implemented"}
 }
 
 func (m *sqlExecutionManager) GetTransferTasks(
+	_ context.Context,
 	request *p.GetTransferTasksRequest,
 ) (*p.GetTransferTasksResponse, error) {
 
@@ -891,6 +904,7 @@ func (m *sqlExecutionManager) GetTransferTasks(
 }
 
 func (m *sqlExecutionManager) CompleteTransferTask(
+	_ context.Context,
 	request *p.CompleteTransferTaskRequest,
 ) error {
 
@@ -906,6 +920,7 @@ func (m *sqlExecutionManager) CompleteTransferTask(
 }
 
 func (m *sqlExecutionManager) RangeCompleteTransferTask(
+	_ context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
 ) error {
 
@@ -921,6 +936,7 @@ func (m *sqlExecutionManager) RangeCompleteTransferTask(
 }
 
 func (m *sqlExecutionManager) GetReplicationTasks(
+	_ context.Context,
 	request *p.GetReplicationTasksRequest,
 ) (*p.GetReplicationTasksResponse, error) {
 
@@ -1014,6 +1030,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 }
 
 func (m *sqlExecutionManager) CompleteReplicationTask(
+	_ context.Context,
 	request *p.CompleteReplicationTaskRequest,
 ) error {
 
@@ -1029,6 +1046,7 @@ func (m *sqlExecutionManager) CompleteReplicationTask(
 }
 
 func (m *sqlExecutionManager) RangeCompleteReplicationTask(
+	_ context.Context,
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
@@ -1044,6 +1062,7 @@ func (m *sqlExecutionManager) RangeCompleteReplicationTask(
 }
 
 func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
+	_ context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
 ) (*p.GetReplicationTasksFromDLQResponse, error) {
 
@@ -1076,6 +1095,7 @@ func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 }
 
 func (m *sqlExecutionManager) GetReplicationDLQSize(
+	_ context.Context,
 	request *p.GetReplicationDLQSizeRequest,
 ) (*p.GetReplicationDLQSizeResponse, error) {
 
@@ -1101,6 +1121,7 @@ func (m *sqlExecutionManager) GetReplicationDLQSize(
 }
 
 func (m *sqlExecutionManager) DeleteReplicationTaskFromDLQ(
+	_ context.Context,
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
@@ -1119,6 +1140,7 @@ func (m *sqlExecutionManager) DeleteReplicationTaskFromDLQ(
 }
 
 func (m *sqlExecutionManager) RangeDeleteReplicationTaskFromDLQ(
+	_ context.Context,
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
@@ -1138,6 +1160,7 @@ func (m *sqlExecutionManager) RangeDeleteReplicationTaskFromDLQ(
 }
 
 func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
+	_ context.Context,
 	request *p.CreateFailoverMarkersRequest,
 ) error {
 
@@ -1180,6 +1203,7 @@ func (t *timerTaskPageToken) deserialize(payload []byte) error {
 }
 
 func (m *sqlExecutionManager) GetTimerIndexTasks(
+	_ context.Context,
 	request *p.GetTimerIndexTasksRequest,
 ) (*p.GetTimerIndexTasksResponse, error) {
 
@@ -1245,6 +1269,7 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 }
 
 func (m *sqlExecutionManager) CompleteTimerTask(
+	_ context.Context,
 	request *p.CompleteTimerTaskRequest,
 ) error {
 
@@ -1261,6 +1286,7 @@ func (m *sqlExecutionManager) CompleteTimerTask(
 }
 
 func (m *sqlExecutionManager) RangeCompleteTimerTask(
+	_ context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
 ) error {
 
@@ -1278,7 +1304,10 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(
 	return nil
 }
 
-func (m *sqlExecutionManager) PutReplicationTaskToDLQ(request *p.PutReplicationTaskToDLQRequest) error {
+func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
+	_ context.Context,
+	request *p.PutReplicationTaskToDLQRequest,
+) error {
 	replicationTask := request.TaskInfo
 	blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
 		DomainID:            sqlplugin.MustParseUUID(replicationTask.DomainID),

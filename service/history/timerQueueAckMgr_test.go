@@ -463,14 +463,14 @@ func (s *timerQueueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	s.False(moreTasks)
 
 	// we are not testing shard context
-	s.mockShardMgr.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 	timerSequenceID1 := timerKey{VisibilityTimestamp: timer1.VisibilityTimestamp, TaskID: timer1.TaskID}
 	s.timerQueueAckMgr.completeTimerTask(timer1)
 	s.True(s.timerQueueAckMgr.outstandingTasks[timerSequenceID1])
 	s.timerQueueAckMgr.updateAckLevel()
 	s.Equal(timer1.VisibilityTimestamp, s.mockShard.GetTimerClusterAckLevel(s.clusterName))
 
-	s.mockShardMgr.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 	timerSequenceID3 := timerKey{VisibilityTimestamp: timer3.VisibilityTimestamp, TaskID: timer3.TaskID}
 	s.timerQueueAckMgr.completeTimerTask(timer3)
 	s.True(s.timerQueueAckMgr.outstandingTasks[timerSequenceID3])
@@ -479,7 +479,7 @@ func (s *timerQueueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	s.Equal(timer1.VisibilityTimestamp, s.mockShard.GetTimerClusterAckLevel(s.clusterName))
 
 	// we are not testing shard context
-	s.mockShardMgr.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 	timerSequenceID2 := timerKey{VisibilityTimestamp: timer2.VisibilityTimestamp, TaskID: timer2.TaskID}
 	s.timerQueueAckMgr.completeTimerTask(timer2)
 	s.True(s.timerQueueAckMgr.outstandingTasks[timerSequenceID2])
@@ -764,7 +764,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	timerSequenceID2 := timerKey{VisibilityTimestamp: timer2.VisibilityTimestamp, TaskID: timer2.TaskID}
 	s.timerQueueFailoverAckMgr.completeTimerTask(timer2)
 	s.True(s.timerQueueFailoverAckMgr.outstandingTasks[timerSequenceID2])
-	s.mockShardMgr.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 	s.timerQueueFailoverAckMgr.updateAckLevel()
 	select {
 	case <-s.timerQueueFailoverAckMgr.getFinishedChan():
@@ -775,7 +775,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	timerSequenceID3 := timerKey{VisibilityTimestamp: timer3.VisibilityTimestamp, TaskID: timer3.TaskID}
 	s.timerQueueFailoverAckMgr.completeTimerTask(timer3)
 	s.True(s.timerQueueFailoverAckMgr.outstandingTasks[timerSequenceID3])
-	s.mockShardMgr.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 	s.timerQueueFailoverAckMgr.updateAckLevel()
 	select {
 	case <-s.timerQueueFailoverAckMgr.getFinishedChan():
@@ -786,7 +786,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	timerSequenceID1 := timerKey{VisibilityTimestamp: timer1.VisibilityTimestamp, TaskID: timer1.TaskID}
 	s.timerQueueFailoverAckMgr.completeTimerTask(timer1)
 	s.True(s.timerQueueFailoverAckMgr.outstandingTasks[timerSequenceID1])
-	s.mockShardMgr.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 	s.timerQueueFailoverAckMgr.updateAckLevel()
 	select {
 	case <-s.timerQueueFailoverAckMgr.getFinishedChan():
