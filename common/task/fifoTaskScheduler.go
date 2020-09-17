@@ -106,6 +106,7 @@ func (f *fifoTaskSchedulerImpl) Stop() {
 
 	f.processor.Stop()
 
+	// TODO: drain taskCh and nack all tasks
 	if success := common.AwaitWaitGroup(&f.dispatcherWG, time.Minute); !success {
 		f.logger.Warn("FIFO task scheduler timedout on shutdown.")
 	}
@@ -122,6 +123,7 @@ func (f *fifoTaskSchedulerImpl) Submit(
 
 	select {
 	case f.taskCh <- task:
+		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
 		return nil
 	case <-f.shutdownCh:
 		return ErrTaskSchedulerClosed
@@ -134,6 +136,7 @@ func (f *fifoTaskSchedulerImpl) TrySubmit(
 	select {
 	case f.taskCh <- task:
 		f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
+		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
 		return true, nil
 	case <-f.shutdownCh:
 		return false, ErrTaskSchedulerClosed

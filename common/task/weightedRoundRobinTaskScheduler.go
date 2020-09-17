@@ -135,6 +135,8 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Stop() {
 
 	w.processor.Stop()
 
+	// lock taskCh map, drain all chs and call nack
+
 	if success := common.AwaitWaitGroup(&w.dispatcherWG, time.Minute); !success {
 		w.logger.Warn("Weighted round robin task scheduler timedout on shutdown.")
 	}
@@ -155,6 +157,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Submit(task PriorityTask) error {
 	select {
 	case taskCh <- task:
 		w.notifyDispatcher()
+		// TODO: if stopped, drain this taskCh
 		return nil
 	case <-w.shutdownCh:
 		return ErrTaskSchedulerClosed
@@ -173,6 +176,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) TrySubmit(
 	case taskCh <- task:
 		w.metricsScope.IncCounter(metrics.PriorityTaskSubmitRequest)
 		w.notifyDispatcher()
+		// TODO: if stopped, drain this taskCh
 		return true, nil
 	case <-w.shutdownCh:
 		return false, ErrTaskSchedulerClosed

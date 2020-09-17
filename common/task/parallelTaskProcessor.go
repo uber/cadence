@@ -90,6 +90,7 @@ func (p *parallelTaskProcessorImpl) Stop() {
 	}
 
 	close(p.shutdownCh)
+	// TODO: drain the taskCh and nack all tasks
 	if success := common.AwaitWaitGroup(&p.workerWG, time.Minute); !success {
 		p.logger.Warn("Parallel task processor timedout on shutdown.")
 	}
@@ -103,6 +104,7 @@ func (p *parallelTaskProcessorImpl) Submit(task Task) error {
 
 	select {
 	case p.tasksCh <- task:
+		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
 		return nil
 	case <-p.shutdownCh:
 		return ErrTaskProcessorClosed
