@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/mock"
@@ -83,6 +84,8 @@ var (
 		Hits: &elastic.SearchHits{},
 	}
 	errTestESSearch = errors.New("ES error")
+
+	testContextTimeout = 5 * time.Second
 
 	filterOpen     = "must_not:map[exists:map[field:CloseStatus]]"
 	filterClose    = "map[exists:map[field:CloseStatus]]"
@@ -141,7 +144,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		return true
 	})).Return(nil).Once()
-	err := s.visibilityStore.RecordWorkflowExecutionStarted(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionStarted(ctx, request)
 	s.NoError(err)
 }
 
@@ -158,7 +165,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted_EmptyRequest() {
 		s.False(ok)
 		return true
 	})).Return(nil).Once()
-	err := s.visibilityStore.RecordWorkflowExecutionStarted(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionStarted(ctx, request)
 	s.NoError(err)
 }
 
@@ -193,7 +204,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		return true
 	})).Return(nil).Once()
-	err := s.visibilityStore.RecordWorkflowExecutionClosed(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionClosed(ctx, request)
 	s.NoError(err)
 }
 
@@ -210,7 +225,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 		s.False(ok)
 		return true
 	})).Return(nil).Once()
-	err := s.visibilityStore.RecordWorkflowExecutionClosed(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionClosed(ctx, request)
 	s.NoError(err)
 }
 
@@ -220,11 +239,15 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 		s.True(strings.Contains(fmt.Sprintf("%v", source), filterOpen))
 		return true
 	})).Return(testSearchResult, nil).Once()
-	_, err := s.visibilityStore.ListOpenWorkflowExecutions(context.Background(), testRequest)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListOpenWorkflowExecutions(ctx, testRequest)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListOpenWorkflowExecutions(context.Background(), testRequest)
+	_, err = s.visibilityStore.ListOpenWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -237,11 +260,15 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 		s.True(strings.Contains(fmt.Sprintf("%v", source), filterClose))
 		return true
 	})).Return(testSearchResult, nil).Once()
-	_, err := s.visibilityStore.ListClosedWorkflowExecutions(context.Background(), testRequest)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListClosedWorkflowExecutions(ctx, testRequest)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListClosedWorkflowExecutions(context.Background(), testRequest)
+	_, err = s.visibilityStore.ListClosedWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -260,11 +287,15 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 		ListWorkflowExecutionsRequest: *testRequest,
 		WorkflowTypeName:              testWorkflowType,
 	}
-	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), request)
+	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -283,11 +314,15 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 		ListWorkflowExecutionsRequest: *testRequest,
 		WorkflowTypeName:              testWorkflowType,
 	}
-	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), request)
+	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -306,11 +341,15 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 		ListWorkflowExecutionsRequest: *testRequest,
 		WorkflowID:                    testWorkflowID,
 	}
-	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), request)
+	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -329,11 +368,15 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 		ListWorkflowExecutionsRequest: *testRequest,
 		WorkflowID:                    testWorkflowID,
 	}
-	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), request)
+	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -352,11 +395,15 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		ListWorkflowExecutionsRequest: *testRequest,
 		Status:                        workflow.WorkflowExecutionCloseStatus(testCloseStatus),
 	}
-	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), request)
+	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -378,11 +425,15 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
 			RunId:      common.StringPtr(testRunID),
 		},
 	}
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.GetClosedWorkflowExecution(context.Background(), request)
+	_, err = s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -403,7 +454,11 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 			WorkflowId: common.StringPtr(testWorkflowID),
 		},
 	}
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
 	s.NoError(err)
 }
 
@@ -850,11 +905,15 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 		PageSize:   10,
 		Query:      `CloseStatus = 5`,
 	}
-	_, err := s.visibilityStore.ListWorkflowExecutions(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ListWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
 	s.mockESClient.On("SearchWithDSL", mock.Anything, mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.ListWorkflowExecutions(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -881,12 +940,16 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 		PageSize:   10,
 		Query:      `CloseStatus = 5`,
 	}
-	_, err := s.visibilityStore.ScanWorkflowExecutions(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	_, err := s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
 	// test bad request
 	request.Query = `invalid query`
-	_, err = s.visibilityStore.ScanWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.BadRequestError)
 	s.True(ok)
@@ -900,20 +963,20 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	tokenBytes, err := s.visibilityStore.serializePageToken(token)
 	s.NoError(err)
 	request.NextPageToken = tokenBytes
-	_, err = s.visibilityStore.ScanWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
 	// test last page
 	mockScroll := &esMocks.ScrollService{}
 	s.mockESClient.On("Scroll", mock.Anything, scrollID).Return(testSearchResult, mockScroll, io.EOF).Once()
 	mockScroll.On("Clear", mock.Anything).Return(nil).Once()
-	_, err = s.visibilityStore.ScanWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.NoError(err)
 	mockScroll.AssertExpectations(s.T())
 
 	// test internal error
 	s.mockESClient.On("Scroll", mock.Anything, scrollID).Return(nil, nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ScanWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
 	_, ok = err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -931,14 +994,18 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 		Domain:     testDomain,
 		Query:      `CloseStatus = 5`,
 	}
-	resp, err := s.visibilityStore.CountWorkflowExecutions(context.Background(), request)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	resp, err := s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.NoError(err)
 	s.Equal(int64(1), resp.Count)
 
 	// test internal error
 	s.mockESClient.On("Count", mock.Anything, testIndex, mock.Anything).Return(int64(0), errTestESSearch).Once()
 
-	_, err = s.visibilityStore.CountWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
 	_, ok := err.(*workflow.InternalServiceError)
 	s.True(ok)
@@ -946,7 +1013,7 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 
 	// test bad request
 	request.Query = `invalid query`
-	_, err = s.visibilityStore.CountWorkflowExecutions(context.Background(), request)
+	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
 	_, ok = err.(*workflow.BadRequestError)
 	s.True(ok)
