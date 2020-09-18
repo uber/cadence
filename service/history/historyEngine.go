@@ -51,9 +51,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/reconciliation/invariants"
-	sconfig "github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -77,6 +75,7 @@ const (
 	defaultQueryFirstDecisionTaskWaitTime     = time.Second
 	queryFirstDecisionTaskCheckInterval       = 200 * time.Millisecond
 	replicationTimeout                        = 30 * time.Second
+	contextLockTimeout                        = 500 * time.Millisecond
 
 	// TerminateIfRunningReason reason for terminateIfRunning
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
@@ -99,7 +98,6 @@ type (
 		replicator                *historyReplicator
 		nDCReplicator             ndc.HistoryReplicator
 		nDCActivityReplicator     ndc.ActivityReplicator
-		replicatorProcessor       ReplicatorQueueProcessor
 		historyEventNotifier      events.Notifier
 		tokenSerializer           common.TaskTokenSerializer
 		executionCache            *execution.Cache
@@ -112,6 +110,7 @@ type (
 		workflowResetter          reset.WorkflowResetter
 		queueTaskProcessor        task.Processor
 		replicationTaskProcessors []replication.TaskProcessor
+		replicationAckManager     replication.TaskAckManager
 		publicClient              workflowserviceclient.Interface
 		eventsReapplier           ndc.EventsReapplier
 		matchingClient            matching.Client
@@ -153,6 +152,8 @@ var (
 	ErrConsistentQueryNotEnabled = &workflow.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
 	// ErrConsistentQueryBufferExceeded is error indicating that too many consistent queries have been buffered and until buffered queries are finished new consistent queries cannot be buffered
 	ErrConsistentQueryBufferExceeded = &workflow.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
+	// ErrConcurrentStartRequest is error indicating there is an outstanding start workflow request. The incoming request fails to acquires the lock before the outstanding request finishes.
+	ErrConcurrentStartRequest = &workflow.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
@@ -225,13 +226,18 @@ func NewEngineWithShardContext(
 		queueTaskProcessor:     queueTaskProcessor,
 		clientChecker:          client.NewVersionChecker(),
 		failoverMarkerNotifier: failoverMarkerNotifier,
+		replicationAckManager: replication.NewTaskAckManager(
+			shard,
+			executionCache,
+		),
 	}
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
-	pRetry := checks.NewPersistenceRetryer(
+	pRetry := persistence.NewPersistenceRetryer(
 		shard.GetExecutionManager(),
 		shard.GetHistoryManager(),
+		common.CreatePersistenceRetryPolicy(),
 	)
-	openExecutionCheck := invariants.NewOpenCurrentExecution(pRetry)
+	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry)
 
 	if config.TransferProcessorEnableMultiCurosrProcessor() {
 		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
@@ -279,14 +285,6 @@ func NewEngineWithShardContext(
 
 	// Only start the replicator processor if valid publisher is passed in
 	if publisher != nil {
-		historyEngImpl.replicatorProcessor = newReplicatorQueueProcessor(
-			shard,
-			historyEngImpl.executionCache,
-			publisher,
-			executionManager,
-			historyV2Manager,
-			logger,
-		)
 		historyEngImpl.replicator = newHistoryReplicator(
 			shard,
 			clock.NewRealTimeSource(),
@@ -387,15 +385,15 @@ func (e *historyEngineImpl) Start() {
 	e.logger.Info("History engine state changed", tag.LifeCycleStarting)
 	defer e.logger.Info("History engine state changed", tag.LifeCycleStarted)
 
-	e.registerDomainFailoverCallback()
-
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
 
-	clusterMetadata := e.shard.GetClusterMetadata()
-	if e.replicatorProcessor != nil && clusterMetadata.GetReplicationConsumerConfig().Type != sconfig.ReplicationConsumerTypeRPC {
-		e.replicatorProcessor.Start()
-	}
+	// failover callback will try to create a failover queue processor to scan all inflight tasks
+	// if domain needs to be failovered. However, in the multicursor queue logic, the scan range
+	// can't be retrieved before the processor is started. If failover callback is registered
+	// before queue processor is started, it may result in a deadline as to create the failover queue,
+	// queue processor need to be started.
+	e.registerDomainFailoverCallback()
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Start()
@@ -412,9 +410,6 @@ func (e *historyEngineImpl) Stop() {
 
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
-	if e.replicatorProcessor != nil {
-		e.replicatorProcessor.Stop()
-	}
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Stop()
@@ -653,13 +648,21 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	workflowID := request.GetWorkflowId()
 	domainID := domainEntry.GetInfo().ID
+
 	// grab the current context as a lock, nothing more
+	// use a smaller context timeout to get the lock
+	childCtx, childCancel := e.newChildContext(ctx)
+	defer childCancel()
+
 	_, currentRelease, err := e.executionCache.GetOrCreateCurrentWorkflowExecution(
-		ctx,
+		childCtx,
 		domainID,
 		workflowID,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return nil, ErrConcurrentStartRequest
+		}
 		return nil, err
 	}
 	defer func() { currentRelease(retError) }()
@@ -1108,7 +1111,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	request *h.QueryWorkflowRequest,
 ) (retResp *h.QueryWorkflowResponse, retErr error) {
 
-	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope)
+	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelStrong && !consistentQueryEnabled {
@@ -2795,15 +2798,6 @@ func (e *historyEngineImpl) NotifyNewTransferTasks(
 	}
 }
 
-func (e *historyEngineImpl) NotifyNewReplicationTasks(
-	tasks []persistence.Task,
-) {
-
-	if len(tasks) > 0 && e.replicatorProcessor != nil {
-		e.replicatorProcessor.notifyNewTask()
-	}
-}
-
 func (e *historyEngineImpl) NotifyNewTimerTasks(
 	tasks []persistence.Task,
 ) {
@@ -2835,7 +2829,6 @@ func (e *historyEngineImpl) DescribeTransferQueue(
 	ctx context.Context,
 	clusterName string,
 ) (*workflow.DescribeQueueResponse, error) {
-	fmt.Println("described queue: shardID: ", e.shard.GetShardID())
 	return e.describeQueue(e.txProcessor, clusterName)
 }
 
@@ -2962,9 +2955,26 @@ func getActiveDomainEntryFromShard(
 		return nil, err
 	}
 	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
-		return nil, err
+		return domainEntry, err
 	}
 	return domainEntry, nil
+}
+
+func (e *historyEngineImpl) getPendingActiveDomainEntry(
+	domainUUID *string,
+) (bool, error) {
+
+	domainID, err := validateDomainUUID(domainUUID)
+	if err != nil {
+		return false, err
+	}
+
+	domainEntry, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return false, err
+	}
+
+	return domainEntry.IsDomainPendingActive(), nil
 }
 
 func getScheduleID(
@@ -3090,7 +3100,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 	sw := e.metricsClient.StartTimer(scope, metrics.GetReplicationMessagesForShardLatency)
 	defer sw.Stop()
 
-	replicationMessages, err := e.replicatorProcessor.getTasks(
+	replicationMessages, err := e.replicationAckManager.GetTasks(
 		ctx,
 		pollingCluster,
 		lastReadMessageID,
@@ -3119,7 +3129,7 @@ func (e *historyEngineImpl) GetDLQReplicationMessages(
 
 	tasks := make([]*r.ReplicationTask, 0, len(taskInfos))
 	for _, taskInfo := range taskInfos {
-		task, err := e.replicatorProcessor.getTask(ctx, taskInfo)
+		task, err := e.replicationAckManager.GetTask(ctx, taskInfo)
 		if err != nil {
 			e.logger.Error("Failed to fetch DLQ replication messages.", tag.Error(err))
 			return nil, err
@@ -3142,7 +3152,12 @@ func (e *historyEngineImpl) ReapplyEvents(
 
 	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
 	if err != nil {
-		return err
+		switch {
+		case domainEntry != nil && domainEntry.IsDomainPendingActive():
+			return nil
+		default:
+			return err
+		}
 	}
 	domainID := domainEntry.GetInfo().ID
 	// remove run id from the execution so that reapply events to the current run
@@ -3435,4 +3450,19 @@ func (e *historyEngineImpl) loadWorkflow(
 	}
 
 	return nil, &workflow.InternalServiceError{Message: "unable to locate current workflow execution"}
+}
+
+func (e *historyEngineImpl) newChildContext(
+	parentCtx context.Context,
+) (context.Context, context.CancelFunc) {
+
+	ctxTimeout := contextLockTimeout
+	if deadline, ok := parentCtx.Deadline(); ok {
+		now := e.shard.GetTimeSource().Now()
+		parentTimeout := deadline.Sub(now)
+		if parentTimeout > 0 && parentTimeout < contextLockTimeout {
+			ctxTimeout = parentTimeout
+		}
+	}
+	return context.WithTimeout(context.Background(), ctxTimeout)
 }

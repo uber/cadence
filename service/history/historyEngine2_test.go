@@ -61,14 +61,13 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller               *gomock.Controller
-		mockShard                *shard.TestContext
-		mockTxProcessor          *queue.MockProcessor
-		mockTimerProcessor       *queue.MockProcessor
-		mockReplicationProcessor *MockReplicatorQueueProcessor
-		mockEventsCache          *events.MockCache
-		mockDomainCache          *cache.MockDomainCache
-		mockClusterMetadata      *cluster.MockMetadata
+		controller          *gomock.Controller
+		mockShard           *shard.TestContext
+		mockTxProcessor     *queue.MockProcessor
+		mockTimerProcessor  *queue.MockProcessor
+		mockEventsCache     *events.MockCache
+		mockDomainCache     *cache.MockDomainCache
+		mockClusterMetadata *cluster.MockMetadata
 
 		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager
@@ -98,10 +97,8 @@ func (s *engine2Suite) SetupTest() {
 
 	s.mockTxProcessor = queue.NewMockProcessor(s.controller)
 	s.mockTimerProcessor = queue.NewMockProcessor(s.controller)
-	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.controller)
 	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
-	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
@@ -145,7 +142,6 @@ func (s *engine2Suite) SetupTest() {
 		timeSource:           s.mockShard.GetTimeSource(),
 		historyEventNotifier: events.NewNotifier(clock.NewRealTimeSource(), metrics.NewClient(tally.NoopScope, metrics.History), func(string) int { return 0 }),
 		txProcessor:          s.mockTxProcessor,
-		replicatorProcessor:  s.mockReplicationProcessor,
 		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.mockShard.SetEngine(h)
@@ -1457,6 +1453,21 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(resp)
 	s.NotNil(err)
+}
+
+func (s *engine2Suite) TestNewChildContext() {
+	ctx := context.Background()
+	childCtx, childCancel := s.historyEngine.newChildContext(ctx)
+	defer childCancel()
+	_, ok := childCtx.Deadline()
+	s.True(ok)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour)
+	defer cancel()
+	childCtx, childCancel = s.historyEngine.newChildContext(ctx)
+	deadline, ok := childCtx.Deadline()
+	s.True(ok)
+	s.True(deadline.Sub(time.Now()) < 10*time.Minute)
 }
 
 func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution) execution.MutableState {

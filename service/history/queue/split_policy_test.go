@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -81,6 +82,7 @@ func (s *splitPolicySuite) TestPendingTaskSplitPolicy() {
 	}
 	pendingTaskSplitPolicy := NewPendingTaskSplitPolicy(
 		pendingTaskThreshold,
+		dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 		lookAheadFunc,
 		maxNewQueueLevel,
 		s.logger,
@@ -262,6 +264,7 @@ func (s *splitPolicySuite) TestPendingTaskSplitPolicy() {
 			for i := 0; i != numPendingTasks; i++ {
 				mockTask := task.NewMockTask(s.controller)
 				mockTask.EXPECT().GetDomainID().Return(domainID).MaxTimes(1)
+				mockTask.EXPECT().State().Return(t.TaskStatePending).MaxTimes(1)
 				outstandingTasks[task.NewMockKey(s.controller)] = mockTask
 			}
 		}
@@ -288,6 +291,7 @@ func (s *splitPolicySuite) TestStuckTaskSplitPolicy() {
 
 	stuckTaskSplitPolicy := NewStuckTaskSplitPolicy(
 		attemptThreshold,
+		dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 		maxNewQueueLevel,
 		s.logger,
 		s.metricsScope,

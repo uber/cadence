@@ -35,7 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -78,10 +78,11 @@ func NewTimerQueueProcessor(
 	taskProcessor task.Processor,
 	executionCache *execution.Cache,
 	archivalClient archiver.Client,
-	executionCheck checks.Invariant,
+	executionCheck invariant.Invariant,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTimerQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
+	config := shard.GetConfig()
 	taskAllocator := NewTaskAllocator(shard)
 
 	activeTaskExecutor := task.NewTimerActiveTaskExecutor(
@@ -90,7 +91,7 @@ func NewTimerQueueProcessor(
 		executionCache,
 		logger,
 		shard.GetMetricsClient(),
-		shard.GetConfig(),
+		config,
 	)
 
 	activeQueueProcessor := newTimerQueueActiveProcessor(
@@ -121,8 +122,8 @@ func NewTimerQueueProcessor(
 				return historyEngine.ReplicateRawEvents(ctx, request)
 			},
 			shard.GetService().GetPayloadSerializer(),
-			historyRereplicationTimeout,
-			nil,
+			historyReplicationTimeout,
+			config.StandbyTaskReReplicationContextTimeout,
 			rereplicatorLogger,
 		)
 		nDCHistoryResender := xdc.NewNDCHistoryResender(
@@ -132,7 +133,7 @@ func NewTimerQueueProcessor(
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
 			shard.GetService().GetPayloadSerializer(),
-			nil,
+			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
 			resenderLogger,
 		)
@@ -145,7 +146,7 @@ func NewTimerQueueProcessor(
 			logger,
 			shard.GetMetricsClient(),
 			clusterName,
-			shard.GetConfig(),
+			config,
 		)
 		standbyQueueProcessors[clusterName], standbyQueueTimerGates[clusterName] = newTimerQueueStandbyProcessor(
 			clusterName,
@@ -163,7 +164,7 @@ func NewTimerQueueProcessor(
 		historyEngine: historyEngine,
 		taskProcessor: taskProcessor,
 
-		config:                shard.GetConfig(),
+		config:                config,
 		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
 		currentClusterName:    currentClusterName,
 
@@ -240,6 +241,13 @@ func (t *timerQueueProcessor) NotifyNewTask(
 func (t *timerQueueProcessor) FailoverDomain(
 	domainIDs map[string]struct{},
 ) {
+	// Failover queue is used to scan all inflight tasks, if queue processor is not
+	// started, there's no inflight task and we don't need to create a failover processor.
+	// Also the HandleAction will be blocked if queue processor processing loop is not running.
+	if atomic.LoadInt32(&t.status) != common.DaemonStatusStarted {
+		return
+	}
+
 	minLevel := t.shard.GetTimerClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
 	for clusterName, info := range t.shard.GetClusterMetadata().GetAllClusterInfo() {

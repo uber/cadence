@@ -810,7 +810,6 @@ func (c *contextImpl) notifyTasks(
 	timerTasks []persistence.Task,
 ) {
 	c.shard.GetEngine().NotifyNewTransferTasks(transferTasks)
-	c.shard.GetEngine().NotifyNewReplicationTasks(replicationTasks)
 	c.shard.GetEngine().NotifyNewTimerTasks(timerTasks)
 }
 
@@ -1275,6 +1274,16 @@ func (c *contextImpl) ReapplyEvents(
 	domainID := eventBatches[0].DomainID
 	workflowID := eventBatches[0].WorkflowID
 	runID := eventBatches[0].RunID
+	domainCache := c.shard.GetDomainCache()
+	clientBean := c.shard.GetService().GetClientBean()
+	serializer := c.shard.GetService().GetPayloadSerializer()
+	domainEntry, err := domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return err
+	}
+	if domainEntry.IsDomainPendingActive() {
+		return nil
+	}
 	var reapplyEvents []*workflow.HistoryEvent
 	for _, events := range eventBatches {
 		if events.DomainID != domainID ||
@@ -1301,14 +1310,6 @@ func (c *contextImpl) ReapplyEvents(
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(runID),
 	}
-	domainCache := c.shard.GetDomainCache()
-	clientBean := c.shard.GetService().GetClientBean()
-	serializer := c.shard.GetService().GetPayloadSerializer()
-	domainEntry, err := domainCache.GetDomainByID(domainID)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()
 

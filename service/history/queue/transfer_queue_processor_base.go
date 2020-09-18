@@ -37,6 +37,10 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
+const (
+	numTasksEstimationDecay = 0.6
+)
+
 var (
 	loadQueueTaskThrottleRetryDelay = 5 * time.Second
 
@@ -62,8 +66,10 @@ type (
 		nextPollTime  map[int]pollTime
 		nextPollTimer TimerGate
 
-		lastSplitTime    time.Time
-		lastMaxReadLevel int64
+		// for estimating the look ahead taskID during split
+		lastSplitTime           time.Time
+		lastMaxReadLevel        int64
+		estimatedTasksPerMinute int64
 	}
 )
 
@@ -370,17 +376,30 @@ func (t *transferQueueProcessorBase) splitQueue() {
 		t.lastMaxReadLevel = currentMaxReadLevel
 	}()
 
-	if t.lastSplitTime.IsZero() {
-		// skip the first split as we can't estimate the look ahead taskID
+	if currentMaxReadLevel-t.lastMaxReadLevel < 2<<(t.shard.GetConfig().RangeSizeBits-1) {
+		// only update the estimation when rangeID is not renewed
+		// note the threshold here is only an estimation. If the read level increased too much
+		// we will drop that data point.
+		numTasksPerMinute := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime).Seconds()) * int64(time.Minute.Seconds())
+
+		if t.estimatedTasksPerMinute == 0 {
+			// set the initial value for the estimation
+			t.estimatedTasksPerMinute = numTasksPerMinute
+		} else {
+			t.estimatedTasksPerMinute = int64(numTasksEstimationDecay*float64(t.estimatedTasksPerMinute) + (1-numTasksEstimationDecay)*float64(numTasksPerMinute))
+		}
+	}
+
+	if t.lastSplitTime.IsZero() || t.estimatedTasksPerMinute == 0 {
+		// skip the split as we can't estimate the look ahead taskID
 		return
 	}
 
-	// TODO: need a better way to estimate the look ahead taskID
-	lookAhead := (currentMaxReadLevel - t.lastMaxReadLevel) / int64(currentTime.Sub(t.lastSplitTime).Seconds())
-
 	splitPolicy := t.initializeSplitPolicy(
 		func(key task.Key, domainID string) task.Key {
-			totalLookAhead := lookAhead * int64(t.options.SplitLookAheadDurationByDomainID(domainID).Seconds())
+			totalLookAhead := t.estimatedTasksPerMinute * int64(t.options.SplitLookAheadDurationByDomainID(domainID).Minutes())
+			// ensure the above calculation doesn't overflow and cap the maximun look ahead interval
+			totalLookAhead = common.MaxInt64(common.MinInt64(totalLookAhead, 2<<t.shard.GetConfig().RangeSizeBits), 0)
 			return newTransferTaskKey(key.(transferTaskKey).taskID + totalLookAhead)
 		},
 	)
@@ -469,9 +488,9 @@ func newTransferQueueProcessorOptions(
 		options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
 		options.EnableRandomSplitByDomainID = config.QueueProcessorEnableRandomSplitByDomainID
 		options.RandomSplitProbability = config.QueueProcessorRandomSplitProbability
-		options.EnablePendingTaskSplit = config.QueueProcessorEnablePendingTaskSplit
+		options.EnablePendingTaskSplitByDomainID = config.QueueProcessorEnablePendingTaskSplitByDomainID
 		options.PendingTaskSplitThreshold = config.QueueProcessorPendingTaskSplitThreshold
-		options.EnableStuckTaskSplit = config.QueueProcessorEnableStuckTaskSplit
+		options.EnableStuckTaskSplitByDomainID = config.QueueProcessorEnableStuckTaskSplitByDomainID
 		options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
 		options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
 

@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/queue"
@@ -70,12 +70,13 @@ func newTimerQueueProcessor(
 	historyService *historyEngineImpl,
 	matchingClient matching.Client,
 	queueTaskProcessor task.Processor,
-	openExecutionCheck checks.Invariant,
+	openExecutionCheck invariant.Invariant,
 	logger log.Logger,
 ) queue.Processor {
 
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithTags(tag.ComponentTimerQueue)
+	config := shard.GetConfig()
 	taskAllocator := queue.NewTaskAllocator(shard)
 
 	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
@@ -93,8 +94,8 @@ func newTimerQueueProcessor(
 					return historyService.ReplicateRawEvents(ctx, request)
 				},
 				shard.GetService().GetPayloadSerializer(),
-				historyRereplicationTimeout,
-				nil,
+				historyReplicationTimeout,
+				config.StandbyTaskReReplicationContextTimeout,
 				logger,
 			)
 			nDCHistoryResender := xdc.NewNDCHistoryResender(
@@ -104,7 +105,7 @@ func newTimerQueueProcessor(
 					return historyService.ReplicateEventsV2(ctx, request)
 				},
 				shard.GetService().GetPayloadSerializer(),
-				nil,
+				config.StandbyTaskReReplicationContextTimeout,
 				openExecutionCheck,
 				logger,
 			)
@@ -126,7 +127,7 @@ func newTimerQueueProcessor(
 		currentClusterName:    currentClusterName,
 		shard:                 shard,
 		taskAllocator:         taskAllocator,
-		config:                shard.GetConfig(),
+		config:                config,
 		metricsClient:         historyService.metricsClient,
 		historyService:        historyService,
 		ackLevel:              timerKey{VisibilityTimestamp: shard.GetTimerAckLevel()},

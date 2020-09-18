@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -50,7 +50,7 @@ import (
 
 const (
 	// TODO: move this constant to xdc package
-	historyRereplicationTimeout = 30 * time.Second
+	historyReplicationTimeout = 30 * time.Second
 
 	defaultProcessingQueueLevel = 0
 )
@@ -96,10 +96,11 @@ func NewTransferQueueProcessor(
 	workflowResetor reset.WorkflowResetor,
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
-	executionCheck checks.Invariant,
+	executionCheck invariant.Invariant,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
+	config := shard.GetConfig()
 	taskAllocator := NewTaskAllocator(shard)
 
 	activeTaskExecutor := task.NewTransferActiveTaskExecutor(
@@ -110,7 +111,7 @@ func NewTransferQueueProcessor(
 		workflowResetter,
 		logger,
 		shard.GetMetricsClient(),
-		shard.GetConfig(),
+		config,
 	)
 
 	activeQueueProcessor := newTransferQueueActiveProcessor(
@@ -138,8 +139,8 @@ func NewTransferQueueProcessor(
 				return historyEngine.ReplicateRawEvents(ctx, request)
 			},
 			shard.GetService().GetPayloadSerializer(),
-			historyRereplicationTimeout,
-			nil,
+			historyReplicationTimeout,
+			config.StandbyTaskReReplicationContextTimeout,
 			rereplicatorLogger,
 		)
 		nDCHistoryResender := xdc.NewNDCHistoryResender(
@@ -149,7 +150,7 @@ func NewTransferQueueProcessor(
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
 			shard.GetService().GetPayloadSerializer(),
-			nil,
+			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
 			resenderLogger,
 		)
@@ -162,7 +163,7 @@ func NewTransferQueueProcessor(
 			logger,
 			shard.GetMetricsClient(),
 			clusterName,
-			shard.GetConfig(),
+			config,
 		)
 		standbyQueueProcessors[clusterName] = newTransferQueueStandbyProcessor(
 			clusterName,
@@ -180,7 +181,7 @@ func NewTransferQueueProcessor(
 		historyEngine: historyEngine,
 		taskProcessor: taskProcessor,
 
-		config:                shard.GetConfig(),
+		config:                config,
 		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
 		currentClusterName:    currentClusterName,
 
@@ -253,6 +254,13 @@ func (t *transferQueueProcessor) NotifyNewTask(
 func (t *transferQueueProcessor) FailoverDomain(
 	domainIDs map[string]struct{},
 ) {
+	// Failover queue is used to scan all inflight tasks, if queue processor is not
+	// started, there's no inflight task and we don't need to create a failover processor.
+	// Also the HandleAction will be blocked if queue processor processing loop is not running.
+	if atomic.LoadInt32(&t.status) != common.DaemonStatusStarted {
+		return
+	}
+
 	minLevel := t.shard.GetTransferClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
 	for clusterName, info := range t.shard.GetService().GetClusterMetadata().GetAllClusterInfo() {

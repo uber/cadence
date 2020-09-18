@@ -37,7 +37,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -76,7 +77,7 @@ type (
 		historyReplicationFn  nDCHistoryReplicationFn
 		serializer            persistence.PayloadSerializer
 		rereplicationTimeout  dynamicconfig.DurationPropertyFnWithDomainIDFilter
-		currentExecutionCheck checks.Invariant
+		currentExecutionCheck invariant.Invariant
 		logger                log.Logger
 	}
 
@@ -93,7 +94,7 @@ func NewNDCHistoryResender(
 	historyReplicationFn nDCHistoryReplicationFn,
 	serializer persistence.PayloadSerializer,
 	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
-	currentExecutionCheck checks.Invariant,
+	currentExecutionCheck invariant.Invariant,
 	logger log.Logger,
 ) *NDCHistoryResenderImpl {
 
@@ -141,6 +142,23 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 
 	for historyIterator.HasNext() {
 		result, err := historyIterator.Next()
+		if err != nil {
+			n.logger.Error("failed to get history events",
+				tag.WorkflowDomainID(domainID),
+				tag.WorkflowID(workflowID),
+				tag.WorkflowRunID(runID),
+				tag.Error(err))
+			return err
+		}
+		historyBatch := result.(*historyBatch)
+		replicationRequest := n.createReplicationRawRequest(
+			domainID,
+			workflowID,
+			runID,
+			historyBatch.rawEventBatch,
+			historyBatch.versionHistory.GetItems())
+
+		err = n.sendReplicationRawRequest(ctx, replicationRequest)
 		switch err.(type) {
 		case nil:
 			// continue to process the events
@@ -157,24 +175,6 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 			}
 			return err
 		default:
-			n.logger.Error("failed to get history events",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
-			return err
-		}
-		historyBatch := result.(*historyBatch)
-
-		replicationRequest := n.createReplicationRawRequest(
-			domainID,
-			workflowID,
-			runID,
-			historyBatch.rawEventBatch,
-			historyBatch.versionHistory.GetItems())
-
-		err = n.sendReplicationRawRequest(ctx, replicationRequest)
-		if err != nil {
 			n.logger.Error("failed to replicate events",
 				tag.WorkflowDomainID(domainID),
 				tag.WorkflowID(workflowID),
@@ -312,9 +312,8 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 	if n.currentExecutionCheck == nil {
 		return false
 	}
-
-	execution := checks.ConcreteExecution{
-		Execution: checks.Execution{
+	execution := &entity.CurrentExecution{
+		Execution: entity.Execution{
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			State:      persistence.WorkflowStateRunning,
@@ -322,16 +321,16 @@ func (n *NDCHistoryResenderImpl) fixCurrentExecution(
 	}
 	res := n.currentExecutionCheck.Check(execution)
 	switch res.CheckResultType {
-	case checks.CheckResultTypeCorrupted:
+	case invariant.CheckResultTypeCorrupted:
 		n.logger.Error(
 			"Encounter corrupted workflow",
 			tag.WorkflowDomainID(domainID),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
 		)
-		n.currentExecutionCheck.Fix(res)
+		n.currentExecutionCheck.Fix(execution)
 		return false
-	case checks.CheckResultTypeFailed:
+	case invariant.CheckResultTypeFailed:
 		return false
 	default:
 		return true

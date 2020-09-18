@@ -131,7 +131,7 @@ func (s *processingQueueSuite) TestUpdateAckLevel_WithPendingTasks() {
 	tasks := make(map[task.Key]task.Task)
 	for i, key := range taskKeys {
 		task := task.NewMockTask(s.controller)
-		task.EXPECT().State().Return(taskStates[i]).MaxTimes(1)
+		task.EXPECT().State().Return(taskStates[i]).AnyTimes()
 		tasks[key] = task
 	}
 
@@ -170,7 +170,7 @@ func (s *processingQueueSuite) TestUpdateAckLevel_NoPendingTasks() {
 	tasks := make(map[task.Key]task.Task)
 	for i, key := range taskKeys {
 		task := task.NewMockTask(s.controller)
-		task.EXPECT().State().Return(taskStates[i]).MaxTimes(1)
+		task.EXPECT().State().Return(taskStates[i]).AnyTimes()
 		tasks[key] = task
 	}
 
@@ -187,6 +187,96 @@ func (s *processingQueueSuite) TestUpdateAckLevel_NoPendingTasks() {
 	s.Equal(readLevel, newAckLevel)
 	s.Equal(readLevel, queue.state.ackLevel)
 	s.Equal(0, pendingTasks)
+}
+
+func (s *processingQueueSuite) TestUpdateAckLevel_TaskKeyLargerThanReadLevel() {
+	ackLevel := testKey{ID: 1}
+	readLevel := testKey{ID: 5}
+	maxLevel := testKey{ID: 10}
+
+	taskKeys := []task.Key{
+		testKey{ID: 2},
+		testKey{ID: 3},
+		testKey{ID: 5},
+		testKey{ID: 8},
+		testKey{ID: 9},
+	}
+	taskStates := []t.State{
+		t.TaskStateAcked,
+		t.TaskStateAcked,
+		t.TaskStateAcked,
+		t.TaskStateAcked,
+		t.TaskStatePending,
+	}
+	tasks := make(map[task.Key]task.Task)
+	for i, key := range taskKeys {
+		task := task.NewMockTask(s.controller)
+		task.EXPECT().State().Return(taskStates[i]).AnyTimes()
+		tasks[key] = task
+	}
+
+	queue := s.newTestProcessingQueue(
+		0,
+		ackLevel,
+		readLevel,
+		maxLevel,
+		NewDomainFilter(nil, true),
+		tasks,
+	)
+
+	newAckLevel, pendingTasks := queue.UpdateAckLevel()
+	s.Equal(readLevel, newAckLevel)
+	s.Equal(readLevel, queue.state.ackLevel)
+	s.Equal(2, pendingTasks)
+}
+
+func (s *processingQueueSuite) TestUpdateAckLevel_DeleteTaskBeyondAckLevel() {
+	ackLevel := testKey{ID: 0}
+	readLevel := testKey{ID: 7}
+	maxLevel := testKey{ID: 10}
+
+	taskKeys := []task.Key{
+		testKey{ID: 1},
+		testKey{ID: 2},
+		testKey{ID: 3},
+		testKey{ID: 4},
+		testKey{ID: 5},
+		testKey{ID: 6},
+		testKey{ID: 7},
+		testKey{ID: 9},
+		testKey{ID: 10},
+	}
+	taskStates := []t.State{
+		t.TaskStateAcked,
+		t.TaskStatePending,
+		t.TaskStateAcked,
+		t.TaskStateAcked,
+		t.TaskStateAcked,
+		t.TaskStatePending,
+		t.TaskStateAcked,
+		t.TaskStateAcked,
+		t.TaskStatePending,
+	}
+	tasks := make(map[task.Key]task.Task)
+	for i, key := range taskKeys {
+		task := task.NewMockTask(s.controller)
+		task.EXPECT().State().Return(taskStates[i]).AnyTimes()
+		tasks[key] = task
+	}
+
+	queue := s.newTestProcessingQueue(
+		0,
+		ackLevel,
+		readLevel,
+		maxLevel,
+		NewDomainFilter(nil, true),
+		tasks,
+	)
+
+	newAckLevel, pendingTasks := queue.UpdateAckLevel()
+	s.Equal(testKey{ID: 1}, newAckLevel)
+	s.Equal(testKey{ID: 1}, queue.state.ackLevel)
+	s.Equal(6, pendingTasks) // 2 5 6 7 9 10
 }
 
 func (s *processingQueueSuite) TestSplit() {
