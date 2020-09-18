@@ -75,6 +75,7 @@ const (
 	defaultQueryFirstDecisionTaskWaitTime     = time.Second
 	queryFirstDecisionTaskCheckInterval       = 200 * time.Millisecond
 	replicationTimeout                        = 30 * time.Second
+	contextLockTimeout                        = 500 * time.Millisecond
 
 	// TerminateIfRunningReason reason for terminateIfRunning
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
@@ -650,22 +651,14 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	// grab the current context as a lock, nothing more
 	// use a smaller context timeout to get the lock
-	getLockContext := ctx
-	var cancel context.CancelFunc
-	if deadline, ok := ctx.Deadline(); ok {
-		now := e.shard.GetTimeSource().Now()
-		ctxTimeout := now.Sub(deadline) / 2
-		if ctxTimeout > 0 {
-			getLockContext, cancel = context.WithTimeout(context.Background(), ctxTimeout)
-			defer cancel()
-		}
-	}
+	childCtx, childCancel := e.newChildContext(ctx)
+	defer childCancel()
+
 	_, currentRelease, err := e.executionCache.GetOrCreateCurrentWorkflowExecution(
-		getLockContext,
+		childCtx,
 		domainID,
 		workflowID,
 	)
-	getLockContext.Err()
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			return nil, ErrConcurrentStartRequest
@@ -3457,4 +3450,19 @@ func (e *historyEngineImpl) loadWorkflow(
 	}
 
 	return nil, &workflow.InternalServiceError{Message: "unable to locate current workflow execution"}
+}
+
+func (e *historyEngineImpl) newChildContext(
+	parentCtx context.Context,
+) (context.Context, context.CancelFunc) {
+
+	ctxTimeout := contextLockTimeout
+	if deadline, ok := parentCtx.Deadline(); ok {
+		now := e.shard.GetTimeSource().Now()
+		parentTimeout := deadline.Sub(now)
+		if parentTimeout > 0 && parentTimeout < contextLockTimeout {
+			ctxTimeout = parentTimeout
+		}
+	}
+	return context.WithTimeout(context.Background(), ctxTimeout)
 }
