@@ -82,6 +82,7 @@ var keys = map[Key]string{
 	HistoryCountLimitError: "limit.historyCount.error",
 	HistoryCountLimitWarn:  "limit.historyCount.warn",
 	MaxIDLengthLimit:       "limit.maxIDLength",
+	MaxIDLengthWarnLimit:   "limit.maxIDWarnLength",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",

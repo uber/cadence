@@ -470,9 +470,6 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	if !wh.validIDLength(pollRequest.GetDomain(), scope) {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
-	if !wh.validIDLength(pollRequest.GetDomain(), scope) {
-		return nil, wh.error(errDomainTooLong, scope)
-	}
 
 	if err := wh.validateTaskList(pollRequest.TaskList, scope); err != nil {
 		return nil, err
