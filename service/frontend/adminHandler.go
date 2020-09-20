@@ -45,11 +45,11 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/xdc"
 )
 
 var _ adminserviceserver.Interface = (*AdminHandler)(nil)
@@ -1066,7 +1066,7 @@ func (adh *AdminHandler) ResendReplicationTasks(
 	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	resender := xdc.NewNDCHistoryResender(
+	resender := ndc.NewHistoryResender(
 		adh.GetDomainCache(),
 		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
 		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {

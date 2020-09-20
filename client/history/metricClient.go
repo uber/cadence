@@ -511,40 +511,6 @@ func (c *metricClient) RecordChildExecutionCompleted(
 	return err
 }
 
-func (c *metricClient) ReplicateEvents(
-	context context.Context,
-	request *h.ReplicateEventsRequest,
-	opts ...yarpc.CallOption) error {
-	c.metricsClient.IncCounter(metrics.HistoryClientReplicateEventsScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientReplicateEventsScope, metrics.CadenceClientLatency)
-	err := c.client.ReplicateEvents(context, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientReplicateEventsScope, metrics.CadenceClientFailures)
-	}
-
-	return err
-}
-
-func (c *metricClient) ReplicateRawEvents(
-	context context.Context,
-	request *h.ReplicateRawEventsRequest,
-	opts ...yarpc.CallOption) error {
-	c.metricsClient.IncCounter(metrics.HistoryClientReplicateRawEventsScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientReplicateRawEventsScope, metrics.CadenceClientLatency)
-	err := c.client.ReplicateRawEvents(context, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientReplicateRawEventsScope, metrics.CadenceClientFailures)
-	}
-
-	return err
-}
-
 func (c *metricClient) ReplicateEventsV2(
 	context context.Context,
 	request *h.ReplicateEventsV2Request,

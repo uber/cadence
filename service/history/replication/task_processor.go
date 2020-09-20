@@ -480,26 +480,8 @@ func (p *taskProcessorImpl) generateDLQRequest(
 			},
 		}, nil
 
-	case r.ReplicationTaskTypeHistory:
-		taskAttributes := replicationTask.GetHistoryTaskAttributes()
-		return &persistence.PutReplicationTaskToDLQRequest{
-			SourceClusterName: p.sourceCluster,
-			TaskInfo: &persistence.ReplicationTaskInfo{
-				DomainID:            taskAttributes.GetDomainId(),
-				WorkflowID:          taskAttributes.GetWorkflowId(),
-				RunID:               taskAttributes.GetRunId(),
-				TaskID:              replicationTask.GetSourceTaskId(),
-				TaskType:            persistence.ReplicationTaskTypeHistory,
-				FirstEventID:        taskAttributes.GetFirstEventId(),
-				NextEventID:         taskAttributes.GetNextEventId() + 1,
-				Version:             taskAttributes.GetVersion(),
-				LastReplicationInfo: toPersistenceReplicationInfo(taskAttributes.GetReplicationInfo()),
-				ResetWorkflow:       taskAttributes.GetResetWorkflow(),
-			},
-		}, nil
 	case r.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
-
 		eventsDataBlob := persistence.NewDataBlobFromThrift(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {

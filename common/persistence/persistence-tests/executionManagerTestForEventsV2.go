@@ -385,226 +385,20 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	s.Equal(*newWorkflowExecution.RunId, newRunID)
 }
 
-// TestWorkflowWithReplicationState test
-func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
-	domainID := uuid.New()
-	runID := uuid.New()
-	workflowExecution := gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-workflow-replication-state-test"),
-		RunId:      common.StringPtr(runID),
-	}
+func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecution(
+	domainID string,
+	workflowExecution gen.WorkflowExecution,
+	taskList string,
+	wType string,
+	wTimeout int32,
+	decisionTimeout int32,
+	nextEventID int64,
+	lastProcessedEventID int64,
+	decisionScheduleID int64,
+	txTasks []p.Task,
+	brToken []byte,
+) (*p.CreateWorkflowExecutionResponse, error) {
 
-	replicationTasks := []p.Task{&p.HistoryReplicationTask{
-		TaskID:       s.GetNextSequenceNumber(),
-		FirstEventID: int64(1),
-		NextEventID:  int64(3),
-		Version:      int64(9),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{
-			"dc1": {
-				Version:     int64(3),
-				LastEventID: int64(1),
-			},
-			"dc2": {
-				Version:     int64(5),
-				LastEventID: int64(2),
-			},
-		},
-		BranchToken:       []byte("branchToken1"),
-		NewRunBranchToken: []byte("branchToken2"),
-	}}
-
-	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
-		0, 2, &p.ReplicationState{
-			CurrentVersion:   int64(9),
-			StartVersion:     int64(8),
-			LastWriteVersion: int64(7),
-			LastWriteEventID: int64(6),
-			LastReplicationInfo: map[string]*p.ReplicationInfo{
-				"dc1": {
-					Version:     int64(3),
-					LastEventID: int64(1),
-				},
-				"dc2": {
-					Version:     int64(5),
-					LastEventID: int64(2),
-				},
-			},
-		}, replicationTasks, []byte("branchToken1"))
-	s.NoError(err0)
-	s.NotNil(task0, "Expected non empty task identifier.")
-
-	taskD, err := s.GetTransferTasks(2, false)
-	s.Equal(1, len(taskD), "Expected 1 decision task.")
-	s.Equal(p.TransferTaskTypeDecisionTask, taskD[0].TaskType)
-	err = s.CompleteTransferTask(taskD[0].TaskID)
-	s.NoError(err)
-
-	taskR, err := s.GetReplicationTasks(1, false)
-	s.Equal(1, len(taskR), "Expected 1 replication task.")
-	tsk := taskR[0]
-	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
-	s.Equal(domainID, tsk.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, tsk.WorkflowID)
-	s.Equal(*workflowExecution.RunId, tsk.RunID)
-	s.Equal(int64(1), tsk.FirstEventID)
-	s.Equal(int64(3), tsk.NextEventID)
-	s.Equal(int64(9), tsk.Version)
-	s.Equal([]byte("branchToken1"), tsk.BranchToken)
-	s.Equal([]byte("branchToken2"), tsk.NewRunBranchToken)
-	s.Equal(2, len(tsk.LastReplicationInfo))
-	for k, v := range tsk.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
-	err = s.CompleteReplicationTask(taskR[0].TaskID)
-	s.NoError(err)
-
-	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
-	s.NoError(err1)
-	info0 := state0.ExecutionInfo
-	replicationState0 := state0.ReplicationState
-	s.NotNil(info0, "Valid Workflow info expected.")
-	s.NotNil(replicationState0, "Valid replication state expected.")
-	s.Equal(domainID, info0.DomainID)
-	s.Equal("taskList", info0.TaskList)
-	s.Equal("wType", info0.WorkflowTypeName)
-	s.Equal(int32(20), info0.WorkflowTimeout)
-	s.Equal(int32(13), info0.DecisionStartToCloseTimeout)
-	s.Equal(int64(3), info0.NextEventID)
-	s.Equal(int64(0), info0.LastProcessedEvent)
-	s.Equal(int64(2), info0.DecisionScheduleID)
-	s.Equal(int64(9), replicationState0.CurrentVersion)
-	s.Equal(int64(8), replicationState0.StartVersion)
-	s.Equal(int64(7), replicationState0.LastWriteVersion)
-	s.Equal(int64(6), replicationState0.LastWriteEventID)
-	s.Equal(2, len(replicationState0.LastReplicationInfo))
-	s.assertChecksumsEqual(testWorkflowChecksum, state0.Checksum)
-	for k, v := range replicationState0.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
-
-	updatedInfo := copyWorkflowExecutionInfo(info0)
-	updatedStats := copyExecutionStats(state0.ExecutionStats)
-	updatedInfo.NextEventID = int64(5)
-	updatedInfo.LastProcessedEvent = int64(2)
-	updatedInfo.BranchToken = []byte("branchToken3")
-
-	updatedReplicationState := copyReplicationState(replicationState0)
-	updatedReplicationState.CurrentVersion = int64(10)
-	updatedReplicationState.StartVersion = int64(11)
-	updatedReplicationState.LastWriteVersion = int64(12)
-	updatedReplicationState.LastWriteEventID = int64(13)
-	updatedReplicationState.LastReplicationInfo["dc1"].Version = int64(4)
-	updatedReplicationState.LastReplicationInfo["dc1"].LastEventID = int64(2)
-
-	replicationTasks1 := []p.Task{&p.HistoryReplicationTask{
-		TaskID:       s.GetNextSequenceNumber(),
-		FirstEventID: int64(3),
-		NextEventID:  int64(5),
-		Version:      int64(10),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{
-			"dc1": {
-				Version:     int64(4),
-				LastEventID: int64(2),
-			},
-			"dc2": {
-				Version:     int64(5),
-				LastEventID: int64(2),
-			},
-		},
-		BranchToken:       []byte("branchToken3"),
-		NewRunBranchToken: []byte("branchToken4"),
-	}}
-	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, updatedStats, updatedReplicationState, nil, int64(3), replicationTasks1)
-	s.NoError(err2)
-
-	taskR1, err := s.GetReplicationTasks(1, false)
-	s.Equal(1, len(taskR1), "Expected 1 replication task.")
-	tsk1 := taskR1[0]
-	s.Equal(p.ReplicationTaskTypeHistory, tsk1.TaskType)
-	s.Equal(domainID, tsk1.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, tsk1.WorkflowID)
-	s.Equal(*workflowExecution.RunId, tsk1.RunID)
-	s.Equal(int64(3), tsk1.FirstEventID)
-	s.Equal(int64(5), tsk1.NextEventID)
-	s.Equal(int64(10), tsk1.Version)
-	s.Equal([]byte("branchToken3"), tsk1.BranchToken)
-	s.Equal([]byte("branchToken4"), tsk1.NewRunBranchToken)
-
-	s.Equal(2, len(tsk1.LastReplicationInfo))
-	for k, v := range tsk1.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(4), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
-	err = s.CompleteReplicationTask(taskR1[0].TaskID)
-	s.NoError(err)
-
-	state1, err2 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
-	s.NoError(err2)
-	info1 := state1.ExecutionInfo
-	replicationState1 := state1.ReplicationState
-	s.NotNil(info1, "Valid Workflow info expected.")
-	s.Equal(domainID, info1.DomainID)
-	s.Equal("taskList", info1.TaskList)
-	s.Equal("wType", info1.WorkflowTypeName)
-	s.Equal(int32(20), info1.WorkflowTimeout)
-	s.Equal(int32(13), info1.DecisionStartToCloseTimeout)
-	s.Equal(int64(5), info1.NextEventID)
-	s.Equal([]byte("branchToken3"), info1.BranchToken)
-	s.Equal(int64(2), info1.LastProcessedEvent)
-	s.Equal(int64(2), info1.DecisionScheduleID)
-	s.Equal(int64(10), replicationState1.CurrentVersion)
-	s.Equal(int64(11), replicationState1.StartVersion)
-	s.Equal(int64(12), replicationState1.LastWriteVersion)
-	s.Equal(int64(13), replicationState1.LastWriteEventID)
-	s.Equal(2, len(replicationState1.LastReplicationInfo))
-	s.assertChecksumsEqual(testWorkflowChecksum, state1.Checksum)
-	for k, v := range replicationState1.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(4), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
-}
-
-func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecutionWithReplication(domainID string, workflowExecution gen.WorkflowExecution,
-	taskList, wType string, wTimeout int32, decisionTimeout int32, nextEventID int64,
-	lastProcessedEventID int64, decisionScheduleID int64, state *p.ReplicationState, txTasks []p.Task, brToken []byte) (*p.CreateWorkflowExecutionResponse, error) {
 	var transferTasks []p.Task
 	var replicationTasks []p.Task
 	var timerTasks []p.Task
@@ -648,7 +442,6 @@ func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecutionWithReplicatio
 				BranchToken:                 brToken,
 			},
 			ExecutionStats:   &p.ExecutionStats{},
-			ReplicationState: state,
 			TimerTasks:       timerTasks,
 			TransferTasks:    transferTasks,
 			ReplicationTasks: replicationTasks,
@@ -671,20 +464,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 
 	currentTime := time.Now()
 	txTasks := []p.Task{&p.HistoryReplicationTask{
-		TaskID:       s.GetNextSequenceNumber(),
-		FirstEventID: int64(1),
-		NextEventID:  int64(3),
-		Version:      int64(9),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{
-			"dc1": {
-				Version:     int64(3),
-				LastEventID: int64(1),
-			},
-			"dc2": {
-				Version:     int64(5),
-				LastEventID: int64(2),
-			},
-		},
+		TaskID:            s.GetNextSequenceNumber(),
+		FirstEventID:      int64(1),
+		NextEventID:       int64(3),
+		Version:           int64(9),
 		BranchToken:       []byte("branchToken1"),
 		NewRunBranchToken: []byte("branchToken2"),
 	},
@@ -693,23 +476,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 			VisibilityTimestamp: currentTime,
 		}}
 
-	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
-		0, 2, &p.ReplicationState{
-			CurrentVersion:   int64(9),
-			StartVersion:     int64(8),
-			LastWriteVersion: int64(7),
-			LastWriteEventID: int64(6),
-			LastReplicationInfo: map[string]*p.ReplicationInfo{
-				"dc1": {
-					Version:     int64(3),
-					LastEventID: int64(1),
-				},
-				"dc2": {
-					Version:     int64(5),
-					LastEventID: int64(2),
-				},
-			},
-		}, txTasks, []byte("branchToken1"))
+	task0, err0 := s.createWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
+		0, 2, txTasks, []byte("branchToken1"))
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
@@ -742,20 +510,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	s.Equal(int64(9), tsk.Version)
 	s.Equal([]byte("branchToken1"), tsk.BranchToken)
 	s.Equal([]byte("branchToken2"), tsk.NewRunBranchToken)
-	s.Equal(2, len(tsk.LastReplicationInfo))
-	for k, v := range tsk.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 	err = s.CompleteReplicationTask(taskR[0].TaskID)
 	s.NoError(err)
 	taskR, err = s.GetReplicationTasks(2, false)
@@ -765,9 +519,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err1)
 	info0 := state0.ExecutionInfo
-	replicationState0 := state0.ReplicationState
 	s.NotNil(info0, "Valid Workflow info expected.")
-	s.NotNil(replicationState0, "Valid replication state expected.")
 	s.Equal(domainID, info0.DomainID)
 	s.Equal("taskList", info0.TaskList)
 	s.Equal("wType", info0.WorkflowTypeName)
@@ -776,38 +528,12 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
 	s.Equal(int64(2), info0.DecisionScheduleID)
-	s.Equal(int64(9), replicationState0.CurrentVersion)
-	s.Equal(int64(8), replicationState0.StartVersion)
-	s.Equal(int64(7), replicationState0.LastWriteVersion)
-	s.Equal(int64(6), replicationState0.LastWriteEventID)
-	s.Equal(2, len(replicationState0.LastReplicationInfo))
-	for k, v := range replicationState0.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updateStats := copyExecutionStats(state0.ExecutionStats)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	updatedInfo.BranchToken = []byte("branchToken3")
-
-	updatedReplicationState := copyReplicationState(replicationState0)
-	updatedReplicationState.CurrentVersion = int64(10)
-	updatedReplicationState.StartVersion = int64(11)
-	updatedReplicationState.LastWriteVersion = int64(12)
-	updatedReplicationState.LastWriteEventID = int64(13)
-	updatedReplicationState.LastReplicationInfo["dc1"].Version = int64(30)
-	updatedReplicationState.LastReplicationInfo["dc1"].LastEventID = int64(10)
 
 	currTransTasks := []p.Task{
 		&p.CloseExecutionTask{
@@ -837,14 +563,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	insertInfo.LastProcessedEvent = int64(20)
 	insertInfo.BranchToken = []byte("branchToken4")
 
-	insertReplicationState := copyReplicationState(replicationState0)
-	insertReplicationState.CurrentVersion = int64(100)
-	insertReplicationState.StartVersion = int64(110)
-	insertReplicationState.LastWriteVersion = int64(120)
-	insertReplicationState.LastWriteEventID = int64(130)
-	insertReplicationState.LastReplicationInfo["dc1"].Version = int64(300)
-	insertReplicationState.LastReplicationInfo["dc1"].LastEventID = int64(100)
-
 	insertTransTasks := []p.Task{
 		&p.DecisionTask{
 			TaskID:              s.GetNextSequenceNumber(),
@@ -868,18 +586,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		FirstEventID: int64(10),
 		NextEventID:  int64(30),
 		Version:      int64(90),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{
-			"dc1": {
-				Version:     int64(30),
-				LastEventID: int64(10),
-			},
-			"dc2": {
-				Version:     int64(50),
-				LastEventID: int64(20),
-			},
-		},
-		BranchToken:   []byte("branchToken5"),
-		ResetWorkflow: true,
+		BranchToken:  []byte("branchToken5"),
 	}}
 
 	insertTimerInfos := []*p.TimerInfo{{
@@ -921,9 +628,27 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 
 	insertSignalRequests := []string{uuid.New()}
 
-	err = s.ResetWorkflowExecution(3,
-		insertInfo, insertStats, insertReplicationState, insertActivityInfos, insertTimerInfos, insertChildExecutionInfos, insertRequestCancelInfos, insertSignalInfos, insertSignalRequests, insertTransTasks, insertTimerTasks, insertReplicationTasks,
-		true, updatedInfo, updateStats, updatedReplicationState, currTransTasks, currTimerTasks, info0.RunID, -1000)
+	err = s.ResetWorkflowExecution(
+		3,
+		insertInfo,
+		insertStats,
+		insertActivityInfos,
+		insertTimerInfos,
+		insertChildExecutionInfos,
+		insertRequestCancelInfos,
+		insertSignalInfos,
+		insertSignalRequests,
+		insertTransTasks,
+		insertTimerTasks,
+		insertReplicationTasks,
+		true,
+		updatedInfo,
+		updateStats,
+		currTransTasks,
+		currTimerTasks,
+		info0.RunID,
+		-1000,
+	)
 	s.Nil(err)
 
 	//////////////////////////////
@@ -969,24 +694,9 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	s.Equal(insertInfo.RunID, tsk.RunID)
 	s.Equal(int64(10), tsk.FirstEventID)
 	s.Equal(int64(30), tsk.NextEventID)
-	s.Equal(true, tsk.ResetWorkflow)
 	s.Equal(int64(90), tsk.Version)
 	s.Equal([]byte("branchToken5"), tsk.BranchToken)
 	s.Equal(0, len(tsk.NewRunBranchToken))
-	s.Equal(2, len(tsk.LastReplicationInfo))
-	for k, v := range tsk.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(30), v.Version)
-			s.Equal(int64(10), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(50), v.Version)
-			s.Equal(int64(20), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 	err = s.CompleteReplicationTask(taskR[0].TaskID)
 	s.NoError(err)
 	taskR, err = s.GetReplicationTasks(2, false)
@@ -1002,7 +712,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	state1, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err1)
 	info1 := state1.ExecutionInfo
-	replicationState1 := state1.ReplicationState
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int64(2), info1.LastProcessedEvent)
@@ -1014,31 +723,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	s.Equal(int32(13), info1.DecisionStartToCloseTimeout)
 	s.Equal(int64(2), info1.DecisionScheduleID)
 
-	s.NotNil(replicationState1, "Valid replication state expected.")
-	s.Equal(int64(10), replicationState1.CurrentVersion)
-	s.Equal(int64(11), replicationState1.StartVersion)
-	s.Equal(int64(12), replicationState1.LastWriteVersion)
-	s.Equal(int64(13), replicationState1.LastWriteEventID)
-	s.Equal(2, len(replicationState1.LastReplicationInfo))
-	for k, v := range replicationState1.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(30), v.Version)
-			s.Equal(int64(10), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
-
 	// the current execution
 	state2, err2 := s.GetWorkflowExecutionInfo(domainID, newExecution)
 	s.NoError(err2)
 	info2 := state2.ExecutionInfo
-	replicationState2 := state2.ReplicationState
 
 	s.NotNil(info2, "Valid Workflow info expected.")
 	s.Equal(int64(50), info2.NextEventID)
@@ -1050,26 +738,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	s.Equal(int32(20), info2.WorkflowTimeout)
 	s.Equal(int32(13), info2.DecisionStartToCloseTimeout)
 	s.Equal(int64(2), info2.DecisionScheduleID)
-
-	s.NotNil(replicationState2, "Valid replication state expected.")
-	s.Equal(int64(100), replicationState2.CurrentVersion)
-	s.Equal(int64(110), replicationState2.StartVersion)
-	s.Equal(int64(120), replicationState2.LastWriteVersion)
-	s.Equal(int64(130), replicationState2.LastWriteEventID)
-	s.Equal(2, len(replicationState2.LastReplicationInfo))
-	for k, v := range replicationState2.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(300), v.Version)
-			s.Equal(int64(100), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 
 	timerInfos2 := state2.TimerInfos
 	actInfos2 := state2.ActivityInfos
@@ -1103,20 +771,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 
 	currentTime := time.Now()
 	txTasks := []p.Task{&p.HistoryReplicationTask{
-		TaskID:       s.GetNextSequenceNumber(),
-		FirstEventID: int64(1),
-		NextEventID:  int64(3),
-		Version:      int64(9),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{
-			"dc1": {
-				Version:     int64(3),
-				LastEventID: int64(1),
-			},
-			"dc2": {
-				Version:     int64(5),
-				LastEventID: int64(2),
-			},
-		},
+		TaskID:            s.GetNextSequenceNumber(),
+		FirstEventID:      int64(1),
+		NextEventID:       int64(3),
+		Version:           int64(9),
 		BranchToken:       []byte("branchToken1"),
 		NewRunBranchToken: []byte("branchToken2"),
 	},
@@ -1125,23 +783,19 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 			VisibilityTimestamp: currentTime,
 		}}
 
-	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
-		0, 2, &p.ReplicationState{
-			CurrentVersion:   int64(9),
-			StartVersion:     int64(8),
-			LastWriteVersion: int64(7),
-			LastWriteEventID: int64(6),
-			LastReplicationInfo: map[string]*p.ReplicationInfo{
-				"dc1": {
-					Version:     int64(3),
-					LastEventID: int64(1),
-				},
-				"dc2": {
-					Version:     int64(5),
-					LastEventID: int64(2),
-				},
-			},
-		}, txTasks, []byte("branchToken1"))
+	task0, err0 := s.createWorkflowExecution(
+		domainID,
+		workflowExecution,
+		"taskList",
+		"wType",
+		20,
+		13,
+		3,
+		0,
+		2,
+		txTasks,
+		[]byte("branchToken1"),
+	)
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
@@ -1174,20 +828,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.Equal(int64(9), tsk.Version)
 	s.Equal([]byte("branchToken1"), tsk.BranchToken)
 	s.Equal([]byte("branchToken2"), tsk.NewRunBranchToken)
-	s.Equal(2, len(tsk.LastReplicationInfo))
-	for k, v := range tsk.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 	err = s.CompleteReplicationTask(taskR[0].TaskID)
 	s.NoError(err)
 	taskR, err = s.GetReplicationTasks(2, false)
@@ -1198,9 +838,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.NoError(err1)
 	info0 := state0.ExecutionInfo
 	stats0 := state0.ExecutionStats
-	replicationState0 := state0.ReplicationState
 	s.NotNil(info0, "Valid Workflow info expected.")
-	s.NotNil(replicationState0, "Valid replication state expected.")
 	s.Equal(domainID, info0.DomainID)
 	s.Equal("taskList", info0.TaskList)
 	s.Equal("wType", info0.WorkflowTypeName)
@@ -1211,33 +849,14 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.Equal(int64(2), info0.DecisionScheduleID)
 	s.Equal(p.WorkflowStateRunning, info0.State)
 	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
-	s.Equal(int64(9), replicationState0.CurrentVersion)
-	s.Equal(int64(8), replicationState0.StartVersion)
-	s.Equal(int64(7), replicationState0.LastWriteVersion)
-	s.Equal(int64(6), replicationState0.LastWriteEventID)
-	s.Equal(2, len(replicationState0.LastReplicationInfo))
-	for k, v := range replicationState0.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 
 	info0.State = p.WorkflowStateCompleted
 	info0.CloseStatus = p.WorkflowCloseStatusCompleted
-	err = s.UpdateWorklowStateAndReplication(info0, stats0, replicationState0, nil, info0.NextEventID, nil)
+	err = s.UpdateWorklowStateAndReplication(info0, stats0, nil, info0.NextEventID, nil)
 	s.Nil(err)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedStats := copyExecutionStats(state0.ExecutionStats)
-	updatedReplicationState := copyReplicationState(replicationState0)
 
 	newRunID := uuid.New()
 	newExecution := gen.WorkflowExecution{
@@ -1252,14 +871,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	insertInfo.NextEventID = int64(50)
 	insertInfo.LastProcessedEvent = int64(20)
 	insertInfo.BranchToken = []byte("branchToken4")
-
-	insertReplicationState := copyReplicationState(replicationState0)
-	insertReplicationState.CurrentVersion = int64(100)
-	insertReplicationState.StartVersion = int64(110)
-	insertReplicationState.LastWriteVersion = int64(120)
-	insertReplicationState.LastWriteEventID = int64(130)
-	insertReplicationState.LastReplicationInfo["dc1"].Version = int64(300)
-	insertReplicationState.LastReplicationInfo["dc1"].LastEventID = int64(100)
 
 	insertTransTasks := []p.Task{
 		&p.DecisionTask{
@@ -1284,17 +895,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		FirstEventID: int64(10),
 		NextEventID:  int64(30),
 		Version:      int64(90),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{
-			"dc1": {
-				Version:     int64(30),
-				LastEventID: int64(10),
-			},
-			"dc2": {
-				Version:     int64(50),
-				LastEventID: int64(20),
-			},
-		},
-		BranchToken: []byte("branchToken5"),
+		BranchToken:  []byte("branchToken5"),
 	}}
 
 	insertTimerInfos := []*p.TimerInfo{{
@@ -1336,9 +937,27 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 
 	insertSignalRequests := []string{uuid.New()}
 
-	err = s.ResetWorkflowExecution(3,
-		insertInfo, insterStats, insertReplicationState, insertActivityInfos, insertTimerInfos, insertChildExecutionInfos, insertRequestCancelInfos, insertSignalInfos, insertSignalRequests, insertTransTasks, insertTimerTasks, insertReplicationTasks,
-		false, updatedInfo, updatedStats, updatedReplicationState, nil, nil, info0.RunID, -1000)
+	err = s.ResetWorkflowExecution(
+		3,
+		insertInfo,
+		insterStats,
+		insertActivityInfos,
+		insertTimerInfos,
+		insertChildExecutionInfos,
+		insertRequestCancelInfos,
+		insertSignalInfos,
+		insertSignalRequests,
+		insertTransTasks,
+		insertTimerTasks,
+		insertReplicationTasks,
+		false,
+		updatedInfo,
+		updatedStats,
+		nil,
+		nil,
+		info0.RunID,
+		-1000,
+	)
 	s.Nil(err)
 
 	//////////////////////////////
@@ -1380,20 +999,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.Equal(int64(90), tsk.Version)
 	s.Equal([]byte("branchToken5"), tsk.BranchToken)
 	s.Equal(0, len(tsk.NewRunBranchToken))
-	s.Equal(2, len(tsk.LastReplicationInfo))
-	for k, v := range tsk.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(30), v.Version)
-			s.Equal(int64(10), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(50), v.Version)
-			s.Equal(int64(20), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 	err = s.CompleteReplicationTask(taskR[0].TaskID)
 	s.NoError(err)
 	taskR, err = s.GetReplicationTasks(2, false)
@@ -1409,7 +1014,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	state1, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err1)
 	info1 := state1.ExecutionInfo
-	replicationState1 := state1.ReplicationState
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(int64(3), info1.NextEventID)
 	s.Equal(int64(0), info1.LastProcessedEvent)
@@ -1421,31 +1025,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.Equal(int32(13), info1.DecisionStartToCloseTimeout)
 	s.Equal(int64(2), info1.DecisionScheduleID)
 
-	s.NotNil(replicationState1, "Valid replication state expected.")
-	s.Equal(int64(9), replicationState1.CurrentVersion)
-	s.Equal(int64(8), replicationState1.StartVersion)
-	s.Equal(int64(7), replicationState1.LastWriteVersion)
-	s.Equal(int64(6), replicationState1.LastWriteEventID)
-	s.Equal(2, len(replicationState1.LastReplicationInfo))
-	for k, v := range replicationState1.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(3), v.Version)
-			s.Equal(int64(1), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
-
 	// the current execution
 	state2, err2 := s.GetWorkflowExecutionInfo(domainID, newExecution)
 	s.NoError(err2)
 	info2 := state2.ExecutionInfo
-	replicationState2 := state2.ReplicationState
 
 	s.NotNil(info2, "Valid Workflow info expected.")
 	s.Equal(int64(50), info2.NextEventID)
@@ -1457,26 +1040,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.Equal(int32(20), info2.WorkflowTimeout)
 	s.Equal(int32(13), info2.DecisionStartToCloseTimeout)
 	s.Equal(int64(2), info2.DecisionScheduleID)
-
-	s.NotNil(replicationState2, "Valid replication state expected.")
-	s.Equal(int64(100), replicationState2.CurrentVersion)
-	s.Equal(int64(110), replicationState2.StartVersion)
-	s.Equal(int64(120), replicationState2.LastWriteVersion)
-	s.Equal(int64(130), replicationState2.LastWriteEventID)
-	s.Equal(2, len(replicationState2.LastReplicationInfo))
-	for k, v := range replicationState2.LastReplicationInfo {
-		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
-		switch k {
-		case "dc1":
-			s.Equal(int64(300), v.Version)
-			s.Equal(int64(100), v.LastEventID)
-		case "dc2":
-			s.Equal(int64(5), v.Version)
-			s.Equal(int64(2), v.LastEventID)
-		default:
-			s.Fail("Unexpected key")
-		}
-	}
 
 	timerInfos2 := state2.TimerInfos
 	actInfos2 := state2.ActivityInfos
@@ -1604,9 +1167,27 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrNoReplicate() 
 		CancelRequestID: uuid.New(),
 	}}
 
-	err = s.ResetWorkflowExecution(3,
-		insertInfo, insertStats, nil, insertActivityInfos, insertTimerInfos, nil, insertRequestCancelInfos, nil, nil, insertTransTasks, insertTimerTasks, nil,
-		false, updatedInfo, updatedStats, nil, nil, nil, info0.RunID, -1000)
+	err = s.ResetWorkflowExecution(
+		3,
+		insertInfo,
+		insertStats,
+		insertActivityInfos,
+		insertTimerInfos,
+		nil,
+		insertRequestCancelInfos,
+		nil,
+		nil,
+		insertTransTasks,
+		insertTimerTasks,
+		nil,
+		false,
+		updatedInfo,
+		updatedStats,
+		nil,
+		nil,
+		info0.RunID,
+		-1000,
+	)
 	s.Nil(err)
 
 	//////////////////////////////

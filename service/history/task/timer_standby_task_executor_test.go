@@ -38,8 +38,8 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -59,10 +59,10 @@ type (
 		mockEngine             *engine.MockEngine
 		mockDomainCache        *cache.MockDomainCache
 		mockClusterMetadata    *cluster.MockMetadata
-		mockNDCHistoryResender *xdc.MockNDCHistoryResender
+		mockNDCHistoryResender *ndc.MockNDCHistoryResender
 
 		mockExecutionMgr        *mocks.ExecutionManager
-		mockHistoryRereplicator *xdc.MockHistoryRereplicator
+		mockHistoryRereplicator *ndc.MockHistoryRereplicator
 
 		logger               log.Logger
 		domainID             string
@@ -103,7 +103,7 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 
-	s.mockHistoryRereplicator = &xdc.MockHistoryRereplicator{}
+	s.mockHistoryRereplicator = &ndc.MockHistoryRereplicator{}
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,

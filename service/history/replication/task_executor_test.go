@@ -41,8 +41,8 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -64,8 +64,8 @@ type (
 		adminClient         *adminservicetest.MockClient
 		clusterMetadata     *cluster.MockMetadata
 		executionManager    *mocks.ExecutionManager
-		nDCHistoryResender  *xdc.MockNDCHistoryResender
-		historyRereplicator *xdc.MockHistoryRereplicator
+		nDCHistoryResender  *ndc.MockNDCHistoryResender
+		historyRereplicator *ndc.MockHistoryRereplicator
 
 		taskHandler *taskExecutorImpl
 	}
@@ -107,8 +107,8 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
 	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
-	s.nDCHistoryResender = xdc.NewMockNDCHistoryResender(s.controller)
-	s.historyRereplicator = &xdc.MockHistoryRereplicator{}
+	s.nDCHistoryResender = ndc.NewMockNDCHistoryResender(s.controller)
+	s.historyRereplicator = &ndc.MockHistoryRereplicator{}
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 

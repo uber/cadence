@@ -41,8 +41,8 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -61,7 +61,7 @@ type (
 		mockShard              *shard.TestContext
 		mockDomainCache        *cache.MockDomainCache
 		mockClusterMetadata    *cluster.MockMetadata
-		mockNDCHistoryResender *xdc.MockNDCHistoryResender
+		mockNDCHistoryResender *ndc.MockNDCHistoryResender
 		mockMatchingClient     *matchingservicetest.MockClient
 
 		mockVisibilityMgr       *mocks.VisibilityManager
@@ -69,7 +69,7 @@ type (
 		mockArchivalClient      *warchiver.ClientMock
 		mockArchivalMetadata    *archiver.MockArchivalMetadata
 		mockArchiverProvider    *provider.MockArchiverProvider
-		mockHistoryRereplicator *xdc.MockHistoryRereplicator
+		mockHistoryRereplicator *ndc.MockHistoryRereplicator
 
 		logger               log.Logger
 		domainID             string
@@ -108,7 +108,7 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2
 
 	s.controller = gomock.NewController(s.T())
-	s.mockNDCHistoryResender = xdc.NewMockNDCHistoryResender(s.controller)
+	s.mockNDCHistoryResender = ndc.NewMockNDCHistoryResender(s.controller)
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
@@ -127,7 +127,7 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	))
 	s.mockShard.Resource.TimeSource = s.timeSource
 
-	s.mockHistoryRereplicator = &xdc.MockHistoryRereplicator{}
+	s.mockHistoryRereplicator = &ndc.MockHistoryRereplicator{}
 	s.mockMatchingClient = s.mockShard.Resource.MatchingClient
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockVisibilityMgr = s.mockShard.Resource.VisibilityMgr
