@@ -24,6 +24,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"runtime"
+
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/environment"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
@@ -111,4 +116,36 @@ func registerTLSConfig(cfg *config.SQL) error {
 		return nil
 	}
 	return errTLSNotImplemented
+}
+
+const (
+	testSchemaDir = "schema/postgres"
+)
+
+// GetTestClusterOption return test options
+func GetTestClusterOption() *pt.TestBaseOptions {
+	testUser := "postgres"
+	testPassword := "cadence"
+
+	if runtime.GOOS == "darwin" {
+		testUser = os.Getenv("USER")
+		testPassword = ""
+	}
+
+	if os.Getenv("POSTGRES_USER") != "" {
+		testUser = os.Getenv("POSTGRES_USER")
+	}
+
+	if os.Getenv("POSTGRES_PASSWORD") != "" {
+		testUser = os.Getenv("POSTGRES_PASSWORD")
+	}
+
+	return &pt.TestBaseOptions{
+		SQLDBPluginName: PluginName,
+		DBUsername:      testUser,
+		DBPassword:      testPassword,
+		DBHost:          environment.GetPostgresAddress(),
+		DBPort:          environment.GetPostgresPort(),
+		SchemaDir:       testSchemaDir,
+	}
 }
