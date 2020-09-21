@@ -8,7 +8,7 @@ permalink: /docs/about
 
 If you have a question, check whether it is already answered at stackoverflow under [cadence-workflow](https://stackoverflow.com/questions/tagged/cadence-workflow) tag.
 
-If you still need help, visit [Cadence Slack Workspace](https://join.slack.com/t/uber-cadence/shared_invite/zt-dvjoiacm-1U2UM4R4mMxKhaRogEx_OQ).
+If you still need help, visit <slack-link />.
 
 If you have a feature request or a bug to report file an issue against one of the Cadence github repositories:
 
