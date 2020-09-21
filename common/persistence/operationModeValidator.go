@@ -186,20 +186,54 @@ func ValidateConflictResolveWorkflowModeState(
 	switch mode {
 	case ConflictResolveWorkflowModeUpdateCurrent:
 		// update current record
-		// 1. current workflow & reset workflow ->
+		// 1. reset workflow only ->
+		//  reset workflow cannot be zombie
+		// 2. reset workflow & new workflow ->
+		//  reset workflow cannot be created / running / zombie,
+		//  new workflow cannot be zombie / completed
+		// 3. current workflow & reset workflow ->
 		//  current workflow cannot be created / running,
 		//  reset workflow cannot be zombie
-		// 2. current workflow & reset workflow & new workflow ->
+		// 4. current workflow & reset workflow & new workflow ->
 		//  current workflow cannot be created / running,
 		//  reset workflow cannot be created / running / zombie,
 		//  new workflow cannot be zombie / completed
 
+		// TODO remove case 1 & 2 support once 2DC is deprecated
 		// it is ok that currentWorkflowMutation is null, only for 2 DC case
 		// NDC should always require current workflow for CAS
 		// Note: current workflow mutation can be in zombie state, for the update
 
 		// case 1 & 2
-		// case 1
+		if currentWorkflowState == nil {
+			// case 1
+			if newWorkflowState == nil {
+				if resetWorkflowState == WorkflowStateZombie {
+					return newInvalidConflictResolveWorkflowMode(
+						mode,
+						resetWorkflowState,
+					)
+				}
+				return nil
+			}
+
+			// case 2
+			if resetWorkflowState == WorkflowStateCreated ||
+				resetWorkflowState == WorkflowStateRunning ||
+				resetWorkflowState == WorkflowStateZombie ||
+				*newWorkflowState == WorkflowStateZombie ||
+				*newWorkflowState == WorkflowStateCompleted {
+				return newInvalidConflictResolveWorkflowWithNewMode(
+					mode,
+					resetWorkflowState,
+					*newWorkflowState,
+				)
+			}
+			return nil
+		}
+
+		// case 3 & 4
+		// case 3
 		if newWorkflowState == nil {
 			if *currentWorkflowState == WorkflowStateCreated ||
 				*currentWorkflowState == WorkflowStateRunning ||
@@ -213,7 +247,7 @@ func ValidateConflictResolveWorkflowModeState(
 			return nil
 		}
 
-		// case 2
+		// case 4
 		if *currentWorkflowState == WorkflowStateCreated ||
 			*currentWorkflowState == WorkflowStateRunning ||
 			resetWorkflowState == WorkflowStateCreated ||
