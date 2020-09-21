@@ -178,7 +178,7 @@ services:
       - "7935:7935"
       - "7939:7939"
     environment:
-      - "POSTGRES_SEEDS=mysql"
+      - "POSTGRES_SEEDS=postgres"
       - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
