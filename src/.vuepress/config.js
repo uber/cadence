@@ -1,3 +1,5 @@
+const { slackUrl } = require('./constants');
+
 module.exports = {
   lang: 'en-US',
   title: 'Cadence',
@@ -49,7 +51,7 @@ module.exports = {
       {
         text: 'Community',
         items: [
-          { text: 'Slack', link: 'https://join.slack.com/t/uber-cadence/shared_invite/zt-dvjoiacm-1U2UM4R4mMxKhaRogEx_OQ' },
+          { text: 'Slack', link: slackUrl },
           { text: 'StackOverflow', link: 'https://stackoverflow.com/questions/tagged/cadence-workflow' },
         ],
       },
