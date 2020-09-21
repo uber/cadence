@@ -262,6 +262,25 @@ func NewMutableStateBuilderWithEventV2(
 	return msBuilder
 }
 
+// NewMutableStateBuilderWithVersionHistoriesWithEventV2 is used only in test
+func NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+	shard shard.Context,
+	logger log.Logger,
+	version int64,
+	runID string,
+	domainEntry *cache.DomainCacheEntry,
+) MutableState {
+
+	msBuilder := NewMutableStateBuilderWithVersionHistories(shard, logger, domainEntry)
+	err := msBuilder.UpdateCurrentVersion(version, false)
+	if err != nil {
+		logger.Error("update current version error", tag.Error(err))
+	}
+	_ = msBuilder.SetHistoryTree(runID)
+
+	return msBuilder
+}
+
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
@@ -2218,7 +2237,9 @@ func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(
 	}
 
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
-		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		e.logger.Warn(
+			mutableStateInvalidHistoryActionMsg,
+			opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),

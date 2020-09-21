@@ -61,15 +61,14 @@ type (
 		mockShard              *shard.TestContext
 		mockDomainCache        *cache.MockDomainCache
 		mockClusterMetadata    *cluster.MockMetadata
-		mockNDCHistoryResender *ndc.MockNDCHistoryResender
+		mockNDCHistoryResender *ndc.MockHistoryResender
 		mockMatchingClient     *matchingservicetest.MockClient
 
-		mockVisibilityMgr       *mocks.VisibilityManager
-		mockExecutionMgr        *mocks.ExecutionManager
-		mockArchivalClient      *warchiver.ClientMock
-		mockArchivalMetadata    *archiver.MockArchivalMetadata
-		mockArchiverProvider    *provider.MockArchiverProvider
-		mockHistoryRereplicator *ndc.MockHistoryRereplicator
+		mockVisibilityMgr    *mocks.VisibilityManager
+		mockExecutionMgr     *mocks.ExecutionManager
+		mockArchivalClient   *warchiver.ClientMock
+		mockArchivalMetadata *archiver.MockArchivalMetadata
+		mockArchiverProvider *provider.MockArchiverProvider
 
 		logger               log.Logger
 		domainID             string
@@ -108,7 +107,7 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2
 
 	s.controller = gomock.NewController(s.T())
-	s.mockNDCHistoryResender = ndc.NewMockNDCHistoryResender(s.controller)
+	s.mockNDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
@@ -127,7 +126,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	))
 	s.mockShard.Resource.TimeSource = s.timeSource
 
-	s.mockHistoryRereplicator = &ndc.MockHistoryRereplicator{}
 	s.mockMatchingClient = s.mockShard.Resource.MatchingClient
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockVisibilityMgr = s.mockShard.Resource.VisibilityMgr
@@ -155,7 +153,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 		s.mockShard,
 		s.mockArchivalClient,
 		execution.NewCache(s.mockShard),
-		s.mockHistoryRereplicator,
 		s.mockNDCHistoryResender,
 		s.logger,
 		s.mockShard.GetMetricsClient(),
@@ -167,7 +164,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 func (s *transferStandbyTaskExecutorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
-	s.mockHistoryRereplicator.AssertExpectations(s.T())
 	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
@@ -180,7 +176,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -241,7 +237,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending_PushT
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -304,7 +300,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -367,7 +363,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -421,7 +417,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Pending_PushT
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -477,7 +473,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Success_First
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -534,7 +530,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Success_NonFi
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -596,7 +592,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCloseExecution() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -662,7 +658,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -690,7 +686,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 
 	taskID := int64(59)
 	event, _ = test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId())
-	nextEventID := event.GetEventId() + 1
 
 	now := time.Now()
 	transferTask := &persistence.TransferTaskInfo{
@@ -716,11 +711,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 	s.Equal(ErrTaskRedispatch, err)
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
-	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
-		transferTask.DomainID, transferTask.WorkflowID,
-		transferTask.RunID, nextEventID,
-		transferTask.RunID, common.EndEventID,
-	).Return(nil).Once()
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
 	s.Equal(ErrTaskRedispatch, err)
 
@@ -743,7 +733,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Success() 
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -771,6 +761,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Success() 
 
 	taskID := int64(59)
 	event, _ = test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId())
+	mutableState.FlushBufferedEvents()
 
 	now := time.Now()
 	transferTask := &persistence.TransferTaskInfo{
@@ -813,7 +804,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 	}
 	signalName := "some random signal name"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -842,7 +833,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 	taskID := int64(59)
 	event, _ = test.AddRequestSignalInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
 		constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId(), signalName, nil, nil)
-	nextEventID := event.GetEventId() + 1
 
 	now := time.Now()
 	transferTask := &persistence.TransferTaskInfo{
@@ -868,11 +858,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 	s.Equal(ErrTaskRedispatch, err)
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
-	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
-		transferTask.DomainID, transferTask.WorkflowID,
-		transferTask.RunID, nextEventID,
-		transferTask.RunID, common.EndEventID,
-	).Return(nil).Once()
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
 	s.Equal(ErrTaskRedispatch, err)
 
@@ -896,7 +881,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Success() 
 	}
 	signalName := "some random signal name"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -965,7 +950,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -994,7 +979,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 	taskID := int64(59)
 	event, _ = test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
 		constants.TestChildDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
-	nextEventID := event.GetEventId() + 1
 
 	now := time.Now()
 	transferTask := &persistence.TransferTaskInfo{
@@ -1020,11 +1004,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 	s.Equal(ErrTaskRedispatch, err)
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
-	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
-		transferTask.DomainID, transferTask.WorkflowID,
-		transferTask.RunID, nextEventID,
-		transferTask.RunID, common.EndEventID,
-	).Return(nil).Once()
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
 	s.Equal(ErrTaskRedispatch, err)
 
@@ -1046,7 +1025,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Succes
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1112,7 +1091,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1181,7 +1160,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1247,9 +1226,7 @@ func (s *transferStandbyTaskExecutorSuite) createPersistenceMutableState(
 	lastEventVersion int64,
 ) *persistence.WorkflowMutableState {
 
-	if ms.GetReplicationState() != nil {
-		ms.UpdateReplicationStateLastEventID(lastEventVersion, lastEventID)
-	} else if ms.GetVersionHistories() != nil {
+	if ms.GetVersionHistories() != nil {
 		currentVersionHistory, err := ms.GetVersionHistories().GetCurrentVersionHistory()
 		s.NoError(err)
 		err = currentVersionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(
