@@ -3945,7 +3945,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	resetReplicationState := &p.ReplicationState{
 		CurrentVersion:      int64(8789),
 		StartVersion:        int64(8780),
-		LastWriteVersion:    int64(8912),
+		LastWriteVersion:    int64(-24),
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
 	}
 
@@ -4104,7 +4104,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	newWorkflowExecutionState := &p.ReplicationState{
 		CurrentVersion:      int64(8989),
 		StartVersion:        int64(8980),
-		LastWriteVersion:    int64(8912),
+		LastWriteVersion:    int64(-24),
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
 	}
 
@@ -4247,7 +4247,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	resetReplicationState := &p.ReplicationState{
 		CurrentVersion:      int64(8789),
 		StartVersion:        int64(8780),
-		LastWriteVersion:    int64(8912),
+		LastWriteVersion:    int64(-24),
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
 	}
 
@@ -4356,7 +4356,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	newWorkflowExecutionState := &p.ReplicationState{
 		CurrentVersion:      int64(8989),
 		StartVersion:        int64(8980),
-		LastWriteVersion:    int64(8912),
+		LastWriteVersion:    int64(-24),
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
 	}
 

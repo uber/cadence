@@ -885,7 +885,6 @@ func createReplicationTasks(
 		version := common.EmptyVersion //nolint:ineffassign
 		activityScheduleID := common.EmptyEventID
 		var branchToken, newRunBranchToken []byte
-		resetWorkflow := false
 
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
@@ -926,7 +925,6 @@ func createReplicationTasks(
 			activityScheduleID,
 			p.EventStoreVersion,
 			branchToken,
-			resetWorkflow,
 			p.EventStoreVersion,
 			newRunBranchToken,
 			task.GetVisibilityTimestamp().UnixNano(),
