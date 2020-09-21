@@ -21,6 +21,7 @@
 package shard
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -1111,7 +1112,7 @@ func (s *contextImpl) renewRangeLocked(isStealing bool) error {
 	var attempt int32
 Retry_Loop:
 	for attempt = 0; attempt < conditionalRetryCount; attempt++ {
-		err = s.GetShardManager().UpdateShard(&persistence.UpdateShardRequest{
+		err = s.GetShardManager().UpdateShard(context.TODO(), &persistence.UpdateShardRequest{
 			ShardInfo:       updatedShardInfo,
 			PreviousRangeID: s.shardInfo.RangeID})
 		switch err.(type) {
@@ -1192,7 +1193,7 @@ func (s *contextImpl) persistShardInfoLocked(
 	updatedShardInfo := copyShardInfo(s.shardInfo)
 	s.emitShardInfoMetricsLogsLocked()
 
-	err = s.GetShardManager().UpdateShard(&persistence.UpdateShardRequest{
+	err = s.GetShardManager().UpdateShard(context.TODO(), &persistence.UpdateShardRequest{
 		ShardInfo:       updatedShardInfo,
 		PreviousRangeID: s.shardInfo.RangeID,
 	})
@@ -1541,7 +1542,7 @@ func acquireShard(
 	}
 
 	getShard := func() error {
-		resp, err := shardItem.GetShardManager().GetShard(&persistence.GetShardRequest{
+		resp, err := shardItem.GetShardManager().GetShard(context.TODO(), &persistence.GetShardRequest{
 			ShardID: shardItem.shardID,
 		})
 		if err == nil {
@@ -1558,7 +1559,7 @@ func acquireShard(
 			RangeID:          0,
 			TransferAckLevel: 0,
 		}
-		return shardItem.GetShardManager().CreateShard(&persistence.CreateShardRequest{ShardInfo: shardInfo})
+		return shardItem.GetShardManager().CreateShard(context.TODO(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
 	}
 
 	err := backoff.Retry(getShard, retryPolicy, retryPredicate)

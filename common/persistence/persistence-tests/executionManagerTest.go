@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -53,11 +54,15 @@ type (
 	}
 )
 
-var testWorkflowChecksum = checksum.Checksum{
-	Version: 22,
-	Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
-	Value:   []byte("test-checksum"),
-}
+var (
+	testContextTimeout = 5 * time.Second
+
+	testWorkflowChecksum = checksum.Checksum{
+		Version: 22,
+		Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+		Value:   []byte("test-checksum"),
+	}
+)
 
 // SetupSuite implementation
 func (s *ExecutionManagerSuite) SetupSuite() {
@@ -5222,7 +5227,11 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
-	s.Nil(s.ShardMgr.CreateShard(createRequest))
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.Nil(s.ShardMgr.CreateShard(ctx, createRequest))
 
 	shardInfo.ClusterTransferAckLevel = map[string]int64{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTransferAck,
@@ -5230,7 +5239,7 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	shardInfo.ClusterTimerAckLevel = map[string]time.Time{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTimerAck,
 	}
-	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(ctx, &p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
@@ -5295,8 +5304,12 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
-	s.Nil(s.ShardMgr.CreateShard(createRequest))
-	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.Nil(s.ShardMgr.CreateShard(ctx, createRequest))
+	resp, err := s.ShardMgr.GetShard(ctx, &p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
@@ -5364,9 +5377,9 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		ShardInfo:       shardInfo,
 		PreviousRangeID: rangeID,
 	}
-	s.Nil(s.ShardMgr.UpdateShard(updateRequest))
+	s.Nil(s.ShardMgr.UpdateShard(ctx, updateRequest))
 
-	resp, err = s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
+	resp, err = s.ShardMgr.GetShard(ctx, &p.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))

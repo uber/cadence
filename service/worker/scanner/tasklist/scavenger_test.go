@@ -21,6 +21,7 @@
 package tasklist
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -179,31 +180,31 @@ func (s *ScavengerTestSuite) runScavenger() {
 }
 
 func (s *ScavengerTestSuite) setupTaskMgrMocks() {
-	s.taskMgr.On("ListTaskList", mock.Anything).Return(
-		func(req *p.ListTaskListRequest) *p.ListTaskListResponse {
+	s.taskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(
+		func(_ context.Context, req *p.ListTaskListRequest) *p.ListTaskListResponse {
 			items, next := s.taskListTable.list(req.PageToken, req.PageSize)
 			return &p.ListTaskListResponse{Items: items, NextPageToken: next}
 		}, nil)
-	s.taskMgr.On("DeleteTaskList", mock.Anything).Return(
-		func(req *p.DeleteTaskListRequest) error {
+	s.taskMgr.On("DeleteTaskList", mock.Anything, mock.Anything).Return(
+		func(_ context.Context, req *p.DeleteTaskListRequest) error {
 			s.taskListTable.delete(req.TaskListName)
 			return nil
 		})
-	s.taskMgr.On("GetTasks", mock.Anything).Return(
-		func(req *p.GetTasksRequest) *p.GetTasksResponse {
+	s.taskMgr.On("GetTasks", mock.Anything, mock.Anything).Return(
+		func(_ context.Context, req *p.GetTasksRequest) *p.GetTasksResponse {
 			result := s.taskTables[req.TaskList].get(req.BatchSize)
 			return &p.GetTasksResponse{Tasks: result}
 		}, nil)
-	s.taskMgr.On("CompleteTasksLessThan", mock.Anything).Return(
-		func(req *p.CompleteTasksLessThanRequest) int {
+	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(
+		func(_ context.Context, req *p.CompleteTasksLessThanRequest) int {
 			return s.taskTables[req.TaskListName].deleteLessThan(req.TaskID, req.Limit)
 		}, nil)
 }
 
 func (s *ScavengerTestSuite) setupTaskMgrMocksWithErrors() {
-	s.taskMgr.On("ListTaskList", mock.Anything).Return(nil, errTest).Once()
-	s.taskMgr.On("GetTasks", mock.Anything).Return(nil, errTest).Once()
-	s.taskMgr.On("CompleteTasksLessThan", mock.Anything).Return(0, errTest).Once()
-	s.taskMgr.On("DeleteTaskList", mock.Anything).Return(errTest).Once()
+	s.taskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(nil, errTest).Once()
+	s.taskMgr.On("GetTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
+	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(0, errTest).Once()
+	s.taskMgr.On("DeleteTaskList", mock.Anything, mock.Anything).Return(errTest).Once()
 	s.setupTaskMgrMocks()
 }

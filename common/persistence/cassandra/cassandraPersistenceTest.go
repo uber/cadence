@@ -25,12 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/cassandra"
-
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/environment"
