@@ -141,7 +141,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
       - "MYSQL_SEEDS=mysql"
-      - "sqlPluginName=postgres"
+      - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"

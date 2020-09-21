@@ -179,7 +179,7 @@ services:
       - "7939:7939"
     environment:
       - "MYSQL_SEEDS=mysql"
-      - "sqlPluginName=postgres"
+      - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
