@@ -135,6 +135,33 @@ services:
         aliases:
           - integration-test
 
+  integration-test-postgres:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    environment:
+      - "MYSQL_SEEDS=mysql"
+      - "sqlPluginName=postgres"
+      - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
+      - "PERSISTENCE_TYPE=sql"
+      - "TEST_TAG=esintegration"
+      - BUILDKITE_AGENT_ACCESS_TOKEN
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_BUILD_ID
+      - BUILDKITE_BUILD_NUMBER
+    depends_on:
+      - postgres
+      - elasticsearch
+      - kafka
+    volumes:
+      - ../../:/cadence
+      - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
+    networks:
+      services-network:
+        aliases:
+          - integration-test
+
   integration-test-xdc-cassandra:
     build:
       context: ../../

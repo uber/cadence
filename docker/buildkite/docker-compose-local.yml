@@ -162,6 +162,39 @@ services:
         aliases:
           - integration-test
 
+  integration-test-postgres:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    command:
+      - /bin/sh
+      - -e
+      - -c
+      - |
+        make cover_integration_profile
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+    environment:
+      - "MYSQL_SEEDS=mysql"
+      - "sqlPluginName=postgres"
+      - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
+      - "PERSISTENCE_TYPE=sql"
+      - "TEST_TAG=esintegration"
+    depends_on:
+      - postgres
+      - elasticsearch
+      - kafka
+    volumes:
+      - ../../:/cadence
+    networks:
+      services-network:
+        aliases:
+          - integration-test
+
   integration-test-v2:
     build:
       context: ../../
