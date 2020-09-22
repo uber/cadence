@@ -68,7 +68,6 @@ require (
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/tools v0.0.0-20200917221617-d56e4e40bc9d
