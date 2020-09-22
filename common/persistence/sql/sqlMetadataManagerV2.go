@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -43,11 +44,15 @@ func newMetadataPersistenceV2(
 	db sqlplugin.DB,
 	currentClusterName string,
 	logger log.Logger,
+	encoder serialization.Encoder,
+	decoder serialization.Decoder,
 ) (persistence.MetadataStore, error) {
 	return &sqlMetadataManagerV2{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			encoder: encoder,
+			decoder: decoder,
 		},
 		activeClusterName: currentClusterName,
 	}, nil
@@ -129,7 +134,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
 
-	blob, err := domainInfoToBlob(domainInfo)
+	blob, err := m.encoder.DomainInfoToBlob(domainInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +216,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 }
 
 func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) (*persistence.InternalGetDomainResponse, error) {
-	domainInfo, err := domainInfoFromBlob(row.Data, row.DataEncoding)
+	domainInfo, err := m.decoder.DomainInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +317,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
 
-	blob, err := domainInfoToBlob(domainInfo)
+	blob, err := m.encoder.DomainInfoToBlob(domainInfo)
 	if err != nil {
 		return err
 	}

@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/persistence/serialization"
 )
 
 const (
@@ -56,6 +57,8 @@ func NewSQLExecutionStore(
 	db sqlplugin.DB,
 	logger log.Logger,
 	shardID int,
+	encoder serialization.Encoder,
+	decoder serialization.Decoder,
 ) (p.ExecutionStore, error) {
 
 	return &sqlExecutionManager{
@@ -63,6 +66,8 @@ func NewSQLExecutionStore(
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			encoder: encoder,
+			decoder: decoder,
 		},
 	}, nil
 }
@@ -236,7 +241,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
-	info, err := workflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
+	info, err := m.decoder.WorkflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -880,7 +885,7 @@ func (m *sqlExecutionManager) GetTransferTasks(
 	}
 	resp := &p.GetTransferTasksResponse{Tasks: make([]*p.TransferTaskInfo, len(rows))}
 	for i, row := range rows {
-		info, err := transferTaskInfoFromBlob(row.Data, row.DataEncoding)
+		info, err := m.decoder.TransferTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -988,7 +993,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 
 	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
 	for i, row := range rows {
-		info, err := replicationTaskInfoFromBlob(row.Data, row.DataEncoding)
+		info, err := m.decoder.ReplicationTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -1232,7 +1237,7 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 
 	resp := &p.GetTimerIndexTasksResponse{Timers: make([]*p.TimerTaskInfo, len(rows))}
 	for i, row := range rows {
-		info, err := timerTaskInfoFromBlob(row.Data, row.DataEncoding)
+		info, err := m.decoder.TimerTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -1309,7 +1314,7 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	request *p.PutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
-	blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+	blob, err := m.encoder.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
 		DomainID:            sqlplugin.MustParseUUID(replicationTask.DomainID),
 		WorkflowID:          &replicationTask.WorkflowID,
 		RunID:               sqlplugin.MustParseUUID(replicationTask.RunID),

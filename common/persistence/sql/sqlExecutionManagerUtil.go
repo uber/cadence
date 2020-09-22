@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -37,6 +38,7 @@ func applyWorkflowMutationTx(
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
+	encoder serialization.Encoder,
 ) error {
 
 	executionInfo := workflowMutation.ExecutionInfo
@@ -79,7 +81,8 @@ func applyWorkflowMutationTx(
 		startVersion,
 		lastWriteVersion,
 		currentVersion,
-		shardID); err != nil {
+		shardID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -93,6 +96,7 @@ func applyWorkflowMutationTx(
 		workflowMutation.TransferTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
+		encoder,
 	); err != nil {
 		return err
 	}
@@ -198,6 +202,7 @@ func applyWorkflowSnapshotTxAsReset(
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
+	encoder serialization.Encoder,
 ) error {
 
 	executionInfo := workflowSnapshot.ExecutionInfo
@@ -240,7 +245,8 @@ func applyWorkflowSnapshotTxAsReset(
 		startVersion,
 		lastWriteVersion,
 		currentVersion,
-		shardID); err != nil {
+		shardID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -254,6 +260,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
+		encoder,
 	); err != nil {
 		return err
 	}
@@ -406,6 +413,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
+	encoder serialization.Encoder,
 ) error {
 
 	executionInfo := workflowSnapshot.ExecutionInfo
@@ -431,7 +439,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		startVersion,
 		lastWriteVersion,
 		currentVersion,
-		shardID); err != nil {
+		shardID,
+		encoder); err != nil {
 		return err
 	}
 
@@ -443,6 +452,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
+		encoder,
 	); err != nil {
 		return err
 	}
@@ -531,6 +541,7 @@ func applyTasks(
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
+	encoder serialization.Encoder,
 ) error {
 
 	if err := createTransferTasks(tx,
@@ -538,7 +549,8 @@ func applyTasks(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create transfer tasks. Error: %v", err),
 		}
@@ -550,6 +562,7 @@ func applyTasks(
 		domainID,
 		workflowID,
 		runID,
+		encoder,
 	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create replication tasks. Error: %v", err),
@@ -561,7 +574,8 @@ func applyTasks(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create timer tasks. Error: %v", err),
 		}
@@ -734,6 +748,7 @@ func createTransferTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	encoder serialization.Encoder,
 ) error {
 
 	if len(transferTasks) == 0 {
@@ -804,7 +819,7 @@ func createTransferTasks(
 		info.Version = common.Int64Ptr(task.GetVersion())
 		info.VisibilityTimestampNanos = common.Int64Ptr(task.GetVisibilityTimestamp().UnixNano())
 
-		blob, err := transferTaskInfoToBlob(info)
+		blob, err := encoder.TransferTaskInfoToBlob(info)
 		if err != nil {
 			return err
 		}
@@ -842,6 +857,7 @@ func createReplicationTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	encoder serialization.Encoder,
 ) error {
 
 	if len(replicationTasks) == 0 {
@@ -893,7 +909,7 @@ func createReplicationTasks(
 			}
 		}
 
-		blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+		blob, err := encoder.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
 			DomainID:                domainID,
 			WorkflowID:              &workflowID,
 			RunID:                   runID,
@@ -949,6 +965,7 @@ func createTimerTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	encoder serialization.Encoder,
 ) error {
 
 	if len(timerTasks) > 0 {
@@ -996,7 +1013,7 @@ func createTimerTasks(
 			info.Version = common.Int64Ptr(task.GetVersion())
 			info.TaskType = common.Int16Ptr(int16(task.GetType()))
 
-			blob, err := timerTaskInfoToBlob(info)
+			blob, err := encoder.TimerTaskInfoToBlob(info)
 			if err != nil {
 				return err
 			}
@@ -1217,6 +1234,7 @@ func buildExecutionRow(
 	lastWriteVersion int64,
 	currentVersion int64,
 	shardID int,
+	encoder serialization.Encoder,
 ) (row *sqlplugin.ExecutionsRow, err error) {
 
 	info := &sqlblobs.WorkflowExecutionInfo{
@@ -1306,7 +1324,7 @@ func buildExecutionRow(
 		info.CancelRequestID = &executionInfo.CancelRequestID
 	}
 
-	blob, err := workflowExecutionInfoToBlob(info)
+	blob, err := encoder.WorkflowExecutionInfoToBlob(info)
 	if err != nil {
 		return nil, err
 	}
@@ -1332,6 +1350,7 @@ func (m *sqlExecutionManager) createExecution(
 	lastWriteVersion int64,
 	currentVersion int64,
 	shardID int,
+	encoder serialization.Encoder,
 ) error {
 
 	// validate workflow state & close status
@@ -1353,6 +1372,7 @@ func (m *sqlExecutionManager) createExecution(
 		lastWriteVersion,
 		currentVersion,
 		shardID,
+		encoder,
 	)
 	if err != nil {
 		return err
@@ -1397,6 +1417,7 @@ func updateExecution(
 	lastWriteVersion int64,
 	currentVersion int64,
 	shardID int,
+	encoder serialization.Encoder,
 ) error {
 
 	// validate workflow state & close status
@@ -1417,6 +1438,7 @@ func updateExecution(
 		lastWriteVersion,
 		currentVersion,
 		shardID,
+		encoder,
 	)
 	if err != nil {
 		return err

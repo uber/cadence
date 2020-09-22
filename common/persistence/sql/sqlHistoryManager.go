@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -41,12 +42,16 @@ type sqlHistoryV2Manager struct {
 func newHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
+	encoder serialization.Encoder,
+	decoder serialization.Decoder,
 ) (p.HistoryStore, error) {
 
 	return &sqlHistoryV2Manager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			encoder: encoder,
+			decoder: decoder,
 		},
 	}, nil
 }
@@ -88,7 +93,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			CreatedTimeNanos: common.TimeNowNanosPtr(),
 		}
 
-		blob, err := historyTreeInfoToBlob(treeInfo)
+		blob, err := m.encoder.HistoryTreeInfoToBlob(treeInfo)
 		if err != nil {
 			return err
 		}
@@ -329,7 +334,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		CreatedTimeNanos: common.TimeNowNanosPtr(),
 	}
 
-	blob, err := historyTreeInfoToBlob(treeInfo)
+	blob, err := m.encoder.HistoryTreeInfoToBlob(treeInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +465,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		return &p.GetHistoryTreeResponse{}, nil
 	}
 	for _, row := range rows {
-		treeInfo, err := historyTreeInfoFromBlob(row.Data, row.DataEncoding)
+		treeInfo, err := m.decoder.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
