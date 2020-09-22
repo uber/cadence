@@ -162,7 +162,7 @@ services:
         aliases:
           - integration-test
 
-  integration-test-xdc-cassandra:
+  integration-test-ndc-cassandra:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -186,9 +186,9 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
-  integration-test-xdc-mysql:
+  integration-test-ndc-mysql:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -213,9 +213,9 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
-  integration-test-xdc-postgres:
+  integration-test-ndc-postgres:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -240,7 +240,7 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
   coverage-report:
     build:

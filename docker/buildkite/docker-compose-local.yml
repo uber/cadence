@@ -226,7 +226,7 @@ services:
         aliases:
           - integration-test
 
-  integration-test-xdc-cassandra:
+  integration-test-ndc-cassandra:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -235,7 +235,7 @@ services:
       - -e
       - -c
       - |
-        make cover_xdc_profile
+        make cover_ndc_profile
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -255,9 +255,9 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
-  integration-test-xdc-mysql:
+  integration-test-ndc-mysql:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -266,7 +266,7 @@ services:
       - -e
       - -c
       - |
-        make cover_xdc_profile
+        make cover_ndc_profile
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -287,7 +287,7 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
 networks:
   services-network:
