@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/pagination"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 )
@@ -48,29 +47,20 @@ type (
 // NewScanner constructs a new scanner
 func NewScanner(
 	shardID int,
-	pr persistence.Retryer,
-	persistencePageSize int,
+	iterator pagination.Iterator,
 	blobstoreClient blobstore.Client,
 	blobstoreFlushThreshold int,
-	invariantCollections []invariant.Collection,
+	manager invariant.Manager,
 	progressReportFn func(),
-	scanType ScanType,
 ) Scanner {
 	id := uuid.New()
 
-	var ivs []invariant.Invariant
-	for _, fn := range scanType.ToInvariants(invariantCollections) {
-		ivs = append(ivs, fn(pr))
-	}
-
-	iterator := scanType.ToIterator()
-
 	return &scanner{
 		shardID:          shardID,
-		itr:              iterator(pr, persistencePageSize),
+		itr:              iterator,
 		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		corruptedWriter:  store.NewBlobstoreWriter(id, store.CorruptedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariant.NewInvariantManager(ivs),
+		invariantManager: manager,
 		progressReportFn: progressReportFn,
 	}
 }
