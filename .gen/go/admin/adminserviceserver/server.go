@@ -81,11 +81,6 @@ type Interface interface {
 		Request *replicator.GetReplicationMessagesRequest,
 	) (*replicator.GetReplicationMessagesResponse, error)
 
-	GetWorkflowExecutionRawHistory(
-		ctx context.Context,
-		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
-	) (*admin.GetWorkflowExecutionRawHistoryResponse, error)
-
 	GetWorkflowExecutionRawHistoryV2(
 		ctx context.Context,
 		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
@@ -243,17 +238,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetWorkflowExecutionRawHistory",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionRawHistory),
-				},
-				Signature:    "GetWorkflowExecutionRawHistory(GetRequest *admin.GetWorkflowExecutionRawHistoryRequest) (*admin.GetWorkflowExecutionRawHistoryResponse)",
-				ThriftModule: admin.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "GetWorkflowExecutionRawHistoryV2",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -354,7 +338,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 19)
+	procedures := make([]transport.Procedure, 0, 18)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -523,25 +507,6 @@ func (h handler) GetReplicationMessages(ctx context.Context, body wire.Value) (t
 
 	hadError := err != nil
 	result, err := admin.AdminService_GetReplicationMessages_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) GetWorkflowExecutionRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args admin.AdminService_GetWorkflowExecutionRawHistory_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.GetWorkflowExecutionRawHistory(ctx, args.GetRequest)
-
-	hadError := err != nil
-	result, err := admin.AdminService_GetWorkflowExecutionRawHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
