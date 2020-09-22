@@ -28,7 +28,6 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 )
@@ -48,28 +47,21 @@ type (
 // NewFixer constructs a new fixer
 func NewFixer(
 	shardID int,
-	pr persistence.Retryer,
+	manager invariant.Manager,
+	iterator store.ScanOutputIterator,
 	blobstoreClient blobstore.Client,
-	keys store.Keys,
 	blobstoreFlushThreshold int,
-	invariantCollections []invariant.Collection,
 	progressReportFn func(),
-	scanType ScanType,
 ) Fixer {
 	id := uuid.New()
 
-	var ivs []invariant.Invariant
-	for _, fn := range scanType.ToInvariants(invariantCollections) {
-		ivs = append(ivs, fn(pr))
-	}
-
 	return &fixer{
 		shardID:          shardID,
-		itr:              store.NewBlobstoreIterator(blobstoreClient, keys, scanType.ToBlobstoreEntity()),
+		itr:              iterator,
 		skippedWriter:    store.NewBlobstoreWriter(id, store.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
 		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
 		fixedWriter:      store.NewBlobstoreWriter(id, store.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
-		invariantManager: invariant.NewInvariantManager(ivs),
+		invariantManager: manager,
 		progressReportFn: progressReportFn,
 	}
 }

@@ -74,6 +74,8 @@ const (
 	FlagExcludeFile                       = "exclude_file"
 	FlagInputSeparator                    = "input_separator"
 	FlagParallism                         = "input_parallism"
+	FlagScanType                          = "scan_type"
+	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"
 	FlagSkipBaseIsNotCurrent              = "skip_base_is_not_current"
 	FlagDryRun                            = "dry_run"

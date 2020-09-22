@@ -120,7 +120,7 @@ func (h *historyExists) Fix(execution interface{}) FixResult {
 	}
 	fixResult = DeleteExecution(&execution, h.pr)
 	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = h.Name()
+	fixResult.InvariantName = h.Name()
 	return *fixResult
 }
 

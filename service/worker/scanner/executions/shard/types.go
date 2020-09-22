@@ -23,24 +23,8 @@
 package shard
 
 import (
-	"github.com/uber/cadence/common/pagination"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/reconciliation/iterator"
 	"github.com/uber/cadence/common/reconciliation/store"
-)
-
-const (
-	// ConcreteExecutionType concrete execution entity
-	ConcreteExecutionType ScanType = iota
-	// CurrentExecutionType current execution entity
-	CurrentExecutionType
-)
-
-type (
-	// ScanType is the enum for representing different entity types to scan
-	ScanType int
 )
 
 // The following are serializable types that represent the reports returns by Scan and Fix.
@@ -130,54 +114,4 @@ type Scanner interface {
 // 4. Producing a FixReport
 type Fixer interface {
 	Fix() FixReport
-}
-
-// ToBlobstoreEntity picks struct depending on scanner type
-func (st ScanType) ToBlobstoreEntity() entity.Entity {
-	switch st {
-	case ConcreteExecutionType:
-		return &entity.ConcreteExecution{}
-	case CurrentExecutionType:
-		return &entity.CurrentExecution{}
-	}
-	panic("unknown scan type")
-}
-
-// ToIterator selects appropriate iterator. It will panic if scan type is unknown
-func (st ScanType) ToIterator() func(retryer persistence.Retryer, pageSize int) pagination.Iterator {
-	switch st {
-	case ConcreteExecutionType:
-		return iterator.ConcreteExecution
-	case CurrentExecutionType:
-		return iterator.CurrentExecution
-	default:
-		panic("unknown scan type")
-	}
-}
-
-// ToInvariants returns list of invariants to be checked
-func (st ScanType) ToInvariants(collections []invariant.Collection) []func(retryer persistence.Retryer) invariant.Invariant {
-	var fns []func(retryer persistence.Retryer) invariant.Invariant
-	switch st {
-	case ConcreteExecutionType:
-		for _, collection := range collections {
-			switch collection {
-			case invariant.CollectionHistory:
-				fns = append(fns, invariant.NewHistoryExists)
-			case invariant.CollectionMutableState:
-				fns = append(fns, invariant.NewOpenCurrentExecution)
-			}
-		}
-		return fns
-	case CurrentExecutionType:
-		for _, collection := range collections {
-			switch collection {
-			case invariant.CollectionMutableState:
-				fns = append(fns, invariant.NewConcreteExecutionExists)
-			}
-		}
-		return fns
-	default:
-		panic("unknown scan type")
-	}
 }

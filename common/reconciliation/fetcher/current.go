@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package iterator
+package fetcher
 
 import (
 	"github.com/uber/cadence/common/pagination"
@@ -28,9 +28,32 @@ import (
 	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
-// CurrentExecution is used to retrieve Concrete executions.
-func CurrentExecution(retryer persistence.Retryer, pageSize int) pagination.Iterator {
+// CurrentExecutionIterator is used to retrieve Concrete executions.
+func CurrentExecutionIterator(retryer persistence.Retryer, pageSize int) pagination.Iterator {
 	return pagination.NewIterator(nil, getCurrentExecution(retryer, pageSize))
+}
+
+// CurrentExecution returns a single execution
+func CurrentExecution(retryer persistence.Retryer, request ExecutionRequest) (entity.Entity, error) {
+	req := persistence.GetCurrentExecutionRequest{
+		DomainID:   request.DomainID,
+		WorkflowID: request.WorkflowID,
+	}
+	e, err := retryer.GetCurrentExecution(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.CurrentExecution{
+		CurrentRunID: e.RunID,
+		Execution: entity.Execution{
+			ShardID:    retryer.GetShardID(),
+			DomainID:   request.DomainID,
+			WorkflowID: request.WorkflowID,
+			RunID:      e.RunID,
+			State:      e.State,
+		},
+	}, nil
 }
 
 func getCurrentExecution(
