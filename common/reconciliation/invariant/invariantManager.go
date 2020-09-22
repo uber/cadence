@@ -60,7 +60,7 @@ func (i *invariantManager) RunChecks(execution interface{}) ManagerCheckResult {
 func (i *invariantManager) RunFixes(execution interface{}) ManagerFixResult {
 	result := ManagerFixResult{
 		FixResultType:            FixResultTypeSkipped,
-		DeterminingInvariantType: nil,
+		DeterminingInvariantName: nil,
 		FixResults:               nil,
 	}
 	for _, iv := range i.invariants {
@@ -69,7 +69,7 @@ func (i *invariantManager) RunFixes(execution interface{}) ManagerFixResult {
 		fixResultType, updated := i.nextFixResultType(result.FixResultType, fixResult.FixResultType)
 		result.FixResultType = fixResultType
 		if updated {
-			result.DeterminingInvariantType = &fixResult.InvariantType
+			result.DeterminingInvariantName = &fixResult.InvariantName
 		}
 	}
 	return result

@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executions"
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 const (
@@ -122,11 +121,11 @@ func (s *Scanner) Start() error {
 	backgroundActivityContext, taskListNames :=
 		s.startExecutionWorkflowWithRetry(context.Background(), executions.ConcreteScannerContextKey, executions.ConcreteFixerContextKey,
 			s.context.cfg.ConcreteExecutionScannerConfig, concreteExecutionsScannerTaskListName, concreteExecutionsFixerTaskListName,
-			concreteExecutionsScannerWFTypeName, concreteExecutionsScannerWFStartOptions, shard.ConcreteExecutionType)
+			concreteExecutionsScannerWFTypeName, concreteExecutionsScannerWFStartOptions, executions.ConcreteExecutionType)
 	backgroundActivityContext, workerTaskListNames :=
 		s.startExecutionWorkflowWithRetry(backgroundActivityContext, executions.CurrentScannerContextKey, executions.CurrentFixerContextKey,
 			s.context.cfg.CurrentExecutionScannerConfig, currentExecutionsScannerTaskListName, currentExecutionsFixerTaskListName,
-			currentExecutionsScannerWFTypeName, currentExecutionsScannerWFStartOptions, shard.CurrentExecutionType)
+			currentExecutionsScannerWFTypeName, currentExecutionsScannerWFStartOptions, executions.CurrentExecutionType)
 	workerTaskListNames = append(workerTaskListNames, taskListNames...)
 
 	workerOpts := worker.Options{
@@ -155,7 +154,7 @@ func (s *Scanner) Start() error {
 
 func (s *Scanner) startExecutionWorkflowWithRetry(parentContext context.Context, scannerContextKey interface{}, fixerContextKey interface{},
 	executionScannerConfig *executions.ScannerWorkflowDynamicConfig, scannerTaskListName string, fixerTaskListName string,
-	executionScannerWFTypeName string, startWorkflowOptions cclient.StartWorkflowOptions, scanType shard.ScanType) (context.Context, []string) {
+	executionScannerWFTypeName string, startWorkflowOptions cclient.StartWorkflowOptions, scanType executions.ScanType) (context.Context, []string) {
 	backgroundActivityContext := context.WithValue(parentContext, scannerContextKey, s.context)
 	if executionScannerConfig.Enabled() {
 		backgroundActivityContext = context.WithValue(backgroundActivityContext, scannerContextKey, executions.ScannerContext{

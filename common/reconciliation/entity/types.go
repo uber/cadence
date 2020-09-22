@@ -115,8 +115,19 @@ func (CurrentExecution) Clone() Entity {
 	return &CurrentExecution{}
 }
 
+// GetShardID returns shard id
+func (ce *ConcreteExecution) GetShardID() int {
+	return ce.Execution.ShardID
+}
+
+// GetShardID returns shard id
+func (curre *CurrentExecution) GetShardID() int {
+	return curre.Execution.ShardID
+}
+
 // Entity allows to deserialize and validate different type of executions
 type Entity interface {
 	Validate() error
 	Clone() Entity
+	GetShardID() int
 }

@@ -118,7 +118,7 @@ func (o *openCurrentExecution) Fix(execution interface{}) FixResult {
 	}
 	fixResult = DeleteExecution(&execution, o.pr)
 	fixResult.CheckResult = *checkResult
-	fixResult.InvariantType = o.Name()
+	fixResult.InvariantName = o.Name()
 	return *fixResult
 }
 

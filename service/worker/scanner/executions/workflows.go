@@ -70,15 +70,15 @@ const (
 )
 
 // ScanTypeScannerContextKeyMap maps execution type to the context key used by scanner
-var ScanTypeScannerContextKeyMap = map[shard.ScanType]interface{}{
-	shard.ConcreteExecutionType: ConcreteScannerContextKey,
-	shard.CurrentExecutionType:  CurrentScannerContextKey,
+var ScanTypeScannerContextKeyMap = map[ScanType]interface{}{
+	ConcreteExecutionType: ConcreteScannerContextKey,
+	CurrentExecutionType:  CurrentScannerContextKey,
 }
 
 // ScanTypeFixerContextKeyMap maps execution type to the context key used by fixer
-var ScanTypeFixerContextKeyMap = map[shard.ScanType]interface{}{
-	shard.ConcreteExecutionType: ConcreteFixerContextKey,
-	shard.CurrentExecutionType:  CurrentFixerContextKey,
+var ScanTypeFixerContextKeyMap = map[ScanType]interface{}{
+	ConcreteExecutionType: ConcreteFixerContextKey,
+	CurrentExecutionType:  CurrentFixerContextKey,
 }
 
 type (
@@ -102,7 +102,7 @@ type (
 	ScannerWorkflowParams struct {
 		Shards                          Shards
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
-		ScanType                        shard.ScanType
+		ScanType                        ScanType
 	}
 
 	// FixerWorkflowParams are the parameters to the fix workflow
@@ -110,7 +110,7 @@ type (
 		ScannerWorkflowWorkflowID     string
 		ScannerWorkflowRunID          string
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
-		ScanType                      shard.ScanType
+		ScanType                      ScanType
 	}
 
 	// Shards identify the shards that should be scanned.
