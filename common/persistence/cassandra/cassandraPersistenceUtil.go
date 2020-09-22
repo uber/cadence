@@ -2326,17 +2326,6 @@ func createReplicationInfo(
 	return info
 }
 
-func createReplicationInfoMap(
-	info *p.ReplicationInfo,
-) map[string]interface{} {
-
-	rInfoMap := make(map[string]interface{})
-	rInfoMap["version"] = info.Version
-	rInfoMap["last_event_id"] = info.LastEventID
-
-	return rInfoMap
-}
-
 func createChecksum(result map[string]interface{}) checksum.Checksum {
 	csum := checksum.Checksum{}
 	if len(result) == 0 {

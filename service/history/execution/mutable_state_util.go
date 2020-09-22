@@ -325,6 +325,10 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 		bufferedEvents = append(bufferedEvents, builder.updateBufferedEvents...)
 	}
 
+	var versionHistories *persistence.VersionHistories
+	if ms.GetVersionHistories() != nil {
+		versionHistories = ms.GetVersionHistories().Duplicate()
+	}
 	return &persistence.WorkflowMutableState{
 		ExecutionInfo:       info,
 		ExecutionStats:      stats,
@@ -334,7 +338,7 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 		SignalInfos:         signalInfos,
 		RequestCancelInfos:  cancellationInfos,
 		ChildExecutionInfos: childInfos,
-		VersionHistories:    ms.GetVersionHistories().Duplicate(),
+		VersionHistories:    versionHistories,
 	}
 }
 
