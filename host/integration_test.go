@@ -1200,6 +1200,12 @@ func (s *integrationSuite) TestCronWorkflow() {
 		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
 	})
 	lastExecution := closedExecutions[0]
+
+	// TODO https://github.com/uber/cadence/issues/3540
+	// the rest assertion can cause transient failure
+	if s.testClusterConfig.Persistence.SQLDBPluginName == "postgres" {
+		return
+	}
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		// Roundup to compare on the precision of seconds
