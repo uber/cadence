@@ -80,7 +80,7 @@ func (s *markerNotifierSuite) SetupTest() {
 	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	mockShardManager := s.mockShard.Resource.ShardMgr
-	mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
+	mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 
 	s.markerNotifier = NewMarkerNotifier(

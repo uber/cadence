@@ -21,16 +21,16 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/uber/cadence/common/cassandra"
 
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
@@ -117,6 +117,7 @@ func convertCommonErrors(
 // AppendHistoryNodes upsert a batch of events as a single node to a history branch
 // Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
 func (h *cassandraHistoryV2Persistence) AppendHistoryNodes(
+	_ context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
 
@@ -161,6 +162,7 @@ func (h *cassandraHistoryV2Persistence) AppendHistoryNodes(
 // ReadHistoryBranch returns history node data for a branch
 // NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
 func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(
+	_ context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
 
@@ -278,6 +280,7 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(
 //       8[8,9]
 //
 func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(
+	_ context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
@@ -338,6 +341,7 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(
 
 // DeleteHistoryBranch removes a branch
 func (h *cassandraHistoryV2Persistence) DeleteHistoryBranch(
+	_ context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
 
@@ -350,7 +354,7 @@ func (h *cassandraHistoryV2Persistence) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
+	rsp, err := h.GetHistoryTree(context.TODO(), &p.GetHistoryTreeRequest{
 		TreeID: treeID,
 	})
 	if err != nil {
@@ -406,6 +410,7 @@ func (h *cassandraHistoryV2Persistence) deleteBranchRangeNodes(
 }
 
 func (h *cassandraHistoryV2Persistence) GetAllHistoryTreeBranches(
+	_ context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 
@@ -451,6 +456,7 @@ func (h *cassandraHistoryV2Persistence) GetAllHistoryTreeBranches(
 
 // GetHistoryTree returns all branch information of a tree
 func (h *cassandraHistoryV2Persistence) GetHistoryTree(
+	_ context.Context,
 	request *p.GetHistoryTreeRequest,
 ) (*p.GetHistoryTreeResponse, error) {
 

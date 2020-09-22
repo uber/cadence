@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pborman/uuid"
@@ -103,7 +104,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(
 		ShardID:        shardID,
 	}
 
-	resp, err := m.persistence.ForkHistoryBranch(req)
+	resp, err := m.persistence.ForkHistoryBranch(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +142,7 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(
 		ShardID:    shardID,
 	}
 
-	return m.persistence.DeleteHistoryBranch(req)
+	return m.persistence.DeleteHistoryBranch(context.TODO(), req)
 }
 
 // GetHistoryTree returns all branch information of a tree
@@ -157,7 +158,7 @@ func (m *historyV2ManagerImpl) GetHistoryTree(
 		}
 		request.TreeID = branch.GetTreeID()
 	}
-	return m.persistence.GetHistoryTree(request)
+	return m.persistence.GetHistoryTree(context.TODO(), request)
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
@@ -227,7 +228,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 		ShardID:       shardID,
 	}
 
-	err = m.persistence.AppendHistoryNodes(req)
+	err = m.persistence.AppendHistoryNodes(context.TODO(), req)
 
 	return &AppendHistoryNodesResponse{
 		Size: size,
@@ -292,7 +293,7 @@ func (m *historyV2ManagerImpl) GetAllHistoryTreeBranches(
 	request *GetAllHistoryTreeBranchesRequest,
 ) (*GetAllHistoryTreeBranchesResponse, error) {
 
-	return m.persistence.GetAllHistoryTreeBranches(request)
+	return m.persistence.GetAllHistoryTreeBranches(context.TODO(), request)
 }
 
 func (m *historyV2ManagerImpl) readRawHistoryBranch(
@@ -387,7 +388,7 @@ func (m *historyV2ManagerImpl) readRawHistoryBranch(
 		PageSize:          pageSize,
 	}
 
-	resp, err := m.persistence.ReadHistoryBranch(req)
+	resp, err := m.persistence.ReadHistoryBranch(context.TODO(), req)
 	if err != nil {
 		return nil, nil, 0, nil, err
 	}

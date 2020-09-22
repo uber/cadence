@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -49,8 +50,11 @@ func newShardPersistence(db sqlplugin.DB, currentClusterName string, log log.Log
 	}, nil
 }
 
-func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) error {
-	if _, err := m.GetShard(&persistence.GetShardRequest{
+func (m *sqlShardManager) CreateShard(
+	_ context.Context,
+	request *persistence.CreateShardRequest,
+) error {
+	if _, err := m.GetShard(context.TODO(), &persistence.GetShardRequest{
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
@@ -74,7 +78,10 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 	return nil
 }
 
-func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persistence.GetShardResponse, error) {
+func (m *sqlShardManager) GetShard(
+	_ context.Context,
+	request *persistence.GetShardRequest,
+) (*persistence.GetShardResponse, error) {
 	row, err := m.db.SelectFromShards(&sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -153,7 +160,10 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 	return resp, nil
 }
 
-func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) error {
+func (m *sqlShardManager) UpdateShard(
+	_ context.Context,
+	request *persistence.UpdateShardRequest,
+) error {
 	row, err := shardInfoToShardsRow(*request.ShardInfo)
 	if err != nil {
 		return &workflow.InternalServiceError{

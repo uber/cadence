@@ -21,6 +21,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -126,6 +127,7 @@ func (q *cassandraQueue) createQueueMetadataEntryIfNotExist() error {
 }
 
 func (q *cassandraQueue) EnqueueMessage(
+	_ context.Context,
 	messagePayload []byte,
 ) error {
 	lastMessageID, err := q.getLastMessageID(q.queueType)
@@ -138,6 +140,7 @@ func (q *cassandraQueue) EnqueueMessage(
 }
 
 func (q *cassandraQueue) EnqueueMessageToDLQ(
+	_ context.Context,
 	messagePayload []byte,
 ) (int64, error) {
 	// Use negative queue type as the dlq type
@@ -201,6 +204,7 @@ func (q *cassandraQueue) getLastMessageID(
 }
 
 func (q *cassandraQueue) ReadMessages(
+	_ context.Context,
 	lastMessageID int64,
 	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
@@ -237,6 +241,7 @@ func (q *cassandraQueue) ReadMessages(
 }
 
 func (q *cassandraQueue) ReadMessagesFromDLQ(
+	_ context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 	pageSize int,
@@ -293,6 +298,7 @@ func getMessageID(
 }
 
 func (q *cassandraQueue) DeleteMessagesBefore(
+	_ context.Context,
 	messageID int64,
 ) error {
 
@@ -306,6 +312,7 @@ func (q *cassandraQueue) DeleteMessagesBefore(
 }
 
 func (q *cassandraQueue) DeleteMessageFromDLQ(
+	_ context.Context,
 	messageID int64,
 ) error {
 
@@ -321,6 +328,7 @@ func (q *cassandraQueue) DeleteMessageFromDLQ(
 }
 
 func (q *cassandraQueue) RangeDeleteMessagesFromDLQ(
+	_ context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
@@ -352,6 +360,7 @@ func (q *cassandraQueue) insertInitialQueueMetadataRecord(
 }
 
 func (q *cassandraQueue) UpdateAckLevel(
+	_ context.Context,
 	messageID int64,
 	clusterName string,
 ) error {
@@ -359,7 +368,9 @@ func (q *cassandraQueue) UpdateAckLevel(
 	return q.updateAckLevel(messageID, clusterName, q.queueType)
 }
 
-func (q *cassandraQueue) GetAckLevels() (map[string]int64, error) {
+func (q *cassandraQueue) GetAckLevels(
+	_ context.Context,
+) (map[string]int64, error) {
 	queueMetadata, err := q.getQueueMetadata(q.queueType)
 	if err != nil {
 		return nil, err
@@ -369,6 +380,7 @@ func (q *cassandraQueue) GetAckLevels() (map[string]int64, error) {
 }
 
 func (q *cassandraQueue) UpdateDLQAckLevel(
+	_ context.Context,
 	messageID int64,
 	clusterName string,
 ) error {
@@ -376,7 +388,9 @@ func (q *cassandraQueue) UpdateDLQAckLevel(
 	return q.updateAckLevel(messageID, clusterName, q.getDLQTypeFromQueueType())
 }
 
-func (q *cassandraQueue) GetDLQAckLevels() (map[string]int64, error) {
+func (q *cassandraQueue) GetDLQAckLevels(
+	_ context.Context,
+) (map[string]int64, error) {
 
 	// Use negative queue type as the dlq type
 	queueMetadata, err := q.getQueueMetadata(q.getDLQTypeFromQueueType())

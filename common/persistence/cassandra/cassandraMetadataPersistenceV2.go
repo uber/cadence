@@ -21,15 +21,14 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/uber/cadence/common/cassandra"
-
-	"github.com/uber/cadence/common"
 
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
@@ -187,7 +186,10 @@ func (m *cassandraMetadataPersistenceV2) Close() {
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
-func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.InternalCreateDomainRequest) (*p.CreateDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) CreateDomain(
+	ctx context.Context,
+	request *p.InternalCreateDomainRequest,
+) (*p.CreateDomainResponse, error) {
 	query := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name)
 	applied, err := query.MapScanCAS(make(map[string]interface{}))
 	if err != nil {
@@ -201,12 +203,15 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.InternalCreateD
 		}
 	}
 
-	return m.CreateDomainInV2Table(request)
+	return m.CreateDomainInV2Table(ctx, request)
 }
 
 // CreateDomainInV2Table is the temporary function used by domain v1 -> v2 migration
-func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.InternalCreateDomainRequest) (*p.CreateDomainResponse, error) {
-	metadata, err := m.GetMetadata()
+func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
+	_ context.Context,
+	request *p.InternalCreateDomainRequest,
+) (*p.CreateDomainResponse, error) {
+	metadata, err := m.GetMetadata(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -279,6 +284,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.Intern
 }
 
 func (m *cassandraMetadataPersistenceV2) UpdateDomain(
+	_ context.Context,
 	request *p.InternalUpdateDomainRequest,
 ) error {
 
@@ -340,7 +346,10 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 	return nil
 }
 
-func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) (*p.InternalGetDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) GetDomain(
+	_ context.Context,
+	request *p.GetDomainRequest,
+) (*p.InternalGetDomainResponse, error) {
 	var query *gocql.Query
 	var err error
 	info := &p.DomainInfo{}
@@ -453,7 +462,10 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	}, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsRequest) (*p.InternalListDomainsResponse, error) {
+func (m *cassandraMetadataPersistenceV2) ListDomains(
+	_ context.Context,
+	request *p.ListDomainsRequest,
+) (*p.InternalListDomainsResponse, error) {
 	var query *gocql.Query
 
 	query = m.session.Query(templateListDomainQueryV2, constDomainPartition)
@@ -540,7 +552,10 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 	return response, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainRequest) error {
+func (m *cassandraMetadataPersistenceV2) DeleteDomain(
+	_ context.Context,
+	request *p.DeleteDomainRequest,
+) error {
 	var name string
 	query := m.session.Query(templateGetDomainQuery, request.ID)
 	err := query.Scan(&name)
@@ -554,7 +569,10 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainReq
 	return m.deleteDomain(name, request.ID)
 }
 
-func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
+func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(
+	_ context.Context,
+	request *p.DeleteDomainByNameRequest,
+) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
 	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -567,7 +585,9 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDom
 	return m.deleteDomain(request.Name, ID)
 }
 
-func (m *cassandraMetadataPersistenceV2) GetMetadata() (*p.GetMetadataResponse, error) {
+func (m *cassandraMetadataPersistenceV2) GetMetadata(
+	_ context.Context,
+) (*p.GetMetadataResponse, error) {
 	var notificationVersion int64
 	query := m.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
 	err := query.Scan(&notificationVersion)
