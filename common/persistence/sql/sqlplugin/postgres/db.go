@@ -21,19 +21,29 @@
 package postgres
 
 import (
+	"database/sql"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
-// db represents a logical connection to mysql database
-type db struct {
-	db        *sqlx.DB
-	tx        *sqlx.Tx
-	conn      sqlplugin.Conn
-	converter DataConverter
-}
+type (
+	conn interface {
+		Exec(query string, args ...interface{}) (sql.Result, error)
+		NamedExec(query string, arg interface{}) (sql.Result, error)
+		Get(dest interface{}, query string, args ...interface{}) error
+		Select(dest interface{}, query string, args ...interface{}) error
+	}
+
+	db struct {
+		db        *sqlx.DB
+		tx        *sqlx.Tx
+		conn      conn
+		converter DataConverter
+	}
+)
 
 var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
@@ -50,13 +60,16 @@ func (pdb *db) IsDupEntryError(err error) bool {
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying postgres database
 func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
-	mdb := &db{db: xdb, tx: tx}
-	mdb.conn = xdb
-	if tx != nil {
-		mdb.conn = tx
+	db := &db{
+		db:        xdb,
+		tx:        tx,
+		converter: &converter{},
+		conn:      xdb,
 	}
-	mdb.converter = &converter{}
-	return mdb
+	if tx != nil {
+		db.conn = tx
+	}
+	return db
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
