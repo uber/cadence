@@ -146,7 +146,6 @@ services:
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
-      - "PERSISTENCE_PLUGIN=postgres"
       - "TEST_TAG=esintegration"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
