@@ -20,19 +20,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package iterator
+package fetcher
 
 import (
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
-// ConcreteExecution is used to retrieve Concrete executions.
-func ConcreteExecution(retryer persistence.Retryer, pageSize int) pagination.Iterator {
+// ConcreteExecutionIterator is used to retrieve Concrete executions.
+func ConcreteExecutionIterator(retryer persistence.Retryer, pageSize int) pagination.Iterator {
 	return pagination.NewIterator(nil, getConcreteExecutions(retryer, pageSize, codec.NewThriftRWEncoder()))
+}
+
+// ConcreteExecution returns a single ConcreteExecution from persistence
+func ConcreteExecution(retryer persistence.Retryer, request ExecutionRequest) (entity.Entity, error) {
+
+	req := persistence.GetWorkflowExecutionRequest{
+		DomainID: request.DomainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(request.WorkflowID),
+			RunId:      common.StringPtr(request.RunID),
+		},
+	}
+	e, err := retryer.GetWorkflowExecution(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	branchToken, branch, err := getBranchToken(e.State.ExecutionInfo.BranchToken, e.State.VersionHistories, codec.NewThriftRWEncoder())
+
+	return &entity.ConcreteExecution{
+		BranchToken: branchToken,
+		TreeID:      branch.GetTreeID(),
+		BranchID:    branch.GetBranchID(),
+		Execution: entity.Execution{
+			ShardID:    retryer.GetShardID(),
+			DomainID:   e.State.ExecutionInfo.DomainID,
+			WorkflowID: e.State.ExecutionInfo.WorkflowID,
+			RunID:      e.State.ExecutionInfo.RunID,
+			State:      e.State.ExecutionInfo.State,
+		},
+	}, nil
 }
 
 func getConcreteExecutions(
@@ -53,14 +85,14 @@ func getConcreteExecutions(
 		}
 		executions := make([]pagination.Entity, len(resp.Executions), len(resp.Executions))
 		for i, e := range resp.Executions {
-			branchToken, treeID, branchID, err := GetBranchToken(e, encoder)
+			branchToken, branch, err := getBranchToken(e.ExecutionInfo.BranchToken, e.VersionHistories, encoder)
 			if err != nil {
 				return pagination.Page{}, err
 			}
 			concreteExec := &entity.ConcreteExecution{
 				BranchToken: branchToken,
-				TreeID:      treeID,
-				BranchID:    branchID,
+				TreeID:      branch.GetTreeID(),
+				BranchID:    branch.GetBranchID(),
 				Execution: entity.Execution{
 					ShardID:    pr.GetShardID(),
 					DomainID:   e.ExecutionInfo.DomainID,
@@ -87,22 +119,25 @@ func getConcreteExecutions(
 	}
 }
 
-// GetBranchToken returns the branchToken, treeID and branchID or error on failure.
-func GetBranchToken(
-	entity *persistence.ListConcreteExecutionsEntity,
+// getBranchToken returns the branchToken and historyBranch, error on failure.
+func getBranchToken(
+	branchToken []byte,
+	histories *persistence.VersionHistories,
 	decoder *codec.ThriftRWEncoder,
-) ([]byte, string, string, error) {
-	branchToken := entity.ExecutionInfo.BranchToken
-	if entity.VersionHistories != nil {
-		versionHistory, err := entity.VersionHistories.GetCurrentVersionHistory()
-		if err != nil {
-			return nil, "", "", err
-		}
-		branchToken = versionHistory.GetBranchToken()
-	}
+) ([]byte, shared.HistoryBranch, error) {
 	var branch shared.HistoryBranch
-	if err := decoder.Decode(branchToken, &branch); err != nil {
-		return nil, "", "", err
+	bt := branchToken
+	if histories != nil {
+		versionHistory, err := histories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, branch, err
+		}
+		bt = versionHistory.GetBranchToken()
 	}
-	return branchToken, branch.GetTreeID(), branch.GetBranchID(), nil
+
+	if err := decoder.Decode(bt, &branch); err != nil {
+		return nil, branch, err
+	}
+
+	return bt, branch, nil
 }

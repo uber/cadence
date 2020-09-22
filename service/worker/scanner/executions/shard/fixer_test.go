@@ -348,14 +348,14 @@ func (s *FixerSuite) TestFix_Success() {
 		FixResults: []invariant.FixResult{
 			{
 				FixResultType: invariant.FixResultTypeSkipped,
-				InvariantType: invariant.HistoryExists,
+				InvariantName: invariant.HistoryExists,
 			},
 			{
 				FixResultType: invariant.FixResultTypeSkipped,
 			},
 			{
 				FixResultType: invariant.FixResultTypeSkipped,
-				InvariantType: invariant.OpenCurrentExecution,
+				InvariantName: invariant.OpenCurrentExecution,
 			},
 		},
 	}).Times(4)
@@ -366,7 +366,7 @@ func (s *FixerSuite) TestFix_Success() {
 		FixResults: []invariant.FixResult{
 			{
 				FixResultType: invariant.FixResultTypeFixed,
-				InvariantType: invariant.HistoryExists,
+				InvariantName: invariant.HistoryExists,
 				Info:          "history did not exist",
 			},
 		},
@@ -378,7 +378,7 @@ func (s *FixerSuite) TestFix_Success() {
 		FixResults: []invariant.FixResult{
 			{
 				FixResultType: invariant.FixResultTypeSkipped,
-				InvariantType: invariant.HistoryExists,
+				InvariantName: invariant.HistoryExists,
 			},
 			{
 				FixResultType: invariant.FixResultTypeFixed,
@@ -394,14 +394,14 @@ func (s *FixerSuite) TestFix_Success() {
 		FixResults: []invariant.FixResult{
 			{
 				FixResultType: invariant.FixResultTypeSkipped,
-				InvariantType: invariant.HistoryExists,
+				InvariantName: invariant.HistoryExists,
 			},
 			{
 				FixResultType: invariant.FixResultTypeSkipped,
 			},
 			{
 				FixResultType: invariant.FixResultTypeFixed,
-				InvariantType: invariant.OpenCurrentExecution,
+				InvariantName: invariant.OpenCurrentExecution,
 				Info:          "execution was orphan",
 			},
 		},
@@ -413,7 +413,7 @@ func (s *FixerSuite) TestFix_Success() {
 		FixResults: []invariant.FixResult{
 			{
 				FixResultType: invariant.FixResultTypeFailed,
-				InvariantType: invariant.HistoryExists,
+				InvariantName: invariant.HistoryExists,
 				Info:          "failed to check if history exists",
 			},
 		},
@@ -434,7 +434,7 @@ func (s *FixerSuite) TestFix_Success() {
 			FixResults: []invariant.FixResult{
 				{
 					FixResultType: invariant.FixResultTypeFixed,
-					InvariantType: invariant.HistoryExists,
+					InvariantName: invariant.HistoryExists,
 					Info:          "history did not exist",
 				},
 			},
@@ -454,7 +454,7 @@ func (s *FixerSuite) TestFix_Success() {
 			FixResults: []invariant.FixResult{
 				{
 					FixResultType: invariant.FixResultTypeSkipped,
-					InvariantType: invariant.HistoryExists,
+					InvariantName: invariant.HistoryExists,
 				},
 				{
 					FixResultType: invariant.FixResultTypeFixed,
@@ -477,14 +477,14 @@ func (s *FixerSuite) TestFix_Success() {
 			FixResults: []invariant.FixResult{
 				{
 					FixResultType: invariant.FixResultTypeSkipped,
-					InvariantType: invariant.HistoryExists,
+					InvariantName: invariant.HistoryExists,
 				},
 				{
 					FixResultType: invariant.FixResultTypeSkipped,
 				},
 				{
 					FixResultType: invariant.FixResultTypeFixed,
-					InvariantType: invariant.OpenCurrentExecution,
+					InvariantName: invariant.OpenCurrentExecution,
 					Info:          "execution was orphan",
 				},
 			},
@@ -505,7 +505,7 @@ func (s *FixerSuite) TestFix_Success() {
 			FixResults: []invariant.FixResult{
 				{
 					FixResultType: invariant.FixResultTypeFailed,
-					InvariantType: invariant.HistoryExists,
+					InvariantName: invariant.HistoryExists,
 					Info:          "failed to check if history exists",
 				},
 			},
@@ -526,14 +526,14 @@ func (s *FixerSuite) TestFix_Success() {
 			FixResults: []invariant.FixResult{
 				{
 					FixResultType: invariant.FixResultTypeSkipped,
-					InvariantType: invariant.HistoryExists,
+					InvariantName: invariant.HistoryExists,
 				},
 				{
 					FixResultType: invariant.FixResultTypeSkipped,
 				},
 				{
 					FixResultType: invariant.FixResultTypeSkipped,
-					InvariantType: invariant.OpenCurrentExecution,
+					InvariantName: invariant.OpenCurrentExecution,
 				},
 			},
 		},
