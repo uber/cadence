@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -48,8 +49,8 @@ func newHistoryV2Persistence(
 
 	return &sqlHistoryV2Manager{
 		sqlStore: sqlStore{
-			db:     db,
-			logger: logger,
+			db:      db,
+			logger:  logger,
 			encoder: encoder,
 			decoder: decoder,
 		},

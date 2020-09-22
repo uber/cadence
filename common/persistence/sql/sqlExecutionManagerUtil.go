@@ -24,8 +24,9 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/serialization"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -107,7 +108,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -119,7 +121,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -131,7 +134,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -143,7 +147,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -155,7 +160,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -281,7 +287,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -303,7 +310,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
@@ -325,7 +333,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -347,7 +356,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
@@ -369,7 +379,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}
@@ -463,7 +474,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -475,7 +487,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
@@ -487,7 +500,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -499,7 +513,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
@@ -511,7 +526,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		encoder); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}

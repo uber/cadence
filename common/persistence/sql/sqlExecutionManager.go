@@ -36,8 +36,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/persistence/serialization"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 const (
@@ -64,8 +64,8 @@ func NewSQLExecutionStore(
 	return &sqlExecutionManager{
 		shardID: shardID,
 		sqlStore: sqlStore{
-			db:     db,
-			logger: logger,
+			db:      db,
+			logger:  logger,
 			encoder: encoder,
 			decoder: decoder,
 		},
@@ -208,7 +208,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 		return nil, err
 	}
 
-	if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, &request.NewWorkflowSnapshot); err != nil {
+	if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, &request.NewWorkflowSnapshot, m.encoder); err != nil {
 		return nil, err
 	}
 
@@ -350,7 +350,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.decoder)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get activity info. Error: %v", err),
@@ -364,7 +365,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.decoder)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get timer info. Error: %v", err),
@@ -378,7 +380,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.decoder)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get child execution info. Error: %v", err),
@@ -392,7 +395,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.decoder)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get request cancel info. Error: %v", err),
@@ -406,7 +410,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.decoder)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get signal info. Error: %v", err),
@@ -543,11 +548,11 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 		}
 	}
 
-	if err := applyWorkflowMutationTx(tx, shardID, &updateWorkflow); err != nil {
+	if err := applyWorkflowMutationTx(tx, shardID, &updateWorkflow, m.encoder); err != nil {
 		return err
 	}
 	if newWorkflow != nil {
-		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow, m.encoder); err != nil {
 			return err
 		}
 	}
@@ -619,7 +624,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 
 	// 3. update or lock current run
 	if request.CurrentWorkflowMutation != nil {
-		if err := applyWorkflowMutationTx(tx, m.shardID, request.CurrentWorkflowMutation); err != nil {
+		if err := applyWorkflowMutationTx(tx, m.shardID, request.CurrentWorkflowMutation, m.encoder); err != nil {
 			return err
 		}
 	} else {
@@ -639,7 +644,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 	}
 
 	// 4. create the new reset workflow
-	return m.applyWorkflowSnapshotTxAsNew(tx, m.shardID, &request.NewWorkflowSnapshot)
+	return m.applyWorkflowSnapshotTxAsNew(tx, m.shardID, &request.NewWorkflowSnapshot, m.encoder)
 }
 
 func (m *sqlExecutionManager) ConflictResolveWorkflowExecution(
@@ -769,16 +774,16 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 		}
 	}
 
-	if err := applyWorkflowSnapshotTxAsReset(tx, shardID, &resetWorkflow); err != nil {
+	if err := applyWorkflowSnapshotTxAsReset(tx, shardID, &resetWorkflow, m.encoder); err != nil {
 		return err
 	}
 	if currentWorkflow != nil {
-		if err := applyWorkflowMutationTx(tx, shardID, currentWorkflow); err != nil {
+		if err := applyWorkflowMutationTx(tx, shardID, currentWorkflow, m.encoder); err != nil {
 			return err
 		}
 	}
 	if newWorkflow != nil {
-		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow, m.encoder); err != nil {
 			return err
 		}
 	}
@@ -1179,6 +1184,7 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 				sqlplugin.MustParseUUID(task.DomainID),
 				emptyWorkflowID,
 				sqlplugin.MustParseUUID(emptyReplicationRunID),
+				m.encoder,
 			); err != nil {
 				rollBackErr := tx.Rollback()
 				if rollBackErr != nil {

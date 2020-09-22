@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -37,6 +39,8 @@ type (
 		dbConn      dbConn
 		clusterName string
 		logger      log.Logger
+		encoder     serialization.Encoder
+		decoder     serialization.Decoder
 	}
 
 	// dbConn represents a logical mysql connection - its a
@@ -52,12 +56,20 @@ type (
 
 // NewFactory returns an instance of a factory object which can be used to create
 // datastores backed by any kind of SQL store
-func NewFactory(cfg config.SQL, clusterName string, logger log.Logger) *Factory {
+func NewFactory(
+	cfg config.SQL,
+	clusterName string,
+	logger log.Logger,
+	encoder serialization.Encoder,
+	decoder serialization.Decoder,
+) *Factory {
 	return &Factory{
 		cfg:         cfg,
 		clusterName: clusterName,
 		logger:      logger,
 		dbConn:      newRefCountedDBConn(&cfg),
+		encoder:     encoder,
+		decoder:     decoder,
 	}
 }
 
@@ -67,7 +79,7 @@ func (f *Factory) NewTaskStore() (p.TaskStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newTaskPersistence(conn, f.cfg.NumShards, f.logger)
+	return newTaskPersistence(conn, f.cfg.NumShards, f.logger, f.encoder, f.decoder)
 }
 
 // NewShardStore returns a new shard store
@@ -76,7 +88,7 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newShardPersistence(conn, f.clusterName, f.logger)
+	return newShardPersistence(conn, f.clusterName, f.logger, f.encoder, f.decoder)
 }
 
 // NewHistoryV2Store returns a new history store
@@ -85,7 +97,7 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryV2Persistence(conn, f.logger)
+	return newHistoryV2Persistence(conn, f.logger, f.encoder, f.decoder)
 }
 
 // NewMetadataStore returns a new metadata store
@@ -94,7 +106,7 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newMetadataPersistenceV2(conn, f.clusterName, f.logger)
+	return newMetadataPersistenceV2(conn, f.clusterName, f.logger, f.encoder, f.decoder)
 }
 
 // NewExecutionStore returns an ExecutionStore for a given shardID
@@ -103,7 +115,7 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewSQLExecutionStore(conn, f.logger, shardID)
+	return NewSQLExecutionStore(conn, f.logger, shardID, f.encoder, f.decoder)
 }
 
 // NewVisibilityStore returns a visibility store

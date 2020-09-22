@@ -23,6 +23,9 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
@@ -297,7 +300,12 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case defaultCfg.Cassandra != nil:
 		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
-		defaultDataStore.factory = sql.NewFactory(*defaultCfg.SQL, clusterName, f.logger)
+		defaultDataStore.factory = sql.NewFactory(
+			*defaultCfg.SQL,
+			clusterName,
+			f.logger,
+			getSQLEncodingType(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType)),
+			serialization.NewDecoder())
 	case defaultCfg.CustomDataStoreConfig != nil:
 		defaultDataStore.factory = f.abstractDataStoreFactory.NewFactory(*defaultCfg.CustomDataStoreConfig, clusterName, f.logger)
 	default:
@@ -316,12 +324,29 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case visibilityCfg.Cassandra != nil:
 		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
-		visibilityDataStore.factory = sql.NewFactory(*visibilityCfg.SQL, clusterName, f.logger)
+		visibilityDataStore.factory = sql.NewFactory(
+			*visibilityCfg.SQL,
+			clusterName,
+			f.logger,
+			getSQLEncodingType(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType)),
+			serialization.NewDecoder())
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
 
 	f.datastores[storeTypeVisibility] = visibilityDataStore
+}
+
+func getSQLEncodingType(logger log.Logger, encodingType common.EncodingType) serialization.Encoder {
+	switch encodingType {
+	case common.EncodingTypeThriftRW:
+		return serialization.NewThriftEncoder()
+	case common.EncodingTypeProto:
+		return serialization.NewProtoEncoder()
+	default:
+		logger.Fatal("invalid config sql config does not contain valid encoding type")
+		return nil
+	}
 }
 
 func buildRatelimiters(cfg *config.Persistence, maxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {

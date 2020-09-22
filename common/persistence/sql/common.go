@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -36,8 +37,8 @@ import (
 
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
-	db     sqlplugin.DB
-	logger log.Logger
+	db      sqlplugin.DB
+	logger  log.Logger
 	encoder serialization.Encoder
 	decoder serialization.Decoder
 }
