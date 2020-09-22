@@ -334,6 +334,7 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 		SignalInfos:         signalInfos,
 		RequestCancelInfos:  cancellationInfos,
 		ChildExecutionInfos: childInfos,
+		VersionHistories:    ms.GetVersionHistories().Duplicate(),
 	}
 }
 

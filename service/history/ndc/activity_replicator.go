@@ -222,6 +222,10 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 ) (bool, error) {
 
 	if mutableState.GetVersionHistories() != nil {
+		if state, _ := mutableState.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCompleted {
+			return false, nil
+		}
+
 		currentVersionHistory, err := mutableState.GetVersionHistories().GetCurrentVersionHistory()
 		if err != nil {
 			return false, err
@@ -282,10 +286,6 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 					nil,
 				)
 			}
-		}
-
-		if state, _ := mutableState.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCompleted {
-			return false, nil
 		}
 	} else {
 		return false, &shared.InternalServiceError{Message: "The workflow version histories is corrupted."}
