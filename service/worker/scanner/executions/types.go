@@ -43,8 +43,10 @@ const (
 type ScanType int
 
 type (
-	IteratorFactory  func(retryer persistence.Retryer, pageSize int) pagination.Iterator
+	//InvariantFactory represents a function which returns Invariant
 	InvariantFactory func(retryer persistence.Retryer) invariant.Invariant
+
+	//ExecutionFetcher represents a function which returns specific execution entity
 	ExecutionFetcher func(retryer persistence.Retryer, request fetcher.ExecutionRequest) (entity.Entity, error)
 )
 
@@ -60,7 +62,7 @@ func (st ScanType) ToBlobstoreEntity() entity.Entity {
 }
 
 // ToIterator selects appropriate iterator. It will panic if scan type is unknown.
-func (st ScanType) ToIterator() IteratorFactory {
+func (st ScanType) ToIterator() func(retryer persistence.Retryer, pageSize int) pagination.Iterator {
 	switch st {
 	case ConcreteExecutionType:
 		return fetcher.ConcreteExecutionIterator
