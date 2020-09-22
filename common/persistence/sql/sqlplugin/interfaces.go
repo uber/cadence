@@ -749,11 +749,4 @@ type (
 		PluginName() string
 		Close() error
 	}
-	// Conn defines the API for a single database connection
-	Conn interface {
-		Exec(query string, args ...interface{}) (sql.Result, error)
-		NamedExec(query string, arg interface{}) (sql.Result, error)
-		Get(dest interface{}, query string, args ...interface{}) error
-		Select(dest interface{}, query string, args ...interface{}) error
-	}
 )
