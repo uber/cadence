@@ -134,7 +134,8 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 // TestGetTasksWithNoMaxReadLevel test
 func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 	if s.TaskMgr.GetName() == "cassandra" {
-		s.T().Skip("this test is not applicable for cassandra persistence")
+		//this test is not applicable for cassandra persistence
+		return
 	}
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
@@ -417,7 +418,8 @@ func (s *MatchingPersistenceSuite) deleteAllTaskList() {
 // TestListWithOneTaskList test
 func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 	if s.TaskMgr.GetName() == "cassandra" {
-		s.T().Skip("ListTaskList API is currently not supported in cassandra")
+		// ListTaskList API is currently not supported in cassandra
+		return
 	}
 	s.deleteAllTaskList()
 
@@ -480,7 +482,8 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 // TestListWithMultipleTaskList test
 func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 	if s.TaskMgr.GetName() == "cassandra" {
-		s.T().Skip("ListTaskList API is currently not supported in cassandra")
+		// ListTaskList API is currently not supported in cassandra"
+		return
 	}
 	s.deleteAllTaskList()
 

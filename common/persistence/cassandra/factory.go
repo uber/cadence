@@ -25,9 +25,9 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
 )
 
