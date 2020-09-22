@@ -196,7 +196,6 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	replicationTask := &replicator.ReplicationTask{
 		TaskType:              replicator.ReplicationTaskTypeHistory.Ptr(),
 		SourceTaskId:          common.Int64Ptr(lastMessageID),
-		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{},
 	}
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).

@@ -196,37 +196,6 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 	s.NoError(err)
 }
 
-func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryReplicationTask() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistory.Ptr(),
-		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			DomainId:     common.StringPtr(domainID),
-			WorkflowId:   common.StringPtr(workflowID),
-			RunId:        common.StringPtr(runID),
-			FirstEventId: common.Int64Ptr(1),
-			NextEventId:  common.Int64Ptr(1),
-		},
-	}
-	request := &persistence.PutReplicationTaskToDLQRequest{
-		SourceClusterName: "standby",
-		TaskInfo: &persistence.ReplicationTaskInfo{
-			DomainID:            domainID,
-			WorkflowID:          workflowID,
-			RunID:               runID,
-			TaskType:            persistence.ReplicationTaskTypeHistory,
-			LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
-			FirstEventID:        int64(1),
-			NextEventID:         int64(2),
-		},
-	}
-	s.executionManager.On("PutReplicationTaskToDLQ", request).Return(nil)
-	err := s.taskProcessor.putReplicationTaskToDLQ(task)
-	s.NoError(err)
-}
-
 func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
@@ -292,33 +261,6 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 				EncodingType: shared.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
 			},
-		},
-	}
-	request, err := s.taskProcessor.generateDLQRequest(task)
-	s.NoError(err)
-	s.Equal("standby", request.SourceClusterName)
-	s.Equal(int64(1), request.TaskInfo.FirstEventID)
-	s.Equal(int64(2), request.TaskInfo.NextEventID)
-	s.Equal(int64(1), request.TaskInfo.GetVersion())
-	s.Equal(domainID, request.TaskInfo.GetDomainID())
-	s.Equal(workflowID, request.TaskInfo.GetWorkflowID())
-	s.Equal(runID, request.TaskInfo.GetRunID())
-	s.Equal(persistence.ReplicationTaskTypeHistory, request.TaskInfo.GetTaskType())
-}
-
-func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistory() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistory.Ptr(),
-		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			DomainId:     common.StringPtr(domainID),
-			WorkflowId:   common.StringPtr(workflowID),
-			RunId:        common.StringPtr(runID),
-			FirstEventId: common.Int64Ptr(1),
-			NextEventId:  common.Int64Ptr(1),
-			Version:      common.Int64Ptr(1),
 		},
 	}
 	request, err := s.taskProcessor.generateDLQRequest(task)

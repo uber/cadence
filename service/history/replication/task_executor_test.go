@@ -64,8 +64,7 @@ type (
 		adminClient         *adminservicetest.MockClient
 		clusterMetadata     *cluster.MockMetadata
 		executionManager    *mocks.ExecutionManager
-		nDCHistoryResender  *ndc.MockNDCHistoryResender
-		historyRereplicator *ndc.MockHistoryRereplicator
+		nDCHistoryResender  *ndc.MockHistoryResender
 
 		taskHandler *taskExecutorImpl
 	}
@@ -107,8 +106,7 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
 	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
-	s.nDCHistoryResender = ndc.NewMockNDCHistoryResender(s.controller)
-	s.historyRereplicator = &ndc.MockHistoryRereplicator{}
+	s.nDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 
@@ -121,7 +119,6 @@ func (s *taskExecutorSuite) SetupTest() {
 		s.mockShard,
 		s.mockDomainCache,
 		s.nDCHistoryResender,
-		s.historyRereplicator,
 		s.mockEngine,
 		metricsClient,
 		s.mockShard.GetLogger(),
@@ -131,18 +128,6 @@ func (s *taskExecutorSuite) SetupTest() {
 func (s *taskExecutorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
-}
-
-func (s *taskExecutorSuite) TestConvertRetryTaskError_OK() {
-	err := &shared.RetryTaskError{}
-	_, ok := s.taskHandler.convertRetryTaskError(err)
-	s.True(ok)
-}
-
-func (s *taskExecutorSuite) TestConvertRetryTaskError_NotOK() {
-	err := &shared.RetryTaskV2Error{}
-	_, ok := s.taskHandler.convertRetryTaskError(err)
-	s.False(ok)
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
@@ -213,34 +198,7 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 		RunId:      common.StringPtr(runID),
 	}
 
-	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
-	_, err := s.taskHandler.execute(task, true)
-	s.NoError(err)
-}
-
-func (s *taskExecutorSuite) TestProcessTaskOnce_HistoryReplicationTask() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistory.Ptr(),
-		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	}
-	request := &history.ReplicateEventsRequest{
-		DomainUUID: common.StringPtr(domainID),
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-		SourceCluster:     common.StringPtr("test"),
-		ForceBufferEvents: common.BoolPtr(false),
-	}
-
-	s.mockEngine.EXPECT().ReplicateEvents(gomock.Any(), request).Return(nil).Times(1)
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
 }
