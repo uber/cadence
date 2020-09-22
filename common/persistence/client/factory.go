@@ -304,7 +304,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			*defaultCfg.SQL,
 			clusterName,
 			f.logger,
-			getSQLEncodingType(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType)),
+			getSQLEncoder(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType)),
 			serialization.NewDecoder())
 	case defaultCfg.CustomDataStoreConfig != nil:
 		defaultDataStore.factory = f.abstractDataStoreFactory.NewFactory(*defaultCfg.CustomDataStoreConfig, clusterName, f.logger)
@@ -328,7 +328,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			*visibilityCfg.SQL,
 			clusterName,
 			f.logger,
-			getSQLEncodingType(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType)),
+			getSQLEncoder(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType)),
 			serialization.NewDecoder())
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
@@ -337,7 +337,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func getSQLEncodingType(logger log.Logger, encodingType common.EncodingType) serialization.Encoder {
+func getSQLEncoder(logger log.Logger, encodingType common.EncodingType) serialization.Encoder {
 	switch encodingType {
 	case common.EncodingTypeThriftRW:
 		return serialization.NewThriftEncoder()

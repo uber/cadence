@@ -46,7 +46,7 @@ type (
 		ReplicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) (p.DataBlob, error)
 	}
 
-	// Decoder is used to deserialize from persistence structs
+	// Decoder is used to deserialize from persistence data blobs
 	Decoder interface {
 		ShardInfoFromBlob([]byte, string) (*sqlblobs.ShardInfo, error)
 		DomainInfoFromBlob([]byte, string) (*sqlblobs.DomainInfo, error)

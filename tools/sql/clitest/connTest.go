@@ -92,6 +92,7 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 		Password:     testPassword,
 		PluginName:   s.pluginName,
 		DatabaseName: s.DBName,
+		EncodingType: "thriftrw",
 	})
 	s.Nil(err)
 	s.RunCreateTest(conn)
@@ -110,6 +111,7 @@ func newTestConn(database, pluginName string) (*sql.Connection, error) {
 		Password:     testPassword,
 		PluginName:   pluginName,
 		DatabaseName: database,
+		EncodingType: "thriftrw",
 	})
 }
 
