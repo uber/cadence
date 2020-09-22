@@ -68,7 +68,7 @@ type (
 	}
 )
 
-func TestNDCHistoryResenderSuite(t *testing.T) {
+func TestHistoryResenderSuite(t *testing.T) {
 	s := new(historyResenderSuite)
 	suite.Run(t, s)
 }

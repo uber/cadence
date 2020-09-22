@@ -936,7 +936,6 @@ func (e *historyEngineImpl) PollMutableState(
 		ClientImpl:                           response.ClientImpl,
 		StickyTaskListScheduleToStartTimeout: response.StickyTaskListScheduleToStartTimeout,
 		CurrentBranchToken:                   response.CurrentBranchToken,
-		ReplicationInfo:                      response.ReplicationInfo,
 		VersionHistories:                     response.VersionHistories,
 		WorkflowState:                        response.WorkflowState,
 		WorkflowCloseState:                   response.WorkflowCloseState,
