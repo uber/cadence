@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -258,7 +259,7 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 
 		op := func() error {
 			var err error
-			resp, err = ratelimitedClient.GetTimerIndexTasks(&req)
+			resp, err = ratelimitedClient.GetTimerIndexTasks(context.TODO(), &req)
 			return err
 		}
 

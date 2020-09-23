@@ -463,6 +463,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	var historyBatches []*gen.History
 	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
 	_, historyBatches, token.PersistenceToken, size, err = persistence.PaginateHistory(
+		context.TODO(),
 		adh.GetHistoryManager(),
 		true, // this means that we are getting history by batch
 		token.BranchToken,
@@ -601,7 +602,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		execution.GetWorkflowId(),
 		adh.numberOfHistoryShards,
 	)
-	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
+	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(context.TODO(), &persistence.ReadHistoryBranchRequest{
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
 		// ReadRawHistoryBranch is inclusive exclusive.
