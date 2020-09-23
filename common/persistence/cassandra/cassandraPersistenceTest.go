@@ -29,7 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/environment"
