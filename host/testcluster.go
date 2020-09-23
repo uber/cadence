@@ -45,6 +45,7 @@ import (
 	pes "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -122,6 +123,8 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {
 			ops = mysql.GetTestClusterOption()
+		} else if TestFlags.SQLPluginName == postgres.PluginName {
+			ops = postgres.GetTestClusterOption()
 		} else {
 			panic("not supported plugin " + TestFlags.SQLPluginName)
 		}
