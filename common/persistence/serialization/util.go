@@ -23,23 +23,15 @@
 package serialization
 
 import (
-	"bytes"
 	"fmt"
 
-	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/wire"
-
 	"github.com/uber/cadence/common"
-	p "github.com/uber/cadence/common/persistence"
 )
 
-type thriftRWType interface {
-	ToWire() (wire.Value, error)
-	FromWire(w wire.Value) error
-}
 
-func validateEncoding(encoding string) error {
-	switch common.EncodingType(encoding) {
+
+func validateEncoding(encoding common.EncodingType) error {
+	switch encoding {
 	case common.EncodingTypeProto, common.EncodingTypeThriftRW:
 		return nil
 	default:
@@ -61,24 +53,4 @@ func decodeErr(err error) error {
 	return fmt.Errorf("error deserializing blob to struct: %v", err)
 }
 
-func thriftRWEncode(t thriftRWType) (p.DataBlob, error) {
-	blob := p.DataBlob{Encoding: common.EncodingTypeThriftRW}
-	value, err := t.ToWire()
-	if err != nil {
-		return blob, encodeErr(err)
-	}
-	var b bytes.Buffer
-	if err := protocol.Binary.Encode(value, &b); err != nil {
-		return blob, encodeErr(err)
-	}
-	blob.Data = b.Bytes()
-	return blob, nil
-}
 
-func thriftRWDecode(data []byte, result thriftRWType) error {
-	value, err := protocol.Binary.Decode(bytes.NewReader(data), wire.TStruct)
-	if err != nil {
-		return decodeErr(err)
-	}
-	return decodeErr(result.FromWire(value))
-}
