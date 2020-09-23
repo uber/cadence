@@ -436,7 +436,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
-	resp1, _ := s.metadataMgr.GetDomain(&persistence.GetDomainRequest{
+	resp1, _ := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		Name: domain,
 	})
 	s.Equal("standby", resp1.ReplicationConfig.ActiveClusterName)
@@ -451,7 +451,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(&persistence.GetDomainRequest{
+	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
@@ -599,7 +599,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(&persistence.GetDomainRequest{
+	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)

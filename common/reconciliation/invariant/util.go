@@ -23,6 +23,8 @@
 package invariant
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 )
@@ -80,7 +82,7 @@ func DeleteExecution(
 	pr persistence.Retryer,
 ) *FixResult {
 	execution := getExecution(exec)
-	if err := pr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+	if err := pr.DeleteWorkflowExecution(context.TODO(), &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
@@ -91,7 +93,7 @@ func DeleteExecution(
 			InfoDetails:   err.Error(),
 		}
 	}
-	if err := pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+	if err := pr.DeleteCurrentWorkflowExecution(context.TODO(), &persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,

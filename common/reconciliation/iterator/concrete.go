@@ -23,6 +23,8 @@
 package iterator
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/pagination"
@@ -47,7 +49,7 @@ func getConcreteExecutions(
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListConcreteExecutions(req)
+		resp, err := pr.ListConcreteExecutions(context.TODO(), req)
 		if err != nil {
 			return pagination.Page{}, err
 		}

@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -67,7 +68,7 @@ func (c *concreteExecutionExists) Check(
 		}
 	}
 
-	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(&persistence.IsWorkflowExecutionExistsRequest{
+	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(context.TODO(), &persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
@@ -121,7 +122,7 @@ func (c *concreteExecutionExists) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
-	if err := c.pr.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+	if err := c.pr.DeleteCurrentWorkflowExecution(context.TODO(), &persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
@@ -147,7 +148,7 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 	currentExecution *entity.CurrentExecution,
 ) (*entity.CurrentExecution, *CheckResult) {
 
-	resp, err := c.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+	resp, err := c.pr.GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 	})
