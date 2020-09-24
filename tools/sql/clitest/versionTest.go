@@ -111,6 +111,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		PluginName:   s.pluginName,
 		DatabaseName: database,
 		EncodingType: "thriftrw",
+		DecodingTypes:   []string{"thriftrw"},
 	}
 	visibilityCfg := defaultCfg
 	visibilityCfg.DatabaseName = visDatabase
@@ -201,6 +202,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		PluginName:   s.pluginName,
 		DatabaseName: database,
 		EncodingType: "thriftrw",
+		DecodingTypes:   []string{"thriftrw"},
 	}
 	err = sql.CheckCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {
