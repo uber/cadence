@@ -21,6 +21,7 @@
 package history
 
 import (
+	"context"
 	ctx "context"
 	"fmt"
 	"time"
@@ -647,7 +648,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 
 func (r *historyReplicator) replicateWorkflowStarted(
 	ctx ctx.Context,
-	context execution.Context,
+	wfContext execution.Context,
 	msBuilder execution.MutableState,
 	history *shared.History,
 	sBuilder execution.StateBuilder,
@@ -672,7 +673,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	if err != nil {
 		return err
 	}
-	historySize, err := context.PersistFirstWorkflowEvents(workflowEventsSeq[0])
+	historySize, err := wfContext.PersistFirstWorkflowEvents(workflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
@@ -683,7 +684,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 		// this function should be only called when we drop start workflow execution
 		currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 		if err == nil {
-			r.shard.GetHistoryManager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{ //nolint:errcheck
+			r.shard.GetHistoryManager().DeleteHistoryBranch(context.TODO(), &persistence.DeleteHistoryBranchRequest{ //nolint:errcheck
 				BranchToken: currentBranchToken,
 				ShardID:     common.IntPtr(r.shard.GetShardID()),
 			})
@@ -694,7 +695,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
-	err = context.CreateWorkflowExecution(
+	err = wfContext.CreateWorkflowExecution(
 		newWorkflow, historySize, now,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -727,7 +728,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 		createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 		prevRunID = currentRunID
 		prevLastWriteVersion = currentLastWriteVersion
-		return context.CreateWorkflowExecution(
+		return wfContext.CreateWorkflowExecution(
 			newWorkflow, historySize, now,
 			createMode, prevRunID, prevLastWriteVersion,
 		)
@@ -801,7 +802,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 	prevRunID = currentRunID
 	prevLastWriteVersion = currentLastWriteVersion
-	return context.CreateWorkflowExecution(
+	return wfContext.CreateWorkflowExecution(
 		newWorkflow, historySize, now,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -833,7 +834,7 @@ func (r *historyReplicator) conflictResolutionTerminateCurrentRunningIfNotSelf(
 	// cannot use history cache to get current workflow since there can be deadlock
 	domainID := msBuilder.GetExecutionInfo().DomainID
 	workflowID := msBuilder.GetExecutionInfo().WorkflowID
-	resp, err := r.shard.GetExecutionManager().GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+	resp, err := r.shard.GetExecutionManager().GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	})
@@ -906,7 +907,7 @@ func (r *historyReplicator) getCurrentWorkflowMutableState(
 }
 
 func (r *historyReplicator) getCurrentWorkflowRunID(domainID string, workflowID string) (string, error) {
-	resp, err := r.historyEngine.executionManager.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+	resp, err := r.historyEngine.executionManager.GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	})

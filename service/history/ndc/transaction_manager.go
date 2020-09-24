@@ -23,6 +23,7 @@
 package ndc
 
 import (
+	context "context"
 	ctx "context"
 	"time"
 
@@ -381,6 +382,7 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 ) (bool, error) {
 
 	_, err := r.shard.GetExecutionManager().GetWorkflowExecution(
+		context.TODO(),
 		&persistence.GetWorkflowExecutionRequest{
 			DomainID: domainID,
 			Execution: shared.WorkflowExecution{
@@ -407,6 +409,7 @@ func (r *transactionManagerImpl) getCurrentWorkflowRunID(
 ) (string, error) {
 
 	resp, err := r.shard.GetExecutionManager().GetCurrentExecution(
+		context.TODO(),
 		&persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
 			WorkflowID: workflowID,

@@ -363,12 +363,15 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	if err != nil {
 		return nil, 0, nil, nil, err
 	}
-	forkResp, retError := w.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
-		ForkBranchToken: baseBranchToken,
-		ForkNodeID:      resetDecisionCompletedEventID,
-		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, newRunID),
-		ShardID:         common.IntPtr(w.shard.GetShardID()),
-	})
+	forkResp, retError := w.historyV2Mgr.ForkHistoryBranch(
+		context.TODO(),
+		&persistence.ForkHistoryBranchRequest{
+			ForkBranchToken: baseBranchToken,
+			ForkNodeID:      resetDecisionCompletedEventID,
+			Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, newRunID),
+			ShardID:         common.IntPtr(w.shard.GetShardID()),
+		},
+	)
 	if retError != nil {
 		return
 	}
@@ -541,7 +544,7 @@ func (w *workflowResetorImpl) replayReceivedSignals(
 		}
 		for {
 			var readResp *persistence.ReadHistoryBranchByBatchResponse
-			readResp, err := w.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
+			readResp, err := w.historyV2Mgr.ReadHistoryBranchByBatch(context.TODO(), readReq)
 			if err != nil {
 				return err
 			}
@@ -664,7 +667,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse
-		readResp, retError = w.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
+		readResp, retError = w.historyV2Mgr.ReadHistoryBranchByBatch(context.TODO(), readReq)
 		if retError != nil {
 			return
 		}
@@ -862,7 +865,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 	if err != nil {
 		return err
 	}
-	forkResp, retError := w.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+	forkResp, retError := w.historyV2Mgr.ForkHistoryBranch(context.TODO(), &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseBranchToken,
 		ForkNodeID:      decisionFinishEventID,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, resetAttr.GetNewRunId()),
@@ -945,7 +948,7 @@ func (w *workflowResetorImpl) replicateResetEvent(
 	}
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse
-		readResp, retError = w.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
+		readResp, retError = w.historyV2Mgr.ReadHistoryBranchByBatch(context.TODO(), readReq)
 		if retError != nil {
 			return
 		}

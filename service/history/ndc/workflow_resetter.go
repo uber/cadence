@@ -23,6 +23,7 @@
 package ndc
 
 import (
+	context "context"
 	ctx "context"
 	"time"
 
@@ -206,12 +207,15 @@ func (r *workflowResetterImpl) getResetBranchToken(
 
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
-	resp, err := r.historyV2Manager.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
-		ForkBranchToken: baseBranchToken,
-		ForkNodeID:      baseLastEventID + 1,
-		Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
-		ShardID:         common.IntPtr(shardID),
-	})
+	resp, err := r.historyV2Manager.ForkHistoryBranch(
+		context.TODO(),
+		&persistence.ForkHistoryBranchRequest{
+			ForkBranchToken: baseBranchToken,
+			ForkNodeID:      baseLastEventID + 1,
+			Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
+			ShardID:         common.IntPtr(shardID),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

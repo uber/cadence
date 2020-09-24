@@ -23,6 +23,8 @@
 package history
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -200,14 +202,17 @@ func (r *conflictResolverImpl) reset(
 func (r *conflictResolverImpl) getHistory(domainID string, execution shared.WorkflowExecution, firstEventID,
 	nextEventID int64, nextPageToken []byte, branchToken []byte) ([]*shared.HistoryEvent, int, int64, []byte, error) {
 
-	response, err := r.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
-		BranchToken:   branchToken,
-		MinEventID:    firstEventID,
-		MaxEventID:    nextEventID,
-		PageSize:      defaultHistoryPageSize,
-		NextPageToken: nextPageToken,
-		ShardID:       common.IntPtr(r.shard.GetShardID()),
-	})
+	response, err := r.historyV2Mgr.ReadHistoryBranch(
+		context.TODO(),
+		&persistence.ReadHistoryBranchRequest{
+			BranchToken:   branchToken,
+			MinEventID:    firstEventID,
+			MaxEventID:    nextEventID,
+			PageSize:      defaultHistoryPageSize,
+			NextPageToken: nextPageToken,
+			ShardID:       common.IntPtr(r.shard.GetShardID()),
+		},
+	)
 	if err != nil {
 		return nil, 0, 0, nil, err
 	}

@@ -25,6 +25,7 @@
 package replication
 
 import (
+	"context"
 	ctx "context"
 	"errors"
 	"strconv"
@@ -308,7 +309,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	}
 
 	for {
-		resp, err := t.historyManager.ReadRawHistoryBranch(req)
+		resp, err := t.historyManager.ReadRawHistoryBranch(context.TODO(), req)
 		if err != nil {
 			return nil, err
 		}
@@ -362,11 +363,14 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 	batchSize int,
 ) ([]task.Info, bool, error) {
 
-	response, err := t.executionManager.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
-		ReadLevel:    readLevel,
-		MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
-		BatchSize:    batchSize,
-	})
+	response, err := t.executionManager.GetReplicationTasks(
+		context.TODO(),
+		&persistence.GetReplicationTasksRequest{
+			ReadLevel:    readLevel,
+			MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
+			BatchSize:    batchSize,
+		},
+	)
 
 	if err != nil {
 		return nil, false, err
@@ -423,6 +427,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 		events, _, pageToken, pageHistorySize, err := persistence.PaginateHistory(
+			context.TODO(),
 			t.historyManager,
 			false,
 			branchToken,
