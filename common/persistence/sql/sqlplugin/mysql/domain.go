@@ -65,7 +65,7 @@ func (mdb *db) InsertIntoDomain(ctx context.Context, row *sqlplugin.DomainRow) (
 }
 
 // UpdateDomain updates a single row in domains table
-func (mdb *db) UpdateDomain(ctx context.Context,row *sqlplugin.DomainRow) (sql.Result, error) {
+func (mdb *db) UpdateDomain(ctx context.Context, row *sqlplugin.DomainRow) (sql.Result, error) {
 	return mdb.conn.ExecContext(ctx, updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
 }
 

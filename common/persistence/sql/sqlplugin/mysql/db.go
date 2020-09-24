@@ -75,8 +75,8 @@ func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
-	xtx, err := mdb.db.Beginx()
+func (mdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
+	xtx, err := mdb.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

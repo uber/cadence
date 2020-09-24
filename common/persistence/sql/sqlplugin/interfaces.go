@@ -513,9 +513,9 @@ type (
 		// DeleteDomain deletes a single row. One of ID or Name MUST be specified
 		DeleteFromDomain(ctx context.Context, filter *DomainFilter) (sql.Result, error)
 
-		LockDomainMetadata(ctx context.Context, ) error
+		LockDomainMetadata(ctx context.Context) error
 		UpdateDomainMetadata(ctx context.Context, row *DomainMetadataRow) (sql.Result, error)
-		SelectFromDomainMetadata(ctx context.Context, ) (*DomainMetadataRow, error)
+		SelectFromDomainMetadata(ctx context.Context) (*DomainMetadataRow, error)
 
 		InsertIntoShards(ctx context.Context, rows *ShardsRow) (sql.Result, error)
 		UpdateShards(ctx context.Context, row *ShardsRow) (sql.Result, error)

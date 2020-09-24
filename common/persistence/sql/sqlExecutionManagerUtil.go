@@ -22,6 +22,7 @@ package sql
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -36,6 +37,7 @@ import (
 )
 
 func applyWorkflowMutationTx(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
@@ -59,7 +61,9 @@ func applyWorkflowMutationTx(
 	}
 
 	// TODO Remove me if UPDATE holds the lock to the end of a transaction
-	if err := lockAndCheckNextEventID(tx,
+	if err := lockAndCheckNextEventID(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -75,7 +79,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateExecution(tx,
+	if err := updateExecution(
+		ctx,
+		tx,
 		executionInfo,
 		replicationState,
 		versionHistories,
@@ -89,7 +95,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -102,7 +110,9 @@ func applyWorkflowMutationTx(
 		return err
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertActivityInfos,
 		workflowMutation.DeleteActivityInfos,
 		shardID,
@@ -115,7 +125,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertTimerInfos,
 		workflowMutation.DeleteTimerInfos,
 		shardID,
@@ -128,7 +140,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertChildExecutionInfos,
 		workflowMutation.DeleteChildExecutionInfo,
 		shardID,
@@ -141,7 +155,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertRequestCancelInfos,
 		workflowMutation.DeleteRequestCancelInfo,
 		shardID,
@@ -154,7 +170,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertSignalInfos,
 		workflowMutation.DeleteSignalInfo,
 		shardID,
@@ -167,7 +185,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		ctx,
+		tx,
 		workflowMutation.UpsertSignalRequestedIDs,
 		workflowMutation.DeleteSignalRequestedID,
 		shardID,
@@ -180,7 +200,9 @@ func applyWorkflowMutationTx(
 	}
 
 	if workflowMutation.ClearBufferedEvents {
-		if err := deleteBufferedEvents(tx,
+		if err := deleteBufferedEvents(
+			ctx,
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -191,7 +213,9 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateBufferedEvents(tx,
+	if err := updateBufferedEvents(
+		ctx,
+		tx,
 		workflowMutation.NewBufferedEvents,
 		shardID,
 		domainID,
@@ -205,6 +229,7 @@ func applyWorkflowMutationTx(
 }
 
 func applyWorkflowSnapshotTxAsReset(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
@@ -228,7 +253,9 @@ func applyWorkflowSnapshotTxAsReset(
 	}
 
 	// TODO Is there a way to modify the various map tables without fear of other people adding rows after we delete, without locking the executions row?
-	if err := lockAndCheckNextEventID(tx,
+	if err := lockAndCheckNextEventID(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -244,7 +271,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateExecution(tx,
+	if err := updateExecution(
+		ctx,
+		tx,
 		executionInfo,
 		replicationState,
 		versionHistories,
@@ -258,7 +287,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -271,7 +302,9 @@ func applyWorkflowSnapshotTxAsReset(
 		return err
 	}
 
-	if err := deleteActivityInfoMap(tx,
+	if err := deleteActivityInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -281,7 +314,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ActivityInfos,
 		nil,
 		shardID,
@@ -294,7 +329,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteTimerInfoMap(tx,
+	if err := deleteTimerInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -304,7 +341,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		ctx,
+		tx,
 		workflowSnapshot.TimerInfos,
 		nil,
 		shardID,
@@ -317,7 +356,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteChildExecutionInfoMap(tx,
+	if err := deleteChildExecutionInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -327,7 +368,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ChildExecutionInfos,
 		nil,
 		shardID,
@@ -340,7 +383,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteRequestCancelInfoMap(tx,
+	if err := deleteRequestCancelInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -350,7 +395,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		ctx,
+		tx,
 		workflowSnapshot.RequestCancelInfos,
 		nil,
 		shardID,
@@ -363,7 +410,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteSignalInfoMap(tx,
+	if err := deleteSignalInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -373,7 +422,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		ctx,
+		tx,
 		workflowSnapshot.SignalInfos,
 		nil,
 		shardID,
@@ -386,7 +437,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteSignalsRequestedSet(tx,
+	if err := deleteSignalsRequestedSet(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -396,7 +449,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		ctx,
+		tx,
 		workflowSnapshot.SignalRequestedIDs,
 		"",
 		shardID,
@@ -408,7 +463,9 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteBufferedEvents(tx,
+	if err := deleteBufferedEvents(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -421,6 +478,7 @@ func applyWorkflowSnapshotTxAsReset(
 }
 
 func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
@@ -443,7 +501,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		currentVersion = replicationState.CurrentVersion
 	}
 
-	if err := m.createExecution(tx,
+	if err := m.createExecution(
+		ctx,
+		tx,
 		executionInfo,
 		replicationState,
 		versionHistories,
@@ -455,7 +515,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		return err
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -468,7 +530,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		return err
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ActivityInfos,
 		nil,
 		shardID,
@@ -481,7 +545,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		ctx,
+		tx,
 		workflowSnapshot.TimerInfos,
 		nil,
 		shardID,
@@ -494,7 +560,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ChildExecutionInfos,
 		nil,
 		shardID,
@@ -507,7 +575,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		ctx,
+		tx,
 		workflowSnapshot.RequestCancelInfos,
 		nil,
 		shardID,
@@ -520,7 +590,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		ctx,
+		tx,
 		workflowSnapshot.SignalInfos,
 		nil,
 		shardID,
@@ -533,7 +605,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		ctx,
+		tx,
 		workflowSnapshot.SignalRequestedIDs,
 		"",
 		shardID,
@@ -549,6 +623,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 }
 
 func applyTasks(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -560,7 +635,9 @@ func applyTasks(
 	parser serialization.Parser,
 ) error {
 
-	if err := createTransferTasks(tx,
+	if err := createTransferTasks(
+		ctx,
+		tx,
 		transferTasks,
 		shardID,
 		domainID,
@@ -572,7 +649,9 @@ func applyTasks(
 		}
 	}
 
-	if err := createReplicationTasks(tx,
+	if err := createReplicationTasks(
+		ctx,
+		tx,
 		replicationTasks,
 		shardID,
 		domainID,
@@ -585,7 +664,9 @@ func applyTasks(
 		}
 	}
 
-	if err := createTimerTasks(tx,
+	if err := createTimerTasks(
+		ctx,
+		tx,
 		timerTasks,
 		shardID,
 		domainID,
@@ -603,13 +684,14 @@ func applyTasks(
 // lockCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID
 // locking it in the DB
 func lockCurrentExecutionIfExists(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 ) (*sqlplugin.CurrentExecutionsRow, error) {
 
-	rows, err := tx.LockCurrentExecutionsJoinExecutions(&sqlplugin.CurrentExecutionsFilter{
+	rows, err := tx.LockCurrentExecutionsJoinExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID: int64(shardID), DomainID: domainID, WorkflowID: workflowID})
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -631,6 +713,7 @@ func lockCurrentExecutionIfExists(
 }
 
 func createOrUpdateCurrentExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	createMode p.CreateWorkflowMode,
 	shardID int,
@@ -658,7 +741,9 @@ func createOrUpdateCurrentExecution(
 
 	switch createMode {
 	case p.CreateWorkflowModeContinueAsNew:
-		if err := updateCurrentExecution(tx,
+		if err := updateCurrentExecution(
+			ctx,
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -673,7 +758,9 @@ func createOrUpdateCurrentExecution(
 			}
 		}
 	case p.CreateWorkflowModeWorkflowIDReuse:
-		if err := updateCurrentExecution(tx,
+		if err := updateCurrentExecution(
+			ctx,
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -688,7 +775,7 @@ func createOrUpdateCurrentExecution(
 			}
 		}
 	case p.CreateWorkflowModeBrandNew:
-		if _, err := tx.InsertIntoCurrentExecutions(&row); err != nil {
+		if _, err := tx.InsertIntoCurrentExecutions(ctx, &row); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to insert into current_executions table. Error: %v", err),
 			}
@@ -703,6 +790,7 @@ func createOrUpdateCurrentExecution(
 }
 
 func lockAndCheckNextEventID(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -711,7 +799,7 @@ func lockAndCheckNextEventID(
 	condition int64,
 ) error {
 
-	nextEventID, err := lockNextEventID(tx, shardID, domainID, workflowID, runID)
+	nextEventID, err := lockNextEventID(ctx, tx, shardID, domainID, workflowID, runID)
 	if err != nil {
 		return err
 	}
@@ -724,6 +812,7 @@ func lockAndCheckNextEventID(
 }
 
 func lockNextEventID(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -731,7 +820,7 @@ func lockNextEventID(
 	runID sqlplugin.UUID,
 ) (*int64, error) {
 
-	nextEventID, err := tx.WriteLockExecutions(&sqlplugin.ExecutionsFilter{
+	nextEventID, err := tx.WriteLockExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID:    shardID,
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -758,6 +847,7 @@ func lockNextEventID(
 }
 
 func createTransferTasks(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	transferTasks []p.Task,
 	shardID int,
@@ -843,7 +933,7 @@ func createTransferTasks(
 		transferTasksRows[i].DataEncoding = string(blob.Encoding)
 	}
 
-	result, err := tx.InsertIntoTransferTasks(transferTasksRows)
+	result, err := tx.InsertIntoTransferTasks(ctx, transferTasksRows)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("createTransferTasks failed. Error: %v", err),
@@ -867,6 +957,7 @@ func createTransferTasks(
 }
 
 func createReplicationTasks(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	replicationTasks []p.Task,
 	shardID int,
@@ -951,7 +1042,7 @@ func createReplicationTasks(
 		replicationTasksRows[i].DataEncoding = string(blob.Encoding)
 	}
 
-	result, err := tx.InsertIntoReplicationTasks(replicationTasksRows)
+	result, err := tx.InsertIntoReplicationTasks(ctx, replicationTasksRows)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("createReplicationTasks failed. Error: %v", err),
@@ -975,6 +1066,7 @@ func createReplicationTasks(
 }
 
 func createTimerTasks(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	timerTasks []p.Task,
 	shardID int,
@@ -1041,7 +1133,7 @@ func createTimerTasks(
 			timerTasksRows[i].DataEncoding = string(blob.Encoding)
 		}
 
-		result, err := tx.InsertIntoTimerTasks(timerTasksRows)
+		result, err := tx.InsertIntoTimerTasks(ctx, timerTasksRows)
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("createTimerTasks failed. Error: %v", err),
@@ -1065,13 +1157,14 @@ func createTimerTasks(
 }
 
 func assertNotCurrentExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
 ) error {
-	currentRow, err := tx.LockCurrentExecutions(&sqlplugin.CurrentExecutionsFilter{
+	currentRow, err := tx.LockCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -1089,6 +1182,7 @@ func assertNotCurrentExecution(
 }
 
 func assertRunIDAndUpdateCurrentExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -1112,14 +1206,15 @@ func assertRunIDAndUpdateCurrentExecution(
 		}
 		return nil
 	}
-	if err := assertCurrentExecution(tx, shardID, domainID, workflowID, assertFn); err != nil {
+	if err := assertCurrentExecution(ctx, tx, shardID, domainID, workflowID, assertFn); err != nil {
 		return err
 	}
 
-	return updateCurrentExecution(tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
 func assertAndUpdateCurrentExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -1159,14 +1254,15 @@ func assertAndUpdateCurrentExecution(
 		}
 		return nil
 	}
-	if err := assertCurrentExecution(tx, shardID, domainID, workflowID, assertFn); err != nil {
+	if err := assertCurrentExecution(ctx, tx, shardID, domainID, workflowID, assertFn); err != nil {
 		return err
 	}
 
-	return updateCurrentExecution(tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
 func assertCurrentExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -1174,7 +1270,7 @@ func assertCurrentExecution(
 	assertFn func(currentRow *sqlplugin.CurrentExecutionsRow) error,
 ) error {
 
-	currentRow, err := tx.LockCurrentExecutions(&sqlplugin.CurrentExecutionsFilter{
+	currentRow, err := tx.LockCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -1200,6 +1296,7 @@ func assertRunIDMismatch(runID sqlplugin.UUID, currentRunID sqlplugin.UUID) erro
 }
 
 func updateCurrentExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -1212,7 +1309,7 @@ func updateCurrentExecution(
 	lastWriteVersion int64,
 ) error {
 
-	result, err := tx.UpdateCurrentExecutions(&sqlplugin.CurrentExecutionsRow{
+	result, err := tx.UpdateCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsRow{
 		ShardID:          int64(shardID),
 		DomainID:         domainID,
 		WorkflowID:       workflowID,
@@ -1358,6 +1455,7 @@ func buildExecutionRow(
 }
 
 func (m *sqlExecutionManager) createExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
@@ -1393,7 +1491,7 @@ func (m *sqlExecutionManager) createExecution(
 	if err != nil {
 		return err
 	}
-	result, err := tx.InsertIntoExecutions(row)
+	result, err := tx.InsertIntoExecutions(ctx, row)
 	if err != nil {
 		if m.db.IsDupEntryError(err) {
 			return &p.WorkflowExecutionAlreadyStartedError{
@@ -1425,6 +1523,7 @@ func (m *sqlExecutionManager) createExecution(
 }
 
 func updateExecution(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
@@ -1459,7 +1558,7 @@ func updateExecution(
 	if err != nil {
 		return err
 	}
-	result, err := tx.UpdateExecutions(row)
+	result, err := tx.UpdateExecutions(ctx, row)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("updateExecution failed. Erorr: %v", err),

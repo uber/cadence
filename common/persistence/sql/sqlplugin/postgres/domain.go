@@ -21,6 +21,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
@@ -59,35 +60,35 @@ const (
 var errMissingArgs = errors.New("missing one or more args for API")
 
 // InsertIntoDomain inserts a single row into domains table
-func (pdb *db) InsertIntoDomain(row *sqlplugin.DomainRow) (sql.Result, error) {
-	return pdb.conn.Exec(createDomainQuery, row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
+func (pdb *db) InsertIntoDomain(ctx context.Context, row *sqlplugin.DomainRow) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, createDomainQuery, row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
 }
 
 // UpdateDomain updates a single row in domains table
-func (pdb *db) UpdateDomain(row *sqlplugin.DomainRow) (sql.Result, error) {
-	return pdb.conn.Exec(updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
+func (pdb *db) UpdateDomain(ctx context.Context, row *sqlplugin.DomainRow) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
 }
 
 // SelectFromDomain reads one or more rows from domains table
-func (pdb *db) SelectFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
+func (pdb *db) SelectFromDomain(ctx context.Context, filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
 	switch {
 	case filter.ID != nil || filter.Name != nil:
-		return pdb.selectFromDomain(filter)
+		return pdb.selectFromDomain(ctx, filter)
 	case filter.PageSize != nil && *filter.PageSize > 0:
-		return pdb.selectAllFromDomain(filter)
+		return pdb.selectAllFromDomain(ctx, filter)
 	default:
 		return nil, errMissingArgs
 	}
 }
 
-func (pdb *db) selectFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
+func (pdb *db) selectFromDomain(ctx context.Context, filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
 	var err error
 	var row sqlplugin.DomainRow
 	switch {
 	case filter.ID != nil:
-		err = pdb.conn.Get(&row, getDomainByIDQuery, shardID, *filter.ID)
+		err = pdb.conn.GetContext(ctx, &row, getDomainByIDQuery, shardID, *filter.ID)
 	case filter.Name != nil:
-		err = pdb.conn.Get(&row, getDomainByNameQuery, shardID, *filter.Name)
+		err = pdb.conn.GetContext(ctx, &row, getDomainByNameQuery, shardID, *filter.Name)
 	}
 	if err != nil {
 		return nil, err
@@ -95,46 +96,46 @@ func (pdb *db) selectFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.Dom
 	return []sqlplugin.DomainRow{row}, err
 }
 
-func (pdb *db) selectAllFromDomain(filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
+func (pdb *db) selectAllFromDomain(ctx context.Context, filter *sqlplugin.DomainFilter) ([]sqlplugin.DomainRow, error) {
 	var err error
 	var rows []sqlplugin.DomainRow
 	switch {
 	case filter.GreaterThanID != nil:
-		err = pdb.conn.Select(&rows, listDomainsRangeQuery, shardID, *filter.GreaterThanID, *filter.PageSize)
+		err = pdb.conn.SelectContext(ctx, &rows, listDomainsRangeQuery, shardID, *filter.GreaterThanID, *filter.PageSize)
 	default:
-		err = pdb.conn.Select(&rows, listDomainsQuery, shardID, filter.PageSize)
+		err = pdb.conn.SelectContext(ctx, &rows, listDomainsQuery, shardID, filter.PageSize)
 	}
 	return rows, err
 }
 
 // DeleteFromDomain deletes a single row in domains table
-func (pdb *db) DeleteFromDomain(filter *sqlplugin.DomainFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromDomain(ctx context.Context, filter *sqlplugin.DomainFilter) (sql.Result, error) {
 	var err error
 	var result sql.Result
 	switch {
 	case filter.ID != nil:
-		result, err = pdb.conn.Exec(deleteDomainByIDQuery, shardID, filter.ID)
+		result, err = pdb.conn.ExecContext(ctx, deleteDomainByIDQuery, shardID, filter.ID)
 	default:
-		result, err = pdb.conn.Exec(deleteDomainByNameQuery, shardID, filter.Name)
+		result, err = pdb.conn.ExecContext(ctx, deleteDomainByNameQuery, shardID, filter.Name)
 	}
 	return result, err
 }
 
 // LockDomainMetadata acquires a write lock on a single row in domain_metadata table
-func (pdb *db) LockDomainMetadata() error {
+func (pdb *db) LockDomainMetadata(ctx context.Context) error {
 	var row sqlplugin.DomainMetadataRow
-	err := pdb.conn.Get(&row.NotificationVersion, lockDomainMetadataQuery)
+	err := pdb.conn.GetContext(ctx, &row.NotificationVersion, lockDomainMetadataQuery)
 	return err
 }
 
 // SelectFromDomainMetadata reads a single row in domain_metadata table
-func (pdb *db) SelectFromDomainMetadata() (*sqlplugin.DomainMetadataRow, error) {
+func (pdb *db) SelectFromDomainMetadata(ctx context.Context) (*sqlplugin.DomainMetadataRow, error) {
 	var row sqlplugin.DomainMetadataRow
-	err := pdb.conn.Get(&row.NotificationVersion, getDomainMetadataQuery)
+	err := pdb.conn.GetContext(ctx, &row.NotificationVersion, getDomainMetadataQuery)
 	return &row, err
 }
 
 // UpdateDomainMetadata updates a single row in domain_metadata table
-func (pdb *db) UpdateDomainMetadata(row *sqlplugin.DomainMetadataRow) (sql.Result, error) {
-	return pdb.conn.Exec(updateDomainMetadataQuery, row.NotificationVersion+1, row.NotificationVersion)
+func (pdb *db) UpdateDomainMetadata(ctx context.Context, row *sqlplugin.DomainMetadataRow) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, updateDomainMetadataQuery, row.NotificationVersion+1, row.NotificationVersion)
 }
