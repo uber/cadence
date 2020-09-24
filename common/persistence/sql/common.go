@@ -26,6 +26,8 @@ import (
 	"encoding/gob"
 	"fmt"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,6 +39,7 @@ import (
 type sqlStore struct {
 	db     sqlplugin.DB
 	logger log.Logger
+	parser serialization.Parser
 }
 
 func (m *sqlStore) GetName() string {
