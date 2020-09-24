@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -92,7 +93,7 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionStarted() {
 		WorkflowTypeName: testWorkflowTypeName,
 		StartTimestamp:   time.Now().UnixNano(),
 	}
-	s.persistence.On("RecordWorkflowExecutionStarted", request).Return(nil).Once()
+	s.persistence.On("RecordWorkflowExecutionStarted", mock.Anything, request).Return(nil).Once()
 	s.NoError(s.client.RecordWorkflowExecutionStarted(ctx, request))
 
 	// no remaining tokens
@@ -119,9 +120,9 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionClosed() {
 		Status:           gen.WorkflowExecutionCloseStatusFailed,
 	}
 
-	s.persistence.On("RecordWorkflowExecutionClosed", request).Return(nil).Once()
+	s.persistence.On("RecordWorkflowExecutionClosed", mock.Anything, request).Return(nil).Once()
 	s.NoError(s.client.RecordWorkflowExecutionClosed(ctx, request))
-	s.persistence.On("RecordWorkflowExecutionClosed", request2).Return(nil).Once()
+	s.persistence.On("RecordWorkflowExecutionClosed", mock.Anything, request2).Return(nil).Once()
 	s.NoError(s.client.RecordWorkflowExecutionClosed(ctx, request2))
 
 	// no remaining tokens
@@ -139,7 +140,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutions() {
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	s.persistence.On("ListOpenWorkflowExecutions", request).Return(nil, nil).Once()
+	s.persistence.On("ListOpenWorkflowExecutions", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListOpenWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
@@ -159,7 +160,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutions() {
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	s.persistence.On("ListClosedWorkflowExecutions", request).Return(nil, nil).Once()
+	s.persistence.On("ListClosedWorkflowExecutions", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
@@ -183,7 +184,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByType() {
 		ListWorkflowExecutionsRequest: req,
 		WorkflowTypeName:              testWorkflowTypeName,
 	}
-	s.persistence.On("ListOpenWorkflowExecutionsByType", request).Return(nil, nil).Once()
+	s.persistence.On("ListOpenWorkflowExecutionsByType", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.NoError(err)
 
@@ -207,7 +208,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByType() {
 		ListWorkflowExecutionsRequest: req,
 		WorkflowTypeName:              testWorkflowTypeName,
 	}
-	s.persistence.On("ListClosedWorkflowExecutionsByType", request).Return(nil, nil).Once()
+	s.persistence.On("ListClosedWorkflowExecutionsByType", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.NoError(err)
 
@@ -231,7 +232,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 		ListWorkflowExecutionsRequest: req,
 		WorkflowID:                    testWorkflowExecution.GetWorkflowId(),
 	}
-	s.persistence.On("ListOpenWorkflowExecutionsByWorkflowID", request).Return(nil, nil).Once()
+	s.persistence.On("ListOpenWorkflowExecutionsByWorkflowID", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.NoError(err)
 
@@ -255,7 +256,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByWorkflowID()
 		ListWorkflowExecutionsRequest: req,
 		WorkflowID:                    testWorkflowExecution.GetWorkflowId(),
 	}
-	s.persistence.On("ListClosedWorkflowExecutionsByWorkflowID", request).Return(nil, nil).Once()
+	s.persistence.On("ListClosedWorkflowExecutionsByWorkflowID", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.NoError(err)
 
@@ -279,7 +280,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
 		ListWorkflowExecutionsRequest: req,
 		Status:                        gen.WorkflowExecutionCloseStatusFailed,
 	}
-	s.persistence.On("ListClosedWorkflowExecutionsByStatus", request).Return(nil, nil).Once()
+	s.persistence.On("ListClosedWorkflowExecutionsByStatus", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.NoError(err)
 

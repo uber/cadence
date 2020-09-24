@@ -168,7 +168,7 @@ func (s *conflictResolverSuite) TestReset() {
 	}
 
 	historySize := int64(1234567)
-	s.mockHistoryV2Mgr.On("ReadHistoryBranch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    common.FirstEventID,
 		MaxEventID:    nextEventID,
@@ -216,7 +216,7 @@ func (s *conflictResolverSuite) TestReset() {
 	// this is only a shallow test, meaning
 	// the mutable state only has the minimal information
 	// so we can test the conflict resolver
-	s.mockExecutionMgr.On("ConflictResolveWorkflowExecution", mock.MatchedBy(func(input *persistence.ConflictResolveWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("ConflictResolveWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.ConflictResolveWorkflowExecutionRequest) bool {
 		transferTasks := input.ResetWorkflowSnapshot.TransferTasks
 		if len(transferTasks) != 1 {
 			return false
@@ -262,7 +262,7 @@ func (s *conflictResolverSuite) TestReset() {
 		}, input)
 		return true
 	})).Return(nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
 	}).Return(&persistence.GetWorkflowExecutionResponse{

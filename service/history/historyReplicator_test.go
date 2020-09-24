@@ -176,7 +176,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Missing
 		},
 	}
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(nil, &shared.EntityNotExistsError{})
@@ -220,7 +220,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -288,7 +288,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -376,7 +376,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -465,14 +465,14 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 		), nil,
 	).AnyTimes()
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
 		RunID: currentRunID,
 		// other attributes are not used
 	}, nil)
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -537,14 +537,14 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 		), nil,
 	).AnyTimes()
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
 		RunID: currentRunID,
 		// other attributes are not used
 	}, nil)
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -609,7 +609,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -628,7 +628,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	msBuilderCurrent.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes() // this is used to update the version on mutable state
 	msBuilderCurrent.EXPECT().UpdateCurrentVersion(currentVersion, true).Return(nil).Times(1)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -682,14 +682,14 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 		), nil,
 	).AnyTimes()
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
 		RunID: currentRunID,
 		// other attributes are not used
 	}, nil)
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -752,14 +752,14 @@ func (s *historyReplicatorSuite) TestWorkflowReset() {
 		), nil,
 	).AnyTimes()
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
 		RunID: currentRunID,
 		// other attributes are not used
 	}, nil)
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -826,14 +826,14 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 		), nil,
 	).AnyTimes()
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
 		RunID: currentRunID,
 		// other attributes are not used
 	}, nil)
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -882,7 +882,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{LastWriteVersion: currentLastWriteVersion}).AnyTimes()
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -926,7 +926,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{LastWriteVersion: lastWriteVersion}).AnyTimes()
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -994,7 +994,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{LastWriteVersion: lastWriteVersion}).AnyTimes()
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -1080,7 +1080,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	}
 	msBuilderIn.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	msBuilderIn.EXPECT().GetReplicationState().Return(&persistence.ReplicationState{LastWriteVersion: lastWriteVersion}).AnyTimes()
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -1932,8 +1932,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		s.Equal(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                persistence.CreateWorkflowModeBrandNew,
@@ -2050,10 +2050,10 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 	errRet := &shared.InternalServiceError{}
 	// the test above already assert the create workflow request, so here just use anyting
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet)
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet)
 	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil) // this is called when err is returned, and shard will try to update
 
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
@@ -2164,7 +2164,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
 	currentRunID := runID
@@ -2175,7 +2175,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anything
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet).Once()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID},
@@ -2301,7 +2301,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
 	currentRunID := uuid.New()
@@ -2312,7 +2312,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anyting
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                persistence.CreateWorkflowModeBrandNew,
@@ -2320,7 +2320,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			NewWorkflowSnapshot: *newWorkflowSnapshot,
 		}, input)
 	})).Return(nil, errRet).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                     persistence.CreateWorkflowModeWorkflowIDReuse,
@@ -2437,7 +2437,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
 	currentRunID := uuid.New()
@@ -2448,7 +2448,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anyting
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                persistence.CreateWorkflowModeBrandNew,
@@ -2456,7 +2456,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			NewWorkflowSnapshot: *newWorkflowSnapshot,
 		}, input)
 	})).Return(nil, errRet).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                     persistence.CreateWorkflowModeWorkflowIDReuse,
@@ -2573,7 +2573,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version - 1
 	currentRunID := uuid.New()
@@ -2584,7 +2584,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anyting
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                persistence.CreateWorkflowModeBrandNew,
@@ -2592,7 +2592,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			NewWorkflowSnapshot: *newWorkflowSnapshot,
 		}, input)
 	})).Return(nil, errRet).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                     persistence.CreateWorkflowModeWorkflowIDReuse,
@@ -2710,7 +2710,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
 	currentRunID := uuid.New()
@@ -2725,8 +2725,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		ShardID:     common.IntPtr(testShardID),
 	}
 	// the test above already assert the create workflow request, so here just use anything
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", delReq).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet).Once()
+	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything, delReq).Return(nil).Once()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID},
@@ -2757,7 +2757,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -2872,7 +2872,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
 	currentRunID := uuid.New()
@@ -2883,8 +2883,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anything
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet).Once()
+	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID},
@@ -2915,7 +2915,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -3048,7 +3048,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
 	currentRunID := uuid.New()
@@ -3061,8 +3061,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anything
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet).Once()
+	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID},
@@ -3093,7 +3093,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -3221,7 +3221,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
 	currentRunID := uuid.New()
@@ -3233,7 +3233,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anyting
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet).Once()
 
 	contextCurrent := execution.NewMockContext(s.controller)
 	contextCurrent.EXPECT().Lock(gomock.Any()).Return(nil).Times(1)
@@ -3249,7 +3249,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -3376,7 +3376,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
 	currentRunID := uuid.New()
@@ -3388,7 +3388,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anything
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errRet).Once()
 
 	contextCurrent := execution.NewMockContext(s.controller)
 	contextCurrent.EXPECT().Lock(gomock.Any()).Return(nil).Times(1)
@@ -3404,7 +3404,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
 	_, _ = s.historyReplicator.executionCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -3548,7 +3548,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		Events:      history.Events,
 	}}
 	msBuilder.EXPECT().CloseTransactionAsSnapshot(now.Local(), execution.TransactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil).Times(1)
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentNextEventID := int64(2333)
 	currentVersion := version - 1
@@ -3560,7 +3560,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here just use anyting
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                persistence.CreateWorkflowModeBrandNew,
@@ -3568,7 +3568,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			NewWorkflowSnapshot: *newWorkflowSnapshot,
 		}, input)
 	})).Return(nil, errRet).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
 		return reflect.DeepEqual(&persistence.CreateWorkflowExecutionRequest{
 			Mode:                     persistence.CreateWorkflowModeWorkflowIDReuse,
@@ -3680,7 +3680,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	currentRunID := uuid.New()
 	currentLastWriteVersion := int64(1394)
 	currentState := persistence.WorkflowStateCompleted
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -3747,7 +3747,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	msBuilderCurrent.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes() // this is used to update the version on mutable state
 	msBuilderCurrent.EXPECT().UpdateCurrentVersion(currentVersion, true).Return(nil).Times(1)
 
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{
@@ -3792,7 +3792,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	}).AnyTimes()
 
 	currentRunID := uuid.New()
-	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{

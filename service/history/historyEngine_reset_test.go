@@ -705,13 +705,13 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		Size: 200,
 	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gcurResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Times(2)
-	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gcurResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, currGwmsRequest).Return(currGwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, readHistoryReq).Return(readHistoryResp, nil).Once()
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything, mock.Anything).Return(forkResp, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(appendV2Resp, nil).Times(2)
+	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -726,7 +726,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(4, len(calls))
 	appendCall := calls[3]
 	s.Equal("AppendHistoryNodes", appendCall.Method)
-	appendReq, ok := appendCall.Arguments[0].(*p.AppendHistoryNodesRequest)
+	appendReq, ok := appendCall.Arguments[1].(*p.AppendHistoryNodesRequest)
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
@@ -750,7 +750,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(4, len(calls))
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
-	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	resetReq, ok := resetCall.Arguments[1].(*p.ResetWorkflowExecutionRequest)
 	s.True(resetReq.CurrentWorkflowMutation.ExecutionInfo.LastEventTaskID > 0)
 	resetReq.CurrentWorkflowMutation.ExecutionInfo.LastEventTaskID = 0
 	s.Equal(true, ok)
@@ -1385,10 +1385,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		}
 	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gcurResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gcurResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, currGwmsRequest).Return(currGwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, readHistoryReq).Return(readHistoryResp, nil).Once()
 
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel.}")
@@ -1988,13 +1988,13 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		Size: 200,
 	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gcurResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Times(2)
-	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gcurResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, currGwmsRequest).Return(currGwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, readHistoryReq).Return(readHistoryResp, nil).Once()
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything, mock.Anything).Return(forkResp, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(appendV2Resp, nil).Times(2)
+	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
@@ -2010,7 +2010,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(4, len(calls))
 	appendCall := calls[3]
 	s.Equal("AppendHistoryNodes", appendCall.Method)
-	appendReq, ok := appendCall.Arguments[0].(*p.AppendHistoryNodesRequest)
+	appendReq, ok := appendCall.Arguments[1].(*p.AppendHistoryNodesRequest)
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
@@ -2032,7 +2032,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(4, len(calls))
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
-	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	resetReq, ok := resetCall.Arguments[1].(*p.ResetWorkflowExecutionRequest)
 	s.True(resetReq.CurrentWorkflowMutation.ExecutionInfo.LastEventTaskID > 0)
 	resetReq.CurrentWorkflowMutation.ExecutionInfo.LastEventTaskID = 0
 	s.Equal(true, ok)
@@ -2688,11 +2688,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 		NewBranchToken: newBranchToken,
 	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gcurResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gcurResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, currGwmsRequest).Return(currGwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, readHistoryReq).Return(readHistoryResp, nil).Once()
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything, mock.Anything).Return(forkResp, nil).Once()
 
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.IsType(&workflow.DomainNotActiveError{}, err)
@@ -3293,13 +3293,13 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 		Size: 200,
 	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gcurResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gcurResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, currGwmsRequest).Return(currGwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, readHistoryReq).Return(readHistoryResp, nil).Once()
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything, mock.Anything).Return(forkResp, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(appendV2Resp, nil).Once()
+	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -3314,7 +3314,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(3, len(calls))
 	appendCall := calls[2]
 	s.Equal("AppendHistoryNodes", appendCall.Method)
-	appendReq, ok := appendCall.Arguments[0].(*p.AppendHistoryNodesRequest)
+	appendReq, ok := appendCall.Arguments[1].(*p.AppendHistoryNodesRequest)
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
@@ -3336,7 +3336,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(4, len(calls))
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
-	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	resetReq, ok := resetCall.Arguments[1].(*p.ResetWorkflowExecutionRequest)
 	s.Equal(true, ok)
 	s.Equal(false, resetReq.CurrentWorkflowMutation != nil)
 	s.Equal(compareCurrExeInfo.RunID, resetReq.CurrentRunID)
@@ -3980,12 +3980,12 @@ func (s *resetorSuite) TestApplyReset() {
 		History:           historyAfterReset,
 	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", forkReq).Return(forkResp, nil).Once()
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, currGwmsRequest).Return(currGwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, readHistoryReq).Return(readHistoryResp, nil).Once()
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything, forkReq).Return(forkResp, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(appendV2Resp, nil).Once()
+	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 	err := s.resetor.ApplyResetEvent(context.Background(), request, domainID, wid, currRunID)
 	s.Nil(err)
 
@@ -3999,7 +3999,7 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Equal(3, len(calls))
 	appendCall := calls[2]
 	s.Equal("AppendHistoryNodes", appendCall.Method)
-	appendReq, ok := appendCall.Arguments[0].(*p.AppendHistoryNodesRequest)
+	appendReq, ok := appendCall.Arguments[1].(*p.AppendHistoryNodesRequest)
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
@@ -4023,7 +4023,7 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Equal(3, len(calls))
 	resetCall := calls[2]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
-	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	resetReq, ok := resetCall.Arguments[1].(*p.ResetWorkflowExecutionRequest)
 	s.Equal(true, ok)
 	s.Equal(false, resetReq.CurrentWorkflowMutation != nil)
 	s.Equal(compareCurrExeInfo.RunID, resetReq.CurrentRunID)
