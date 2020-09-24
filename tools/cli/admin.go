@@ -22,9 +22,13 @@
 package cli
 
 import (
+	"strings"
 	"time"
 
 	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/service/worker/scanner/executions"
 )
 
 func newAdminWorkflowCommands() []cli.Command {
@@ -767,108 +771,53 @@ func newAdminQueueCommands() []cli.Command {
 }
 
 func newDBCommands() []cli.Command {
+	var collections cli.StringSlice = invariant.CollectionStrings()
+
+	scanFlag := cli.StringFlag{
+		Name:     FlagScanType,
+		Usage:    "Scan type to use: " + strings.Join(executions.ScanTypeStrings(), ", "),
+		Required: true,
+	}
+
+	collectionsFlag := cli.StringSliceFlag{
+		Name:  FlagInvariantCollection,
+		Usage: "Scan collection type to use: " + strings.Join(collections, ", "),
+		Value: &collections,
+	}
+
 	return []cli.Command{
 		{
-			Name:    "scan",
-			Aliases: []string{"scan"},
-			Usage:   "scan concrete executions in database and detect corruptions",
+			Name:  "scan",
+			Usage: "scan executions in database and detect corruptions",
 			Flags: append(getDBFlags(),
 				cli.IntFlag{
-					Name:  FlagLowerShardBound,
-					Usage: "lower bound of shard to scan (inclusive)",
-					Value: 0,
+					Name:     FlagNumberOfShards,
+					Usage:    "NumberOfShards for the cadence cluster (see config for numHistoryShards)",
+					Required: true,
 				},
-				cli.IntFlag{
-					Name:  FlagUpperShardBound,
-					Usage: "upper bound of shard to scan (exclusive)",
-					Value: 16384,
+				scanFlag,
+				collectionsFlag,
+				cli.StringFlag{
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file of executions to scan in JSON format {\"DomainID\":\"x\",\"WorkflowID\":\"x\",\"RunID\":\"x\"} separated by a newline",
 				},
-				cli.IntFlag{
-					Name:  FlagStartingRPS,
-					Usage: "starting rps of database queries, rps will be increased to target over scale up seconds",
-					Value: 100,
-				},
-				cli.IntFlag{
-					Name:  FlagRPS,
-					Usage: "target rps of database queries, target will be reached over scale up seconds",
-					Value: 7000,
-				},
-				cli.IntFlag{
-					Name:  FlagRPSScaleUpSeconds,
-					Usage: "number of seconds over which rps is scaled up to target",
-					Value: 1800,
-				},
-				cli.IntFlag{
-					Name:  FlagPageSize,
-					Usage: "page size used to query db executions table",
-					Value: 500,
-				},
-				cli.IntFlag{
-					Name:  FlagConcurrency,
-					Usage: "number of threads to handle scan",
-					Value: 1000,
-				},
-				cli.IntFlag{
-					Name:  FlagReportRate,
-					Usage: "the number of shards which get handled between each emitting of progress",
-					Value: 10,
-				},
-				cli.BoolFlag{
-					Name:  FlagSkipHistoryChecks,
-					Usage: "skip over history check invariants",
-				}),
+			),
+
 			Action: func(c *cli.Context) {
 				AdminDBScan(c)
 			},
 		},
 		{
-			Name:    "clean",
-			Aliases: []string{"clean"},
-			Usage:   "clean up corrupted workflows",
+			Name:  "clean",
+			Usage: "clean up corrupted workflows",
 			Flags: append(getDBFlags(),
+				scanFlag,
+				collectionsFlag,
 				cli.StringFlag{
-					Name:  FlagInputDirectory,
-					Usage: "the directory which contains corrupted workflow execution files from scan",
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file of execution to clean in JSON format. Use `scan` command to generate list of executions.",
 				},
-				cli.IntFlag{
-					Name:  FlagLowerShardBound,
-					Usage: "lower bound of corrupt shard to handle (inclusive)",
-					Value: 0,
-				},
-				cli.IntFlag{
-					Name:  FlagUpperShardBound,
-					Usage: "upper bound of shard to handle (exclusive)",
-					Value: 16384,
-				},
-				cli.IntFlag{
-					Name:  FlagStartingRPS,
-					Usage: "starting rps of database queries, rps will be increased to target over scale up seconds",
-					Value: 100,
-				},
-				cli.IntFlag{
-					Name:  FlagRPS,
-					Usage: "target rps of database queries, target will be reached over scale up seconds",
-					Value: 7000,
-				},
-				cli.IntFlag{
-					Name:  FlagRPSScaleUpSeconds,
-					Usage: "number of seconds over which rps is scaled up to target",
-					Value: 1800,
-				},
-				cli.IntFlag{
-					Name:  FlagConcurrency,
-					Usage: "number of threads to handle clean",
-					Value: 1000,
-				},
-				cli.IntFlag{
-					Name:  FlagReportRate,
-					Usage: "the number of shards which get handled between each emitting of progress",
-					Value: 10,
-				},
-				cli.BoolFlag{
-					Name:  FlagSkipHistoryChecks,
-					Usage: "skip over history check invariants",
-				}),
+			),
 			Action: func(c *cli.Context) {
 				AdminDBClean(c)
 			},

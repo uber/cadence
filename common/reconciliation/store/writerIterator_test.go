@@ -38,7 +38,7 @@ import (
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
-	"github.com/uber/cadence/common/reconciliation/iterator"
+	"github.com/uber/cadence/common/reconciliation/fetcher"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -63,7 +63,7 @@ func (s *WriterIteratorSuite) SetupTest() {
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
 	pr := persistence.NewPersistenceRetryer(getMockExecutionManager(10, 10), nil, common.CreatePersistenceRetryPolicy())
-	pItr := iterator.ConcreteExecution(pr, executionPageSize)
+	pItr := fetcher.ConcreteExecutionIterator(pr, executionPageSize)
 
 	uuid := "uuid"
 	extension := Extension("test")

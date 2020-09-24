@@ -643,7 +643,8 @@ func (s *VisibilityPersistenceSuite) TestDelete() {
 	defer cancel()
 
 	if s.VisibilityMgr.GetName() == "cassandra" {
-		s.T().Skip("this test is not applicable for cassandra")
+		// this test is not applicable for cassandra
+		return
 	}
 	nRows := 5
 	testDomainUUID := uuid.New()

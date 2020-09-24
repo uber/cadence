@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 //go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination mocks.go -self_package github.com/uber/cadence/common/reconciliation/invariant
+//go:generate enumer -type=Collection
 
 package invariant
 
@@ -53,7 +54,7 @@ const (
 )
 
 type (
-	// Name is the type of an invariant
+	// Name is the name of an invariant
 	Name string
 
 	// Collection is a type which indicates a collection of invariants
@@ -92,7 +93,7 @@ type ManagerCheckResult struct {
 // ManagerFixResult is the result of running a list of fixes
 type ManagerFixResult struct {
 	FixResultType            FixResultType
-	DeterminingInvariantType *Name
+	DeterminingInvariantName *Name
 	FixResults               []FixResult
 }
 
@@ -107,7 +108,7 @@ type CheckResult struct {
 // FixResult is the result of running Fix.
 type FixResult struct {
 	FixResultType FixResultType
-	InvariantType Name
+	InvariantName Name
 	CheckResult   CheckResult
 	Info          string
 	InfoDetails   string

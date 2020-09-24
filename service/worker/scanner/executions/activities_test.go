@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 type activitiesSuite struct {
@@ -84,7 +83,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			params: ScannerConfigActivityParams{
 				Overwrites: ScannerWorkflowConfigOverwrites{},
-				ScanType:   shard.ConcreteExecutionType,
+				ScanType:   ConcreteExecutionType,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
 				Enabled:                 true,
@@ -119,7 +118,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 						InvariantCollectionHistory:      true,
 					},
 				},
-				ScanType: shard.ConcreteExecutionType,
+				ScanType: ConcreteExecutionType,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
 				Enabled:                 false,
@@ -138,7 +137,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 	for _, tc := range testCases {
 		env := s.NewTestActivityEnvironment()
 		env.SetWorkerOptions(worker.Options{
-			BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeScannerContextKeyMap[shard.ConcreteExecutionType], ScannerContext{
+			BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeScannerContextKeyMap[ConcreteExecutionType], ScannerContext{
 				ScannerWorkflowDynamicConfig: tc.scannerWorkflowDynamicConfig,
 			}),
 		})
@@ -180,7 +179,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	}, nil)
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeFixerContextKeyMap[shard.ConcreteExecutionType], FixerContext{
+		BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeFixerContextKeyMap[ConcreteExecutionType], FixerContext{
 			Resource: s.mockResource,
 		}),
 	})

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package iterator
+package fetcher
 
 import (
 	"testing"
@@ -35,8 +35,8 @@ import (
 )
 
 const (
-	treeID   = "test-tree-id"
-	branchID = "test-branch-id"
+	testTreeID   = "test-tree-id"
+	testBranchID = "test-branch-id"
 )
 
 var (
@@ -74,8 +74,8 @@ func (p *PersistenceSuite) TestGetBranchToken() {
 			},
 			expectError: false,
 			branchToken: validBranchToken,
-			treeID:      treeID,
-			branchID:    branchID,
+			treeID:      testTreeID,
+			branchID:    testBranchID,
 		},
 		{
 			entity: &persistence.ListConcreteExecutionsEntity{
@@ -96,8 +96,8 @@ func (p *PersistenceSuite) TestGetBranchToken() {
 			},
 			expectError: false,
 			branchToken: validBranchToken,
-			treeID:      treeID,
-			branchID:    branchID,
+			treeID:      testTreeID,
+			branchID:    testBranchID,
 		},
 		{
 			entity: &persistence.ListConcreteExecutionsEntity{
@@ -133,25 +133,25 @@ func (p *PersistenceSuite) TestGetBranchToken() {
 	}
 
 	for _, tc := range testCases {
-		branchToken, treeID, branchID, err := GetBranchToken(tc.entity, encoder)
+		branchToken, branch, err := getBranchToken(tc.entity.ExecutionInfo.BranchToken, tc.entity.VersionHistories, encoder)
 		if tc.expectError {
 			p.Error(err)
 			p.Nil(branchToken)
-			p.Empty(treeID)
-			p.Empty(branchID)
+			p.Empty(branch.GetTreeID())
+			p.Empty(branch.GetBranchID())
 		} else {
 			p.NoError(err)
 			p.Equal(tc.branchToken, branchToken)
-			p.Equal(tc.treeID, treeID)
-			p.Equal(tc.branchID, branchID)
+			p.Equal(tc.treeID, branch.GetTreeID())
+			p.Equal(tc.branchID, branch.GetBranchID())
 		}
 	}
 }
 
 func (p *PersistenceSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {
 	hb := &shared.HistoryBranch{
-		TreeID:   common.StringPtr(treeID),
-		BranchID: common.StringPtr(branchID),
+		TreeID:   common.StringPtr(testTreeID),
+		BranchID: common.StringPtr(testBranchID),
 	}
 	bytes, err := encoder.Encode(hb)
 	p.NoError(err)

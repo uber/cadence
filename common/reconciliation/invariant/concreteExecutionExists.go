@@ -114,7 +114,7 @@ func (c *concreteExecutionExists) Fix(
 			return FixResult{
 				FixResultType: FixResultTypeSkipped,
 				CheckResult:   *runIDCheckResult,
-				InvariantType: c.Name(),
+				InvariantName: c.Name(),
 			}
 		}
 	}
@@ -136,7 +136,7 @@ func (c *concreteExecutionExists) Fix(
 	return FixResult{
 		FixResultType: FixResultTypeFixed,
 		CheckResult:   *checkResult,
-		InvariantType: c.Name(),
+		InvariantName: c.Name(),
 	}
 }
 
