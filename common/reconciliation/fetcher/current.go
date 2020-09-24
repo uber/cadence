@@ -41,7 +41,7 @@ func CurrentExecution(retryer persistence.Retryer, request ExecutionRequest) (en
 		DomainID:   request.DomainID,
 		WorkflowID: request.WorkflowID,
 	}
-	e, err := retryer.GetCurrentExecution(&req)
+	e, err := retryer.GetCurrentExecution(context.TODO(), &req)
 	if err != nil {
 		return nil, err
 	}

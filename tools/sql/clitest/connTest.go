@@ -88,12 +88,12 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 			environment.GetMySQLAddress(),
 			strconv.Itoa(environment.GetMySQLPort()),
 		),
-		User:         testUser,
-		Password:     testPassword,
-		PluginName:   s.pluginName,
-		DatabaseName: s.DBName,
-		EncodingType: "thriftrw",
-		DecodingTypes:   []string{"thriftrw"},
+		User:          testUser,
+		Password:      testPassword,
+		PluginName:    s.pluginName,
+		DatabaseName:  s.DBName,
+		EncodingType:  "thriftrw",
+		DecodingTypes: []string{"thriftrw"},
 	})
 	s.Nil(err)
 	s.RunCreateTest(conn)
@@ -108,12 +108,12 @@ func newTestConn(database, pluginName string) (*sql.Connection, error) {
 			environment.GetMySQLAddress(),
 			strconv.Itoa(environment.GetMySQLPort()),
 		),
-		User:         testUser,
-		Password:     testPassword,
-		PluginName:   pluginName,
-		DatabaseName: database,
-		EncodingType: "thriftrw",
-		DecodingTypes:   []string{"thriftrw"},
+		User:          testUser,
+		Password:      testPassword,
+		PluginName:    pluginName,
+		DatabaseName:  database,
+		EncodingType:  "thriftrw",
+		DecodingTypes: []string{"thriftrw"},
 	})
 }
 

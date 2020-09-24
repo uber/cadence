@@ -48,7 +48,7 @@ func ConcreteExecution(retryer persistence.Retryer, request ExecutionRequest) (e
 			RunId:      common.StringPtr(request.RunID),
 		},
 	}
-	e, err := retryer.GetWorkflowExecution(&req)
+	e, err := retryer.GetWorkflowExecution(context.TODO(), &req)
 	if err != nil {
 		return nil, err
 	}
