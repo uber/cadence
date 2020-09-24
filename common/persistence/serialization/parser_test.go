@@ -23,34 +23,25 @@
 package serialization
 
 import (
-	"fmt"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 )
 
-
-
-func validateEncoding(encoding common.EncodingType) error {
-	switch encoding {
-	case common.EncodingTypeProto, common.EncodingTypeThriftRW:
-		return nil
-	default:
-		return fmt.Errorf("invalid encoding type: %v", encoding)
+func TestParse(t *testing.T) {
+	thriftParser, err := NewParser(common.EncodingTypeThriftRW, common.EncodingTypeThriftRW)
+	assert.NoError(t, err)
+	domainInfo := &sqlblobs.DomainInfo{
+		Name: common.StringPtr("test_name"),
+		Data: map[string]string{"test_key": "test_value"},
 	}
+	db, err := thriftParser.DomainInfoToBlob(domainInfo)
+	assert.NoError(t, err)
+	assert.NotNil(t, db.Data)
+	decodedDomainInfo, err := thriftParser.DomainInfoFromBlob(db.Data, string(db.Encoding))
+	assert.NoError(t, err)
+	assert.Equal(t, decodedDomainInfo, domainInfo)
 }
-
-func encodeErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("error serializing struct to blob: %v", err)
-}
-
-func decodeErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("error deserializing blob to struct: %v", err)
-}
-
-

@@ -53,15 +53,13 @@ func newTaskPersistence(
 	db sqlplugin.DB,
 	nShards int,
 	log log.Logger,
-	encoder serialization.Encoder,
-	decoder serialization.Decoder,
+	parser serialization.Parser,
 ) (persistence.TaskManager, error) {
 	return &sqlTaskManager{
 		sqlStore: sqlStore{
-			db:      db,
-			logger:  log,
-			encoder: encoder,
-			decoder: decoder,
+			db:     db,
+			logger: log,
+			parser: parser,
 		},
 		nShards: nShards,
 	}, nil
@@ -88,7 +86,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 				ExpiryTimeNanos:  common.Int64Ptr(0),
 				LastUpdatedNanos: common.Int64Ptr(time.Now().UnixNano()),
 			}
-			blob, err := m.encoder.TaskListInfoToBlob(tlInfo)
+			blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 			if err != nil {
 				return nil, err
 			}
@@ -121,7 +119,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 		}
 	}
 
-	tlInfo, err := m.decoder.TaskListInfoFromBlob(row.Data, row.DataEncoding)
+	tlInfo, err := m.parser.TaskListInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +137,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 		}
 		now := time.Now()
 		tlInfo.LastUpdatedNanos = common.Int64Ptr(now.UnixNano())
-		blob, err1 := m.encoder.TaskListInfoToBlob(tlInfo)
+		blob, err1 := m.parser.TaskListInfoToBlob(tlInfo)
 		if err1 != nil {
 			return err1
 		}
@@ -190,7 +188,7 @@ func (m *sqlTaskManager) UpdateTaskList(
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListTTL().UnixNano())
-		blob, err := m.encoder.TaskListInfoToBlob(tlInfo)
+		blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +207,7 @@ func (m *sqlTaskManager) UpdateTaskList(
 		}
 	}
 	var resp *persistence.UpdateTaskListResponse
-	blob, err := m.encoder.TaskListInfoToBlob(tlInfo)
+	blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +303,7 @@ func (m *sqlTaskManager) ListTaskList(
 	}
 
 	for i := range rows {
-		info, err := m.decoder.TaskListInfoFromBlob(rows[i].Data, rows[i].DataEncoding)
+		info, err := m.parser.TaskListInfoFromBlob(rows[i].Data, rows[i].DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -357,7 +355,7 @@ func (m *sqlTaskManager) CreateTasks(
 		if v.Data.ScheduleToStartTimeout > 0 {
 			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
 		}
-		blob, err := m.encoder.TaskInfoToBlob(&sqlblobs.TaskInfo{
+		blob, err := m.parser.TaskInfoToBlob(&sqlblobs.TaskInfo{
 			WorkflowID:       &v.Data.WorkflowID,
 			RunID:            sqlplugin.MustParseUUID(v.Data.RunID),
 			ScheduleID:       &v.Data.ScheduleID,
@@ -416,7 +414,7 @@ func (m *sqlTaskManager) GetTasks(
 
 	var tasks = make([]*persistence.TaskInfo, len(rows))
 	for i, v := range rows {
-		info, err := m.decoder.TaskInfoFromBlob(v.Data, v.DataEncoding)
+		info, err := m.parser.TaskInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}

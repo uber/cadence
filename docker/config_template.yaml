@@ -26,6 +26,7 @@ persistence:
             sql:
                 pluginName: "mysql"
                 encodingType: "thriftrw"
+                decodingType: ["thriftrw"]
                 databaseName: {{ default .Env.DBNAME "cadence" }}
                 connectAddr: "{{ default .Env.MYSQL_SEEDS "" }}:{{ default .Env.DB_PORT "3306" }}"
                 connectProtocol: "tcp"

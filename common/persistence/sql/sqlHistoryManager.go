@@ -43,16 +43,14 @@ type sqlHistoryV2Manager struct {
 func newHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
-	encoder serialization.Encoder,
-	decoder serialization.Decoder,
+	parser serialization.Parser,
 ) (p.HistoryStore, error) {
 
 	return &sqlHistoryV2Manager{
 		sqlStore: sqlStore{
-			db:      db,
-			logger:  logger,
-			encoder: encoder,
-			decoder: decoder,
+			db:     db,
+			logger: logger,
+			parser: parser,
 		},
 	}, nil
 }
@@ -94,7 +92,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			CreatedTimeNanos: common.TimeNowNanosPtr(),
 		}
 
-		blob, err := m.encoder.HistoryTreeInfoToBlob(treeInfo)
+		blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
 		if err != nil {
 			return err
 		}
@@ -335,7 +333,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		CreatedTimeNanos: common.TimeNowNanosPtr(),
 	}
 
-	blob, err := m.encoder.HistoryTreeInfoToBlob(treeInfo)
+	blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +464,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		return &p.GetHistoryTreeResponse{}, nil
 	}
 	for _, row := range rows {
-		treeInfo, err := m.decoder.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
+		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}

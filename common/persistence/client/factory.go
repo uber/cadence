@@ -23,6 +23,8 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence/serialization"
 
@@ -300,12 +302,15 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case defaultCfg.Cassandra != nil:
 		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
+		var decodingTypes []common.EncodingType
+		for dt := range defaultCfg.SQL.DecodingTypes {
+			decodingTypes = append(decodingTypes, common.EncodingType(dt))
+		}
 		defaultDataStore.factory = sql.NewFactory(
 			*defaultCfg.SQL,
 			clusterName,
 			f.logger,
-			getSQLEncoder(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType)),
-			serialization.NewDecoder())
+			getSQLParser(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
 	case defaultCfg.CustomDataStoreConfig != nil:
 		defaultDataStore.factory = f.abstractDataStoreFactory.NewFactory(*defaultCfg.CustomDataStoreConfig, clusterName, f.logger)
 	default:
@@ -324,12 +329,15 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case visibilityCfg.Cassandra != nil:
 		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
+		var decodingTypes []common.EncodingType
+		for dt := range visibilityCfg.SQL.DecodingTypes {
+			decodingTypes = append(decodingTypes, common.EncodingType(dt))
+		}
 		visibilityDataStore.factory = sql.NewFactory(
 			*visibilityCfg.SQL,
 			clusterName,
 			f.logger,
-			getSQLEncoder(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType)),
-			serialization.NewDecoder())
+			getSQLParser(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType), decodingTypes...))
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
@@ -337,16 +345,12 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func getSQLEncoder(logger log.Logger, encodingType common.EncodingType) serialization.Encoder {
-	switch encodingType {
-	case common.EncodingTypeThriftRW:
-		return serialization.NewThriftEncoder()
-	case common.EncodingTypeProto:
-		return serialization.NewProtoEncoder()
-	default:
-		logger.Fatal("invalid config sql config does not contain valid encoding type")
-		return nil
+func getSQLParser(logger log.Logger, encodingType common.EncodingType, decodingTypes ...common.EncodingType) serialization.Parser {
+	parser, err := serialization.NewParser(encodingType, decodingTypes...)
+	if err != nil {
+		logger.Fatal("failed to construct sql parser", tag.Error(err))
 	}
+	return parser
 }
 
 func buildRatelimiters(cfg *config.Persistence, maxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {

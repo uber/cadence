@@ -37,10 +37,9 @@ import (
 
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
-	db      sqlplugin.DB
-	logger  log.Logger
-	encoder serialization.Encoder
-	decoder serialization.Decoder
+	db     sqlplugin.DB
+	logger log.Logger
+	parser serialization.Parser
 }
 
 func (m *sqlStore) GetName() string {

@@ -39,8 +39,7 @@ type (
 		dbConn      dbConn
 		clusterName string
 		logger      log.Logger
-		encoder     serialization.Encoder
-		decoder     serialization.Decoder
+		parser      serialization.Parser
 	}
 
 	// dbConn represents a logical mysql connection - its a
@@ -60,16 +59,14 @@ func NewFactory(
 	cfg config.SQL,
 	clusterName string,
 	logger log.Logger,
-	encoder serialization.Encoder,
-	decoder serialization.Decoder,
+	parser serialization.Parser,
 ) *Factory {
 	return &Factory{
 		cfg:         cfg,
 		clusterName: clusterName,
 		logger:      logger,
 		dbConn:      newRefCountedDBConn(&cfg),
-		encoder:     encoder,
-		decoder:     decoder,
+		parser:      parser,
 	}
 }
 
@@ -79,7 +76,7 @@ func (f *Factory) NewTaskStore() (p.TaskStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newTaskPersistence(conn, f.cfg.NumShards, f.logger, f.encoder, f.decoder)
+	return newTaskPersistence(conn, f.cfg.NumShards, f.logger, f.parser)
 }
 
 // NewShardStore returns a new shard store
@@ -88,7 +85,7 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newShardPersistence(conn, f.clusterName, f.logger, f.encoder, f.decoder)
+	return newShardPersistence(conn, f.clusterName, f.logger, f.parser)
 }
 
 // NewHistoryV2Store returns a new history store
@@ -97,7 +94,7 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryV2Persistence(conn, f.logger, f.encoder, f.decoder)
+	return newHistoryV2Persistence(conn, f.logger, f.parser)
 }
 
 // NewMetadataStore returns a new metadata store
@@ -106,7 +103,7 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newMetadataPersistenceV2(conn, f.clusterName, f.logger, f.encoder, f.decoder)
+	return newMetadataPersistenceV2(conn, f.clusterName, f.logger, f.parser)
 }
 
 // NewExecutionStore returns an ExecutionStore for a given shardID
@@ -115,7 +112,7 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewSQLExecutionStore(conn, f.logger, shardID, f.encoder, f.decoder)
+	return NewSQLExecutionStore(conn, f.logger, shardID, f.parser)
 }
 
 // NewVisibilityStore returns a visibility store

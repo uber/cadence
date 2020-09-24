@@ -24,81 +24,87 @@ package serialization
 
 import (
 	"bytes"
-	"github.com/uber/cadence/.gen/go/sqlblobs"
+
 	"go.uber.org/thriftrw/protocol"
+
+	"github.com/uber/cadence/.gen/go/sqlblobs"
+	"github.com/uber/cadence/common"
 )
 
 type thriftEncoder struct{}
 
-// NewThriftEncoder returns a new thrift encoder
-func NewThriftEncoder() Encoder {
+func newThriftEncoder() encoder {
 	return &thriftEncoder{}
 }
 
-func (e *thriftEncoder) ShardInfoToBlob(info *sqlblobs.ShardInfo) ([]byte, error) {
+func (e *thriftEncoder) shardInfoToBlob(info *sqlblobs.ShardInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) DomainInfoToBlob(info *sqlblobs.DomainInfo) ([]byte, error) {
+func (e *thriftEncoder) domainInfoToBlob(info *sqlblobs.DomainInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) HistoryTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) ([]byte, error) {
+func (e *thriftEncoder) historyTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) WorkflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInfo) ([]byte, error) {
+func (e *thriftEncoder) workflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) ActivityInfoToBlob(info *sqlblobs.ActivityInfo) ([]byte, error) {
+func (e *thriftEncoder) activityInfoToBlob(info *sqlblobs.ActivityInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) ChildExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) ([]byte, error) {
+func (e *thriftEncoder) childExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) SignalInfoToBlob(info *sqlblobs.SignalInfo) ([]byte, error) {
+func (e *thriftEncoder) signalInfoToBlob(info *sqlblobs.SignalInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) RequestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) ([]byte, error) {
+func (e *thriftEncoder) requestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) TimerInfoToBlob(info *sqlblobs.TimerInfo) ([]byte, error) {
+func (e *thriftEncoder) timerInfoToBlob(info *sqlblobs.TimerInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) TaskInfoToBlob(info *sqlblobs.TaskInfo) ([]byte, error) {
+func (e *thriftEncoder) taskInfoToBlob(info *sqlblobs.TaskInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) TaskListInfoToBlob(info *sqlblobs.TaskListInfo) ([]byte, error) {
+func (e *thriftEncoder) taskListInfoToBlob(info *sqlblobs.TaskListInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) TransferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) ([]byte, error) {
+func (e *thriftEncoder) transferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) TimerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) ([]byte, error) {
+func (e *thriftEncoder) timerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) ([]byte, error) {
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) ReplicationTaskInfoToBlob(info *sqlblobs.ReplicationTaskInfo) ([]byte, error) {
+func (e *thriftEncoder) replicationTaskInfoToBlob(info *sqlblobs.ReplicationTaskInfo) ([]byte, error) {
 	return thriftRWEncode(info)
+}
+
+func (e *thriftEncoder) encodingType() common.EncodingType {
+	return common.EncodingTypeThriftRW
 }
 
 func thriftRWEncode(t thriftRWType) ([]byte, error) {
 	value, err := t.ToWire()
 	if err != nil {
-		return nil, encodeErr(err)
+		return nil, err
 	}
 	var b bytes.Buffer
 	if err := protocol.Binary.Encode(value, &b); err != nil {
-		return nil, encodeErr(err)
+		return nil, err
 	}
 	return b.Bytes(), nil
 }

@@ -46,15 +46,13 @@ func newShardPersistence(
 	db sqlplugin.DB,
 	currentClusterName string,
 	log log.Logger,
-	encoder serialization.Encoder,
-	decoder serialization.Decoder,
+	parser serialization.Parser,
 ) (persistence.ShardManager, error) {
 	return &sqlShardManager{
 		sqlStore: sqlStore{
-			db:      db,
-			logger:  log,
-			encoder: encoder,
-			decoder: decoder,
+			db:     db,
+			logger: log,
+			parser: parser,
 		},
 		currentClusterName: currentClusterName,
 	}, nil
@@ -72,7 +70,7 @@ func (m *sqlShardManager) CreateShard(
 		}
 	}
 
-	row, err := shardInfoToShardsRow(*request.ShardInfo, m.encoder)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
@@ -104,7 +102,7 @@ func (m *sqlShardManager) GetShard(
 		}
 	}
 
-	shardInfo, err := m.decoder.ShardInfoFromBlob(row.Data, row.DataEncoding)
+	shardInfo, err := m.parser.ShardInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +172,7 @@ func (m *sqlShardManager) UpdateShard(
 	_ context.Context,
 	request *persistence.UpdateShardRequest,
 ) error {
-	row, err := shardInfoToShardsRow(*request.ShardInfo, m.encoder)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
@@ -246,7 +244,7 @@ func readLockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
 	return nil
 }
 
-func shardInfoToShardsRow(s persistence.ShardInfo, encoder serialization.Encoder) (*sqlplugin.ShardsRow, error) {
+func shardInfoToShardsRow(s persistence.ShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
 	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
 	for k, v := range s.ClusterTimerAckLevel {
 		timerAckLevels[k] = v.UnixNano()
@@ -293,7 +291,7 @@ func shardInfoToShardsRow(s persistence.ShardInfo, encoder serialization.Encoder
 		PendingFailoverMarkersEncoding:        common.StringPtr(markerEncoding),
 	}
 
-	blob, err := encoder.ShardInfoToBlob(shardInfo)
+	blob, err := parser.ShardInfoToBlob(shardInfo)
 	if err != nil {
 		return nil, err
 	}
