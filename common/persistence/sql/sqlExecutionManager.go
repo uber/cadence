@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -56,6 +57,7 @@ func NewSQLExecutionStore(
 	db sqlplugin.DB,
 	logger log.Logger,
 	shardID int,
+	parser serialization.Parser,
 ) (p.ExecutionStore, error) {
 
 	return &sqlExecutionManager{
@@ -63,6 +65,7 @@ func NewSQLExecutionStore(
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			parser: parser,
 		},
 	}, nil
 }
@@ -203,7 +206,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 		return nil, err
 	}
 
-	if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, &request.NewWorkflowSnapshot); err != nil {
+	if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, &request.NewWorkflowSnapshot, m.parser); err != nil {
 		return nil, err
 	}
 
@@ -236,7 +239,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
-	info, err := workflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
+	info, err := m.parser.WorkflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +348,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.parser)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get activity info. Error: %v", err),
@@ -359,7 +363,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.parser)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get timer info. Error: %v", err),
@@ -373,7 +378,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.parser)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get child execution info. Error: %v", err),
@@ -387,7 +393,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.parser)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get request cancel info. Error: %v", err),
@@ -401,7 +408,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			m.shardID,
 			domainID,
 			wfID,
-			runID)
+			runID,
+			m.parser)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution: failed to get signal info. Error: %v", err),
@@ -538,11 +546,11 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 		}
 	}
 
-	if err := applyWorkflowMutationTx(tx, shardID, &updateWorkflow); err != nil {
+	if err := applyWorkflowMutationTx(tx, shardID, &updateWorkflow, m.parser); err != nil {
 		return err
 	}
 	if newWorkflow != nil {
-		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
@@ -614,7 +622,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 
 	// 3. update or lock current run
 	if request.CurrentWorkflowMutation != nil {
-		if err := applyWorkflowMutationTx(tx, m.shardID, request.CurrentWorkflowMutation); err != nil {
+		if err := applyWorkflowMutationTx(tx, m.shardID, request.CurrentWorkflowMutation, m.parser); err != nil {
 			return err
 		}
 	} else {
@@ -634,7 +642,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 	}
 
 	// 4. create the new reset workflow
-	return m.applyWorkflowSnapshotTxAsNew(tx, m.shardID, &request.NewWorkflowSnapshot)
+	return m.applyWorkflowSnapshotTxAsNew(tx, m.shardID, &request.NewWorkflowSnapshot, m.parser)
 }
 
 func (m *sqlExecutionManager) ConflictResolveWorkflowExecution(
@@ -764,16 +772,16 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 		}
 	}
 
-	if err := applyWorkflowSnapshotTxAsReset(tx, shardID, &resetWorkflow); err != nil {
+	if err := applyWorkflowSnapshotTxAsReset(tx, shardID, &resetWorkflow, m.parser); err != nil {
 		return err
 	}
 	if currentWorkflow != nil {
-		if err := applyWorkflowMutationTx(tx, shardID, currentWorkflow); err != nil {
+		if err := applyWorkflowMutationTx(tx, shardID, currentWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
 	if newWorkflow != nil {
-		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNew(tx, shardID, newWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
@@ -880,7 +888,7 @@ func (m *sqlExecutionManager) GetTransferTasks(
 	}
 	resp := &p.GetTransferTasksResponse{Tasks: make([]*p.TransferTaskInfo, len(rows))}
 	for i, row := range rows {
-		info, err := transferTaskInfoFromBlob(row.Data, row.DataEncoding)
+		info, err := m.parser.TransferTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -988,7 +996,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 
 	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
 	for i, row := range rows {
-		info, err := replicationTaskInfoFromBlob(row.Data, row.DataEncoding)
+		info, err := m.parser.ReplicationTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -1174,6 +1182,7 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 				sqlplugin.MustParseUUID(task.DomainID),
 				emptyWorkflowID,
 				sqlplugin.MustParseUUID(emptyReplicationRunID),
+				m.parser,
 			); err != nil {
 				rollBackErr := tx.Rollback()
 				if rollBackErr != nil {
@@ -1232,7 +1241,7 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 
 	resp := &p.GetTimerIndexTasksResponse{Timers: make([]*p.TimerTaskInfo, len(rows))}
 	for i, row := range rows {
-		info, err := timerTaskInfoFromBlob(row.Data, row.DataEncoding)
+		info, err := m.parser.TimerTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -1309,7 +1318,7 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	request *p.PutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
-	blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
 		DomainID:            sqlplugin.MustParseUUID(replicationTask.DomainID),
 		WorkflowID:          &replicationTask.WorkflowID,
 		RunID:               sqlplugin.MustParseUUID(replicationTask.RunID),

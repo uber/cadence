@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -40,6 +42,7 @@ func updateActivityInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(activityInfos) > 0 {
@@ -81,7 +84,7 @@ func updateActivityInfos(
 				RetryLastWorkerIdentity:       &v.LastWorkerIdentity,
 				RetryLastFailureDetails:       v.LastFailureDetails,
 			}
-			blob, err := activityInfoToBlob(info)
+			blob, err := parser.ActivityInfoToBlob(info)
 			if err != nil {
 				return err
 			}
@@ -142,6 +145,7 @@ func getActivityInfoMap(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.InternalActivityInfo, error) {
 
 	rows, err := db.SelectFromActivityInfoMaps(&sqlplugin.ActivityInfoMapsFilter{
@@ -158,7 +162,7 @@ func getActivityInfoMap(
 
 	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range rows {
-		decoded, err := activityInfoFromBlob(v.Data, v.DataEncoding)
+		decoded, err := parser.ActivityInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -234,12 +238,13 @@ func updateTimerInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(timerInfos) > 0 {
 		rows := make([]sqlplugin.TimerInfoMapsRow, len(timerInfos))
 		for i, v := range timerInfos {
-			blob, err := timerInfoToBlob(&sqlblobs.TimerInfo{
+			blob, err := parser.TimerInfoToBlob(&sqlblobs.TimerInfo{
 				Version:         &v.Version,
 				StartedID:       &v.StartedID,
 				ExpiryTimeNanos: common.Int64Ptr(v.ExpiryTime.UnixNano()),
@@ -303,6 +308,7 @@ func getTimerInfoMap(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[string]*persistence.TimerInfo, error) {
 
 	rows, err := db.SelectFromTimerInfoMaps(&sqlplugin.TimerInfoMapsFilter{
@@ -318,7 +324,7 @@ func getTimerInfoMap(
 	}
 	ret := make(map[string]*persistence.TimerInfo)
 	for _, v := range rows {
-		info, err := timerInfoFromBlob(v.Data, v.DataEncoding)
+		info, err := parser.TimerInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -366,6 +372,7 @@ func updateChildExecutionInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(childExecutionInfos) > 0 {
@@ -389,7 +396,7 @@ func updateChildExecutionInfos(
 				WorkflowTypeName:       &v.WorkflowTypeName,
 				ParentClosePolicy:      common.Int32Ptr(int32(v.ParentClosePolicy)),
 			}
-			blob, err := childExecutionInfoToBlob(info)
+			blob, err := parser.ChildExecutionInfoToBlob(info)
 			if err != nil {
 				return err
 			}
@@ -432,6 +439,7 @@ func getChildExecutionInfoMap(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.InternalChildExecutionInfo, error) {
 
 	rows, err := db.SelectFromChildExecutionInfoMaps(&sqlplugin.ChildExecutionInfoMapsFilter{
@@ -448,7 +456,7 @@ func getChildExecutionInfoMap(
 
 	ret := make(map[int64]*persistence.InternalChildExecutionInfo)
 	for _, v := range rows {
-		rowInfo, err := childExecutionInfoFromBlob(v.Data, v.DataEncoding)
+		rowInfo, err := parser.ChildExecutionInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -505,12 +513,13 @@ func updateRequestCancelInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(requestCancelInfos) > 0 {
 		rows := make([]sqlplugin.RequestCancelInfoMapsRow, len(requestCancelInfos))
 		for i, v := range requestCancelInfos {
-			blob, err := requestCancelInfoToBlob(&sqlblobs.RequestCancelInfo{
+			blob, err := parser.RequestCancelInfoToBlob(&sqlblobs.RequestCancelInfo{
 				Version:               &v.Version,
 				InitiatedEventBatchID: &v.InitiatedEventBatchID,
 				CancelRequestID:       &v.CancelRequestID,
@@ -570,6 +579,7 @@ func getRequestCancelInfoMap(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.RequestCancelInfo, error) {
 
 	rows, err := db.SelectFromRequestCancelInfoMaps(&sqlplugin.RequestCancelInfoMapsFilter{
@@ -586,7 +596,7 @@ func getRequestCancelInfoMap(
 
 	ret := make(map[int64]*persistence.RequestCancelInfo)
 	for _, v := range rows {
-		rowInfo, err := requestCancelInfoFromBlob(v.Data, v.DataEncoding)
+		rowInfo, err := parser.RequestCancelInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -630,12 +640,13 @@ func updateSignalInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(signalInfos) > 0 {
 		rows := make([]sqlplugin.SignalInfoMapsRow, len(signalInfos))
 		for i, v := range signalInfos {
-			blob, err := signalInfoToBlob(&sqlblobs.SignalInfo{
+			blob, err := parser.SignalInfoToBlob(&sqlblobs.SignalInfo{
 				Version:               &v.Version,
 				InitiatedEventBatchID: &v.InitiatedEventBatchID,
 				RequestID:             &v.SignalRequestID,
@@ -698,6 +709,7 @@ func getSignalInfoMap(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.SignalInfo, error) {
 
 	rows, err := db.SelectFromSignalInfoMaps(&sqlplugin.SignalInfoMapsFilter{
@@ -714,7 +726,7 @@ func getSignalInfoMap(
 
 	ret := make(map[int64]*persistence.SignalInfo)
 	for _, v := range rows {
-		rowInfo, err := signalInfoFromBlob(v.Data, v.DataEncoding)
+		rowInfo, err := parser.SignalInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
