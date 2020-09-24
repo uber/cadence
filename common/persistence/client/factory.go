@@ -330,7 +330,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
 		var decodingTypes []common.EncodingType
-		for dt := range visibilityCfg.SQL.DecodingTypes {
+		for _, dt := range visibilityCfg.SQL.DecodingTypes {
 			decodingTypes = append(decodingTypes, common.EncodingType(dt))
 		}
 		visibilityDataStore.factory = sql.NewFactory(
