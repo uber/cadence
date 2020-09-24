@@ -83,7 +83,7 @@ You will probably get code review from them. Don't hesitate to ask for some earl
 
 ## Testing & Debug
 
-To run all the package tests.
+To run all the package tests use the below command.
 This will run all the tests excluding end-to-end integration test in host/ package):
 
 ```bash
@@ -91,7 +91,7 @@ make test
 ```
 > Note that you will see some test failures because of errors connecting to MySQL/Postgres if only Cassandra is up. This is okay if you don't write any code related to persistence layer. 
  
-To run all end-to-end integration tests under **host/** package: 
+To run all end-to-end integration tests in **host/** package: 
 ```bash
 make test_e2e
 ```
@@ -103,7 +103,7 @@ go test -v <path> -run <TestSuite> -testify.m <TestSpercificTaskName>
 go test -v github.com/uber/cadence/common/persistence/persistence-tests -run TestVisibilitySamplingSuite -testify.m TestListClosedWorkflowExecutions
 ```
 
-##Pull Requests
+## Pull Requests
 After all the preparation you are about to write code and make a Pull Request for the issue.
 
 ### When to open a PR
