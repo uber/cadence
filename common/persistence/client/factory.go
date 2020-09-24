@@ -303,7 +303,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
 		var decodingTypes []common.EncodingType
-		for dt := range defaultCfg.SQL.DecodingTypes {
+		for _, dt := range defaultCfg.SQL.DecodingTypes {
 			decodingTypes = append(decodingTypes, common.EncodingType(dt))
 		}
 		defaultDataStore.factory = sql.NewFactory(
