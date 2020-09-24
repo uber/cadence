@@ -111,7 +111,7 @@ You have a few options for choosing when to submit:
 
 * You can open a PR with an initial prototype with "Draft" option or with "WIP"(work in progress) in the title. This is useful when want to get some early feedback.
 
-* PR is supposed to be production ready. You should have fixed all styling, adding new tests if possible, and verified the change doesn't break any existing tests. 
+* PR is supposed to be or near production ready. You should have fixed all styling, adding new tests if possible, and verified the change doesn't break any existing tests. 
 
 * For small changes where the approach seems obvious, you can open a PR with what you believe to be production-ready or near-production-ready code. As you get more experience with how we develop code, you'll find that more PRs will begin falling into this category.
 
@@ -143,7 +143,7 @@ make copyright
 ### Code review
 We take code reviews very seriously at Cadence. Please don't be deterred if you feel like you've received some hefty feedback. That's completely normal and expected—and, if you're an external contributor, we very much appreciate your contribution!
 
-In this repository in particular, merging a PR means accepting responsibility for maintaining that code for, quite possibly, the lifetime of CockroachDB. To take on that reponsibility, we need to ensure that meets our strict standards for production-ready code.
+In this repository in particular, merging a PR means accepting responsibility for maintaining that code for, quite possibly, the lifetime of Cadence. To take on that reponsibility, we need to ensure that meets our strict standards for production-ready code.
 
 No one is expected to write perfect code on the first try. That's why we have code reviews in the first place!
 
@@ -154,7 +154,7 @@ If someone leaves line comments on your PR without leaving a top-level "looks go
 
 You should respond to all unresolved comments whenever you push a new revision or before you merge.
 
-As you gain confidence in Go, you'll find that some of the nitpicky style feedback you get does not make for obviously better code. Don't be afraid to stick to your guns and push back. Much of coding style is subjective. 
+Also, as you gain confidence in Go, you'll find that some of the nitpicky style feedback you get does not make for obviously better code. Don't be afraid to stick to your guns and push back. Much of coding style is subjective. 
 
 ### Merging
 External contributors: you don't need to worry about this section. We'll merge your PR as soon as you've addressed all review feedback(you will get at least one approval) and pipeline runs are all successful(meaning all tests are passing).
