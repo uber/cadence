@@ -21,8 +21,11 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -38,12 +41,17 @@ type sqlMetadataManagerV2 struct {
 }
 
 // newMetadataPersistenceV2 creates an instance of sqlMetadataManagerV2
-func newMetadataPersistenceV2(db sqlplugin.DB, currentClusterName string,
-	logger log.Logger) (persistence.MetadataStore, error) {
+func newMetadataPersistenceV2(
+	db sqlplugin.DB,
+	currentClusterName string,
+	logger log.Logger,
+	parser serialization.Parser,
+) (persistence.MetadataStore, error) {
 	return &sqlMetadataManagerV2{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			parser: parser,
 		},
 		activeClusterName: currentClusterName,
 	}, nil
@@ -81,8 +89,11 @@ func lockMetadata(tx sqlplugin.Tx) error {
 	return nil
 }
 
-func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateDomainRequest) (*persistence.CreateDomainResponse, error) {
-	metadata, err := m.GetMetadata()
+func (m *sqlMetadataManagerV2) CreateDomain(
+	_ context.Context,
+	request *persistence.InternalCreateDomainRequest,
+) (*persistence.CreateDomainResponse, error) {
+	metadata, err := m.GetMetadata(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +133,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateD
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
 
-	blob, err := domainInfoToBlob(domainInfo)
+	blob, err := m.parser.DomainInfoToBlob(domainInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +166,10 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateD
 	return resp, err
 }
 
-func (m *sqlMetadataManagerV2) GetDomain(request *persistence.GetDomainRequest) (*persistence.InternalGetDomainResponse, error) {
+func (m *sqlMetadataManagerV2) GetDomain(
+	_ context.Context,
+	request *persistence.GetDomainRequest,
+) (*persistence.InternalGetDomainResponse, error) {
 	filter := &sqlplugin.DomainFilter{}
 	switch {
 	case request.Name != "" && request.ID != "":
@@ -201,7 +215,7 @@ func (m *sqlMetadataManagerV2) GetDomain(request *persistence.GetDomainRequest) 
 }
 
 func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) (*persistence.InternalGetDomainResponse, error) {
-	domainInfo, err := domainInfoFromBlob(row.Data, row.DataEncoding)
+	domainInfo, err := m.parser.DomainInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -256,6 +270,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 }
 
 func (m *sqlMetadataManagerV2) UpdateDomain(
+	_ context.Context,
 	request *persistence.InternalUpdateDomainRequest,
 ) error {
 
@@ -301,7 +316,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
 
-	blob, err := domainInfoToBlob(domainInfo)
+	blob, err := m.parser.DomainInfoToBlob(domainInfo)
 	if err != nil {
 		return err
 	}
@@ -330,21 +345,29 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 	})
 }
 
-func (m *sqlMetadataManagerV2) DeleteDomain(request *persistence.DeleteDomainRequest) error {
+func (m *sqlMetadataManagerV2) DeleteDomain(
+	_ context.Context,
+	request *persistence.DeleteDomainRequest,
+) error {
 	return m.txExecute("DeleteDomain", func(tx sqlplugin.Tx) error {
 		_, err := tx.DeleteFromDomain(&sqlplugin.DomainFilter{ID: sqlplugin.UUIDPtr(sqlplugin.MustParseUUID(request.ID))})
 		return err
 	})
 }
 
-func (m *sqlMetadataManagerV2) DeleteDomainByName(request *persistence.DeleteDomainByNameRequest) error {
+func (m *sqlMetadataManagerV2) DeleteDomainByName(
+	_ context.Context,
+	request *persistence.DeleteDomainByNameRequest,
+) error {
 	return m.txExecute("DeleteDomainByName", func(tx sqlplugin.Tx) error {
 		_, err := tx.DeleteFromDomain(&sqlplugin.DomainFilter{Name: &request.Name})
 		return err
 	})
 }
 
-func (m *sqlMetadataManagerV2) GetMetadata() (*persistence.GetMetadataResponse, error) {
+func (m *sqlMetadataManagerV2) GetMetadata(
+	_ context.Context,
+) (*persistence.GetMetadataResponse, error) {
 	row, err := m.db.SelectFromDomainMetadata()
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -354,7 +377,10 @@ func (m *sqlMetadataManagerV2) GetMetadata() (*persistence.GetMetadataResponse, 
 	return &persistence.GetMetadataResponse{NotificationVersion: row.NotificationVersion}, nil
 }
 
-func (m *sqlMetadataManagerV2) ListDomains(request *persistence.ListDomainsRequest) (*persistence.InternalListDomainsResponse, error) {
+func (m *sqlMetadataManagerV2) ListDomains(
+	_ context.Context,
+	request *persistence.ListDomainsRequest,
+) (*persistence.InternalListDomainsResponse, error) {
 	var pageToken *sqlplugin.UUID
 	if request.NextPageToken != nil {
 		token := sqlplugin.UUID(request.NextPageToken)

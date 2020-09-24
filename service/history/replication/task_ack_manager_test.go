@@ -942,7 +942,7 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
 		NextPageToken: []byte{1},
 	}, nil)
-	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything).Return(nil)
+	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
 
 	_, err := s.ackManager.GetTasks(context.Background(), clusterName, 10)
 	s.NoError(err)

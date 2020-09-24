@@ -26,11 +26,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/uber/cadence/common/auth"
-
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )

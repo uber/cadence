@@ -166,27 +166,6 @@ func buildFilterFnForVisibility(workflowID, runID string) filterFnForVisibility 
 	}
 }
 
-func getInputFile(inputFile string) *os.File {
-	if len(inputFile) == 0 {
-		info, err := os.Stdin.Stat()
-		if err != nil {
-			ErrorAndExit("Failed to stat stdin file handle", err)
-		}
-		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
-			fmt.Println("Misuse of pipe mode")
-			os.Exit(1)
-		}
-		return os.Stdin
-	}
-	// This code is executed from the CLI. All user input is from a CLI user.
-	// #nosec
-	f, err := os.Open(inputFile)
-	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
-	}
-	return f
-}
-
 func getOutputFile(outputFile string) *os.File {
 	if len(outputFile) == 0 {
 		return os.Stdout

@@ -21,10 +21,13 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/dgryski/go-farm"
 
@@ -46,17 +49,26 @@ var (
 )
 
 // newTaskPersistence creates a new instance of TaskManager
-func newTaskPersistence(db sqlplugin.DB, nShards int, log log.Logger) (persistence.TaskManager, error) {
+func newTaskPersistence(
+	db sqlplugin.DB,
+	nShards int,
+	log log.Logger,
+	parser serialization.Parser,
+) (persistence.TaskManager, error) {
 	return &sqlTaskManager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
+			parser: parser,
 		},
 		nShards: nShards,
 	}, nil
 }
 
-func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
+func (m *sqlTaskManager) LeaseTaskList(
+	_ context.Context,
+	request *persistence.LeaseTaskListRequest,
+) (*persistence.LeaseTaskListResponse, error) {
 	var rangeID int64
 	var ackLevel int64
 	shardID := m.shardID(request.DomainID, request.TaskList)
@@ -74,7 +86,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 				ExpiryTimeNanos:  common.Int64Ptr(0),
 				LastUpdatedNanos: common.Int64Ptr(time.Now().UnixNano()),
 			}
-			blob, err := taskListInfoToBlob(tlInfo)
+			blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +119,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 		}
 	}
 
-	tlInfo, err := taskListInfoFromBlob(row.Data, row.DataEncoding)
+	tlInfo, err := m.parser.TaskListInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +137,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 		}
 		now := time.Now()
 		tlInfo.LastUpdatedNanos = common.Int64Ptr(now.UnixNano())
-		blob, err1 := taskListInfoToBlob(tlInfo)
+		blob, err1 := m.parser.TaskListInfoToBlob(tlInfo)
 		if err1 != nil {
 			return err1
 		}
@@ -162,7 +174,10 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 	return resp, err
 }
 
-func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListRequest) (*persistence.UpdateTaskListResponse, error) {
+func (m *sqlTaskManager) UpdateTaskList(
+	_ context.Context,
+	request *persistence.UpdateTaskListRequest,
+) (*persistence.UpdateTaskListResponse, error) {
 	shardID := m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name)
 	domainID := sqlplugin.MustParseUUID(request.TaskListInfo.DomainID)
 	tlInfo := &sqlblobs.TaskListInfo{
@@ -173,7 +188,7 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListTTL().UnixNano())
-		blob, err := taskListInfoToBlob(tlInfo)
+		blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +207,7 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 		}
 	}
 	var resp *persistence.UpdateTaskListResponse
-	blob, err := taskListInfoToBlob(tlInfo)
+	blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +249,10 @@ type taskListPageToken struct {
 	TaskType int64
 }
 
-func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) (*persistence.ListTaskListResponse, error) {
+func (m *sqlTaskManager) ListTaskList(
+	_ context.Context,
+	request *persistence.ListTaskListRequest,
+) (*persistence.ListTaskListResponse, error) {
 	pageToken := taskListPageToken{TaskType: math.MinInt16, DomainID: minUUID}
 	if request.PageToken != nil {
 		if err := gobDeserialize(request.PageToken, &pageToken); err != nil {
@@ -285,7 +303,7 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 	}
 
 	for i := range rows {
-		info, err := taskListInfoFromBlob(rows[i].Data, rows[i].DataEncoding)
+		info, err := m.parser.TaskListInfoFromBlob(rows[i].Data, rows[i].DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +320,10 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 	return resp, nil
 }
 
-func (m *sqlTaskManager) DeleteTaskList(request *persistence.DeleteTaskListRequest) error {
+func (m *sqlTaskManager) DeleteTaskList(
+	_ context.Context,
+	request *persistence.DeleteTaskListRequest,
+) error {
 	domainID := sqlplugin.MustParseUUID(request.DomainID)
 	result, err := m.db.DeleteFromTaskLists(&sqlplugin.TaskListsFilter{
 		ShardID:  m.shardID(request.DomainID, request.TaskListName),
@@ -324,14 +345,17 @@ func (m *sqlTaskManager) DeleteTaskList(request *persistence.DeleteTaskListReque
 	return nil
 }
 
-func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*persistence.CreateTasksResponse, error) {
+func (m *sqlTaskManager) CreateTasks(
+	_ context.Context,
+	request *persistence.CreateTasksRequest,
+) (*persistence.CreateTasksResponse, error) {
 	tasksRows := make([]sqlplugin.TasksRow, len(request.Tasks))
 	for i, v := range request.Tasks {
 		var expiryTime time.Time
 		if v.Data.ScheduleToStartTimeout > 0 {
 			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
 		}
-		blob, err := taskInfoToBlob(&sqlblobs.TaskInfo{
+		blob, err := m.parser.TaskInfoToBlob(&sqlblobs.TaskInfo{
 			WorkflowID:       &v.Data.WorkflowID,
 			RunID:            sqlplugin.MustParseUUID(v.Data.RunID),
 			ScheduleID:       &v.Data.ScheduleID,
@@ -370,7 +394,10 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 	return resp, err
 }
 
-func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
+func (m *sqlTaskManager) GetTasks(
+	_ context.Context,
+	request *persistence.GetTasksRequest,
+) (*persistence.GetTasksResponse, error) {
 	rows, err := m.db.SelectFromTasks(&sqlplugin.TasksFilter{
 		DomainID:     sqlplugin.MustParseUUID(request.DomainID),
 		TaskListName: request.TaskList,
@@ -387,7 +414,7 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 
 	var tasks = make([]*persistence.TaskInfo, len(rows))
 	for i, v := range rows {
-		info, err := taskInfoFromBlob(v.Data, v.DataEncoding)
+		info, err := m.parser.TaskInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -405,7 +432,10 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 	return &persistence.GetTasksResponse{Tasks: tasks}, nil
 }
 
-func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
+func (m *sqlTaskManager) CompleteTask(
+	_ context.Context,
+	request *persistence.CompleteTaskRequest,
+) error {
 	taskID := request.TaskID
 	taskList := request.TaskList
 	_, err := m.db.DeleteFromTasks(&sqlplugin.TasksFilter{
@@ -419,7 +449,10 @@ func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) 
 	return nil
 }
 
-func (m *sqlTaskManager) CompleteTasksLessThan(request *persistence.CompleteTasksLessThanRequest) (int, error) {
+func (m *sqlTaskManager) CompleteTasksLessThan(
+	_ context.Context,
+	request *persistence.CompleteTasksLessThanRequest,
+) (int, error) {
 	result, err := m.db.DeleteFromTasks(&sqlplugin.TasksFilter{
 		DomainID:             sqlplugin.MustParseUUID(request.DomainID),
 		TaskListName:         request.TaskListName,

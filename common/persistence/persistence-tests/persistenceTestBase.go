@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -263,7 +264,7 @@ func (s *TestBase) Setup() {
 	}
 
 	s.TaskIDGenerator = &TestTransferTaskIDGenerator{}
-	err = s.ShardMgr.CreateShard(&p.CreateShardRequest{ShardInfo: s.ShardInfo})
+	err = s.ShardMgr.CreateShard(context.Background(), &p.CreateShardRequest{ShardInfo: s.ShardInfo})
 	s.fatalOnError("CreateShard", err)
 
 	queue, err := factory.NewDomainReplicationQueue()
@@ -285,14 +286,14 @@ func (s *TestBase) CreateShard(shardID int, owner string, rangeID int64) error {
 		RangeID: rangeID,
 	}
 
-	return s.ShardMgr.CreateShard(&p.CreateShardRequest{
+	return s.ShardMgr.CreateShard(context.TODO(), &p.CreateShardRequest{
 		ShardInfo: info,
 	})
 }
 
 // GetShard is a utility method to get the shard using persistence layer
 func (s *TestBase) GetShard(shardID int) (*p.ShardInfo, error) {
-	response, err := s.ShardMgr.GetShard(&p.GetShardRequest{
+	response, err := s.ShardMgr.GetShard(context.TODO(), &p.GetShardRequest{
 		ShardID: shardID,
 	})
 
@@ -305,7 +306,7 @@ func (s *TestBase) GetShard(shardID int) (*p.ShardInfo, error) {
 
 // UpdateShard is a utility method to update the shard using persistence layer
 func (s *TestBase) UpdateShard(updatedInfo *p.ShardInfo, previousRangeID int64) error {
-	return s.ShardMgr.UpdateShard(&p.UpdateShardRequest{
+	return s.ShardMgr.UpdateShard(context.TODO(), &p.UpdateShardRequest{
 		ShardInfo:       updatedInfo,
 		PreviousRangeID: previousRangeID,
 	})
@@ -1283,7 +1284,7 @@ func (s *TestBase) RangeCompleteTimerTask(inclusiveBeginTimestamp time.Time, exc
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(context.TODO(), &p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
 		TaskType: p.TaskListTypeDecision,
@@ -1307,7 +1308,7 @@ func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflo
 		},
 	}
 
-	_, err = s.TaskMgr.CreateTasks(&p.CreateTasksRequest{
+	_, err = s.TaskMgr.CreateTasks(context.TODO(), &p.CreateTasksRequest{
 		TaskListInfo: leaseResponse.TaskListInfo,
 		Tasks:        tasks,
 	})
@@ -1328,6 +1329,7 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 		_, ok := taskLists[tl]
 		if !ok {
 			resp, err := s.TaskMgr.LeaseTaskList(
+				context.TODO(),
 				&p.LeaseTaskListRequest{DomainID: domainID, TaskList: tl, TaskType: p.TaskListTypeActivity})
 			if err != nil {
 				return []int64{}, err
@@ -1353,7 +1355,7 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 				},
 			},
 		}
-		_, err := s.TaskMgr.CreateTasks(&p.CreateTasksRequest{
+		_, err := s.TaskMgr.CreateTasks(context.TODO(), &p.CreateTasksRequest{
 			TaskListInfo: taskLists[taskList],
 			Tasks:        tasks,
 		})
@@ -1368,7 +1370,7 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 
 // GetTasks is a utility method to get tasks from persistence
 func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize int) (*p.GetTasksResponse, error) {
-	response, err := s.TaskMgr.GetTasks(&p.GetTasksRequest{
+	response, err := s.TaskMgr.GetTasks(context.TODO(), &p.GetTasksRequest{
 		DomainID:     domainID,
 		TaskList:     taskList,
 		TaskType:     taskType,
@@ -1385,7 +1387,7 @@ func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize i
 
 // CompleteTask is a utility method to complete a task
 func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID int64, ackLevel int64) error {
-	return s.TaskMgr.CompleteTask(&p.CompleteTaskRequest{
+	return s.TaskMgr.CompleteTask(context.TODO(), &p.CompleteTaskRequest{
 		TaskList: &p.TaskListInfo{
 			DomainID: domainID,
 			AckLevel: ackLevel,

@@ -21,8 +21,11 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -40,18 +43,21 @@ type sqlHistoryV2Manager struct {
 func newHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
+	parser serialization.Parser,
 ) (p.HistoryStore, error) {
 
 	return &sqlHistoryV2Manager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			parser: parser,
 		},
 	}, nil
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *sqlHistoryV2Manager) AppendHistoryNodes(
+	_ context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
 
@@ -86,7 +92,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			CreatedTimeNanos: common.TimeNowNanosPtr(),
 		}
 
-		blob, err := historyTreeInfoToBlob(treeInfo)
+		blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
 		if err != nil {
 			return err
 		}
@@ -138,6 +144,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 
 // ReadHistoryBranch returns history node data for a branch
 func (m *sqlHistoryV2Manager) ReadHistoryBranch(
+	_ context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
 
@@ -280,6 +287,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 //       8[8,9]
 //
 func (m *sqlHistoryV2Manager) ForkHistoryBranch(
+	_ context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
@@ -325,7 +333,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		CreatedTimeNanos: common.TimeNowNanosPtr(),
 	}
 
-	blob, err := historyTreeInfoToBlob(treeInfo)
+	blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -353,6 +361,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 
 // DeleteHistoryBranch removes a branch
 func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
+	_ context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
 
@@ -365,7 +374,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := m.GetHistoryTree(&p.GetHistoryTreeRequest{
+	rsp, err := m.GetHistoryTree(context.TODO(), &p.GetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: common.IntPtr(request.ShardID),
 	})
@@ -428,6 +437,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 }
 
 func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
+	_ context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 
@@ -438,6 +448,7 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 
 // GetHistoryTree returns all branch information of a tree
 func (m *sqlHistoryV2Manager) GetHistoryTree(
+	_ context.Context,
 	request *p.GetHistoryTreeRequest,
 ) (*p.GetHistoryTreeResponse, error) {
 
@@ -453,7 +464,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		return &p.GetHistoryTreeResponse{}, nil
 	}
 	for _, row := range rows {
-		treeInfo, err := historyTreeInfoFromBlob(row.Data, row.DataEncoding)
+		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}

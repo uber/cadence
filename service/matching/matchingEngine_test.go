@@ -1778,8 +1778,11 @@ func newTestTaskListID(domainID string, name string, taskType int) *taskListID {
 	return result
 }
 
-// LeaseTaskList provides a mock function with given fields: request
-func (m *testTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
+// LeaseTaskList provides a mock function with given fields: ctx, request
+func (m *testTaskManager) LeaseTaskList(
+	_ context.Context,
+	request *persistence.LeaseTaskListRequest,
+) (*persistence.LeaseTaskListResponse, error) {
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskList, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
@@ -1798,8 +1801,11 @@ func (m *testTaskManager) LeaseTaskList(request *persistence.LeaseTaskListReques
 	}, nil
 }
 
-// UpdateTaskList provides a mock function with given fields: request
-func (m *testTaskManager) UpdateTaskList(request *persistence.UpdateTaskListRequest) (*persistence.UpdateTaskListResponse, error) {
+// UpdateTaskList provides a mock function with given fields: ctx, request
+func (m *testTaskManager) UpdateTaskList(
+	_ context.Context,
+	request *persistence.UpdateTaskListRequest,
+) (*persistence.UpdateTaskListResponse, error) {
 	m.logger.Debug(fmt.Sprintf("UpdateTaskList taskListInfo=%v, ackLevel=%v", request.TaskListInfo, request.TaskListInfo.AckLevel))
 
 	tli := request.TaskListInfo
@@ -1816,8 +1822,11 @@ func (m *testTaskManager) UpdateTaskList(request *persistence.UpdateTaskListRequ
 	return &persistence.UpdateTaskListResponse{}, nil
 }
 
-// CompleteTask provides a mock function with given fields: request
-func (m *testTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
+// CompleteTask provides a mock function with given fields: ctx, request
+func (m *testTaskManager) CompleteTask(
+	_ context.Context,
+	request *persistence.CompleteTaskRequest,
+) error {
 	m.logger.Debug(fmt.Sprintf("CompleteTask taskID=%v, ackLevel=%v", request.TaskID, request.TaskList.AckLevel))
 	if request.TaskID <= 0 {
 		panic(fmt.Errorf("Invalid taskID=%v", request.TaskID))
@@ -1833,7 +1842,11 @@ func (m *testTaskManager) CompleteTask(request *persistence.CompleteTaskRequest)
 	return nil
 }
 
-func (m *testTaskManager) CompleteTasksLessThan(request *persistence.CompleteTasksLessThanRequest) (int, error) {
+// CompleteTasksLessThan provides a mock function with given fields: ctx, request
+func (m *testTaskManager) CompleteTasksLessThan(
+	_ context.Context,
+	request *persistence.CompleteTasksLessThanRequest,
+) (int, error) {
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
@@ -1847,12 +1860,19 @@ func (m *testTaskManager) CompleteTasksLessThan(request *persistence.CompleteTas
 	return persistence.UnknownNumRowsAffected, nil
 }
 
+// ListTaskList provides a mock function with given fields: ctx, request
 func (m *testTaskManager) ListTaskList(
-	request *persistence.ListTaskListRequest) (*persistence.ListTaskListResponse, error) {
+	_ context.Context,
+	request *persistence.ListTaskListRequest,
+) (*persistence.ListTaskListResponse, error) {
 	return nil, fmt.Errorf("unsupported operation")
 }
 
-func (m *testTaskManager) DeleteTaskList(request *persistence.DeleteTaskListRequest) error {
+// DeleteTaskList provides a mock function with given fields: ctx, request
+func (m *testTaskManager) DeleteTaskList(
+	_ context.Context,
+	request *persistence.DeleteTaskListRequest,
+) error {
 	m.Lock()
 	defer m.Unlock()
 	key := newTestTaskListID(request.DomainID, request.TaskListName, request.TaskListType)
@@ -1860,8 +1880,11 @@ func (m *testTaskManager) DeleteTaskList(request *persistence.DeleteTaskListRequ
 	return nil
 }
 
-// CreateTask provides a mock function with given fields: request
-func (m *testTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*persistence.CreateTasksResponse, error) {
+// CreateTask provides a mock function with given fields: ctx, request
+func (m *testTaskManager) CreateTasks(
+	_ context.Context,
+	request *persistence.CreateTasksRequest,
+) (*persistence.CreateTasksResponse, error) {
 	domainID := request.TaskListInfo.DomainID
 	taskList := request.TaskListInfo.Name
 	taskType := request.TaskListInfo.TaskType
@@ -1913,8 +1936,11 @@ func (m *testTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (
 	return &persistence.CreateTasksResponse{}, nil
 }
 
-// GetTasks provides a mock function with given fields: request
-func (m *testTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
+// GetTasks provides a mock function with given fields: ctx, request
+func (m *testTaskManager) GetTasks(
+	_ context.Context,
+	request *persistence.GetTasksRequest,
+) (*persistence.GetTasksResponse, error) {
 	m.logger.Debug(fmt.Sprintf("testTaskManager.GetTasks readLevel=%v, maxReadLevel=%v", request.ReadLevel, request.MaxReadLevel))
 
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskList, request.TaskType))

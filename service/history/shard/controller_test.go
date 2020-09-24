@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -113,7 +114,7 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 			s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 			s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-			s.mockShardManager.On("GetShard", &persistence.GetShardRequest{ShardID: shardID}).Return(
+			s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 				&persistence.GetShardResponse{
 					ShardInfo: &persistence.ShardInfo{
 						ShardID:             shardID,
@@ -133,7 +134,7 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 						ClusterReplicationLevel: map[string]int64{},
 					},
 				}, nil).Once()
-			s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
+			s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
 				ShardInfo: &persistence.ShardInfo{
 					ShardID:             shardID,
 					Owner:               s.hostInfo.Identity(),
@@ -196,7 +197,7 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 			s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 			s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-			s.mockShardManager.On("GetShard", &persistence.GetShardRequest{ShardID: shardID}).Return(
+			s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 				&persistence.GetShardResponse{
 					ShardInfo: &persistence.ShardInfo{
 						ShardID:             shardID,
@@ -216,7 +217,7 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 						ClusterReplicationLevel: map[string]int64{},
 					},
 				}, nil).Once()
-			s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
+			s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
 				ShardInfo: &persistence.ShardInfo{
 					ShardID:             shardID,
 					Owner:               s.hostInfo.Identity(),
@@ -286,7 +287,7 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 		s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 		s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-		s.mockShardManager.On("GetShard", &persistence.GetShardRequest{ShardID: shardID}).Return(
+		s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 			&persistence.GetShardResponse{
 				ShardInfo: &persistence.ShardInfo{
 					ShardID:             shardID,
@@ -306,7 +307,7 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 					ClusterReplicationLevel: map[string]int64{},
 				},
 			}, nil).Once()
-		s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
+		s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
 			ShardInfo: &persistence.ShardInfo{
 				ShardID:             shardID,
 				Owner:               s.hostInfo.Identity(),
@@ -361,7 +362,7 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 		s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 		s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-		s.mockShardManager.On("GetShard", &persistence.GetShardRequest{ShardID: shardID}).Return(
+		s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 			&persistence.GetShardResponse{
 				ShardInfo: &persistence.ShardInfo{
 					ShardID:             shardID,
@@ -381,7 +382,7 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 					ClusterReplicationLevel: map[string]int64{},
 				},
 			}, nil).Once()
-		s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
+		s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
 			ShardInfo: &persistence.ShardInfo{
 				ShardID:             shardID,
 				Owner:               s.hostInfo.Identity(),
@@ -571,7 +572,7 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 	mockEngine.EXPECT().Start().Times(1)
 	s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 	s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(mockEngine).Times(1)
-	s.mockShardManager.On("GetShard", &persistence.GetShardRequest{ShardID: shardID}).Return(
+	s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 		&persistence.GetShardResponse{
 			ShardInfo: &persistence.ShardInfo{
 				ShardID:             shardID,
@@ -591,7 +592,7 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 				ClusterReplicationLevel: map[string]int64{},
 			},
 		}, nil).Once()
-	s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
+	s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
 		ShardInfo: &persistence.ShardInfo{
 			ShardID:             shardID,
 			Owner:               s.hostInfo.Identity(),
