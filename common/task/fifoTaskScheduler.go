@@ -30,13 +30,14 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
 	// FIFOTaskSchedulerOptions configs FIFO task scheduler
 	FIFOTaskSchedulerOptions struct {
 		QueueSize       int
-		WorkerCount     int
+		WorkerCount     dynamicconfig.IntPropertyFn
 		DispatcherCount int
 		RetryPolicy     backoff.RetryPolicy
 	}

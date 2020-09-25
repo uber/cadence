@@ -40,7 +40,7 @@ type (
 	WeightedRoundRobinTaskSchedulerOptions struct {
 		Weights         dynamicconfig.MapPropertyFn
 		QueueSize       int
-		WorkerCount     int
+		WorkerCount     dynamicconfig.IntPropertyFn
 		DispatcherCount int
 		RetryPolicy     backoff.RetryPolicy
 	}

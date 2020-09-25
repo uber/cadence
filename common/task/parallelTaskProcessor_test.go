@@ -24,7 +24,6 @@ import (
 	"errors"
 	"math/rand"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -70,7 +70,7 @@ func (s *parallelTaskProcessorSuite) SetupTest() {
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   0,
-			WorkerCount: 1,
+			WorkerCount: dynamicconfig.GetIntPropertyFn(1),
 			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
 	).(*parallelTaskProcessorImpl)
@@ -102,7 +102,10 @@ func (s *parallelTaskProcessorSuite) TestTaskWorker() {
 	numTasks := 5
 
 	done := make(chan struct{})
-	s.processor.workerWG.Add(1)
+
+	s.processor.shutdownWG.Add(1)
+	workerShutdownCh := make(chan struct{})
+	s.processor.workerShutdownCh = append(s.processor.workerShutdownCh, workerShutdownCh)
 
 	go func() {
 		for i := 0; i != numTasks; i++ {
@@ -112,11 +115,11 @@ func (s *parallelTaskProcessorSuite) TestTaskWorker() {
 			err := s.processor.Submit(mockTask)
 			s.NoError(err)
 		}
-		close(s.processor.shutdownCh)
+		close(workerShutdownCh)
 		close(done)
 	}()
 
-	s.processor.taskWorker()
+	s.processor.taskWorker(workerShutdownCh)
 	<-done
 }
 
@@ -133,7 +136,7 @@ func (s *parallelTaskProcessorSuite) TestExecuteTask_RetryableError() {
 		mockTask.EXPECT().Ack(),
 	)
 
-	s.processor.executeTask(mockTask)
+	s.processor.executeTask(mockTask, make(chan struct{}))
 }
 
 func (s *parallelTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
@@ -145,24 +148,89 @@ func (s *parallelTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
 		mockTask.EXPECT().Nack(),
 	)
 
-	s.processor.executeTask(mockTask)
+	s.processor.executeTask(mockTask, make(chan struct{}))
 }
 
-func (s *parallelTaskProcessorSuite) TestExecuteTask_ProcessorStopped() {
+func (s *parallelTaskProcessorSuite) TestExecuteTask_WorkerStopped() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().Execute().Return(errRetryable).AnyTimes()
 	mockTask.EXPECT().HandleErr(errRetryable).Return(errRetryable).AnyTimes()
 	mockTask.EXPECT().RetryErr(errRetryable).Return(true).AnyTimes()
+	mockTask.EXPECT().Nack().Times(1)
 
 	done := make(chan struct{})
+	workerShutdownCh := make(chan struct{})
 	go func() {
-		s.processor.executeTask(mockTask)
+		s.processor.executeTask(mockTask, workerShutdownCh)
 		close(done)
 	}()
 
 	time.Sleep(100 * time.Millisecond)
-	atomic.StoreInt32(&s.processor.status, common.DaemonStatusStopped)
+	close(workerShutdownCh)
 	<-done
+}
+
+func (s *parallelTaskProcessorSuite) TestAddWorker() {
+	newWorkerCount := 10
+
+	s.processor.addWorker(newWorkerCount)
+	s.Len(s.processor.workerShutdownCh, newWorkerCount)
+
+	s.processor.addWorker(-1)
+	s.Len(s.processor.workerShutdownCh, newWorkerCount)
+
+	for _, shutdownCh := range s.processor.workerShutdownCh {
+		close(shutdownCh)
+	}
+
+	s.processor.shutdownWG.Wait()
+}
+
+func (s *parallelTaskProcessorSuite) TestRemoveWorker() {
+	currentWorkerCount := 10
+	removeWorkerCount := 4
+
+	s.processor.addWorker(currentWorkerCount)
+
+	s.processor.removeWorker(removeWorkerCount)
+	s.Len(s.processor.workerShutdownCh, currentWorkerCount-removeWorkerCount)
+
+	s.processor.removeWorker(-1)
+	s.Len(s.processor.workerShutdownCh, currentWorkerCount-removeWorkerCount)
+
+	for _, shutdownCh := range s.processor.workerShutdownCh {
+		close(shutdownCh)
+	}
+
+	s.processor.shutdownWG.Wait()
+}
+
+func (s *parallelTaskProcessorSuite) TestMonitor() {
+	workerCount := 5
+
+	s.processor.shutdownWG.Add(1) // for monitor
+	dcClient := dynamicconfig.NewInMemoryClient()
+	dcCollection := dynamicconfig.NewCollection(dcClient, s.processor.logger)
+	s.processor.options.WorkerCount = dcCollection.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, workerCount)
+
+	testMonitorTickerDuration := 100 * time.Millisecond
+	go s.processor.workerMonitor(testMonitorTickerDuration)
+
+	time.Sleep(2 * testMonitorTickerDuration)
+	s.Len(s.processor.workerShutdownCh, workerCount)
+
+	newWorkerCount := 3
+	dcClient.UpdateValue(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
+
+	time.Sleep(2 * testMonitorTickerDuration)
+	s.Len(s.processor.workerShutdownCh, newWorkerCount)
+
+	close(s.processor.shutdownCh)
+
+	time.Sleep(2 * testMonitorTickerDuration)
+	s.Empty(s.processor.workerShutdownCh)
+
+	s.processor.shutdownWG.Wait()
 }
 
 func (s *parallelTaskProcessorSuite) TestProcessorContract() {
@@ -201,7 +269,7 @@ func (s *parallelTaskProcessorSuite) TestProcessorContract() {
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   100,
-			WorkerCount: 10,
+			WorkerCount: dynamicconfig.GetIntPropertyFn(10),
 			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
 	).(*parallelTaskProcessorImpl)

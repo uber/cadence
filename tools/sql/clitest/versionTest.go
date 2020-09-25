@@ -105,13 +105,13 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	s.NoError(err)
 
 	defaultCfg := config.SQL{
-		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
-		User:         testUser,
-		Password:     testPassword,
-		PluginName:   s.pluginName,
-		DatabaseName: database,
-		EncodingType: "thriftrw",
-		DecodingTypes:   []string{"thriftrw"},
+		ConnectAddr:   fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		User:          testUser,
+		Password:      testPassword,
+		PluginName:    s.pluginName,
+		DatabaseName:  database,
+		EncodingType:  "thriftrw",
+		DecodingTypes: []string{"thriftrw"},
 	}
 	visibilityCfg := defaultCfg
 	visibilityCfg.DatabaseName = visDatabase
@@ -196,13 +196,13 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	}
 
 	cfg := config.SQL{
-		ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
-		User:         testUser,
-		Password:     testPassword,
-		PluginName:   s.pluginName,
-		DatabaseName: database,
-		EncodingType: "thriftrw",
-		DecodingTypes:   []string{"thriftrw"},
+		ConnectAddr:   fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		User:          testUser,
+		Password:      testPassword,
+		PluginName:    s.pluginName,
+		DatabaseName:  database,
+		EncodingType:  "thriftrw",
+		DecodingTypes: []string{"thriftrw"},
 	}
 	err = sql.CheckCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {

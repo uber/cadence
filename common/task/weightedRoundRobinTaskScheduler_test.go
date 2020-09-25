@@ -84,7 +84,7 @@ func (s *weightedRoundRobinTaskSchedulerSuite) SetupTest() {
 		&WeightedRoundRobinTaskSchedulerOptions{
 			Weights:         testSchedulerWeights,
 			QueueSize:       s.queueSize,
-			WorkerCount:     1,
+			WorkerCount:     dynamicconfig.GetIntPropertyFn(1),
 			DispatcherCount: 3,
 			RetryPolicy:     backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
@@ -116,7 +116,7 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestSubmit_Fail_SchedulerShutDown
 		&WeightedRoundRobinTaskSchedulerOptions{
 			Weights:         testSchedulerWeights,
 			QueueSize:       0,
-			WorkerCount:     1,
+			WorkerCount:     dynamicconfig.GetIntPropertyFn(1),
 			DispatcherCount: 3,
 			RetryPolicy:     backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},

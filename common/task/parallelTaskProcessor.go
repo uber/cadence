@@ -30,25 +30,31 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
 	// ParallelTaskProcessorOptions configs PriorityTaskProcessor
 	ParallelTaskProcessorOptions struct {
 		QueueSize   int
-		WorkerCount int
+		WorkerCount dynamicconfig.IntPropertyFn
 		RetryPolicy backoff.RetryPolicy
 	}
 
 	parallelTaskProcessorImpl struct {
-		status       int32
-		tasksCh      chan Task
-		shutdownCh   chan struct{}
-		workerWG     sync.WaitGroup
-		logger       log.Logger
-		metricsScope metrics.Scope
-		options      *ParallelTaskProcessorOptions
+		status           int32
+		tasksCh          chan Task
+		shutdownCh       chan struct{}
+		workerShutdownCh []chan struct{}
+		shutdownWG       sync.WaitGroup
+		logger           log.Logger
+		metricsScope     metrics.Scope
+		options          *ParallelTaskProcessorOptions
 	}
+)
+
+const (
+	defaultMonitorTickerDuration = 5 * time.Second
 )
 
 var (
@@ -63,12 +69,13 @@ func NewParallelTaskProcessor(
 	options *ParallelTaskProcessorOptions,
 ) Processor {
 	return &parallelTaskProcessorImpl{
-		status:       common.DaemonStatusInitialized,
-		tasksCh:      make(chan Task, options.QueueSize),
-		shutdownCh:   make(chan struct{}),
-		logger:       logger,
-		metricsScope: metricsClient.Scope(metrics.ParallelTaskProcessingScope),
-		options:      options,
+		status:           common.DaemonStatusInitialized,
+		tasksCh:          make(chan Task, options.QueueSize),
+		shutdownCh:       make(chan struct{}),
+		workerShutdownCh: make([]chan struct{}, 0, options.WorkerCount()),
+		logger:           logger,
+		metricsScope:     metricsClient.Scope(metrics.ParallelTaskProcessingScope),
+		options:          options,
 	}
 }
 
@@ -77,10 +84,18 @@ func (p *parallelTaskProcessorImpl) Start() {
 		return
 	}
 
-	p.workerWG.Add(p.options.WorkerCount)
-	for i := 0; i < p.options.WorkerCount; i++ {
-		go p.taskWorker()
+	initialWorkerCount := p.options.WorkerCount()
+
+	p.shutdownWG.Add(initialWorkerCount)
+	for i := 0; i < initialWorkerCount; i++ {
+		shutdownCh := make(chan struct{})
+		p.workerShutdownCh = append(p.workerShutdownCh, shutdownCh)
+		go p.taskWorker(shutdownCh)
 	}
+
+	p.shutdownWG.Add(1)
+	go p.workerMonitor(defaultMonitorTickerDuration)
+
 	p.logger.Info("Parallel task processor started.")
 }
 
@@ -93,7 +108,7 @@ func (p *parallelTaskProcessorImpl) Stop() {
 
 	p.drainAndNackTasks()
 
-	if success := common.AwaitWaitGroup(&p.workerWG, time.Minute); !success {
+	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
 		p.logger.Warn("Parallel task processor timedout on shutdown.")
 	}
 	p.logger.Info("Parallel task processor shutdown.")
@@ -119,20 +134,20 @@ func (p *parallelTaskProcessorImpl) Submit(task Task) error {
 	}
 }
 
-func (p *parallelTaskProcessorImpl) taskWorker() {
-	defer p.workerWG.Done()
+func (p *parallelTaskProcessorImpl) taskWorker(shutdownCh chan struct{}) {
+	defer p.shutdownWG.Done()
 
 	for {
 		select {
-		case <-p.shutdownCh:
+		case <-shutdownCh:
 			return
 		case task := <-p.tasksCh:
-			p.executeTask(task)
+			p.executeTask(task, shutdownCh)
 		}
 	}
 }
 
-func (p *parallelTaskProcessorImpl) executeTask(task Task) {
+func (p *parallelTaskProcessorImpl) executeTask(task Task, shutdownCh chan struct{}) {
 	sw := p.metricsScope.StartTimer(metrics.ParallelTaskTaskProcessingLatency)
 	defer sw.Stop()
 
@@ -144,9 +159,12 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task) {
 	}
 
 	isRetryable := func(err error) bool {
-		if p.isStopped() {
+		select {
+		case <-shutdownCh:
 			return false
+		default:
 		}
+
 		return task.RetryErr(err)
 	}
 
@@ -158,6 +176,54 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task) {
 
 	// no error
 	task.Ack()
+}
+
+func (p *parallelTaskProcessorImpl) workerMonitor(tickerDuration time.Duration) {
+	defer p.shutdownWG.Done()
+
+	ticker := time.NewTicker(tickerDuration)
+
+	for {
+		select {
+		case <-p.shutdownCh:
+			ticker.Stop()
+			p.removeWorker(len(p.workerShutdownCh))
+			return
+		case <-ticker.C:
+			targetWorkerCount := p.options.WorkerCount()
+			currentWorkerCount := len(p.workerShutdownCh)
+			p.addWorker(targetWorkerCount - currentWorkerCount)
+			p.removeWorker(currentWorkerCount - targetWorkerCount)
+		}
+	}
+}
+
+func (p *parallelTaskProcessorImpl) addWorker(count int) {
+	for i := 0; i < count; i++ {
+		shutdownCh := make(chan struct{})
+		p.workerShutdownCh = append(p.workerShutdownCh, shutdownCh)
+
+		p.shutdownWG.Add(1)
+		go p.taskWorker(shutdownCh)
+	}
+}
+
+func (p *parallelTaskProcessorImpl) removeWorker(count int) {
+	if count <= 0 {
+		return
+	}
+
+	currentWorkerCount := len(p.workerShutdownCh)
+	if count > currentWorkerCount {
+		count = currentWorkerCount
+	}
+
+	shutdownChToClose := p.workerShutdownCh[currentWorkerCount-count:]
+	p.workerShutdownCh = p.workerShutdownCh[:currentWorkerCount-count]
+
+	for _, shutdownCh := range shutdownChToClose {
+		close(shutdownCh)
+	}
 }
 
 func (p *parallelTaskProcessorImpl) drainAndNackTasks() {

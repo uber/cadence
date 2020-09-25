@@ -71,7 +71,7 @@ func NewProcessor(
 	options, err := newSchedulerOptions(
 		config.TaskSchedulerType(),
 		config.TaskSchedulerQueueSize(),
-		config.TaskSchedulerWorkerCount(),
+		config.TaskSchedulerWorkerCount,
 		config.TaskSchedulerDispatcherCount(),
 		config.TaskSchedulerRoundRobinWeights,
 	)
@@ -79,13 +79,12 @@ func NewProcessor(
 		return nil, err
 	}
 
-	shardWorkerCount := config.TaskSchedulerShardWorkerCount()
 	var shardOptions *schedulerOptions
-	if shardWorkerCount > 0 {
+	if config.TaskSchedulerShardWorkerCount() > 0 {
 		shardOptions, err = newSchedulerOptions(
 			config.TaskSchedulerType(),
 			config.TaskSchedulerShardQueueSize(),
-			shardWorkerCount,
+			config.TaskSchedulerShardWorkerCount,
 			1,
 			config.TaskSchedulerRoundRobinWeights,
 		)
@@ -260,7 +259,7 @@ func (p *processorImpl) isRunning() bool {
 func newSchedulerOptions(
 	schedulerType int,
 	queueSize int,
-	workerCount int,
+	workerCount dynamicconfig.IntPropertyFn,
 	dispatcherCount int,
 	weights dynamicconfig.MapPropertyFn,
 ) (*schedulerOptions, error) {
