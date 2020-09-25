@@ -148,7 +148,6 @@ func (f *fifoTaskSchedulerImpl) TrySubmit(
 	select {
 	case f.taskCh <- task:
 		f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
-		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
 		if f.isStopped() {
 			f.drainAndNackTasks()
 		}
