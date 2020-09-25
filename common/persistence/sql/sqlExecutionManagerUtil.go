@@ -51,7 +51,8 @@ func applyWorkflowMutationTx(
 	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
 
 	// TODO Remove me if UPDATE holds the lock to the end of a transaction
-	if err := lockAndCheckNextEventID(tx,
+	if err := lockAndCheckNextEventID(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -67,7 +68,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateExecution(tx,
+	if err := updateExecution(
+		tx,
 		executionInfo,
 		versionHistories,
 		startVersion,
@@ -79,7 +81,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -92,7 +95,8 @@ func applyWorkflowMutationTx(
 		return err
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		tx,
 		workflowMutation.UpsertActivityInfos,
 		workflowMutation.DeleteActivityInfos,
 		shardID,
@@ -105,7 +109,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		tx,
 		workflowMutation.UpsertTimerInfos,
 		workflowMutation.DeleteTimerInfos,
 		shardID,
@@ -118,7 +123,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		tx,
 		workflowMutation.UpsertChildExecutionInfos,
 		workflowMutation.DeleteChildExecutionInfo,
 		shardID,
@@ -131,7 +137,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		tx,
 		workflowMutation.UpsertRequestCancelInfos,
 		workflowMutation.DeleteRequestCancelInfo,
 		shardID,
@@ -144,7 +151,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		tx,
 		workflowMutation.UpsertSignalInfos,
 		workflowMutation.DeleteSignalInfo,
 		shardID,
@@ -157,7 +165,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		tx,
 		workflowMutation.UpsertSignalRequestedIDs,
 		workflowMutation.DeleteSignalRequestedID,
 		shardID,
@@ -170,7 +179,8 @@ func applyWorkflowMutationTx(
 	}
 
 	if workflowMutation.ClearBufferedEvents {
-		if err := deleteBufferedEvents(tx,
+		if err := deleteBufferedEvents(
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -181,7 +191,8 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateBufferedEvents(tx,
+	if err := updateBufferedEvents(
+		tx,
 		workflowMutation.NewBufferedEvents,
 		shardID,
 		domainID,
@@ -210,7 +221,8 @@ func applyWorkflowSnapshotTxAsReset(
 	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
 
 	// TODO Is there a way to modify the various map tables without fear of other people adding rows after we delete, without locking the executions row?
-	if err := lockAndCheckNextEventID(tx,
+	if err := lockAndCheckNextEventID(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -226,11 +238,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := 
-  
-  
-  
-  (tx,
+	if err := updateExecution(
+		tx,
 		executionInfo,
 		versionHistories,
 		startVersion,
@@ -242,7 +251,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -255,7 +265,8 @@ func applyWorkflowSnapshotTxAsReset(
 		return err
 	}
 
-	if err := deleteActivityInfoMap(tx,
+	if err := deleteActivityInfoMap(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -265,7 +276,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		tx,
 		workflowSnapshot.ActivityInfos,
 		nil,
 		shardID,
@@ -278,7 +290,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteTimerInfoMap(tx,
+	if err := deleteTimerInfoMap(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -288,7 +301,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		tx,
 		workflowSnapshot.TimerInfos,
 		nil,
 		shardID,
@@ -301,7 +315,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteChildExecutionInfoMap(tx,
+	if err := deleteChildExecutionInfoMap(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -311,7 +326,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		tx,
 		workflowSnapshot.ChildExecutionInfos,
 		nil,
 		shardID,
@@ -324,7 +340,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteRequestCancelInfoMap(tx,
+	if err := deleteRequestCancelInfoMap(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -334,7 +351,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		tx,
 		workflowSnapshot.RequestCancelInfos,
 		nil,
 		shardID,
@@ -347,7 +365,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteSignalInfoMap(tx,
+	if err := deleteSignalInfoMap(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -357,7 +376,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		tx,
 		workflowSnapshot.SignalInfos,
 		nil,
 		shardID,
@@ -370,7 +390,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteSignalsRequestedSet(tx,
+	if err := deleteSignalsRequestedSet(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -380,7 +401,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		tx,
 		workflowSnapshot.SignalRequestedIDs,
 		"",
 		shardID,
@@ -392,7 +414,8 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := deleteBufferedEvents(tx,
+	if err := deleteBufferedEvents(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -419,7 +442,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 	workflowID := executionInfo.WorkflowID
 	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
 
-	if err := m.createExecution(tx,
+	if err := m.createExecution(
+		tx,
 		executionInfo,
 		versionHistories,
 		startVersion,
@@ -429,7 +453,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		return err
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -442,7 +467,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		return err
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		tx,
 		workflowSnapshot.ActivityInfos,
 		nil,
 		shardID,
@@ -455,7 +481,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		tx,
 		workflowSnapshot.TimerInfos,
 		nil,
 		shardID,
@@ -468,7 +495,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		tx,
 		workflowSnapshot.ChildExecutionInfos,
 		nil,
 		shardID,
@@ -481,7 +509,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		tx,
 		workflowSnapshot.RequestCancelInfos,
 		nil,
 		shardID,
@@ -494,7 +523,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		tx,
 		workflowSnapshot.SignalInfos,
 		nil,
 		shardID,
@@ -507,7 +537,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		tx,
 		workflowSnapshot.SignalRequestedIDs,
 		"",
 		shardID,
@@ -534,7 +565,8 @@ func applyTasks(
 	parser serialization.Parser,
 ) error {
 
-	if err := createTransferTasks(tx,
+	if err := createTransferTasks(
+		tx,
 		transferTasks,
 		shardID,
 		domainID,
@@ -546,7 +578,8 @@ func applyTasks(
 		}
 	}
 
-	if err := createReplicationTasks(tx,
+	if err := createReplicationTasks(
+		tx,
 		replicationTasks,
 		shardID,
 		domainID,
@@ -559,7 +592,8 @@ func applyTasks(
 		}
 	}
 
-	if err := createTimerTasks(tx,
+	if err := createTimerTasks(
+		tx,
 		timerTasks,
 		shardID,
 		domainID,
@@ -584,7 +618,10 @@ func lockCurrentExecutionIfExists(
 ) (*sqlplugin.CurrentExecutionsRow, error) {
 
 	rows, err := tx.LockCurrentExecutionsJoinExecutions(&sqlplugin.CurrentExecutionsFilter{
-		ShardID: int64(shardID), DomainID: domainID, WorkflowID: workflowID})
+		ShardID: int64(shardID),
+		DomainID: domainID,
+		WorkflowID: workflowID,
+	})
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return nil, &workflow.InternalServiceError{
@@ -632,7 +669,8 @@ func createOrUpdateCurrentExecution(
 
 	switch createMode {
 	case p.CreateWorkflowModeContinueAsNew:
-		if err := updateCurrentExecution(tx,
+		if err := updateCurrentExecution(
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -647,7 +685,8 @@ func createOrUpdateCurrentExecution(
 			}
 		}
 	case p.CreateWorkflowModeWorkflowIDReuse:
-		if err := updateCurrentExecution(tx,
+		if err := updateCurrentExecution(
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -685,7 +724,13 @@ func lockAndCheckNextEventID(
 	condition int64,
 ) error {
 
-	nextEventID, err := lockNextEventID(tx, shardID, domainID, workflowID, runID)
+	nextEventID, err := lockNextEventID(
+		tx,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+	)
 	if err != nil {
 		return err
 	}
