@@ -45,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -59,26 +58,25 @@ type (
 		Logger          log.Logger
 		ThrottledLogger log.Logger
 
-		MetricScope              tally.Scope
-		MembershipFactory        MembershipMonitorFactory
-		RPCFactory               common.RPCFactory
-		AbstractDatastoreFactory persistenceClient.AbstractDataStoreFactory
-		PProfInitializer         common.PProfInitializer
-		PersistenceConfig        config.Persistence
-		ClusterMetadata          cluster.Metadata
-		ReplicatorConfig         config.Replicator
-		MetricsClient            metrics.Client
-		MessagingClient          messaging.Client
-		BlobstoreClient          blobstore.Client
-		ESClient                 es.Client
-		ESConfig                 *es.Config
-		DynamicConfig            dynamicconfig.Client
-		DispatcherProvider       client.DispatcherProvider
-		DCRedirectionPolicy      config.DCRedirectionPolicy
-		PublicClient             workflowserviceclient.Interface
-		ArchivalMetadata         archiver.ArchivalMetadata
-		ArchiverProvider         provider.ArchiverProvider
-		Authorizer               authorization.Authorizer
+		MetricScope         tally.Scope
+		MembershipFactory   MembershipMonitorFactory
+		RPCFactory          common.RPCFactory
+		PProfInitializer    common.PProfInitializer
+		PersistenceConfig   config.Persistence
+		ClusterMetadata     cluster.Metadata
+		ReplicatorConfig    config.Replicator
+		MetricsClient       metrics.Client
+		MessagingClient     messaging.Client
+		BlobstoreClient     blobstore.Client
+		ESClient            es.Client
+		ESConfig            *es.Config
+		DynamicConfig       dynamicconfig.Client
+		DispatcherProvider  client.DispatcherProvider
+		DCRedirectionPolicy config.DCRedirectionPolicy
+		PublicClient        workflowserviceclient.Interface
+		ArchivalMetadata    archiver.ArchivalMetadata
+		ArchiverProvider    provider.ArchiverProvider
+		Authorizer          authorization.Authorizer
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor
