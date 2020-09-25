@@ -167,7 +167,7 @@ func newReplicationTaskFetcher(
 		currentCluster: currentCluster,
 		sourceCluster:  sourceCluster,
 		rateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
-			return config.ReplicationTaskProcessorHostQPS()
+			return config.ReplicationTaskProcessorHostQPS(currentCluster)
 		}),
 		requestChan: make(chan *request, requestChanBufferSize),
 		done:        make(chan struct{}),

@@ -89,11 +89,17 @@ type IntPropertyFnWithTaskListInfoFilters func(domain string, taskList string, t
 // IntPropertyFnWithShardIDFilter is a wrapper to get int property from dynamic config with shardID as filter
 type IntPropertyFnWithShardIDFilter func(shardID int) int
 
+// IntPropertyFnWithClusterNameFilter is a wrapper to get int property from dynamic config with cluster name as filter
+type IntPropertyFnWithClusterNameFilter func(clusterName string) int
+
 // FloatPropertyFn is a wrapper to get float property from dynamic config
 type FloatPropertyFn func(opts ...FilterOption) float64
 
 // FloatPropertyFnWithShardIDFilter is a wrapper to get float property from dynamic config with shardID as filter
 type FloatPropertyFnWithShardIDFilter func(shardID int) float64
+
+// FloatPropertyFnWithClusterNameFilter is a wrapper to get float property from dynamic config with cluster name as filter
+type FloatPropertyFnWithClusterNameFilter func(clusterName string) float64
 
 // DurationPropertyFn is a wrapper to get duration property from dynamic config
 type DurationPropertyFn func(opts ...FilterOption) time.Duration
@@ -208,6 +214,22 @@ func (c *Collection) GetIntPropertyFilteredByShardID(key Key, defaultValue int) 
 	}
 }
 
+// GetIntPropertyFilteredByShardID gets property with shardID as filter and asserts that it's an integer
+func (c *Collection) GetIntPropertyFilteredByCluster(key Key, defaultValue int) IntPropertyFnWithClusterNameFilter {
+	return func(clusterName string) int {
+		val, err := c.client.GetIntValue(
+			key,
+			getFilterMap(ClusterNameFilter(clusterName)),
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, err)
+		}
+		c.logValue(key, val, defaultValue, intCompareEquals)
+		return val
+	}
+}
+
 // GetFloat64Property gets property and asserts that it's a float64
 func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatPropertyFn {
 	return func(opts ...FilterOption) float64 {
@@ -226,6 +248,22 @@ func (c *Collection) GetFloat64PropertyFilteredByShardID(key Key, defaultValue f
 		val, err := c.client.GetFloatValue(
 			key,
 			getFilterMap(ShardIDFilter(shardID)),
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, err)
+		}
+		c.logValue(key, val, defaultValue, float64CompareEquals)
+		return val
+	}
+}
+
+// GetFloat64PropertyFilteredByCluster gets property with cluster filter and asserts that it's a float64
+func (c *Collection) GetFloat64PropertyFilteredByCluster(key Key, defaultValue float64) FloatPropertyFnWithClusterNameFilter {
+	return func(clusterName string) float64 {
+		val, err := c.client.GetFloatValue(
+			key,
+			getFilterMap(ClusterNameFilter(clusterName)),
 			defaultValue,
 		)
 		if err != nil {

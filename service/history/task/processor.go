@@ -65,13 +65,14 @@ var (
 func NewProcessor(
 	priorityAssigner PriorityAssigner,
 	config *config.Config,
+	currentCluster string,
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (Processor, error) {
 	options, err := newSchedulerOptions(
 		config.TaskSchedulerType(),
 		config.TaskSchedulerQueueSize(),
-		config.TaskSchedulerWorkerCount(),
+		config.TaskSchedulerWorkerCount(currentCluster),
 		config.TaskSchedulerDispatcherCount(),
 		config.TaskSchedulerRoundRobinWeights,
 	)

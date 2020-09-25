@@ -80,7 +80,7 @@ type Config struct {
 	TaskProcessRPS                          dynamicconfig.IntPropertyFnWithDomainFilter
 	EnablePriorityTaskProcessor             dynamicconfig.BoolPropertyFn
 	TaskSchedulerType                       dynamicconfig.IntPropertyFn
-	TaskSchedulerWorkerCount                dynamicconfig.IntPropertyFn
+	TaskSchedulerWorkerCount                dynamicconfig.IntPropertyFnWithClusterNameFilter
 	TaskSchedulerShardWorkerCount           dynamicconfig.IntPropertyFn
 	TaskSchedulerQueueSize                  dynamicconfig.IntPropertyFn
 	TaskSchedulerShardQueueSize             dynamicconfig.IntPropertyFn
@@ -231,12 +231,12 @@ type Config struct {
 	ReplicationTaskProcessorNoTaskRetryWait            dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorCleanupInterval            dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorCleanupJitterCoefficient   dynamicconfig.FloatPropertyFnWithShardIDFilter
-	ReplicationTaskProcessorReadHistoryBatchSize       dynamicconfig.IntPropertyFn
+	ReplicationTaskProcessorReadHistoryBatchSize       dynamicconfig.IntPropertyFnWithClusterNameFilter
 	ReplicationTaskProcessorStartWait                  dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorStartWaitJitterCoefficient dynamicconfig.FloatPropertyFnWithShardIDFilter
-	ReplicationTaskProcessorHostQPS                    dynamicconfig.FloatPropertyFn
-	ReplicationTaskProcessorShardQPS                   dynamicconfig.FloatPropertyFn
-	ReplicationTaskGenerationQPS                       dynamicconfig.FloatPropertyFn
+	ReplicationTaskProcessorHostQPS                    dynamicconfig.FloatPropertyFnWithClusterNameFilter
+	ReplicationTaskProcessorShardQPS                   dynamicconfig.FloatPropertyFnWithClusterNameFilter
+	ReplicationTaskGenerationQPS                       dynamicconfig.FloatPropertyFnWithClusterNameFilter
 
 	// The following are used by consistent query
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
@@ -321,7 +321,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, 1000),
 		EnablePriorityTaskProcessor:             dc.GetBoolProperty(dynamicconfig.EnablePriorityTaskProcessor, false),
 		TaskSchedulerType:                       dc.GetIntProperty(dynamicconfig.TaskSchedulerType, int(task.SchedulerTypeWRR)),
-		TaskSchedulerWorkerCount:                dc.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, 400),
+		TaskSchedulerWorkerCount:                dc.GetIntPropertyFilteredByCluster(dynamicconfig.TaskSchedulerWorkerCount, 400),
 		TaskSchedulerShardWorkerCount:           dc.GetIntProperty(dynamicconfig.TaskSchedulerShardWorkerCount, 2),
 		TaskSchedulerQueueSize:                  dc.GetIntProperty(dynamicconfig.TaskSchedulerQueueSize, 10000),
 		TaskSchedulerShardQueueSize:             dc.GetIntProperty(dynamicconfig.TaskSchedulerShardQueueSize, 200),
@@ -445,12 +445,12 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicationTaskProcessorNoTaskRetryWait:            dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorNoTaskInitialWait, 2*time.Second),
 		ReplicationTaskProcessorCleanupInterval:            dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorCleanupInterval, 1*time.Minute),
 		ReplicationTaskProcessorCleanupJitterCoefficient:   dc.GetFloat64PropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorCleanupJitterCoefficient, 0.15),
-		ReplicationTaskProcessorReadHistoryBatchSize:       dc.GetIntProperty(dynamicconfig.ReplicationTaskProcessorReadHistoryBatchSize, 5),
+		ReplicationTaskProcessorReadHistoryBatchSize:       dc.GetIntPropertyFilteredByCluster(dynamicconfig.ReplicationTaskProcessorReadHistoryBatchSize, 5),
 		ReplicationTaskProcessorStartWait:                  dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait, 5*time.Second),
 		ReplicationTaskProcessorStartWaitJitterCoefficient: dc.GetFloat64PropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWaitJitterCoefficient, 0.9),
-		ReplicationTaskProcessorHostQPS:                    dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorHostQPS, 1500),
-		ReplicationTaskProcessorShardQPS:                   dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS, 5),
-		ReplicationTaskGenerationQPS:                       dc.GetFloat64Property(dynamicconfig.ReplicationTaskGenerationQPS, 100),
+		ReplicationTaskProcessorHostQPS:                    dc.GetFloat64PropertyFilteredByCluster(dynamicconfig.ReplicationTaskProcessorHostQPS, 1500),
+		ReplicationTaskProcessorShardQPS:                   dc.GetFloat64PropertyFilteredByCluster(dynamicconfig.ReplicationTaskProcessorShardQPS, 5),
+		ReplicationTaskGenerationQPS:                       dc.GetFloat64PropertyFilteredByCluster(dynamicconfig.ReplicationTaskGenerationQPS, 100),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery, true),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, false),
@@ -476,8 +476,8 @@ func NewForTest() *Config {
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, true)
-	config.ReplicationTaskProcessorHostQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorHostQPS, 10000)
-	config.ReplicationTaskProcessorShardQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS, 10000)
+	config.ReplicationTaskProcessorHostQPS = dc.GetFloat64PropertyFilteredByCluster(dynamicconfig.ReplicationTaskProcessorHostQPS, 10000)
+	config.ReplicationTaskProcessorShardQPS = dc.GetFloat64PropertyFilteredByCluster(dynamicconfig.ReplicationTaskProcessorShardQPS, 10000)
 	config.ReplicationTaskProcessorStartWait = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond)
 	return config
 }
