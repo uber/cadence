@@ -217,19 +217,28 @@ func (s *parallelTaskProcessorSuite) TestMonitor() {
 	go s.processor.workerMonitor(testMonitorTickerDuration)
 
 	time.Sleep(2 * testMonitorTickerDuration)
-	s.Len(s.processor.workerShutdownCh, workerCount)
+	// note we can't check the length of the workerShutdownCh directly
+	// as that will lead to race condition. Instead we check the current
+	// size of shutdownWG chan, which should be workerCount + 1
+	for i := 0; i != workerCount+1; i++ {
+		s.processor.shutdownWG.Done()
+	}
+	s.processor.shutdownWG.Wait()
+	s.processor.shutdownWG.Add(workerCount + 1)
 
 	newWorkerCount := 3
 	dcClient.UpdateValue(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
 
 	time.Sleep(2 * testMonitorTickerDuration)
-	s.Len(s.processor.workerShutdownCh, newWorkerCount)
+	for i := 0; i != newWorkerCount+1; i++ {
+		s.processor.shutdownWG.Done()
+	}
+	s.processor.shutdownWG.Wait()
+	s.processor.shutdownWG.Add(newWorkerCount + 1)
 
 	close(s.processor.shutdownCh)
 
 	time.Sleep(2 * testMonitorTickerDuration)
-	s.Empty(s.processor.workerShutdownCh)
-
 	s.processor.shutdownWG.Wait()
 }
 

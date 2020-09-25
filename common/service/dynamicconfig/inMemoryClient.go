@@ -22,30 +22,35 @@ package dynamicconfig
 
 import (
 	"errors"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
 type inMemoryClient struct {
-	globalValues atomic.Value
+	sync.RWMutex
+
+	globalValues map[Key]interface{}
 }
 
 // NewInMemoryClient creates a new in memory dynamic config client for testing purpose
 func NewInMemoryClient() Client {
-	var globalValues atomic.Value
-	globalValues.Store(make(map[Key]interface{}))
-	return &inMemoryClient{globalValues: globalValues}
+	return &inMemoryClient{
+		globalValues: make(map[Key]interface{}),
+	}
 }
 
 func (mc *inMemoryClient) SetValue(key Key, value interface{}) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	v[key] = value
-	mc.globalValues.Store(v)
+	mc.Lock()
+	defer mc.Unlock()
+
+	mc.globalValues[key] = value
 }
 
 func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface{}, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[key]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[key]; ok {
 		return val, nil
 	}
 	return defaultValue, errors.New("unable to find key")
@@ -54,36 +59,47 @@ func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface
 func (mc *inMemoryClient) GetValueWithFilters(
 	name Key, filters map[Filter]interface{}, defaultValue interface{},
 ) (interface{}, error) {
+	mc.RLock()
+	defer mc.RUnlock()
+
 	return mc.GetValue(name, defaultValue)
 }
 
 func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
 		return val.(int), nil
 	}
 	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
 		return val.(float64), nil
 	}
 	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
 		return val.(bool), nil
 	}
 	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
 		return val.(string), nil
 	}
 	return defaultValue, errors.New("unable to find key")
@@ -92,8 +108,10 @@ func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{
 func (mc *inMemoryClient) GetMapValue(
 	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
 		return val.(map[string]interface{}), nil
 	}
 	return defaultValue, errors.New("unable to find key")
@@ -102,8 +120,10 @@ func (mc *inMemoryClient) GetMapValue(
 func (mc *inMemoryClient) GetDurationValue(
 	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
 		return val.(time.Duration), nil
 	}
 	return defaultValue, errors.New("unable to find key")
