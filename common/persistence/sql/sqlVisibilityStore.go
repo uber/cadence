@@ -61,10 +61,10 @@ func NewSQLVisibilityStore(cfg config.SQL, logger log.Logger) (p.VisibilityStore
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
-	_, err := s.db.InsertIntoVisibility(&sqlplugin.VisibilityRow{
+	_, err := s.db.InsertIntoVisibility(ctx, &sqlplugin.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       request.WorkflowID,
 		RunID:            request.RunID,
@@ -79,11 +79,11 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	closeTime := time.Unix(0, request.CloseTimestamp)
-	result, err := s.db.ReplaceIntoVisibility(&sqlplugin.VisibilityRow{
+	result, err := s.db.ReplaceIntoVisibility(ctx, &sqlplugin.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       request.WorkflowID,
 		RunID:            request.RunID,
@@ -110,7 +110,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 }
 
 func (s *sqlVisibilityStore) UpsertWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	if p.IsNopUpsertWorkflowRequest(request) {
@@ -120,13 +120,13 @@ func (s *sqlVisibilityStore) UpsertWorkflowExecution(
 }
 
 func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListOpenWorkflowExecutions", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
@@ -137,13 +137,13 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(
 }
 
 func (s *sqlVisibilityStore) ListClosedWorkflowExecutions(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutions", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
@@ -155,13 +155,13 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutions(
 }
 
 func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByType(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListOpenWorkflowExecutionsByType", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:         request.DomainUUID,
 				MinStartTime:     &minStartTime,
 				MaxStartTime:     &readLevel.Time,
@@ -173,13 +173,13 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByType(
 }
 
 func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByType(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutionsByType", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:         request.DomainUUID,
 				MinStartTime:     &minStartTime,
 				MaxStartTime:     &readLevel.Time,
@@ -192,13 +192,13 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByType(
 }
 
 func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListOpenWorkflowExecutionsByWorkflowID", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
@@ -210,13 +210,13 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 }
 
 func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutionsByWorkflowID", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
@@ -229,13 +229,13 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 }
 
 func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutionsByStatus", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+			return s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
@@ -248,11 +248,11 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 }
 
 func (s *sqlVisibilityStore) GetClosedWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetClosedWorkflowExecutionRequest,
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 	execution := request.Execution
-	rows, err := s.db.SelectFromVisibility(&sqlplugin.VisibilityFilter{
+	rows, err := s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 		DomainID: request.DomainUUID,
 		Closed:   true,
 		RunID:    execution.RunId,
@@ -275,10 +275,10 @@ func (s *sqlVisibilityStore) GetClosedWorkflowExecution(
 }
 
 func (s *sqlVisibilityStore) DeleteWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
-	_, err := s.db.DeleteFromVisibility(&sqlplugin.VisibilityFilter{
+	_, err := s.db.DeleteFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 		DomainID: request.DomainID,
 		RunID:    &request.RunID,
 	})

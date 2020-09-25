@@ -59,10 +59,10 @@ func newShardPersistence(
 }
 
 func (m *sqlShardManager) CreateShard(
-	_ context.Context,
+	ctx context.Context,
 	request *persistence.CreateShardRequest,
 ) error {
-	if _, err := m.GetShard(context.TODO(), &persistence.GetShardRequest{
+	if _, err := m.GetShard(ctx, &persistence.GetShardRequest{
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
@@ -77,7 +77,7 @@ func (m *sqlShardManager) CreateShard(
 		}
 	}
 
-	if _, err := m.db.InsertIntoShards(row); err != nil {
+	if _, err := m.db.InsertIntoShards(ctx, row); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Failed to insert into shards table. Error: %v", err),
 		}
@@ -87,10 +87,10 @@ func (m *sqlShardManager) CreateShard(
 }
 
 func (m *sqlShardManager) GetShard(
-	_ context.Context,
+	ctx context.Context,
 	request *persistence.GetShardRequest,
 ) (*persistence.GetShardResponse, error) {
-	row, err := m.db.SelectFromShards(&sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
+	row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, &workflow.EntityNotExistsError{
@@ -169,7 +169,7 @@ func (m *sqlShardManager) GetShard(
 }
 
 func (m *sqlShardManager) UpdateShard(
-	_ context.Context,
+	ctx context.Context,
 	request *persistence.UpdateShardRequest,
 ) error {
 	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
@@ -178,11 +178,11 @@ func (m *sqlShardManager) UpdateShard(
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
 		}
 	}
-	return m.txExecute("UpdateShard", func(tx sqlplugin.Tx) error {
-		if err := lockShard(tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
+	return m.txExecute(ctx, "UpdateShard", func(tx sqlplugin.Tx) error {
+		if err := lockShard(ctx, tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
 			return err
 		}
-		result, err := tx.UpdateShards(row)
+		result, err := tx.UpdateShards(ctx, row)
 		if err != nil {
 			return err
 		}
@@ -198,8 +198,8 @@ func (m *sqlShardManager) UpdateShard(
 }
 
 // initiated by the owning shard
-func lockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.WriteLockShards(&sqlplugin.ShardsFilter{ShardID: int64(shardID)})
+func lockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
+	rangeID, err := tx.WriteLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &workflow.InternalServiceError{
@@ -222,8 +222,8 @@ func lockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
 }
 
 // initiated by the owning shard
-func readLockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.ReadLockShards(&sqlplugin.ShardsFilter{ShardID: int64(shardID)})
+func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
+	rangeID, err := tx.ReadLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &workflow.InternalServiceError{

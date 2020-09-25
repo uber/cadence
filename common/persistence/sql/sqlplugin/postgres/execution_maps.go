@@ -21,6 +21,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -157,17 +158,17 @@ var (
 )
 
 // ReplaceIntoActivityInfoMaps replaces one or more rows in activity_info_maps table
-func (pdb *db) ReplaceIntoActivityInfoMaps(rows []sqlplugin.ActivityInfoMapsRow) (sql.Result, error) {
+func (pdb *db) ReplaceIntoActivityInfoMaps(ctx context.Context, rows []sqlplugin.ActivityInfoMapsRow) (sql.Result, error) {
 	for i := range rows {
 		rows[i].LastHeartbeatUpdatedTime = pdb.converter.ToPostgresDateTime(rows[i].LastHeartbeatUpdatedTime)
 	}
-	return pdb.conn.NamedExec(setKeyInActivityInfoMapQry, rows)
+	return pdb.conn.NamedExecContext(ctx, setKeyInActivityInfoMapQry, rows)
 }
 
 // SelectFromActivityInfoMaps reads one or more rows from activity_info_maps table
-func (pdb *db) SelectFromActivityInfoMaps(filter *sqlplugin.ActivityInfoMapsFilter) ([]sqlplugin.ActivityInfoMapsRow, error) {
+func (pdb *db) SelectFromActivityInfoMaps(ctx context.Context, filter *sqlplugin.ActivityInfoMapsFilter) ([]sqlplugin.ActivityInfoMapsRow, error) {
 	var rows []sqlplugin.ActivityInfoMapsRow
-	err := pdb.conn.Select(&rows, getActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := pdb.conn.SelectContext(ctx, &rows, getActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -179,11 +180,11 @@ func (pdb *db) SelectFromActivityInfoMaps(filter *sqlplugin.ActivityInfoMapsFilt
 }
 
 // DeleteFromActivityInfoMaps deletes one or more rows from activity_info_maps table
-func (pdb *db) DeleteFromActivityInfoMaps(filter *sqlplugin.ActivityInfoMapsFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromActivityInfoMaps(ctx context.Context, filter *sqlplugin.ActivityInfoMapsFilter) (sql.Result, error) {
 	if filter.ScheduleID != nil {
-		return pdb.conn.Exec(deleteKeyInActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.ScheduleID)
+		return pdb.conn.ExecContext(ctx, deleteKeyInActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.ScheduleID)
 	}
-	return pdb.conn.Exec(deleteActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return pdb.conn.ExecContext(ctx, deleteActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -201,14 +202,14 @@ var (
 )
 
 // ReplaceIntoTimerInfoMaps replaces one or more rows in timer_info_maps table
-func (pdb *db) ReplaceIntoTimerInfoMaps(rows []sqlplugin.TimerInfoMapsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(setKeyInTimerInfoMapSQLQuery, rows)
+func (pdb *db) ReplaceIntoTimerInfoMaps(ctx context.Context, rows []sqlplugin.TimerInfoMapsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, setKeyInTimerInfoMapSQLQuery, rows)
 }
 
 // SelectFromTimerInfoMaps reads one or more rows from timer_info_maps table
-func (pdb *db) SelectFromTimerInfoMaps(filter *sqlplugin.TimerInfoMapsFilter) ([]sqlplugin.TimerInfoMapsRow, error) {
+func (pdb *db) SelectFromTimerInfoMaps(ctx context.Context, filter *sqlplugin.TimerInfoMapsFilter) ([]sqlplugin.TimerInfoMapsRow, error) {
 	var rows []sqlplugin.TimerInfoMapsRow
-	err := pdb.conn.Select(&rows, getTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := pdb.conn.SelectContext(ctx, &rows, getTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -219,11 +220,11 @@ func (pdb *db) SelectFromTimerInfoMaps(filter *sqlplugin.TimerInfoMapsFilter) ([
 }
 
 // DeleteFromTimerInfoMaps deletes one or more rows from timer_info_maps table
-func (pdb *db) DeleteFromTimerInfoMaps(filter *sqlplugin.TimerInfoMapsFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromTimerInfoMaps(ctx context.Context, filter *sqlplugin.TimerInfoMapsFilter) (sql.Result, error) {
 	if filter.TimerID != nil {
-		return pdb.conn.Exec(deleteKeyInTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.TimerID)
+		return pdb.conn.ExecContext(ctx, deleteKeyInTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.TimerID)
 	}
-	return pdb.conn.Exec(deleteTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return pdb.conn.ExecContext(ctx, deleteTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -241,14 +242,14 @@ var (
 )
 
 // ReplaceIntoChildExecutionInfoMaps replaces one or more rows in child_execution_info_maps table
-func (pdb *db) ReplaceIntoChildExecutionInfoMaps(rows []sqlplugin.ChildExecutionInfoMapsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(setKeyInChildExecutionInfoMapQry, rows)
+func (pdb *db) ReplaceIntoChildExecutionInfoMaps(ctx context.Context, rows []sqlplugin.ChildExecutionInfoMapsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, setKeyInChildExecutionInfoMapQry, rows)
 }
 
 // SelectFromChildExecutionInfoMaps reads one or more rows from child_execution_info_maps table
-func (pdb *db) SelectFromChildExecutionInfoMaps(filter *sqlplugin.ChildExecutionInfoMapsFilter) ([]sqlplugin.ChildExecutionInfoMapsRow, error) {
+func (pdb *db) SelectFromChildExecutionInfoMaps(ctx context.Context, filter *sqlplugin.ChildExecutionInfoMapsFilter) ([]sqlplugin.ChildExecutionInfoMapsRow, error) {
 	var rows []sqlplugin.ChildExecutionInfoMapsRow
-	err := pdb.conn.Select(&rows, getChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := pdb.conn.SelectContext(ctx, &rows, getChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -259,11 +260,11 @@ func (pdb *db) SelectFromChildExecutionInfoMaps(filter *sqlplugin.ChildExecution
 }
 
 // DeleteFromChildExecutionInfoMaps deletes one or more rows from child_execution_info_maps table
-func (pdb *db) DeleteFromChildExecutionInfoMaps(filter *sqlplugin.ChildExecutionInfoMapsFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromChildExecutionInfoMaps(ctx context.Context, filter *sqlplugin.ChildExecutionInfoMapsFilter) (sql.Result, error) {
 	if filter.InitiatedID != nil {
-		return pdb.conn.Exec(deleteKeyInChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+		return pdb.conn.ExecContext(ctx, deleteKeyInChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
 	}
-	return pdb.conn.Exec(deleteChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return pdb.conn.ExecContext(ctx, deleteChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -281,14 +282,14 @@ var (
 )
 
 // ReplaceIntoRequestCancelInfoMaps replaces one or more rows in request_cancel_info_maps table
-func (pdb *db) ReplaceIntoRequestCancelInfoMaps(rows []sqlplugin.RequestCancelInfoMapsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(setKeyInRequestCancelInfoMapQry, rows)
+func (pdb *db) ReplaceIntoRequestCancelInfoMaps(ctx context.Context, rows []sqlplugin.RequestCancelInfoMapsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, setKeyInRequestCancelInfoMapQry, rows)
 }
 
 // SelectFromRequestCancelInfoMaps reads one or more rows from request_cancel_info_maps table
-func (pdb *db) SelectFromRequestCancelInfoMaps(filter *sqlplugin.RequestCancelInfoMapsFilter) ([]sqlplugin.RequestCancelInfoMapsRow, error) {
+func (pdb *db) SelectFromRequestCancelInfoMaps(ctx context.Context, filter *sqlplugin.RequestCancelInfoMapsFilter) ([]sqlplugin.RequestCancelInfoMapsRow, error) {
 	var rows []sqlplugin.RequestCancelInfoMapsRow
-	err := pdb.conn.Select(&rows, getRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := pdb.conn.SelectContext(ctx, &rows, getRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -299,11 +300,11 @@ func (pdb *db) SelectFromRequestCancelInfoMaps(filter *sqlplugin.RequestCancelIn
 }
 
 // DeleteFromRequestCancelInfoMaps deletes one or more rows from request_cancel_info_maps table
-func (pdb *db) DeleteFromRequestCancelInfoMaps(filter *sqlplugin.RequestCancelInfoMapsFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromRequestCancelInfoMaps(ctx context.Context, filter *sqlplugin.RequestCancelInfoMapsFilter) (sql.Result, error) {
 	if filter.InitiatedID != nil {
-		return pdb.conn.Exec(deleteKeyInRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+		return pdb.conn.ExecContext(ctx, deleteKeyInRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
 	}
-	return pdb.conn.Exec(deleteRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return pdb.conn.ExecContext(ctx, deleteRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 var (
@@ -321,14 +322,14 @@ var (
 )
 
 // ReplaceIntoSignalInfoMaps replaces one or more rows in signal_info_maps table
-func (pdb *db) ReplaceIntoSignalInfoMaps(rows []sqlplugin.SignalInfoMapsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(setKeyInSignalInfoMapQry, rows)
+func (pdb *db) ReplaceIntoSignalInfoMaps(ctx context.Context, rows []sqlplugin.SignalInfoMapsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, setKeyInSignalInfoMapQry, rows)
 }
 
 // SelectFromSignalInfoMaps reads one or more rows from signal_info_maps table
-func (pdb *db) SelectFromSignalInfoMaps(filter *sqlplugin.SignalInfoMapsFilter) ([]sqlplugin.SignalInfoMapsRow, error) {
+func (pdb *db) SelectFromSignalInfoMaps(ctx context.Context, filter *sqlplugin.SignalInfoMapsFilter) ([]sqlplugin.SignalInfoMapsRow, error) {
 	var rows []sqlplugin.SignalInfoMapsRow
-	err := pdb.conn.Select(&rows, getSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := pdb.conn.SelectContext(ctx, &rows, getSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -339,22 +340,22 @@ func (pdb *db) SelectFromSignalInfoMaps(filter *sqlplugin.SignalInfoMapsFilter) 
 }
 
 // DeleteFromSignalInfoMaps deletes one or more rows from signal_info_maps table
-func (pdb *db) DeleteFromSignalInfoMaps(filter *sqlplugin.SignalInfoMapsFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromSignalInfoMaps(ctx context.Context, filter *sqlplugin.SignalInfoMapsFilter) (sql.Result, error) {
 	if filter.InitiatedID != nil {
-		return pdb.conn.Exec(deleteKeyInSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+		return pdb.conn.ExecContext(ctx, deleteKeyInSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
 	}
-	return pdb.conn.Exec(deleteSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return pdb.conn.ExecContext(ctx, deleteSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 // InsertIntoSignalsRequestedSets inserts one or more rows into signals_requested_sets table
-func (pdb *db) InsertIntoSignalsRequestedSets(rows []sqlplugin.SignalsRequestedSetsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(createSignalsRequestedSetQuery, rows)
+func (pdb *db) InsertIntoSignalsRequestedSets(ctx context.Context, rows []sqlplugin.SignalsRequestedSetsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, createSignalsRequestedSetQuery, rows)
 }
 
 // SelectFromSignalsRequestedSets reads one or more rows from signals_requested_sets table
-func (pdb *db) SelectFromSignalsRequestedSets(filter *sqlplugin.SignalsRequestedSetsFilter) ([]sqlplugin.SignalsRequestedSetsRow, error) {
+func (pdb *db) SelectFromSignalsRequestedSets(ctx context.Context, filter *sqlplugin.SignalsRequestedSetsFilter) ([]sqlplugin.SignalsRequestedSetsRow, error) {
 	var rows []sqlplugin.SignalsRequestedSetsRow
-	err := pdb.conn.Select(&rows, getSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := pdb.conn.SelectContext(ctx, &rows, getSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].ShardID = int64(filter.ShardID)
 		rows[i].DomainID = filter.DomainID
@@ -365,9 +366,9 @@ func (pdb *db) SelectFromSignalsRequestedSets(filter *sqlplugin.SignalsRequested
 }
 
 // DeleteFromSignalsRequestedSets deletes one or more rows from signals_requested_sets table
-func (pdb *db) DeleteFromSignalsRequestedSets(filter *sqlplugin.SignalsRequestedSetsFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromSignalsRequestedSets(ctx context.Context, filter *sqlplugin.SignalsRequestedSetsFilter) (sql.Result, error) {
 	if filter.SignalID != nil {
-		return pdb.conn.Exec(deleteSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.SignalID)
+		return pdb.conn.ExecContext(ctx, deleteSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.SignalID)
 	}
-	return pdb.conn.Exec(deleteAllSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	return pdb.conn.ExecContext(ctx, deleteAllSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
