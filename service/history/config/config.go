@@ -255,6 +255,7 @@ type Config struct {
 	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
 	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
 	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
+	TestConfig                                 dynamicconfig.IntPropertyFnWithShardIDFilter
 }
 
 const (
@@ -464,6 +465,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		NotifyFailoverMarkerInterval:               dc.GetDurationProperty(dynamicconfig.NotifyFailoverMarkerInterval, 5*time.Second),
 		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
+		TestConfig:                                 dc.GetIntPropertyFilteredByShardIDV2(dynamicconfig.ReplicatorProcessorUpdateShardTaskCount, 0),
 	}
 
 	return cfg

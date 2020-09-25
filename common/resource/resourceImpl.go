@@ -157,7 +157,7 @@ func New(
 		return nil, err
 	}
 
-	dynamicCollection := dynamicconfig.NewCollection(params.DynamicConfig, logger)
+	dynamicCollection := dynamicconfig.NewCollection(params.DynamicConfig, params.ClusterMetadata.GetCurrentClusterName(), logger)
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(
 			params.RPCFactory,

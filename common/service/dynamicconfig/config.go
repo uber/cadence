@@ -35,12 +35,13 @@ const (
 )
 
 // NewCollection creates a new collection
-func NewCollection(client Client, logger log.Logger) *Collection {
+func NewCollection(client Client, clusterName string, logger log.Logger) *Collection {
 	return &Collection{
-		client:   client,
-		logger:   logger,
-		keys:     &sync.Map{},
-		errCount: -1,
+		client:      client,
+		logger:      logger,
+		keys:        &sync.Map{},
+		errCount:    -1,
+		clusterName: clusterName,
 	}
 }
 
@@ -48,10 +49,11 @@ func NewCollection(client Client, logger log.Logger) *Collection {
 // can be directly accessed by calling the function without propagating the client everywhere in
 // code
 type Collection struct {
-	client   Client
-	logger   log.Logger
-	keys     *sync.Map // map of config Key to strongly typed value
-	errCount int64
+	client      Client
+	logger      log.Logger
+	keys        *sync.Map // map of config Key to strongly typed value
+	errCount    int64
+	clusterName string
 }
 
 func (c *Collection) logError(key Key, err error) {
@@ -198,6 +200,22 @@ func (c *Collection) GetIntPropertyFilteredByShardID(key Key, defaultValue int) 
 		val, err := c.client.GetIntValue(
 			key,
 			getFilterMap(ShardIDFilter(shardID)),
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, err)
+		}
+		c.logValue(key, val, defaultValue, intCompareEquals)
+		return val
+	}
+}
+
+// GetIntPropertyFilteredByShardIDV2 gets property with shardID as filter and asserts that it's an integer
+func (c *Collection) GetIntPropertyFilteredByShardIDV2(key Key, defaultValue int) IntPropertyFnWithShardIDFilter {
+	return func(shardID int) int {
+		val, err := c.client.GetIntValue(
+			key,
+			getFilterMap(ShardIDFilter(shardID), ClusterNameFilter(c.clusterName)),
 			defaultValue,
 		)
 		if err != nil {

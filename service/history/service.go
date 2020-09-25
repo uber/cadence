@@ -53,7 +53,7 @@ func NewService(
 	params *service.BootstrapParams,
 ) (resource.Resource, error) {
 	serviceConfig := config.New(
-		dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
+		dynamicconfig.NewCollection(params.DynamicConfig, params.ClusterMetadata.GetCurrentClusterName(), params.Logger),
 		params.PersistenceConfig.NumHistoryShards,
 		params.PersistenceConfig.DefaultStoreType(),
 		params.PersistenceConfig.IsAdvancedVisibilityConfigExist())

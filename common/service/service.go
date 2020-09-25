@@ -140,7 +140,7 @@ func New(params *BootstrapParams) Service {
 		messagingClient:       params.MessagingClient,
 		blobstoreClient:       params.BlobstoreClient,
 		dispatcherProvider:    params.DispatcherProvider,
-		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
+		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.ClusterMetadata.GetCurrentClusterName(), params.Logger),
 		archivalMetadata:      params.ArchivalMetadata,
 		archiverProvider:      params.ArchiverProvider,
 		serializer:            persistence.NewPayloadSerializer(),

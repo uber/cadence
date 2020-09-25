@@ -446,6 +446,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	//		failover min / max task levels calculated & updated to shard (using shard lock) -> failover start
 	// above 2 guarantees that failover start is after persistence of the task.
 
+	e.logger.Info("Test config with two filters", tag.ShardID(e.config.TestConfig(e.shard.GetShardID())))
+
 	failoverPredicate := func(shardNotificationVersion int64, nextDomain *cache.DomainCacheEntry, action func()) {
 		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
