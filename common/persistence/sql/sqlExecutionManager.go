@@ -1273,7 +1273,7 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	request *p.PutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
-	blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
 		DomainID:          sqlplugin.MustParseUUID(replicationTask.DomainID),
 		WorkflowID:        &replicationTask.WorkflowID,
 		RunID:             sqlplugin.MustParseUUID(replicationTask.RunID),

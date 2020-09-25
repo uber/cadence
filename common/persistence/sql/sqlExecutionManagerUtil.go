@@ -37,7 +37,7 @@ import (
 
 func applyWorkflowMutationTx(
 	tx sqlplugin.Tx,
-	shardID int, 
+	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
 	parser serialization.Parser,
 ) error {
@@ -618,8 +618,8 @@ func lockCurrentExecutionIfExists(
 ) (*sqlplugin.CurrentExecutionsRow, error) {
 
 	rows, err := tx.LockCurrentExecutionsJoinExecutions(&sqlplugin.CurrentExecutionsFilter{
-		ShardID: int64(shardID),
-		DomainID: domainID,
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
 		WorkflowID: workflowID,
 	})
 	if err != nil {
