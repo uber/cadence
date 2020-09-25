@@ -21,6 +21,7 @@
 package nosqlplugin
 
 import (
+	"context"
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -51,21 +52,21 @@ type (
 		**/
 
 		// InsertIntoHistoryTreeAndNode inserts one or two rows: tree row and node row(at least one of them)
-		InsertIntoHistoryTreeAndNode(treeRow *HistoryTreeRow, nodeRow *HistoryNodeRow) error
+		InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *HistoryTreeRow, nodeRow *HistoryNodeRow) error
 
 		// SelectFromHistoryNode read nodes based on a filter
-		SelectFromHistoryNode(filter *HistoryNodeFilter) ([]*HistoryNodeRow, []byte, error)
+		SelectFromHistoryNode(ctx context.Context, filter *HistoryNodeFilter) ([]*HistoryNodeRow, []byte, error)
 
 		// DeleteFromHistoryTreeAndNode delete a branch record, and a list of ranges of nodes.
 		// for each range, it will delete all nodes starting from MinNodeID(inclusive)
-		DeleteFromHistoryTreeAndNode(treeFilter *HistoryTreeFilter, nodeFilters []*HistoryNodeFilter) error
+		DeleteFromHistoryTreeAndNode(ctx context.Context, treeFilter *HistoryTreeFilter, nodeFilters []*HistoryNodeFilter) error
 
 		// SelectAllHistoryTrees will return all tree branches with pagination
-		SelectAllHistoryTrees(nextPageToken []byte, pageSize int) ([]*HistoryTreeRow, []byte, error)
+		SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, pageSize int) ([]*HistoryTreeRow, []byte, error)
 
 		// SelectFromHistoryTree read branch records for a tree.
 		// It returns without pagination, because we assume one tree won't have too many branches.
-		SelectFromHistoryTree(filter *HistoryTreeFilter) ([]*HistoryTreeRow, error)
+		SelectFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) ([]*HistoryTreeRow, error)
 	}
 
 	// HistoryNodeRow represents a row in history_node table
