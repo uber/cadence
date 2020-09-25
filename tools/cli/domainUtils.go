@@ -299,7 +299,6 @@ func initializeMetadataMgr(
 	pFactory := client.NewFactory(
 		&pConfig,
 		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
-		nil, // TODO propagate abstract datastore factory from the CLI.
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
 		logger,
