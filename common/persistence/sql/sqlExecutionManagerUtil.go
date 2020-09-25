@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -35,8 +37,9 @@ import (
 
 func applyWorkflowMutationTx(
 	tx sqlplugin.Tx,
-	shardID int,
+	shardID int, 
 	workflowMutation *p.InternalWorkflowMutation,
+	parser serialization.Parser,
 ) error {
 
 	executionInfo := workflowMutation.ExecutionInfo
@@ -69,7 +72,8 @@ func applyWorkflowMutationTx(
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		shardID); err != nil {
+		shardID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -83,6 +87,7 @@ func applyWorkflowMutationTx(
 		workflowMutation.TransferTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
+		parser,
 	); err != nil {
 		return err
 	}
@@ -93,7 +98,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -105,7 +111,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -117,7 +124,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -129,7 +137,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -141,7 +150,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -188,6 +198,7 @@ func applyWorkflowSnapshotTxAsReset(
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
+	parser serialization.Parser,
 ) error {
 
 	executionInfo := workflowSnapshot.ExecutionInfo
@@ -215,12 +226,17 @@ func applyWorkflowSnapshotTxAsReset(
 		}
 	}
 
-	if err := updateExecution(tx,
+	if err := 
+  
+  
+  
+  (tx,
 		executionInfo,
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		shardID); err != nil {
+		shardID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -234,6 +250,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
+		parser,
 	); err != nil {
 		return err
 	}
@@ -254,7 +271,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -276,7 +294,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
@@ -298,7 +317,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -320,7 +340,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
@@ -342,7 +363,8 @@ func applyWorkflowSnapshotTxAsReset(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}
@@ -386,6 +408,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
+	parser serialization.Parser,
 ) error {
 
 	executionInfo := workflowSnapshot.ExecutionInfo
@@ -401,7 +424,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		shardID); err != nil {
+		shardID,
+		parser); err != nil {
 		return err
 	}
 
@@ -413,6 +437,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
+		parser,
 	); err != nil {
 		return err
 	}
@@ -423,7 +448,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -435,7 +461,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
@@ -447,7 +474,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -459,7 +487,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
@@ -471,7 +500,8 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}
@@ -501,6 +531,7 @@ func applyTasks(
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
+	parser serialization.Parser,
 ) error {
 
 	if err := createTransferTasks(tx,
@@ -508,7 +539,8 @@ func applyTasks(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create transfer tasks. Error: %v", err),
 		}
@@ -520,6 +552,7 @@ func applyTasks(
 		domainID,
 		workflowID,
 		runID,
+		parser,
 	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create replication tasks. Error: %v", err),
@@ -531,7 +564,8 @@ func applyTasks(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+		parser); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create timer tasks. Error: %v", err),
 		}
@@ -704,6 +738,7 @@ func createTransferTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(transferTasks) == 0 {
@@ -774,7 +809,7 @@ func createTransferTasks(
 		info.Version = common.Int64Ptr(task.GetVersion())
 		info.VisibilityTimestampNanos = common.Int64Ptr(task.GetVisibilityTimestamp().UnixNano())
 
-		blob, err := transferTaskInfoToBlob(info)
+		blob, err := parser.TransferTaskInfoToBlob(info)
 		if err != nil {
 			return err
 		}
@@ -812,6 +847,7 @@ func createReplicationTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(replicationTasks) == 0 {
@@ -854,7 +890,7 @@ func createReplicationTasks(
 			}
 		}
 
-		blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+		blob, err := parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
 			DomainID:                domainID,
 			WorkflowID:              &workflowID,
 			RunID:                   runID,
@@ -908,6 +944,7 @@ func createTimerTasks(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(timerTasks) > 0 {
@@ -955,7 +992,7 @@ func createTimerTasks(
 			info.Version = common.Int64Ptr(task.GetVersion())
 			info.TaskType = common.Int16Ptr(int16(task.GetType()))
 
-			blob, err := timerTaskInfoToBlob(info)
+			blob, err := parser.TimerTaskInfoToBlob(info)
 			if err != nil {
 				return err
 			}
@@ -1174,6 +1211,7 @@ func buildExecutionRow(
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
+	parser serialization.Parser,
 ) (row *sqlplugin.ExecutionsRow, err error) {
 
 	info := &sqlblobs.WorkflowExecutionInfo{
@@ -1252,7 +1290,7 @@ func buildExecutionRow(
 		info.CancelRequestID = &executionInfo.CancelRequestID
 	}
 
-	blob, err := workflowExecutionInfoToBlob(info)
+	blob, err := parser.WorkflowExecutionInfoToBlob(info)
 	if err != nil {
 		return nil, err
 	}
@@ -1276,6 +1314,7 @@ func (m *sqlExecutionManager) createExecution(
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
+	parser serialization.Parser,
 ) error {
 
 	// validate workflow state & close status
@@ -1295,6 +1334,7 @@ func (m *sqlExecutionManager) createExecution(
 		startVersion,
 		lastWriteVersion,
 		shardID,
+		parser,
 	)
 	if err != nil {
 		return err
@@ -1337,6 +1377,7 @@ func updateExecution(
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
+	parser serialization.Parser,
 ) error {
 
 	// validate workflow state & close status
@@ -1355,6 +1396,7 @@ func updateExecution(
 		startVersion,
 		lastWriteVersion,
 		shardID,
+		parser,
 	)
 	if err != nil {
 		return err
