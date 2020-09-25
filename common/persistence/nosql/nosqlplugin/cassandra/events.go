@@ -76,7 +76,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 	var err error
 	if treeRow != nil && nodeRow != nil {
 		// Note: for perf, prefer using batch for inserting more than one records
-		batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx).WithContext(ctx)
+		batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 		batch.Query(v2templateInsertTree,
 			treeRow.TreeID, treeRow.BranchID, ancs, treeRow.CreateTimestampMilliseconds, treeRow.Info)
 		batch.Query(v2templateUpsertData,
