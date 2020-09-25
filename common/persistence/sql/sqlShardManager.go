@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
@@ -40,11 +42,17 @@ type sqlShardManager struct {
 }
 
 // newShardPersistence creates an instance of ShardManager
-func newShardPersistence(db sqlplugin.DB, currentClusterName string, log log.Logger) (persistence.ShardManager, error) {
+func newShardPersistence(
+	db sqlplugin.DB,
+	currentClusterName string,
+	log log.Logger,
+	parser serialization.Parser,
+) (persistence.ShardManager, error) {
 	return &sqlShardManager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
+			parser: parser,
 		},
 		currentClusterName: currentClusterName,
 	}, nil
@@ -62,7 +70,7 @@ func (m *sqlShardManager) CreateShard(
 		}
 	}
 
-	row, err := shardInfoToShardsRow(*request.ShardInfo)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
@@ -94,7 +102,7 @@ func (m *sqlShardManager) GetShard(
 		}
 	}
 
-	shardInfo, err := shardInfoFromBlob(row.Data, row.DataEncoding)
+	shardInfo, err := m.parser.ShardInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +172,7 @@ func (m *sqlShardManager) UpdateShard(
 	_ context.Context,
 	request *persistence.UpdateShardRequest,
 ) error {
-	row, err := shardInfoToShardsRow(*request.ShardInfo)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
@@ -236,7 +244,7 @@ func readLockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
 	return nil
 }
 
-func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error) {
+func shardInfoToShardsRow(s persistence.ShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
 	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
 	for k, v := range s.ClusterTimerAckLevel {
 		timerAckLevels[k] = v.UnixNano()
@@ -283,7 +291,7 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error)
 		PendingFailoverMarkersEncoding:        common.StringPtr(markerEncoding),
 	}
 
-	blob, err := shardInfoToBlob(shardInfo)
+	blob, err := parser.ShardInfoToBlob(shardInfo)
 	if err != nil {
 		return nil, err
 	}

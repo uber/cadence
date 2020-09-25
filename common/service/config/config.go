@@ -226,6 +226,11 @@ type (
 		NumShards int `yaml:"nShards"`
 		// TLS is the configuration for TLS connections
 		TLS *auth.TLS `yaml:"tls"`
+		// EncodingType is the configuration for the type of encoding used for sql blobs
+		EncodingType string `yaml:"encodingType"`
+		// DecodingTypes is the configuration for all the sql blob decoding types which need to be supported
+		// DecodingTypes should not be removed unless there are no blobs in database with the encoding type
+		DecodingTypes []string `yaml:"decodingTypes"`
 	}
 
 	// CustomDatastoreConfig is the configuration for connecting to a custom datastore that is not supported by cadence core
