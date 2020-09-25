@@ -122,9 +122,7 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestSubmit_Fail_SchedulerShutDown
 		},
 	)
 
-	taskPriority := 1
 	mockTask := NewMockPriorityTask(s.controller)
-	mockTask.EXPECT().Priority().Return(taskPriority)
 	scheduler.Start()
 	scheduler.Stop()
 	err := scheduler.Submit(mockTask)
