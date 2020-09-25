@@ -90,7 +90,9 @@ func (p *parallelTaskProcessorImpl) Stop() {
 	}
 
 	close(p.shutdownCh)
-	// TODO: drain the taskCh and nack all tasks
+
+	p.drainAndNackTasks()
+
 	if success := common.AwaitWaitGroup(&p.workerWG, time.Minute); !success {
 		p.logger.Warn("Parallel task processor timedout on shutdown.")
 	}
@@ -102,9 +104,15 @@ func (p *parallelTaskProcessorImpl) Submit(task Task) error {
 	sw := p.metricsScope.StartTimer(metrics.ParallelTaskSubmitLatency)
 	defer sw.Stop()
 
+	if p.isStopped() {
+		return ErrTaskProcessorClosed
+	}
+
 	select {
 	case p.tasksCh <- task:
-		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
+		if p.isStopped() {
+			p.drainAndNackTasks()
+		}
 		return nil
 	case <-p.shutdownCh:
 		return ErrTaskProcessorClosed
@@ -143,18 +151,24 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task) {
 	}
 
 	if err := backoff.Retry(op, p.options.RetryPolicy, isRetryable); err != nil {
-		if p.isStopped() {
-			// neither ack or nack here
-			return
-		}
-
-		// non-retryable error or exhausted all retries
+		// non-retryable error or exhausted all retries or worker shutdown
 		task.Nack()
 		return
 	}
 
 	// no error
 	task.Ack()
+}
+
+func (p *parallelTaskProcessorImpl) drainAndNackTasks() {
+	for {
+		select {
+		case task := <-p.tasksCh:
+			task.Nack()
+		default:
+			return
+		}
+	}
 }
 
 func (p *parallelTaskProcessorImpl) isStopped() bool {

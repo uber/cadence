@@ -282,6 +282,10 @@ func (s *weightedRoundRobinTaskSchedulerSuite) TestWRR() {
 	s.scheduler.Stop()
 }
 
+func (s *weightedRoundRobinTaskSchedulerSuite) TestSchedulerContract() {
+	testSchedulerContract(s.Assertions, s.controller, s.scheduler)
+}
+
 func (s *weightedRoundRobinTaskSchedulerSuite) newTestWeightedRoundRobinTaskScheduler(
 	options *WeightedRoundRobinTaskSchedulerOptions,
 ) *weightedRoundRobinTaskSchedulerImpl {
@@ -293,6 +297,121 @@ func (s *weightedRoundRobinTaskSchedulerSuite) newTestWeightedRoundRobinTaskSche
 	s.NoError(err)
 	return scheduler.(*weightedRoundRobinTaskSchedulerImpl)
 }
+
+func testSchedulerContract(
+	s *require.Assertions,
+	controller *gomock.Controller,
+	scheduler Scheduler,
+) {
+	numTasks := 10000
+	var taskWG sync.WaitGroup
+
+	tasks := []PriorityTask{}
+	taskStatusLock := &sync.Mutex{}
+	taskStatus := make(map[PriorityTask]State)
+	for i := 0; i != numTasks; i++ {
+		mockTask := NewMockPriorityTask(controller)
+		taskStatus[mockTask] = TaskStatePending
+		mockTask.EXPECT().Priority().Return(rand.Intn(len(testSchedulerWeights()))).MaxTimes(1)
+		mockTask.EXPECT().Execute().Return(nil).MaxTimes(1)
+		mockTask.EXPECT().Ack().Do(func() {
+			taskStatusLock.Lock()
+			defer taskStatusLock.Unlock()
+
+			s.Equal(TaskStatePending, taskStatus[mockTask])
+			taskStatus[mockTask] = TaskStateAcked
+			taskWG.Done()
+		}).MaxTimes(1)
+		mockTask.EXPECT().Nack().Do(func() {
+			taskStatusLock.Lock()
+			defer taskStatusLock.Unlock()
+
+			s.Equal(TaskStatePending, taskStatus[mockTask])
+			taskStatus[mockTask] = TaskStateNacked
+			taskWG.Done()
+		}).MaxTimes(1)
+		tasks = append(tasks, mockTask)
+		taskWG.Add(1)
+	}
+
+	scheduler.Start()
+	go func() {
+		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+		scheduler.Stop()
+	}()
+
+	for _, task := range tasks {
+		if rand.Intn(2) == 0 {
+			if err := scheduler.Submit(task); err != nil {
+				taskWG.Done()
+				taskStatusLock.Lock()
+				delete(taskStatus, task)
+				taskStatusLock.Unlock()
+			}
+		} else {
+			if submitted, _ := scheduler.TrySubmit(task); !submitted {
+				taskWG.Done()
+				taskStatusLock.Lock()
+				delete(taskStatus, task)
+				taskStatusLock.Unlock()
+			}
+		}
+	}
+	s.True(common.AwaitWaitGroup(&taskWG, 10*time.Second))
+	switch schedulerImpl := scheduler.(type) {
+	case *fifoTaskSchedulerImpl:
+		<-schedulerImpl.shutdownCh
+	case *weightedRoundRobinTaskSchedulerImpl:
+		<-schedulerImpl.shutdownCh
+	default:
+		s.Fail("unknown task scheduler type")
+	}
+
+	for _, status := range taskStatus {
+		s.NotEqual(TaskStatePending, status)
+	}
+}
+
+// func TestBench(t *testing.T) {
+// 	logger, _ := loggerimpl.NewDevelopment()
+// 	scheduler, _ := NewWeightedRoundRobinTaskScheduler(
+// 		logger,
+// 		metrics.NewClient(tally.NoopScope, metrics.Common),
+// 		&WeightedRoundRobinTaskSchedulerOptions{
+// 			Weights:         testSchedulerWeights,
+// 			QueueSize:       10000,
+// 			WorkerCount:     100,
+// 			DispatcherCount: 1,
+// 			RetryPolicy:     backoff.NewExponentialRetryPolicy(time.Millisecond),
+// 		},
+// 	)
+
+// 	N := 10000000
+// 	tasks := make(chan PriorityTask, N)
+// 	for i := 0; i != N; i++ {
+// 		tasks <- newTestPriorityTask(rand.Intn(3))
+// 	}
+
+// 	start := time.Now()
+
+// 	wg := &sync.WaitGroup{}
+// 	for i := 0; i < 400; i++ {
+// 		wg.Add(1)
+// 		go func() {
+// 			defer wg.Done()
+// 			select {
+// 			case task := <-tasks:
+// 				scheduler.TrySubmit(task)
+// 			default:
+// 				return
+// 			}
+// 		}()
+// 	}
+
+// 	wg.Wait()
+
+// 	fmt.Println(time.Now().Sub(start))
+// }
 
 func newMockPriorityTaskMatcher(mockTask *MockPriorityTask) gomock.Matcher {
 	return &mockPriorityTaskMatcher{
@@ -311,3 +430,65 @@ func (m *mockPriorityTaskMatcher) Matches(x interface{}) bool {
 func (m *mockPriorityTaskMatcher) String() string {
 	return fmt.Sprintf("is equal to %v", m.task)
 }
+
+// type testPriorityTask struct {
+// 	sync.Mutex
+
+// 	priority int
+// 	state    State
+// }
+
+// func newTestPriorityTask(p int) *testPriorityTask {
+// 	return &testPriorityTask{
+// 		priority: p,
+// 		state:    TaskStatePending,
+// 	}
+// }
+
+// func (t *testPriorityTask) Execute() error {
+// 	time.Sleep(30 * time.Microsecond)
+// 	return nil
+// }
+
+// func (t *testPriorityTask) HandleErr(err error) error {
+// 	return err
+// }
+
+// func (t *testPriorityTask) RetryErr(err error) bool {
+// 	return true
+// }
+
+// func (t *testPriorityTask) Ack() {
+// 	t.Lock()
+// 	t.Unlock()
+
+// 	t.state = TaskStateAcked
+// }
+
+// func (t *testPriorityTask) Nack() {
+// 	t.Lock()
+// 	t.Unlock()
+
+// 	t.state = TaskStateNacked
+// }
+
+// func (t *testPriorityTask) State() State {
+// 	t.Lock()
+// 	t.Unlock()
+
+// 	return t.state
+// }
+
+// func (t *testPriorityTask) Priority() int {
+// 	t.Lock()
+// 	t.Unlock()
+
+// 	return t.priority
+// }
+
+// func (t *testPriorityTask) SetPriority(p int) {
+// 	t.Lock()
+// 	t.Unlock()
+
+// 	t.priority = p
+// }

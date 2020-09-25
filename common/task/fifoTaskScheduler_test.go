@@ -121,3 +121,7 @@ func (s *fifoTaskSchedulerSuite) TestTrySubmit() {
 	s.NoError(err)
 	s.False(submitted)
 }
+
+func (s *fifoTaskSchedulerSuite) TestSchedulerContract() {
+	testSchedulerContract(s.Assertions, s.controller, s.scheduler)
+}

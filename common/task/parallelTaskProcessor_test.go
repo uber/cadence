@@ -22,6 +22,8 @@ package task
 
 import (
 	"errors"
+	"math/rand"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -161,4 +163,67 @@ func (s *parallelTaskProcessorSuite) TestExecuteTask_ProcessorStopped() {
 	time.Sleep(100 * time.Millisecond)
 	atomic.StoreInt32(&s.processor.status, common.DaemonStatusStopped)
 	<-done
+}
+
+func (s *parallelTaskProcessorSuite) TestProcessorContract() {
+	numTasks := 10000
+	var taskWG sync.WaitGroup
+
+	tasks := []Task{}
+	taskStatusLock := &sync.Mutex{}
+	taskStatus := make(map[Task]State)
+	for i := 0; i != numTasks; i++ {
+		mockTask := NewMockTask(s.controller)
+		taskStatus[mockTask] = TaskStatePending
+		mockTask.EXPECT().Execute().Return(nil).MaxTimes(1)
+		mockTask.EXPECT().Ack().Do(func() {
+			taskStatusLock.Lock()
+			defer taskStatusLock.Unlock()
+
+			s.Equal(TaskStatePending, taskStatus[mockTask])
+			taskStatus[mockTask] = TaskStateAcked
+			taskWG.Done()
+		}).MaxTimes(1)
+		mockTask.EXPECT().Nack().Do(func() {
+			taskStatusLock.Lock()
+			defer taskStatusLock.Unlock()
+
+			s.Equal(TaskStatePending, taskStatus[mockTask])
+			taskStatus[mockTask] = TaskStateNacked
+			taskWG.Done()
+		}).MaxTimes(1)
+		tasks = append(tasks, mockTask)
+		taskWG.Add(1)
+	}
+
+	processor := NewParallelTaskProcessor(
+		loggerimpl.NewDevelopmentForTest(s.Suite),
+		metrics.NewClient(tally.NoopScope, metrics.Common),
+		&ParallelTaskProcessorOptions{
+			QueueSize:   100,
+			WorkerCount: 10,
+			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
+		},
+	).(*parallelTaskProcessorImpl)
+
+	processor.Start()
+	go func() {
+		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+		processor.Stop()
+	}()
+
+	for _, task := range tasks {
+		if err := processor.Submit(task); err != nil {
+			taskWG.Done()
+			taskStatusLock.Lock()
+			delete(taskStatus, task)
+			taskStatusLock.Unlock()
+		}
+	}
+	s.True(common.AwaitWaitGroup(&taskWG, 10*time.Second))
+	<-processor.shutdownCh
+
+	for _, status := range taskStatus {
+		s.NotEqual(TaskStatePending, status)
+	}
 }

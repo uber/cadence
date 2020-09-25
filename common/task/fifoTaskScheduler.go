@@ -106,7 +106,8 @@ func (f *fifoTaskSchedulerImpl) Stop() {
 
 	f.processor.Stop()
 
-	// TODO: drain taskCh and nack all tasks
+	f.drainAndNackTasks()
+
 	if success := common.AwaitWaitGroup(&f.dispatcherWG, time.Minute); !success {
 		f.logger.Warn("FIFO task scheduler timedout on shutdown.")
 	}
@@ -121,9 +122,15 @@ func (f *fifoTaskSchedulerImpl) Submit(
 	sw := f.metricsScope.StartTimer(metrics.ParallelTaskSubmitLatency)
 	defer sw.Stop()
 
+	if f.isStopped() {
+		return ErrTaskSchedulerClosed
+	}
+
 	select {
 	case f.taskCh <- task:
-		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
+		if f.isStopped() {
+			f.drainAndNackTasks()
+		}
 		return nil
 	case <-f.shutdownCh:
 		return ErrTaskSchedulerClosed
@@ -133,10 +140,17 @@ func (f *fifoTaskSchedulerImpl) Submit(
 func (f *fifoTaskSchedulerImpl) TrySubmit(
 	task PriorityTask,
 ) (bool, error) {
+	if f.isStopped() {
+		return false, ErrTaskSchedulerClosed
+	}
+
 	select {
 	case f.taskCh <- task:
 		f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
 		// TODO: check if processor is closed, if so, drain the taskCh and nack all tasks
+		if f.isStopped() {
+			f.drainAndNackTasks()
+		}
 		return true, nil
 	case <-f.shutdownCh:
 		return false, ErrTaskSchedulerClosed
@@ -156,6 +170,21 @@ func (f *fifoTaskSchedulerImpl) dispatcher() {
 				task.Nack()
 			}
 		case <-f.shutdownCh:
+			return
+		}
+	}
+}
+
+func (f *fifoTaskSchedulerImpl) isStopped() bool {
+	return atomic.LoadInt32(&f.status) == common.DaemonStatusStopped
+}
+
+func (f *fifoTaskSchedulerImpl) drainAndNackTasks() {
+	for {
+		select {
+		case task := <-f.taskCh:
+			task.Nack()
+		default:
 			return
 		}
 	}
