@@ -79,11 +79,6 @@ type (
 		NewVisibilityStore() (p.VisibilityStore, error)
 		NewQueue(queueType p.QueueType) (p.Queue, error)
 	}
-	// AbstractDataStoreFactory creates a DataStoreFactory, can be used to implement custom datastore support outside
-	// of the cadence core.
-	AbstractDataStoreFactory interface {
-		NewFactory(cfg config.CustomDatastoreConfig, clusterName string, logger log.Logger) DataStoreFactory
-	}
 
 	// Datastore represents a datastore
 	Datastore struct {
@@ -92,12 +87,11 @@ type (
 	}
 	factoryImpl struct {
 		sync.RWMutex
-		config                   *config.Persistence
-		abstractDataStoreFactory AbstractDataStoreFactory
-		metricsClient            metrics.Client
-		logger                   log.Logger
-		datastores               map[storeType]Datastore
-		clusterName              string
+		config        *config.Persistence
+		metricsClient metrics.Client
+		logger        log.Logger
+		datastores    map[storeType]Datastore
+		clusterName   string
 	}
 
 	storeType int
@@ -133,17 +127,15 @@ var storeTypes = []storeType{
 func NewFactory(
 	cfg *config.Persistence,
 	persistenceMaxQPS dynamicconfig.IntPropertyFn,
-	abstractDataStoreFactory AbstractDataStoreFactory,
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) Factory {
 	factory := &factoryImpl{
-		config:                   cfg,
-		abstractDataStoreFactory: abstractDataStoreFactory,
-		metricsClient:            metricsClient,
-		logger:                   logger,
-		clusterName:              clusterName,
+		config:        cfg,
+		metricsClient: metricsClient,
+		logger:        logger,
+		clusterName:   clusterName,
 	}
 	limiters := buildRatelimiters(cfg, persistenceMaxQPS)
 	factory.init(clusterName, limiters)
@@ -311,8 +303,6 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			clusterName,
 			f.logger,
 			getSQLParser(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
-	case defaultCfg.CustomDataStoreConfig != nil:
-		defaultDataStore.factory = f.abstractDataStoreFactory.NewFactory(*defaultCfg.CustomDataStoreConfig, clusterName, f.logger)
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
