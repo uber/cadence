@@ -182,7 +182,7 @@ func (r *redispatcherImpl) redispatchTasks(
 		if notification.doneCh != nil {
 			close(notification.doneCh)
 		}
-		if r.sizeLocked() > 0 && !r.isStopped() {
+		if r.sizeLocked() > 0 {
 			// there are still tasks left in the queue, setup a redispatch timer for those tasks
 			r.setupTimerLocked()
 		}
@@ -248,7 +248,7 @@ func (r *redispatcherImpl) redispatchTasks(
 }
 
 func (r *redispatcherImpl) setupTimerLocked() {
-	if r.redispatchTimer == nil {
+	if r.redispatchTimer == nil && !r.isStopped() {
 		r.redispatchTimer = time.AfterFunc(
 			backoff.JitDuration(
 				r.options.TaskRedispatchInterval(),
