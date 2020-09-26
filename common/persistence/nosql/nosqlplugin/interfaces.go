@@ -80,30 +80,30 @@ type (
 		// Must return conditionFailed error if row already exists
 		InsertIntoQueue(ctx context.Context, row *QueueMessageRow) error
 		// Get the ID of last message inserted into the queue
-		GetLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error)
+		SelectLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error)
 		// Read queue messages starting from the exclusiveBeginMessageID
-		GetMessagesFromQueue(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, maxRows int) ([]*QueueMessageRow, error)
+		SelectMessagesFrom(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, maxRows int) ([]*QueueMessageRow, error)
 		// Read queue message starting from exclusiveBeginMessageID int64, inclusiveEndMessageID int64
-		GetMessagesBetween(ctx context.Context, request GetMessagesBetweenRequest) (*GetMessagesBetweenResponse, error)
+		SelectMessagesBetween(ctx context.Context, request SelectMessagesBetweenRequest) (*SelectMessagesBetweenResponse, error)
 		// Delete all messages before exclusiveBeginMessageID
 		DeleteMessagesBefore(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64) error
 		// Delete all messages in a range between exclusiveBeginMessageID and inclusiveEndMessageID
-		RangeDeleteMessages(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, inclusiveEndMessageID int64) error
+		DeleteMessagesInRange(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, inclusiveEndMessageID int64) error
 		// Delete one message
 		DeleteMessage(ctx context.Context, queueType persistence.QueueType, messageID int64) error
 
 		// Insert an empty metadata row, starting from a version
-		InitQueueMetadata(ctx context.Context, queueType persistence.QueueType, version int64) error
+		InsertQueueMetadata(ctx context.Context, queueType persistence.QueueType, version int64) error
 		// **Conditionally** update a queue metadata row, if current version is matched(meaning current == row.Version - 1),
 		// then the current version will increase by one when updating the metadata row
 		// Must return conditionFailed error if the condition is not met
 		UpdateQueueMetadataCas(ctx context.Context, row QueueMetadataRow) error
 		// Read a QueueMetadata
-		GetQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)
+		SelectQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)
 	}
 
-	// GetMessagesBetweenRequest is a request struct for GetMessagesBetween
-	GetMessagesBetweenRequest struct {
+	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween
+	SelectMessagesBetweenRequest struct {
 		QueueType               persistence.QueueType
 		ExclusiveBeginMessageID int64
 		InclusiveEndMessageID   int64
@@ -111,8 +111,8 @@ type (
 		NextPageToken           []byte
 	}
 
-	// GetMessagesBetweenResponse is a response struct for GetMessagesBetween
-	GetMessagesBetweenResponse struct {
+	// SelectMessagesBetweenResponse is a response struct for SelectMessagesBetween
+	SelectMessagesBetweenResponse struct {
 		Rows          []QueueMessageRow
 		NextPageToken []byte
 	}

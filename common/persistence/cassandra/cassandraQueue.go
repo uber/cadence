@@ -155,7 +155,7 @@ func (q *nosqlQueue) getLastMessageID(
 	queueType persistence.QueueType,
 ) (int64, error) {
 
-	msgID, err := q.db.GetLastEnqueuedMessageID(ctx, queueType)
+	msgID, err := q.db.SelectLastEnqueuedMessageID(ctx, queueType)
 	if err != nil {
 		if q.db.IsNotFoundError(err) {
 			return emptyMessageID, nil
@@ -178,7 +178,7 @@ func (q *nosqlQueue) ReadMessages(
 	lastMessageID int64,
 	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
-	messages, err := q.db.GetMessagesFromQueue(ctx, q.queueType, lastMessageID, maxCount)
+	messages, err := q.db.SelectMessagesFrom(ctx, q.queueType, lastMessageID, maxCount)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (q *nosqlQueue) ReadMessagesFromDLQ(
 	pageSize int,
 	pageToken []byte,
 ) ([]*persistence.QueueMessage, []byte, error) {
-	response, err := q.db.GetMessagesBetween(ctx, nosqlplugin.GetMessagesBetweenRequest{
+	response, err := q.db.SelectMessagesBetween(ctx, nosqlplugin.SelectMessagesBetweenRequest{
 		QueueType:               q.queueType,
 		ExclusiveBeginMessageID: firstMessageID,
 		InclusiveEndMessageID:   lastMessageID,
@@ -245,7 +245,7 @@ func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
 	lastMessageID int64,
 ) error {
 	// Use negative queue type as the dlq type
-	return q.db.RangeDeleteMessages(ctx, q.queueType, firstMessageID, lastMessageID)
+	return q.db.DeleteMessagesInRange(ctx, q.queueType, firstMessageID, lastMessageID)
 }
 
 func (q *nosqlQueue) insertInitialQueueMetadataRecord(
@@ -253,7 +253,7 @@ func (q *nosqlQueue) insertInitialQueueMetadataRecord(
 	queueType persistence.QueueType,
 ) error {
 	version := int64(0)
-	return q.db.InitQueueMetadata(ctx, queueType, version)
+	return q.db.InsertQueueMetadata(ctx, queueType, version)
 }
 
 func (q *nosqlQueue) UpdateAckLevel(
@@ -302,7 +302,7 @@ func (q *nosqlQueue) getQueueMetadata(
 	ctx context.Context,
 	queueType persistence.QueueType,
 ) (*nosqlplugin.QueueMetadataRow, error) {
-	row, err := q.db.GetQueueMetadata(ctx, queueType)
+	row, err := q.db.SelectQueueMetadata(ctx, queueType)
 	if err != nil {
 		if q.db.IsNotFoundError(err) {
 			return nil, nil

@@ -58,7 +58,7 @@ func (db *cdb) InsertIntoQueue(ctx context.Context, row *nosqlplugin.QueueMessag
 }
 
 // Get the ID of last message inserted into the queue
-func (db *cdb) GetLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error) {
+func (db *cdb) SelectLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error) {
 	query := db.session.Query(templateGetLastMessageIDQuery, queueType).WithContext(ctx)
 	result := make(map[string]interface{})
 	err := query.MapScan(result)
@@ -70,7 +70,7 @@ func (db *cdb) GetLastEnqueuedMessageID(ctx context.Context, queueType persisten
 }
 
 // Read queue messages starting from the exclusiveBeginMessageID
-func (db *cdb) GetMessagesFromQueue(
+func (db *cdb) SelectMessagesFrom(
 	ctx context.Context,
 	queueType persistence.QueueType,
 	exclusiveBeginMessageID int64,
@@ -85,7 +85,7 @@ func (db *cdb) GetMessagesFromQueue(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, fmt.Errorf("GetMessagesFromQueue operation failed. Not able to create query iterator")
+		return nil, fmt.Errorf("SelectMessagesFrom operation failed. Not able to create query iterator")
 	}
 
 	var result []*nosqlplugin.QueueMessageRow
@@ -105,10 +105,10 @@ func (db *cdb) GetMessagesFromQueue(
 }
 
 // Read queue message starting from exclusiveBeginMessageID int64, inclusiveEndMessageID int64
-func (db *cdb) GetMessagesBetween(
+func (db *cdb) SelectMessagesBetween(
 	ctx context.Context,
-	request nosqlplugin.GetMessagesBetweenRequest,
-) (*nosqlplugin.GetMessagesBetweenResponse, error) {
+	request nosqlplugin.SelectMessagesBetweenRequest,
+) (*nosqlplugin.SelectMessagesBetweenResponse, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	// Use negative queue type as the dlq type
 	query := db.session.Query(templateGetMessagesFromDLQQuery,
@@ -119,7 +119,7 @@ func (db *cdb) GetMessagesBetween(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, fmt.Errorf("GetMessagesBetween operation failed. Not able to create query iterator")
+		return nil, fmt.Errorf("SelectMessagesBetween operation failed. Not able to create query iterator")
 	}
 
 	var rows []nosqlplugin.QueueMessageRow
@@ -139,7 +139,7 @@ func (db *cdb) GetMessagesBetween(
 		return nil, err
 	}
 
-	return &nosqlplugin.GetMessagesBetweenResponse{
+	return &nosqlplugin.SelectMessagesBetweenResponse{
 		Rows:          rows,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -156,7 +156,7 @@ func (db *cdb) DeleteMessagesBefore(
 }
 
 // Delete all messages in a range between exclusiveBeginMessageID and inclusiveEndMessageID
-func (db *cdb) RangeDeleteMessages(
+func (db *cdb) DeleteMessagesInRange(
 	ctx context.Context,
 	queueType persistence.QueueType,
 	exclusiveBeginMessageID int64,
@@ -177,7 +177,7 @@ func (db *cdb) DeleteMessage(
 }
 
 // Insert an empty metadata row, starting from a version
-func (db *cdb) InitQueueMetadata(
+func (db *cdb) InsertQueueMetadata(
 	ctx context.Context,
 	queueType persistence.QueueType,
 	version int64,
@@ -217,7 +217,7 @@ func (db *cdb) UpdateQueueMetadataCas(
 }
 
 // Read a QueueMetadata
-func (db *cdb) GetQueueMetadata(
+func (db *cdb) SelectQueueMetadata(
 	ctx context.Context,
 	queueType persistence.QueueType,
 ) (*nosqlplugin.QueueMetadataRow, error) {
