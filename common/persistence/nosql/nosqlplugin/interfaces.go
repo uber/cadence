@@ -22,7 +22,6 @@ package nosqlplugin
 
 import (
 	"context"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -78,7 +77,8 @@ type (
 	// Typically two tables(queue_message,and queue_metadata) are needed to implement this interface
 	messageQueueCRUD interface {
 		//Insert message into queue, return error if failed or already exists
-		InsertIntoQueue(ctx context.Context, row QueueMessageRow) error
+		// Must return conditionFailed error if row already exists
+		InsertIntoQueue(ctx context.Context, row *QueueMessageRow) error
 		// Get the ID of last message inserted into the queue
 		GetLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error)
 		// Read queue messages starting from the exclusiveBeginMessageID
@@ -96,7 +96,7 @@ type (
 		InitQueueMetadata(ctx context.Context, queueType persistence.QueueType, version int64) error
 		// **Conditionally** update a queue metadata row, if current version is matched(meaning current == row.Version - 1),
 		// then the current version will increase by one when updating the metadata row
-		// it should return error if the condition is not met
+		// Must return conditionFailed error if the condition is not met
 		UpdateQueueMetadataCas(ctx context.Context, row QueueMetadataRow) error
 		// Read a QueueMetadata
 		GetQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)

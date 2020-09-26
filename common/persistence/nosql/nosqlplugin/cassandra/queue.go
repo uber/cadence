@@ -23,7 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
@@ -42,6 +42,7 @@ const (
 )
 
 //Insert message into queue, return error if failed or already exists
+// Must return conditionFailed error if row already exists
 func (db *cdb) InsertIntoQueue(ctx context.Context, row *nosqlplugin.QueueMessageRow) error {
 	query := db.session.Query(templateEnqueueMessageQuery, row.QueueType, row.ID, row.Payload).WithContext(ctx)
 	previous := make(map[string]interface{})
@@ -74,7 +75,7 @@ func (db *cdb) GetMessagesFromQueue(
 	queueType persistence.QueueType,
 	exclusiveBeginMessageID int64,
 	maxRows int,
-) ([]nosqlplugin.QueueMessageRow, error) {
+) ([]*nosqlplugin.QueueMessageRow, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := db.session.Query(templateGetMessagesQuery,
 		queueType,
@@ -87,12 +88,12 @@ func (db *cdb) GetMessagesFromQueue(
 		return nil, fmt.Errorf("GetMessagesFromQueue operation failed. Not able to create query iterator")
 	}
 
-	var result []nosqlplugin.QueueMessageRow
+	var result []*nosqlplugin.QueueMessageRow
 	message := make(map[string]interface{})
 	for iter.MapScan(message) {
 		payload := getMessagePayload(message)
 		id := getMessageID(message)
-		result = append(result, nosqlplugin.QueueMessageRow{ID: id, Payload: payload})
+		result = append(result, &nosqlplugin.QueueMessageRow{ID: id, Payload: payload})
 		message = make(map[string]interface{})
 	}
 
