@@ -37,14 +37,14 @@ const (
 )
 
 type (
-	nosqlQueueManager struct {
+	nosqlQueue struct {
 		queueType persistence.QueueType
 		logger    log.Logger
 		db        nosqlplugin.DB
 	}
 )
 
-func (q *nosqlQueueManager) Close() {
+func (q *nosqlQueue) Close() {
 	q.db.Close()
 }
 
@@ -59,12 +59,7 @@ func newQueue(
 		return nil, err
 	}
 
-	// TODO Is that not needed anymore?
-	//retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
-	//retryPolicy.SetBackoffCoefficient(1.5)
-	//retryPolicy.SetMaximumAttempts(5)
-
-	queue := &nosqlQueueManager{
+	queue := &nosqlQueue{
 		db:        db,
 		logger:    logger,
 		queueType: queueType,
@@ -76,7 +71,7 @@ func newQueue(
 	return queue, nil
 }
 
-func (q *nosqlQueueManager) createQueueMetadataEntryIfNotExist() error {
+func (q *nosqlQueue) createQueueMetadataEntryIfNotExist() error {
 	queueMetadata, err := q.getQueueMetadata(context.Background(), q.queueType)
 	if err != nil {
 		return err
@@ -100,7 +95,7 @@ func (q *nosqlQueueManager) createQueueMetadataEntryIfNotExist() error {
 	return nil
 }
 
-func (q *nosqlQueueManager) EnqueueMessage(
+func (q *nosqlQueue) EnqueueMessage(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
@@ -113,7 +108,7 @@ func (q *nosqlQueueManager) EnqueueMessage(
 	return err
 }
 
-func (q *nosqlQueueManager) EnqueueMessageToDLQ(
+func (q *nosqlQueue) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
 ) (int64, error) {
@@ -127,7 +122,7 @@ func (q *nosqlQueueManager) EnqueueMessageToDLQ(
 	return q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
 }
 
-func (q *nosqlQueueManager) tryEnqueue(
+func (q *nosqlQueue) tryEnqueue(
 	ctx context.Context,
 	queueType persistence.QueueType,
 	messageID int64,
@@ -155,7 +150,7 @@ func (q *nosqlQueueManager) tryEnqueue(
 	return messageID, nil
 }
 
-func (q *nosqlQueueManager) getLastMessageID(
+func (q *nosqlQueue) getLastMessageID(
 	ctx context.Context,
 	queueType persistence.QueueType,
 ) (int64, error) {
@@ -178,7 +173,7 @@ func (q *nosqlQueueManager) getLastMessageID(
 	return msgID, nil
 }
 
-func (q *nosqlQueueManager) ReadMessages(
+func (q *nosqlQueue) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
@@ -199,7 +194,7 @@ func (q *nosqlQueueManager) ReadMessages(
 	return result, nil
 }
 
-func (q *nosqlQueueManager) ReadMessagesFromDLQ(
+func (q *nosqlQueue) ReadMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -228,7 +223,7 @@ func (q *nosqlQueueManager) ReadMessagesFromDLQ(
 	return result, response.NextPageToken, nil
 }
 
-func (q *nosqlQueueManager) DeleteMessagesBefore(
+func (q *nosqlQueue) DeleteMessagesBefore(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -236,7 +231,7 @@ func (q *nosqlQueueManager) DeleteMessagesBefore(
 	return q.db.DeleteMessagesBefore(ctx, q.queueType, messageID)
 }
 
-func (q *nosqlQueueManager) DeleteMessageFromDLQ(
+func (q *nosqlQueue) DeleteMessageFromDLQ(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -244,7 +239,7 @@ func (q *nosqlQueueManager) DeleteMessageFromDLQ(
 	return q.db.DeleteMessage(ctx, q.queueType, messageID)
 }
 
-func (q *nosqlQueueManager) RangeDeleteMessagesFromDLQ(
+func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -253,7 +248,7 @@ func (q *nosqlQueueManager) RangeDeleteMessagesFromDLQ(
 	return q.db.RangeDeleteMessages(ctx, q.queueType, firstMessageID, lastMessageID)
 }
 
-func (q *nosqlQueueManager) insertInitialQueueMetadataRecord(
+func (q *nosqlQueue) insertInitialQueueMetadataRecord(
 	ctx context.Context,
 	queueType persistence.QueueType,
 ) error {
@@ -261,7 +256,7 @@ func (q *nosqlQueueManager) insertInitialQueueMetadataRecord(
 	return q.db.InitQueueMetadata(ctx, queueType, version)
 }
 
-func (q *nosqlQueueManager) UpdateAckLevel(
+func (q *nosqlQueue) UpdateAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
@@ -270,7 +265,7 @@ func (q *nosqlQueueManager) UpdateAckLevel(
 	return q.updateAckLevel(ctx, messageID, clusterName, q.queueType)
 }
 
-func (q *nosqlQueueManager) GetAckLevels(
+func (q *nosqlQueue) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 	queueMetadata, err := q.getQueueMetadata(ctx, q.queueType)
@@ -281,7 +276,7 @@ func (q *nosqlQueueManager) GetAckLevels(
 	return queueMetadata.ClusterAckLevels, nil
 }
 
-func (q *nosqlQueueManager) UpdateDLQAckLevel(
+func (q *nosqlQueue) UpdateDLQAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
@@ -290,7 +285,7 @@ func (q *nosqlQueueManager) UpdateDLQAckLevel(
 	return q.updateAckLevel(ctx, messageID, clusterName, q.getDLQTypeFromQueueType())
 }
 
-func (q *nosqlQueueManager) GetDLQAckLevels(
+func (q *nosqlQueue) GetDLQAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 
@@ -303,7 +298,7 @@ func (q *nosqlQueueManager) GetDLQAckLevels(
 	return queueMetadata.ClusterAckLevels, nil
 }
 
-func (q *nosqlQueueManager) getQueueMetadata(
+func (q *nosqlQueue) getQueueMetadata(
 	ctx context.Context,
 	queueType persistence.QueueType,
 ) (*nosqlplugin.QueueMetadataRow, error) {
@@ -318,7 +313,7 @@ func (q *nosqlQueueManager) getQueueMetadata(
 	return row, nil
 }
 
-func (q *nosqlQueueManager) updateQueueMetadata(
+func (q *nosqlQueue) updateQueueMetadata(
 	ctx context.Context,
 	metadata *nosqlplugin.QueueMetadataRow,
 	queueType persistence.QueueType,
@@ -338,11 +333,11 @@ func (q *nosqlQueueManager) updateQueueMetadata(
 	return nil
 }
 
-func (q *nosqlQueueManager) getDLQTypeFromQueueType() persistence.QueueType {
+func (q *nosqlQueue) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }
 
-func (q *nosqlQueueManager) updateAckLevel(
+func (q *nosqlQueue) updateAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
