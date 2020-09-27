@@ -58,7 +58,7 @@ type (
 func (k *KafkaConfig) Validate(checkCluster bool, checkApp bool) {
 	//TODO need to clean up checkCluster
 	if len(k.Clusters) == 0 {
-		print("Empty Kafka Cluster Config")
+		panic("Empty Kafka Cluster Config")
 	}
 	if len(k.Topics) == 0 {
 		panic("Empty Topics Config")
