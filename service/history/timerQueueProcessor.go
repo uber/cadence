@@ -32,9 +32,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
@@ -86,19 +86,7 @@ func newTimerQueueProcessor(
 		}
 
 		if clusterName != shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
-			historyRereplicator := xdc.NewHistoryRereplicator(
-				currentClusterName,
-				shard.GetDomainCache(),
-				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-				func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-					return historyService.ReplicateRawEvents(ctx, request)
-				},
-				shard.GetService().GetPayloadSerializer(),
-				historyReplicationTimeout,
-				config.StandbyTaskReReplicationContextTimeout,
-				logger,
-			)
-			nDCHistoryResender := xdc.NewNDCHistoryResender(
+			historyResender := ndc.NewHistoryResender(
 				shard.GetDomainCache(),
 				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 				func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -114,8 +102,7 @@ func newTimerQueueProcessor(
 				historyService,
 				clusterName,
 				taskAllocator,
-				historyRereplicator,
-				nDCHistoryResender,
+				historyResender,
 				queueTaskProcessor,
 				logger,
 			)

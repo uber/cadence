@@ -396,11 +396,7 @@ type (
 		ScheduledID       int64
 		BranchToken       []byte
 		NewRunBranchToken []byte
-		ResetWorkflow     bool
 		CreationTime      int64
-
-		// TODO deprecate when NDC is fully released && migrated
-		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -606,10 +602,6 @@ type (
 		Version             int64
 		BranchToken         []byte
 		NewRunBranchToken   []byte
-
-		// TODO when 2DC is deprecated remove these 2 attributes
-		ResetWorkflow       bool
-		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters
@@ -662,7 +654,6 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
 		ExecutionStats      *ExecutionStats
-		ReplicationState    *ReplicationState
 		BufferedEvents      []*workflow.HistoryEvent
 		VersionHistories    *VersionHistories
 		Checksum            checksum.Checksum
@@ -886,19 +877,7 @@ type (
 		// current workflow
 		CurrentWorkflowMutation *WorkflowMutation
 
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS *CurrentWorkflowCAS
-
 		Encoding common.EncodingType // optional binary encoding type
-	}
-
-	// CurrentWorkflowCAS represent a compare and swap on current record
-	// TODO deprecate this once nDC migration is completed
-	CurrentWorkflowCAS struct {
-		PrevRunID            string
-		PrevLastWriteVersion int64
-		PrevState            int
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -935,7 +914,6 @@ type (
 	WorkflowMutation struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ExecutionStats   *ExecutionStats
-		ReplicationState *ReplicationState
 		VersionHistories *VersionHistories
 
 		UpsertActivityInfos       []*ActivityInfo
@@ -965,7 +943,6 @@ type (
 	WorkflowSnapshot struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ExecutionStats   *ExecutionStats
-		ReplicationState *ReplicationState
 		VersionHistories *VersionHistories
 
 		ActivityInfos       []*ActivityInfo

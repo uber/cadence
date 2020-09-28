@@ -36,9 +36,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -49,9 +49,6 @@ import (
 )
 
 const (
-	// TODO: move this constant to xdc package
-	historyReplicationTimeout = 30 * time.Second
-
 	defaultProcessingQueueLevel = 0
 )
 
@@ -93,7 +90,6 @@ func NewTransferQueueProcessor(
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	executionCache *execution.Cache,
-	workflowResetor reset.WorkflowResetor,
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
@@ -107,7 +103,6 @@ func NewTransferQueueProcessor(
 		shard,
 		archivalClient,
 		executionCache,
-		workflowResetor,
 		workflowResetter,
 		logger,
 		shard.GetMetricsClient(),
@@ -124,26 +119,11 @@ func NewTransferQueueProcessor(
 	)
 
 	standbyQueueProcessors := make(map[string]*transferQueueProcessorBase)
-	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
-	resenderLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled || clusterName == currentClusterName {
 			continue
 		}
-
-		historyRereplicator := xdc.NewHistoryRereplicator(
-			currentClusterName,
-			shard.GetDomainCache(),
-			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-			func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-				return historyEngine.ReplicateRawEvents(ctx, request)
-			},
-			shard.GetService().GetPayloadSerializer(),
-			historyReplicationTimeout,
-			config.StandbyTaskReReplicationContextTimeout,
-			rereplicatorLogger,
-		)
-		nDCHistoryResender := xdc.NewNDCHistoryResender(
+		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -152,14 +132,13 @@ func NewTransferQueueProcessor(
 			shard.GetService().GetPayloadSerializer(),
 			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
-			resenderLogger,
+			shard.GetLogger().WithTags(tag.ComponentHistoryResender),
 		)
 		standbyTaskExecutor := task.NewTransferStandbyTaskExecutor(
 			shard,
 			archivalClient,
 			executionCache,
-			historyRereplicator,
-			nDCHistoryResender,
+			historyResender,
 			logger,
 			shard.GetMetricsClient(),
 			clusterName,

@@ -84,7 +84,7 @@ TOOLS_SRC += $(TOOLS_CMD_ROOT)
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
 
-# all tests other than integration test fall into the pkg_test category
+# all tests other than end-to-end integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
 # Code coverage output files
@@ -179,14 +179,21 @@ bins: thriftc bins_nothrift
 test: bins
 	@rm -f test
 	@rm -f test.log
-	@for dir in $(TEST_DIRS); do \
+	@for dir in $(PKG_TEST_DIRS); do \
 		go test -timeout $(TEST_TIMEOUT) -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 release: go-generate test
 
-# need to run xdc tests with race detector off because of ringpop bug causing data race issue
-test_xdc: bins
+test_e2e: bins
+	@rm -f test
+	@rm -f test.log
+	@for dir in $(INTEG_TEST_ROOT); do \
+		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+	done;
+
+# need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
+test_e2e_xdc: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \

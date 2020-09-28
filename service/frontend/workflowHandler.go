@@ -94,7 +94,6 @@ type (
 		PersistenceToken  []byte
 		TransientDecision *gen.TransientDecisionInfo
 		BranchToken       []byte
-		ReplicationInfo   map[string]*gen.ReplicationInfo
 	}
 
 	domainGetter interface {

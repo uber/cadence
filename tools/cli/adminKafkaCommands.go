@@ -140,14 +140,14 @@ func AdminKafkaParse(c *cli.Context) {
 func buildFilterFn(workflowID, runID string) filterFn {
 	return func(task *replicator.ReplicationTask) bool {
 		if len(workflowID) != 0 || len(runID) != 0 {
-			if task.GetHistoryTaskAttributes() == nil {
+			if task.GetHistoryTaskV2Attributes() == nil {
 				return false
 			}
 		}
-		if len(workflowID) != 0 && *task.HistoryTaskAttributes.WorkflowId != workflowID {
+		if len(workflowID) != 0 && *task.GetHistoryTaskV2Attributes().WorkflowId != workflowID {
 			return false
 		}
-		if len(runID) != 0 && *task.HistoryTaskAttributes.RunId != runID {
+		if len(runID) != 0 && *task.GetHistoryTaskV2Attributes().RunId != runID {
 			return false
 		}
 		return true
@@ -272,12 +272,10 @@ Loop:
 					outStr = string(jsonStr)
 				} else {
 					outStr = fmt.Sprintf(
-						"%v, %v, %v, %v, %v",
-						*task.HistoryTaskAttributes.DomainId,
-						*task.HistoryTaskAttributes.WorkflowId,
-						*task.HistoryTaskAttributes.RunId,
-						*task.HistoryTaskAttributes.FirstEventId,
-						*task.HistoryTaskAttributes.NextEventId,
+						"%v, %v, %v",
+						*task.GetHistoryTaskV2Attributes().DomainId,
+						*task.GetHistoryTaskV2Attributes().WorkflowId,
+						*task.GetHistoryTaskV2Attributes().RunId,
 					)
 				}
 				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))

@@ -222,6 +222,10 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 ) (bool, error) {
 
 	if mutableState.GetVersionHistories() != nil {
+		if state, _ := mutableState.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCompleted {
+			return false, nil
+		}
+
 		currentVersionHistory, err := mutableState.GetVersionHistories().GetCurrentVersionHistory()
 		if err != nil {
 			return false, err
@@ -283,58 +287,9 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 				)
 			}
 		}
-
-		if state, _ := mutableState.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCompleted {
-			return false, nil
-		}
-	} else if mutableState.GetReplicationState() != nil {
-		// TODO when 2DC is deprecated, remove this block
-		if !mutableState.IsWorkflowExecutionRunning() {
-			// perhaps conflict resolution force termination
-			return false, nil
-		}
-
-		if scheduleID >= mutableState.GetNextEventID() {
-			lastWriteVersion, err := mutableState.GetLastWriteVersion()
-			if err != nil {
-				return false, err
-			}
-			if activityVersion < lastWriteVersion {
-				// this can happen if target workflow has different history branch
-				return false, nil
-			}
-			// version >= last write version
-			// this can happen if out of order delivery happens
-			return false, NewRetryTaskErrorWithHint(
-				errRetrySyncActivityMsg,
-				domainID,
-				workflowID,
-				runID,
-				mutableState.GetNextEventID(),
-			)
-		}
 	} else {
-		return false, &shared.InternalServiceError{Message: "The workflow is neither 2DC or 3DC enabled."}
+		return false, &shared.InternalServiceError{Message: "The workflow version histories is corrupted."}
 	}
 
 	return true, nil
-}
-
-// NewRetryTaskErrorWithHint returns a 2DC resend error
-// TODO: remove it after remove 2DC code
-func NewRetryTaskErrorWithHint(
-	msg string,
-	domainID string,
-	workflowID string,
-	runID string,
-	nextEventID int64,
-) *workflow.RetryTaskError {
-
-	return &workflow.RetryTaskError{
-		Message:     msg,
-		DomainId:    common.StringPtr(domainID),
-		WorkflowId:  common.StringPtr(workflowID),
-		RunId:       common.StringPtr(runID),
-		NextEventId: common.Int64Ptr(nextEventID),
-	}
 }

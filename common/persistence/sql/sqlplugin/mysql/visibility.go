@@ -21,6 +21,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -77,9 +78,10 @@ var errCloseParams = errors.New("missing one of {closeStatus, closeTime, history
 
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
-func (mdb *db) InsertIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, error) {
+func (mdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.VisibilityRow) (sql.Result, error) {
 	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
-	return mdb.conn.Exec(templateCreateWorkflowExecutionStarted,
+	return mdb.conn.ExecContext(ctx,
+		templateCreateWorkflowExecutionStarted,
 		row.DomainID,
 		row.WorkflowID,
 		row.RunID,
@@ -91,12 +93,13 @@ func (mdb *db) InsertIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, e
 }
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
-func (mdb *db) ReplaceIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, error) {
+func (mdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.VisibilityRow) (sql.Result, error) {
 	switch {
 	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:
 		row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
 		closeTime := mdb.converter.ToMySQLDateTime(*row.CloseTime)
-		return mdb.conn.Exec(templateCreateWorkflowExecutionClosed,
+		return mdb.conn.ExecContext(ctx,
+			templateCreateWorkflowExecutionClosed,
 			row.DomainID,
 			row.WorkflowID,
 			row.RunID,
@@ -114,12 +117,12 @@ func (mdb *db) ReplaceIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, 
 }
 
 // DeleteFromVisibility deletes a row from visibility table if it exist
-func (mdb *db) DeleteFromVisibility(filter *sqlplugin.VisibilityFilter) (sql.Result, error) {
-	return mdb.conn.Exec(templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
+func (mdb *db) DeleteFromVisibility(ctx context.Context, filter *sqlplugin.VisibilityFilter) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
 }
 
 // SelectFromVisibility reads one or more rows from visibility table
-func (mdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlplugin.VisibilityRow, error) {
+func (mdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.VisibilityFilter) ([]sqlplugin.VisibilityRow, error) {
 	var err error
 	var rows []sqlplugin.VisibilityRow
 	if filter.MinStartTime != nil {
@@ -131,7 +134,7 @@ func (mdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqlplugin.VisibilityRow
-		err = mdb.conn.Get(&row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
+		err = mdb.conn.GetContext(ctx, &row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
 		if err == nil {
 			rows = append(rows, row)
 		}
@@ -140,7 +143,8 @@ func (mdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByID
 		}
-		err = mdb.conn.Select(&rows,
+		err = mdb.conn.SelectContext(ctx,
+			&rows,
 			qry,
 			*filter.WorkflowID,
 			filter.DomainID,
@@ -154,7 +158,8 @@ func (mdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByType
 		}
-		err = mdb.conn.Select(&rows,
+		err = mdb.conn.SelectContext(ctx,
+			&rows,
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
@@ -164,7 +169,8 @@ func (mdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 			*filter.MaxStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
-		err = mdb.conn.Select(&rows,
+		err = mdb.conn.SelectContext(ctx,
+			&rows,
 			templateGetClosedWorkflowExecutionsByStatus,
 			*filter.CloseStatus,
 			filter.DomainID,
@@ -178,7 +184,8 @@ func (mdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutions
 		}
-		err = mdb.conn.Select(&rows,
+		err = mdb.conn.SelectContext(ctx,
+			&rows,
 			qry,
 			filter.DomainID,
 			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),

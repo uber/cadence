@@ -33,9 +33,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
@@ -82,27 +82,13 @@ func newTransferQueueProcessor(
 	taskAllocator := queue.NewTaskAllocator(shard)
 
 	standbyTaskProcessors := make(map[string]*transferQueueStandbyProcessorImpl)
-	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryReplicator)
-	resenderLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
 	for clusterName, info := range shard.GetService().GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled {
 			continue
 		}
 
 		if clusterName != currentClusterName {
-			historyRereplicator := xdc.NewHistoryRereplicator(
-				currentClusterName,
-				shard.GetDomainCache(),
-				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-				func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-					return historyService.ReplicateRawEvents(ctx, request)
-				},
-				shard.GetService().GetPayloadSerializer(),
-				historyReplicationTimeout,
-				config.StandbyTaskReReplicationContextTimeout,
-				rereplicatorLogger,
-			)
-			nDCHistoryResender := xdc.NewNDCHistoryResender(
+			historyResender := ndc.NewHistoryResender(
 				shard.GetDomainCache(),
 				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 				func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -111,7 +97,7 @@ func newTransferQueueProcessor(
 				shard.GetService().GetPayloadSerializer(),
 				config.StandbyTaskReReplicationContextTimeout,
 				openExecutionCheck,
-				resenderLogger,
+				shard.GetLogger().WithTags(tag.ComponentHistoryReplicator),
 			)
 			standbyTaskProcessors[clusterName] = newTransferQueueStandbyProcessor(
 				clusterName,
@@ -120,8 +106,7 @@ func newTransferQueueProcessor(
 				visibilityMgr,
 				matchingClient,
 				taskAllocator,
-				historyRereplicator,
-				nDCHistoryResender,
+				historyResender,
 				queueTaskProcessor,
 				logger,
 			)

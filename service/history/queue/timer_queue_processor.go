@@ -34,9 +34,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -106,27 +106,12 @@ func NewTimerQueueProcessor(
 
 	standbyQueueProcessors := make(map[string]*timerQueueProcessorBase)
 	standbyQueueTimerGates := make(map[string]RemoteTimerGate)
-	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
-	resenderLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
-
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled || clusterName == currentClusterName {
 			continue
 		}
 
-		historyRereplicator := xdc.NewHistoryRereplicator(
-			currentClusterName,
-			shard.GetDomainCache(),
-			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-			func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-				return historyEngine.ReplicateRawEvents(ctx, request)
-			},
-			shard.GetService().GetPayloadSerializer(),
-			historyReplicationTimeout,
-			config.StandbyTaskReReplicationContextTimeout,
-			rereplicatorLogger,
-		)
-		nDCHistoryResender := xdc.NewNDCHistoryResender(
+		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -135,14 +120,13 @@ func NewTimerQueueProcessor(
 			shard.GetService().GetPayloadSerializer(),
 			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
-			resenderLogger,
+			shard.GetLogger().WithTags(tag.ComponentHistoryResender),
 		)
 		standbyTaskExecutor := task.NewTimerStandbyTaskExecutor(
 			shard,
 			archivalClient,
 			executionCache,
-			historyRereplicator,
-			nDCHistoryResender,
+			historyResender,
 			logger,
 			shard.GetMetricsClient(),
 			clusterName,
