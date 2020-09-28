@@ -48,7 +48,6 @@ import (
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
@@ -171,7 +170,6 @@ func NewEngineWithShardContext(
 	historyClient hc.Client,
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier events.Notifier,
-	publisher messaging.Producer,
 	config *config.Config,
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
@@ -275,8 +273,8 @@ func NewEngineWithShardContext(
 	}
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
-	// Only start the replicator processor if valid publisher is passed in
-	if publisher != nil {
+	// Only start the replicator processor if global domain is enabled
+	if shard.GetClusterMetadata().IsGlobalDomainEnabled() {
 		historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
 			shard,
 			executionCache,
