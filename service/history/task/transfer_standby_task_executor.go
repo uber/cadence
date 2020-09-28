@@ -28,8 +28,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -40,9 +40,8 @@ type (
 	transferStandbyTaskExecutor struct {
 		*transferTaskExecutorBase
 
-		clusterName         string
-		historyRereplicator xdc.HistoryRereplicator
-		nDCHistoryResender  xdc.NDCHistoryResender
+		clusterName     string
+		historyResender ndc.HistoryResender
 	}
 )
 
@@ -51,8 +50,7 @@ func NewTransferStandbyTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
 	executionCache *execution.Cache,
-	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryResender xdc.NDCHistoryResender,
+	historyResender ndc.HistoryResender,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	clusterName string,
@@ -67,9 +65,8 @@ func NewTransferStandbyTaskExecutor(
 			metricsClient,
 			config,
 		),
-		clusterName:         clusterName,
-		historyRereplicator: historyRereplicator,
-		nDCHistoryResender:  nDCHistoryResender,
+		clusterName:     clusterName,
+		historyResender: historyResender,
 	}
 }
 
@@ -570,7 +567,7 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 
 	var err error
 	if resendInfo.lastEventID != nil && resendInfo.lastEventVersion != nil {
-		err = t.nDCHistoryResender.SendSingleWorkflowHistory(
+		err = t.historyResender.SendSingleWorkflowHistory(
 			transferTask.DomainID,
 			transferTask.WorkflowID,
 			transferTask.RunID,
@@ -578,15 +575,6 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 			resendInfo.lastEventVersion,
 			nil,
 			nil,
-		)
-	} else if resendInfo.nextEventID != nil {
-		err = t.historyRereplicator.SendMultiWorkflowHistory(
-			transferTask.DomainID,
-			transferTask.WorkflowID,
-			transferTask.RunID,
-			*resendInfo.nextEventID,
-			transferTask.RunID,
-			common.EndEventID, // use common.EndEventID since we do not know where is the end
 		)
 	} else {
 		err = &workflow.InternalServiceError{

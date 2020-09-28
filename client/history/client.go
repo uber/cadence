@@ -735,44 +735,6 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 	return err
 }
 
-func (c *clientImpl) ReplicateEvents(
-	ctx context.Context,
-	request *h.ReplicateEventsRequest,
-	opts ...yarpc.CallOption,
-) error {
-	client, err := c.getClientForWorkflowID(request.WorkflowExecution.GetWorkflowId())
-	if err != nil {
-		return err
-	}
-	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
-		ctx, cancel := c.createContext(ctx)
-		defer cancel()
-		return client.ReplicateEvents(ctx, request, opts...)
-	}
-	err = c.executeWithRedirect(ctx, client, op)
-	return err
-}
-
-func (c *clientImpl) ReplicateRawEvents(
-	ctx context.Context,
-	request *h.ReplicateRawEventsRequest,
-	opts ...yarpc.CallOption,
-) error {
-	client, err := c.getClientForWorkflowID(request.WorkflowExecution.GetWorkflowId())
-	if err != nil {
-		return err
-	}
-	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
-		ctx, cancel := c.createContext(ctx)
-		defer cancel()
-		return client.ReplicateRawEvents(ctx, request, opts...)
-	}
-	err = c.executeWithRedirect(ctx, client, op)
-	return err
-}
-
 func (c *clientImpl) ReplicateEventsV2(
 	ctx context.Context,
 	request *h.ReplicateEventsV2Request,

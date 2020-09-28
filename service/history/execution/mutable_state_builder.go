@@ -113,7 +113,6 @@ type (
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
-		replicationState *persistence.ReplicationState
 		hBuilder         *HistoryBuilder
 
 		// in memory only attributes
@@ -237,23 +236,6 @@ func newMutableStateBuilder(
 	return s
 }
 
-// NewMutableStateBuilderWithReplicationState creates mutable state builder with replication state initialized
-func NewMutableStateBuilderWithReplicationState(
-	shard shard.Context,
-	logger log.Logger,
-	domainEntry *cache.DomainCacheEntry,
-) MutableState {
-	s := newMutableStateBuilder(shard, logger, domainEntry)
-	s.replicationState = &persistence.ReplicationState{
-		StartVersion:        s.currentVersion,
-		CurrentVersion:      s.currentVersion,
-		LastWriteVersion:    common.EmptyVersion,
-		LastWriteEventID:    common.EmptyEventID,
-		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
-	}
-	return s
-}
-
 // NewMutableStateBuilderWithVersionHistories creates mutable state builder with version history initialized
 func NewMutableStateBuilderWithVersionHistories(
 	shard shard.Context,
@@ -280,8 +262,8 @@ func NewMutableStateBuilderWithEventV2(
 	return msBuilder
 }
 
-// NewMutableStateBuilderWithReplicationStateWithEventV2 is used only in test
-func NewMutableStateBuilderWithReplicationStateWithEventV2(
+// NewMutableStateBuilderWithVersionHistoriesWithEventV2 is used only in test
+func NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 	shard shard.Context,
 	logger log.Logger,
 	version int64,
@@ -289,9 +271,8 @@ func NewMutableStateBuilderWithReplicationStateWithEventV2(
 	domainEntry *cache.DomainCacheEntry,
 ) MutableState {
 
-	msBuilder := NewMutableStateBuilderWithReplicationState(shard, logger, domainEntry)
-	msBuilder.GetReplicationState().StartVersion = version
-	err := msBuilder.UpdateCurrentVersion(version, true)
+	msBuilder := NewMutableStateBuilderWithVersionHistories(shard, logger, domainEntry)
+	err := msBuilder.UpdateCurrentVersion(version, false)
 	if err != nil {
 		logger.Error("update current version error", tag.Error(err))
 	}
@@ -314,9 +295,6 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 	state.VersionHistories = e.versionHistories
 	state.Checksum = e.checksum
 
-	// TODO when 2DC is deprecated, remove this
-	state.ReplicationState = e.replicationState
-
 	return state
 }
 
@@ -337,8 +315,6 @@ func (e *mutableStateBuilder) Load(
 	e.pendingSignalInfoIDs = state.SignalInfos
 	e.pendingSignalRequestedIDs = state.SignalRequestedIDs
 	e.executionInfo = state.ExecutionInfo
-
-	e.replicationState = state.ReplicationState
 	e.bufferedEvents = state.BufferedEvents
 
 	e.currentVersion = common.EmptyVersion
@@ -427,10 +403,6 @@ func (e *mutableStateBuilder) SetHistoryBuilder(hBuilder *HistoryBuilder) {
 
 func (e *mutableStateBuilder) GetExecutionInfo() *persistence.WorkflowExecutionInfo {
 	return e.executionInfo
-}
-
-func (e *mutableStateBuilder) GetReplicationState() *persistence.ReplicationState {
-	return e.replicationState
 }
 
 func (e *mutableStateBuilder) FlushBufferedEvents() error {
@@ -523,12 +495,6 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 		return nil
 	}
 
-	// TODO when 2DC is deprecated, remove this block
-	if e.replicationState != nil {
-		e.UpdateReplicationStateVersion(version, forceUpdate)
-		return nil
-	}
-
 	if e.versionHistories != nil {
 		versionHistory, err := e.versionHistories.GetCurrentVersionHistory()
 		if err != nil {
@@ -550,25 +516,11 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 
 		return nil
 	}
-
-	// TODO when NDC is fully rolled out remove this block
-	//  since event local domain workflow will have version history
-	if version != common.EmptyVersion {
-		err := &workflow.InternalServiceError{
-			Message: "cannot update current version of local domain workflow to version other than empty version",
-		}
-		e.logError(err.Error())
-		return err
-	}
 	e.currentVersion = common.EmptyVersion
 	return nil
 }
 
 func (e *mutableStateBuilder) GetCurrentVersion() int64 {
-
-	if e.replicationState != nil {
-		return e.replicationState.CurrentVersion
-	}
 
 	if e.versionHistories != nil {
 		return e.currentVersion
@@ -578,11 +530,6 @@ func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 }
 
 func (e *mutableStateBuilder) GetStartVersion() (int64, error) {
-
-	if e.replicationState != nil {
-		return e.replicationState.StartVersion, nil
-
-	}
 
 	if e.versionHistories != nil {
 		versionHistory, err := e.versionHistories.GetCurrentVersionHistory()
@@ -601,10 +548,6 @@ func (e *mutableStateBuilder) GetStartVersion() (int64, error) {
 
 func (e *mutableStateBuilder) GetLastWriteVersion() (int64, error) {
 
-	if e.replicationState != nil {
-		return e.replicationState.LastWriteVersion, nil
-	}
-
 	if e.versionHistories != nil {
 		versionHistory, err := e.versionHistories.GetCurrentVersionHistory()
 		if err != nil {
@@ -618,42 +561,6 @@ func (e *mutableStateBuilder) GetLastWriteVersion() (int64, error) {
 	}
 
 	return common.EmptyVersion, nil
-}
-
-// TODO nDC deprecate once replication state is deprecated
-func (e *mutableStateBuilder) UpdateReplicationStateVersion(
-	version int64,
-	forceUpdate bool,
-) {
-
-	if version > e.replicationState.CurrentVersion || forceUpdate {
-		e.replicationState.CurrentVersion = version
-	}
-}
-
-// TODO nDC deprecate once replication state is deprecated
-// Assumption: It is expected CurrentVersion on replication state is updated at the start of transaction when
-// MutableState is loaded for this workflow execution.
-func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(
-	lastWriteVersion,
-	lastEventID int64,
-) {
-	e.replicationState.LastWriteVersion = lastWriteVersion
-	e.replicationState.LastWriteEventID = lastEventID
-
-	lastEventSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-	currentCluster := e.clusterMetadata.GetCurrentClusterName()
-	if lastEventSourceCluster != currentCluster {
-		info, ok := e.replicationState.LastReplicationInfo[lastEventSourceCluster]
-		if !ok {
-			// ReplicationInfo doesn't exist for this cluster, create one
-			info = &persistence.ReplicationInfo{}
-			e.replicationState.LastReplicationInfo[lastEventSourceCluster] = info
-		}
-
-		info.Version = lastWriteVersion
-		info.LastEventID = lastEventID
-	}
 }
 
 func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(
@@ -2330,7 +2237,9 @@ func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(
 	}
 
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
-		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+		e.logger.Warn(
+			mutableStateInvalidHistoryActionMsg,
+			opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
@@ -3350,31 +3259,12 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		return nil, nil, err
 	}
 	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunId()
-
-	domainName := e.domainEntry.GetInfo().Name
 	domainID := e.domainEntry.GetInfo().ID
-	var newStateBuilder *mutableStateBuilder
-	// If a workflow is ndc enabled, the continue as new should be ndc enabled.
-	if e.config.EnableNDC(domainName) || e.GetVersionHistories() != nil {
-		newStateBuilder = NewMutableStateBuilderWithVersionHistories(
-			e.shard,
-			e.logger,
-			e.domainEntry,
-		).(*mutableStateBuilder)
-	} else {
-		if e.domainEntry.IsGlobalDomain() {
-			// all workflows within a global domain should have replication state,
-			// no matter whether it will be replicated to multiple
-			// target clusters or not, for 2DC case
-			newStateBuilder = NewMutableStateBuilderWithReplicationState(
-				e.shard,
-				e.logger,
-				e.domainEntry,
-			).(*mutableStateBuilder)
-		} else {
-			newStateBuilder = newMutableStateBuilder(e.shard, e.logger, e.domainEntry)
-		}
-	}
+	newStateBuilder := NewMutableStateBuilderWithVersionHistories(
+		e.shard,
+		e.logger,
+		e.domainEntry,
+	).(*mutableStateBuilder)
 
 	if _, err = newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(
 		parentInfo,
@@ -4007,7 +3897,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
-		ReplicationState: e.replicationState,
 		VersionHistories: e.versionHistories,
 
 		UpsertActivityInfos:       convertUpdateActivityInfos(e.updateActivityInfos),
@@ -4096,7 +3985,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 
 	workflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    e.executionInfo,
-		ReplicationState: e.replicationState,
 		VersionHistories: e.versionHistories,
 
 		ActivityInfos:       convertPendingActivityInfos(e.pendingActivityInfoIDs),
@@ -4318,17 +4206,6 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 		NewRunBranchToken: nil,
 	}
 
-	// TODO after NDC release and migration is done, remove this check
-	if e.GetReplicationState() != nil {
-		replicationTask.LastReplicationInfo = e.GetReplicationState().LastReplicationInfo
-	} else if e.GetVersionHistories() != nil {
-		replicationTask.LastReplicationInfo = nil
-	} else {
-		return nil, &workflow.InternalServiceError{
-			Message: "should not generate replication task when missing replication state & version history",
-		}
-	}
-
 	return []persistence.Task{replicationTask}, nil
 }
 
@@ -4359,10 +4236,6 @@ func (e *mutableStateBuilder) updateWithLastWriteEvent(
 
 	e.GetExecutionInfo().LastEventTaskID = lastEvent.GetTaskId()
 
-	if e.replicationState != nil {
-		e.UpdateReplicationStateLastEventID(lastEvent.GetVersion(), lastEvent.GetEventId())
-	}
-
 	if e.versionHistories != nil {
 		currentVersionHistory, err := e.versionHistories.GetCurrentVersionHistory()
 		if err != nil {
@@ -4384,8 +4257,7 @@ func (e *mutableStateBuilder) updateWithLastFirstEvent(
 }
 
 func (e *mutableStateBuilder) canReplicateEvents() bool {
-	return (e.GetReplicationState() != nil || e.GetVersionHistories() != nil) &&
-		e.domainEntry.GetReplicationPolicy() == cache.ReplicationPolicyMultiCluster
+	return e.domainEntry.GetReplicationPolicy() == cache.ReplicationPolicyMultiCluster
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch

@@ -147,19 +147,9 @@ type Interface interface {
 		Request *shared.RemoveTaskRequest,
 	) error
 
-	ReplicateEvents(
-		ctx context.Context,
-		ReplicateRequest *history.ReplicateEventsRequest,
-	) error
-
 	ReplicateEventsV2(
 		ctx context.Context,
 		ReplicateV2Request *history.ReplicateEventsV2Request,
-	) error
-
-	ReplicateRawEvents(
-		ctx context.Context,
-		ReplicateRequest *history.ReplicateRawEventsRequest,
 	) error
 
 	RequestCancelWorkflowExecution(
@@ -497,17 +487,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "ReplicateEvents",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReplicateEvents),
-				},
-				Signature:    "ReplicateEvents(ReplicateRequest *history.ReplicateEventsRequest)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "ReplicateEventsV2",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -515,17 +494,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.ReplicateEventsV2),
 				},
 				Signature:    "ReplicateEventsV2(ReplicateV2Request *history.ReplicateEventsV2Request)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "ReplicateRawEvents",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReplicateRawEvents),
-				},
-				Signature:    "ReplicateRawEvents(ReplicateRequest *history.ReplicateRawEventsRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -707,7 +675,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 41)
+	procedures := make([]transport.Procedure, 0, 39)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1132,25 +1100,6 @@ func (h handler) RemoveTask(ctx context.Context, body wire.Value) (thrift.Respon
 	return response, err
 }
 
-func (h handler) ReplicateEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_ReplicateEvents_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.ReplicateEvents(ctx, args.ReplicateRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_ReplicateEvents_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
 func (h handler) ReplicateEventsV2(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_ReplicateEventsV2_Args
 	if err := args.FromWire(body); err != nil {
@@ -1161,25 +1110,6 @@ func (h handler) ReplicateEventsV2(ctx context.Context, body wire.Value) (thrift
 
 	hadError := err != nil
 	result, err := history.HistoryService_ReplicateEventsV2_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) ReplicateRawEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_ReplicateRawEvents_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.ReplicateRawEvents(ctx, args.ReplicateRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_ReplicateRawEvents_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

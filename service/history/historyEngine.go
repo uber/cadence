@@ -50,9 +50,9 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -95,7 +95,6 @@ type (
 		visibilityMgr             persistence.VisibilityManager
 		txProcessor               queue.Processor
 		timerProcessor            queue.Processor
-		replicator                *historyReplicator
 		nDCReplicator             ndc.HistoryReplicator
 		nDCActivityReplicator     ndc.ActivityReplicator
 		historyEventNotifier      events.Notifier
@@ -106,7 +105,6 @@ type (
 		throttledLogger           log.Logger
 		config                    *config.Config
 		archivalClient            warchiver.Client
-		resetor                   reset.WorkflowResetor
 		workflowResetter          reset.WorkflowResetter
 		queueTaskProcessor        task.Processor
 		replicationTaskProcessors []replication.TaskProcessor
@@ -215,11 +213,6 @@ func NewEngineWithShardContext(
 			executionCache,
 			logger,
 		),
-		resetor: reset.NewWorkflowResetor(
-			shard,
-			executionCache,
-			logger,
-		),
 		publicClient:           publicClient,
 		matchingClient:         matching,
 		rawMatchingClient:      rawMatchingClient,
@@ -245,7 +238,6 @@ func NewEngineWithShardContext(
 			historyEngImpl,
 			queueTaskProcessor,
 			executionCache,
-			historyEngImpl.resetor,
 			historyEngImpl.workflowResetter,
 			historyEngImpl.archivalClient,
 			openExecutionCheck,
@@ -285,15 +277,6 @@ func NewEngineWithShardContext(
 
 	// Only start the replicator processor if valid publisher is passed in
 	if publisher != nil {
-		historyEngImpl.replicator = newHistoryReplicator(
-			shard,
-			clock.NewRealTimeSource(),
-			historyEngImpl,
-			executionCache,
-			shard.GetDomainCache(),
-			historyV2Manager,
-			logger,
-		)
 		historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
 			shard,
 			executionCache,
@@ -325,7 +308,7 @@ func NewEngineWithShardContext(
 			common.CreateReplicationServiceBusyRetryPolicy(),
 			common.IsServiceBusyError,
 		)
-		nDCHistoryResender := xdc.NewNDCHistoryResender(
+		historyResender := cndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			adminRetryableClient,
 			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -336,24 +319,11 @@ func NewEngineWithShardContext(
 			openExecutionCheck,
 			shard.GetLogger(),
 		)
-		historyRereplicator := xdc.NewHistoryRereplicator(
-			currentClusterName,
-			shard.GetDomainCache(),
-			adminRetryableClient,
-			func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-				return historyRetryableClient.ReplicateRawEvents(ctx, request)
-			},
-			shard.GetService().GetPayloadSerializer(),
-			replicationTimeout,
-			nil,
-			shard.GetLogger(),
-		)
 		replicationTaskExecutor := replication.NewTaskExecutor(
 			sourceCluster,
 			shard,
 			shard.GetDomainCache(),
-			nDCHistoryResender,
-			historyRereplicator,
+			historyResender,
 			historyEngImpl,
 			shard.GetMetricsClient(),
 			shard.GetLogger(),
@@ -542,33 +512,11 @@ func (e *historyEngineImpl) createMutableState(
 	runID string,
 ) (execution.MutableState, error) {
 
-	domainName := domainEntry.GetInfo().Name
-	enableNDC := e.config.EnableNDC(domainName)
-
-	var newMutableState execution.MutableState
-	if enableNDC {
-		// version history applies to both local and global domain
-		newMutableState = execution.NewMutableStateBuilderWithVersionHistories(
-			e.shard,
-			e.logger,
-			domainEntry,
-		)
-	} else if domainEntry.IsGlobalDomain() {
-		// 2DC XDC protocol
-		// all workflows within a global domain should have replication state,
-		// no matter whether it will be replicated to multiple target clusters or not
-		newMutableState = execution.NewMutableStateBuilderWithReplicationState(
-			e.shard,
-			e.logger,
-			domainEntry,
-		)
-	} else {
-		newMutableState = execution.NewMutableStateBuilder(
-			e.shard,
-			e.logger,
-			domainEntry,
-		)
-	}
+	newMutableState := execution.NewMutableStateBuilderWithVersionHistories(
+		e.shard,
+		e.logger,
+		domainEntry,
+	)
 
 	if err := newMutableState.SetHistoryTree(runID); err != nil {
 		return nil, err
@@ -988,7 +936,6 @@ func (e *historyEngineImpl) PollMutableState(
 		ClientImpl:                           response.ClientImpl,
 		StickyTaskListScheduleToStartTimeout: response.StickyTaskListScheduleToStartTimeout,
 		CurrentBranchToken:                   response.CurrentBranchToken,
-		ReplicationInfo:                      response.ReplicationInfo,
 		VersionHistories:                     response.VersionHistories,
 		WorkflowState:                        response.WorkflowState,
 		WorkflowCloseState:                   response.WorkflowCloseState,
@@ -1402,16 +1349,6 @@ func (e *historyEngineImpl) getMutableState(
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
 		IsStickyTaskListEnabled:              common.BoolPtr(mutableState.IsStickyTaskListEnabled()),
-	}
-	replicationState := mutableState.GetReplicationState()
-	if replicationState != nil {
-		retResp.ReplicationInfo = map[string]*workflow.ReplicationInfo{}
-		for k, v := range replicationState.LastReplicationInfo {
-			retResp.ReplicationInfo[k] = &workflow.ReplicationInfo{
-				Version:     common.Int64Ptr(v.Version),
-				LastEventId: common.Int64Ptr(v.LastEventID),
-			}
-		}
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
@@ -2442,22 +2379,6 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 		})
 }
 
-func (e *historyEngineImpl) ReplicateEvents(
-	ctx context.Context,
-	replicateRequest *h.ReplicateEventsRequest,
-) error {
-
-	return e.replicator.ApplyEvents(ctx, replicateRequest)
-}
-
-func (e *historyEngineImpl) ReplicateRawEvents(
-	ctx context.Context,
-	replicateRequest *h.ReplicateRawEventsRequest,
-) error {
-
-	return e.replicator.ApplyRawEvents(ctx, replicateRequest)
-}
-
 func (e *historyEngineImpl) ReplicateEventsV2(
 	ctx context.Context,
 	replicateRequest *h.ReplicateEventsV2Request,
@@ -2571,18 +2492,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		return &workflow.ResetWorkflowExecutionResponse{
 			RunId: common.StringPtr(currentRunID),
 		}, nil
-	}
-
-	// TODO when NDC is rolled out, remove this block
-	if baseMutableState.GetVersionHistories() == nil {
-		return e.resetor.ResetWorkflowExecution(
-			ctx,
-			request,
-			baseContext,
-			baseMutableState,
-			currentContext,
-			currentMutableState,
-		)
 	}
 
 	resetRunID := uuid.New()

@@ -249,7 +249,6 @@ type (
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
 	InternalWorkflowMutableState struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
 		ActivityInfos    map[int64]*InternalActivityInfo
 
@@ -344,10 +343,6 @@ type (
 
 		// current workflow
 		CurrentWorkflowMutation *InternalWorkflowMutation
-
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS *CurrentWorkflowCAS
 	}
 
 	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
@@ -372,7 +367,6 @@ type (
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
 	InternalWorkflowMutation struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
 		StartVersion     int64
 		LastWriteVersion int64
@@ -404,7 +398,6 @@ type (
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
 	InternalWorkflowSnapshot struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
 		StartVersion     int64
 		LastWriteVersion int64

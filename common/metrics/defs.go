@@ -326,10 +326,6 @@ const (
 	HistoryClientScheduleDecisionTaskScope
 	// HistoryClientRecordChildExecutionCompletedScope tracks RPC calls to history service
 	HistoryClientRecordChildExecutionCompletedScope
-	// HistoryClientReplicateEventsScope tracks RPC calls to history service
-	HistoryClientReplicateEventsScope
-	// HistoryClientReplicateRawEventsScope tracks RPC calls to history service
-	HistoryClientReplicateRawEventsScope
 	// HistoryClientSyncShardStatusScope tracks RPC calls to history service
 	HistoryClientReplicateEventsV2Scope
 	// HistoryClientReplicateRawEventsV2Scope tracks RPC calls to history service
@@ -474,8 +470,6 @@ const (
 	AdminClientDescribeHistoryHostScope
 	// AdminClientDescribeWorkflowExecutionScope tracks RPC calls to admin service
 	AdminClientDescribeWorkflowExecutionScope
-	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
-	AdminClientGetWorkflowExecutionRawHistoryScope
 	// AdminClientGetWorkflowExecutionRawHistoryV2Scope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryV2Scope
 	// AdminClientDescribeClusterScope tracks RPC calls to admin service
@@ -1044,14 +1038,8 @@ const (
 	ReplicatorScope = iota + NumCommonScopes
 	// DomainReplicationTaskScope is the scope used by domain task replication processing
 	DomainReplicationTaskScope
-	// HistoryReplicationTaskScope is the scope used by history task replication processing
-	HistoryReplicationTaskScope
-	// HistoryMetadataReplicationTaskScope is the scope used by history metadata task replication processing
-	HistoryMetadataReplicationTaskScope
 	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
 	HistoryReplicationV2TaskScope
-	// SyncShardTaskScope is the scope used by sync shrad information processing
-	SyncShardTaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
 	SyncActivityTaskScope
 	// ESProcessorScope is scope used by all metric emitted by esProcessor
@@ -1201,8 +1189,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientResetWorkflowExecutionScope:              {operation: "HistoryClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientScheduleDecisionTaskScope:                {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordChildExecutionCompletedScope:       {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientReplicateEventsScope:                     {operation: "HistoryClientReplicateEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientReplicateRawEventsScope:                  {operation: "HistoryClientReplicateRawEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientReplicateEventsV2Scope:                   {operation: "HistoryClientReplicateEventsV2", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientSyncShardStatusScope:                     {operation: "HistoryClientSyncShardStatusScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientSyncActivityScope:                        {operation: "HistoryClientSyncActivityScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
@@ -1271,7 +1257,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientAddSearchAttributeScope:                    {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeHistoryHostScope:                   {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:             {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminClientGetWorkflowExecutionRawHistoryScope:        {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryV2Scope:      {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeClusterScope:                       {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientRefreshWorkflowTasksScope:                  {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
@@ -1550,10 +1535,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	Worker: {
 		ReplicatorScope:                        {operation: "Replicator"},
 		DomainReplicationTaskScope:             {operation: "DomainReplicationTask"},
-		HistoryReplicationTaskScope:            {operation: "HistoryReplicationTask"},
-		HistoryMetadataReplicationTaskScope:    {operation: "HistoryMetadataReplicationTask"},
 		HistoryReplicationV2TaskScope:          {operation: "HistoryReplicationV2Task"},
-		SyncShardTaskScope:                     {operation: "SyncShardTask"},
 		SyncActivityTaskScope:                  {operation: "SyncActivityTask"},
 		ESProcessorScope:                       {operation: "ESProcessor"},
 		IndexProcessorScope:                    {operation: "IndexProcessor"},

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xdc
+package ndc
 
 import (
 	"context"
@@ -47,7 +47,7 @@ import (
 )
 
 type (
-	nDCHistoryResenderSuite struct {
+	historyResenderSuite struct {
 		suite.Suite
 		*require.Assertions
 
@@ -64,23 +64,23 @@ type (
 		serializer persistence.PayloadSerializer
 		logger     log.Logger
 
-		rereplicator *NDCHistoryResenderImpl
+		rereplicator *HistoryResenderImpl
 	}
 )
 
-func TestNDCHistoryResenderSuite(t *testing.T) {
-	s := new(nDCHistoryResenderSuite)
+func TestHistoryResenderSuite(t *testing.T) {
+	s := new(historyResenderSuite)
 	suite.Run(t, s)
 }
 
-func (s *nDCHistoryResenderSuite) SetupSuite() {
+func (s *historyResenderSuite) SetupSuite() {
 }
 
-func (s *nDCHistoryResenderSuite) TearDownSuite() {
+func (s *historyResenderSuite) TearDownSuite() {
 
 }
 
-func (s *nDCHistoryResenderSuite) SetupTest() {
+func (s *historyResenderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
@@ -111,7 +111,7 @@ func (s *nDCHistoryResenderSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomain(s.domainName).Return(domainEntry, nil).AnyTimes()
 	s.serializer = persistence.NewPayloadSerializer()
 
-	s.rereplicator = NewNDCHistoryResender(
+	s.rereplicator = NewHistoryResender(
 		s.mockDomainCache,
 		s.mockAdminClient,
 		func(ctx context.Context, request *history.ReplicateEventsV2Request) error {
@@ -124,11 +124,11 @@ func (s *nDCHistoryResenderSuite) SetupTest() {
 	)
 }
 
-func (s *nDCHistoryResenderSuite) TearDownTest() {
+func (s *historyResenderSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *nDCHistoryResenderSuite) TestSendSingleWorkflowHistory() {
+func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	startEventID := int64(123)
@@ -222,7 +222,7 @@ func (s *nDCHistoryResenderSuite) TestSendSingleWorkflowHistory() {
 	s.Nil(err)
 }
 
-func (s *nDCHistoryResenderSuite) TestCreateReplicateRawEventsRequest() {
+func (s *historyResenderSuite) TestCreateReplicateRawEventsRequest() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	blob := &shared.DataBlob{
@@ -252,7 +252,7 @@ func (s *nDCHistoryResenderSuite) TestCreateReplicateRawEventsRequest() {
 		versionHistoryItems))
 }
 
-func (s *nDCHistoryResenderSuite) TestSendReplicationRawRequest() {
+func (s *historyResenderSuite) TestSendReplicationRawRequest() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &shared.VersionHistoryItem{
@@ -277,7 +277,7 @@ func (s *nDCHistoryResenderSuite) TestSendReplicationRawRequest() {
 	s.Nil(err)
 }
 
-func (s *nDCHistoryResenderSuite) TestSendReplicationRawRequest_Err() {
+func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &shared.VersionHistoryItem{
@@ -307,7 +307,7 @@ func (s *nDCHistoryResenderSuite) TestSendReplicationRawRequest_Err() {
 	s.Equal(retryErr, err)
 }
 
-func (s *nDCHistoryResenderSuite) TestGetHistory() {
+func (s *historyResenderSuite) TestGetHistory() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	startEventID := int64(123)
@@ -354,13 +354,13 @@ func (s *nDCHistoryResenderSuite) TestGetHistory() {
 	s.Equal(response, out)
 }
 
-func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
+func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 	domainID := uuid.New()
 	workflowID1 := uuid.New()
 	workflowID2 := uuid.New()
 	runID := uuid.New()
 	invariantMock := invariant.NewMockInvariant(s.controller)
-	s.rereplicator = NewNDCHistoryResender(
+	s.rereplicator = NewHistoryResender(
 		s.mockDomainCache,
 		s.mockAdminClient,
 		func(ctx context.Context, request *history.ReplicateEventsV2Request) error {
@@ -399,7 +399,7 @@ func (s *nDCHistoryResenderSuite) TestCurrentExecutionCheck() {
 	s.True(skipTask)
 }
 
-func (s *nDCHistoryResenderSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
+func (s *historyResenderSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
 	blob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
 	s.Nil(err)
 	return &shared.DataBlob{

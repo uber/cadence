@@ -130,15 +130,6 @@ func newHistoryResendInfo(
 	}
 }
 
-// TODO this logic is for 2DC, to be deprecated
-func newHistoryResendInfoFor2DC(
-	nextEventID int64,
-) *historyResendInfo {
-	return &historyResendInfo{
-		nextEventID: common.Int64Ptr(nextEventID),
-	}
-}
-
 func newPushActivityToMatchingInfo(
 	activityScheduleToStartTimeout int32,
 ) *pushActivityToMatchingInfo {
@@ -162,11 +153,6 @@ func newPushDecisionToMatchingInfo(
 func getHistoryResendInfo(
 	mutableState execution.MutableState,
 ) (*historyResendInfo, error) {
-
-	// TODO this logic is for 2DC, to be deprecated
-	if mutableState.GetVersionHistories() == nil {
-		return newHistoryResendInfoFor2DC(mutableState.GetNextEventID()), nil
-	}
 
 	currentBranch, err := mutableState.GetVersionHistories().GetCurrentVersionHistory()
 	if err != nil {

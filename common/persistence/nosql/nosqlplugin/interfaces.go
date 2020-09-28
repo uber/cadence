@@ -22,6 +22,7 @@ package nosqlplugin
 
 import (
 	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 )
 

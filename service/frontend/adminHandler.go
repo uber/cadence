@@ -45,11 +45,11 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/xdc"
 )
 
 var _ adminserviceserver.Interface = (*AdminHandler)(nil)
@@ -358,164 +358,6 @@ func (adh *AdminHandler) DescribeHistoryHost(
 
 	resp, err := adh.GetHistoryClient().DescribeHistoryHost(ctx, request)
 	return resp, err
-}
-
-// GetWorkflowExecutionRawHistory - retrieves the history of workflow execution
-func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
-	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryRequest,
-) (resp *admin.GetWorkflowExecutionRawHistoryResponse, retError error) {
-
-	defer log.CapturePanic(adh.GetLogger(), &retError)
-	scope, sw := adh.startRequestProfile(metrics.AdminGetWorkflowExecutionRawHistoryScope)
-	defer sw.Stop()
-
-	var err error
-	var size int
-
-	domainID, err := adh.GetDomainCache().GetDomainID(request.GetDomain())
-	if err != nil {
-		return nil, adh.error(err, scope)
-	}
-	scope = scope.Tagged(metrics.DomainTag(request.GetDomain()))
-
-	execution := request.Execution
-	if len(execution.GetWorkflowId()) == 0 {
-		return nil, &gen.BadRequestError{Message: "Invalid WorkflowID."}
-	}
-	// TODO currently, this API is only going to be used by re-send history events
-	// to remote cluster if kafka is lossy again, in the future, this API can be used
-	// by CLI and client, then empty runID (meaning the current workflow) should be allowed
-	if len(execution.GetRunId()) == 0 || uuid.Parse(execution.GetRunId()) == nil {
-		return nil, &gen.BadRequestError{Message: "Invalid RunID."}
-	}
-
-	pageSize := int(request.GetMaximumPageSize())
-	if pageSize <= 0 {
-		return nil, &gen.BadRequestError{Message: "Invalid PageSize."}
-	}
-
-	var token *getHistoryContinuationToken
-	// initialize or validate the token
-	// token will be used as a source of truth
-	if request.NextPageToken != nil {
-		token, err = deserializeHistoryToken(request.NextPageToken)
-		if err != nil {
-			return nil, err
-		}
-
-		if execution.GetRunId() != token.RunID ||
-			// we guarantee to use the first event ID provided in the request
-			request.GetFirstEventId() != token.FirstEventID ||
-			// the next event ID in the request must be <= next event ID from mutable state, when initialized
-			// so as long as customer do not change next event ID during pagination,
-			// next event ID in the token <= next event ID in the request.
-			request.GetNextEventId() < token.NextEventID {
-			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
-		}
-
-		// for the rest variables in the token, since we do not do hmac,
-		// the only thing can be done is to trust the token:
-		// IsWorkflowRunning: not used
-		// TransientDecision: not used
-		// PersistenceToken: trust
-		// ReplicationInfo: trust
-
-	} else {
-		firstEventID := request.GetFirstEventId()
-		nextEventID := request.GetNextEventId()
-		if firstEventID < 0 || firstEventID > nextEventID {
-			return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
-		}
-
-		response, err := adh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  execution,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		// check if the input next event ID is > actual next event ID in the mutable state
-		// since we should not leak invalid events
-		if nextEventID > response.GetNextEventId() {
-			nextEventID = response.GetNextEventId()
-		}
-		token = &getHistoryContinuationToken{
-			RunID:            execution.GetRunId(),
-			BranchToken:      response.CurrentBranchToken,
-			FirstEventID:     firstEventID,
-			NextEventID:      nextEventID,
-			PersistenceToken: nil, // this is the initialized value
-			ReplicationInfo:  response.ReplicationInfo,
-		}
-	}
-
-	if token.FirstEventID >= token.NextEventID {
-		return &admin.GetWorkflowExecutionRawHistoryResponse{
-			HistoryBatches:  []*gen.DataBlob{},
-			ReplicationInfo: token.ReplicationInfo,
-			NextPageToken:   nil, // no further pagination
-		}, nil
-	}
-
-	// TODO need to deal with transient decision if to be used by client getting history
-	var historyBatches []*gen.History
-	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
-	_, historyBatches, token.PersistenceToken, size, err = persistence.PaginateHistory(
-		adh.GetHistoryManager(),
-		true, // this means that we are getting history by batch
-		token.BranchToken,
-		token.FirstEventID,
-		token.NextEventID,
-		token.PersistenceToken,
-		pageSize,
-		common.IntPtr(shardID),
-	)
-	if err != nil {
-		if _, ok := err.(*gen.EntityNotExistsError); ok {
-			// when no events can be returned from DB, DB layer will return
-			// EntityNotExistsError, this API shall return empty response
-			return &admin.GetWorkflowExecutionRawHistoryResponse{
-				HistoryBatches:  []*gen.DataBlob{},
-				ReplicationInfo: token.ReplicationInfo,
-				NextPageToken:   nil, // no further pagination
-			}, nil
-		}
-		return nil, err
-	}
-
-	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
-	// domains along with the individual domains stats
-	adh.GetMetricsClient().RecordTimer(metrics.AdminGetWorkflowExecutionRawHistoryScope, metrics.HistorySize, time.Duration(size))
-	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
-
-	blobs := []*gen.DataBlob{}
-	for _, historyBatch := range historyBatches {
-		blob, err := adh.GetPayloadSerializer().SerializeBatchEvents(historyBatch.Events, common.EncodingTypeThriftRW)
-		if err != nil {
-			return nil, err
-		}
-		blobs = append(blobs, &gen.DataBlob{
-			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
-			Data:         blob.Data,
-		})
-	}
-
-	result := &admin.GetWorkflowExecutionRawHistoryResponse{
-		HistoryBatches:  blobs,
-		ReplicationInfo: token.ReplicationInfo,
-	}
-	if len(token.PersistenceToken) == 0 {
-		result.NextPageToken = nil
-	} else {
-		result.NextPageToken, err = serializeHistoryToken(token)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return result, nil
 }
 
 // GetWorkflowExecutionRawHistoryV2 - retrieves the history of workflow execution
@@ -1066,7 +908,7 @@ func (adh *AdminHandler) ResendReplicationTasks(
 	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	resender := xdc.NewNDCHistoryResender(
+	resender := ndc.NewHistoryResender(
 		adh.GetDomainCache(),
 		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
 		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {

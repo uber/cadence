@@ -436,30 +436,6 @@ func (c *retryableClient) RecordChildExecutionCompleted(
 	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
-func (c *retryableClient) ReplicateEvents(
-	ctx context.Context,
-	request *h.ReplicateEventsRequest,
-	opts ...yarpc.CallOption) error {
-
-	op := func() error {
-		return c.client.ReplicateEvents(ctx, request, opts...)
-	}
-
-	return backoff.Retry(op, c.policy, c.isRetryable)
-}
-
-func (c *retryableClient) ReplicateRawEvents(
-	ctx context.Context,
-	request *h.ReplicateRawEventsRequest,
-	opts ...yarpc.CallOption) error {
-
-	op := func() error {
-		return c.client.ReplicateRawEvents(ctx, request, opts...)
-	}
-
-	return backoff.Retry(op, c.policy, c.isRetryable)
-}
-
 func (c *retryableClient) ReplicateEventsV2(
 	ctx context.Context,
 	request *h.ReplicateEventsV2Request,

@@ -77,7 +77,6 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 			RequestCancelInfos: response.State.RequestCancelInfos,
 			SignalInfos:        response.State.SignalInfos,
 			SignalRequestedIDs: response.State.SignalRequestedIDs,
-			ReplicationState:   response.State.ReplicationState,
 			Checksum:           response.State.Checksum,
 		},
 	}
@@ -525,12 +524,6 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 		}
 	}
 
-	if request.CurrentWorkflowMutation != nil && request.CurrentWorkflowCAS != nil {
-		return &workflow.InternalServiceError{
-			Message: "ConflictResolveWorkflowExecution: current workflow & current workflow CAS both set",
-		}
-	}
-
 	newRequest := &InternalConflictResolveWorkflowExecutionRequest{
 		RangeID: request.RangeID,
 
@@ -541,10 +534,6 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 		NewWorkflowSnapshot: serializedNewWorkflowMutation,
 
 		CurrentWorkflowMutation: serializedCurrentWorkflowMutation,
-
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS: request.CurrentWorkflowCAS,
 	}
 	return m.persistence.ConflictResolveWorkflowExecution(context.TODO(), newRequest)
 }
@@ -639,18 +628,17 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		}
 	}
 
-	startVersion, err := getStartVersion(input.VersionHistories, input.ReplicationState)
+	startVersion, err := getStartVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
-	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories, input.ReplicationState)
+	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
 
 	return &InternalWorkflowMutation{
 		ExecutionInfo:    serializedExecutionInfo,
-		ReplicationState: input.ReplicationState,
 		VersionHistories: serializedVersionHistories,
 		StartVersion:     startVersion,
 		LastWriteVersion: lastWriteVersion,
@@ -705,18 +693,17 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		return nil, err
 	}
 
-	startVersion, err := getStartVersion(input.VersionHistories, input.ReplicationState)
+	startVersion, err := getStartVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
-	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories, input.ReplicationState)
+	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
 
 	return &InternalWorkflowSnapshot{
 		ExecutionInfo:    serializedExecutionInfo,
-		ReplicationState: input.ReplicationState,
 		VersionHistories: serializedVersionHistories,
 		StartVersion:     startVersion,
 		LastWriteVersion: lastWriteVersion,
@@ -919,15 +906,10 @@ func (m *executionManagerImpl) Close() {
 
 func getStartVersion(
 	versionHistories *VersionHistories,
-	replicationState *ReplicationState,
 ) (int64, error) {
 
-	if replicationState == nil && versionHistories == nil {
+	if versionHistories == nil {
 		return common.EmptyVersion, nil
-	}
-
-	if replicationState != nil {
-		return replicationState.StartVersion, nil
 	}
 
 	versionHistory, err := versionHistories.GetCurrentVersionHistory()
@@ -943,15 +925,10 @@ func getStartVersion(
 
 func getLastWriteVersion(
 	versionHistories *VersionHistories,
-	replicationState *ReplicationState,
 ) (int64, error) {
 
-	if replicationState == nil && versionHistories == nil {
+	if versionHistories == nil {
 		return common.EmptyVersion, nil
-	}
-
-	if replicationState != nil {
-		return replicationState.LastWriteVersion, nil
 	}
 
 	versionHistory, err := versionHistories.GetCurrentVersionHistory()
