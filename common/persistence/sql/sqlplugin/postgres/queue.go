@@ -21,6 +21,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 
@@ -43,79 +44,79 @@ const (
 )
 
 // InsertIntoQueue inserts a new row into queue table
-func (pdb *db) InsertIntoQueue(row *sqlplugin.QueueRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(templateEnqueueMessageQuery, row)
+func (pdb *db) InsertIntoQueue(ctx context.Context, row *sqlplugin.QueueRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, templateEnqueueMessageQuery, row)
 }
 
 // GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
-func (pdb *db) GetLastEnqueuedMessageIDForUpdate(queueType persistence.QueueType) (int64, error) {
+func (pdb *db) GetLastEnqueuedMessageIDForUpdate(ctx context.Context, queueType persistence.QueueType) (int64, error) {
 	var lastMessageID int64
-	err := pdb.conn.Get(&lastMessageID, templateGetLastMessageIDQuery, queueType)
+	err := pdb.conn.GetContext(ctx, &lastMessageID, templateGetLastMessageIDQuery, queueType)
 	return lastMessageID, err
 }
 
 // GetMessagesFromQueue retrieves messages from the queue
-func (pdb *db) GetMessagesFromQueue(queueType persistence.QueueType, lastMessageID int64, maxRows int) ([]sqlplugin.QueueRow, error) {
+func (pdb *db) GetMessagesFromQueue(ctx context.Context, queueType persistence.QueueType, lastMessageID int64, maxRows int) ([]sqlplugin.QueueRow, error) {
 	var rows []sqlplugin.QueueRow
-	err := pdb.conn.Select(&rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
+	err := pdb.conn.SelectContext(ctx, &rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
 	return rows, err
 }
 
 // GetMessagesBetween retrieves messages from the queue
-func (pdb *db) GetMessagesBetween(queueType persistence.QueueType, firstMessageID int64, lastMessageID int64, maxRows int) ([]sqlplugin.QueueRow, error) {
+func (pdb *db) GetMessagesBetween(ctx context.Context, queueType persistence.QueueType, firstMessageID int64, lastMessageID int64, maxRows int) ([]sqlplugin.QueueRow, error) {
 	var rows []sqlplugin.QueueRow
-	err := pdb.conn.Select(&rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
+	err := pdb.conn.SelectContext(ctx, &rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
 	return rows, err
 }
 
 // DeleteMessagesBefore deletes messages before messageID from the queue
-func (pdb *db) DeleteMessagesBefore(queueType persistence.QueueType, messageID int64) (sql.Result, error) {
-	return pdb.conn.Exec(templateDeleteMessagesBeforeQuery, queueType, messageID)
+func (pdb *db) DeleteMessagesBefore(ctx context.Context, queueType persistence.QueueType, messageID int64) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, templateDeleteMessagesBeforeQuery, queueType, messageID)
 }
 
 // RangeDeleteMessages deletes messages before messageID from the queue
-func (pdb *db) RangeDeleteMessages(queueType persistence.QueueType, exclusiveBeginMessageID int64, inclusiveEndMessageID int64) (sql.Result, error) {
-	return pdb.conn.Exec(templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
+func (pdb *db) RangeDeleteMessages(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, inclusiveEndMessageID int64) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
 }
 
 // DeleteMessage deletes message with a messageID from the queue
-func (pdb *db) DeleteMessage(queueType persistence.QueueType, messageID int64) (sql.Result, error) {
-	return pdb.conn.Exec(templateDeleteMessageQuery, queueType, messageID)
+func (pdb *db) DeleteMessage(ctx context.Context, queueType persistence.QueueType, messageID int64) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, templateDeleteMessageQuery, queueType, messageID)
 }
 
 // InsertAckLevel inserts ack level
-func (pdb *db) InsertAckLevel(queueType persistence.QueueType, messageID int64, clusterName string) error {
+func (pdb *db) InsertAckLevel(ctx context.Context, queueType persistence.QueueType, messageID int64, clusterName string) error {
 	clusterAckLevels := map[string]int64{clusterName: messageID}
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
 		return err
 	}
 
-	_, err = pdb.conn.NamedExec(templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
+	_, err = pdb.conn.NamedExecContext(ctx, templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
 	return err
 
 }
 
 // UpdateAckLevels updates cluster ack levels
-func (pdb *db) UpdateAckLevels(queueType persistence.QueueType, clusterAckLevels map[string]int64) error {
+func (pdb *db) UpdateAckLevels(ctx context.Context, queueType persistence.QueueType, clusterAckLevels map[string]int64) error {
 	data, err := json.Marshal(clusterAckLevels)
 	if err != nil {
 		return err
 	}
 
-	_, err = pdb.conn.Exec(templateUpdateQueueMetadataQuery, data, queueType)
+	_, err = pdb.conn.ExecContext(ctx, templateUpdateQueueMetadataQuery, data, queueType)
 	return err
 }
 
 // GetAckLevels returns ack levels for pulling clusters
-func (pdb *db) GetAckLevels(queueType persistence.QueueType, forUpdate bool) (map[string]int64, error) {
+func (pdb *db) GetAckLevels(ctx context.Context, queueType persistence.QueueType, forUpdate bool) (map[string]int64, error) {
 	queryStr := templateGetQueueMetadataQuery
 	if forUpdate {
 		queryStr = templateGetQueueMetadataForUpdateQuery
 	}
 
 	var data []byte
-	err := pdb.conn.Get(&data, queryStr, queueType)
+	err := pdb.conn.GetContext(ctx, &data, queryStr, queueType)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

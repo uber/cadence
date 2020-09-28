@@ -71,24 +71,23 @@ type (
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
 		suite.Suite
-		ShardMgr                 p.ShardManager
-		AbstractDataStoreFactory client.AbstractDataStoreFactory
-		ExecutionMgrFactory      client.Factory
-		ExecutionManager         p.ExecutionManager
-		TaskMgr                  p.TaskManager
-		HistoryV2Mgr             p.HistoryManager
-		MetadataManager          p.MetadataManager
-		VisibilityMgr            p.VisibilityManager
-		DomainReplicationQueue   p.DomainReplicationQueue
-		ShardInfo                *p.ShardInfo
-		TaskIDGenerator          TransferTaskIDGenerator
-		ClusterMetadata          cluster.Metadata
-		ReadLevel                int64
-		ReplicationReadLevel     int64
-		DefaultTestCluster       PersistenceTestCluster
-		VisibilityTestCluster    PersistenceTestCluster
-		Logger                   log.Logger
-		PayloadSerializer        p.PayloadSerializer
+		ShardMgr               p.ShardManager
+		ExecutionMgrFactory    client.Factory
+		ExecutionManager       p.ExecutionManager
+		TaskMgr                p.TaskManager
+		HistoryV2Mgr           p.HistoryManager
+		MetadataManager        p.MetadataManager
+		VisibilityMgr          p.VisibilityManager
+		DomainReplicationQueue p.DomainReplicationQueue
+		ShardInfo              *p.ShardInfo
+		TaskIDGenerator        TransferTaskIDGenerator
+		ClusterMetadata        cluster.Metadata
+		ReadLevel              int64
+		ReplicationReadLevel   int64
+		DefaultTestCluster     PersistenceTestCluster
+		VisibilityTestCluster  PersistenceTestCluster
+		Logger                 log.Logger
+		PayloadSerializer      p.PayloadSerializer
 	}
 
 	// PersistenceTestCluster exposes management operations on a database
@@ -184,7 +183,7 @@ func (s *TestBase) Setup() {
 	cfg := s.DefaultTestCluster.Config()
 	scope := tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 	metricsClient := metrics.NewClient(scope, service.GetMetricsServiceIdx(common.HistoryServiceName, s.Logger))
-	factory := client.NewFactory(&cfg, nil, s.AbstractDataStoreFactory, clusterName, metricsClient, s.Logger)
+	factory := client.NewFactory(&cfg, nil, clusterName, metricsClient, s.Logger)
 
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
@@ -205,7 +204,7 @@ func (s *TestBase) Setup() {
 	visibilityFactory := factory
 	if s.VisibilityTestCluster != s.DefaultTestCluster {
 		vCfg := s.VisibilityTestCluster.Config()
-		visibilityFactory = client.NewFactory(&vCfg, nil, nil, clusterName, nil, s.Logger)
+		visibilityFactory = client.NewFactory(&vCfg, nil, clusterName, nil, s.Logger)
 	}
 	// SQL currently doesn't have support for visibility manager
 	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
