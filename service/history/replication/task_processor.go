@@ -587,8 +587,6 @@ func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *shared.LimitExceededError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
-	case *shared.RetryTaskError:
-		p.metricsClient.IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
 	case *yarpcerrors.Status:
 		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
 			p.metricsClient.IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)

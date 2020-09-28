@@ -1930,8 +1930,6 @@ func (h *Handler) updateErrorMetric(
 		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrCancellationAlreadyRequestedCounter)
 	case *gen.LimitExceededError:
 		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
-	case *gen.RetryTaskError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
 	case *gen.RetryTaskV2Error:
 		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
 	case *gen.ServiceBusyError:
