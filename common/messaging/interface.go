@@ -24,9 +24,7 @@ type (
 	// Client is the interface used to abstract out interaction with messaging system for replication
 	Client interface {
 		NewConsumer(appName, consumerName string, concurrency int) (Consumer, error)
-		NewConsumerWithClusterName(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error)
 		NewProducer(appName string) (Producer, error)
-		NewProducerWithClusterName(sourceCluster string) (Producer, error)
 	}
 
 	// Consumer is the unified interface for both internal and external kafka clients
