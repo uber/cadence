@@ -579,7 +579,7 @@ func updateExecution(
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if versionHistories == nil {
-		// Updates will be called with null version historyies while the feature is disabled
+		// Updates will be called with null version histories while the feature is disabled
 		batch.Query(templateUpdateWorkflowExecutionQuery,
 			domainID,
 			workflowID,
