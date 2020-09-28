@@ -137,7 +137,7 @@ func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_NotOK() {
-	err := &shared.RetryTaskError{}
+	err := &shared.BadRequestError{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
 	s.False(ok)
 }

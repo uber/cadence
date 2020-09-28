@@ -662,10 +662,10 @@ func lockCurrentExecutionIfExists(
 ) (*sqlplugin.CurrentExecutionsRow, error) {
 
 	rows, err := tx.LockCurrentExecutionsJoinExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
-		ShardID: int64(shardID),
-    DomainID: domainID,
-    WorkflowID: workflowID,
-  })
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+	})
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return nil, &workflow.InternalServiceError{
@@ -773,7 +773,7 @@ func lockAndCheckNextEventID(
 ) error {
 
 	nextEventID, err := lockNextEventID(
-    ctx,
+		ctx,
 		tx,
 		shardID,
 		domainID,
