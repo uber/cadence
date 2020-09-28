@@ -200,7 +200,6 @@ func (h *Handler) isShuttingDown() bool {
 func (h *Handler) CreateEngine(
 	shardContext shard.Context,
 ) engine.Engine {
-	// TODO remove the nil parameter
 	return NewEngineWithShardContext(
 		shardContext,
 		h.GetVisibilityManager(),
@@ -208,7 +207,6 @@ func (h *Handler) CreateEngine(
 		h.GetHistoryClient(),
 		h.GetSDKClient(),
 		h.historyEventNotifier,
-		nil,
 		h.config,
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
