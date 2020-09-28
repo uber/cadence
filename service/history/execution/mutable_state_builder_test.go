@@ -107,7 +107,7 @@ func (s *mutableStateSuite) TearDownTest() {
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_ReplicateDecisionCompleted() {
 	version := int64(12)
 	runID := uuid.New()
-	s.msBuilder = NewMutableStateBuilderWithReplicationStateWithEventV2(
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		version,
@@ -137,7 +137,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_FailoverDecisionTimeout() {
 	version := int64(12)
 	runID := uuid.New()
-	s.msBuilder = NewMutableStateBuilderWithReplicationStateWithEventV2(
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		version,
@@ -147,7 +147,6 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
-	s.msBuilder.UpdateReplicationStateVersion(version+1, true)
 	s.NotNil(s.msBuilder.AddDecisionTaskTimedOutEvent(newDecisionScheduleEvent.GetEventId(), newDecisionStartedEvent.GetEventId()))
 	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
 	s.Equal(1, len(s.msBuilder.GetHistoryBuilder().history))
@@ -156,7 +155,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_FailoverDecisionFailed() {
 	version := int64(12)
 	runID := uuid.New()
-	s.msBuilder = NewMutableStateBuilderWithReplicationStateWithEventV2(
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		version,
@@ -166,7 +165,6 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
-	s.msBuilder.UpdateReplicationStateVersion(version+1, true)
 	s.NotNil(s.msBuilder.AddDecisionTaskFailedEvent(
 		newDecisionScheduleEvent.GetEventId(),
 		newDecisionStartedEvent.GetEventId(),
@@ -321,19 +319,10 @@ func (s *mutableStateSuite) TestReorderEvents() {
 		},
 	}
 
-	replicationState := &persistence.ReplicationState{
-		StartVersion:        int64(1),
-		CurrentVersion:      int64(1),
-		LastWriteVersion:    common.EmptyVersion,
-		LastWriteEventID:    common.EmptyEventID,
-		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
-	}
-
 	dbState := &persistence.WorkflowMutableState{
-		ExecutionInfo:    info,
-		ActivityInfos:    activityInfos,
-		BufferedEvents:   bufferedEvents,
-		ReplicationState: replicationState,
+		ExecutionInfo:  info,
+		ActivityInfos:  activityInfos,
+		BufferedEvents: bufferedEvents,
 	}
 
 	s.msBuilder.Load(dbState)
@@ -805,14 +794,6 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		},
 	}
 
-	replicationState := &persistence.ReplicationState{
-		StartVersion:        failoverVersion,
-		CurrentVersion:      failoverVersion,
-		LastWriteVersion:    common.EmptyVersion,
-		LastWriteEventID:    common.EmptyEventID,
-		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
-	}
-
 	versionHistories := &persistence.VersionHistories{
 		Histories: []*persistence.VersionHistory{
 			{
@@ -832,7 +813,6 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		SignalInfos:         signalInfos,
 		SignalRequestedIDs:  signalRequestIDs,
 		BufferedEvents:      bufferedEvents,
-		ReplicationState:    replicationState,
 		VersionHistories:    versionHistories,
 	}
 }

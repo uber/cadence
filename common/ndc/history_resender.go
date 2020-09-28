@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCHistoryResender_mock.go
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination history_resender_mock.go
 
-package xdc
+package ndc
 
 import (
 	"context"
@@ -49,6 +49,7 @@ var (
 
 const (
 	resendContextTimeout = 30 * time.Second
+	defaultPageSize      = int32(100)
 )
 
 type (
@@ -56,8 +57,8 @@ type (
 	// the provided func should be thread safe
 	nDCHistoryReplicationFn func(ctx context.Context, request *history.ReplicateEventsV2Request) error
 
-	// NDCHistoryResender is the interface for resending history events to remote
-	NDCHistoryResender interface {
+	// HistoryResender is the interface for resending history events to remote
+	HistoryResender interface {
 		// SendSingleWorkflowHistory sends multiple run IDs's history events to remote
 		SendSingleWorkflowHistory(
 			domainID string,
@@ -70,8 +71,8 @@ type (
 		) error
 	}
 
-	// NDCHistoryResenderImpl is the implementation of NDCHistoryResender
-	NDCHistoryResenderImpl struct {
+	// HistoryResenderImpl is the implementation of NDCHistoryResender
+	HistoryResenderImpl struct {
 		domainCache           cache.DomainCache
 		adminClient           adminClient.Client
 		historyReplicationFn  nDCHistoryReplicationFn
@@ -87,8 +88,8 @@ type (
 	}
 )
 
-// NewNDCHistoryResender create a new NDCHistoryResenderImpl
-func NewNDCHistoryResender(
+// NewHistoryResender create a new NDCHistoryResenderImpl
+func NewHistoryResender(
 	domainCache cache.DomainCache,
 	adminClient adminClient.Client,
 	historyReplicationFn nDCHistoryReplicationFn,
@@ -96,9 +97,9 @@ func NewNDCHistoryResender(
 	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
 	currentExecutionCheck invariant.Invariant,
 	logger log.Logger,
-) *NDCHistoryResenderImpl {
+) *HistoryResenderImpl {
 
-	return &NDCHistoryResenderImpl{
+	return &HistoryResenderImpl{
 		domainCache:           domainCache,
 		adminClient:           adminClient,
 		historyReplicationFn:  historyReplicationFn,
@@ -110,7 +111,7 @@ func NewNDCHistoryResender(
 }
 
 // SendSingleWorkflowHistory sends one run IDs's history events to remote
-func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
+func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 	domainID string,
 	workflowID string,
 	runID string,
@@ -186,7 +187,7 @@ func (n *NDCHistoryResenderImpl) SendSingleWorkflowHistory(
 	return nil
 }
 
-func (n *NDCHistoryResenderImpl) getPaginationFn(
+func (n *HistoryResenderImpl) getPaginationFn(
 	ctx context.Context,
 	domainID string,
 	workflowID string,
@@ -228,7 +229,7 @@ func (n *NDCHistoryResenderImpl) getPaginationFn(
 	}
 }
 
-func (n *NDCHistoryResenderImpl) createReplicationRawRequest(
+func (n *HistoryResenderImpl) createReplicationRawRequest(
 	domainID string,
 	workflowID string,
 	runID string,
@@ -248,7 +249,7 @@ func (n *NDCHistoryResenderImpl) createReplicationRawRequest(
 	return request
 }
 
-func (n *NDCHistoryResenderImpl) sendReplicationRawRequest(
+func (n *HistoryResenderImpl) sendReplicationRawRequest(
 	ctx context.Context,
 	request *history.ReplicateEventsV2Request,
 ) error {
@@ -258,7 +259,7 @@ func (n *NDCHistoryResenderImpl) sendReplicationRawRequest(
 	return n.historyReplicationFn(ctx, request)
 }
 
-func (n *NDCHistoryResenderImpl) getHistory(
+func (n *HistoryResenderImpl) getHistory(
 	ctx context.Context,
 	domainID string,
 	workflowID string,
@@ -303,7 +304,7 @@ func (n *NDCHistoryResenderImpl) getHistory(
 	return response, nil
 }
 
-func (n *NDCHistoryResenderImpl) fixCurrentExecution(
+func (n *HistoryResenderImpl) fixCurrentExecution(
 	domainID string,
 	workflowID string,
 	runID string,

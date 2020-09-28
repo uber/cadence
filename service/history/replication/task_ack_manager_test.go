@@ -118,18 +118,6 @@ func (s *taskAckManagerSuite) TearDownTest() {
 	s.mockShard.Finish(s.T())
 }
 
-func (s *taskAckManagerSuite) TestConvertLastReplicationInfo() {
-	info := map[string]*persistence.ReplicationInfo{
-		"test": {
-			Version:     0,
-			LastEventID: 0,
-		}}
-	replicationInfo := convertLastReplicationInfo(info)
-	s.NotNil(replicationInfo["test"])
-	s.Equal(info["test"].Version, replicationInfo["test"].GetVersion())
-	s.Equal(info["test"].LastEventID, replicationInfo["test"].GetLastEventId())
-}
-
 func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	firstEventID := int64(0)
 	nextEventID := int64(1)

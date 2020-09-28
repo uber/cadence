@@ -59,18 +59,18 @@ func (m *MockStateBuilder) EXPECT() *MockStateBuilderMockRecorder {
 }
 
 // ApplyEvents mocks base method
-func (m *MockStateBuilder) ApplyEvents(domainID, requestID string, workflowExecution shared.WorkflowExecution, history, newRunHistory []*shared.HistoryEvent, newRunNDC bool) (MutableState, error) {
+func (m *MockStateBuilder) ApplyEvents(domainID, requestID string, workflowExecution shared.WorkflowExecution, history, newRunHistory []*shared.HistoryEvent) (MutableState, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyEvents", domainID, requestID, workflowExecution, history, newRunHistory, newRunNDC)
+	ret := m.ctrl.Call(m, "ApplyEvents", domainID, requestID, workflowExecution, history, newRunHistory)
 	ret0, _ := ret[0].(MutableState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyEvents indicates an expected call of ApplyEvents
-func (mr *MockStateBuilderMockRecorder) ApplyEvents(domainID, requestID, workflowExecution, history, newRunHistory, newRunNDC interface{}) *gomock.Call {
+func (mr *MockStateBuilderMockRecorder) ApplyEvents(domainID, requestID, workflowExecution, history, newRunHistory interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyEvents", reflect.TypeOf((*MockStateBuilder)(nil).ApplyEvents), domainID, requestID, workflowExecution, history, newRunHistory, newRunNDC)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyEvents", reflect.TypeOf((*MockStateBuilder)(nil).ApplyEvents), domainID, requestID, workflowExecution, history, newRunHistory)
 }
 
 // GetMutableState mocks base method

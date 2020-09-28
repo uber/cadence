@@ -359,7 +359,6 @@ func (r *transactionManagerForExistingWorkflowImpl) suppressCurrentAndUpdateAsCu
 		currentWorkflow.GetContext(),
 		currentWorkflow.GetMutableState(),
 		currentWorkflowPolicy.Ptr(),
-		nil,
 	)
 }
 
@@ -383,7 +382,6 @@ func (r *transactionManagerForExistingWorkflowImpl) conflictResolveAsCurrent(
 		targetWorkflow.GetMutableState(),
 		newContext,
 		newMutableState,
-		nil,
 		nil,
 		nil,
 		nil,
@@ -459,7 +457,6 @@ func (r *transactionManagerForExistingWorkflowImpl) conflictResolveAsZombie(
 		targetWorkflow.GetMutableState(),
 		newContext,
 		newMutableState,
-		nil,
 		nil,
 		nil,
 		nil,

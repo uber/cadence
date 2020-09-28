@@ -298,18 +298,6 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		Memo:                               info.GetMemo(),
 	}
 
-	if info.LastWriteEventID != nil {
-		state.ReplicationState = &p.ReplicationState{}
-		state.ReplicationState.StartVersion = info.GetStartVersion()
-		state.ReplicationState.CurrentVersion = info.GetCurrentVersion()
-		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
-		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
-		state.ReplicationState.LastReplicationInfo = make(map[string]*p.ReplicationInfo, len(info.LastReplicationInfo))
-		for k, v := range info.LastReplicationInfo {
-			state.ReplicationState.LastReplicationInfo[k] = &p.ReplicationInfo{Version: v.GetVersion(), LastEventID: v.GetLastEventID()}
-		}
-	}
-
 	if info.GetVersionHistories() != nil {
 		state.VersionHistories = p.NewDataBlob(
 			info.GetVersionHistories(),
@@ -733,32 +721,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 		state := executionInfo.State
 		closeStatus := executionInfo.CloseStatus
 
-		if request.CurrentWorkflowCAS != nil {
-			prevRunID := sqlplugin.MustParseUUID(request.CurrentWorkflowCAS.PrevRunID)
-			prevLastWriteVersion := request.CurrentWorkflowCAS.PrevLastWriteVersion
-			prevState := request.CurrentWorkflowCAS.PrevState
-
-			if err := assertAndUpdateCurrentExecution(
-				ctx,
-				tx,
-				m.shardID,
-				domainID,
-				workflowID,
-				runID,
-				prevRunID,
-				prevLastWriteVersion,
-				prevState,
-				createRequestID,
-				state,
-				closeStatus,
-				startVersion,
-				lastWriteVersion); err != nil {
-				return &workflow.InternalServiceError{Message: fmt.Sprintf(
-					"ConflictResolveWorkflowExecution. Failed to comare and swap the current record. Error: %v",
-					err,
-				)}
-			}
-		} else if currentWorkflow != nil {
+		if currentWorkflow != nil {
 			prevRunID := sqlplugin.MustParseUUID(currentWorkflow.ExecutionInfo.RunID)
 
 			if err := assertRunIDAndUpdateCurrentExecution(
@@ -1039,29 +1002,19 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 			return nil, err
 		}
 
-		var lastReplicationInfo map[string]*p.ReplicationInfo
-		if info.GetTaskType() == p.ReplicationTaskTypeHistory {
-			lastReplicationInfo = make(map[string]*p.ReplicationInfo, len(info.LastReplicationInfo))
-			for k, v := range info.LastReplicationInfo {
-				lastReplicationInfo[k] = &p.ReplicationInfo{Version: v.GetVersion(), LastEventID: v.GetLastEventID()}
-			}
-		}
-
 		tasks[i] = &p.ReplicationTaskInfo{
-			TaskID:              row.TaskID,
-			DomainID:            sqlplugin.UUID(info.DomainID).String(),
-			WorkflowID:          info.GetWorkflowID(),
-			RunID:               sqlplugin.UUID(info.RunID).String(),
-			TaskType:            int(info.GetTaskType()),
-			FirstEventID:        info.GetFirstEventID(),
-			NextEventID:         info.GetNextEventID(),
-			Version:             info.GetVersion(),
-			LastReplicationInfo: lastReplicationInfo,
-			ScheduledID:         info.GetScheduledID(),
-			BranchToken:         info.GetBranchToken(),
-			NewRunBranchToken:   info.GetNewRunBranchToken(),
-			ResetWorkflow:       info.GetResetWorkflow(),
-			CreationTime:        info.GetCreationTime(),
+			TaskID:            row.TaskID,
+			DomainID:          sqlplugin.UUID(info.DomainID).String(),
+			WorkflowID:        info.GetWorkflowID(),
+			RunID:             sqlplugin.UUID(info.RunID).String(),
+			TaskType:          int(info.GetTaskType()),
+			FirstEventID:      info.GetFirstEventID(),
+			NextEventID:       info.GetNextEventID(),
+			Version:           info.GetVersion(),
+			ScheduledID:       info.GetScheduledID(),
+			BranchToken:       info.GetBranchToken(),
+			NewRunBranchToken: info.GetNewRunBranchToken(),
+			CreationTime:      info.GetCreationTime(),
 		}
 	}
 	var nextPageToken []byte
@@ -1358,18 +1311,16 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 ) error {
 	replicationTask := request.TaskInfo
 	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
-		DomainID:            sqlplugin.MustParseUUID(replicationTask.DomainID),
-		WorkflowID:          &replicationTask.WorkflowID,
-		RunID:               sqlplugin.MustParseUUID(replicationTask.RunID),
-		TaskType:            common.Int16Ptr(int16(replicationTask.TaskType)),
-		FirstEventID:        &replicationTask.FirstEventID,
-		NextEventID:         &replicationTask.NextEventID,
-		Version:             &replicationTask.Version,
-		LastReplicationInfo: toSqldbReplicationInfo(replicationTask.LastReplicationInfo),
-		ScheduledID:         &replicationTask.ScheduledID,
-		BranchToken:         replicationTask.BranchToken,
-		NewRunBranchToken:   replicationTask.NewRunBranchToken,
-		ResetWorkflow:       &replicationTask.ResetWorkflow,
+		DomainID:          sqlplugin.MustParseUUID(replicationTask.DomainID),
+		WorkflowID:        &replicationTask.WorkflowID,
+		RunID:             sqlplugin.MustParseUUID(replicationTask.RunID),
+		TaskType:          common.Int16Ptr(int16(replicationTask.TaskType)),
+		FirstEventID:      &replicationTask.FirstEventID,
+		NextEventID:       &replicationTask.NextEventID,
+		Version:           &replicationTask.Version,
+		ScheduledID:       &replicationTask.ScheduledID,
+		BranchToken:       replicationTask.BranchToken,
+		NewRunBranchToken: replicationTask.NewRunBranchToken,
 	})
 	if err != nil {
 		return err
@@ -1394,16 +1345,4 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	}
 
 	return nil
-}
-
-func toSqldbReplicationInfo(info map[string]*p.ReplicationInfo) map[string]*sqlblobs.ReplicationInfo {
-	replicationInfoMap := make(map[string]*sqlblobs.ReplicationInfo)
-	for k, v := range info {
-		replicationInfoMap[k] = &sqlblobs.ReplicationInfo{
-			Version:     common.Int64Ptr(v.Version),
-			LastEventID: common.Int64Ptr(v.LastEventID),
-		}
-	}
-
-	return replicationInfoMap
 }
