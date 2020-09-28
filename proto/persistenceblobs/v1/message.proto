@@ -114,11 +114,11 @@ message HistoryEvent {
         WorkflowExecutionCompletedEventAttributes workflow_execution_completed_event_attributes = 7;
         WorkflowExecutionFailedEventAttributes workflow_execution_failed_event_attributes = 8;
         WorkflowExecutionTimedOutEventAttributes workflow_execution_timed_out_event_attributes = 9;
-        WorkflowTaskScheduledEventAttributes workflow_task_scheduled_event_attributes = 10;
-        WorkflowTaskStartedEventAttributes workflow_task_started_event_attributes = 11;
-        WorkflowTaskCompletedEventAttributes workflow_task_completed_event_attributes = 12;
-        WorkflowTaskTimedOutEventAttributes workflow_task_timed_out_event_attributes = 13;
-        WorkflowTaskFailedEventAttributes workflow_task_failed_event_attributes = 14;
+        DecisionTaskScheduledEventAttributes decision_task_scheduled_event_attributes = 10;
+        DecisionTaskStartedEventAttributes decision_task_started_event_attributes = 11;
+        DecisionTaskCompletedEventAttributes decision_task_completed_event_attributes = 12;
+        DecisionTaskTimedOutEventAttributes decision_task_timed_out_event_attributes = 13;
+        DecisionTaskFailedEventAttributes decision_task_failed_event_attributes = 14;
         ActivityTaskScheduledEventAttributes activity_task_scheduled_event_attributes = 15;
         ActivityTaskStartedEventAttributes activity_task_started_event_attributes = 16;
         ActivityTaskCompletedEventAttributes activity_task_completed_event_attributes = 17;
@@ -160,11 +160,11 @@ enum EventType {
     EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED = 2;
     EVENT_TYPE_WORKFLOW_EXECUTION_FAILED = 3;
     EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT = 4;
-    EVENT_TYPE_WORKFLOW_TASK_SCHEDULED = 5;
-    EVENT_TYPE_WORKFLOW_TASK_STARTED = 6;
-    EVENT_TYPE_WORKFLOW_TASK_COMPLETED = 7;
-    EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT = 8;
-    EVENT_TYPE_WORKFLOW_TASK_FAILED = 9;
+    EVENT_TYPE_DECISION_TASK_SCHEDULED = 5;
+    EVENT_TYPE_DECISION_TASK_STARTED = 6;
+    EVENT_TYPE_DECISION_TASK_COMPLETED = 7;
+    EVENT_TYPE_DECISION_TASK_TIMED_OUT = 8;
+    EVENT_TYPE_DECISION_TASK_FAILED = 9;
     EVENT_TYPE_ACTIVITY_TASK_SCHEDULED = 10;
     EVENT_TYPE_ACTIVITY_TASK_STARTED = 11;
     EVENT_TYPE_ACTIVITY_TASK_COMPLETED = 12;
@@ -210,7 +210,7 @@ message WorkflowExecutionStartedEventAttributes {
     // Timeout of a single workflow run.
     google.protobuf.Duration workflow_run_timeout = 8 [(gogoproto.stdduration) = true];
     // Timeout of a single workflow task.
-    google.protobuf.Duration workflow_task_timeout = 9 [(gogoproto.stdduration) = true];
+    google.protobuf.Duration decision_task_timeout = 9 [(gogoproto.stdduration) = true];
     string continued_execution_run_id = 10;
     ContinueAsNewInitiator initiator = 11;
     Failure continued_failure = 12;
@@ -226,7 +226,7 @@ message WorkflowExecutionStartedEventAttributes {
     // This time is passed without change to the next run/retry of a workflow.
     google.protobuf.Timestamp workflow_execution_expiration_time = 19 [(gogoproto.stdtime) = true];
     string cron_schedule = 20;
-    google.protobuf.Duration first_workflow_task_backoff = 21 [(gogoproto.stdduration) = true];
+    google.protobuf.Duration first_decision_task_backoff = 21 [(gogoproto.stdduration) = true];
     Memo memo = 22;
     SearchAttributes search_attributes = 23;
     ResetPoints prev_auto_reset_points = 24;
@@ -235,13 +235,13 @@ message WorkflowExecutionStartedEventAttributes {
 
 message WorkflowExecutionCompletedEventAttributes {
     Payloads result = 1;
-    int64 workflow_task_completed_event_id = 2;
+    int64 decision_task_completed_event_id = 2;
 }
 
 message WorkflowExecutionFailedEventAttributes {
     Failure failure = 1;
     RetryState retry_state = 2;
-    int64 workflow_task_completed_event_id = 3;
+    int64 decision_task_completed_event_id = 3;
 }
 
 message WorkflowExecutionTimedOutEventAttributes {
@@ -257,8 +257,8 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     // Timeout of a single workflow run.
     google.protobuf.Duration workflow_run_timeout = 5 [(gogoproto.stdduration) = true];
     // Timeout of a single workflow task.
-    google.protobuf.Duration workflow_task_timeout = 6 [(gogoproto.stdduration) = true];
-    int64 workflow_task_completed_event_id = 7;
+    google.protobuf.Duration decision_task_timeout = 6 [(gogoproto.stdduration) = true];
+    int64 decision_task_completed_event_id = 7;
     google.protobuf.Duration backoff_start_interval = 8 [(gogoproto.stdduration) = true];
     ContinueAsNewInitiator initiator = 9;
     Failure failure = 10;
@@ -268,7 +268,7 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     SearchAttributes search_attributes = 14;
 }
 
-message WorkflowTaskScheduledEventAttributes {
+message DecisionTaskScheduledEventAttributes {
     TaskList task_list = 1;
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -276,29 +276,29 @@ message WorkflowTaskScheduledEventAttributes {
     int32 attempt = 3;
 }
 
-message WorkflowTaskStartedEventAttributes {
+message DecisionTaskStartedEventAttributes {
     int64 scheduled_event_id = 1;
     string identity = 2;
     string request_id = 3;
 }
 
-message WorkflowTaskCompletedEventAttributes {
+message DecisionTaskCompletedEventAttributes {
     int64 scheduled_event_id = 1;
     int64 started_event_id = 2;
     string identity = 3;
     string binary_checksum = 4;
 }
 
-message WorkflowTaskTimedOutEventAttributes {
+message DecisionTaskTimedOutEventAttributes {
     int64 scheduled_event_id = 1;
     int64 started_event_id = 2;
     TimeoutType timeout_type = 3;
 }
 
-message WorkflowTaskFailedEventAttributes {
+message DecisionTaskFailedEventAttributes {
     int64 scheduled_event_id = 1;
     int64 started_event_id = 2;
-    WorkflowTaskFailedCause cause = 3;
+    DecisionTaskFailedCause cause = 3;
     Failure failure = 4;
     string identity = 5;
     // For reset workflow.
@@ -333,7 +333,7 @@ message ActivityTaskScheduledEventAttributes {
     google.protobuf.Duration start_to_close_timeout = 9 [(gogoproto.stdduration) = true];
     // Maximum time between successful worker heartbeats.
     google.protobuf.Duration heartbeat_timeout = 10 [(gogoproto.stdduration) = true];
-    int64 workflow_task_completed_event_id = 11;
+    int64 decision_task_completed_event_id = 11;
     // Activities are provided by a default retry policy controlled through the service dynamic configuration.
     // Retries are happening up to schedule_to_close_timeout.
     // To disable retries set retry_policy.maximum_attempts to 1.
@@ -373,7 +373,7 @@ message ActivityTaskTimedOutEventAttributes {
 
 message ActivityTaskCancelRequestedEventAttributes {
     int64 scheduled_event_id = 1;
-    int64 workflow_task_completed_event_id = 2;
+    int64 decision_task_completed_event_id = 2;
 }
 
 message ActivityTaskCanceledEventAttributes {
@@ -389,7 +389,7 @@ message TimerStartedEventAttributes {
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration start_to_fire_timeout = 2 [(gogoproto.stdduration) = true];
-    int64 workflow_task_completed_event_id = 3;
+    int64 decision_task_completed_event_id = 3;
 }
 
 message TimerFiredEventAttributes {
@@ -400,7 +400,7 @@ message TimerFiredEventAttributes {
 message TimerCanceledEventAttributes {
     string timer_id = 1;
     int64 started_event_id = 2;
-    int64 workflow_task_completed_event_id = 3;
+    int64 decision_task_completed_event_id = 3;
     string identity = 4;
 }
 
@@ -412,14 +412,14 @@ message WorkflowExecutionCancelRequestedEventAttributes {
 }
 
 message WorkflowExecutionCanceledEventAttributes {
-    int64 workflow_task_completed_event_id = 1;
+    int64 decision_task_completed_event_id = 1;
     Payloads details = 2;
 }
 
 message MarkerRecordedEventAttributes {
     string marker_name = 1;
     map<string, Payloads> details = 2;
-    int64 workflow_task_completed_event_id = 3;
+    int64 decision_task_completed_event_id = 3;
     Header header = 4;
     Failure failure = 5;
 }
@@ -437,7 +437,7 @@ message WorkflowExecutionTerminatedEventAttributes {
 }
 
 message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
-    int64 workflow_task_completed_event_id = 1;
+    int64 decision_task_completed_event_id = 1;
     string domain = 2;
     WorkflowExecution workflow_execution = 3;
     string control = 4;
@@ -446,7 +446,7 @@ message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
 
 message RequestCancelExternalWorkflowExecutionFailedEventAttributes {
     CancelExternalWorkflowExecutionFailedCause cause = 1;
-    int64 workflow_task_completed_event_id = 2;
+    int64 decision_task_completed_event_id = 2;
     string domain = 3;
     WorkflowExecution workflow_execution = 4;
     int64 initiated_event_id = 5;
@@ -460,7 +460,7 @@ message ExternalWorkflowExecutionCancelRequestedEventAttributes {
 }
 
 message SignalExternalWorkflowExecutionInitiatedEventAttributes {
-    int64 workflow_task_completed_event_id = 1;
+    int64 decision_task_completed_event_id = 1;
     string domain = 2;
     WorkflowExecution workflow_execution = 3;
     string signal_name = 4;
@@ -471,7 +471,7 @@ message SignalExternalWorkflowExecutionInitiatedEventAttributes {
 
 message SignalExternalWorkflowExecutionFailedEventAttributes {
     SignalExternalWorkflowExecutionFailedCause cause = 1;
-    int64 workflow_task_completed_event_id = 2;
+    int64 decision_task_completed_event_id = 2;
     string domain = 3;
     WorkflowExecution workflow_execution = 4;
     int64 initiated_event_id = 5;
@@ -486,7 +486,7 @@ message ExternalWorkflowExecutionSignaledEventAttributes {
 }
 
 message UpsertWorkflowSearchAttributesEventAttributes {
-    int64 workflow_task_completed_event_id = 1;
+    int64 decision_task_completed_event_id = 1;
     SearchAttributes search_attributes = 2;
 }
 
@@ -501,11 +501,11 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
     // Timeout of a single workflow run.
     google.protobuf.Duration workflow_run_timeout = 7 [(gogoproto.stdduration) = true];
     // Timeout of a single workflow task.
-    google.protobuf.Duration workflow_task_timeout = 8 [(gogoproto.stdduration) = true];
+    google.protobuf.Duration decision_task_timeout = 8 [(gogoproto.stdduration) = true];
     // Default: PARENT_CLOSE_POLICY_TERMINATE.
     ParentClosePolicy parent_close_policy = 9;
     string control = 10;
-    int64 workflow_task_completed_event_id = 11;
+    int64 decision_task_completed_event_id = 11;
     // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
     WorkflowIdReusePolicy workflow_id_reuse_policy = 12;
     RetryPolicy retry_policy = 13;
@@ -522,7 +522,7 @@ message StartChildWorkflowExecutionFailedEventAttributes {
     StartChildWorkflowExecutionFailedCause cause = 4;
     string control = 5;
     int64 initiated_event_id = 6;
-    int64 workflow_task_completed_event_id = 7;
+    int64 decision_task_completed_event_id = 7;
 }
 
 message ChildWorkflowExecutionStartedEventAttributes {
@@ -801,31 +801,31 @@ enum TaskListType {
     TASK_LIST_TYPE_ACTIVITY = 2;
 }
 
-enum WorkflowTaskFailedCause {
-    WORKFLOW_TASK_FAILED_CAUSE_UNSPECIFIED = 0;
-    WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND = 1;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_ACTIVITY_ATTRIBUTES = 2;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES = 3;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_START_TIMER_ATTRIBUTES = 4;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_CANCEL_TIMER_ATTRIBUTES = 5;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_RECORD_MARKER_ATTRIBUTES = 6;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES = 7;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES = 8;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES = 9;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES = 10;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_CONTINUE_AS_NEW_ATTRIBUTES = 11;
-    WORKFLOW_TASK_FAILED_CAUSE_START_TIMER_DUPLICATE_ID = 12;
-    WORKFLOW_TASK_FAILED_CAUSE_RESET_STICKY_TASK_LIST = 13;
-    WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_WORKER_UNHANDLED_FAILURE = 14;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES = 15;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_START_CHILD_EXECUTION_ATTRIBUTES = 16;
-    WORKFLOW_TASK_FAILED_CAUSE_FORCE_CLOSE_COMMAND = 17;
-    WORKFLOW_TASK_FAILED_CAUSE_FAILOVER_CLOSE_COMMAND = 18;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_SIGNAL_INPUT_SIZE = 19;
-    WORKFLOW_TASK_FAILED_CAUSE_RESET_WORKFLOW = 20;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_BINARY = 21;
-    WORKFLOW_TASK_FAILED_CAUSE_SCHEDULE_ACTIVITY_DUPLICATE_ID = 22;
-    WORKFLOW_TASK_FAILED_CAUSE_BAD_SEARCH_ATTRIBUTES = 23;
+enum DecisionTaskFailedCause {
+    DECISION_TASK_FAILED_CAUSE_UNSPECIFIED = 0;
+    DECISION_TASK_FAILED_CAUSE_UNHANDLED_COMMAND = 1;
+    DECISION_TASK_FAILED_CAUSE_BAD_SCHEDULE_ACTIVITY_ATTRIBUTES = 2;
+    DECISION_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES = 3;
+    DECISION_TASK_FAILED_CAUSE_BAD_START_TIMER_ATTRIBUTES = 4;
+    DECISION_TASK_FAILED_CAUSE_BAD_CANCEL_TIMER_ATTRIBUTES = 5;
+    DECISION_TASK_FAILED_CAUSE_BAD_RECORD_MARKER_ATTRIBUTES = 6;
+    DECISION_TASK_FAILED_CAUSE_BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES = 7;
+    DECISION_TASK_FAILED_CAUSE_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES = 8;
+    DECISION_TASK_FAILED_CAUSE_BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES = 9;
+    DECISION_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES = 10;
+    DECISION_TASK_FAILED_CAUSE_BAD_CONTINUE_AS_NEW_ATTRIBUTES = 11;
+    DECISION_TASK_FAILED_CAUSE_START_TIMER_DUPLICATE_ID = 12;
+    DECISION_TASK_FAILED_CAUSE_RESET_STICKY_TASK_LIST = 13;
+    DECISION_TASK_FAILED_CAUSE_WORKFLOW_WORKER_UNHANDLED_FAILURE = 14;
+    DECISION_TASK_FAILED_CAUSE_BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES = 15;
+    DECISION_TASK_FAILED_CAUSE_BAD_START_CHILD_EXECUTION_ATTRIBUTES = 16;
+    DECISION_TASK_FAILED_CAUSE_FORCE_CLOSE_COMMAND = 17;
+    DECISION_TASK_FAILED_CAUSE_FAILOVER_CLOSE_COMMAND = 18;
+    DECISION_TASK_FAILED_CAUSE_BAD_SIGNAL_INPUT_SIZE = 19;
+    DECISION_TASK_FAILED_CAUSE_RESET_WORKFLOW = 20;
+    DECISION_TASK_FAILED_CAUSE_BAD_BINARY = 21;
+    DECISION_TASK_FAILED_CAUSE_SCHEDULE_ACTIVITY_DUPLICATE_ID = 22;
+    DECISION_TASK_FAILED_CAUSE_BAD_SEARCH_ATTRIBUTES = 23;
 }
 
 enum ContinueAsNewInitiator {
@@ -842,7 +842,7 @@ message ResetPoints {
 message ResetPointInfo {
     string binary_checksum = 1;
     string run_id = 2;
-    int64 first_workflow_task_completed_id = 3;
+    int64 first_decision_task_completed_id = 3;
     google.protobuf.Timestamp create_time = 4 [(gogoproto.stdtime) = true];
     // (-- api-linter: core::0214::resource-expiry=disabled
     //     aip.dev/not-precedent: TTL is not defined for ResetPointInfo. --)
@@ -887,7 +887,7 @@ message WorkflowExecutionInfo {
     string workflow_type_name = 10;
     google.protobuf.Duration workflow_execution_timeout = 11 [(gogoproto.stdduration) = true];
     google.protobuf.Duration workflow_run_timeout = 12 [(gogoproto.stdduration) = true];
-    google.protobuf.Duration default_workflow_task_timeout = 13 [(gogoproto.stdduration) = true];
+    google.protobuf.Duration default_decision_task_timeout = 13 [(gogoproto.stdduration) = true];
     int64 start_version = 14;
     ReplicationData replication_data = 16;
     int64 last_event_task_id = 17;
@@ -895,16 +895,16 @@ message WorkflowExecutionInfo {
     int64 last_processed_event = 19;
     google.protobuf.Timestamp start_time = 20 [(gogoproto.stdtime) = true];
     google.protobuf.Timestamp last_update_time = 21 [(gogoproto.stdtime) = true];
-    int64 workflow_task_version = 22;
-    int64 workflow_task_schedule_id = 23;
-    int64 workflow_task_started_id = 24;
-    google.protobuf.Duration workflow_task_timeout = 25 [(gogoproto.stdduration) = true];
-    int32 workflow_task_attempt = 26;
-    google.protobuf.Timestamp workflow_task_started_time = 27 [(gogoproto.stdtime) = true];
-    google.protobuf.Timestamp workflow_task_scheduled_time = 28 [(gogoproto.stdtime) = true];
+    int64 decision_task_version = 22;
+    int64 decision_task_schedule_id = 23;
+    int64 decision_task_started_id = 24;
+    google.protobuf.Duration decision_task_timeout = 25 [(gogoproto.stdduration) = true];
+    int32 decision_task_attempt = 26;
+    google.protobuf.Timestamp decision_task_started_time = 27 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp decision_task_scheduled_time = 28 [(gogoproto.stdtime) = true];
     bool cancel_requested = 29;
-    google.protobuf.Timestamp workflow_task_original_scheduled_time = 30 [(gogoproto.stdtime) = true];
-    string workflow_task_request_id = 31;
+    google.protobuf.Timestamp decision_task_original_scheduled_time = 30 [(gogoproto.stdtime) = true];
+    string decision_task_request_id = 31;
     string cancel_request_id = 32;
     string sticky_task_list = 33;
     // (-- api-linter: core::0140::prepositions=disabled
@@ -1140,7 +1140,7 @@ enum TaskType {
     TASK_TYPE_UNSPECIFIED = 0;
     TASK_TYPE_REPLICATION_HISTORY = 1;
     TASK_TYPE_REPLICATION_SYNC_ACTIVITY = 2;
-    TASK_TYPE_TRANSFER_WORKFLOW_TASK = 3;
+    TASK_TYPE_TRANSFER_DECISION_TASK = 3;
     TASK_TYPE_TRANSFER_ACTIVITY_TASK = 4;
     TASK_TYPE_TRANSFER_CLOSE_EXECUTION = 5;
     TASK_TYPE_TRANSFER_CANCEL_EXECUTION = 6;
@@ -1149,7 +1149,7 @@ enum TaskType {
     TASK_TYPE_TRANSFER_RECORD_WORKFLOW_STARTED = 9;
     TASK_TYPE_TRANSFER_RESET_WORKFLOW = 10;
     TASK_TYPE_TRANSFER_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES = 11;
-    TASK_TYPE_WORKFLOW_TASK_TIMEOUT = 12;
+    TASK_TYPE_DECISION_TASK_TIMEOUT = 12;
     TASK_TYPE_ACTIVITY_TIMEOUT = 13;
     TASK_TYPE_USER_TIMER = 14;
     TASK_TYPE_WORKFLOW_RUN_TIMEOUT = 15;
