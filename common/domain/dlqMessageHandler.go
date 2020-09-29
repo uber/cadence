@@ -23,6 +23,8 @@
 package domain
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -65,12 +67,13 @@ func (d *dlqMessageHandlerImpl) Read(
 	pageToken []byte,
 ) ([]*replicator.ReplicationTask, []byte, error) {
 
-	ackLevel, err := d.domainReplicationQueue.GetDLQAckLevel()
+	ackLevel, err := d.domainReplicationQueue.GetDLQAckLevel(context.TODO())
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return d.domainReplicationQueue.GetMessagesFromDLQ(
+		context.TODO(),
 		ackLevel,
 		lastMessageID,
 		pageSize,
@@ -83,12 +86,13 @@ func (d *dlqMessageHandlerImpl) Purge(
 	lastMessageID int64,
 ) error {
 
-	ackLevel, err := d.domainReplicationQueue.GetDLQAckLevel()
+	ackLevel, err := d.domainReplicationQueue.GetDLQAckLevel(context.TODO())
 	if err != nil {
 		return err
 	}
 
 	if err := d.domainReplicationQueue.RangeDeleteMessagesFromDLQ(
+		context.TODO(),
 		ackLevel,
 		lastMessageID,
 	); err != nil {
@@ -96,6 +100,7 @@ func (d *dlqMessageHandlerImpl) Purge(
 	}
 
 	if err := d.domainReplicationQueue.UpdateDLQAckLevel(
+		context.TODO(),
 		lastMessageID,
 	); err != nil {
 		d.logger.Error("Failed to update DLQ ack level after purging messages", tag.Error(err))
@@ -111,12 +116,13 @@ func (d *dlqMessageHandlerImpl) Merge(
 	pageToken []byte,
 ) ([]byte, error) {
 
-	ackLevel, err := d.domainReplicationQueue.GetDLQAckLevel()
+	ackLevel, err := d.domainReplicationQueue.GetDLQAckLevel(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
 	messages, token, err := d.domainReplicationQueue.GetMessagesFromDLQ(
+		context.TODO(),
 		ackLevel,
 		lastMessageID,
 		pageSize,
@@ -142,13 +148,14 @@ func (d *dlqMessageHandlerImpl) Merge(
 	}
 
 	if err := d.domainReplicationQueue.RangeDeleteMessagesFromDLQ(
+		context.TODO(),
 		ackLevel,
 		ackedMessageID,
 	); err != nil {
 		d.logger.Error("failed to delete merged tasks on merging domain DLQ message", tag.Error(err))
 		return nil, err
 	}
-	if err := d.domainReplicationQueue.UpdateDLQAckLevel(ackedMessageID); err != nil {
+	if err := d.domainReplicationQueue.UpdateDLQAckLevel(context.TODO(), ackedMessageID); err != nil {
 		d.logger.Error("failed to update ack level on merging domain DLQ message", tag.Error(err))
 	}
 

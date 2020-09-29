@@ -81,16 +81,16 @@ type (
 	// DomainReplicationQueue is used to publish and list domain replication tasks
 	DomainReplicationQueue interface {
 		common.Daemon
-		Publish(message interface{}) error
-		PublishToDLQ(message interface{}) error
-		GetReplicationMessages(lastMessageID int64, maxCount int) ([]*replicator.ReplicationTask, int64, error)
-		UpdateAckLevel(lastProcessedMessageID int64, clusterName string) error
-		GetAckLevels() (map[string]int64, error)
-		GetMessagesFromDLQ(firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
-		UpdateDLQAckLevel(lastProcessedMessageID int64) error
-		GetDLQAckLevel() (int64, error)
-		RangeDeleteMessagesFromDLQ(firstMessageID int64, lastMessageID int64) error
-		DeleteMessageFromDLQ(messageID int64) error
+		Publish(ctx context.Context, message interface{}) error
+		PublishToDLQ(ctx context.Context, message interface{}) error
+		GetReplicationMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*replicator.ReplicationTask, int64, error)
+		UpdateAckLevel(ctx context.Context, lastProcessedMessageID int64, clusterName string) error
+		GetAckLevels(ctx context.Context) (map[string]int64, error)
+		GetMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
+		UpdateDLQAckLevel(ctx context.Context, lastProcessedMessageID int64) error
+		GetDLQAckLevel(ctx context.Context) (int64, error)
+		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
+		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
 	}
 )
 
@@ -108,7 +108,10 @@ func (q *domainReplicationQueueImpl) Stop() {
 	close(q.done)
 }
 
-func (q *domainReplicationQueueImpl) Publish(message interface{}) error {
+func (q *domainReplicationQueueImpl) Publish(
+	ctx context.Context,
+	message interface{},
+) error {
 	task, ok := message.(*replicator.ReplicationTask)
 	if !ok {
 		return errors.New("wrong message type")
@@ -118,10 +121,13 @@ func (q *domainReplicationQueueImpl) Publish(message interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
-	return q.queue.EnqueueMessage(context.TODO(), bytes)
+	return q.queue.EnqueueMessage(ctx, bytes)
 }
 
-func (q *domainReplicationQueueImpl) PublishToDLQ(message interface{}) error {
+func (q *domainReplicationQueueImpl) PublishToDLQ(
+	ctx context.Context,
+	message interface{},
+) error {
 	task, ok := message.(*replicator.ReplicationTask)
 	if !ok {
 		return errors.New("wrong message type")
@@ -131,7 +137,7 @@ func (q *domainReplicationQueueImpl) PublishToDLQ(message interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
-	messageID, err := q.queue.EnqueueMessageToDLQ(context.TODO(), bytes)
+	messageID, err := q.queue.EnqueueMessageToDLQ(ctx, bytes)
 	if err != nil {
 		return err
 	}
@@ -146,11 +152,12 @@ func (q *domainReplicationQueueImpl) PublishToDLQ(message interface{}) error {
 }
 
 func (q *domainReplicationQueueImpl) GetReplicationMessages(
+	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
 ) ([]*replicator.ReplicationTask, int64, error) {
 
-	messages, err := q.queue.ReadMessages(context.TODO(), lastMessageID, maxCount)
+	messages, err := q.queue.ReadMessages(ctx, lastMessageID, maxCount)
 	if err != nil {
 		return nil, lastMessageID, err
 	}
@@ -171,11 +178,12 @@ func (q *domainReplicationQueueImpl) GetReplicationMessages(
 }
 
 func (q *domainReplicationQueueImpl) UpdateAckLevel(
+	ctx context.Context,
 	lastProcessedMessageID int64,
 	clusterName string,
 ) error {
 
-	err := q.queue.UpdateAckLevel(context.TODO(), lastProcessedMessageID, clusterName)
+	err := q.queue.UpdateAckLevel(ctx, lastProcessedMessageID, clusterName)
 	if err != nil {
 		return fmt.Errorf("failed to update ack level: %v", err)
 	}
@@ -188,18 +196,21 @@ func (q *domainReplicationQueueImpl) UpdateAckLevel(
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) GetAckLevels() (map[string]int64, error) {
-	return q.queue.GetAckLevels(context.TODO())
+func (q *domainReplicationQueueImpl) GetAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
+	return q.queue.GetAckLevels(ctx)
 }
 
 func (q *domainReplicationQueueImpl) GetMessagesFromDLQ(
+	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
 ) ([]*replicator.ReplicationTask, []byte, error) {
 
-	messages, token, err := q.queue.ReadMessagesFromDLQ(context.TODO(), firstMessageID, lastMessageID, pageSize, pageToken)
+	messages, token, err := q.queue.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -221,11 +232,12 @@ func (q *domainReplicationQueueImpl) GetMessagesFromDLQ(
 }
 
 func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
+	ctx context.Context,
 	lastProcessedMessageID int64,
 ) error {
 
 	if err := q.queue.UpdateDLQAckLevel(
-		context.TODO(),
+		ctx,
 		lastProcessedMessageID,
 		localDomainReplicationCluster,
 	); err != nil {
@@ -241,8 +253,10 @@ func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) GetDLQAckLevel() (int64, error) {
-	dlqMetadata, err := q.queue.GetDLQAckLevels(context.TODO())
+func (q *domainReplicationQueueImpl) GetDLQAckLevel(
+	ctx context.Context,
+) (int64, error) {
+	dlqMetadata, err := q.queue.GetDLQAckLevels(ctx)
 	if err != nil {
 		return emptyMessageID, err
 	}
@@ -255,12 +269,13 @@ func (q *domainReplicationQueueImpl) GetDLQAckLevel() (int64, error) {
 }
 
 func (q *domainReplicationQueueImpl) RangeDeleteMessagesFromDLQ(
+	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
 
 	if err := q.queue.RangeDeleteMessagesFromDLQ(
-		context.TODO(),
+		ctx,
 		firstMessageID,
 		lastMessageID,
 	); err != nil {
@@ -271,14 +286,17 @@ func (q *domainReplicationQueueImpl) RangeDeleteMessagesFromDLQ(
 }
 
 func (q *domainReplicationQueueImpl) DeleteMessageFromDLQ(
+	ctx context.Context,
 	messageID int64,
 ) error {
 
-	return q.queue.DeleteMessageFromDLQ(context.TODO(), messageID)
+	return q.queue.DeleteMessageFromDLQ(ctx, messageID)
 }
 
-func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
-	ackLevelByCluster, err := q.GetAckLevels()
+func (q *domainReplicationQueueImpl) purgeAckedMessages(
+	ctx context.Context,
+) error {
+	ackLevelByCluster, err := q.GetAckLevels(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
@@ -294,7 +312,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 		}
 	}
 
-	err = q.queue.DeleteMessagesBefore(context.TODO(), minAckLevel)
+	err = q.queue.DeleteMessagesBefore(ctx, minAckLevel)
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
@@ -315,7 +333,7 @@ func (q *domainReplicationQueueImpl) purgeProcessor() {
 			return
 		case <-ticker.C:
 			if q.ackLevelUpdated {
-				err := q.purgeAckedMessages()
+				err := q.purgeAckedMessages(context.TODO())
 				if err != nil {
 					q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
 				} else {
