@@ -979,5 +979,34 @@ func newAdminFailoverCommands() []cli.Command {
 				AdminFailoverStart(c)
 			},
 		},
+		{
+			Name:    "pause",
+			Aliases: []string{"p"},
+			Usage:   "pause failover workflow",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "Optional Failover workflow runID",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverPause(c)
+			},
+		},
+		{
+			Name:    "resume",
+			Aliases: []string{"re"},
+			Usage:   "resume paused failover workflow",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "Optional Failover workflow runID",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverResume(c)
+			},
+		},
 	}
+
 }

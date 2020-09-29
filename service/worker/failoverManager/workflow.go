@@ -54,7 +54,11 @@ const (
 	errMsgTargetClusterIsEmpty = "targetCluster is empty"
 
 	// QueryType for failover workflow
-	QueryType = "state"
+	QueryType    = "state"
+	// PauseSignal signal name for pause
+	PauseSignal  = "pause"
+	// ResumeSignal signal name for resume
+	ResumeSignal = "resume"
 )
 
 type (
@@ -142,7 +146,19 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	batchSize := params.BatchFailoverSize
 	times := len(domains) / batchSize
 
+	pauseCh := workflow.GetSignalChannel(ctx, PauseSignal)
+	resumeCh := workflow.GetSignalChannel(ctx, ResumeSignal)
+	var shouldPause bool
+
 	for i := 0; i < times; i++ {
+		// check if need to pause
+		shouldPause = pauseCh.ReceiveAsync(nil)
+		if shouldPause {
+			// todo: add log workflow paused, and query state
+			resumeCh.Receive(ctx, nil)
+		}
+
+		// failover domains
 		failoverActivityParams := &FailoverActivityParams{
 			Domains:       domains[i*batchSize : min((i+1)*batchSize, totalNumOfDomains)],
 			TargetCluster: params.TargetCluster,

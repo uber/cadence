@@ -38,8 +38,7 @@ func AdminFailoverStart(c *cli.Context) {
 	batchFailoverWaitTimeInSeconds := c.Int(FlagFailoverWaitTime)
 	workflowTimeout := time.Duration(c.Int(FlagFailoverTimeout)) * time.Second
 
-	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
+	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
@@ -61,4 +60,62 @@ func AdminFailoverStart(c *cli.Context) {
 	fmt.Println("Failover workflow started")
 	fmt.Println("wid: " + wf.ID)
 	fmt.Println("rid: " + wf.RunID)
+}
+
+// AdminFailoverPause pause failover workflow
+func AdminFailoverPause(c *cli.Context) {
+	err := executePauseOrResume(c, true)
+	if err != nil {
+		ErrorAndExit("Failed to pause failover workflow", err)
+	}
+	fmt.Println("Failover paused")
+}
+
+// AdminFailoverResume resume a paused failover workflow
+func AdminFailoverResume(c *cli.Context) {
+	err := executePauseOrResume(c, false)
+	if err != nil {
+		ErrorAndExit("Failed to resume failover workflow", err)
+	}
+	fmt.Println("Failover resumed")
+}
+
+func executePauseOrResume(c *cli.Context, isPause bool) error {
+	client := getCadenceClient(c)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	runID := getCurrentRunID(c, client)
+	var signalName string
+	if isPause {
+		signalName = failoverManager.PauseSignal
+	} else {
+		signalName = failoverManager.ResumeSignal
+	}
+
+	return client.SignalWorkflow(tcCtx, failoverManager.WorkflowID, runID, signalName, nil)
+}
+
+func getCadenceClient(c *cli.Context) cclient.Client {
+	svcClient := cFactory.ClientFrontendClient(c)
+	return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
+}
+
+func getCurrentRunID(c *cli.Context, client cclient.Client) string {
+	var runID string
+
+	if c.IsSet(FlagRunID) {
+		runID = c.String(FlagRunID)
+	} else {
+		tcCtx, cancel := newContext(c)
+		defer cancel()
+
+		descResp, err := client.DescribeWorkflowExecution(tcCtx, failoverManager.WorkflowID, "")
+		if err != nil {
+			ErrorAndExit("Failed to get failover workflow runID", err)
+		}
+
+		runID = descResp.WorkflowExecutionInfo.Execution.GetRunId()
+	}
+	return runID
 }
