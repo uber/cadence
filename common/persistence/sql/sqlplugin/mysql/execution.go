@@ -21,6 +21,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -159,19 +160,19 @@ VALUES     (:source_cluster_name,
 )
 
 // InsertIntoExecutions inserts a row into executions table
-func (mdb *db) InsertIntoExecutions(row *sqlplugin.ExecutionsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(createExecutionQuery, row)
+func (mdb *db) InsertIntoExecutions(ctx context.Context, row *sqlplugin.ExecutionsRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, createExecutionQuery, row)
 }
 
 // UpdateExecutions updates a single row in executions table
-func (mdb *db) UpdateExecutions(row *sqlplugin.ExecutionsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(updateExecutionQuery, row)
+func (mdb *db) UpdateExecutions(ctx context.Context, row *sqlplugin.ExecutionsRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, updateExecutionQuery, row)
 }
 
 // SelectFromExecutions reads a single row from executions table
-func (mdb *db) SelectFromExecutions(filter *sqlplugin.ExecutionsFilter) (*sqlplugin.ExecutionsRow, error) {
+func (mdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) (*sqlplugin.ExecutionsRow, error) {
 	var row sqlplugin.ExecutionsRow
-	err := mdb.conn.Get(&row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.GetContext(ctx, &row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	if err != nil {
 		return nil, err
 	}
@@ -179,70 +180,70 @@ func (mdb *db) SelectFromExecutions(filter *sqlplugin.ExecutionsFilter) (*sqlplu
 }
 
 // DeleteFromExecutions deletes a single row from executions table
-func (mdb *db) DeleteFromExecutions(filter *sqlplugin.ExecutionsFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+func (mdb *db) DeleteFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, deleteExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 // ReadLockExecutions acquires a write lock on a single row in executions table
-func (mdb *db) ReadLockExecutions(filter *sqlplugin.ExecutionsFilter) (int, error) {
+func (mdb *db) ReadLockExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) (int, error) {
 	var nextEventID int
-	err := mdb.conn.Get(&nextEventID, readLockExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.GetContext(ctx, &nextEventID, readLockExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	return nextEventID, err
 }
 
 // WriteLockExecutions acquires a write lock on a single row in executions table
-func (mdb *db) WriteLockExecutions(filter *sqlplugin.ExecutionsFilter) (int, error) {
+func (mdb *db) WriteLockExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) (int, error) {
 	var nextEventID int
-	err := mdb.conn.Get(&nextEventID, writeLockExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.GetContext(ctx, &nextEventID, writeLockExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	return nextEventID, err
 }
 
 // InsertIntoCurrentExecutions inserts a single row into current_executions table
-func (mdb *db) InsertIntoCurrentExecutions(row *sqlplugin.CurrentExecutionsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(createCurrentExecutionQuery, row)
+func (mdb *db) InsertIntoCurrentExecutions(ctx context.Context, row *sqlplugin.CurrentExecutionsRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, createCurrentExecutionQuery, row)
 }
 
 // UpdateCurrentExecutions updates a single row in current_executions table
-func (mdb *db) UpdateCurrentExecutions(row *sqlplugin.CurrentExecutionsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(updateCurrentExecutionsQuery, row)
+func (mdb *db) UpdateCurrentExecutions(ctx context.Context, row *sqlplugin.CurrentExecutionsRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, updateCurrentExecutionsQuery, row)
 }
 
 // SelectFromCurrentExecutions reads one or more rows from current_executions table
-func (mdb *db) SelectFromCurrentExecutions(filter *sqlplugin.CurrentExecutionsFilter) (*sqlplugin.CurrentExecutionsRow, error) {
+func (mdb *db) SelectFromCurrentExecutions(ctx context.Context, filter *sqlplugin.CurrentExecutionsFilter) (*sqlplugin.CurrentExecutionsRow, error) {
 	var row sqlplugin.CurrentExecutionsRow
-	err := mdb.conn.Get(&row, getCurrentExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID)
+	err := mdb.conn.GetContext(ctx, &row, getCurrentExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID)
 	return &row, err
 }
 
 // DeleteFromCurrentExecutions deletes a single row in current_executions table
-func (mdb *db) DeleteFromCurrentExecutions(filter *sqlplugin.CurrentExecutionsFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteCurrentExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+func (mdb *db) DeleteFromCurrentExecutions(ctx context.Context, filter *sqlplugin.CurrentExecutionsFilter) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, deleteCurrentExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 // LockCurrentExecutions acquires a write lock on a single row in current_executions table
-func (mdb *db) LockCurrentExecutions(filter *sqlplugin.CurrentExecutionsFilter) (*sqlplugin.CurrentExecutionsRow, error) {
+func (mdb *db) LockCurrentExecutions(ctx context.Context, filter *sqlplugin.CurrentExecutionsFilter) (*sqlplugin.CurrentExecutionsRow, error) {
 	var row sqlplugin.CurrentExecutionsRow
-	err := mdb.conn.Get(&row, lockCurrentExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID)
+	err := mdb.conn.GetContext(ctx, &row, lockCurrentExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID)
 	return &row, err
 }
 
 // LockCurrentExecutionsJoinExecutions joins a row in current_executions with executions table and acquires a
 // write lock on the result
-func (mdb *db) LockCurrentExecutionsJoinExecutions(filter *sqlplugin.CurrentExecutionsFilter) ([]sqlplugin.CurrentExecutionsRow, error) {
+func (mdb *db) LockCurrentExecutionsJoinExecutions(ctx context.Context, filter *sqlplugin.CurrentExecutionsFilter) ([]sqlplugin.CurrentExecutionsRow, error) {
 	var rows []sqlplugin.CurrentExecutionsRow
-	err := mdb.conn.Select(&rows, lockCurrentExecutionJoinExecutionsQuery, filter.ShardID, filter.DomainID, filter.WorkflowID)
+	err := mdb.conn.SelectContext(ctx, &rows, lockCurrentExecutionJoinExecutionsQuery, filter.ShardID, filter.DomainID, filter.WorkflowID)
 	return rows, err
 }
 
 // InsertIntoTransferTasks inserts one or more rows into transfer_tasks table
-func (mdb *db) InsertIntoTransferTasks(rows []sqlplugin.TransferTasksRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(createTransferTasksQuery, rows)
+func (mdb *db) InsertIntoTransferTasks(ctx context.Context, rows []sqlplugin.TransferTasksRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, createTransferTasksQuery, rows)
 }
 
 // SelectFromTransferTasks reads one or more rows from transfer_tasks table
-func (mdb *db) SelectFromTransferTasks(filter *sqlplugin.TransferTasksFilter) ([]sqlplugin.TransferTasksRow, error) {
+func (mdb *db) SelectFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) ([]sqlplugin.TransferTasksRow, error) {
 	var rows []sqlplugin.TransferTasksRow
-	err := mdb.conn.Select(&rows, getTransferTasksQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	err := mdb.conn.SelectContext(ctx, &rows, getTransferTasksQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
 	if err != nil {
 		return nil, err
 	}
@@ -250,27 +251,27 @@ func (mdb *db) SelectFromTransferTasks(filter *sqlplugin.TransferTasksFilter) ([
 }
 
 // DeleteFromTransferTasks deletes one or more rows from transfer_tasks table
-func (mdb *db) DeleteFromTransferTasks(filter *sqlplugin.TransferTasksFilter) (sql.Result, error) {
+func (mdb *db) DeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) (sql.Result, error) {
 	if filter.MinTaskID != nil {
-		return mdb.conn.Exec(rangeDeleteTransferTaskQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+		return mdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
 	}
-	return mdb.conn.Exec(deleteTransferTaskQuery, filter.ShardID, *filter.TaskID)
+	return mdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, *filter.TaskID)
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table
-func (mdb *db) InsertIntoTimerTasks(rows []sqlplugin.TimerTasksRow) (sql.Result, error) {
+func (mdb *db) InsertIntoTimerTasks(ctx context.Context, rows []sqlplugin.TimerTasksRow) (sql.Result, error) {
 	for i := range rows {
 		rows[i].VisibilityTimestamp = mdb.converter.ToMySQLDateTime(rows[i].VisibilityTimestamp)
 	}
-	return mdb.conn.NamedExec(createTimerTasksQuery, rows)
+	return mdb.conn.NamedExecContext(ctx, createTimerTasksQuery, rows)
 }
 
 // SelectFromTimerTasks reads one or more rows from timer_tasks table
-func (mdb *db) SelectFromTimerTasks(filter *sqlplugin.TimerTasksFilter) ([]sqlplugin.TimerTasksRow, error) {
+func (mdb *db) SelectFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) ([]sqlplugin.TimerTasksRow, error) {
 	var rows []sqlplugin.TimerTasksRow
 	*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
 	*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
-	err := mdb.conn.Select(&rows, getTimerTasksQuery, filter.ShardID, *filter.MinVisibilityTimestamp,
+	err := mdb.conn.SelectContext(ctx, &rows, getTimerTasksQuery, filter.ShardID, *filter.MinVisibilityTimestamp,
 		filter.TaskID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp, *filter.PageSize)
 	if err != nil {
 		return nil, err
@@ -282,25 +283,25 @@ func (mdb *db) SelectFromTimerTasks(filter *sqlplugin.TimerTasksFilter) ([]sqlpl
 }
 
 // DeleteFromTimerTasks deletes one or more rows from timer_tasks table
-func (mdb *db) DeleteFromTimerTasks(filter *sqlplugin.TimerTasksFilter) (sql.Result, error) {
+func (mdb *db) DeleteFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) (sql.Result, error) {
 	if filter.MinVisibilityTimestamp != nil {
 		*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
 		*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
-		return mdb.conn.Exec(rangeDeleteTimerTaskQuery, filter.ShardID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp)
+		return mdb.conn.ExecContext(ctx, rangeDeleteTimerTaskQuery, filter.ShardID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp)
 	}
 	*filter.VisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.VisibilityTimestamp)
-	return mdb.conn.Exec(deleteTimerTaskQuery, filter.ShardID, *filter.VisibilityTimestamp, filter.TaskID)
+	return mdb.conn.ExecContext(ctx, deleteTimerTaskQuery, filter.ShardID, *filter.VisibilityTimestamp, filter.TaskID)
 }
 
 // InsertIntoBufferedEvents inserts one or more rows into buffered_events table
-func (mdb *db) InsertIntoBufferedEvents(rows []sqlplugin.BufferedEventsRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(createBufferedEventsQuery, rows)
+func (mdb *db) InsertIntoBufferedEvents(ctx context.Context, rows []sqlplugin.BufferedEventsRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, createBufferedEventsQuery, rows)
 }
 
 // SelectFromBufferedEvents reads one or more rows from buffered_events table
-func (mdb *db) SelectFromBufferedEvents(filter *sqlplugin.BufferedEventsFilter) ([]sqlplugin.BufferedEventsRow, error) {
+func (mdb *db) SelectFromBufferedEvents(ctx context.Context, filter *sqlplugin.BufferedEventsFilter) ([]sqlplugin.BufferedEventsRow, error) {
 	var rows []sqlplugin.BufferedEventsRow
-	err := mdb.conn.Select(&rows, getBufferedEventsQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	err := mdb.conn.SelectContext(ctx, &rows, getBufferedEventsQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 	for i := 0; i < len(rows); i++ {
 		rows[i].DomainID = filter.DomainID
 		rows[i].WorkflowID = filter.WorkflowID
@@ -311,42 +312,44 @@ func (mdb *db) SelectFromBufferedEvents(filter *sqlplugin.BufferedEventsFilter) 
 }
 
 // DeleteFromBufferedEvents deletes one or more rows from buffered_events table
-func (mdb *db) DeleteFromBufferedEvents(filter *sqlplugin.BufferedEventsFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteBufferedEventsQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+func (mdb *db) DeleteFromBufferedEvents(ctx context.Context, filter *sqlplugin.BufferedEventsFilter) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, deleteBufferedEventsQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 // InsertIntoReplicationTasks inserts one or more rows into replication_tasks table
-func (mdb *db) InsertIntoReplicationTasks(rows []sqlplugin.ReplicationTasksRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(createReplicationTasksQuery, rows)
+func (mdb *db) InsertIntoReplicationTasks(ctx context.Context, rows []sqlplugin.ReplicationTasksRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, createReplicationTasksQuery, rows)
 }
 
 // SelectFromReplicationTasks reads one or more rows from replication_tasks table
-func (mdb *db) SelectFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) ([]sqlplugin.ReplicationTasksRow, error) {
+func (mdb *db) SelectFromReplicationTasks(ctx context.Context, filter *sqlplugin.ReplicationTasksFilter) ([]sqlplugin.ReplicationTasksRow, error) {
 	var rows []sqlplugin.ReplicationTasksRow
-	err := mdb.conn.Select(&rows, getReplicationTasksQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
+	err := mdb.conn.SelectContext(ctx, &rows, getReplicationTasksQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	return rows, err
 }
 
 // DeleteFromReplicationTasks deletes one row from replication_tasks table
-func (mdb *db) DeleteFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteReplicationTaskQuery, filter.ShardID, filter.TaskID)
+func (mdb *db) DeleteFromReplicationTasks(ctx context.Context, filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, deleteReplicationTaskQuery, filter.ShardID, filter.TaskID)
 }
 
 // RangeDeleteFromReplicationTasks deletes multi rows from replication_tasks table
-func (mdb *db) RangeDeleteFromReplicationTasks(filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
-	return mdb.conn.Exec(rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
+func (mdb *db) RangeDeleteFromReplicationTasks(ctx context.Context, filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
 }
 
 // InsertIntoReplicationTasksDLQ inserts one or more rows into replication_tasks_dlq table
-func (mdb *db) InsertIntoReplicationTasksDLQ(row *sqlplugin.ReplicationTaskDLQRow) (sql.Result, error) {
-	return mdb.conn.NamedExec(insertReplicationTaskDLQQuery, row)
+func (mdb *db) InsertIntoReplicationTasksDLQ(ctx context.Context, row *sqlplugin.ReplicationTaskDLQRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, insertReplicationTaskDLQQuery, row)
 }
 
 // SelectFromReplicationTasksDLQ reads one or more rows from replication_tasks_dlq table
-func (mdb *db) SelectFromReplicationTasksDLQ(filter *sqlplugin.ReplicationTasksDLQFilter) ([]sqlplugin.ReplicationTasksRow, error) {
+func (mdb *db) SelectFromReplicationTasksDLQ(ctx context.Context, filter *sqlplugin.ReplicationTasksDLQFilter) ([]sqlplugin.ReplicationTasksRow, error) {
 	var rows []sqlplugin.ReplicationTasksRow
-	err := mdb.conn.Select(
-		&rows, getReplicationTasksDLQQuery,
+	err := mdb.conn.SelectContext(
+		ctx,
+		&rows,
+		getReplicationTasksDLQQuery,
 		filter.SourceClusterName,
 		filter.ShardID,
 		filter.MinTaskID,
@@ -356,10 +359,12 @@ func (mdb *db) SelectFromReplicationTasksDLQ(filter *sqlplugin.ReplicationTasksD
 }
 
 // SelectFromReplicationDLQ reads one row from replication_tasks_dlq table
-func (mdb *db) SelectFromReplicationDLQ(filter *sqlplugin.ReplicationTaskDLQFilter) (int64, error) {
+func (mdb *db) SelectFromReplicationDLQ(ctx context.Context, filter *sqlplugin.ReplicationTaskDLQFilter) (int64, error) {
 	var size []int64
-	if err := mdb.conn.Select(
-		&size, getReplicationTaskDLQQuery,
+	if err := mdb.conn.SelectContext(
+		ctx,
+		&size,
+		getReplicationTaskDLQQuery,
 		filter.SourceClusterName,
 		filter.ShardID,
 	); err != nil {
@@ -370,10 +375,12 @@ func (mdb *db) SelectFromReplicationDLQ(filter *sqlplugin.ReplicationTaskDLQFilt
 
 // DeleteMessageFromReplicationTasksDLQ deletes one row from replication_tasks_dlq table
 func (mdb *db) DeleteMessageFromReplicationTasksDLQ(
+	ctx context.Context,
 	filter *sqlplugin.ReplicationTasksDLQFilter,
 ) (sql.Result, error) {
 
-	return mdb.conn.Exec(
+	return mdb.conn.ExecContext(
+		ctx,
 		deleteReplicationTaskFromDLQQuery,
 		filter.SourceClusterName,
 		filter.ShardID,
@@ -383,10 +390,12 @@ func (mdb *db) DeleteMessageFromReplicationTasksDLQ(
 
 // DeleteMessageFromReplicationTasksDLQ deletes one or more rows from replication_tasks_dlq table
 func (mdb *db) RangeDeleteMessageFromReplicationTasksDLQ(
+	ctx context.Context,
 	filter *sqlplugin.ReplicationTasksDLQFilter,
 ) (sql.Result, error) {
 
-	return mdb.conn.Exec(
+	return mdb.conn.ExecContext(
+		ctx,
 		rangeDeleteReplicationTaskFromDLQQuery,
 		filter.SourceClusterName,
 		filter.ShardID,

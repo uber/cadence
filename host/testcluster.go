@@ -71,7 +71,6 @@ type (
 	// TestClusterConfig are config for a test cluster
 	TestClusterConfig struct {
 		FrontendAddress       string
-		EnableNDC             bool
 		EnableArchival        bool
 		IsMasterCluster       bool
 		ClusterNo             int
@@ -184,7 +183,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		VisibilityMgr:                 visibilityMgr,
 		Logger:                        logger,
 		ClusterNo:                     options.ClusterNo,
-		EnableNDC:                     options.EnableNDC,
 		ESConfig:                      options.ESConfig,
 		ESClient:                      esClient,
 		ArchiverMetadata:              archiverBase.metadata,
@@ -264,9 +262,8 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 	if config == nil || config.UseMock {
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
-	checkCluster := len(config.KafkaConfig.ClusterToTopic) != 0
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkCluster, checkApp)
+	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster

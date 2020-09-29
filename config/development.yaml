@@ -15,7 +15,7 @@ persistence:
 ringpop:
   name: cadence
   bootstrapMode: hosts
-  bootstrapHosts: ["127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935"]
+  bootstrapHosts: [ "127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935" ]
   maxJoinDuration: 30s
 
 services:
@@ -64,7 +64,7 @@ services:
       port: 7940
 
 clusterMetadata:
-  enableGlobalDomain: false
+  enableGlobalDomain: true
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
@@ -74,6 +74,11 @@ clusterMetadata:
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:7933"
+    standby:
+      enabled: true
+      initialFailoverVersion: 1
+      rpcName: "cadence-frontend"
+      rpcAddress: "localhost:8933"
 
 dcRedirectionPolicy:
   policy: "noop"
@@ -105,19 +110,6 @@ domainDefaults:
     visibility:
       status: "enabled"
       URI: "file:///tmp/cadence_vis_archival/development"
-
-kafka:
-  tls:
-    enabled: false
-  clusters:
-    test:
-      brokers:
-        - 127.0.0.1:9092
-  topics:
-    cadence-visibility-dev:
-      cluster: test
-    cadence-visibility-dev-dlq:
-      cluster: test
 
 publicClient:
   hostPort: "localhost:7933"

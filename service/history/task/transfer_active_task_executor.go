@@ -65,7 +65,6 @@ type (
 
 		historyClient           history.Client
 		parentClosePolicyClient parentclosepolicy.Client
-		workflowResetor         reset.WorkflowResetor
 		workflowResetter        reset.WorkflowResetter
 	}
 )
@@ -75,7 +74,6 @@ func NewTransferActiveTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
 	executionCache *execution.Cache,
-	workflowResetor reset.WorkflowResetor,
 	workflowResetter reset.WorkflowResetter,
 	logger log.Logger,
 	metricsClient metrics.Client,
@@ -98,7 +96,6 @@ func NewTransferActiveTaskExecutor(
 			shard.GetService().GetSDKClient(),
 			config.NumParentClosePolicySystemWorkflows(),
 		),
-		workflowResetor:  workflowResetor,
 		workflowResetter: workflowResetter,
 	}
 }
@@ -1300,67 +1297,42 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 	domainID := task.DomainID
 	workflowID := task.WorkflowID
 	baseRunID := baseMutableState.GetExecutionInfo().RunID
+	resetRunID := uuid.New()
+	baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
+	baseVersionHistories := baseMutableState.GetVersionHistories()
+	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+	if err != nil {
+		return err
+	}
+	baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
+	if err != nil {
+		return err
+	}
+	baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
+	baseNextEventID := baseMutableState.GetNextEventID()
 
-	// TODO when NDC is rolled out, remove this block
-	if baseMutableState.GetVersionHistories() == nil {
-		_, err = t.workflowResetor.ResetWorkflowExecution(
+	err = t.workflowResetter.ResetWorkflow(
+		ctx,
+		domainID,
+		workflowID,
+		baseRunID,
+		baseCurrentBranchToken,
+		baseRebuildLastEventID,
+		baseRebuildLastEventVersion,
+		baseNextEventID,
+		resetRunID,
+		uuid.New(),
+		execution.NewWorkflow(
 			ctx,
-			&workflow.ResetWorkflowExecutionRequest{
-				Domain: common.StringPtr(domain),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(baseRunID),
-				},
-				Reason: common.StringPtr(
-					fmt.Sprintf("auto-reset reason:%v, binaryChecksum:%v ", reason, resetPoint.GetBinaryChecksum()),
-				),
-				DecisionFinishEventId: common.Int64Ptr(resetPoint.GetFirstDecisionCompletedId()),
-				RequestId:             common.StringPtr(uuid.New()),
-			},
-			baseContext,
-			baseMutableState,
+			t.shard.GetDomainCache(),
+			t.shard.GetClusterMetadata(),
 			currentContext,
 			currentMutableState,
-		)
-	} else {
-		resetRunID := uuid.New()
-		baseRunID := baseMutableState.GetExecutionInfo().RunID
-		baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
-		baseVersionHistories := baseMutableState.GetVersionHistories()
-		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
-		if err != nil {
-			return err
-		}
-		baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
-		if err != nil {
-			return err
-		}
-		baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
-		baseNextEventID := baseMutableState.GetNextEventID()
-
-		err = t.workflowResetter.ResetWorkflow(
-			ctx,
-			domainID,
-			workflowID,
-			baseRunID,
-			baseCurrentBranchToken,
-			baseRebuildLastEventID,
-			baseRebuildLastEventVersion,
-			baseNextEventID,
-			resetRunID,
-			uuid.New(),
-			execution.NewWorkflow(
-				ctx,
-				t.shard.GetDomainCache(),
-				t.shard.GetClusterMetadata(),
-				currentContext,
-				currentMutableState,
-				execution.NoopReleaseFn, // this is fine since caller will defer on release
-			),
-			reason,
-			nil,
-		)
-	}
+			execution.NoopReleaseFn, // this is fine since caller will defer on release
+		),
+		reason,
+		nil,
+	)
 
 	switch err.(type) {
 	case nil:

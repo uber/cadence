@@ -26,13 +26,12 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -48,9 +47,8 @@ type (
 	timerStandbyTaskExecutor struct {
 		*timerTaskExecutorBase
 
-		clusterName         string
-		historyRereplicator xdc.HistoryRereplicator
-		nDCHistoryResender  xdc.NDCHistoryResender
+		clusterName     string
+		historyResender ndc.HistoryResender
 	}
 )
 
@@ -59,8 +57,7 @@ func NewTimerStandbyTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
 	executionCache *execution.Cache,
-	historyRereplicator xdc.HistoryRereplicator,
-	nDCHistoryResender xdc.NDCHistoryResender,
+	historyResender ndc.HistoryResender,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	clusterName string,
@@ -75,9 +72,8 @@ func NewTimerStandbyTaskExecutor(
 			metricsClient,
 			config,
 		),
-		clusterName:         clusterName,
-		historyRereplicator: historyRereplicator,
-		nDCHistoryResender:  nDCHistoryResender,
+		clusterName:     clusterName,
+		historyResender: historyResender,
 	}
 }
 
@@ -460,7 +456,7 @@ func (t *timerStandbyTaskExecutor) fetchHistoryFromRemote(
 
 	var err error
 	if resendInfo.lastEventID != nil && resendInfo.lastEventVersion != nil {
-		err = t.nDCHistoryResender.SendSingleWorkflowHistory(
+		err = t.historyResender.SendSingleWorkflowHistory(
 			timerTask.DomainID,
 			timerTask.WorkflowID,
 			timerTask.RunID,
@@ -468,15 +464,6 @@ func (t *timerStandbyTaskExecutor) fetchHistoryFromRemote(
 			resendInfo.lastEventVersion,
 			nil,
 			nil,
-		)
-	} else if resendInfo.nextEventID != nil {
-		err = t.historyRereplicator.SendMultiWorkflowHistory(
-			timerTask.DomainID,
-			timerTask.WorkflowID,
-			timerTask.RunID,
-			*resendInfo.nextEventID,
-			timerTask.RunID,
-			common.EndEventID, // use common.EndEventID since we do not know where is the end
 		)
 	} else {
 		err = &workflow.InternalServiceError{

@@ -151,8 +151,6 @@ type (
 		Cassandra *Cassandra `yaml:"cassandra"`
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
-		// Custom contains the config for custom datastore implementation
-		CustomDataStoreConfig *CustomDatastoreConfig `yaml:"customDatastore"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *elasticsearch.Config `yaml:"elasticsearch"`
 	}

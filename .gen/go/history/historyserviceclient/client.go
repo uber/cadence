@@ -171,21 +171,9 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
-	ReplicateEvents(
-		ctx context.Context,
-		ReplicateRequest *history.ReplicateEventsRequest,
-		opts ...yarpc.CallOption,
-	) error
-
 	ReplicateEventsV2(
 		ctx context.Context,
 		ReplicateV2Request *history.ReplicateEventsV2Request,
-		opts ...yarpc.CallOption,
-	) error
-
-	ReplicateRawEvents(
-		ctx context.Context,
-		ReplicateRequest *history.ReplicateRawEventsRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -816,29 +804,6 @@ func (c client) RemoveTask(
 	return
 }
 
-func (c client) ReplicateEvents(
-	ctx context.Context,
-	_ReplicateRequest *history.ReplicateEventsRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := history.HistoryService_ReplicateEvents_Helper.Args(_ReplicateRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result history.HistoryService_ReplicateEvents_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	err = history.HistoryService_ReplicateEvents_Helper.UnwrapResponse(&result)
-	return
-}
-
 func (c client) ReplicateEventsV2(
 	ctx context.Context,
 	_ReplicateV2Request *history.ReplicateEventsV2Request,
@@ -859,29 +824,6 @@ func (c client) ReplicateEventsV2(
 	}
 
 	err = history.HistoryService_ReplicateEventsV2_Helper.UnwrapResponse(&result)
-	return
-}
-
-func (c client) ReplicateRawEvents(
-	ctx context.Context,
-	_ReplicateRequest *history.ReplicateRawEventsRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := history.HistoryService_ReplicateRawEvents_Helper.Args(_ReplicateRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result history.HistoryService_ReplicateRawEvents_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	err = history.HistoryService_ReplicateRawEvents_Helper.UnwrapResponse(&result)
 	return
 }
 

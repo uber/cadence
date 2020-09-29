@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
@@ -65,7 +64,6 @@ type (
 		startWG                 sync.WaitGroup
 		config                  *config.Config
 		historyEventNotifier    events.Notifier
-		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers replication.TaskFetchers
 		queueTaskProcessor      task.Processor
@@ -119,13 +117,6 @@ func (h *Handler) RegisterHandler() {
 
 // Start starts the handler
 func (h *Handler) Start() {
-	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
-		var err error
-		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
-		if err != nil {
-			h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
-		}
-	}
 
 	h.replicationTaskFetchers = replication.NewTaskFetchers(
 		h.GetLogger(),
@@ -216,7 +207,6 @@ func (h *Handler) CreateEngine(
 		h.GetHistoryClient(),
 		h.GetSDKClient(),
 		h.historyEventNotifier,
-		h.publisher,
 		h.config,
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
@@ -1416,90 +1406,6 @@ func (h *Handler) ResetStickyTaskList(
 	return resp, nil
 }
 
-// ReplicateEvents is called by processor to replicate history events for passive domains
-func (h *Handler) ReplicateEvents(
-	ctx context.Context,
-	replicateRequest *hist.ReplicateEventsRequest,
-) (retError error) {
-
-	defer log.CapturePanic(h.GetLogger(), &retError)
-	h.startWG.Wait()
-
-	scope := metrics.HistoryReplicateEventsScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
-	defer sw.Stop()
-
-	if h.isShuttingDown() {
-		return errShuttingDown
-	}
-
-	domainID := replicateRequest.GetDomainUUID()
-	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
-	}
-
-	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
-	}
-
-	workflowExecution := replicateRequest.WorkflowExecution
-	workflowID := workflowExecution.GetWorkflowId()
-	engine, err1 := h.controller.GetEngine(workflowID)
-	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
-	}
-
-	err2 := engine.ReplicateEvents(ctx, replicateRequest)
-	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
-	}
-
-	return nil
-}
-
-// ReplicateRawEvents is called by processor to replicate history raw events for passive domains
-func (h *Handler) ReplicateRawEvents(
-	ctx context.Context,
-	replicateRequest *hist.ReplicateRawEventsRequest,
-) (retError error) {
-
-	defer log.CapturePanic(h.GetLogger(), &retError)
-	h.startWG.Wait()
-
-	if h.isShuttingDown() {
-		return errShuttingDown
-	}
-
-	scope := metrics.HistoryReplicateRawEventsScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
-	defer sw.Stop()
-
-	domainID := replicateRequest.GetDomainUUID()
-	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
-	}
-
-	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
-	}
-
-	workflowExecution := replicateRequest.WorkflowExecution
-	workflowID := workflowExecution.GetWorkflowId()
-	engine, err1 := h.controller.GetEngine(workflowID)
-	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
-	}
-
-	err2 := engine.ReplicateRawEvents(ctx, replicateRequest)
-	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
-	}
-
-	return nil
-}
-
 // ReplicateEventsV2 is called by processor to replicate history events for passive domains
 func (h *Handler) ReplicateEventsV2(
 	ctx context.Context,
@@ -2014,8 +1920,6 @@ func (h *Handler) updateErrorMetric(
 		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrCancellationAlreadyRequestedCounter)
 	case *gen.LimitExceededError:
 		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
-	case *gen.RetryTaskError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
 	case *gen.RetryTaskV2Error:
 		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
 	case *gen.ServiceBusyError:

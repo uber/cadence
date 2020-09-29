@@ -21,6 +21,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/go-sql-driver/mysql"
@@ -38,10 +39,10 @@ type (
 	}
 
 	conn interface {
-		Exec(query string, args ...interface{}) (sql.Result, error)
-		NamedExec(query string, arg interface{}) (sql.Result, error)
-		Get(dest interface{}, query string, args ...interface{}) error
-		Select(dest interface{}, query string, args ...interface{}) error
+		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 	}
 )
 
@@ -74,8 +75,8 @@ func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
-	xtx, err := mdb.db.Beginx()
+func (mdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
+	xtx, err := mdb.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

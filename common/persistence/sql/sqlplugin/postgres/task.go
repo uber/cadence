@@ -21,6 +21,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -87,20 +88,20 @@ task_type = :task_type
 )
 
 // InsertIntoTasks inserts one or more rows into tasks table
-func (pdb *db) InsertIntoTasks(rows []sqlplugin.TasksRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(createTaskQry, rows)
+func (pdb *db) InsertIntoTasks(ctx context.Context, rows []sqlplugin.TasksRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, createTaskQry, rows)
 }
 
 // SelectFromTasks reads one or more rows from tasks table
-func (pdb *db) SelectFromTasks(filter *sqlplugin.TasksFilter) ([]sqlplugin.TasksRow, error) {
+func (pdb *db) SelectFromTasks(ctx context.Context, filter *sqlplugin.TasksFilter) ([]sqlplugin.TasksRow, error) {
 	var err error
 	var rows []sqlplugin.TasksRow
 	switch {
 	case filter.MaxTaskID != nil:
-		err = pdb.conn.Select(&rows, getTaskMinMaxQry, filter.DomainID,
+		err = pdb.conn.SelectContext(ctx, &rows, getTaskMinMaxQry, filter.DomainID,
 			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID, *filter.PageSize)
 	default:
-		err = pdb.conn.Select(&rows, getTaskMinQry, filter.DomainID,
+		err = pdb.conn.SelectContext(ctx, &rows, getTaskMinQry, filter.DomainID,
 			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.PageSize)
 	}
 	if err != nil {
@@ -110,58 +111,58 @@ func (pdb *db) SelectFromTasks(filter *sqlplugin.TasksFilter) ([]sqlplugin.Tasks
 }
 
 // DeleteFromTasks deletes one or more rows from tasks table
-func (pdb *db) DeleteFromTasks(filter *sqlplugin.TasksFilter) (sql.Result, error) {
+func (pdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilter) (sql.Result, error) {
 	if filter.TaskIDLessThanEquals != nil {
 		if filter.Limit == nil || *filter.Limit == 0 {
 			return nil, fmt.Errorf("missing limit parameter")
 		}
-		return pdb.conn.Exec(rangeDeleteTaskQry,
+		return pdb.conn.ExecContext(ctx, rangeDeleteTaskQry,
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
-	return pdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+	return pdb.conn.ExecContext(ctx, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
 }
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table
-func (pdb *db) InsertIntoTaskLists(row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(createTaskListQry, row)
+func (pdb *db) InsertIntoTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, createTaskListQry, row)
 }
 
 // ReplaceIntoTaskLists replaces one or more rows in task_lists table
-func (pdb *db) ReplaceIntoTaskLists(row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(replaceTaskListQry, row)
+func (pdb *db) ReplaceIntoTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, replaceTaskListQry, row)
 }
 
 // UpdateTaskLists updates a row in task_lists table
-func (pdb *db) UpdateTaskLists(row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return pdb.conn.NamedExec(updateTaskListQry, row)
+func (pdb *db) UpdateTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, updateTaskListQry, row)
 }
 
 // SelectFromTaskLists reads one or more rows from task_lists table
-func (pdb *db) SelectFromTaskLists(filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
+func (pdb *db) SelectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	switch {
 	case filter.DomainID != nil && filter.Name != nil && filter.TaskType != nil:
-		return pdb.selectFromTaskLists(filter)
+		return pdb.selectFromTaskLists(ctx, filter)
 	case filter.DomainIDGreaterThan != nil && filter.NameGreaterThan != nil && filter.TaskTypeGreaterThan != nil && filter.PageSize != nil:
-		return pdb.rangeSelectFromTaskLists(filter)
+		return pdb.rangeSelectFromTaskLists(ctx, filter)
 	default:
 		return nil, fmt.Errorf("invalid set of query filter params")
 	}
 }
 
-func (pdb *db) selectFromTaskLists(filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
+func (pdb *db) selectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	var err error
 	var row sqlplugin.TaskListsRow
-	err = pdb.conn.Get(&row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	err = pdb.conn.GetContext(ctx, &row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	if err != nil {
 		return nil, err
 	}
 	return []sqlplugin.TaskListsRow{row}, err
 }
 
-func (pdb *db) rangeSelectFromTaskLists(filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
+func (pdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	var err error
 	var rows []sqlplugin.TaskListsRow
-	err = pdb.conn.Select(&rows, listTaskListQry,
+	err = pdb.conn.SelectContext(ctx, &rows, listTaskListQry,
 		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.PageSize)
 	if err != nil {
 		return nil, err
@@ -173,13 +174,13 @@ func (pdb *db) rangeSelectFromTaskLists(filter *sqlplugin.TaskListsFilter) ([]sq
 }
 
 // DeleteFromTaskLists deletes a row from task_lists table
-func (pdb *db) DeleteFromTaskLists(filter *sqlplugin.TaskListsFilter) (sql.Result, error) {
-	return pdb.conn.Exec(deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
+func (pdb *db) DeleteFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
 }
 
 // LockTaskLists locks a row in task_lists table
-func (pdb *db) LockTaskLists(filter *sqlplugin.TaskListsFilter) (int64, error) {
+func (pdb *db) LockTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) (int64, error) {
 	var rangeID int64
-	err := pdb.conn.Get(&rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	err := pdb.conn.GetContext(ctx, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	return rangeID, err
 }

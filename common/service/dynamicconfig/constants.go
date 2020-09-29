@@ -52,7 +52,6 @@ var keys = map[Key]string{
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
-	EnableNDC:                           "system.enableNDC",
 	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
@@ -346,8 +345,6 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
-	// EnableNDC is key for enable N data center events replication
-	EnableNDC
 	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling

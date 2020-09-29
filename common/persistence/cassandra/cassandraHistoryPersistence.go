@@ -101,7 +101,7 @@ func (h *nosqlHistoryManager) convertCommonErrors(
 // AppendHistoryNodes upsert a batch of events as a single node to a history branch
 // Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
 func (h *nosqlHistoryManager) AppendHistoryNodes(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
 
@@ -139,7 +139,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 		DataEncoding: string(request.Events.Encoding),
 		ShardID:      request.ShardID,
 	}
-	err = h.db.InsertIntoHistoryTreeAndNode(treeRow, nodeRow)
+	err = h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nodeRow)
 
 	if err != nil {
 		return h.convertCommonErrors("AppendHistoryNodes", err)
@@ -150,7 +150,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 // ReadHistoryBranch returns history node data for a branch
 // NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
 func (h *nosqlHistoryManager) ReadHistoryBranch(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
 	filter := &nosqlplugin.HistoryNodeFilter{
@@ -162,7 +162,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 		NextPageToken: request.NextPageToken,
 		PageSize:      request.PageSize,
 	}
-	rows, pagingToken, err := h.db.SelectFromHistoryNode(filter)
+	rows, pagingToken, err := h.db.SelectFromHistoryNode(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 //       8[8,9]
 //
 func (h *nosqlHistoryManager) ForkHistoryBranch(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
@@ -322,7 +322,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 		Info:                        request.Info,
 	}
 
-	err := h.db.InsertIntoHistoryTreeAndNode(treeRow, nil)
+	err := h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nil)
 	if err != nil {
 		return nil, h.convertCommonErrors("ForkHistoryBranch", err)
 	}
@@ -331,7 +331,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 
 // DeleteHistoryBranch removes a branch
 func (h *nosqlHistoryManager) DeleteHistoryBranch(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
 
@@ -396,7 +396,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 		}
 	}
 
-	err = h.db.DeleteFromHistoryTreeAndNode(treeFilter, nodeFilters)
+	err = h.db.DeleteFromHistoryTreeAndNode(ctx, treeFilter, nodeFilters)
 	if err != nil {
 		return h.convertCommonErrors("DeleteHistoryBranch", err)
 	}
@@ -404,10 +404,10 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 }
 
 func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
-	dbBranches, pagingToken, err := h.db.SelectAllHistoryTrees(request.NextPageToken, request.PageSize)
+	dbBranches, pagingToken, err := h.db.SelectAllHistoryTrees(ctx, request.NextPageToken, request.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -435,16 +435,17 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 
 // GetHistoryTree returns all branch information of a tree
 func (h *nosqlHistoryManager) GetHistoryTree(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetHistoryTreeRequest,
 ) (*p.GetHistoryTreeResponse, error) {
 
 	treeID := request.TreeID
 
-	dbBranches, err := h.db.SelectFromHistoryTree(&nosqlplugin.HistoryTreeFilter{
-		ShardID: *request.ShardID,
-		TreeID:  treeID,
-	})
+	dbBranches, err := h.db.SelectFromHistoryTree(ctx,
+		&nosqlplugin.HistoryTreeFilter{
+			ShardID: *request.ShardID,
+			TreeID:  treeID,
+		})
 	if err != nil {
 		return nil, err
 	}

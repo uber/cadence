@@ -324,11 +324,11 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 	if len(builder.updateBufferedEvents) > 0 {
 		bufferedEvents = append(bufferedEvents, builder.updateBufferedEvents...)
 	}
-	var replicationState *persistence.ReplicationState
-	if builder.GetReplicationState() != nil {
-		replicationState = CopyReplicationState(builder.GetReplicationState())
-	}
 
+	var versionHistories *persistence.VersionHistories
+	if ms.GetVersionHistories() != nil {
+		versionHistories = ms.GetVersionHistories().Duplicate()
+	}
 	return &persistence.WorkflowMutableState{
 		ExecutionInfo:       info,
 		ExecutionStats:      stats,
@@ -338,7 +338,7 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 		SignalInfos:         signalInfos,
 		RequestCancelInfos:  cancellationInfos,
 		ChildExecutionInfos: childInfos,
-		ReplicationState:    replicationState,
+		VersionHistories:    versionHistories,
 	}
 }
 

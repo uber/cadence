@@ -118,7 +118,6 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockEngine.EXPECT().NotifyNewHistoryEvent(gomock.Any()).AnyTimes()
 	s.mockEngine.EXPECT().NotifyNewTransferTasks(gomock.Any()).AnyTimes()
-	s.mockEngine.EXPECT().NotifyNewReplicationTasks(gomock.Any()).AnyTimes()
 	s.mockEngine.EXPECT().NotifyNewTimerTasks(gomock.Any()).AnyTimes()
 	s.mockShard.SetEngine(s.mockEngine)
 
@@ -160,7 +159,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -230,7 +229,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -279,6 +278,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 	}
 
 	event = test.AddTimerFiredEvent(mutableState, timerID)
+	mutableState.FlushBufferedEvents()
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
@@ -297,7 +297,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -380,7 +380,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -444,6 +444,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	}
 
 	completeEvent := test.AddActivityTaskCompletedEvent(mutableState, scheduledEvent.GetEventId(), startedEvent.GetEventId(), []byte(nil), identity)
+	mutableState.FlushBufferedEvents()
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, completeEvent.GetEventId(), completeEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
@@ -462,7 +463,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -559,7 +560,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -652,7 +653,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -725,6 +726,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 	}
 
 	completeEvent := test.AddActivityTaskCompletedEvent(mutableState, scheduledEvent.GetEventId(), common.TransientEventID, []byte(nil), identity)
+	mutableState.FlushBufferedEvents()
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, completeEvent.GetEventId(), completeEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
@@ -742,7 +744,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -832,7 +834,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -892,7 +894,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -944,7 +946,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Fire() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1001,7 +1003,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Noop() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1055,7 +1057,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1149,7 +1151,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1232,7 +1234,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_Fire() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1290,7 +1292,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry()
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1358,7 +1360,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Cron() 
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	mutableState := execution.NewMutableStateBuilderWithReplicationStateWithEventV2(
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
@@ -1418,9 +1420,7 @@ func (s *timerActiveTaskExecutorSuite) createPersistenceMutableState(
 	lastEventVersion int64,
 ) *persistence.WorkflowMutableState {
 
-	if ms.GetReplicationState() != nil {
-		ms.UpdateReplicationStateLastEventID(lastEventVersion, lastEventID)
-	} else if ms.GetVersionHistories() != nil {
+	if ms.GetVersionHistories() != nil {
 		currentVersionHistory, err := ms.GetVersionHistories().GetCurrentVersionHistory()
 		s.NoError(err)
 		err = currentVersionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(
