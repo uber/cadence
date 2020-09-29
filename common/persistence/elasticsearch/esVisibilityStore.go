@@ -112,7 +112,7 @@ func (v *esVisibilityStore) GetName() string {
 }
 
 func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
@@ -129,11 +129,11 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.Publish(ctx, msg)
 }
 
 func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	v.checkProducer()
@@ -153,11 +153,11 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.Publish(ctx, msg)
 }
 
 func (v *esVisibilityStore) UpsertWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
@@ -174,7 +174,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.Publish(ctx, msg)
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutions(
@@ -401,7 +401,7 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 }
 
 func (v *esVisibilityStore) DeleteWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
@@ -411,7 +411,7 @@ func (v *esVisibilityStore) DeleteWorkflowExecution(
 		request.RunID,
 		request.TaskID,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.Publish(ctx, msg)
 }
 
 func (v *esVisibilityStore) ListWorkflowExecutions(
