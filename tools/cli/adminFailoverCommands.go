@@ -32,15 +32,30 @@ import (
 )
 
 const (
-	defaultAbortReason = "Failover aborted through admin CLI"
+	defaultAbortReason                    = "Failover aborted through admin CLI"
+	defaultBatchFailoverSize              = 10
+	defaultBatchFailoverWaitTimeInSeconds = 10
+	defaultFailoverTimeoutInSeconds       = 600
 )
 
-// AdminFailoverStart start failover workflow
-func AdminFailoverStart(c *cli.Context) {
-	targetCluster := getRequiredOption(c, FlagTargetCluster)
-	batchFailoverSize := c.Int(FlagFailoverBatchSize)
-	batchFailoverWaitTimeInSeconds := c.Int(FlagFailoverWaitTime)
-	workflowTimeout := time.Duration(c.Int(FlagFailoverTimeout)) * time.Second
+type startParams struct {
+	targetCluster                  string
+	sourceCluster                  string
+	batchFailoverSize              int
+	batchFailoverWaitTimeInSeconds int
+	failoverTimeout                int
+	domains                        []string
+}
+
+func failoverStart(c *cli.Context, params *startParams) {
+	validateStartParams(params)
+
+	targetCluster := params.targetCluster
+	sourceCluster := params.sourceCluster
+	batchFailoverSize := params.batchFailoverSize
+	batchFailoverWaitTimeInSeconds := params.batchFailoverWaitTimeInSeconds
+	workflowTimeout := time.Duration(params.failoverTimeout) * time.Second
+	domains := params.domains
 
 	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
@@ -52,18 +67,54 @@ func AdminFailoverStart(c *cli.Context) {
 		TaskList:                     failoverManager.TaskListName,
 		ExecutionStartToCloseTimeout: workflowTimeout,
 	}
-	params := failoverManager.FailoverParams{
+	foParams := failoverManager.FailoverParams{
 		TargetCluster:                  targetCluster,
+		SourceCluster:                  sourceCluster,
 		BatchFailoverSize:              batchFailoverSize,
 		BatchFailoverWaitTimeInSeconds: batchFailoverWaitTimeInSeconds,
+		Domains:                        domains,
 	}
-	wf, err := client.StartWorkflow(tcCtx, options, failoverManager.WorkflowTypeName, params)
+	wf, err := client.StartWorkflow(tcCtx, options, failoverManager.WorkflowTypeName, foParams)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
 	fmt.Println("Failover workflow started")
 	fmt.Println("wid: " + wf.ID)
 	fmt.Println("rid: " + wf.RunID)
+}
+
+func validateStartParams(params *startParams) {
+	if len(params.targetCluster) == 0 {
+		ErrorAndExit("targetCluster is not provided", nil)
+	}
+	if len(params.sourceCluster) == 0 {
+		ErrorAndExit("sourceCluster is not provided", nil)
+	}
+	if params.targetCluster == params.sourceCluster {
+		ErrorAndExit("targetCluster is same as sourceCluster", nil)
+	}
+	if params.batchFailoverSize <= 0 {
+		params.batchFailoverSize = defaultBatchFailoverSize
+	}
+	if params.batchFailoverWaitTimeInSeconds <= 0 {
+		params.batchFailoverWaitTimeInSeconds = defaultBatchFailoverWaitTimeInSeconds
+	}
+	if params.failoverTimeout <= 0 {
+		params.failoverTimeout = defaultFailoverTimeoutInSeconds
+	}
+}
+
+// AdminFailoverStart start failover workflow
+func AdminFailoverStart(c *cli.Context) {
+	params := &startParams{
+		targetCluster:                  getRequiredOption(c, FlagTargetCluster),
+		sourceCluster:                  getRequiredOption(c, FlagSourceCluster),
+		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
+		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
+		failoverTimeout:                c.Int(FlagFailoverTimeout),
+		domains:                        c.StringSlice(FlagFailoverDomains),
+	}
+	failoverStart(c, params)
 }
 
 // AdminFailoverPause pause failover workflow
@@ -138,6 +189,35 @@ func AdminFailoverAbort(c *cli.Context) {
 	}
 
 	fmt.Println("Failover aborted")
+}
+
+// AdminFailoverRollback rollback a failover run
+func AdminFailoverRollback(c *cli.Context) {
+	client := getCadenceClient(c)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	runID := getRunID(c, client)
+
+	queryResp, err := client.QueryWorkflow(tcCtx, failoverManager.WorkflowID, runID, failoverManager.QueryType)
+	if err != nil {
+		ErrorAndExit("Failed to query failover workflow", err)
+	}
+	if !queryResp.HasValue() {
+		ErrorAndExit("QueryResult has no value", nil)
+	}
+	var queryResult failoverManager.QueryResult
+	queryResp.Get(&queryResult)
+
+	params := &startParams{
+		targetCluster:                  queryResult.SourceCluster,
+		sourceCluster:                  queryResult.TargetCluster,
+		domains:                        queryResult.SuccessDomains,
+		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
+		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
+		failoverTimeout:                c.Int(FlagFailoverTimeout),
+	}
+	failoverStart(c, params)
 }
 
 func getCadenceClient(c *cli.Context) cclient.Client {

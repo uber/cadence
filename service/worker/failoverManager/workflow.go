@@ -50,8 +50,10 @@ const (
 	defaultBatchFailoverSize              = 10
 	defaultBatchFailoverWaitTimeInSeconds = 10
 
-	errMsgParamsIsNil          = "params is nil"
-	errMsgTargetClusterIsEmpty = "targetCluster is empty"
+	errMsgParamsIsNil                 = "params is nil"
+	errMsgTargetClusterIsEmpty        = "targetCluster is empty"
+	errMsgSourceClusterIsEmpty        = "sourceCluster is empty"
+	errMsgTargetClusterIsSameAsSource = "targetCluster is same as sourceCluster"
 
 	// QueryType for failover workflow
 	QueryType = "state"
@@ -71,10 +73,14 @@ type (
 	FailoverParams struct {
 		// TargetCluster is the destination of failover
 		TargetCluster string
+		// SourceCluster is from which cluster the domains are active before failover
+		SourceCluster string
 		// BatchFailoverSize is number of domains to failover in one batch
 		BatchFailoverSize int
 		// BatchFailoverWaitTimeInSeconds is the waiting time between batch failover
 		BatchFailoverWaitTimeInSeconds int
+		// Domains candidates to be failover
+		Domains []string
 	}
 
 	// FailoverResult is workflow result
@@ -86,6 +92,8 @@ type (
 	// GetDomainsActivityParams params for activity
 	GetDomainsActivityParams struct {
 		TargetCluster string
+		SourceCluster string
+		Domains       []string
 	}
 
 	// FailoverActivityParams params for activity
@@ -102,11 +110,14 @@ type (
 
 	// QueryResult ..
 	QueryResult struct {
-		TotalDomains  int
-		Success       int
-		Failed        int
-		FailedDomains []string
-		State         string
+		TotalDomains   int
+		Success        int
+		Failed         int
+		State          string
+		TargetCluster  string
+		SourceCluster  string
+		SuccessDomains []string
+		FailedDomains  []string
 	}
 )
 
@@ -123,33 +134,42 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		return nil, err
 	}
 
-	ao := workflow.WithActivityOptions(ctx, getGetDomainsActivityOptions())
-	getDomainsParams := &GetDomainsActivityParams{
-		TargetCluster: params.TargetCluster,
-	}
-	var domains []string
-	err = workflow.ExecuteActivity(ao, GetDomainsActivity, getDomainsParams).Get(ctx, &domains)
-	if err != nil {
-		return nil, err
-	}
-
+	// define query properties
 	var failedDomains []string
 	var successDomains []string
-	totalNumOfDomains := len(domains)
+	var totalNumOfDomains int
 	wfState := wfRunning
 	err = workflow.SetQueryHandler(ctx, QueryType, func(input []byte) (*QueryResult, error) {
 		return &QueryResult{
-			TotalDomains:  totalNumOfDomains,
-			Success:       len(successDomains),
-			Failed:        len(failedDomains),
-			FailedDomains: failedDomains,
-			State:         wfState,
+			TotalDomains:   totalNumOfDomains,
+			Success:        len(successDomains),
+			Failed:         len(failedDomains),
+			State:          wfState,
+			TargetCluster:  params.TargetCluster,
+			SourceCluster:  params.SourceCluster,
+			SuccessDomains: successDomains,
+			FailedDomains:  failedDomains,
 		}, nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	// get target domains
+	ao := workflow.WithActivityOptions(ctx, getGetDomainsActivityOptions())
+	getDomainsParams := &GetDomainsActivityParams{
+		TargetCluster: params.TargetCluster,
+		SourceCluster: params.SourceCluster,
+		Domains:       params.Domains,
+	}
+	var domains []string
+	err = workflow.ExecuteActivity(ao, GetDomainsActivity, getDomainsParams).Get(ctx, &domains)
+	if err != nil {
+		return nil, err
+	}
+	totalNumOfDomains = len(domains)
+
+	// failover in batch
 	ao = workflow.WithActivityOptions(ctx, getFailoverActivityOptions())
 	batchSize := params.BatchFailoverSize
 	times := len(domains) / batchSize
@@ -167,14 +187,15 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		}
 		wfState = wfRunning
 
-		// failover domains
 		failoverActivityParams := &FailoverActivityParams{
 			Domains:       domains[i*batchSize : min((i+1)*batchSize, totalNumOfDomains)],
 			TargetCluster: params.TargetCluster,
 		}
 		var actResult FailoverActivityResult
 		workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
+		successDomains = append(successDomains, actResult.SuccessDomains...)
 		failedDomains = append(failedDomains, actResult.FailedDomains...)
+
 		workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
 	}
 
@@ -190,11 +211,15 @@ func getGetDomainsActivityOptions() workflow.ActivityOptions {
 		ScheduleToStartTimeout: 10 * time.Second,
 		StartToCloseTimeout:    20 * time.Second,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          2 * time.Second,
-			BackoffCoefficient:       2,
-			MaximumInterval:          1 * time.Minute,
-			ExpirationInterval:       10 * time.Minute,
-			NonRetriableErrorReasons: []string{errMsgParamsIsNil, errMsgTargetClusterIsEmpty},
+			InitialInterval:    2 * time.Second,
+			BackoffCoefficient: 2,
+			MaximumInterval:    1 * time.Minute,
+			ExpirationInterval: 10 * time.Minute,
+			NonRetriableErrorReasons: []string{
+				errMsgParamsIsNil,
+				errMsgTargetClusterIsEmpty,
+				errMsgSourceClusterIsEmpty,
+				errMsgTargetClusterIsSameAsSource},
 		},
 	}
 }
@@ -218,16 +243,13 @@ func validateParams(params *FailoverParams) error {
 	if params == nil {
 		return errors.New(errMsgParamsIsNil)
 	}
-	if len(params.TargetCluster) == 0 {
-		return errors.New(errMsgTargetClusterIsEmpty)
-	}
 	if params.BatchFailoverSize <= 0 {
 		params.BatchFailoverSize = defaultBatchFailoverSize
 	}
 	if params.BatchFailoverWaitTimeInSeconds <= 0 {
 		params.BatchFailoverWaitTimeInSeconds = defaultBatchFailoverWaitTimeInSeconds
 	}
-	return nil
+	return validateTargetAndSourceCluster(params.TargetCluster, params.SourceCluster)
 }
 
 // GetDomainsActivity activity def
@@ -236,13 +258,13 @@ func GetDomainsActivity(ctx context.Context, params *GetDomainsActivityParams) (
 	if err != nil {
 		return nil, err
 	}
-	domains, err := getAllDomains(ctx)
+	domains, err := getAllDomains(ctx, params.Domains)
 	if err != nil {
 		return nil, err
 	}
 	var res []string
 	for _, domain := range domains {
-		if shouldFailover(domain, params.TargetCluster) {
+		if shouldFailover(domain, params.SourceCluster) {
 			domainName := domain.GetDomainInfo().GetName()
 			res = append(res, domainName)
 		}
@@ -254,16 +276,26 @@ func validateGetDomainsActivityParams(params *GetDomainsActivityParams) error {
 	if params == nil {
 		return errors.New(errMsgParamsIsNil)
 	}
-	if len(params.TargetCluster) == 0 {
+	return validateTargetAndSourceCluster(params.TargetCluster, params.SourceCluster)
+}
+
+func validateTargetAndSourceCluster(targetCluster, sourceCluster string) error {
+	if len(targetCluster) == 0 {
 		return errors.New(errMsgTargetClusterIsEmpty)
+	}
+	if len(sourceCluster) == 0 {
+		return errors.New(errMsgSourceClusterIsEmpty)
+	}
+	if sourceCluster == targetCluster {
+		return errors.New(errMsgTargetClusterIsSameAsSource)
 	}
 	return nil
 }
 
-func shouldFailover(domain *shared.DescribeDomainResponse, targetCluster string) bool {
-	isDomainNotActiveInTargetCluster := domain.ReplicationConfiguration.GetActiveClusterName() != targetCluster
-	return isDomainNotActiveInTargetCluster && isDomainFailoverManagedByCadence(domain)
-
+func shouldFailover(domain *shared.DescribeDomainResponse, sourceCluster string) bool {
+	currentActiveCluster := domain.ReplicationConfiguration.GetActiveClusterName()
+	isDomainTarget := currentActiveCluster == sourceCluster
+	return isDomainTarget && isDomainFailoverManagedByCadence(domain)
 }
 
 func isDomainFailoverManagedByCadence(domain *shared.DescribeDomainResponse) bool {
@@ -277,9 +309,18 @@ func getClient(ctx context.Context) frontend.Client {
 	return feClient
 }
 
-func getAllDomains(ctx context.Context) ([]*shared.DescribeDomainResponse, error) {
+func getAllDomains(ctx context.Context, targetDomains []string) ([]*shared.DescribeDomainResponse, error) {
 	feClient := getClient(ctx)
 	var res []*shared.DescribeDomainResponse
+
+	isTargetDomainsProvided := len(targetDomains) == 0
+	targetDomainsSet := make(map[string]struct{})
+	if isTargetDomainsProvided {
+		for _, domain := range targetDomains {
+			targetDomainsSet[domain] = struct{}{}
+		}
+	}
+
 	pagesize := int32(200)
 	var token []byte
 	for more := true; more; more = len(token) > 0 {
@@ -292,7 +333,17 @@ func getAllDomains(ctx context.Context) ([]*shared.DescribeDomainResponse, error
 			return nil, err
 		}
 		token = listResp.GetNextPageToken()
-		res = append(res, listResp.GetDomains()...)
+
+		if isTargetDomainsProvided {
+			for _, domain := range listResp.GetDomains() {
+				if _, ok := targetDomainsSet[domain.DomainInfo.GetName()]; ok {
+					res = append(res, domain)
+				}
+			}
+		} else {
+			res = append(res, listResp.GetDomains()...)
+		}
+
 		activity.RecordHeartbeat(ctx, len(res))
 	}
 	return res, nil

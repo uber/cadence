@@ -957,22 +957,31 @@ func newAdminFailoverCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagTargetClusterWithAlias,
-					Usage: "Target active cluster name",
+					Usage: "Target cluster name",
+				},
+				cli.StringFlag{
+					Name:  FlagSourceClusterWithAlias,
+					Usage: "Source cluster name",
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverTimeoutWithAlias,
 					Usage: "Optional Failover workflow timeout in seconds",
-					Value: 600,
+					Value: defaultFailoverTimeoutInSeconds,
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverWaitTimeWithAlias,
 					Usage: "Optional Failover wait time after each batch in seconds",
-					Value: 10,
+					Value: defaultBatchFailoverWaitTimeInSeconds,
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverBatchSizeWithAlias,
 					Usage: "Optional number of domains to failover in one batch",
-					Value: 10,
+					Value: defaultBatchFailoverSize,
+				},
+				cli.StringSliceFlag{
+					Name: FlagFailoverDomains,
+					Usage: "Optional domains to failover, eg d1,d2..,dn. " +
+						"Only provided domains in source cluster will be failover.",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -986,7 +995,7 @@ func newAdminFailoverCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
-					Usage: "Optional Failover workflow runID",
+					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1000,7 +1009,7 @@ func newAdminFailoverCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
-					Usage: "Optional Failover workflow runID",
+					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1014,7 +1023,7 @@ func newAdminFailoverCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
-					Usage: "Optional Failover workflow runID",
+					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1024,11 +1033,11 @@ func newAdminFailoverCommands() []cli.Command {
 		{
 			Name:    "abort",
 			Aliases: []string{"a"},
-			Usage:   "abort failover workflow state",
+			Usage:   "abort failover workflow",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
-					Usage: "Optional Failover workflow runID",
+					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
 				cli.StringFlag{
 					Name:  FlagReasonWithAlias,
@@ -1037,6 +1046,35 @@ func newAdminFailoverCommands() []cli.Command {
 			},
 			Action: func(c *cli.Context) {
 				AdminFailoverAbort(c)
+			},
+		},
+		{
+			Name:    "rollback",
+			Aliases: []string{"ro"},
+			Usage:   "rollback failover workflow",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "Optional Failover workflow runID, default is latest runID",
+				},
+				cli.IntFlag{
+					Name:  FlagFailoverTimeoutWithAlias,
+					Usage: "Optional Failover workflow timeout in seconds",
+					Value: defaultFailoverTimeoutInSeconds,
+				},
+				cli.IntFlag{
+					Name:  FlagFailoverWaitTimeWithAlias,
+					Usage: "Optional Failover wait time after each batch in seconds",
+					Value: defaultBatchFailoverWaitTimeInSeconds,
+				},
+				cli.IntFlag{
+					Name:  FlagFailoverBatchSizeWithAlias,
+					Usage: "Optional number of domains to failover in one batch",
+					Value: defaultBatchFailoverSize,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverRollback(c)
 			},
 		},
 	}
