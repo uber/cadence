@@ -29,11 +29,11 @@ import (
 type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters
 	KafkaConfig struct {
-		TLS            auth.TLS                 `yaml:"tls"`
-		Clusters       map[string]ClusterConfig `yaml:"clusters"`
-		Topics         map[string]TopicConfig   `yaml:"topics"`
-		ClusterToTopic map[string]TopicList     `yaml:"cadence-cluster-topics"`
-		Applications   map[string]TopicList     `yaml:"applications"`
+		TLS      auth.TLS                 `yaml:"tls"`
+		Clusters map[string]ClusterConfig `yaml:"clusters"`
+		Topics   map[string]TopicConfig   `yaml:"topics"`
+		// Applications describes the applications that will use the Kafka topics
+		Applications map[string]TopicList `yaml:"applications"`
 	}
 
 	// ClusterConfig describes the configuration for a single Kafka cluster
@@ -55,7 +55,7 @@ type (
 )
 
 // Validate will validate config for kafka
-func (k *KafkaConfig) Validate(checkCluster bool, checkApp bool) {
+func (k *KafkaConfig) Validate(checkApp bool) {
 	if len(k.Clusters) == 0 {
 		panic("Empty Kafka Cluster Config")
 	}
@@ -75,15 +75,6 @@ func (k *KafkaConfig) Validate(checkCluster bool, checkApp bool) {
 		}
 	}
 
-	if checkCluster {
-		if len(k.ClusterToTopic) == 0 {
-			panic("Empty Cluster To Topics Config")
-		}
-		for _, topics := range k.ClusterToTopic {
-			validateTopicsFn(topics.Topic)
-			validateTopicsFn(topics.DLQTopic)
-		}
-	}
 	if checkApp {
 		if len(k.Applications) == 0 {
 			panic("Empty Applications Config")
@@ -93,10 +84,6 @@ func (k *KafkaConfig) Validate(checkCluster bool, checkApp bool) {
 			validateTopicsFn(topics.DLQTopic)
 		}
 	}
-}
-
-func (k *KafkaConfig) getTopicsForCadenceCluster(cadenceCluster string) TopicList {
-	return k.ClusterToTopic[cadenceCluster]
 }
 
 func (k *KafkaConfig) getKafkaClusterForTopic(topic string) string {

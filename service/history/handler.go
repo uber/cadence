@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
@@ -65,7 +64,6 @@ type (
 		startWG                 sync.WaitGroup
 		config                  *config.Config
 		historyEventNotifier    events.Notifier
-		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers replication.TaskFetchers
 		queueTaskProcessor      task.Processor
@@ -119,13 +117,6 @@ func (h *Handler) RegisterHandler() {
 
 // Start starts the handler
 func (h *Handler) Start() {
-	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
-		var err error
-		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
-		if err != nil {
-			h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
-		}
-	}
 
 	h.replicationTaskFetchers = replication.NewTaskFetchers(
 		h.GetLogger(),
@@ -216,7 +207,6 @@ func (h *Handler) CreateEngine(
 		h.GetHistoryClient(),
 		h.GetSDKClient(),
 		h.historyEventNotifier,
-		h.publisher,
 		h.config,
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
