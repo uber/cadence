@@ -346,9 +346,9 @@ func (h *historyArchiver) ValidateURI(URI archiver.URI) error {
 }
 
 func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIterator) (*archiver.HistoryBlob, error) {
-	historyBlob, err := historyIterator.Next()
+	historyBlob, err := historyIterator.Next(ctx)
 	op := func() error {
-		historyBlob, err = historyIterator.Next()
+		historyBlob, err = historyIterator.Next(ctx)
 		return err
 	}
 	for err != nil {
