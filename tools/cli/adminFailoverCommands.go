@@ -85,7 +85,7 @@ func executePauseOrResume(c *cli.Context, isPause bool) error {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	runID := getCurrentRunID(c, client)
+	runID := getRunID(c, client)
 	var signalName string
 	if isPause {
 		signalName = failoverManager.PauseSignal
@@ -96,12 +96,31 @@ func executePauseOrResume(c *cli.Context, isPause bool) error {
 	return client.SignalWorkflow(tcCtx, failoverManager.WorkflowID, runID, signalName, nil)
 }
 
+// AdminFailoverQuery query a failover workflow
+func AdminFailoverQuery(c *cli.Context) {
+	client := getCadenceClient(c)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	runID := getRunID(c, client)
+	queryResult, err := client.QueryWorkflow(tcCtx, failoverManager.WorkflowID, runID, failoverManager.QueryType)
+	if err != nil {
+		ErrorAndExit("Failed to query failover workflow", err)
+	}
+	if !queryResult.HasValue() {
+		ErrorAndExit("QueryResult has no value", nil)
+	}
+	var result failoverManager.QueryResult
+	queryResult.Get(&result)
+	prettyPrintJSONObject(result)
+}
+
 func getCadenceClient(c *cli.Context) cclient.Client {
 	svcClient := cFactory.ClientFrontendClient(c)
 	return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
 }
 
-func getCurrentRunID(c *cli.Context, client cclient.Client) string {
+func getRunID(c *cli.Context, client cclient.Client) string {
 	var runID string
 
 	if c.IsSet(FlagRunID) {

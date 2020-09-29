@@ -54,11 +54,16 @@ const (
 	errMsgTargetClusterIsEmpty = "targetCluster is empty"
 
 	// QueryType for failover workflow
-	QueryType    = "state"
+	QueryType = "state"
 	// PauseSignal signal name for pause
-	PauseSignal  = "pause"
+	PauseSignal = "pause"
 	// ResumeSignal signal name for resume
 	ResumeSignal = "resume"
+
+	// workflow states for query
+	wfRunning   = "running"
+	wfPaused    = "paused"
+	wfCompleted = "complete"
 )
 
 type (
@@ -101,6 +106,7 @@ type (
 		Success       int
 		Failed        int
 		FailedDomains []string
+		State         string
 	}
 )
 
@@ -130,12 +136,14 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	var failedDomains []string
 	var successDomains []string
 	totalNumOfDomains := len(domains)
+	wfState := wfRunning
 	err = workflow.SetQueryHandler(ctx, QueryType, func(input []byte) (*QueryResult, error) {
 		return &QueryResult{
 			TotalDomains:  totalNumOfDomains,
 			Success:       len(successDomains),
 			Failed:        len(failedDomains),
 			FailedDomains: failedDomains,
+			State:         wfState,
 		}, nil
 	})
 	if err != nil {
@@ -154,9 +162,10 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		// check if need to pause
 		shouldPause = pauseCh.ReceiveAsync(nil)
 		if shouldPause {
-			// todo: add log workflow paused, and query state
+			wfState = wfPaused
 			resumeCh.Receive(ctx, nil)
 		}
+		wfState = wfRunning
 
 		// failover domains
 		failoverActivityParams := &FailoverActivityParams{
@@ -169,6 +178,7 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
 	}
 
+	wfState = wfCompleted
 	return &FailoverResult{
 		SuccessDomains: successDomains,
 		FailedDomains:  failedDomains,

@@ -1007,6 +1007,20 @@ func newAdminFailoverCommands() []cli.Command {
 				AdminFailoverResume(c)
 			},
 		},
+		{
+			Name:    "query",
+			Aliases: []string{"q"},
+			Usage:   "query failover workflow state",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "Optional Failover workflow runID",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverQuery(c)
+			},
+		},
 	}
 
 }
