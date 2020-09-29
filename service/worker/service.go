@@ -153,6 +153,10 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
+		failoverManagerCfg: &failoverManager.Config{
+			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
+			ClusterMetadata:     params.ClusterMetadata,
+		},
 		EnableBatcher:                 dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		EnableParentClosePolicyWorker: dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		EnableFailoverManager:         dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),

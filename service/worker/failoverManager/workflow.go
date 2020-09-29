@@ -41,7 +41,9 @@ const (
 	// TaskListName tasklist
 	TaskListName = "cadence-sys-failoverManager-tasklist"
 	// WorkflowTypeName workflow type name
-	WorkflowTypeName       = "cadence-sys-failoverManager-workflow"
+	WorkflowTypeName = "cadence-sys-failoverManager-workflow"
+	// WorkflowID will be reused to ensure only one workflow running
+	WorkflowID             = "cadence-failover-manager"
 	failoverActivityName   = "cadence-sys-failover-activity"
 	getDomainsActivityName = "cadence-sys-getDomains-activity"
 

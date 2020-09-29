@@ -629,12 +629,18 @@ func newAdminClusterCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "failover",
-			Aliases: []string{"fo"},
+			Name:        "failover",
+			Aliases:     []string{"fo"},
+			Usage:       "Failover domains with domain data IsManagedByCadence=true to target cluster",
+			Subcommands: newAdminFailoverCommands(),
+		},
+		{
+			Name:    "failover_fast",
+			Aliases: []string{"fof"},
 			Usage:   "Failover domains with domain data IsManagedByCadence=true to target cluster",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  FlagActiveClusterNameWithAlias,
+					Name:  FlagTargetClusterWithAlias,
 					Usage: "Target active cluster name",
 				},
 			},
@@ -938,6 +944,40 @@ func getQueueCommandFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  FlagQueueType,
 			Usage: "queue type: 2 (transfer queue) or 3 (timer queue)",
+		},
+	}
+}
+
+func newAdminFailoverCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "start",
+			Aliases: []string{"s"},
+			Usage:   "start failover workflow",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagTargetClusterWithAlias,
+					Usage: "Target active cluster name",
+				},
+				cli.IntFlag{
+					Name:  FlagFailoverTimeoutWithAlias,
+					Usage: "Optional Failover workflow timeout in seconds",
+					Value: 600,
+				},
+				cli.IntFlag{
+					Name:  FlagFailoverWaitTimeWithAlias,
+					Usage: "Optional Failover wait time after each batch in seconds",
+					Value: 10,
+				},
+				cli.IntFlag{
+					Name:  FlagFailoverBatchSizeWithAlias,
+					Usage: "Optional number of domains to failover in one batch",
+					Value: 10,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverStart(c)
+			},
 		},
 	}
 }
