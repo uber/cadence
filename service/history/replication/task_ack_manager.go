@@ -93,8 +93,7 @@ func NewTaskAckManager(
 
 	config := shard.GetConfig()
 	rateLimiter := quotas.NewDynamicRateLimiter(func() float64 {
-		clusterName := shard.GetClusterMetadata().GetCurrentClusterName()
-		return config.ReplicationTaskGenerationQPS(clusterName)
+		return config.ReplicationTaskGenerationQPS()
 	})
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
@@ -299,8 +298,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 
 	var eventBatchBlobs []*persistence.DataBlob
 	var pageToken []byte
-	clusterName := t.shard.GetClusterMetadata().GetCurrentClusterName()
-	batchSize := t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize(clusterName)
+	batchSize := t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize()
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,

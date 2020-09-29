@@ -149,7 +149,6 @@ func (h *Handler) Start() {
 		h.queueTaskProcessor, err = task.NewProcessor(
 			taskPriorityAssigner,
 			h.config,
-			h.GetClusterMetadata().GetCurrentClusterName(),
 			h.GetLogger(),
 			h.GetMetricsClient(),
 		)

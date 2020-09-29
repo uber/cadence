@@ -48,7 +48,13 @@ func NewService(
 	params *service.BootstrapParams,
 ) (resource.Resource, error) {
 
-	serviceConfig := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger))
+	serviceConfig := NewConfig(
+		dynamicconfig.NewCollection(
+			params.DynamicConfig,
+			params.ClusterMetadata.GetCurrentClusterName(),
+			params.Logger,
+		),
+	)
 	serviceResource, err := resource.New(
 		params,
 		common.MatchingServiceName,

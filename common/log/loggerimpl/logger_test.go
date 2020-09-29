@@ -86,7 +86,7 @@ func TestThrottleLogger(t *testing.T) {
 	zapLogger = zap.NewExample()
 
 	dc := dynamicconfig.NewNopClient()
-	cln := dynamicconfig.NewCollection(dc, NewNopLogger())
+	cln := dynamicconfig.NewCollectionForTest(dc, NewNopLogger())
 	logger := NewThrottledLogger(NewLogger(zapLogger), cln.GetIntProperty(dynamicconfig.FrontendRPS, 1))
 	preCaller := caller(1)
 	logger.WithTags(tag.Error(fmt.Errorf("test error"))).WithTags(tag.ComponentShard).Info("test info", tag.WorkflowActionWorkflowStarted)

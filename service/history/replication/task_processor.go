@@ -136,8 +136,7 @@ func NewTaskProcessor(
 		taskExecutor:      taskExecutor,
 		hostRateLimiter:   taskFetcher.GetRateLimiter(),
 		shardRateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
-			cluster := shard.GetClusterMetadata().GetCurrentClusterName()
-			return config.ReplicationTaskProcessorShardQPS(cluster)
+			return config.ReplicationTaskProcessorShardQPS()
 		}),
 		taskRetryPolicy:        taskRetryPolicy,
 		dlqRetryPolicy:         dlqRetryPolicy,

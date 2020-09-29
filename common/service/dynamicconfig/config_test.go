@@ -133,7 +133,7 @@ func TestConfigSuite(t *testing.T) {
 func (s *configSuite) SetupSuite() {
 	s.client = newInMemoryClient()
 	logger := log.NewNoop()
-	s.cln = NewCollection(s.client, logger)
+	s.cln = NewCollectionForTest(s.client, logger)
 }
 
 func (s *configSuite) TestGetProperty() {
@@ -301,7 +301,7 @@ func BenchmarkLogValue(b *testing.B) {
 		durationCompareEquals,
 	}
 
-	collection := NewCollection(newInMemoryClient(), log.NewNoop())
+	collection := NewCollectionForTest(newInMemoryClient(), log.NewNoop())
 	// pre-warm the collection logValue map
 	for i := range keys {
 		collection.logValue(keys[i], values[i], values[i], cmpFuncs[i])
