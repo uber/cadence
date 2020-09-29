@@ -93,7 +93,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 	ctx context.Context,
 	request *persistence.InternalCreateDomainRequest,
 ) (*persistence.CreateDomainResponse, error) {
-	metadata, err := m.GetMetadata(context.TODO())
+	metadata, err := m.GetMetadata(ctx)
 	if err != nil {
 		return nil, err
 	}
