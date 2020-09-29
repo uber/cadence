@@ -1021,6 +1021,24 @@ func newAdminFailoverCommands() []cli.Command {
 				AdminFailoverQuery(c)
 			},
 		},
+		{
+			Name:    "abort",
+			Aliases: []string{"a"},
+			Usage:   "abort failover workflow state",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "Optional Failover workflow runID",
+				},
+				cli.StringFlag{
+					Name:  FlagReasonWithAlias,
+					Usage: "Optional reason why abort",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverAbort(c)
+			},
+		},
 	}
 
 }

@@ -31,6 +31,10 @@ import (
 	"github.com/uber/cadence/service/worker/failoverManager"
 )
 
+const (
+	defaultAbortReason = "Failover aborted through admin CLI"
+)
+
 // AdminFailoverStart start failover workflow
 func AdminFailoverStart(c *cli.Context) {
 	targetCluster := getRequiredOption(c, FlagTargetCluster)
@@ -113,6 +117,27 @@ func AdminFailoverQuery(c *cli.Context) {
 	var result failoverManager.QueryResult
 	queryResult.Get(&result)
 	prettyPrintJSONObject(result)
+}
+
+// AdminFailoverAbort abort a failover workflow
+func AdminFailoverAbort(c *cli.Context) {
+	client := getCadenceClient(c)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	reason := c.String(FlagReason)
+	if len(reason) == 0 {
+		reason = defaultAbortReason
+	}
+	runID := getRunID(c, client)
+
+	// todo: update query state to reflect abort status
+	err := client.TerminateWorkflow(tcCtx, failoverManager.WorkflowID, runID, reason, nil)
+	if err != nil {
+		ErrorAndExit("Failed to abort failover workflow", err)
+	}
+
+	fmt.Println("Failover aborted")
 }
 
 func getCadenceClient(c *cli.Context) cclient.Client {
