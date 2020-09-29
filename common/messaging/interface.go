@@ -20,6 +20,10 @@
 
 package messaging
 
+import (
+	"context"
+)
+
 type (
 	// Client is the interface used to abstract out interaction with messaging system for replication
 	Client interface {
@@ -53,7 +57,7 @@ type (
 
 	// Producer is the interface used to send replication tasks to other clusters through replicator
 	Producer interface {
-		Publish(message interface{}) error
+		Publish(ctx context.Context, message interface{}) error
 	}
 
 	// CloseableProducer is a Producer that can be closed

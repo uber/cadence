@@ -21,6 +21,8 @@
 package domain
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -113,6 +115,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
 	}
 
 	return domainReplicator.replicationMessageSink.Publish(
+		context.TODO(),
 		&replicator.ReplicationTask{
 			TaskType:             &taskType,
 			DomainTaskAttributes: task,

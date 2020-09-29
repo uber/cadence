@@ -21,6 +21,7 @@
 package messaging
 
 import (
+	"context"
 	"errors"
 
 	"github.com/Shopify/sarama"
@@ -53,7 +54,7 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Log
 }
 
 // Publish is used to send messages to other clusters through Kafka topic
-func (p *kafkaProducer) Publish(msg interface{}) error {
+func (p *kafkaProducer) Publish(_ context.Context, msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
 	if err != nil {
 		return err

@@ -119,11 +119,11 @@ func (s *domainReplicationSuite) TestPutDomainReplicationTaskToDLQ() {
 		ID: common.StringPtr(domainID),
 	}
 
-	s.domainReplicationQueue.EXPECT().PublishToDLQ(task).Return(nil).Times(1)
+	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), task).Return(nil).Times(1)
 	err = s.replicationProcessor.putDomainReplicationTaskToDLQ(task)
 	s.NoError(err)
 
-	s.domainReplicationQueue.EXPECT().PublishToDLQ(task).Return(errors.New("test")).Times(1)
+	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), task).Return(errors.New("test")).Times(1)
 	err = s.replicationProcessor.putDomainReplicationTaskToDLQ(task)
 	s.Error(err)
 }
@@ -193,7 +193,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(errors.New("test")).AnyTimes()
-	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any()).Return(nil).Times(2)
+	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
 	s.replicationProcessor.fetchDomainReplicationTasks()
 	s.Equal(lastMessageID, s.replicationProcessor.lastProcessedMessageID)
@@ -225,7 +225,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(nil).AnyTimes()
-	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any()).Return(errors.New("test")).Times(1)
+	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(1)
 
 	s.replicationProcessor.fetchDomainReplicationTasks()
 	s.Equal(lastMessageID, s.replicationProcessor.lastProcessedMessageID)
