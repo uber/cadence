@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/cadence/.gen/go/shared"
+
 	"github.com/urfave/cli"
 	cclient "go.uber.org/cadence/client"
 
@@ -157,7 +159,19 @@ func AdminFailoverQuery(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	runID := getRunID(c, client)
+	var runID string
+	var descResp *shared.DescribeWorkflowExecutionResponse
+	var err error
+	if c.IsSet(FlagRunID) {
+		runID = c.String(FlagRunID)
+	} else {
+		descResp, err = client.DescribeWorkflowExecution(tcCtx, failoverManager.WorkflowID, "")
+		if err != nil {
+			ErrorAndExit("Failed to get failover workflow runID", err)
+		}
+		runID = descResp.WorkflowExecutionInfo.Execution.GetRunId()
+	}
+
 	queryResult, err := client.QueryWorkflow(tcCtx, failoverManager.WorkflowID, runID, failoverManager.QueryType)
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
@@ -165,8 +179,19 @@ func AdminFailoverQuery(c *cli.Context) {
 	if !queryResult.HasValue() {
 		ErrorAndExit("QueryResult has no value", nil)
 	}
+
 	var result failoverManager.QueryResult
 	queryResult.Get(&result)
+
+	if descResp == nil {
+		descResp, err = client.DescribeWorkflowExecution(tcCtx, failoverManager.WorkflowID, runID)
+		if err != nil {
+			ErrorAndExit("Failed to describe workflow", err)
+		}
+	}
+	if descResp.WorkflowExecutionInfo.CloseStatus.Equals(shared.WorkflowExecutionCloseStatusTerminated) {
+		result.State = "aborted"
+	}
 	prettyPrintJSONObject(result)
 }
 
@@ -182,7 +207,6 @@ func AdminFailoverAbort(c *cli.Context) {
 	}
 	runID := getRunID(c, client)
 
-	// todo: update query state to reflect abort status
 	err := client.TerminateWorkflow(tcCtx, failoverManager.WorkflowID, runID, reason, nil)
 	if err != nil {
 		ErrorAndExit("Failed to abort failover workflow", err)
