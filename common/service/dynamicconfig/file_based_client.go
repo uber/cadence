@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sort"
 	"sync/atomic"
 	"time"
 
@@ -237,17 +236,7 @@ func (fc *fileBasedClient) update() error {
 		return fmt.Errorf("failed to decode dynamic config %v", err)
 	}
 
-	// sort the slice by the number of the constrains descending sort
-	storeValue := newValues
-	for key, constrainedValue := range newValues {
-
-		sort.Slice(constrainedValue, func(i, j int) bool {
-			return len(constrainedValue[i].Constraints) > len(constrainedValue[j].Constraints)
-		})
-		storeValue[key] = constrainedValue
-	}
-
-	return fc.storeValues(storeValue)
+	return fc.storeValues(newValues)
 }
 
 func (fc *fileBasedClient) storeValues(newValues map[string][]*constrainedValue) error {
@@ -293,12 +282,12 @@ func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]inter
 
 // match will return true if the constraints matches the filters or any subsets
 func match(v *constrainedValue, filters map[Filter]interface{}) bool {
-	if len(filters) == 0 && len(v.Constraints) != len(filters) {
+	if len(v.Constraints) > len(filters) {
 		return false
 	}
 
-	for filter, filterValue := range filters {
-		if v.Constraints[filter.String()] != filterValue {
+	for constrain, constrainedValue := range v.Constraints {
+		if filters[parseFilter(constrain)] != constrainedValue {
 			return false
 		}
 	}

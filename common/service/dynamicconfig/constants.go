@@ -913,6 +913,25 @@ func (f Filter) String() string {
 	return filters[f]
 }
 
+func parseFilter(filterName string) Filter {
+	switch filterName {
+	case "domainName":
+		return DomainName
+	case "domainID":
+		return DomainID
+	case "taskListName":
+		return TaskListName
+	case "taskType":
+		return TaskType
+	case "shardID":
+		return ShardID
+	case "clusterName":
+		return ClusterName
+	default:
+		return unknownFilter
+	}
+}
+
 var filters = []string{
 	"unknownFilter",
 	"domainName",
