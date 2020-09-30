@@ -220,6 +220,12 @@ func AdminFailoverRollback(c *cli.Context) {
 	failoverStart(c, params)
 }
 
+// AdminFailoverList list failover runs
+func AdminFailoverList(c *cli.Context) {
+	c.Set(FlagWorkflowID, failoverManager.WorkflowID)
+	ListWorkflow(c)
+}
+
 func getCadenceClient(c *cli.Context) cclient.Client {
 	svcClient := cFactory.ClientFrontendClient(c)
 	return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})

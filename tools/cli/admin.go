@@ -1077,6 +1077,29 @@ func newAdminFailoverCommands() []cli.Command {
 				AdminFailoverRollback(c)
 			},
 		},
+		{
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "list failover workflow runs closed/open. This is just a simplified list cmd",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  FlagOpenWithAlias,
+					Usage: "List for open workflow executions, default is to list for closed ones",
+				},
+				cli.IntFlag{
+					Name:  FlagPageSizeWithAlias,
+					Value: 10,
+					Usage: "Result page size",
+				},
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "Ignore this. It is a dummy flag which will be forced overwrite",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminFailoverList(c)
+			},
+		},
 	}
 
 }
