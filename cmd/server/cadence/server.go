@@ -119,8 +119,8 @@ func (s *server) startService() common.Daemon {
 	clusterMetadata := s.cfg.ClusterMetadata
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
-		clusterMetadata.CurrentClusterName,
 		params.Logger,
+		dynamicconfig.ClusterNameFilter(clusterMetadata.CurrentClusterName),
 	)
 
 	svcCfg := s.cfg.Services[s.name]

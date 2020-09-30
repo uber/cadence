@@ -1121,7 +1121,7 @@ func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHist
 func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, transientDecision *gen.TransientDecisionInfo, historyEvents []*shared.HistoryEvent) {
 	wh := s.getWorkflowHandler(
 		NewConfig(
-			dc.NewCollectionForTest(
+			dc.NewCollection(
 				dc.NewNopClient(),
 				s.mockResource.GetLogger()),
 			numHistoryShards,
@@ -1362,7 +1362,7 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 
 func (s *workflowHandlerSuite) newConfig() *Config {
 	return NewConfig(
-		dc.NewCollectionForTest(
+		dc.NewCollection(
 			dc.NewNopClient(),
 			s.mockResource.GetLogger(),
 		),

@@ -93,7 +93,7 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	s.config = NewConfig(
-		dynamicconfig.NewCollectionForTest(
+		dynamicconfig.NewCollection(
 			dynamicconfig.NewNopClient(),
 			s.mockResource.GetLogger(),
 		),

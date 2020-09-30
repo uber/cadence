@@ -55,8 +55,8 @@ func NewService(
 	serviceConfig := config.New(
 		dynamicconfig.NewCollection(
 			params.DynamicConfig,
-			params.ClusterMetadata.GetCurrentClusterName(),
 			params.Logger,
+			dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
 		),
 		params.PersistenceConfig.NumHistoryShards,
 		params.PersistenceConfig.DefaultStoreType(),

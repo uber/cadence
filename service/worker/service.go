@@ -111,8 +111,8 @@ func NewService(
 func NewConfig(params *service.BootstrapParams) *Config {
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
-		params.ClusterMetadata.GetCurrentClusterName(),
 		params.Logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
 	)
 	config := &Config{
 		ArchiverConfig: &archiver.Config{

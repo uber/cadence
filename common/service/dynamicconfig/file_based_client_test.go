@@ -21,6 +21,7 @@
 package dynamicconfig
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -307,9 +308,9 @@ func (s *fileBasedClientSuite) TestMatch() {
 		},
 	}
 
-	for _, tc := range testCases {
+	for index, tc := range testCases {
 		matched := match(tc.v, tc.filters)
-		s.Equal(tc.matched, matched)
+		s.Equal(tc.matched, matched, fmt.Sprintf("Test case %v failved", index))
 	}
 }
 

@@ -134,7 +134,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	logger, err := loggerimpl.NewDevelopment()
 	s.Nil(err)
 
-	s.mockConfig = NewConfig(dynamicconfig.NewCollectionForTest(
+	s.mockConfig = NewConfig(dynamicconfig.NewCollection(
 		dynamicconfig.NewNopClient(),
 		logger,
 	),

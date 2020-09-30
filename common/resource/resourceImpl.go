@@ -159,8 +159,8 @@ func New(
 
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
-		params.ClusterMetadata.GetCurrentClusterName(),
 		logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
 	)
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(

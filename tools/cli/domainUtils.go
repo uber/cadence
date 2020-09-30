@@ -404,7 +404,7 @@ func initializeDynamicConfig(
 	if err != nil {
 		ErrorAndExit("Error initializing dynamic config.", err)
 	}
-	return dynamicconfig.NewCollection(dynamicConfigClient, "", logger)
+	return dynamicconfig.NewCollection(dynamicConfigClient, logger)
 }
 
 func initializeMetricsClient() metrics.Client {

@@ -140,8 +140,8 @@ func New(params *BootstrapParams) Service {
 		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection: dynamicconfig.NewCollection(
 			params.DynamicConfig,
-			params.ClusterMetadata.GetCurrentClusterName(),
 			params.Logger,
+			dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
 		),
 		archivalMetadata: params.ArchivalMetadata,
 		archiverProvider: params.ArchiverProvider,

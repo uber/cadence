@@ -87,7 +87,7 @@ func (s *domainHandlerCommonSuite) TearDownSuite() {
 
 func (s *domainHandlerCommonSuite) SetupTest() {
 	logger := loggerimpl.NewNopLogger()
-	dcCollection := dc.NewCollectionForTest(dc.NewNopClient(), logger)
+	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
 	s.metadataMgr = s.TestBase.MetadataManager

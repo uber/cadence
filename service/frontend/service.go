@@ -159,9 +159,10 @@ func NewService(
 
 	isAdvancedVisExistInConfig := len(params.PersistenceConfig.AdvancedVisibilityStore) != 0
 	serviceConfig := NewConfig(
-		dynamicconfig.NewCollectionForTest(
+		dynamicconfig.NewCollection(
 			params.DynamicConfig,
 			params.Logger,
+			dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
 		),
 		params.PersistenceConfig.NumHistoryShards,
 		isAdvancedVisExistInConfig,
