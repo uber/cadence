@@ -298,7 +298,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 			ClusterName: common.StringPtr(clusterName),
 		})
 	}
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 	err = s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName2),
 		Description:                            common.StringPtr(description2),
@@ -417,7 +417,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_InvalidRetentionPeriod() {
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 	domain := uuid.New()
 	registerRequest := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
@@ -461,7 +461,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentActiveCluster() {
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 	domain := uuid.New()
 	registerRequest := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
@@ -493,7 +493,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentA
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFailover() {
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 	domain := uuid.New()
 	registerRequest := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
@@ -527,7 +527,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFail
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateActiveCluster() {
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 	domain := uuid.New()
 	registerRequest := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
@@ -559,7 +559,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateAct
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_ForceFailover() {
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Times(3)
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Times(3)
 	domain := uuid.New()
 	registerRequest := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
@@ -607,7 +607,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_ForceFailover_SameActiveCluster() {
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 	domain := uuid.New()
 	registerRequest := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),

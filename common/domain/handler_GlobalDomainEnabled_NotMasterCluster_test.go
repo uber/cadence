@@ -691,7 +691,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
