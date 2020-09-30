@@ -41,8 +41,8 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -54,18 +54,17 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		currentCluster      string
-		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
-		config              *config.Config
-		historyClient       *historyservicetest.MockClient
-		mockDomainCache     *cache.MockDomainCache
-		mockClientBean      *client.MockBean
-		adminClient         *adminservicetest.MockClient
-		clusterMetadata     *cluster.MockMetadata
-		executionManager    *mocks.ExecutionManager
-		nDCHistoryResender  *xdc.MockNDCHistoryResender
-		historyRereplicator *xdc.MockHistoryRereplicator
+		currentCluster     string
+		mockShard          *shard.TestContext
+		mockEngine         *engine.MockEngine
+		config             *config.Config
+		historyClient      *historyservicetest.MockClient
+		mockDomainCache    *cache.MockDomainCache
+		mockClientBean     *client.MockBean
+		adminClient        *adminservicetest.MockClient
+		clusterMetadata    *cluster.MockMetadata
+		executionManager   *mocks.ExecutionManager
+		nDCHistoryResender *ndc.MockHistoryResender
 
 		taskHandler *taskExecutorImpl
 	}
@@ -107,8 +106,7 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
 	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
-	s.nDCHistoryResender = xdc.NewMockNDCHistoryResender(s.controller)
-	s.historyRereplicator = &xdc.MockHistoryRereplicator{}
+	s.nDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 
@@ -121,7 +119,6 @@ func (s *taskExecutorSuite) SetupTest() {
 		s.mockShard,
 		s.mockDomainCache,
 		s.nDCHistoryResender,
-		s.historyRereplicator,
 		s.mockEngine,
 		metricsClient,
 		s.mockShard.GetLogger(),
@@ -133,18 +130,6 @@ func (s *taskExecutorSuite) TearDownTest() {
 	s.mockShard.Finish(s.T())
 }
 
-func (s *taskExecutorSuite) TestConvertRetryTaskError_OK() {
-	err := &shared.RetryTaskError{}
-	_, ok := s.taskHandler.convertRetryTaskError(err)
-	s.True(ok)
-}
-
-func (s *taskExecutorSuite) TestConvertRetryTaskError_NotOK() {
-	err := &shared.RetryTaskV2Error{}
-	_, ok := s.taskHandler.convertRetryTaskError(err)
-	s.False(ok)
-}
-
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
 	err := &shared.RetryTaskV2Error{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
@@ -152,7 +137,7 @@ func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_NotOK() {
-	err := &shared.RetryTaskError{}
+	err := &shared.BadRequestError{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
 	s.False(ok)
 }
@@ -213,34 +198,7 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 		RunId:      common.StringPtr(runID),
 	}
 
-	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
-	_, err := s.taskHandler.execute(task, true)
-	s.NoError(err)
-}
-
-func (s *taskExecutorSuite) TestProcessTaskOnce_HistoryReplicationTask() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistory.Ptr(),
-		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	}
-	request := &history.ReplicateEventsRequest{
-		DomainUUID: common.StringPtr(domainID),
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-		SourceCluster:     common.StringPtr("test"),
-		ForceBufferEvents: common.BoolPtr(false),
-	}
-
-	s.mockEngine.EXPECT().ReplicateEvents(gomock.Any(), request).Return(nil).Times(1)
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
 }

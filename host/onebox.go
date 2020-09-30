@@ -107,7 +107,6 @@ type (
 		replicator                    *replicator.Replicator
 		clientWorker                  archiver.ClientWorker
 		indexer                       *indexer.Indexer
-		enableNDC                     bool
 		archiverMetadata              carchiver.ArchivalMetadata
 		archiverProvider              provider.ArchiverProvider
 		historyConfig                 *HistoryConfig
@@ -141,7 +140,6 @@ type (
 		DomainReplicationQueue        persistence.DomainReplicationQueue
 		Logger                        log.Logger
 		ClusterNo                     int
-		EnableNDC                     bool
 		ArchiverMetadata              carchiver.ArchivalMetadata
 		ArchiverProvider              provider.ArchiverProvider
 		EnableReadHistoryFromArchival bool
@@ -176,7 +174,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		domainReplicationQueue:        params.DomainReplicationQueue,
 		shutdownCh:                    make(chan struct{}),
 		clusterNo:                     params.ClusterNo,
-		enableNDC:                     params.EnableNDC,
 		esConfig:                      params.ESConfig,
 		esClient:                      params.ESClient,
 		archiverMetadata:              params.ArchiverMetadata,
@@ -734,7 +731,6 @@ func (c *cadenceImpl) GetExecutionManagerFactory() persistence.ExecutionManagerF
 func (c *cadenceImpl) overrideHistoryDynamicConfig(client *dynamicClient) {
 	client.OverrideValue(dynamicconfig.HistoryMgrNumConns, c.historyConfig.NumHistoryShards)
 	client.OverrideValue(dynamicconfig.ExecutionMgrNumConns, c.historyConfig.NumHistoryShards)
-	client.OverrideValue(dynamicconfig.EnableNDC, c.enableNDC)
 	client.OverrideValue(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond)
 
 	if c.workerConfig.EnableIndexer {

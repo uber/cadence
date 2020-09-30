@@ -218,7 +218,6 @@ func (r *stateRebuilderImpl) applyEvents(
 		},
 		events,
 		nil, // no new run history when rebuilding mutable state
-		true,
 	)
 	if err != nil {
 		r.logger.Error("nDCStateRebuilder unable to rebuild mutable state.", tag.Error(err))

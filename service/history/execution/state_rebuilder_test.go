@@ -146,7 +146,6 @@ func (s *stateRebuilderSuite) TestApplyEvents() {
 		},
 		events,
 		[]*shared.HistoryEvent(nil),
-		true,
 	).Return(nil, nil).Times(1)
 
 	err := s.nDCStateRebuilder.applyEvents(workflowIdentifier, mockStateBuilder, events, requestID)

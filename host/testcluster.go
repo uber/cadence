@@ -45,6 +45,7 @@ import (
 	pes "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -70,7 +71,6 @@ type (
 	// TestClusterConfig are config for a test cluster
 	TestClusterConfig struct {
 		FrontendAddress       string
-		EnableNDC             bool
 		EnableArchival        bool
 		IsMasterCluster       bool
 		ClusterNo             int
@@ -122,6 +122,8 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {
 			ops = mysql.GetTestClusterOption()
+		} else if TestFlags.SQLPluginName == postgres.PluginName {
+			ops = postgres.GetTestClusterOption()
 		} else {
 			panic("not supported plugin " + TestFlags.SQLPluginName)
 		}
@@ -181,7 +183,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		VisibilityMgr:                 visibilityMgr,
 		Logger:                        logger,
 		ClusterNo:                     options.ClusterNo,
-		EnableNDC:                     options.EnableNDC,
 		ESConfig:                      options.ESConfig,
 		ESClient:                      esClient,
 		ArchiverMetadata:              archiverBase.metadata,
@@ -261,9 +262,8 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 	if config == nil || config.UseMock {
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
-	checkCluster := len(config.KafkaConfig.ClusterToTopic) != 0
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkCluster, checkApp)
+	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster

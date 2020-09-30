@@ -21,11 +21,10 @@
 package sql
 
 import (
+	"context"
 	"fmt"
 
 	"database/sql"
-
-	"go.uber.org/cadence/.gen/go/shared"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -61,11 +60,12 @@ func newQueue(
 }
 
 func (q *sqlQueue) EnqueueMessage(
+	ctx context.Context,
 	messagePayload []byte,
 ) error {
 
-	err := q.txExecute("EnqueueMessage", func(tx sqlplugin.Tx) error {
-		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(q.queueType)
+	err := q.txExecute(ctx, "EnqueueMessage", func(tx sqlplugin.Tx) error {
+		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.queueType)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				lastMessageID = -1
@@ -74,7 +74,7 @@ func (q *sqlQueue) EnqueueMessage(
 			}
 		}
 
-		_, err = tx.InsertIntoQueue(newQueueRow(q.queueType, lastMessageID+1, messagePayload))
+		_, err = tx.InsertIntoQueue(ctx, newQueueRow(q.queueType, lastMessageID+1, messagePayload))
 		return err
 	})
 	if err != nil {
@@ -84,11 +84,12 @@ func (q *sqlQueue) EnqueueMessage(
 }
 
 func (q *sqlQueue) ReadMessages(
+	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
 ) ([]*persistence.QueueMessage, error) {
 
-	rows, err := q.db.GetMessagesFromQueue(q.queueType, lastMessageID, maxCount)
+	rows, err := q.db.GetMessagesFromQueue(ctx, q.queueType, lastMessageID, maxCount)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +111,11 @@ func newQueueRow(
 }
 
 func (q *sqlQueue) DeleteMessagesBefore(
+	ctx context.Context,
 	messageID int64,
 ) error {
 
-	_, err := q.db.DeleteMessagesBefore(q.queueType, messageID)
+	_, err := q.db.DeleteMessagesBefore(ctx, q.queueType, messageID)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteMessagesBefore operation failed. Error %v", err),
@@ -123,12 +125,13 @@ func (q *sqlQueue) DeleteMessagesBefore(
 }
 
 func (q *sqlQueue) UpdateAckLevel(
+	ctx context.Context,
 	messageID int64,
 	clusterName string,
 ) error {
 
-	err := q.txExecute("UpdateAckLevel", func(tx sqlplugin.Tx) error {
-		clusterAckLevels, err := tx.GetAckLevels(q.queueType, true)
+	err := q.txExecute(ctx, "UpdateAckLevel", func(tx sqlplugin.Tx) error {
+		clusterAckLevels, err := tx.GetAckLevels(ctx, q.queueType, true)
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
@@ -136,7 +139,7 @@ func (q *sqlQueue) UpdateAckLevel(
 		}
 
 		if clusterAckLevels == nil {
-			err := tx.InsertAckLevel(q.queueType, messageID, clusterName)
+			err := tx.InsertAckLevel(ctx, q.queueType, messageID, clusterName)
 			if err != nil {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
@@ -151,7 +154,7 @@ func (q *sqlQueue) UpdateAckLevel(
 		}
 
 		clusterAckLevels[clusterName] = messageID
-		err = tx.UpdateAckLevels(q.queueType, clusterAckLevels)
+		err = tx.UpdateAckLevels(ctx, q.queueType, clusterAckLevels)
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
@@ -166,18 +169,21 @@ func (q *sqlQueue) UpdateAckLevel(
 	return nil
 }
 
-func (q *sqlQueue) GetAckLevels() (map[string]int64, error) {
-	return q.db.GetAckLevels(q.queueType, false)
+func (q *sqlQueue) GetAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
+	return q.db.GetAckLevels(ctx, q.queueType, false)
 }
 
 func (q *sqlQueue) EnqueueMessageToDLQ(
+	ctx context.Context,
 	messagePayload []byte,
 ) (int64, error) {
 
 	var lastMessageID int64
-	err := q.txExecute("EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
+	err := q.txExecute(ctx, "EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
 		var err error
-		lastMessageID, err = tx.GetLastEnqueuedMessageIDForUpdate(q.getDLQTypeFromQueueType())
+		lastMessageID, err = tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.getDLQTypeFromQueueType())
 		if err != nil {
 			if err == sql.ErrNoRows {
 				lastMessageID = -1
@@ -185,7 +191,7 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 				return fmt.Errorf("failed to get last enqueued message id from DLQ: %v", err)
 			}
 		}
-		_, err = tx.InsertIntoQueue(newQueueRow(q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload))
+		_, err = tx.InsertIntoQueue(ctx, newQueueRow(q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload))
 		return err
 	})
 	if err != nil {
@@ -195,6 +201,7 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 }
 
 func (q *sqlQueue) ReadMessagesFromDLQ(
+	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 	pageSize int,
@@ -204,13 +211,13 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 	if pageToken != nil && len(pageToken) != 0 {
 		lastReadMessageID, err := deserializePageToken(pageToken)
 		if err != nil {
-			return nil, nil, &shared.InternalServiceError{
+			return nil, nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", pageToken)}
 		}
 		firstMessageID = lastReadMessageID
 	}
 
-	rows, err := q.db.GetMessagesBetween(q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID, pageSize)
+	rows, err := q.db.GetMessagesBetween(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID, pageSize)
 	if err != nil {
 		return nil, nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ReadMessagesFromDLQ operation failed. Error %v", err),
@@ -231,10 +238,11 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 }
 
 func (q *sqlQueue) DeleteMessageFromDLQ(
+	ctx context.Context,
 	messageID int64,
 ) error {
 
-	_, err := q.db.DeleteMessage(q.getDLQTypeFromQueueType(), messageID)
+	_, err := q.db.DeleteMessage(ctx, q.getDLQTypeFromQueueType(), messageID)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteMessageFromDLQ operation failed. Error %v", err),
@@ -244,11 +252,12 @@ func (q *sqlQueue) DeleteMessageFromDLQ(
 }
 
 func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
+	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
 
-	_, err := q.db.RangeDeleteMessages(q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID)
+	_, err := q.db.RangeDeleteMessages(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("RangeDeleteMessagesFromDLQ operation failed. Error %v", err),
@@ -258,12 +267,13 @@ func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
 }
 
 func (q *sqlQueue) UpdateDLQAckLevel(
+	ctx context.Context,
 	messageID int64,
 	clusterName string,
 ) error {
 
-	err := q.txExecute("UpdateDLQAckLevel", func(tx sqlplugin.Tx) error {
-		clusterAckLevels, err := tx.GetAckLevels(q.getDLQTypeFromQueueType(), true)
+	err := q.txExecute(ctx, "UpdateDLQAckLevel", func(tx sqlplugin.Tx) error {
+		clusterAckLevels, err := tx.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), true)
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
@@ -271,7 +281,7 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 		}
 
 		if clusterAckLevels == nil {
-			err := tx.InsertAckLevel(q.getDLQTypeFromQueueType(), messageID, clusterName)
+			err := tx.InsertAckLevel(ctx, q.getDLQTypeFromQueueType(), messageID, clusterName)
 			if err != nil {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
@@ -286,7 +296,7 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 		}
 
 		clusterAckLevels[clusterName] = messageID
-		err = tx.UpdateAckLevels(q.getDLQTypeFromQueueType(), clusterAckLevels)
+		err = tx.UpdateAckLevels(ctx, q.getDLQTypeFromQueueType(), clusterAckLevels)
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
@@ -301,9 +311,11 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 	return nil
 }
 
-func (q *sqlQueue) GetDLQAckLevels() (map[string]int64, error) {
+func (q *sqlQueue) GetDLQAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
 
-	return q.db.GetAckLevels(q.getDLQTypeFromQueueType(), false)
+	return q.db.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), false)
 }
 
 func (q *sqlQueue) getDLQTypeFromQueueType() persistence.QueueType {

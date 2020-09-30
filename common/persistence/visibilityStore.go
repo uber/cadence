@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -73,7 +74,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(request *RecordWo
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		SearchAttributes:   request.SearchAttributes,
 	}
-	return v.persistence.RecordWorkflowExecutionStarted(req)
+	return v.persistence.RecordWorkflowExecutionStarted(context.TODO(), req)
 }
 
 func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error {
@@ -93,7 +94,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWor
 		HistoryLength:      request.HistoryLength,
 		RetentionSeconds:   request.RetentionSeconds,
 	}
-	return v.persistence.RecordWorkflowExecutionClosed(req)
+	return v.persistence.RecordWorkflowExecutionClosed(context.TODO(), req)
 }
 
 func (v *visibilityManagerImpl) UpsertWorkflowExecution(request *UpsertWorkflowExecutionRequest) error {
@@ -109,11 +110,11 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(request *UpsertWorkflowE
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
 	}
-	return v.persistence.UpsertWorkflowExecution(req)
+	return v.persistence.UpsertWorkflowExecution(context.TODO(), req)
 }
 
 func (v *visibilityManagerImpl) ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListOpenWorkflowExecutions(request)
+	internalResp, err := v.persistence.ListOpenWorkflowExecutions(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ func (v *visibilityManagerImpl) ListOpenWorkflowExecutions(request *ListWorkflow
 }
 
 func (v *visibilityManagerImpl) ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutions(request)
+	internalResp, err := v.persistence.ListClosedWorkflowExecutions(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +130,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutions(request *ListWorkfl
 }
 
 func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByType(request)
+	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByType(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +138,7 @@ func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByType(request *ListWo
 }
 
 func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByType(request)
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByType(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +146,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByType(request *List
 }
 
 func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByWorkflowID(request)
+	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByWorkflowID(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByWorkflowID(request *
 }
 
 func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByWorkflowID(request)
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByWorkflowID(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +162,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByWorkflowID(request
 }
 
 func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByStatus(request)
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByStatus(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(request *Li
 }
 
 func (v *visibilityManagerImpl) GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error) {
-	internalResp, err := v.persistence.GetClosedWorkflowExecution(request)
+	internalResp, err := v.persistence.GetClosedWorkflowExecution(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +178,11 @@ func (v *visibilityManagerImpl) GetClosedWorkflowExecution(request *GetClosedWor
 }
 
 func (v *visibilityManagerImpl) DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error {
-	return v.persistence.DeleteWorkflowExecution(request)
+	return v.persistence.DeleteWorkflowExecution(context.TODO(), request)
 }
 
 func (v *visibilityManagerImpl) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListWorkflowExecutions(request)
+	internalResp, err := v.persistence.ListWorkflowExecutions(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +190,7 @@ func (v *visibilityManagerImpl) ListWorkflowExecutions(request *ListWorkflowExec
 }
 
 func (v *visibilityManagerImpl) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ScanWorkflowExecutions(request)
+	internalResp, err := v.persistence.ScanWorkflowExecutions(context.TODO(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +198,7 @@ func (v *visibilityManagerImpl) ScanWorkflowExecutions(request *ListWorkflowExec
 }
 
 func (v *visibilityManagerImpl) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
-	return v.persistence.CountWorkflowExecutions(request)
+	return v.persistence.CountWorkflowExecutions(context.TODO(), request)
 }
 
 func (v *visibilityManagerImpl) convertInternalGetResponse(internalResp *InternalGetClosedWorkflowExecutionResponse) *GetClosedWorkflowExecutionResponse {

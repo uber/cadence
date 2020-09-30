@@ -21,19 +21,30 @@
 package mysql
 
 import (
+	"context"
+	"database/sql"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
-// db represents a logical connection to mysql database
-type db struct {
-	db        *sqlx.DB
-	tx        *sqlx.Tx
-	conn      sqlplugin.Conn
-	converter DataConverter
-}
+type (
+	db struct {
+		db        *sqlx.DB
+		tx        *sqlx.Tx
+		converter DataConverter
+		conn      conn
+	}
+
+	conn interface {
+		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	}
+)
 
 var _ sqlplugin.AdminDB = (*db)(nil)
 var _ sqlplugin.DB = (*db)(nil)
@@ -51,18 +62,21 @@ func (mdb *db) IsDupEntryError(err error) bool {
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
 func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
-	mdb := &db{db: xdb, tx: tx}
-	mdb.conn = xdb
-	if tx != nil {
-		mdb.conn = tx
+	db := &db{
+		db:        xdb,
+		tx:        tx,
+		converter: &converter{},
+		conn:      xdb,
 	}
-	mdb.converter = &converter{}
-	return mdb
+	if tx != nil {
+		db.conn = tx
+	}
+	return db
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (mdb *db) BeginTx() (sqlplugin.Tx, error) {
-	xtx, err := mdb.db.Beginx()
+func (mdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
+	xtx, err := mdb.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

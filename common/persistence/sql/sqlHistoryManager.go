@@ -21,8 +21,11 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -40,18 +43,21 @@ type sqlHistoryV2Manager struct {
 func newHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
+	parser serialization.Parser,
 ) (p.HistoryStore, error) {
 
 	return &sqlHistoryV2Manager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
+			parser: parser,
 		},
 	}, nil
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *sqlHistoryV2Manager) AppendHistoryNodes(
+	ctx context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
 
@@ -86,7 +92,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			CreatedTimeNanos: common.TimeNowNanosPtr(),
 		}
 
-		blob, err := historyTreeInfoToBlob(treeInfo)
+		blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
 		if err != nil {
 			return err
 		}
@@ -99,8 +105,8 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			DataEncoding: string(blob.Encoding),
 		}
 
-		return m.txExecute("AppendHistoryNodes", func(tx sqlplugin.Tx) error {
-			result, err := tx.InsertIntoHistoryNode(nodeRow)
+		return m.txExecute(ctx, "AppendHistoryNodes", func(tx sqlplugin.Tx) error {
+			result, err := tx.InsertIntoHistoryNode(ctx, nodeRow)
 			if err != nil {
 				return err
 			}
@@ -111,7 +117,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			if rowsAffected != 1 {
 				return fmt.Errorf("expected 1 row to be affected for node table, got %v", rowsAffected)
 			}
-			result, err = tx.InsertIntoHistoryTree(treeRow)
+			result, err = tx.InsertIntoHistoryTree(ctx, treeRow)
 			if err != nil {
 				return err
 			}
@@ -126,7 +132,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 		})
 	}
 
-	_, err := m.db.InsertIntoHistoryNode(nodeRow)
+	_, err := m.db.InsertIntoHistoryNode(ctx, nodeRow)
 	if err != nil {
 		if m.db.IsDupEntryError(err) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
@@ -138,6 +144,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 
 // ReadHistoryBranch returns history node data for a branch
 func (m *sqlHistoryV2Manager) ReadHistoryBranch(
+	ctx context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
 
@@ -168,7 +175,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 		ShardID:   request.ShardID,
 	}
 
-	rows, err := m.db.SelectFromHistoryNode(filter)
+	rows, err := m.db.SelectFromHistoryNode(ctx, filter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
 		return &p.InternalReadHistoryBranchResponse{}, nil
 	}
@@ -280,6 +287,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 //       8[8,9]
 //
 func (m *sqlHistoryV2Manager) ForkHistoryBranch(
+	ctx context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
@@ -325,7 +333,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		CreatedTimeNanos: common.TimeNowNanosPtr(),
 	}
 
-	blob, err := historyTreeInfoToBlob(treeInfo)
+	blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +345,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 		Data:         blob.Data,
 		DataEncoding: string(blob.Encoding),
 	}
-	result, err := m.db.InsertIntoHistoryTree(row)
+	result, err := m.db.InsertIntoHistoryTree(ctx, row)
 	if err != nil {
 		return nil, err
 	}
@@ -353,6 +361,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 
 // DeleteHistoryBranch removes a branch
 func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
+	ctx context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
 
@@ -365,7 +374,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := m.GetHistoryTree(&p.GetHistoryTreeRequest{
+	rsp, err := m.GetHistoryTree(ctx, &p.GetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: common.IntPtr(request.ShardID),
 	})
@@ -384,14 +393,14 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		}
 	}
 
-	return m.txExecute("DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
 		branchID := sqlplugin.MustParseUUID(*branch.BranchID)
 		treeFilter := &sqlplugin.HistoryTreeFilter{
 			TreeID:   sqlplugin.MustParseUUID(treeID),
 			BranchID: &branchID,
 			ShardID:  request.ShardID,
 		}
-		_, err = tx.DeleteFromHistoryTree(treeFilter)
+		_, err = tx.DeleteFromHistoryTree(ctx, treeFilter)
 		if err != nil {
 			return err
 		}
@@ -415,7 +424,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 				// No any branch is using this range, we can delete all of it
 				nodeFilter.MinNodeID = br.BeginNodeID
 			}
-			_, err := tx.DeleteFromHistoryNode(nodeFilter)
+			_, err := tx.DeleteFromHistoryNode(ctx, nodeFilter)
 			if err != nil {
 				return err
 			}
@@ -428,6 +437,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 }
 
 func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
+	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 
@@ -438,6 +448,7 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 
 // GetHistoryTree returns all branch information of a tree
 func (m *sqlHistoryV2Manager) GetHistoryTree(
+	ctx context.Context,
 	request *p.GetHistoryTreeRequest,
 ) (*p.GetHistoryTreeResponse, error) {
 
@@ -448,12 +459,12 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		TreeID:  treeID,
 		ShardID: *request.ShardID,
 	}
-	rows, err := m.db.SelectFromHistoryTree(treeFilter)
+	rows, err := m.db.SelectFromHistoryTree(ctx, treeFilter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
 		return &p.GetHistoryTreeResponse{}, nil
 	}
 	for _, row := range rows {
-		treeInfo, err := historyTreeInfoFromBlob(row.Data, row.DataEncoding)
+		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}

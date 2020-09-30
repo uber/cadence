@@ -1,4 +1,4 @@
-Documentation for the Cadence command line interface is located at our [main site](https://cadenceworkflow.io/docs/08_cli).
+Documentation for the Cadence command line interface is located at our [main site](https://cadenceworkflow.io/docs/cli/).
 
 ## Quick Start
 Run `make bins` from the project root. You should see an executable file called `cadence`. Try a few example commands to 

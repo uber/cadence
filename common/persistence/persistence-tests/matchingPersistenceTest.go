@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -133,7 +134,8 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 // TestGetTasksWithNoMaxReadLevel test
 func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 	if s.TaskMgr.GetName() == "cassandra" {
-		s.T().Skip("this test is not applicable for cassandra persistence")
+		//this test is not applicable for cassandra persistence
+		return
 	}
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
@@ -161,9 +163,12 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 		{5, firstTaskID + 2, []int64{firstTaskID + 3, firstTaskID + 4}},
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	for _, tc := range testCases {
 		s.Run(fmt.Sprintf("tc_%v_%v", tc.batchSz, tc.readLevel), func() {
-			response, err := s.TaskMgr.GetTasks(&p.GetTasksRequest{
+			response, err := s.TaskMgr.GetTasks(ctx, &p.GetTasksRequest{
 				DomainID:  domainID,
 				TaskList:  taskList,
 				TaskType:  p.TaskListTypeActivity,
@@ -267,10 +272,13 @@ func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 	remaining := len(resp.Tasks)
 	req := &p.CompleteTasksLessThanRequest{DomainID: domainID, TaskListName: taskList, TaskType: p.TaskListTypeActivity, Limit: 1}
 
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	for _, tc := range testCases {
 		req.TaskID = tc.taskID
 		req.Limit = tc.limit
-		nRows, err := s.TaskMgr.CompleteTasksLessThan(req)
+		nRows, err := s.TaskMgr.CompleteTasksLessThan(ctx, req)
 		s.NoError(err)
 		resp, err := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 10)
 		s.NoError(err)
@@ -292,7 +300,11 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	domainID := "00136543-72ad-4615-b7e9-44bca9775b45"
 	taskList := "aaaaaaa"
 	leaseTime := time.Now()
-	response, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	response, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
 		TaskType: p.TaskListTypeActivity,
@@ -304,7 +316,7 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	s.True(tli.LastUpdated.After(leaseTime) || tli.LastUpdated.Equal(leaseTime))
 
 	leaseTime = time.Now()
-	response, err = s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+	response, err = s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
 		TaskType: p.TaskListTypeActivity,
@@ -315,7 +327,7 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	s.EqualValues(0, tli.AckLevel)
 	s.True(tli.LastUpdated.After(leaseTime) || tli.LastUpdated.Equal(leaseTime))
 
-	response, err = s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+	response, err = s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
 		TaskType: p.TaskListTypeActivity,
@@ -333,13 +345,13 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 		AckLevel: 0,
 		Kind:     p.TaskListKindNormal,
 	}
-	_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(ctx, &p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.NoError(err)
 
 	taskListInfo.RangeID = 3
-	_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(ctx, &p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.Error(err)
@@ -349,7 +361,11 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskListSticky() {
 	domainID := uuid.New()
 	taskList := "aaaaaaa"
-	response, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	response, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID:     domainID,
 		TaskList:     taskList,
 		TaskType:     p.TaskListTypeDecision,
@@ -369,19 +385,22 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskListSticky() {
 		AckLevel: 0,
 		Kind:     p.TaskListKindSticky,
 	}
-	_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(ctx, &p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.NoError(err) // because update with ttl doesn't check rangeID
 }
 
 func (s *MatchingPersistenceSuite) deleteAllTaskList() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	var nextPageToken []byte
 	for {
-		resp, err := s.TaskMgr.ListTaskList(&p.ListTaskListRequest{PageSize: 10, PageToken: nextPageToken})
+		resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10, PageToken: nextPageToken})
 		s.NoError(err)
 		for _, it := range resp.Items {
-			err = s.TaskMgr.DeleteTaskList(&p.DeleteTaskListRequest{
+			err = s.TaskMgr.DeleteTaskList(ctx, &p.DeleteTaskListRequest{
 				DomainID:     it.DomainID,
 				TaskListName: it.Name,
 				TaskListType: it.TaskType,
@@ -399,10 +418,15 @@ func (s *MatchingPersistenceSuite) deleteAllTaskList() {
 // TestListWithOneTaskList test
 func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 	if s.TaskMgr.GetName() == "cassandra" {
-		s.T().Skip("ListTaskList API is currently not supported in cassandra")
+		// ListTaskList API is currently not supported in cassandra
+		return
 	}
 	s.deleteAllTaskList()
-	resp, err := s.TaskMgr.ListTaskList(&p.ListTaskListRequest{PageSize: 10})
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10})
 	s.NoError(err)
 	s.Nil(resp.NextPageToken)
 	s.Equal(0, len(resp.Items))
@@ -413,7 +437,7 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 	for i := 0; i < 10; i++ {
 		rangeID++
 		updatedTime := time.Now()
-		_, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+		_, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 			DomainID:     domainID,
 			TaskList:     "list-task-list-test-tl0",
 			TaskType:     p.TaskListTypeActivity,
@@ -421,7 +445,7 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 		})
 		s.NoError(err)
 
-		resp, err := s.TaskMgr.ListTaskList(&p.ListTaskListRequest{PageSize: 10})
+		resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10})
 		s.NoError(err)
 
 		s.Equal(1, len(resp.Items))
@@ -435,7 +459,7 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 
 		ackLevel++
 		updatedTime = time.Now()
-		_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
+		_, err = s.TaskMgr.UpdateTaskList(ctx, &p.UpdateTaskListRequest{
 			TaskListInfo: &p.TaskListInfo{
 				DomainID: domainID,
 				Name:     "list-task-list-test-tl0",
@@ -447,7 +471,7 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 		})
 		s.NoError(err)
 
-		resp, err = s.TaskMgr.ListTaskList(&p.ListTaskListRequest{PageSize: 10})
+		resp, err = s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10})
 		s.NoError(err)
 		s.Equal(1, len(resp.Items))
 		s.True(resp.Items[0].LastUpdated.After(updatedTime) || resp.Items[0].LastUpdated.Equal(updatedTime))
@@ -458,14 +482,19 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 // TestListWithMultipleTaskList test
 func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 	if s.TaskMgr.GetName() == "cassandra" {
-		s.T().Skip("ListTaskList API is currently not supported in cassandra")
+		// ListTaskList API is currently not supported in cassandra"
+		return
 	}
 	s.deleteAllTaskList()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	domainID := uuid.New()
 	tlNames := make(map[string]struct{})
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("test-list-with-multiple-%v", i)
-		_, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
+		_, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 			DomainID:     domainID,
 			TaskList:     name,
 			TaskType:     p.TaskListTypeActivity,
@@ -476,7 +505,7 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		listedNames := make(map[string]struct{})
 		var nextPageToken []byte
 		for {
-			resp, err := s.TaskMgr.ListTaskList(&p.ListTaskListRequest{PageSize: 10, PageToken: nextPageToken})
+			resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10, PageToken: nextPageToken})
 			s.NoError(err)
 			for _, it := range resp.Items {
 				s.Equal(domainID, it.DomainID)
@@ -494,7 +523,7 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		s.Equal(tlNames, listedNames, "list API returned wrong set of task list names")
 	}
 	s.deleteAllTaskList()
-	resp, err := s.TaskMgr.ListTaskList(&p.ListTaskListRequest{PageSize: 10})
+	resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10})
 	s.NoError(err)
 	s.Nil(resp.NextPageToken)
 	s.Equal(0, len(resp.Items))

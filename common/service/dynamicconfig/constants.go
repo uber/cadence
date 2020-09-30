@@ -52,7 +52,6 @@ var keys = map[Key]string{
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
-	EnableNDC:                           "system.enableNDC",
 	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
@@ -83,6 +82,7 @@ var keys = map[Key]string{
 	HistoryCountLimitError: "limit.historyCount.error",
 	HistoryCountLimitWarn:  "limit.historyCount.warn",
 	MaxIDLengthLimit:       "limit.maxIDLength",
+	MaxIDLengthWarnLimit:   "limit.maxIDWarnLength",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
@@ -182,6 +182,8 @@ var keys = map[Key]string{
 	QueueProcessorSplitLookAheadDurationByDomainID:        "history.queueProcessorSplitLookAheadDurationByDomainID",
 	QueueProcessorPollBackoffInterval:                     "history.queueProcessorPollBackoffInterval",
 	QueueProcessorPollBackoffIntervalJitterCoefficient:    "history.queueProcessorPollBackoffIntervalJitterCoefficient",
+	QueueProcessorEnablePersistQueueStates:                "history.queueProcessorEnablePersistQueueStates",
+	QueueProcessorEnableLoadQueueStates:                   "history.queueProcessorEnableLoadQueueStates",
 	TimerTaskBatchSize:                                    "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                  "history.timerTaskWorkerCount",
 	TimerTaskMaxRetryCount:                                "history.timerTaskMaxRetryCount",
@@ -344,8 +346,6 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
-	// EnableNDC is key for enable N data center events replication
-	EnableNDC
 	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
@@ -402,6 +402,9 @@ const (
 	// MaxIDLengthLimit is the length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
 	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	MaxIDLengthLimit
+	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
+	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
+	MaxIDLengthWarnLimit
 
 	// key for frontend
 
@@ -597,6 +600,10 @@ const (
 	QueueProcessorPollBackoffInterval
 	// QueueProcessorPollBackoffIntervalJitterCoefficient backoff interval jitter coefficient
 	QueueProcessorPollBackoffIntervalJitterCoefficient
+	// QueueProcessorEnablePersistQueueStates indicates whether processing queue states should be persisted
+	QueueProcessorEnablePersistQueueStates
+	// QueueProcessorEnableLoadQueueStates indicates whether processing queue states should be loaded
+	QueueProcessorEnableLoadQueueStates
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	TimerTaskBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor

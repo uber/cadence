@@ -54,7 +54,6 @@ func verifyMutableStateChecksum(
 
 func newMutableStateChecksumPayload(ms MutableState) *checksumgen.MutableStateChecksumPayload {
 	executionInfo := ms.GetExecutionInfo()
-	replicationState := ms.GetReplicationState()
 	payload := &checksumgen.MutableStateChecksumPayload{
 		CancelRequested:      common.BoolPtr(executionInfo.CancelRequested),
 		State:                common.Int16Ptr(int16(executionInfo.State)),
@@ -67,11 +66,6 @@ func newMutableStateChecksumPayload(ms MutableState) *checksumgen.MutableStateCh
 		DecisionStartedID:    common.Int64Ptr(executionInfo.DecisionStartedID),
 		DecisionVersion:      common.Int64Ptr(executionInfo.DecisionVersion),
 		StickyTaskListName:   common.StringPtr(executionInfo.StickyTaskList),
-	}
-
-	if replicationState != nil {
-		payload.LastWriteVersion = common.Int64Ptr(replicationState.LastWriteVersion)
-		payload.LastWriteEventID = common.Int64Ptr(replicationState.LastWriteEventID)
 	}
 
 	versionHistories := ms.GetVersionHistories()

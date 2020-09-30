@@ -25,6 +25,8 @@ persistence:
         default:
             sql:
                 pluginName: "mysql"
+                encodingType: "thriftrw"
+                decodingType: ["thriftrw"]
                 databaseName: {{ default .Env.DBNAME "cadence" }}
                 connectAddr: "{{ default .Env.MYSQL_SEEDS "" }}:{{ default .Env.DB_PORT "3306" }}"
                 connectProtocol: "tcp"
@@ -37,6 +39,8 @@ persistence:
         visibility:
             sql:
                 pluginName: "mysql"
+                encodingType: "thriftrw"
+                decodingType: ["thriftrw"]
                 databaseName: {{ default .Env.VISIBILITY_DBNAME "cadence_visibility" }}
                 connectAddr: "{{ default .Env.MYSQL_SEEDS "" }}:{{ default .Env.DB_PORT "3306" }}"
                 connectProtocol: "tcp"
@@ -50,6 +54,8 @@ persistence:
         default:
             sql:
                 pluginName: "postgres"
+                encodingType: "thriftrw"
+                decodingType: ["thriftrw"]
                 databaseName: {{ default .Env.DBNAME "cadence" }}
                 connectAddr: "{{ default .Env.POSTGRES_SEEDS "" }}:{{ default .Env.DB_PORT "5432" }}"
                 connectProtocol: "tcp"
@@ -61,6 +67,8 @@ persistence:
         visibility:
             sql:
                 pluginName: "postgres"
+                encodingType: "thriftrw"
+                decodingType: ["thriftrw"]
                 databaseName: {{ default .Env.VISIBILITY_DBNAME "cadence_visibility" }}
                 connectAddr: "{{ default .Env.POSTGRES_SEEDS "" }}:{{ default .Env.DB_PORT "5432" }}"
                 connectProtocol: "tcp"

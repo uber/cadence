@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -395,11 +396,7 @@ type (
 		ScheduledID       int64
 		BranchToken       []byte
 		NewRunBranchToken []byte
-		ResetWorkflow     bool
 		CreationTime      int64
-
-		// TODO deprecate when NDC is fully released && migrated
-		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -605,10 +602,6 @@ type (
 		Version             int64
 		BranchToken         []byte
 		NewRunBranchToken   []byte
-
-		// TODO when 2DC is deprecated remove these 2 attributes
-		ResetWorkflow       bool
-		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters
@@ -661,7 +654,6 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
 		ExecutionStats      *ExecutionStats
-		ReplicationState    *ReplicationState
 		BufferedEvents      []*workflow.HistoryEvent
 		VersionHistories    *VersionHistories
 		Checksum            checksum.Checksum
@@ -885,19 +877,7 @@ type (
 		// current workflow
 		CurrentWorkflowMutation *WorkflowMutation
 
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS *CurrentWorkflowCAS
-
 		Encoding common.EncodingType // optional binary encoding type
-	}
-
-	// CurrentWorkflowCAS represent a compare and swap on current record
-	// TODO deprecate this once nDC migration is completed
-	CurrentWorkflowCAS struct {
-		PrevRunID            string
-		PrevLastWriteVersion int64
-		PrevState            int
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -934,7 +914,6 @@ type (
 	WorkflowMutation struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ExecutionStats   *ExecutionStats
-		ReplicationState *ReplicationState
 		VersionHistories *VersionHistories
 
 		UpsertActivityInfos       []*ActivityInfo
@@ -964,7 +943,6 @@ type (
 	WorkflowSnapshot struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ExecutionStats   *ExecutionStats
-		ReplicationState *ReplicationState
 		VersionHistories *VersionHistories
 
 		ActivityInfos       []*ActivityInfo
@@ -1537,9 +1515,9 @@ type (
 	ShardManager interface {
 		Closeable
 		GetName() string
-		CreateShard(request *CreateShardRequest) error
-		GetShard(request *GetShardRequest) (*GetShardResponse, error)
-		UpdateShard(request *UpdateShardRequest) error
+		CreateShard(ctx context.Context, request *CreateShardRequest) error
+		GetShard(ctx context.Context, request *GetShardRequest) (*GetShardResponse, error)
+		UpdateShard(ctx context.Context, request *UpdateShardRequest) error
 	}
 
 	// ExecutionManager is used to manage workflow executions
@@ -1594,13 +1572,13 @@ type (
 	TaskManager interface {
 		Closeable
 		GetName() string
-		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
-		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
-		ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error)
-		DeleteTaskList(request *DeleteTaskListRequest) error
-		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
-		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
-		CompleteTask(request *CompleteTaskRequest) error
+		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
+		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
+		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
+		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
 		// CompleteTasksLessThan completes tasks less than or equal to the given task id
 		// This API takes a limit parameter which specifies the count of maxRows that
 		// can be deleted. This parameter may be ignored by the underlying storage, but
@@ -1610,7 +1588,7 @@ type (
 		// On success, this method returns:
 		//  - number of rows actually deleted, if limit is honored
 		//  - UnknownNumRowsDeleted, when all rows below value are deleted
-		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
+		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
 	}
 
 	// HistoryManager is used to manager workflow history events
@@ -2518,12 +2496,12 @@ func (config *ClusterReplicationConfig) GetCopy() *ClusterReplicationConfig {
 	return &res
 }
 
-// DBTimestampToUnixNano converts CQL timestamp to UnixNano
+// DBTimestampToUnixNano converts Milliseconds timestamp to UnixNano
 func DBTimestampToUnixNano(milliseconds int64) int64 {
 	return milliseconds * 1000 * 1000 // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-3) - (-9) = 6, so multiply by 10⁶
 }
 
-// UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
+// UnixNanoToDBTimestamp converts UnixNano to Milliseconds timestamp
 func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }

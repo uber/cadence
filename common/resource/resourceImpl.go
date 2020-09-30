@@ -206,7 +206,6 @@ func New(
 			}
 			return persistenceMaxQPS()
 		},
-		params.AbstractDatastoreFactory,
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
