@@ -553,7 +553,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 		fmt.Printf("Query was rejected, workflow is in state: %v\n", *queryResponse.QueryRejected.CloseStatus)
 	} else {
 		// assume it is json encoded
-		fmt.Printf("Query result as JSON:\n%v\n", string(queryResponse.QueryResult))
+		fmt.Print(string(queryResponse.QueryResult))
 	}
 }
 

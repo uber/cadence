@@ -177,9 +177,10 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
-			Name:  "query",
-			Usage: "query workflow execution",
-			Flags: getFlagsForQuery(),
+			Name:        "query",
+			Usage:       "query workflow execution",
+			Description: "query result will be printed as JSON",
+			Flags:       getFlagsForQuery(),
 			Action: func(c *cli.Context) {
 				QueryWorkflow(c)
 			},
