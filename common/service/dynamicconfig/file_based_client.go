@@ -287,7 +287,8 @@ func match(v *constrainedValue, filters map[Filter]interface{}) bool {
 	}
 
 	for constrain, constrainedValue := range v.Constraints {
-		if filters[parseFilter(constrain)] != constrainedValue {
+		constrainKey := parseFilter(constrain)
+		if filters[constrainKey] == nil || filters[constrainKey] != constrainedValue {
 			return false
 		}
 	}
