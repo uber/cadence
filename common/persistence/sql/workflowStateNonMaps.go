@@ -24,8 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
@@ -179,7 +178,7 @@ func getBufferedEvents(
 	}
 	var result []*p.DataBlob
 	for _, row := range rows {
-		result = append(result, p.NewDataBlob(row.Data, common.EncodingType(row.DataEncoding)))
+		result = append(result, p.NewDataBlob(row.Data, types.EncodingType(row.DataEncoding)))
 	}
 	return result, nil
 }

@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"strings"
 	"time"
 
@@ -1368,7 +1369,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	state := &p.InternalWorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
-	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
+	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), types.EncodingType(result["version_histories_encoding"].(string)))
 
 	activityInfos := make(map[int64]*p.InternalActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
@@ -2180,7 +2181,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 		}
 		response.Executions = append(response.Executions, &p.InternalListConcreteExecutionsEntity{
 			ExecutionInfo:    createWorkflowExecutionInfo(result["execution"].(map[string]interface{})),
-			VersionHistories: p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string))),
+			VersionHistories: p.NewDataBlob(result["version_histories"].([]byte), types.EncodingType(result["version_histories_encoding"].(string))),
 		})
 		result = make(map[string]interface{})
 	}

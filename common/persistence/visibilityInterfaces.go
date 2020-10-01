@@ -23,6 +23,7 @@ package persistence
 import (
 	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/types"
 )
 
 // Interfaces for the Visibility Store.
@@ -169,7 +170,7 @@ type (
 
 	// VisibilityManager is used to manage the visibility store
 	VisibilityManager interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		RecordWorkflowExecutionStarted(request *RecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error

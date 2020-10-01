@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -176,7 +177,7 @@ func getActivityInfoMap(
 			LastHeartBeatUpdatedTime: v.LastHeartbeatUpdatedTime,
 			Version:                  decoded.GetVersion(),
 			ScheduledEventBatchID:    decoded.GetScheduledEventBatchID(),
-			ScheduledEvent:           persistence.NewDataBlob(decoded.ScheduledEvent, common.EncodingType(decoded.GetScheduledEventEncoding())),
+			ScheduledEvent:           persistence.NewDataBlob(decoded.ScheduledEvent, types.EncodingType(decoded.GetScheduledEventEncoding())),
 			ScheduledTime:            time.Unix(0, decoded.GetScheduledTimeNanos()),
 			StartedID:                decoded.GetStartedID(),
 			StartedTime:              time.Unix(0, decoded.GetStartedTimeNanos()),
@@ -204,7 +205,7 @@ func getActivityInfoMap(
 			LastFailureDetails:       decoded.GetRetryLastFailureDetails(),
 		}
 		if decoded.StartedEvent != nil {
-			info.StartedEvent = persistence.NewDataBlob(decoded.StartedEvent, common.EncodingType(decoded.GetStartedEventEncoding()))
+			info.StartedEvent = persistence.NewDataBlob(decoded.StartedEvent, types.EncodingType(decoded.GetStartedEventEncoding()))
 		}
 		ret[v.ScheduleID] = info
 	}
@@ -482,10 +483,10 @@ func getChildExecutionInfoMap(
 			ParentClosePolicy:     workflow.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
 		}
 		if rowInfo.InitiatedEvent != nil {
-			info.InitiatedEvent = persistence.NewDataBlob(rowInfo.InitiatedEvent, common.EncodingType(rowInfo.GetInitiatedEventEncoding()))
+			info.InitiatedEvent = persistence.NewDataBlob(rowInfo.InitiatedEvent, types.EncodingType(rowInfo.GetInitiatedEventEncoding()))
 		}
 		if rowInfo.StartedEvent != nil {
-			info.StartedEvent = persistence.NewDataBlob(rowInfo.StartedEvent, common.EncodingType(rowInfo.GetStartedEventEncoding()))
+			info.StartedEvent = persistence.NewDataBlob(rowInfo.StartedEvent, types.EncodingType(rowInfo.GetStartedEventEncoding()))
 		}
 		ret[v.InitiatedID] = info
 	}

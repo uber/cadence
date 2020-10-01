@@ -23,10 +23,10 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 )
 
@@ -44,7 +44,7 @@ type (
 	TaskStore = TaskManager
 	// MetadataStore is a lower level of MetadataManager
 	MetadataStore interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
 		GetDomain(ctx context.Context, request *GetDomainRequest) (*InternalGetDomainResponse, error)
@@ -57,7 +57,7 @@ type (
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
 	ExecutionStore interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		GetShardID() int
 		//The below three APIs are related to serialization/deserialization
@@ -100,7 +100,7 @@ type (
 
 	// HistoryStore is to manager workflow history events
 	HistoryStore interface {
-		Closeable
+		types.Closeable
 		GetName() string
 
 		// The below are history V2 APIs
@@ -122,7 +122,7 @@ type (
 
 	// VisibilityStore is the store interface for visibility
 	VisibilityStore interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		RecordWorkflowExecutionStarted(ctx context.Context, request *InternalRecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(ctx context.Context, request *InternalRecordWorkflowExecutionClosedRequest) error
@@ -143,7 +143,7 @@ type (
 
 	// Queue is a store to enqueue and get messages
 	Queue interface {
-		Closeable
+		types.Closeable
 		EnqueueMessage(ctx context.Context, messagePayload []byte) error
 		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error)
 		DeleteMessagesBefore(ctx context.Context, messageID int64) error
@@ -168,7 +168,7 @@ type (
 	// It contains raw data, and metadata(right now only encoding) in other field
 	// Note that it should be only used for Persistence layer, below dataInterface and application(historyEngine/etc)
 	DataBlob struct {
-		Encoding common.EncodingType
+		Encoding types.EncodingType
 		Data     []byte
 	}
 
@@ -672,7 +672,7 @@ type (
 )
 
 // NewDataBlob returns a new DataBlob
-func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
+func NewDataBlob(data []byte, encodingType types.EncodingType) *DataBlob {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -694,32 +694,32 @@ func FromDataBlob(blob *DataBlob) ([]byte, string) {
 }
 
 // GetEncoding returns encoding type
-func (d *DataBlob) GetEncoding() common.EncodingType {
+func (d *DataBlob) GetEncoding() types.EncodingType {
 	encodingStr := string(d.Encoding)
 
-	switch common.EncodingType(encodingStr) {
-	case common.EncodingTypeGob:
-		return common.EncodingTypeGob
-	case common.EncodingTypeJSON:
-		return common.EncodingTypeJSON
-	case common.EncodingTypeThriftRW:
-		return common.EncodingTypeThriftRW
-	case common.EncodingTypeEmpty:
-		return common.EncodingTypeEmpty
+	switch types.EncodingType(encodingStr) {
+	case types.EncodingTypeGob:
+		return types.EncodingTypeGob
+	case types.EncodingTypeJSON:
+		return types.EncodingTypeJSON
+	case types.EncodingTypeThriftRW:
+		return types.EncodingTypeThriftRW
+	case types.EncodingTypeEmpty:
+		return types.EncodingTypeEmpty
 	default:
-		return common.EncodingTypeUnknown
+		return types.EncodingTypeUnknown
 	}
 }
 
 // ToThrift convert data blob to thrift representation
 func (d *DataBlob) ToThrift() *workflow.DataBlob {
 	switch d.Encoding {
-	case common.EncodingTypeJSON:
+	case types.EncodingTypeJSON:
 		return &workflow.DataBlob{
 			EncodingType: workflow.EncodingTypeJSON.Ptr(),
 			Data:         d.Data,
 		}
-	case common.EncodingTypeThriftRW:
+	case types.EncodingTypeThriftRW:
 		return &workflow.DataBlob{
 			EncodingType: workflow.EncodingTypeThriftRW.Ptr(),
 			Data:         d.Data,
@@ -734,12 +734,12 @@ func NewDataBlobFromThrift(blob *workflow.DataBlob) *DataBlob {
 	switch blob.GetEncodingType() {
 	case workflow.EncodingTypeJSON:
 		return &DataBlob{
-			Encoding: common.EncodingTypeJSON,
+			Encoding: types.EncodingTypeJSON,
 			Data:     blob.Data,
 		}
 	case workflow.EncodingTypeThriftRW:
 		return &DataBlob{
-			Encoding: common.EncodingTypeThriftRW,
+			Encoding: types.EncodingTypeThriftRW,
 			Data:     blob.Data,
 		}
 	default:

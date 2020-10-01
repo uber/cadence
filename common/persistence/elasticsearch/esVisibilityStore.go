@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"io"
 	"math"
 	"regexp"
@@ -935,7 +936,7 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		Memo:             p.NewDataBlob(source.Memo, types.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}
@@ -949,7 +950,7 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 }
 
 func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string, taskList string,
-	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
+	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding types.EncodingType,
 	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
@@ -980,7 +981,7 @@ func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName str
 
 func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, workflowTypeName string,
 	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64, memo []byte, taskList string, encoding common.EncodingType,
+	historyLength int64, taskID int64, memo []byte, taskList string, encoding types.EncodingType,
 	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex

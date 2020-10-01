@@ -24,11 +24,11 @@ package serialization
 
 import (
 	"bytes"
+	"github.com/uber/cadence/common/types"
 
 	"go.uber.org/thriftrw/protocol"
 
 	"github.com/uber/cadence/.gen/go/sqlblobs"
-	"github.com/uber/cadence/common"
 )
 
 type thriftEncoder struct{}
@@ -93,8 +93,8 @@ func (e *thriftEncoder) replicationTaskInfoToBlob(info *sqlblobs.ReplicationTask
 	return thriftRWEncode(info)
 }
 
-func (e *thriftEncoder) encodingType() common.EncodingType {
-	return common.EncodingTypeThriftRW
+func (e *thriftEncoder) encodingType() types.EncodingType {
+	return types.EncodingTypeThriftRW
 }
 
 func thriftRWEncode(t thriftRWType) ([]byte, error) {

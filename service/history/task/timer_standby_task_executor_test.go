@@ -21,6 +21,7 @@
 package task
 
 import (
+	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
 
@@ -718,7 +719,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 				VersionHistories:          mutableState.GetVersionHistories(),
 			},
 			NewWorkflowSnapshot: nil,
-			Encoding:            common.EncodingType(s.mockShard.GetConfig().EventEncodingType(s.domainID)),
+			Encoding:            types.EncodingType(s.mockShard.GetConfig().EventEncodingType(s.domainID)),
 		}, input)
 		return true
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()

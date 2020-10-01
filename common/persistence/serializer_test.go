@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"github.com/uber/cadence/common/types"
 	"sync"
 	"testing"
 	"time"
@@ -176,88 +177,88 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			// serialize event
 
-			nilEvent, err := serializer.SerializeEvent(nil, common.EncodingTypeThriftRW)
+			nilEvent, err := serializer.SerializeEvent(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.Nil(nilEvent)
 
-			_, err = serializer.SerializeEvent(event0, common.EncodingTypeGob)
+			_, err = serializer.SerializeEvent(event0, types.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok := err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			dJSON, err := serializer.SerializeEvent(event0, common.EncodingTypeJSON)
+			dJSON, err := serializer.SerializeEvent(event0, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(dJSON)
 
-			dThrift, err := serializer.SerializeEvent(event0, common.EncodingTypeThriftRW)
+			dThrift, err := serializer.SerializeEvent(event0, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(dThrift)
 
-			dEmpty, err := serializer.SerializeEvent(event0, common.EncodingType(""))
+			dEmpty, err := serializer.SerializeEvent(event0, "")
 			s.Nil(err)
 			s.NotNil(dEmpty)
 
 			// serialize batch events
 
-			nilEvents, err := serializer.SerializeBatchEvents(nil, common.EncodingTypeThriftRW)
+			nilEvents, err := serializer.SerializeBatchEvents(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(nilEvents)
 
-			_, err = serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeGob)
+			_, err = serializer.SerializeBatchEvents(history0.Events, types.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			dsJSON, err := serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeJSON)
+			dsJSON, err := serializer.SerializeBatchEvents(history0.Events, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(dsJSON)
 
-			dsThrift, err := serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeThriftRW)
+			dsThrift, err := serializer.SerializeBatchEvents(history0.Events, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(dsThrift)
 
-			dsEmpty, err := serializer.SerializeBatchEvents(history0.Events, common.EncodingType(""))
+			dsEmpty, err := serializer.SerializeBatchEvents(history0.Events, "")
 			s.Nil(err)
 			s.NotNil(dsEmpty)
 
-			_, err = serializer.SerializeVisibilityMemo(memo0, common.EncodingTypeGob)
+			_, err = serializer.SerializeVisibilityMemo(memo0, types.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
 			// serialize visibility memo
 
-			nilMemo, err := serializer.SerializeVisibilityMemo(nil, common.EncodingTypeThriftRW)
+			nilMemo, err := serializer.SerializeVisibilityMemo(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.Nil(nilMemo)
 
-			mJSON, err := serializer.SerializeVisibilityMemo(memo0, common.EncodingTypeJSON)
+			mJSON, err := serializer.SerializeVisibilityMemo(memo0, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(mJSON)
 
-			mThrift, err := serializer.SerializeVisibilityMemo(memo0, common.EncodingTypeThriftRW)
+			mThrift, err := serializer.SerializeVisibilityMemo(memo0, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(mThrift)
 
-			mEmpty, err := serializer.SerializeVisibilityMemo(memo0, common.EncodingType(""))
+			mEmpty, err := serializer.SerializeVisibilityMemo(memo0, "")
 			s.Nil(err)
 			s.NotNil(mEmpty)
 
 			// serialize version histories
 
-			nilHistories, err := serializer.SerializeVersionHistories(nil, common.EncodingTypeThriftRW)
+			nilHistories, err := serializer.SerializeVersionHistories(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.Nil(nilHistories)
 
-			historiesJSON, err := serializer.SerializeVersionHistories(histories, common.EncodingTypeJSON)
+			historiesJSON, err := serializer.SerializeVersionHistories(histories, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(historiesJSON)
 
-			historiesThrift, err := serializer.SerializeVersionHistories(histories, common.EncodingTypeThriftRW)
+			historiesThrift, err := serializer.SerializeVersionHistories(histories, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(historiesThrift)
 
-			historiesEmpty, err := serializer.SerializeVersionHistories(histories, common.EncodingType(""))
+			historiesEmpty, err := serializer.SerializeVersionHistories(histories, "")
 			s.Nil(err)
 			s.NotNil(historiesEmpty)
 
@@ -319,24 +320,24 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			// serialize reset points
 
-			nilResetPoints, err := serializer.SerializeResetPoints(nil, common.EncodingTypeThriftRW)
+			nilResetPoints, err := serializer.SerializeResetPoints(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(nilResetPoints)
 
-			_, err = serializer.SerializeResetPoints(resetPoints0, common.EncodingTypeGob)
+			_, err = serializer.SerializeResetPoints(resetPoints0, types.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			resetPointsJSON, err := serializer.SerializeResetPoints(resetPoints0, common.EncodingTypeJSON)
+			resetPointsJSON, err := serializer.SerializeResetPoints(resetPoints0, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(resetPointsJSON)
 
-			resetPointsThrift, err := serializer.SerializeResetPoints(resetPoints0, common.EncodingTypeThriftRW)
+			resetPointsThrift, err := serializer.SerializeResetPoints(resetPoints0, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(resetPointsThrift)
 
-			resetPointsEmpty, err := serializer.SerializeResetPoints(resetPoints0, common.EncodingType(""))
+			resetPointsEmpty, err := serializer.SerializeResetPoints(resetPoints0, "")
 			s.Nil(err)
 			s.NotNil(resetPointsEmpty)
 
@@ -364,24 +365,24 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			// serialize bad binaries
 
-			nilBadBinaries, err := serializer.SerializeBadBinaries(nil, common.EncodingTypeThriftRW)
+			nilBadBinaries, err := serializer.SerializeBadBinaries(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(nilBadBinaries)
 
-			_, err = serializer.SerializeBadBinaries(badBinaries0, common.EncodingTypeGob)
+			_, err = serializer.SerializeBadBinaries(badBinaries0, types.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			badBinariesJSON, err := serializer.SerializeBadBinaries(badBinaries0, common.EncodingTypeJSON)
+			badBinariesJSON, err := serializer.SerializeBadBinaries(badBinaries0, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(badBinariesJSON)
 
-			badBinariesThrift, err := serializer.SerializeBadBinaries(badBinaries0, common.EncodingTypeThriftRW)
+			badBinariesThrift, err := serializer.SerializeBadBinaries(badBinaries0, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(badBinariesThrift)
 
-			badBinariesEmpty, err := serializer.SerializeBadBinaries(badBinaries0, common.EncodingType(""))
+			badBinariesEmpty, err := serializer.SerializeBadBinaries(badBinaries0, "")
 			s.Nil(err)
 			s.NotNil(badBinariesEmpty)
 
@@ -431,24 +432,24 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			// serialize processing queue states
 
-			nilProcessingQueueStates, err := serializer.SerializeProcessingQueueStates(nil, common.EncodingTypeThriftRW)
+			nilProcessingQueueStates, err := serializer.SerializeProcessingQueueStates(nil, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.Nil(nilProcessingQueueStates)
 
-			_, err = serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingTypeGob)
+			_, err = serializer.SerializeProcessingQueueStates(processingQueueStates, types.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			processingQueueStatesJSON, err := serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingTypeJSON)
+			processingQueueStatesJSON, err := serializer.SerializeProcessingQueueStates(processingQueueStates, types.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(processingQueueStatesJSON)
 
-			processingQueueStatesThrift, err := serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingTypeThriftRW)
+			processingQueueStatesThrift, err := serializer.SerializeProcessingQueueStates(processingQueueStates, types.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(processingQueueStatesThrift)
 
-			processingQueueStatesEmpty, err := serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingType(""))
+			processingQueueStatesEmpty, err := serializer.SerializeProcessingQueueStates(processingQueueStates, "")
 			s.Nil(err)
 			s.NotNil(processingQueueStatesEmpty)
 

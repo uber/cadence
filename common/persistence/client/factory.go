@@ -21,11 +21,11 @@
 package client
 
 import (
+	"github.com/uber/cadence/common/types"
 	"sync"
 
 	"github.com/uber/cadence/common/log/tag"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/uber/cadence/common/log"
@@ -294,15 +294,15 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case defaultCfg.Cassandra != nil:
 		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
-		var decodingTypes []common.EncodingType
+		var decodingTypes []types.EncodingType
 		for _, dt := range defaultCfg.SQL.DecodingTypes {
-			decodingTypes = append(decodingTypes, common.EncodingType(dt))
+			decodingTypes = append(decodingTypes, types.EncodingType(dt))
 		}
 		defaultDataStore.factory = sql.NewFactory(
 			*defaultCfg.SQL,
 			clusterName,
 			f.logger,
-			getSQLParser(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
+			getSQLParser(f.logger, types.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
@@ -319,15 +319,15 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case visibilityCfg.Cassandra != nil:
 		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
-		var decodingTypes []common.EncodingType
+		var decodingTypes []types.EncodingType
 		for _, dt := range visibilityCfg.SQL.DecodingTypes {
-			decodingTypes = append(decodingTypes, common.EncodingType(dt))
+			decodingTypes = append(decodingTypes, types.EncodingType(dt))
 		}
 		visibilityDataStore.factory = sql.NewFactory(
 			*visibilityCfg.SQL,
 			clusterName,
 			f.logger,
-			getSQLParser(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType), decodingTypes...))
+			getSQLParser(f.logger, types.EncodingType(visibilityCfg.SQL.EncodingType), decodingTypes...))
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
@@ -335,7 +335,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func getSQLParser(logger log.Logger, encodingType common.EncodingType, decodingTypes ...common.EncodingType) serialization.Parser {
+func getSQLParser(logger log.Logger, encodingType types.EncodingType, decodingTypes ...types.EncodingType) serialization.Parser {
 	parser, err := serialization.NewParser(encodingType, decodingTypes...)
 	if err != nil {
 		logger.Fatal("failed to construct sql parser", tag.Error(err))

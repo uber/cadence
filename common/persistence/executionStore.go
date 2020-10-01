@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"context"
+	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -332,7 +333,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 
 func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 	infos []*ChildExecutionInfo,
-	encoding common.EncodingType,
+	encoding types.EncodingType,
 ) ([]*InternalChildExecutionInfo, error) {
 
 	newInfos := make([]*InternalChildExecutionInfo, 0)
@@ -367,7 +368,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 
 func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 	infos []*ActivityInfo,
-	encoding common.EncodingType,
+	encoding types.EncodingType,
 ) ([]*InternalActivityInfo, error) {
 
 	newInfos := make([]*InternalActivityInfo, 0)
@@ -424,7 +425,7 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 func (m *executionManagerImpl) SerializeExecutionInfo(
 	info *WorkflowExecutionInfo,
 	stats *ExecutionStats,
-	encoding common.EncodingType,
+	encoding types.EncodingType,
 ) (*InternalWorkflowExecutionInfo, error) {
 
 	if info == nil {
@@ -574,7 +575,7 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 	request *CreateWorkflowExecutionRequest,
 ) (*CreateWorkflowExecutionResponse, error) {
 
-	encoding := common.EncodingTypeThriftRW
+	encoding := types.EncodingTypeThriftRW
 
 	serializedNewWorkflowSnapshot, err := m.SerializeWorkflowSnapshot(&request.NewWorkflowSnapshot, encoding)
 	if err != nil {
@@ -597,7 +598,7 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 
 func (m *executionManagerImpl) SerializeWorkflowMutation(
 	input *WorkflowMutation,
-	encoding common.EncodingType,
+	encoding types.EncodingType,
 ) (*InternalWorkflowMutation, error) {
 
 	serializedExecutionInfo, err := m.SerializeExecutionInfo(
@@ -669,7 +670,7 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 
 func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 	input *WorkflowSnapshot,
-	encoding common.EncodingType,
+	encoding types.EncodingType,
 ) (*InternalWorkflowSnapshot, error) {
 
 	serializedExecutionInfo, err := m.SerializeExecutionInfo(
@@ -726,7 +727,7 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 
 func (m *executionManagerImpl) SerializeVersionHistories(
 	versionHistories *VersionHistories,
-	encoding common.EncodingType,
+	encoding types.EncodingType,
 ) (*DataBlob, error) {
 
 	if versionHistories == nil {

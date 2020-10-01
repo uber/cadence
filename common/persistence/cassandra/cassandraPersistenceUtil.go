@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -1652,15 +1653,15 @@ func createShardInfo(
 	}
 	info.PendingFailoverMarkers = p.NewDataBlob(
 		pendingFailoverMarkersRawData,
-		common.EncodingType(pendingFailoverMarkersEncoding),
+		types.EncodingType(pendingFailoverMarkersEncoding),
 	)
 	info.TransferProcessingQueueStates = p.NewDataBlob(
 		transferProcessingQueueStatesRawData,
-		common.EncodingType(transferProcessingQueueStatesEncoding),
+		types.EncodingType(transferProcessingQueueStatesEncoding),
 	)
 	info.TimerProcessingQueueStates = p.NewDataBlob(
 		timerProcessingQueueStatesRawData,
-		common.EncodingType(timerProcessingQueueStatesEncoding),
+		types.EncodingType(timerProcessingQueueStatesEncoding),
 	)
 
 	return info
@@ -1672,9 +1673,9 @@ func createWorkflowExecutionInfo(
 
 	info := &p.InternalWorkflowExecutionInfo{}
 	var completionEventData []byte
-	var completionEventEncoding common.EncodingType
+	var completionEventEncoding types.EncodingType
 	var autoResetPoints []byte
-	var autoResetPointsEncoding common.EncodingType
+	var autoResetPointsEncoding types.EncodingType
 
 	for k, v := range result {
 		switch k {
@@ -1703,11 +1704,11 @@ func createWorkflowExecutionInfo(
 		case "completion_event":
 			completionEventData = v.([]byte)
 		case "completion_event_data_encoding":
-			completionEventEncoding = common.EncodingType(v.(string))
+			completionEventEncoding = types.EncodingType(v.(string))
 		case "auto_reset_points":
 			autoResetPoints = v.([]byte)
 		case "auto_reset_points_encoding":
-			autoResetPointsEncoding = common.EncodingType(v.(string))
+			autoResetPointsEncoding = types.EncodingType(v.(string))
 		case "task_list":
 			info.TaskList = v.(string)
 		case "workflow_type_name":
@@ -1892,7 +1893,7 @@ func createActivityInfo(
 ) *p.InternalActivityInfo {
 
 	info := &p.InternalActivityInfo{}
-	var sharedEncoding common.EncodingType
+	var sharedEncoding types.EncodingType
 	var scheduledEventData, startedEventData []byte
 	for k, v := range result {
 		switch k {
@@ -1961,7 +1962,7 @@ func createActivityInfo(
 		case "last_failure_details":
 			info.LastFailureDetails = v.([]byte)
 		case "event_data_encoding":
-			sharedEncoding = common.EncodingType(v.(string))
+			sharedEncoding = types.EncodingType(v.(string))
 		}
 	}
 	info.DomainID = domainID
@@ -2001,7 +2002,7 @@ func createChildExecutionInfo(
 ) *p.InternalChildExecutionInfo {
 
 	info := &p.InternalChildExecutionInfo{}
-	var encoding common.EncodingType
+	var encoding types.EncodingType
 	var initiatedData []byte
 	var startedData []byte
 	for k, v := range result {
@@ -2025,7 +2026,7 @@ func createChildExecutionInfo(
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
 		case "event_data_encoding":
-			encoding = common.EncodingType(v.(string))
+			encoding = types.EncodingType(v.(string))
 		case "domain_name":
 			info.DomainName = v.(string)
 		case "workflow_type_name":
@@ -2240,11 +2241,11 @@ func createHistoryEventBatchBlob(
 	result map[string]interface{},
 ) *p.DataBlob {
 
-	eventBatch := &p.DataBlob{Encoding: common.EncodingTypeJSON}
+	eventBatch := &p.DataBlob{Encoding: types.EncodingTypeJSON}
 	for k, v := range result {
 		switch k {
 		case "encoding_type":
-			eventBatch.Encoding = common.EncodingType(v.(string))
+			eventBatch.Encoding = types.EncodingType(v.(string))
 		case "data":
 			eventBatch.Data = v.([]byte)
 		}

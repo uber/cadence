@@ -23,13 +23,13 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/codec"
 )
@@ -859,7 +859,7 @@ type (
 
 		NewWorkflowSnapshot *WorkflowSnapshot
 
-		Encoding common.EncodingType // optional binary encoding type
+		Encoding types.EncodingType // optional binary encoding type
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run
@@ -877,7 +877,7 @@ type (
 		// current workflow
 		CurrentWorkflowMutation *WorkflowMutation
 
-		Encoding common.EncodingType // optional binary encoding type
+		Encoding types.EncodingType // optional binary encoding type
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -898,7 +898,7 @@ type (
 		// For new mutable state
 		NewWorkflowSnapshot WorkflowSnapshot
 
-		Encoding common.EncodingType // optional binary encoding type
+		Encoding types.EncodingType // optional binary encoding type
 	}
 
 	// WorkflowEvents is used as generic workflow history events transaction container
@@ -1354,7 +1354,7 @@ type (
 		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
 		// optional binary encoding type
-		Encoding common.EncodingType
+		Encoding types.EncodingType
 		// The shard to get history node data
 		ShardID *int
 	}
@@ -1506,14 +1506,9 @@ type (
 		Markers []*FailoverMarkerTask
 	}
 
-	// Closeable is an interface for any entity that supports a close operation to release resources
-	Closeable interface {
-		Close()
-	}
-
 	// ShardManager is used to manage all shards
 	ShardManager interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		CreateShard(ctx context.Context, request *CreateShardRequest) error
 		GetShard(ctx context.Context, request *GetShardRequest) (*GetShardResponse, error)
@@ -1522,7 +1517,7 @@ type (
 
 	// ExecutionManager is used to manage workflow executions
 	ExecutionManager interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		GetShardID() int
 
@@ -1564,13 +1559,13 @@ type (
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
 	ExecutionManagerFactory interface {
-		Closeable
+		types.Closeable
 		NewExecutionManager(shardID int) (ExecutionManager, error)
 	}
 
 	// TaskManager is used to manage tasks
 	TaskManager interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
@@ -1593,7 +1588,7 @@ type (
 
 	// HistoryManager is used to manager workflow history events
 	HistoryManager interface {
-		Closeable
+		types.Closeable
 		GetName() string
 
 		// The below are history V2 APIs
@@ -1622,7 +1617,7 @@ type (
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
 	MetadataManager interface {
-		Closeable
+		types.Closeable
 		GetName() string
 		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
 		GetDomain(request *GetDomainRequest) (*GetDomainResponse, error)

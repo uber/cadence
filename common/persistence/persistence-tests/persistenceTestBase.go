@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"context"
+	"github.com/uber/cadence/common/types"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -232,7 +233,7 @@ func (s *TestBase) Setup() {
 	transferPQS := history.ProcessingQueueStates{transferPQSMap}
 	transferPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
 		&transferPQS,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 	timerPQSMap := map[string][]*history.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
@@ -247,7 +248,7 @@ func (s *TestBase) Setup() {
 	timerPQS := history.ProcessingQueueStates{StatesByCluster: timerPQSMap}
 	timerPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
 		&timerPQS,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 
 	s.ShardInfo = &p.ShardInfo{
@@ -1799,17 +1800,17 @@ func GenerateRandomDBName(n int) string {
 	return string(b)
 }
 
-func pickRandomEncoding() common.EncodingType {
+func pickRandomEncoding() types.EncodingType {
 	// randomly pick json/thriftrw/empty as encoding type
-	var encoding common.EncodingType
+	var encoding types.EncodingType
 	i := rand.Intn(3)
 	switch i {
 	case 0:
-		encoding = common.EncodingTypeJSON
+		encoding = types.EncodingTypeJSON
 	case 1:
-		encoding = common.EncodingTypeThriftRW
+		encoding = types.EncodingTypeThriftRW
 	case 2:
-		encoding = common.EncodingType("")
+		encoding = ""
 	}
 	return encoding
 }

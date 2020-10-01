@@ -24,7 +24,7 @@ package serialization
 
 import (
 	"github.com/uber/cadence/.gen/go/sqlblobs"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type protoEncoder struct{}
@@ -89,6 +89,6 @@ func (e *protoEncoder) replicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) 
 	panic("not implemented")
 }
 
-func (e *protoEncoder) encodingType() common.EncodingType {
-	return common.EncodingTypeProto
+func (e *protoEncoder) encodingType() types.EncodingType {
+	return types.EncodingTypeProto
 }

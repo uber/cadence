@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"math"
 	"strconv"
 	"sync"
@@ -306,7 +307,7 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 	}
 	s.transferProcessingQueueStates.StatesByCluster[cluster] = states
 	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializeProcessingQueueStates(s.transferProcessingQueueStates, common.EncodingTypeThriftRW)
+	data, err := serializer.SerializeProcessingQueueStates(s.transferProcessingQueueStates, types.EncodingTypeThriftRW)
 	if err != nil {
 		s.logger.Error("Failed to serialize transfer processing queue states", tag.Error(err))
 		return err
@@ -479,7 +480,7 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 	}
 	s.timerProcessingQueueStates.StatesByCluster[cluster] = states
 	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializeProcessingQueueStates(s.timerProcessingQueueStates, common.EncodingTypeThriftRW)
+	data, err := serializer.SerializeProcessingQueueStates(s.timerProcessingQueueStates, types.EncodingTypeThriftRW)
 	if err != nil {
 		s.logger.Error("Failed to serialize timer processing queue states", tag.Error(err))
 		return err
@@ -682,8 +683,8 @@ Create_Loop:
 	return nil, errMaxAttemptsExceeded
 }
 
-func (s *contextImpl) getDefaultEncoding(domainEntry *cache.DomainCacheEntry) common.EncodingType {
-	return common.EncodingType(s.config.EventEncodingType(domainEntry.GetInfo().Name))
+func (s *contextImpl) getDefaultEncoding(domainEntry *cache.DomainCacheEntry) types.EncodingType {
+	return types.EncodingType(s.config.EventEncodingType(domainEntry.GetInfo().Name))
 }
 
 func (s *contextImpl) UpdateWorkflowExecution(
@@ -1513,7 +1514,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 func (s *contextImpl) updateFailoverMarkersInShardInfoLocked() error {
 
 	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializePendingFailoverMarkers(s.pendingFailoverMarkers, common.EncodingTypeThriftRW)
+	data, err := serializer.SerializePendingFailoverMarkers(s.pendingFailoverMarkers, types.EncodingTypeThriftRW)
 	if err != nil {
 		return err
 	}

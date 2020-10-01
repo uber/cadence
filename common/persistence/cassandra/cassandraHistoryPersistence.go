@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -179,7 +180,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 		nodeID = row.NodeID
 		txnID = *row.TxnID
 		eventBlob.Data = row.Data
-		eventBlob.Encoding = common.EncodingType(row.DataEncoding)
+		eventBlob.Encoding = types.EncodingType(row.DataEncoding)
 		if txnID < lastTxnID {
 			// assuming that business logic layer is correct and transaction ID only increase
 			// thus, valid event batch will come with increasing transaction ID

@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
@@ -185,7 +186,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 
 	for _, row := range rows {
 		eventBlob.Data = row.Data
-		eventBlob.Encoding = common.EncodingType(row.DataEncoding)
+		eventBlob.Encoding = types.EncodingType(row.DataEncoding)
 
 		if *row.TxnID < lastTxnID {
 			// assuming that business logic layer is correct and transaction ID only increase

@@ -67,21 +67,6 @@ const (
 	WorkerServiceName = "cadence-worker"
 )
 
-// Data encoding types
-const (
-	EncodingTypeJSON     EncodingType = "json"
-	EncodingTypeThriftRW EncodingType = "thriftrw"
-	EncodingTypeGob      EncodingType = "gob"
-	EncodingTypeUnknown  EncodingType = "unknow"
-	EncodingTypeEmpty    EncodingType = ""
-	EncodingTypeProto    EncodingType = "proto3"
-)
-
-type (
-	// EncodingType is an enum that represents various data encoding types
-	EncodingType string
-)
-
 // MaxTaskTimeout is maximum task timeout allowed. 366 days in seconds
 const MaxTaskTimeout = 31622400
 

@@ -23,10 +23,10 @@
 package serialization
 
 import (
+	"github.com/uber/cadence/common/types"
 	"go.uber.org/thriftrw/wire"
 
 	"github.com/uber/cadence/.gen/go/sqlblobs"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -82,7 +82,7 @@ type (
 		transferTaskInfoToBlob(*sqlblobs.TransferTaskInfo) ([]byte, error)
 		timerTaskInfoToBlob(*sqlblobs.TimerTaskInfo) ([]byte, error)
 		replicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) ([]byte, error)
-		encodingType() common.EncodingType
+		encodingType() types.EncodingType
 	}
 
 	// decoder is used to deserialize structs. Each decoder implementation uses one serialization format.
