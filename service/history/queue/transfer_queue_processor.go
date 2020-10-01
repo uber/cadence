@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -589,7 +591,7 @@ func newTransferQueueFailoverProcessor(
 		taskID := ackLevel.(transferTaskKey).taskID
 		return shard.UpdateTransferFailoverLevel(
 			failoverUUID,
-			persistence.TransferFailoverLevel{
+			shard2.TransferFailoverLevel{
 				StartTime:    shard.GetTimeSource().Now(),
 				MinLevel:     minLevel,
 				CurrentLevel: taskID,

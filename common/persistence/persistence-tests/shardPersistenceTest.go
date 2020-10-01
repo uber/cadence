@@ -30,6 +30,7 @@ import (
 
 	gen "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/managers/shard"
 )
 
 type (
@@ -155,8 +156,8 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.EqualTimes(updatedTimerAckLevel, info1.TimerAckLevel)
 }
 
-func copyShardInfo(sourceInfo *p.ShardInfo) *p.ShardInfo {
-	return &p.ShardInfo{
+func copyShardInfo(sourceInfo *shard.Info) *shard.Info {
+	return &shard.Info{
 		ShardID:             sourceInfo.ShardID,
 		Owner:               sourceInfo.Owner,
 		RangeID:             sourceInfo.RangeID,

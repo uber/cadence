@@ -23,6 +23,8 @@ package ndc
 import (
 	ctx "context"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"testing"
 	"time"
 
@@ -83,7 +85,7 @@ func (s *transactionManagerSuite) SetupTest() {
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,

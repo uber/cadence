@@ -23,11 +23,12 @@ package shard
 import (
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/resource"
@@ -46,7 +47,7 @@ var _ Context = (*TestContext)(nil)
 // NewTestContext create a new shardContext for test
 func NewTestContext(
 	ctrl *gomock.Controller,
-	shardInfo *persistence.ShardInfo,
+	shardInfo *shard.Info,
 	config *config.Config,
 ) *TestContext {
 	resource := resource.NewTest(ctrl, metrics.History)
@@ -75,7 +76,7 @@ func NewTestContext(
 }
 
 // ShardInfo is a test hook for getting shard info
-func (s *TestContext) ShardInfo() *persistence.ShardInfo {
+func (s *TestContext) ShardInfo() *shard.Info {
 	return s.shardInfo
 }
 

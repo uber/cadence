@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/managers/shard"
 )
 
 type (
@@ -45,8 +46,8 @@ type (
 		GetDomainReplicationQueue() persistence.DomainReplicationQueue
 		SetDomainReplicationQueue(persistence.DomainReplicationQueue)
 
-		GetShardManager() persistence.ShardManager
-		SetShardManager(persistence.ShardManager)
+		GetShardManager() shard.Manager
+		SetShardManager(shard.Manager)
 
 		GetHistoryManager() persistence.HistoryManager
 		SetHistoryManager(persistence.HistoryManager)
@@ -61,7 +62,7 @@ type (
 		taskManager             persistence.TaskManager
 		visibilityManager       persistence.VisibilityManager
 		domainReplicationQueue  persistence.DomainReplicationQueue
-		shardManager            persistence.ShardManager
+		shardManager            shard.Manager
 		historyManager          persistence.HistoryManager
 		executionManagerFactory persistence.ExecutionManagerFactory
 
@@ -122,7 +123,7 @@ func NewBean(
 	taskManager persistence.TaskManager,
 	visibilityManager persistence.VisibilityManager,
 	domainReplicationQueue persistence.DomainReplicationQueue,
-	shardManager persistence.ShardManager,
+	shardManager shard.Manager,
 	historyManager persistence.HistoryManager,
 	executionManagerFactory persistence.ExecutionManagerFactory,
 ) *BeanImpl {
@@ -219,8 +220,8 @@ func (s *BeanImpl) SetDomainReplicationQueue(
 	s.domainReplicationQueue = domainReplicationQueue
 }
 
-// GetShardManager get ShardManager
-func (s *BeanImpl) GetShardManager() persistence.ShardManager {
+// GetShardManager get Manager
+func (s *BeanImpl) GetShardManager() shard.Manager {
 
 	s.RLock()
 	defer s.RUnlock()
@@ -228,9 +229,9 @@ func (s *BeanImpl) GetShardManager() persistence.ShardManager {
 	return s.shardManager
 }
 
-// SetShardManager set ShardManager
+// SetShardManager set Manager
 func (s *BeanImpl) SetShardManager(
-	shardManager persistence.ShardManager,
+	shardManager shard.Manager,
 ) {
 
 	s.Lock()

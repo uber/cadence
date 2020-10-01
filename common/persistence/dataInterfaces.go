@@ -242,46 +242,6 @@ type (
 		Msg string
 	}
 
-	// ShardInfo describes a shard
-	ShardInfo struct {
-		ShardID                       int                              `json:"shard_id"`
-		Owner                         string                           `json:"owner"`
-		RangeID                       int64                            `json:"range_id"`
-		StolenSinceRenew              int                              `json:"stolen_since_renew"`
-		UpdatedAt                     time.Time                        `json:"updated_at"`
-		ReplicationAckLevel           int64                            `json:"replication_ack_level"`
-		ReplicationDLQAckLevel        map[string]int64                 `json:"replication_dlq_ack_level"`
-		TransferAckLevel              int64                            `json:"transfer_ack_level"`
-		TimerAckLevel                 time.Time                        `json:"timer_ack_level"`
-		ClusterTransferAckLevel       map[string]int64                 `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel          map[string]time.Time             `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *types.DataBlob                  `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *types.DataBlob                  `json:"timer_processing_queue_states"`
-		TransferFailoverLevels        map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
-		TimerFailoverLevels           map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel       map[string]int64                 `json:"cluster_replication_level"`
-		DomainNotificationVersion     int64                            `json:"domain_notification_version"`
-		PendingFailoverMarkers        *types.DataBlob                  `json:"pending_failover_markers"`
-	}
-
-	// TransferFailoverLevel contains corresponding start / end level
-	TransferFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     int64
-		CurrentLevel int64
-		MaxLevel     int64
-		DomainIDs    map[string]struct{}
-	}
-
-	// TimerFailoverLevel contains domain IDs and corresponding start / end level
-	TimerFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     time.Time
-		CurrentLevel time.Time
-		MaxLevel     time.Time
-		DomainIDs    map[string]struct{}
-	}
-
 	// WorkflowExecutionInfo describes a workflow execution
 	WorkflowExecutionInfo struct {
 		DomainID                           string
@@ -742,27 +702,6 @@ type (
 		SignalName            string
 		Input                 []byte
 		Control               []byte
-	}
-
-	// CreateShardRequest is used to create a shard in executions table
-	CreateShardRequest struct {
-		ShardInfo *ShardInfo
-	}
-
-	// GetShardRequest is used to get shard information
-	GetShardRequest struct {
-		ShardID int
-	}
-
-	// GetShardResponse is the response to GetShard
-	GetShardResponse struct {
-		ShardInfo *ShardInfo
-	}
-
-	// UpdateShardRequest  is used to update shard information
-	UpdateShardRequest struct {
-		ShardInfo       *ShardInfo
-		PreviousRangeID int64
 	}
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
@@ -1505,15 +1444,6 @@ type (
 	CreateFailoverMarkersRequest struct {
 		RangeID int64
 		Markers []*FailoverMarkerTask
-	}
-
-	// ShardManager is used to manage all shards
-	ShardManager interface {
-		types.Closeable
-		GetName() string
-		CreateShard(ctx context.Context, request *CreateShardRequest) error
-		GetShard(ctx context.Context, request *GetShardRequest) (*GetShardResponse, error)
-		UpdateShard(ctx context.Context, request *UpdateShardRequest) error
 	}
 
 	// ExecutionManager is used to manage workflow executions

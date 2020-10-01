@@ -25,6 +25,8 @@ import (
 	"sync"
 	"testing"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -32,7 +34,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
@@ -68,7 +69,7 @@ func (s *historyCacheSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,

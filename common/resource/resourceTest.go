@@ -27,6 +27,8 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
@@ -408,7 +410,7 @@ func (s *Test) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
 }
 
 // GetShardManager for testing
-func (s *Test) GetShardManager() persistence.ShardManager {
+func (s *Test) GetShardManager() shard.Manager {
 	return s.ShardMgr
 }
 

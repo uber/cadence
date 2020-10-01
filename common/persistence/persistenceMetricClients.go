@@ -23,6 +23,8 @@ package persistence
 import (
 	"context"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -32,7 +34,7 @@ import (
 type (
 	shardPersistenceClient struct {
 		metricClient metrics.Client
-		persistence  ShardManager
+		persistence  shard.Manager
 		logger       log.Logger
 	}
 
@@ -73,7 +75,7 @@ type (
 	}
 )
 
-var _ ShardManager = (*shardPersistenceClient)(nil)
+var _ shard.Manager = (*shardPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionPersistenceClient)(nil)
 var _ TaskManager = (*taskPersistenceClient)(nil)
 var _ HistoryManager = (*historyV2PersistenceClient)(nil)
@@ -82,7 +84,7 @@ var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ Queue = (*queuePersistenceClient)(nil)
 
 // NewShardPersistenceMetricsClient creates a client to manage shards
-func NewShardPersistenceMetricsClient(persistence ShardManager, metricClient metrics.Client, logger log.Logger) ShardManager {
+func NewShardPersistenceMetricsClient(persistence shard.Manager, metricClient metrics.Client, logger log.Logger) shard.Manager {
 	return &shardPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -150,7 +152,7 @@ func (p *shardPersistenceClient) GetName() string {
 
 func (p *shardPersistenceClient) CreateShard(
 	ctx context.Context,
-	request *CreateShardRequest,
+	request *shard.CreateShardRequest,
 ) error {
 	p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceRequests)
 
@@ -167,8 +169,8 @@ func (p *shardPersistenceClient) CreateShard(
 
 func (p *shardPersistenceClient) GetShard(
 	ctx context.Context,
-	request *GetShardRequest,
-) (*GetShardResponse, error) {
+	request *shard.GetShardRequest,
+) (*shard.GetShardResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetShardScope, metrics.PersistenceLatency)
@@ -184,7 +186,7 @@ func (p *shardPersistenceClient) GetShard(
 
 func (p *shardPersistenceClient) UpdateShard(
 	ctx context.Context,
-	request *UpdateShardRequest,
+	request *shard.UpdateShardRequest,
 ) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceRequests)
 

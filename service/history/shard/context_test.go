@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -80,7 +82,7 @@ func (s *contextTestSuite) SetupTest() {
 func (s *contextTestSuite) newContext() *contextImpl {
 	eventsCache := events.NewMockCache(s.controller)
 	config := config.NewForTest()
-	shardInfo := &persistence.ShardInfo{
+	shardInfo := &shard.Info{
 		ShardID:          0,
 		RangeID:          1,
 		TransferAckLevel: 0,

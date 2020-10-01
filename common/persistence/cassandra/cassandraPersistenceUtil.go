@@ -24,14 +24,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/managers/shard"
+	"github.com/uber/cadence/common/types"
 )
 
 func applyWorkflowMutationBatch(
@@ -1584,7 +1584,7 @@ func updateBufferedEvents(
 func createShardInfo(
 	currentCluster string,
 	result map[string]interface{},
-) *p.ShardInfo {
+) *shard.Info {
 
 	var pendingFailoverMarkersRawData []byte
 	var pendingFailoverMarkersEncoding string
@@ -1592,7 +1592,7 @@ func createShardInfo(
 	var transferProcessingQueueStatesEncoding string
 	var timerProcessingQueueStatesRawData []byte
 	var timerProcessingQueueStatesEncoding string
-	info := &p.ShardInfo{}
+	info := &shard.Info{}
 	for k, v := range result {
 		switch k {
 		case "shard_id":

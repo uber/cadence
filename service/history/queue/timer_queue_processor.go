@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -581,7 +583,7 @@ func newTimerQueueFailoverProcessor(
 	updateClusterAckLevel := func(ackLevel task.Key) error {
 		return shard.UpdateTimerFailoverLevel(
 			failoverUUID,
-			persistence.TimerFailoverLevel{
+			shard2.TimerFailoverLevel{
 				StartTime:    failoverStartTime,
 				MinLevel:     minLevel,
 				CurrentLevel: ackLevel.(timerTaskKey).visibilityTimestamp,

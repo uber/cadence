@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -38,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -114,9 +115,9 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 			s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 			s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-			s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
-				&persistence.GetShardResponse{
-					ShardInfo: &persistence.ShardInfo{
+			s.mockShardManager.On("GetShard", mock.Anything, &shard.GetShardRequest{ShardID: shardID}).Return(
+				&shard.GetShardResponse{
+					ShardInfo: &shard.Info{
 						ShardID:             shardID,
 						Owner:               s.hostInfo.Identity(),
 						RangeID:             5,
@@ -134,8 +135,8 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 						ClusterReplicationLevel: map[string]int64{},
 					},
 				}, nil).Once()
-			s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
-				ShardInfo: &persistence.ShardInfo{
+			s.mockShardManager.On("UpdateShard", mock.Anything, &shard.UpdateShardRequest{
+				ShardInfo: &shard.Info{
 					ShardID:             shardID,
 					Owner:               s.hostInfo.Identity(),
 					RangeID:             6,
@@ -151,8 +152,8 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+					TransferFailoverLevels:  map[string]shard.TransferFailoverLevel{},
+					TimerFailoverLevels:     map[string]shard.TimerFailoverLevel{},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -197,9 +198,9 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 			s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 			s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-			s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
-				&persistence.GetShardResponse{
-					ShardInfo: &persistence.ShardInfo{
+			s.mockShardManager.On("GetShard", mock.Anything, &shard.GetShardRequest{ShardID: shardID}).Return(
+				&shard.GetShardResponse{
+					ShardInfo: &shard.Info{
 						ShardID:             shardID,
 						Owner:               s.hostInfo.Identity(),
 						RangeID:             5,
@@ -217,8 +218,8 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 						ClusterReplicationLevel: map[string]int64{},
 					},
 				}, nil).Once()
-			s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
-				ShardInfo: &persistence.ShardInfo{
+			s.mockShardManager.On("UpdateShard", mock.Anything, &shard.UpdateShardRequest{
+				ShardInfo: &shard.Info{
 					ShardID:             shardID,
 					Owner:               s.hostInfo.Identity(),
 					RangeID:             6,
@@ -234,8 +235,8 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+					TransferFailoverLevels:  map[string]shard.TransferFailoverLevel{},
+					TimerFailoverLevels:     map[string]shard.TimerFailoverLevel{},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -287,9 +288,9 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 		s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 		s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-		s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
-			&persistence.GetShardResponse{
-				ShardInfo: &persistence.ShardInfo{
+		s.mockShardManager.On("GetShard", mock.Anything, &shard.GetShardRequest{ShardID: shardID}).Return(
+			&shard.GetShardResponse{
+				ShardInfo: &shard.Info{
 					ShardID:             shardID,
 					Owner:               s.hostInfo.Identity(),
 					RangeID:             5,
@@ -307,8 +308,8 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 					ClusterReplicationLevel: map[string]int64{},
 				},
 			}, nil).Once()
-		s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
-			ShardInfo: &persistence.ShardInfo{
+		s.mockShardManager.On("UpdateShard", mock.Anything, &shard.UpdateShardRequest{
+			ShardInfo: &shard.Info{
 				ShardID:             shardID,
 				Owner:               s.hostInfo.Identity(),
 				RangeID:             6,
@@ -324,8 +325,8 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+				TransferFailoverLevels:  map[string]shard.TransferFailoverLevel{},
+				TimerFailoverLevels:     map[string]shard.TimerFailoverLevel{},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -362,9 +363,9 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 		s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
 		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 		s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
-		s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
-			&persistence.GetShardResponse{
-				ShardInfo: &persistence.ShardInfo{
+		s.mockShardManager.On("GetShard", mock.Anything, &shard.GetShardRequest{ShardID: shardID}).Return(
+			&shard.GetShardResponse{
+				ShardInfo: &shard.Info{
 					ShardID:             shardID,
 					Owner:               s.hostInfo.Identity(),
 					RangeID:             5,
@@ -382,8 +383,8 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 					ClusterReplicationLevel: map[string]int64{},
 				},
 			}, nil).Once()
-		s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
-			ShardInfo: &persistence.ShardInfo{
+		s.mockShardManager.On("UpdateShard", mock.Anything, &shard.UpdateShardRequest{
+			ShardInfo: &shard.Info{
 				ShardID:             shardID,
 				Owner:               s.hostInfo.Identity(),
 				RangeID:             6,
@@ -399,8 +400,8 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+				TransferFailoverLevels:  map[string]shard.TransferFailoverLevel{},
+				TimerFailoverLevels:     map[string]shard.TimerFailoverLevel{},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -572,9 +573,9 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 	mockEngine.EXPECT().Start().Times(1)
 	s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
 	s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(mockEngine).Times(1)
-	s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
-		&persistence.GetShardResponse{
-			ShardInfo: &persistence.ShardInfo{
+	s.mockShardManager.On("GetShard", mock.Anything, &shard.GetShardRequest{ShardID: shardID}).Return(
+		&shard.GetShardResponse{
+			ShardInfo: &shard.Info{
 				ShardID:             shardID,
 				Owner:               s.hostInfo.Identity(),
 				RangeID:             currentRangeID,
@@ -592,8 +593,8 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 				ClusterReplicationLevel: map[string]int64{},
 			},
 		}, nil).Once()
-	s.mockShardManager.On("UpdateShard", mock.Anything, &persistence.UpdateShardRequest{
-		ShardInfo: &persistence.ShardInfo{
+	s.mockShardManager.On("UpdateShard", mock.Anything, &shard.UpdateShardRequest{
+		ShardInfo: &shard.Info{
 			ShardID:             shardID,
 			Owner:               s.hostInfo.Identity(),
 			RangeID:             newRangeID,
@@ -609,8 +610,8 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 				cluster.TestCurrentClusterName:     currentClusterTimerAck,
 				cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 			},
-			TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-			TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+			TransferFailoverLevels:  map[string]shard.TransferFailoverLevel{},
+			TimerFailoverLevels:     map[string]shard.TimerFailoverLevel{},
 			ClusterReplicationLevel: map[string]int64{},
 			ReplicationDLQAckLevel:  map[string]int64{},
 		},

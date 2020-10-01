@@ -23,6 +23,8 @@ package history
 import (
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/matching"
@@ -141,7 +143,7 @@ func newTimerQueueFailoverProcessor(
 	updateShardAckLevel := func(ackLevel timerKey) error {
 		return shard.UpdateTimerFailoverLevel(
 			failoverUUID,
-			persistence.TimerFailoverLevel{
+			shard2.TimerFailoverLevel{
 				StartTime:    failoverStartTime,
 				MinLevel:     minLevel,
 				CurrentLevel: ackLevel.VisibilityTimestamp,

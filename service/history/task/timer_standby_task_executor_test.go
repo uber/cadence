@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/golang/mock/gomock"
@@ -106,7 +108,7 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			RangeID:          1,
 			TransferAckLevel: 0,
 		},

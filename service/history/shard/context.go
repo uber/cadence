@@ -30,6 +30,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/history"
@@ -103,13 +105,13 @@ type (
 		GetTimerProcessingQueueStates(cluster string) []*history.ProcessingQueueState
 		UpdateTimerProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error
 
-		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
+		UpdateTransferFailoverLevel(failoverID string, level shard.TransferFailoverLevel) error
 		DeleteTransferFailoverLevel(failoverID string) error
-		GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel
+		GetAllTransferFailoverLevels() map[string]shard.TransferFailoverLevel
 
-		UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error
+		UpdateTimerFailoverLevel(failoverID string, level shard.TimerFailoverLevel) error
 		DeleteTimerFailoverLevel(failoverID string) error
-		GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel
+		GetAllTimerFailoverLevels() map[string]shard.TimerFailoverLevel
 
 		GetDomainNotificationVersion() int64
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
@@ -142,7 +144,7 @@ type (
 
 		sync.RWMutex
 		lastUpdated                   time.Time
-		shardInfo                     *persistence.ShardInfo
+		shardInfo                     *shard.Info
 		transferSequenceNumber        int64
 		maxTransferSequenceNumber     int64
 		transferMaxReadLevel          int64
@@ -499,7 +501,7 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error {
+func (s *contextImpl) UpdateTransferFailoverLevel(failoverID string, level shard.TransferFailoverLevel) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -518,18 +520,18 @@ func (s *contextImpl) DeleteTransferFailoverLevel(failoverID string) error {
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel {
+func (s *contextImpl) GetAllTransferFailoverLevels() map[string]shard.TransferFailoverLevel {
 	s.RLock()
 	defer s.RUnlock()
 
-	ret := map[string]persistence.TransferFailoverLevel{}
+	ret := map[string]shard.TransferFailoverLevel{}
 	for k, v := range s.shardInfo.TransferFailoverLevels {
 		ret[k] = v
 	}
 	return ret
 }
 
-func (s *contextImpl) UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error {
+func (s *contextImpl) UpdateTimerFailoverLevel(failoverID string, level shard.TimerFailoverLevel) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -548,11 +550,11 @@ func (s *contextImpl) DeleteTimerFailoverLevel(failoverID string) error {
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel {
+func (s *contextImpl) GetAllTimerFailoverLevels() map[string]shard.TimerFailoverLevel {
 	s.RLock()
 	defer s.RUnlock()
 
-	ret := map[string]persistence.TimerFailoverLevel{}
+	ret := map[string]shard.TimerFailoverLevel{}
 	for k, v := range s.shardInfo.TimerFailoverLevels {
 		ret[k] = v
 	}
@@ -1114,7 +1116,7 @@ func (s *contextImpl) renewRangeLocked(isStealing bool) error {
 	var attempt int32
 Retry_Loop:
 	for attempt = 0; attempt < conditionalRetryCount; attempt++ {
-		err = s.GetShardManager().UpdateShard(context.TODO(), &persistence.UpdateShardRequest{
+		err = s.GetShardManager().UpdateShard(context.TODO(), &shard.UpdateShardRequest{
 			ShardInfo:       updatedShardInfo,
 			PreviousRangeID: s.shardInfo.RangeID})
 		switch err.(type) {
@@ -1195,7 +1197,7 @@ func (s *contextImpl) persistShardInfoLocked(
 	updatedShardInfo := copyShardInfo(s.shardInfo)
 	s.emitShardInfoMetricsLogsLocked()
 
-	err = s.GetShardManager().UpdateShard(context.TODO(), &persistence.UpdateShardRequest{
+	err = s.GetShardManager().UpdateShard(context.TODO(), &shard.UpdateShardRequest{
 		ShardInfo:       updatedShardInfo,
 		PreviousRangeID: s.shardInfo.RangeID,
 	})
@@ -1529,7 +1531,7 @@ func acquireShard(
 	closeCallback func(int, *historyShardsItem),
 ) (Context, error) {
 
-	var shardInfo *persistence.ShardInfo
+	var shardInfo *shard.Info
 
 	retryPolicy := backoff.NewExponentialRetryPolicy(50 * time.Millisecond)
 	retryPolicy.SetMaximumInterval(time.Second)
@@ -1544,7 +1546,7 @@ func acquireShard(
 	}
 
 	getShard := func() error {
-		resp, err := shardItem.GetShardManager().GetShard(context.TODO(), &persistence.GetShardRequest{
+		resp, err := shardItem.GetShardManager().GetShard(context.TODO(), &shard.GetShardRequest{
 			ShardID: shardItem.shardID,
 		})
 		if err == nil {
@@ -1556,12 +1558,12 @@ func acquireShard(
 		}
 
 		// EntityNotExistsError error
-		shardInfo = &persistence.ShardInfo{
+		shardInfo = &shard.Info{
 			ShardID:          shardItem.shardID,
 			RangeID:          0,
 			TransferAckLevel: 0,
 		}
-		return shardItem.GetShardManager().CreateShard(context.TODO(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
+		return shardItem.GetShardManager().CreateShard(context.TODO(), &shard.CreateShardRequest{ShardInfo: shardInfo})
 	}
 
 	err := backoff.Retry(getShard, retryPolicy, retryPredicate)
@@ -1659,12 +1661,12 @@ func acquireShard(
 	return context, nil
 }
 
-func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
-	transferFailoverLevels := map[string]persistence.TransferFailoverLevel{}
+func copyShardInfo(shardInfo *shard.Info) *shard.Info {
+	transferFailoverLevels := map[string]shard.TransferFailoverLevel{}
 	for k, v := range shardInfo.TransferFailoverLevels {
 		transferFailoverLevels[k] = v
 	}
-	timerFailoverLevels := map[string]persistence.TimerFailoverLevel{}
+	timerFailoverLevels := map[string]shard.TimerFailoverLevel{}
 	for k, v := range shardInfo.TimerFailoverLevels {
 		timerFailoverLevels[k] = v
 	}
@@ -1684,7 +1686,7 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 	for k, v := range shardInfo.ReplicationDLQAckLevel {
 		replicationDLQAckLevel[k] = v
 	}
-	shardInfoCopy := &persistence.ShardInfo{
+	shardInfoCopy := &shard.Info{
 		ShardID:                       shardInfo.ShardID,
 		Owner:                         shardInfo.Owner,
 		RangeID:                       shardInfo.RangeID,

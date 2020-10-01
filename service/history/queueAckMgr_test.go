@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	gomock "github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -94,7 +96,7 @@ func (s *queueAckMgrSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&p.ShardInfo{
+		&shard2.Info{
 			ShardID: 0,
 			RangeID: 1,
 			ClusterTimerAckLevel: map[string]time.Time{
@@ -282,7 +284,7 @@ func (s *queueFailoverAckMgrSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&p.ShardInfo{
+		&shard2.Info{
 			ShardID: 0,
 			RangeID: 1,
 			ClusterTimerAckLevel: map[string]time.Time{

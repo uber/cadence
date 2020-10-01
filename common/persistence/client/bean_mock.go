@@ -30,6 +30,8 @@ package client
 import (
 	reflect "reflect"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	gomock "github.com/golang/mock/gomock"
 
 	persistence "github.com/uber/cadence/common/persistence"
@@ -175,10 +177,10 @@ func (mr *MockBeanMockRecorder) SetDomainReplicationQueue(arg0 interface{}) *gom
 }
 
 // GetShardManager mocks base method
-func (m *MockBean) GetShardManager() persistence.ShardManager {
+func (m *MockBean) GetShardManager() shard.Manager {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetShardManager")
-	ret0, _ := ret[0].(persistence.ShardManager)
+	ret0, _ := ret[0].(shard.Manager)
 	return ret0
 }
 
@@ -189,7 +191,7 @@ func (mr *MockBeanMockRecorder) GetShardManager() *gomock.Call {
 }
 
 // SetShardManager mocks base method
-func (m *MockBean) SetShardManager(arg0 persistence.ShardManager) {
+func (m *MockBean) SetShardManager(arg0 shard.Manager) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetShardManager", arg0)
 }

@@ -23,20 +23,18 @@ package client
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/types"
-
-	"github.com/uber/cadence/common/log/tag"
-
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/managers/shard"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -49,7 +47,7 @@ type (
 		// NewTaskManager returns a new task manager
 		NewTaskManager() (p.TaskManager, error)
 		// NewShardManager returns a new shard manager
-		NewShardManager() (p.ShardManager, error)
+		NewShardManager() (shard.Manager, error)
 		// NewHistoryManager returns a new history manager
 		NewHistoryManager() (p.HistoryManager, error)
 		// NewMetadataManager returns a new metadata manager
@@ -160,7 +158,7 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 }
 
 // NewShardManager returns a new shard manager
-func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
+func (f *factoryImpl) NewShardManager() (shard.Manager, error) {
 	ds := f.datastores[storeTypeShard]
 	result, err := ds.factory.NewShardStore()
 	if err != nil {

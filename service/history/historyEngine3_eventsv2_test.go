@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -97,7 +99,7 @@ func (s *engine3Suite) SetupTest() {
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&p.ShardInfo{
+		&shard2.Info{
 			ShardID:          0,
 			RangeID:          1,
 			TransferAckLevel: 0,

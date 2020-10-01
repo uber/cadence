@@ -27,6 +27,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/domain"
@@ -95,7 +97,7 @@ type (
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
 		metadataMgr                   persistence.MetadataManager
-		shardMgr                      persistence.ShardManager
+		shardMgr                      shard.Manager
 		historyV2Mgr                  persistence.HistoryManager
 		taskMgr                       persistence.TaskManager
 		visibilityMgr                 persistence.VisibilityManager
@@ -132,7 +134,7 @@ type (
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
-		ShardMgr                      persistence.ShardManager
+		ShardMgr                      shard.Manager
 		HistoryV2Mgr                  persistence.HistoryManager
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager

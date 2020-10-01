@@ -23,6 +23,8 @@ package persistence
 import (
 	"context"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/quotas"
@@ -38,7 +40,7 @@ var (
 type (
 	shardRateLimitedPersistenceClient struct {
 		rateLimiter quotas.Limiter
-		persistence ShardManager
+		persistence shard.Manager
 		logger      log.Logger
 	}
 
@@ -79,7 +81,7 @@ type (
 	}
 )
 
-var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
+var _ shard.Manager = (*shardRateLimitedPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionRateLimitedPersistenceClient)(nil)
 var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
 var _ HistoryManager = (*historyV2RateLimitedPersistenceClient)(nil)
@@ -88,7 +90,7 @@ var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ Queue = (*queueRateLimitedPersistenceClient)(nil)
 
 // NewShardPersistenceRateLimitedClient creates a client to manage shards
-func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter quotas.Limiter, logger log.Logger) ShardManager {
+func NewShardPersistenceRateLimitedClient(persistence shard.Manager, rateLimiter quotas.Limiter, logger log.Logger) shard.Manager {
 	return &shardRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -156,7 +158,7 @@ func (p *shardRateLimitedPersistenceClient) GetName() string {
 
 func (p *shardRateLimitedPersistenceClient) CreateShard(
 	ctx context.Context,
-	request *CreateShardRequest,
+	request *shard.CreateShardRequest,
 ) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
@@ -168,8 +170,8 @@ func (p *shardRateLimitedPersistenceClient) CreateShard(
 
 func (p *shardRateLimitedPersistenceClient) GetShard(
 	ctx context.Context,
-	request *GetShardRequest,
-) (*GetShardResponse, error) {
+	request *shard.GetShardRequest,
+) (*shard.GetShardResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -180,7 +182,7 @@ func (p *shardRateLimitedPersistenceClient) GetShard(
 
 func (p *shardRateLimitedPersistenceClient) UpdateShard(
 	ctx context.Context,
-	request *UpdateShardRequest,
+	request *shard.UpdateShardRequest,
 ) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded

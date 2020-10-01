@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -581,7 +583,7 @@ func (h *Impl) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
 }
 
 // GetShardManager return shard manager
-func (h *Impl) GetShardManager() persistence.ShardManager {
+func (h *Impl) GetShardManager() shard.Manager {
 	return h.persistenceBean.GetShardManager()
 }
 

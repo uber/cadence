@@ -23,6 +23,8 @@ package resource
 import (
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	"github.com/uber/cadence/client"
@@ -96,7 +98,7 @@ type (
 		GetTaskManager() persistence.TaskManager
 		GetVisibilityManager() persistence.VisibilityManager
 		GetDomainReplicationQueue() persistence.DomainReplicationQueue
-		GetShardManager() persistence.ShardManager
+		GetShardManager() shard.Manager
 		GetHistoryManager() persistence.HistoryManager
 		GetExecutionManager(int) (persistence.ExecutionManager, error)
 		GetPersistenceBean() persistenceClient.Bean

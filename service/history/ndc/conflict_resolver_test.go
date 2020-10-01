@@ -24,6 +24,8 @@ import (
 	ctx "context"
 	"testing"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -74,7 +76,7 @@ func (s *conflictResolverSuite) SetupTest() {
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID:          10,
 			RangeID:          1,
 			TransferAckLevel: 0,

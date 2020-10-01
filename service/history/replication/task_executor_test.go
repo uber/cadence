@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"testing"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -92,7 +94,7 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID:                0,
 			RangeID:                1,
 			ReplicationAckLevel:    0,

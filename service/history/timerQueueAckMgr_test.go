@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	gomock "github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -102,7 +104,7 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID: 0,
 			RangeID: 1,
 			ClusterTimerAckLevel: map[string]time.Time{
@@ -535,14 +537,14 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID: 0,
 			RangeID: 1,
 			ClusterTimerAckLevel: map[string]time.Time{
 				cluster.TestCurrentClusterName:     time.Now(),
 				cluster.TestAlternativeClusterName: time.Now().Add(-10 * time.Second),
 			},
-			TimerFailoverLevels: make(map[string]persistence.TimerFailoverLevel),
+			TimerFailoverLevels: make(map[string]shard2.TimerFailoverLevel),
 		},
 		config,
 	)
@@ -568,7 +570,7 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 		func(ackLevel timerKey) error {
 			return s.mockShard.UpdateTimerFailoverLevel(
 				s.domainID,
-				persistence.TimerFailoverLevel{
+				shard2.TimerFailoverLevel{
 					MinLevel:  ackLevel.VisibilityTimestamp,
 					MaxLevel:  ackLevel.VisibilityTimestamp,
 					DomainIDs: map[string]struct{}{s.domainID: struct{}{}},

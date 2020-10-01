@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -46,9 +44,11 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/persistence/managers/shard"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -73,7 +73,7 @@ type (
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
 		suite.Suite
-		ShardMgr               p.ShardManager
+		ShardMgr               shard.Manager
 		ExecutionMgrFactory    client.Factory
 		ExecutionManager       p.ExecutionManager
 		TaskMgr                p.TaskManager
@@ -81,7 +81,7 @@ type (
 		MetadataManager        p.MetadataManager
 		VisibilityMgr          p.VisibilityManager
 		DomainReplicationQueue p.DomainReplicationQueue
-		ShardInfo              *p.ShardInfo
+		ShardInfo              *shard.Info
 		TaskIDGenerator        TransferTaskIDGenerator
 		ClusterMetadata        cluster.Metadata
 		ReadLevel              int64
@@ -252,7 +252,7 @@ func (s *TestBase) Setup() {
 		types.EncodingTypeThriftRW,
 	)
 
-	s.ShardInfo = &p.ShardInfo{
+	s.ShardInfo = &shard.Info{
 		ShardID:                       shardID,
 		RangeID:                       0,
 		TransferAckLevel:              0,
@@ -265,7 +265,7 @@ func (s *TestBase) Setup() {
 	}
 
 	s.TaskIDGenerator = &TestTransferTaskIDGenerator{}
-	err = s.ShardMgr.CreateShard(context.Background(), &p.CreateShardRequest{ShardInfo: s.ShardInfo})
+	err = s.ShardMgr.CreateShard(context.Background(), &shard.CreateShardRequest{ShardInfo: s.ShardInfo})
 	s.fatalOnError("CreateShard", err)
 
 	queue, err := factory.NewDomainReplicationQueue()
@@ -281,20 +281,20 @@ func (s *TestBase) fatalOnError(msg string, err error) {
 
 // CreateShard is a utility method to create the shard using persistence layer
 func (s *TestBase) CreateShard(shardID int, owner string, rangeID int64) error {
-	info := &p.ShardInfo{
+	info := &shard.Info{
 		ShardID: shardID,
 		Owner:   owner,
 		RangeID: rangeID,
 	}
 
-	return s.ShardMgr.CreateShard(context.TODO(), &p.CreateShardRequest{
+	return s.ShardMgr.CreateShard(context.TODO(), &shard.CreateShardRequest{
 		ShardInfo: info,
 	})
 }
 
 // GetShard is a utility method to get the shard using persistence layer
-func (s *TestBase) GetShard(shardID int) (*p.ShardInfo, error) {
-	response, err := s.ShardMgr.GetShard(context.TODO(), &p.GetShardRequest{
+func (s *TestBase) GetShard(shardID int) (*shard.Info, error) {
+	response, err := s.ShardMgr.GetShard(context.TODO(), &shard.GetShardRequest{
 		ShardID: shardID,
 	})
 
@@ -306,8 +306,8 @@ func (s *TestBase) GetShard(shardID int) (*p.ShardInfo, error) {
 }
 
 // UpdateShard is a utility method to update the shard using persistence layer
-func (s *TestBase) UpdateShard(updatedInfo *p.ShardInfo, previousRangeID int64) error {
-	return s.ShardMgr.UpdateShard(context.TODO(), &p.UpdateShardRequest{
+func (s *TestBase) UpdateShard(updatedInfo *shard.Info, previousRangeID int64) error {
+	return s.ShardMgr.UpdateShard(context.TODO(), &shard.UpdateShardRequest{
 		ShardInfo:       updatedInfo,
 		PreviousRangeID: previousRangeID,
 	})

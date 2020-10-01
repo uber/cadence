@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"time"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/gocql/gocql"
@@ -406,7 +408,7 @@ func AdminDescribeShard(c *cli.Context) {
 	session := connectToCassandra(c)
 	shardManager := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
 
-	getShardReq := &persistence.GetShardRequest{ShardID: sid}
+	getShardReq := &shard2.GetShardRequest{ShardID: sid}
 	shard, err := shardManager.GetShard(ctx, getShardReq)
 	if err != nil {
 		ErrorAndExit("Failed to describe shard.", err)

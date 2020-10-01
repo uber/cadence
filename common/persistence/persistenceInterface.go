@@ -24,10 +24,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/persistence/managers/shard"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -35,11 +35,12 @@ type (
 	// Persistence interface is a lower layer of dataInterface.
 	// The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
-	// ShardManager/TaskManager/MetadataManager are the same.
+	// Manager/TaskManager/MetadataManager are the same.
 	//////////////////////////////////////////////////////////////////////
 
-	// ShardStore is a lower level of ShardManager
-	ShardStore = ShardManager
+	// ShardStore is a lower level of Manager
+	// TODO: move this definition to store package and to change references to it then simply remove it in favor of the interface
+	ShardStore = shard.Manager
 	// TaskStore is a lower level of TaskManager
 	TaskStore = TaskManager
 	// MetadataStore is a lower level of MetadataManager

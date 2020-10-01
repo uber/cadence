@@ -24,6 +24,8 @@ import (
 	"errors"
 	"testing"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -32,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
@@ -66,7 +67,7 @@ func (s *queueTaskProcessorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&persistence.ShardInfo{
+		&shard2.Info{
 			ShardID: 10,
 			RangeID: 1,
 		},
@@ -143,7 +144,7 @@ func (s *queueTaskProcessorSuite) TestStartStop() {
 	for i := 0; i != 10; i++ {
 		mockShard := shard.NewTestContext(
 			s.controller,
-			&persistence.ShardInfo{
+			&shard2.Info{
 				ShardID: 10,
 				RangeID: 1,
 			},

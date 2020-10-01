@@ -32,8 +32,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -44,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/managers/shard"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -4555,7 +4555,7 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	currentReplicationAck := int64(27)
 	currentClusterTransferAck := int64(21)
 	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
-	shardInfo := &p.ShardInfo{
+	shardInfo := &shard.Info{
 		ShardID:                 shardID,
 		Owner:                   "some random owner",
 		RangeID:                 rangeID,
@@ -4567,7 +4567,7 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 		ClusterReplicationLevel: map[string]int64{},
 		ReplicationDLQAckLevel:  map[string]int64{},
 	}
-	createRequest := &p.CreateShardRequest{
+	createRequest := &shard.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
 
@@ -4582,7 +4582,7 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	shardInfo.ClusterTimerAckLevel = map[string]time.Time{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTimerAck,
 	}
-	resp, err := s.ShardMgr.GetShard(ctx, &p.GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(ctx, &shard.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
@@ -4621,7 +4621,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		&timerPQS,
 		types.EncodingTypeThriftRW,
 	)
-	shardInfo := &p.ShardInfo{
+	shardInfo := &shard.Info{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             rangeID,
@@ -4644,7 +4644,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		ClusterReplicationLevel:       map[string]int64{},
 		ReplicationDLQAckLevel:        map[string]int64{},
 	}
-	createRequest := &p.CreateShardRequest{
+	createRequest := &shard.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
 
@@ -4652,7 +4652,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	defer cancel()
 
 	s.Nil(s.ShardMgr.CreateShard(ctx, createRequest))
-	resp, err := s.ShardMgr.GetShard(ctx, &p.GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(ctx, &shard.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))
@@ -4693,7 +4693,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		&timerPQS,
 		types.EncodingTypeThriftRW,
 	)
-	shardInfo = &p.ShardInfo{
+	shardInfo = &shard.Info{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             int64(28),
@@ -4716,13 +4716,13 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		ClusterReplicationLevel:       map[string]int64{cluster.TestAlternativeClusterName: 12345},
 		ReplicationDLQAckLevel:        map[string]int64{},
 	}
-	updateRequest := &p.UpdateShardRequest{
+	updateRequest := &shard.UpdateShardRequest{
 		ShardInfo:       shardInfo,
 		PreviousRangeID: rangeID,
 	}
 	s.Nil(s.ShardMgr.UpdateShard(ctx, updateRequest))
 
-	resp, err = s.ShardMgr.GetShard(ctx, &p.GetShardRequest{ShardID: shardID})
+	resp, err = s.ShardMgr.GetShard(ctx, &shard.GetShardRequest{ShardID: shardID})
 	s.NoError(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, TimePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], TimePrecision))

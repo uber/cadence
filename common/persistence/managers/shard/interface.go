@@ -30,15 +30,6 @@ import (
 )
 
 type (
-	// TransferFailoverLevel contains corresponding start / end level
-	TransferFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     int64
-		CurrentLevel int64
-		MaxLevel     int64
-		DomainIDs    map[string]struct{}
-	}
-
 	// TimerFailoverLevel contains domain IDs and corresponding start / end level
 	TimerFailoverLevel struct {
 		StartTime    time.Time
@@ -48,7 +39,15 @@ type (
 		DomainIDs    map[string]struct{}
 	}
 
-	// Info describes a shard
+	// TransferFailoverLevel contains corresponding start / end level
+	TransferFailoverLevel struct {
+		StartTime    time.Time
+		MinLevel     int64
+		CurrentLevel int64
+		MaxLevel     int64
+		DomainIDs    map[string]struct{}
+	}
+
 	Info struct {
 		ShardID                       int                              `json:"shard_id"`
 		Owner                         string                           `json:"owner"`
@@ -86,12 +85,13 @@ type (
 		PreviousRangeID int64
 	}
 
+	// GetShardResponse is the response to GetShard
 	GetShardResponse struct {
 		ShardInfo *Info
 	}
 
-	// Store supports persistence backed operations on shards
-	Store interface {
+	// Manager is used to manage all shards
+	Manager interface {
 		types.Closeable
 		GetName() string
 		CreateShard(ctx context.Context, request *CreateShardRequest) error

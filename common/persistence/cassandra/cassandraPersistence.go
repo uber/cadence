@@ -26,16 +26,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/managers/shard"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 // Guidelines for creating new special UUID constants
@@ -989,7 +989,7 @@ func (d *cassandraPersistence) GetShardID() int {
 
 func (d *cassandraPersistence) CreateShard(
 	_ context.Context,
-	request *p.CreateShardRequest,
+	request *shard.CreateShardRequest,
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
@@ -1051,8 +1051,8 @@ func (d *cassandraPersistence) CreateShard(
 
 func (d *cassandraPersistence) GetShard(
 	_ context.Context,
-	request *p.GetShardRequest,
-) (*p.GetShardResponse, error) {
+	request *shard.GetShardRequest,
+) (*shard.GetShardResponse, error) {
 	shardID := request.ShardID
 	query := d.session.Query(templateGetShardQuery,
 		shardID,
@@ -1082,12 +1082,12 @@ func (d *cassandraPersistence) GetShard(
 
 	info := createShardInfo(d.currentClusterName, result["shard"].(map[string]interface{}))
 
-	return &p.GetShardResponse{ShardInfo: info}, nil
+	return &shard.GetShardResponse{ShardInfo: info}, nil
 }
 
 func (d *cassandraPersistence) UpdateShard(
 	_ context.Context,
-	request *p.UpdateShardRequest,
+	request *shard.UpdateShardRequest,
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo

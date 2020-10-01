@@ -23,6 +23,8 @@ package history
 import (
 	"github.com/pborman/uuid"
 
+	shard2 "github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/log"
@@ -209,7 +211,7 @@ func newTransferQueueFailoverProcessor(
 	updateTransferAckLevel := func(ackLevel int64) error {
 		return shard.UpdateTransferFailoverLevel(
 			failoverUUID,
-			persistence.TransferFailoverLevel{
+			shard2.TransferFailoverLevel{
 				StartTime:    failoverStartTime,
 				MinLevel:     minLevel,
 				CurrentLevel: ackLevel,

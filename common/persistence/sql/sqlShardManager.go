@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/managers/shard"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -43,13 +45,13 @@ type sqlShardManager struct {
 	currentClusterName string
 }
 
-// newShardPersistence creates an instance of ShardManager
+// newShardPersistence creates an instance of Manager
 func newShardPersistence(
 	db sqlplugin.DB,
 	currentClusterName string,
 	log log.Logger,
 	parser serialization.Parser,
-) (persistence.ShardManager, error) {
+) (shard.Manager, error) {
 	return &sqlShardManager{
 		sqlStore: sqlStore{
 			db:     db,
@@ -62,9 +64,9 @@ func newShardPersistence(
 
 func (m *sqlShardManager) CreateShard(
 	ctx context.Context,
-	request *persistence.CreateShardRequest,
+	request *shard.CreateShardRequest,
 ) error {
-	if _, err := m.GetShard(ctx, &persistence.GetShardRequest{
+	if _, err := m.GetShard(ctx, &shard.GetShardRequest{
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
@@ -90,8 +92,8 @@ func (m *sqlShardManager) CreateShard(
 
 func (m *sqlShardManager) GetShard(
 	ctx context.Context,
-	request *persistence.GetShardRequest,
-) (*persistence.GetShardResponse, error) {
+	request *shard.GetShardRequest,
+) (*shard.GetShardResponse, error) {
 	row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -149,7 +151,7 @@ func (m *sqlShardManager) GetShard(
 		}
 	}
 
-	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
+	resp := &shard.GetShardResponse{ShardInfo: &shard.Info{
 		ShardID:                       int(row.ShardID),
 		RangeID:                       row.RangeID,
 		Owner:                         shardInfo.GetOwner(),
@@ -172,7 +174,7 @@ func (m *sqlShardManager) GetShard(
 
 func (m *sqlShardManager) UpdateShard(
 	ctx context.Context,
-	request *persistence.UpdateShardRequest,
+	request *shard.UpdateShardRequest,
 ) error {
 	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
@@ -246,7 +248,7 @@ func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID
 	return nil
 }
 
-func shardInfoToShardsRow(s persistence.ShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
+func shardInfoToShardsRow(s shard.Info, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
 	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
 	for k, v := range s.ClusterTimerAckLevel {
 		timerAckLevels[k] = v.UnixNano()
