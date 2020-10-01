@@ -95,13 +95,13 @@ func (s *fileBasedClientSuite) TestGetValueWithFilters() {
 	}
 	v, err = s.client.GetValueWithFilters(testGetBoolPropertyKey, filters, false)
 	s.NoError(err)
-	s.Equal(false, v)
+	s.Equal(true, v)
 }
 
 func (s *fileBasedClientSuite) TestGetValueWithFilters_UnknownFilter() {
 	filters := map[Filter]interface{}{
-		DomainName:    "global-samples-domain",
-		unknownFilter: "unknown-filter",
+		DomainName:    "global-samples-domain1",
+		unknownFilter: "unknown-filter1",
 	}
 	v, err := s.client.GetValueWithFilters(testGetBoolPropertyKey, filters, false)
 	s.NoError(err)
@@ -251,7 +251,7 @@ func (s *fileBasedClientSuite) TestMatch() {
 			filters: map[Filter]interface{}{
 				DomainName: "some random domain",
 			},
-			matched: false,
+			matched: true,
 		},
 		{
 			v: &constrainedValue{
