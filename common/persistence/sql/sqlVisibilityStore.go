@@ -25,8 +25,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -320,7 +321,7 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Visibili
 		TypeName:      row.WorkflowTypeName,
 		StartTime:     row.StartTime,
 		ExecutionTime: row.ExecutionTime,
-		Memo:          p.NewDataBlob(row.Memo, types.EncodingType(row.Encoding)),
+		Memo:          types.NewDataBlob(row.Memo, types.EncodingType(row.Encoding)),
 	}
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)

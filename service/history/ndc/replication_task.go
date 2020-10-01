@@ -23,6 +23,8 @@ package ndc
 import (
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -372,8 +374,8 @@ func deserializeBlob(
 		return nil, nil
 	}
 
-	return historySerializer.DeserializeBatchEvents(&persistence.DataBlob{
-		Encoding: common.EncodingTypeThriftRW,
+	return historySerializer.DeserializeBatchEvents(&types.DataBlob{
+		Encoding: types.EncodingTypeThriftRW,
 		Data:     blob.Data,
 	})
 }

@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -1132,9 +1134,9 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 	ctx := context.Background()
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
 	s.mockVersionChecker.EXPECT().SupportsRawHistoryQuery(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	blob, _ := wh.GetPayloadSerializer().SerializeBatchEvents(historyEvents, common.EncodingTypeThriftRW)
+	blob, _ := wh.GetPayloadSerializer().SerializeBatchEvents(historyEvents, types.EncodingTypeThriftRW)
 	s.mockHistoryV2Mgr.On("ReadRawHistoryBranch", mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
-		HistoryEventBlobs: []*persistence.DataBlob{blob},
+		HistoryEventBlobs: []*types.DataBlob{blob},
 		NextPageToken:     []byte{},
 	}, nil).Once()
 	token, _ := json.Marshal(&getHistoryContinuationToken{
@@ -1169,7 +1171,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 func deserializeBlobDataToHistoryEvents(wh *WorkflowHandler, dataBlobs []*shared.DataBlob) []*shared.HistoryEvent {
 	var historyEvents []*shared.HistoryEvent
 	for _, batch := range dataBlobs {
-		events, err := wh.GetPayloadSerializer().DeserializeBatchEvents(&persistence.DataBlob{Data: batch.Data, Encoding: common.EncodingTypeThriftRW})
+		events, err := wh.GetPayloadSerializer().DeserializeBatchEvents(&types.DataBlob{Data: batch.Data, Encoding: types.EncodingTypeThriftRW})
 		if err != nil {
 			return nil
 		}

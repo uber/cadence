@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -207,7 +209,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
-	data, err := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	data, err := serializer.SerializeBatchEvents(events, types.EncodingTypeThriftRW)
 	s.NoError(err)
 	task := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskTypeHistoryV2.Ptr(),
@@ -249,7 +251,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
-	data, err := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	data, err := serializer.SerializeBatchEvents(events, types.EncodingTypeThriftRW)
 	s.NoError(err)
 	task := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskTypeHistoryV2.Ptr(),

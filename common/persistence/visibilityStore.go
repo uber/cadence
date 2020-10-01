@@ -24,6 +24,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -39,7 +41,7 @@ type (
 )
 
 // VisibilityEncoding is default encoding for visibility data
-const VisibilityEncoding = common.EncodingTypeThriftRW
+const VisibilityEncoding = types.EncodingTypeThriftRW
 
 var _ VisibilityManager = (*visibilityManagerImpl)(nil)
 
@@ -292,7 +294,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	return convertedExecution
 }
 
-func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *shared.Memo, domainID, wID, rID string) *DataBlob {
+func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *shared.Memo, domainID, wID, rID string) *types.DataBlob {
 	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, VisibilityEncoding)
 	if err != nil {
 		v.logger.WithTags(
@@ -303,7 +305,7 @@ func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *shared.Memo, domai
 			Error("Unable to encode visibility memo")
 	}
 	if memo == nil {
-		return &DataBlob{}
+		return &types.DataBlob{}
 	}
 	return memo
 }

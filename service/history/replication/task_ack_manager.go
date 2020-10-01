@@ -30,6 +30,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -296,7 +298,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	nextEventID int64,
 ) (*shared.DataBlob, error) {
 
-	var eventBatchBlobs []*persistence.DataBlob
+	var eventBatchBlobs []*types.DataBlob
 	var pageToken []byte
 	batchSize := t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize()
 	req := &persistence.ReadHistoryBranchRequest{

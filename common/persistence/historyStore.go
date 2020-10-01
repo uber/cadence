@@ -24,6 +24,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/pborman/uuid"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -298,7 +300,7 @@ func (m *historyV2ManagerImpl) GetAllHistoryTreeBranches(
 
 func (m *historyV2ManagerImpl) readRawHistoryBranch(
 	request *ReadHistoryBranchRequest,
-) ([]*DataBlob, *historyV2PagingToken, int, log.Logger, error) {
+) ([]*types.DataBlob, *historyV2PagingToken, int, log.Logger, error) {
 
 	var branch workflow.HistoryBranch
 	err := m.thriftEncoder.Decode(request.BranchToken, &branch)

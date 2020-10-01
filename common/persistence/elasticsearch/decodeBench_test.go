@@ -23,9 +23,10 @@ package elasticsearch
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
@@ -64,7 +65,7 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 			TypeName:      source.WorkflowType,
 			StartTime:     time.Unix(0, source.StartTime),
 			ExecutionTime: time.Unix(0, source.ExecutionTime),
-			Memo:          p.NewDataBlob(source.Memo, types.EncodingType(source.Encoding)),
+			Memo:          types.NewDataBlob(source.Memo, types.EncodingType(source.Encoding)),
 			TaskList:      source.TaskList,
 		}
 		record.CloseTime = time.Unix(0, source.CloseTime)
@@ -94,7 +95,7 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 			StartTime:     time.Unix(0, startTime),
 			ExecutionTime: time.Unix(0, executionTime),
 			TaskList:      source[definition.TaskList].(string),
-			Memo:          p.NewDataBlob([]byte(source[definition.Memo].(string)), types.EncodingType(source[definition.Encoding].(string))),
+			Memo:          types.NewDataBlob([]byte(source[definition.Memo].(string)), types.EncodingType(source[definition.Encoding].(string))),
 		}
 		record.CloseTime = time.Unix(0, closeTime)
 		status := (shared.WorkflowExecutionCloseStatus)(int32(closeStatus))

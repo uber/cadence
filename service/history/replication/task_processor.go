@@ -30,6 +30,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"go.uber.org/yarpc/yarpcerrors"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -482,7 +484,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 
 	case r.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
-		eventsDataBlob := persistence.NewDataBlobFromThrift(taskAttributes.GetEvents())
+		eventsDataBlob := types.NewDataBlobFromThrift(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
 			return nil, err

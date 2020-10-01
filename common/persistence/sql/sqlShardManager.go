@@ -24,8 +24,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
@@ -132,17 +133,17 @@ func (m *sqlShardManager) GetShard(
 		shardInfo.ReplicationDlqAckLevel = make(map[string]int64)
 	}
 
-	var transferPQS *persistence.DataBlob
+	var transferPQS *types.DataBlob
 	if shardInfo.GetTransferProcessingQueueStates() != nil {
-		transferPQS = &persistence.DataBlob{
+		transferPQS = &types.DataBlob{
 			Encoding: types.EncodingType(shardInfo.GetTransferProcessingQueueStatesEncoding()),
 			Data:     shardInfo.GetTransferProcessingQueueStates(),
 		}
 	}
 
-	var timerPQS *persistence.DataBlob
+	var timerPQS *types.DataBlob
 	if shardInfo.GetTimerProcessingQueueStates() != nil {
-		timerPQS = &persistence.DataBlob{
+		timerPQS = &types.DataBlob{
 			Encoding: types.EncodingType(shardInfo.GetTimerProcessingQueueStatesEncoding()),
 			Data:     shardInfo.GetTimerProcessingQueueStates(),
 		}

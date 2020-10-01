@@ -24,8 +24,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
@@ -51,8 +52,8 @@ func updateActivityInfos(
 	if len(activityInfos) > 0 {
 		rows := make([]sqlplugin.ActivityInfoMapsRow, len(activityInfos))
 		for i, v := range activityInfos {
-			scheduledEvent, scheduledEncoding := persistence.FromDataBlob(v.ScheduledEvent)
-			startEvent, startEncoding := persistence.FromDataBlob(v.StartedEvent)
+			scheduledEvent, scheduledEncoding := types.FromDataBlob(v.ScheduledEvent)
+			startEvent, startEncoding := types.FromDataBlob(v.StartedEvent)
 
 			info := &sqlblobs.ActivityInfo{
 				Version:                       &v.Version,
@@ -177,7 +178,7 @@ func getActivityInfoMap(
 			LastHeartBeatUpdatedTime: v.LastHeartbeatUpdatedTime,
 			Version:                  decoded.GetVersion(),
 			ScheduledEventBatchID:    decoded.GetScheduledEventBatchID(),
-			ScheduledEvent:           persistence.NewDataBlob(decoded.ScheduledEvent, types.EncodingType(decoded.GetScheduledEventEncoding())),
+			ScheduledEvent:           types.NewDataBlob(decoded.ScheduledEvent, types.EncodingType(decoded.GetScheduledEventEncoding())),
 			ScheduledTime:            time.Unix(0, decoded.GetScheduledTimeNanos()),
 			StartedID:                decoded.GetStartedID(),
 			StartedTime:              time.Unix(0, decoded.GetStartedTimeNanos()),
@@ -205,7 +206,7 @@ func getActivityInfoMap(
 			LastFailureDetails:       decoded.GetRetryLastFailureDetails(),
 		}
 		if decoded.StartedEvent != nil {
-			info.StartedEvent = persistence.NewDataBlob(decoded.StartedEvent, types.EncodingType(decoded.GetStartedEventEncoding()))
+			info.StartedEvent = types.NewDataBlob(decoded.StartedEvent, types.EncodingType(decoded.GetStartedEventEncoding()))
 		}
 		ret[v.ScheduleID] = info
 	}
@@ -387,8 +388,8 @@ func updateChildExecutionInfos(
 	if len(childExecutionInfos) > 0 {
 		rows := make([]sqlplugin.ChildExecutionInfoMapsRow, len(childExecutionInfos))
 		for i, v := range childExecutionInfos {
-			initiateEvent, initiateEncoding := persistence.FromDataBlob(v.InitiatedEvent)
-			startEvent, startEncoding := persistence.FromDataBlob(v.StartedEvent)
+			initiateEvent, initiateEncoding := types.FromDataBlob(v.InitiatedEvent)
+			startEvent, startEncoding := types.FromDataBlob(v.StartedEvent)
 
 			info := &sqlblobs.ChildExecutionInfo{
 				Version:                &v.Version,
@@ -483,10 +484,10 @@ func getChildExecutionInfoMap(
 			ParentClosePolicy:     workflow.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
 		}
 		if rowInfo.InitiatedEvent != nil {
-			info.InitiatedEvent = persistence.NewDataBlob(rowInfo.InitiatedEvent, types.EncodingType(rowInfo.GetInitiatedEventEncoding()))
+			info.InitiatedEvent = types.NewDataBlob(rowInfo.InitiatedEvent, types.EncodingType(rowInfo.GetInitiatedEventEncoding()))
 		}
 		if rowInfo.StartedEvent != nil {
-			info.StartedEvent = persistence.NewDataBlob(rowInfo.StartedEvent, types.EncodingType(rowInfo.GetStartedEventEncoding()))
+			info.StartedEvent = types.NewDataBlob(rowInfo.StartedEvent, types.EncodingType(rowInfo.GetStartedEventEncoding()))
 		}
 		ret[v.InitiatedID] = info
 	}

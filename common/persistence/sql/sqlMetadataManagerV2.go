@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -226,9 +227,9 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		clusters[i] = &persistence.ClusterReplicationConfig{ClusterName: domainInfo.Clusters[i]}
 	}
 
-	var badBinaries *persistence.DataBlob
+	var badBinaries *types.DataBlob
 	if domainInfo.BadBinaries != nil {
-		badBinaries = persistence.NewDataBlob(domainInfo.BadBinaries, types.EncodingType(*domainInfo.BadBinariesEncoding))
+		badBinaries = types.NewDataBlob(domainInfo.BadBinaries, types.EncodingType(*domainInfo.BadBinariesEncoding))
 	}
 
 	var failoverEndTime *int64

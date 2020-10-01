@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -1311,7 +1313,7 @@ func updateCurrentExecution(
 
 func buildExecutionRow(
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	versionHistories *types.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
@@ -1415,7 +1417,7 @@ func (m *sqlExecutionManager) createExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	versionHistories *types.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
@@ -1479,7 +1481,7 @@ func updateExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	versionHistories *types.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,

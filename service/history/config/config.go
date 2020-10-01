@@ -23,6 +23,8 @@ package config
 import (
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/service/config"
@@ -407,7 +409,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:                   dc.GetStringPropertyFilteredByDomain(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EventEncodingType:                   dc.GetStringPropertyFilteredByDomain(dynamicconfig.DefaultEventEncoding, string(types.EncodingTypeThriftRW)),
 		EnableParentClosePolicy:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableParentClosePolicy, true),
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),

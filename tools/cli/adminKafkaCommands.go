@@ -33,6 +33,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
@@ -554,7 +556,7 @@ func decodeReplicationTask(
 	case replicator.ReplicationTaskTypeHistoryV2:
 		historyV2 := task.GetHistoryTaskV2Attributes()
 		events, err := serializer.DeserializeBatchEvents(
-			persistence.NewDataBlobFromThrift(historyV2.Events),
+			types.NewDataBlobFromThrift(historyV2.Events),
 		)
 		if err != nil {
 			return nil, err
@@ -562,7 +564,7 @@ func decodeReplicationTask(
 		var newRunEvents []*shared.HistoryEvent
 		if historyV2.IsSetNewRunEvents() {
 			newRunEvents, err = serializer.DeserializeBatchEvents(
-				persistence.NewDataBlobFromThrift(historyV2.NewRunEvents),
+				types.NewDataBlobFromThrift(historyV2.NewRunEvents),
 			)
 			if err != nil {
 				return nil, err

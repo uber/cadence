@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -316,9 +318,9 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
+			HistoryEventBlobs: []*types.DataBlob{
 				{
-					Encoding: common.EncodingTypeJSON,
+					Encoding: types.EncodingTypeJSON,
 					Data:     []byte{},
 				},
 			},
@@ -335,7 +337,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{},
+			HistoryEventBlobs: []*types.DataBlob{},
 			Size:              0,
 		}, nil)
 	_, err := s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
@@ -343,13 +345,13 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
+			HistoryEventBlobs: []*types.DataBlob{
 				{
-					Encoding: common.EncodingTypeJSON,
+					Encoding: types.EncodingTypeJSON,
 					Data:     []byte{},
 				},
 				{
-					Encoding: common.EncodingTypeJSON,
+					Encoding: types.EncodingTypeJSON,
 					Data:     []byte{},
 				},
 			},
@@ -726,9 +728,9 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	), nil).AnyTimes()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
+			HistoryEventBlobs: []*types.DataBlob{
 				{
-					Encoding: common.EncodingTypeJSON,
+					Encoding: types.EncodingTypeJSON,
 					Data:     []byte{},
 				},
 			},
@@ -895,9 +897,9 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	), nil).AnyTimes()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
+			HistoryEventBlobs: []*types.DataBlob{
 				{
-					Encoding: common.EncodingTypeJSON,
+					Encoding: types.EncodingTypeJSON,
 					Data:     []byte{},
 				},
 			},

@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/gocql/gocql"
@@ -438,7 +439,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 	if info.Data == nil {
 		info.Data = map[string]string{}
 	}
-	config.BadBinaries = p.NewDataBlob(badBinariesData, types.EncodingType(badBinariesDataEncoding))
+	config.BadBinaries = types.NewDataBlob(badBinariesData, types.EncodingType(badBinariesDataEncoding))
 	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
@@ -521,7 +522,7 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(
 			if domain.Info.Data == nil {
 				domain.Info.Data = map[string]string{}
 			}
-			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, types.EncodingType(badBinariesDataEncoding))
+			domain.Config.BadBinaries = types.NewDataBlob(badBinariesData, types.EncodingType(badBinariesDataEncoding))
 			badBinariesData = []byte("")
 			badBinariesDataEncoding = ""
 			domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)

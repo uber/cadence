@@ -22,8 +22,9 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/gocql/gocql"
 
@@ -359,7 +360,7 @@ func createExecution(
 	batch *gocql.Batch,
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	versionHistories *types.DataBlob,
 	checksum checksum.Checksum,
 	cqlNowTimestampMillis int64,
 ) error {
@@ -390,7 +391,7 @@ func createExecution(
 	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 
-	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
+	completionData, completionEncoding := types.FromDataBlob(executionInfo.CompletionEvent)
 	if versionHistories == nil {
 		// Cross DC feature is currently disabled so we will be creating workflow executions without version histories
 		batch.Query(templateCreateWorkflowExecutionQuery,
@@ -465,7 +466,7 @@ func createExecution(
 			checksum.Value)
 	} else {
 		// TODO also need to set the start / current / last write version
-		versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
+		versionHistoriesData, versionHistoriesEncoding := types.FromDataBlob(versionHistories)
 		batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
 			shardID,
 			domainID,
@@ -547,7 +548,7 @@ func updateExecution(
 	batch *gocql.Batch,
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	versionHistories *types.DataBlob,
 	cqlNowTimestampMillis int64,
 	condition int64,
 	checksum checksum.Checksum,
@@ -578,7 +579,7 @@ func updateExecution(
 	// TODO we should set the last update time on business logic layer
 	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 
-	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
+	completionData, completionEncoding := types.FromDataBlob(executionInfo.CompletionEvent)
 	if versionHistories == nil {
 		// Updates will be called with null version histories while the feature is disabled
 		batch.Query(templateUpdateWorkflowExecutionQuery,
@@ -654,7 +655,7 @@ func updateExecution(
 			condition)
 	} else {
 		// TODO also need to set the start / current / last write version
-		versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
+		versionHistoriesData, versionHistoriesEncoding := types.FromDataBlob(versionHistories)
 		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
 			domainID,
 			workflowID,
@@ -1109,8 +1110,8 @@ func updateActivityInfos(
 ) error {
 
 	for _, a := range activityInfos {
-		scheduledEventData, scheduleEncoding := p.FromDataBlob(a.ScheduledEvent)
-		startedEventData, startEncoding := p.FromDataBlob(a.StartedEvent)
+		scheduledEventData, scheduleEncoding := types.FromDataBlob(a.ScheduledEvent)
+		startedEventData, startEncoding := types.FromDataBlob(a.StartedEvent)
 		if a.StartedEvent != nil && scheduleEncoding != startEncoding {
 			return p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", scheduleEncoding, startEncoding))
 		}
@@ -1289,8 +1290,8 @@ func updateChildExecutionInfos(
 ) error {
 
 	for _, c := range childExecutionInfos {
-		initiatedEventData, initiatedEncoding := p.FromDataBlob(c.InitiatedEvent)
-		startedEventData, startEncoding := p.FromDataBlob(c.StartedEvent)
+		initiatedEventData, initiatedEncoding := types.FromDataBlob(c.InitiatedEvent)
+		startedEventData, startEncoding := types.FromDataBlob(c.StartedEvent)
 		if c.StartedEvent != nil && initiatedEncoding != startEncoding {
 			return p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", initiatedEncoding, startEncoding))
 		}
@@ -1545,7 +1546,7 @@ func resetSignalRequested(
 
 func updateBufferedEvents(
 	batch *gocql.Batch,
-	newBufferedEvents *p.DataBlob,
+	newBufferedEvents *types.DataBlob,
 	clearBufferedEvents bool,
 	shardID int,
 	domainID string,
@@ -1651,15 +1652,15 @@ func createShardInfo(
 	if info.ReplicationDLQAckLevel == nil {
 		info.ReplicationDLQAckLevel = make(map[string]int64)
 	}
-	info.PendingFailoverMarkers = p.NewDataBlob(
+	info.PendingFailoverMarkers = types.NewDataBlob(
 		pendingFailoverMarkersRawData,
 		types.EncodingType(pendingFailoverMarkersEncoding),
 	)
-	info.TransferProcessingQueueStates = p.NewDataBlob(
+	info.TransferProcessingQueueStates = types.NewDataBlob(
 		transferProcessingQueueStatesRawData,
 		types.EncodingType(transferProcessingQueueStatesEncoding),
 	)
-	info.TimerProcessingQueueStates = p.NewDataBlob(
+	info.TimerProcessingQueueStates = types.NewDataBlob(
 		timerProcessingQueueStatesRawData,
 		types.EncodingType(timerProcessingQueueStatesEncoding),
 	)
@@ -1801,8 +1802,8 @@ func createWorkflowExecutionInfo(
 			info.Memo = v.(map[string][]byte)
 		}
 	}
-	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
-	info.AutoResetPoints = p.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
+	info.CompletionEvent = types.NewDataBlob(completionEventData, completionEventEncoding)
+	info.AutoResetPoints = types.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
 	return info
 }
 
@@ -1966,8 +1967,8 @@ func createActivityInfo(
 		}
 	}
 	info.DomainID = domainID
-	info.ScheduledEvent = p.NewDataBlob(scheduledEventData, sharedEncoding)
-	info.StartedEvent = p.NewDataBlob(startedEventData, sharedEncoding)
+	info.ScheduledEvent = types.NewDataBlob(scheduledEventData, sharedEncoding)
+	info.StartedEvent = types.NewDataBlob(startedEventData, sharedEncoding)
 
 	return info
 }
@@ -2035,8 +2036,8 @@ func createChildExecutionInfo(
 			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int))
 		}
 	}
-	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
-	info.StartedEvent = p.NewDataBlob(startedData, encoding)
+	info.InitiatedEvent = types.NewDataBlob(initiatedData, encoding)
+	info.StartedEvent = types.NewDataBlob(startedData, encoding)
 	return info
 }
 
@@ -2094,8 +2095,8 @@ func resetActivityInfoMap(
 
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
-		scheduledEventData, scheduleEncoding := p.FromDataBlob(a.ScheduledEvent)
-		startedEventData, startEncoding := p.FromDataBlob(a.StartedEvent)
+		scheduledEventData, scheduleEncoding := types.FromDataBlob(a.ScheduledEvent)
+		startedEventData, startEncoding := types.FromDataBlob(a.StartedEvent)
 		if a.StartedEvent != nil && scheduleEncoding != startEncoding {
 			return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", scheduleEncoding, startEncoding))
 		}
@@ -2169,8 +2170,8 @@ func resetChildExecutionInfoMap(
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
 		cInfo := make(map[string]interface{})
-		initiatedEventData, initiatedEncoding := p.FromDataBlob(c.InitiatedEvent)
-		startedEventData, startEncoding := p.FromDataBlob(c.StartedEvent)
+		initiatedEventData, initiatedEncoding := types.FromDataBlob(c.InitiatedEvent)
+		startedEventData, startEncoding := types.FromDataBlob(c.StartedEvent)
 		if c.StartedEvent != nil && initiatedEncoding != startEncoding {
 			return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", initiatedEncoding, startEncoding))
 		}
@@ -2239,9 +2240,9 @@ func resetSignalInfoMap(
 
 func createHistoryEventBatchBlob(
 	result map[string]interface{},
-) *p.DataBlob {
+) *types.DataBlob {
 
-	eventBatch := &p.DataBlob{Encoding: types.EncodingTypeJSON}
+	eventBatch := &types.DataBlob{Encoding: types.EncodingTypeJSON}
 	for k, v := range result {
 		switch k {
 		case "encoding_type":

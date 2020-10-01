@@ -30,6 +30,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"go.uber.org/yarpc"
 
 	"github.com/golang/mock/gomock"
@@ -1608,7 +1610,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 	version int64,
 	workflowType string,
 	taskList string,
-) *persistence.DataBlob {
+) *types.DataBlob {
 
 	// TODO temporary code to generate first event & version history
 	//  we should generate these as part of modeled based testing
@@ -1649,14 +1651,14 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 		},
 	}
 
-	eventBlob, err := s.serializer.SerializeBatchEvents([]*shared.HistoryEvent{newRunFirstEvent}, common.EncodingTypeThriftRW)
+	eventBlob, err := s.serializer.SerializeBatchEvents([]*shared.HistoryEvent{newRunFirstEvent}, types.EncodingTypeThriftRW)
 	s.NoError(err)
 
 	return eventBlob
 }
 
 func (s *nDCIntegrationTestSuite) toThriftDataBlob(
-	blob *persistence.DataBlob,
+	blob *types.DataBlob,
 ) *shared.DataBlob {
 
 	if blob == nil {
@@ -1665,12 +1667,12 @@ func (s *nDCIntegrationTestSuite) toThriftDataBlob(
 
 	var encodingType shared.EncodingType
 	switch blob.GetEncoding() {
-	case common.EncodingTypeThriftRW:
+	case types.EncodingTypeThriftRW:
 		encodingType = shared.EncodingTypeThriftRW
-	case common.EncodingTypeJSON,
-		common.EncodingTypeGob,
-		common.EncodingTypeUnknown,
-		common.EncodingTypeEmpty:
+	case types.EncodingTypeJSON,
+		types.EncodingTypeGob,
+		types.EncodingTypeUnknown,
+		types.EncodingTypeEmpty:
 		panic(fmt.Sprintf("unsupported encoding type: %v", blob.GetEncoding()))
 	default:
 		panic(fmt.Sprintf("unknown encoding type: %v", blob.GetEncoding()))
@@ -1688,7 +1690,7 @@ func (s *nDCIntegrationTestSuite) generateEventBlobs(
 	workflowType string,
 	tasklist string,
 	batch *shared.History,
-) (*persistence.DataBlob, *persistence.DataBlob) {
+) (*types.DataBlob, *types.DataBlob) {
 	// TODO temporary code to generate next run first event
 	//  we should generate these as part of modeled based testing
 	lastEvent := batch.Events[len(batch.Events)-1]
@@ -1697,7 +1699,7 @@ func (s *nDCIntegrationTestSuite) generateEventBlobs(
 	)
 	// must serialize events batch after attempt on continue as new as generateNewRunHistory will
 	// modify the NewExecutionRunId attr
-	eventBlob, err := s.serializer.SerializeBatchEvents(batch.Events, common.EncodingTypeThriftRW)
+	eventBlob, err := s.serializer.SerializeBatchEvents(batch.Events, types.EncodingTypeThriftRW)
 	s.NoError(err)
 	return eventBlob, newRunEventBlob
 }

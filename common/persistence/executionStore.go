@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"context"
+
 	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -186,7 +187,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 }
 
 func (m *executionManagerImpl) DeserializeBufferedEvents(
-	blobs []*DataBlob,
+	blobs []*types.DataBlob,
 ) ([]*workflow.HistoryEvent, error) {
 
 	events := make([]*workflow.HistoryEvent, 0)
@@ -621,7 +622,7 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 	if err != nil {
 		return nil, err
 	}
-	var serializedNewBufferedEvents *DataBlob
+	var serializedNewBufferedEvents *types.DataBlob
 	if input.NewBufferedEvents != nil {
 		serializedNewBufferedEvents, err = m.serializer.SerializeBatchEvents(input.NewBufferedEvents, encoding)
 		if err != nil {
@@ -728,7 +729,7 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 func (m *executionManagerImpl) SerializeVersionHistories(
 	versionHistories *VersionHistories,
 	encoding types.EncodingType,
-) (*DataBlob, error) {
+) (*types.DataBlob, error) {
 
 	if versionHistories == nil {
 		return nil, nil
@@ -737,7 +738,7 @@ func (m *executionManagerImpl) SerializeVersionHistories(
 }
 
 func (m *executionManagerImpl) DeserializeVersionHistories(
-	blob *DataBlob,
+	blob *types.DataBlob,
 ) (*VersionHistories, error) {
 
 	if blob == nil {

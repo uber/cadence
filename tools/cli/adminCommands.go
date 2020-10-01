@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 
@@ -56,7 +58,7 @@ func AdminShowWorkflow(c *cli.Context) {
 	defer cancel()
 	session := connectToCassandra(c)
 	serializer := persistence.NewPayloadSerializer()
-	var history []*persistence.DataBlob
+	var history []*types.DataBlob
 	if len(tid) != 0 {
 		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 		resp, err := histV2.ReadHistoryBranch(ctx, &persistence.InternalReadHistoryBranchRequest{

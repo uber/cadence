@@ -23,8 +23,9 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/gocql/gocql"
 
@@ -168,9 +169,9 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 		return nil, err
 	}
 
-	history := make([]*p.DataBlob, 0, int(request.PageSize))
+	history := make([]*types.DataBlob, 0, int(request.PageSize))
 
-	eventBlob := &p.DataBlob{}
+	eventBlob := &types.DataBlob{}
 	nodeID := int64(0)
 	txnID := int64(0)
 	lastNodeID := request.LastNodeID
@@ -209,7 +210,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 			lastTxnID = txnID
 			lastNodeID = nodeID
 			history = append(history, eventBlob)
-			eventBlob = &p.DataBlob{}
+			eventBlob = &types.DataBlob{}
 		}
 	}
 

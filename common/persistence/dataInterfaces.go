@@ -23,9 +23,10 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/pborman/uuid"
 
@@ -254,13 +255,13 @@ type (
 		TimerAckLevel                 time.Time                        `json:"timer_ack_level"`
 		ClusterTransferAckLevel       map[string]int64                 `json:"cluster_transfer_ack_level"`
 		ClusterTimerAckLevel          map[string]time.Time             `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *DataBlob                        `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *DataBlob                        `json:"timer_processing_queue_states"`
+		TransferProcessingQueueStates *types.DataBlob                  `json:"transfer_processing_queue_states"`
+		TimerProcessingQueueStates    *types.DataBlob                  `json:"timer_processing_queue_states"`
 		TransferFailoverLevels        map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
 		TimerFailoverLevels           map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
 		ClusterReplicationLevel       map[string]int64                 `json:"cluster_replication_level"`
 		DomainNotificationVersion     int64                            `json:"domain_notification_version"`
-		PendingFailoverMarkers        *DataBlob                        `json:"pending_failover_markers"`
+		PendingFailoverMarkers        *types.DataBlob                  `json:"pending_failover_markers"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level
@@ -1413,7 +1414,7 @@ type (
 	// ReadRawHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	ReadRawHistoryBranchResponse struct {
 		// HistoryEventBlobs history event blobs
-		HistoryEventBlobs []*DataBlob
+		HistoryEventBlobs []*types.DataBlob
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		// Empty means we have reached the last page, not need to continue

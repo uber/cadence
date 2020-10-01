@@ -24,12 +24,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"math"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"

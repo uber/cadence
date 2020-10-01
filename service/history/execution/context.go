@@ -28,6 +28,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -1128,7 +1130,7 @@ func (c *contextImpl) ReapplyEvents(
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(
 		reapplyEvents,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 	if err != nil {
 		return err

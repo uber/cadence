@@ -21,9 +21,10 @@
 package task
 
 import (
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"

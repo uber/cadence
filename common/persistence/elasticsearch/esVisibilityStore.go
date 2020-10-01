@@ -26,13 +26,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"io"
 	"math"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/cch123/elasticsql"
 	"github.com/olivere/elastic"
@@ -936,7 +937,7 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             p.NewDataBlob(source.Memo, types.EncodingType(source.Encoding)),
+		Memo:             types.NewDataBlob(source.Memo, types.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}

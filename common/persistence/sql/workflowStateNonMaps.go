@@ -24,10 +24,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -129,7 +129,7 @@ func deleteSignalsRequestedSet(
 func updateBufferedEvents(
 	ctx context.Context,
 	tx sqlplugin.Tx,
-	batch *p.DataBlob,
+	batch *types.DataBlob,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
@@ -163,7 +163,7 @@ func getBufferedEvents(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
-) ([]*p.DataBlob, error) {
+) ([]*types.DataBlob, error) {
 
 	rows, err := db.SelectFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
 		ShardID:    shardID,
@@ -176,9 +176,9 @@ func getBufferedEvents(
 			Message: fmt.Sprintf("getBufferedEvents operation failed. Select failed: %v", err),
 		}
 	}
-	var result []*p.DataBlob
+	var result []*types.DataBlob
 	for _, row := range rows {
-		result = append(result, p.NewDataBlob(row.Data, types.EncodingType(row.DataEncoding)))
+		result = append(result, types.NewDataBlob(row.Data, types.EncodingType(row.DataEncoding)))
 	}
 	return result, nil
 }

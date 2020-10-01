@@ -32,6 +32,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -4611,13 +4613,13 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTransferAck)
 	transferPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
 		&transferPQS,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 	timerPQS := createTimerPQS(cluster.TestCurrentClusterName, 0, currentClusterTimerAck,
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTimerAck)
 	timerPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
 		&timerPQS,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 	shardInfo := &p.ShardInfo{
 		ShardID:             shardID,
@@ -4683,13 +4685,13 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTransferAck)
 	transferPQSBlob, _ = s.PayloadSerializer.SerializeProcessingQueueStates(
 		&transferPQS,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 	timerPQS = createTimerPQS(cluster.TestCurrentClusterName, 0, currentClusterTimerAck,
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTimerAck)
 	timerPQSBlob, _ = s.PayloadSerializer.SerializeProcessingQueueStates(
 		&timerPQS,
-		common.EncodingTypeThriftRW,
+		types.EncodingTypeThriftRW,
 	)
 	shardInfo = &p.ShardInfo{
 		ShardID:             shardID,

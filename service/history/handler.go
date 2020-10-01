@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -1708,8 +1710,8 @@ func (h *Handler) ReapplyEvents(
 		return h.error(err, scope, domainID, workflowID)
 	}
 	// deserialize history event object
-	historyEvents, err := h.GetPayloadSerializer().DeserializeBatchEvents(&persistence.DataBlob{
-		Encoding: common.EncodingTypeThriftRW,
+	historyEvents, err := h.GetPayloadSerializer().DeserializeBatchEvents(&types.DataBlob{
+		Encoding: types.EncodingTypeThriftRW,
 		Data:     request.GetRequest().GetEvents().GetData(),
 	})
 	if err != nil {

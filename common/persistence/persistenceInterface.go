@@ -22,9 +22,9 @@ package persistence
 
 import (
 	"context"
-	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/checksum"
@@ -164,14 +164,6 @@ type (
 		Payload   []byte    `json:"message_payload"`
 	}
 
-	// DataBlob represents a blob for any binary data.
-	// It contains raw data, and metadata(right now only encoding) in other field
-	// Note that it should be only used for Persistence layer, below dataInterface and application(historyEngine/etc)
-	DataBlob struct {
-		Encoding types.EncodingType
-		Data     []byte
-	}
-
 	// InternalCreateWorkflowExecutionRequest is used to write a new workflow execution
 	InternalCreateWorkflowExecutionRequest struct {
 		RangeID int64
@@ -194,7 +186,7 @@ type (
 		ParentRunID                        string
 		InitiatedID                        int64
 		CompletionEventBatchID             int64
-		CompletionEvent                    *DataBlob
+		CompletionEvent                    *types.DataBlob
 		TaskList                           string
 		WorkflowTypeName                   string
 		WorkflowTimeout                    int32
@@ -226,7 +218,7 @@ type (
 		ClientLibraryVersion               string
 		ClientFeatureVersion               string
 		ClientImpl                         string
-		AutoResetPoints                    *DataBlob
+		AutoResetPoints                    *types.DataBlob
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -249,7 +241,7 @@ type (
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
 	InternalWorkflowMutableState struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		VersionHistories *DataBlob
+		VersionHistories *types.DataBlob
 		ActivityInfos    map[int64]*InternalActivityInfo
 
 		TimerInfos          map[string]*TimerInfo
@@ -257,7 +249,7 @@ type (
 		RequestCancelInfos  map[int64]*RequestCancelInfo
 		SignalInfos         map[int64]*SignalInfo
 		SignalRequestedIDs  map[string]struct{}
-		BufferedEvents      []*DataBlob
+		BufferedEvents      []*types.DataBlob
 
 		Checksum checksum.Checksum
 	}
@@ -267,10 +259,10 @@ type (
 		Version                  int64
 		ScheduleID               int64
 		ScheduledEventBatchID    int64
-		ScheduledEvent           *DataBlob
+		ScheduledEvent           *types.DataBlob
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *DataBlob
+		StartedEvent             *types.DataBlob
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
@@ -307,11 +299,11 @@ type (
 		Version               int64
 		InitiatedID           int64
 		InitiatedEventBatchID int64
-		InitiatedEvent        *DataBlob
+		InitiatedEvent        *types.DataBlob
 		StartedID             int64
 		StartedWorkflowID     string
 		StartedRunID          string
-		StartedEvent          *DataBlob
+		StartedEvent          *types.DataBlob
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
@@ -367,7 +359,7 @@ type (
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
 	InternalWorkflowMutation struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		VersionHistories *DataBlob
+		VersionHistories *types.DataBlob
 		StartVersion     int64
 		LastWriteVersion int64
 
@@ -383,7 +375,7 @@ type (
 		DeleteSignalInfo          *int64
 		UpsertSignalRequestedIDs  []string
 		DeleteSignalRequestedID   string
-		NewBufferedEvents         *DataBlob
+		NewBufferedEvents         *types.DataBlob
 		ClearBufferedEvents       bool
 
 		TransferTasks    []Task
@@ -398,7 +390,7 @@ type (
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
 	InternalWorkflowSnapshot struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		VersionHistories *DataBlob
+		VersionHistories *types.DataBlob
 		StartVersion     int64
 		LastWriteVersion int64
 
@@ -426,7 +418,7 @@ type (
 		EventBatchVersion int64
 		RangeID           int64
 		TransactionID     int64
-		Events            *DataBlob
+		Events            *types.DataBlob
 		Overwrite         bool
 	}
 
@@ -441,7 +433,7 @@ type (
 		// The first eventID becomes the nodeID to be appended
 		NodeID int64
 		// The events to be appended
-		Events *DataBlob
+		Events *types.DataBlob
 		// Requested TransactionID for conditional update
 		TransactionID int64
 		// Used in sharded data stores to identify which shard to use
@@ -462,7 +454,7 @@ type (
 	// InternalListConcreteExecutionsEntity is a single entity in InternalListConcreteExecutionsResponse
 	InternalListConcreteExecutionsEntity struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		VersionHistories *DataBlob
+		VersionHistories *types.DataBlob
 	}
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch
@@ -528,7 +520,7 @@ type (
 	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	InternalReadHistoryBranchResponse struct {
 		// History events
-		History []*DataBlob
+		History []*types.DataBlob
 		// Pagination token
 		NextPageToken []byte
 		// LastNodeID is the last known node ID attached to a history node
@@ -547,7 +539,7 @@ type (
 		CloseTime        time.Time
 		Status           *workflow.WorkflowExecutionCloseStatus
 		HistoryLength    int64
-		Memo             *DataBlob
+		Memo             *types.DataBlob
 		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
@@ -575,7 +567,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -589,7 +581,7 @@ type (
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
@@ -608,7 +600,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -624,7 +616,7 @@ type (
 		HistoryArchivalURI       string
 		VisibilityArchivalStatus workflow.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              *DataBlob
+		BadBinaries              *types.DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
@@ -670,79 +662,3 @@ type (
 		NextPageToken []byte
 	}
 )
-
-// NewDataBlob returns a new DataBlob
-func NewDataBlob(data []byte, encodingType types.EncodingType) *DataBlob {
-	if data == nil || len(data) == 0 {
-		return nil
-	}
-	if encodingType != "thriftrw" && data[0] == 'Y' {
-		panic(fmt.Sprintf("Invalid incoding: \"%v\"", encodingType))
-	}
-	return &DataBlob{
-		Data:     data,
-		Encoding: encodingType,
-	}
-}
-
-// FromDataBlob decodes a datablob into a (payload, encodingType) tuple
-func FromDataBlob(blob *DataBlob) ([]byte, string) {
-	if blob == nil || len(blob.Data) == 0 {
-		return nil, ""
-	}
-	return blob.Data, string(blob.Encoding)
-}
-
-// GetEncoding returns encoding type
-func (d *DataBlob) GetEncoding() types.EncodingType {
-	encodingStr := string(d.Encoding)
-
-	switch types.EncodingType(encodingStr) {
-	case types.EncodingTypeGob:
-		return types.EncodingTypeGob
-	case types.EncodingTypeJSON:
-		return types.EncodingTypeJSON
-	case types.EncodingTypeThriftRW:
-		return types.EncodingTypeThriftRW
-	case types.EncodingTypeEmpty:
-		return types.EncodingTypeEmpty
-	default:
-		return types.EncodingTypeUnknown
-	}
-}
-
-// ToThrift convert data blob to thrift representation
-func (d *DataBlob) ToThrift() *workflow.DataBlob {
-	switch d.Encoding {
-	case types.EncodingTypeJSON:
-		return &workflow.DataBlob{
-			EncodingType: workflow.EncodingTypeJSON.Ptr(),
-			Data:         d.Data,
-		}
-	case types.EncodingTypeThriftRW:
-		return &workflow.DataBlob{
-			EncodingType: workflow.EncodingTypeThriftRW.Ptr(),
-			Data:         d.Data,
-		}
-	default:
-		panic(fmt.Sprintf("DataBlob seeing unsupported enconding type: %v", d.Encoding))
-	}
-}
-
-// NewDataBlobFromThrift convert data blob from thrift representation
-func NewDataBlobFromThrift(blob *workflow.DataBlob) *DataBlob {
-	switch blob.GetEncodingType() {
-	case workflow.EncodingTypeJSON:
-		return &DataBlob{
-			Encoding: types.EncodingTypeJSON,
-			Data:     blob.Data,
-		}
-	case workflow.EncodingTypeThriftRW:
-		return &DataBlob{
-			Encoding: types.EncodingTypeThriftRW,
-			Data:     blob.Data,
-		}
-	default:
-		panic(fmt.Sprintf("NewDataBlobFromThrift seeing unsupported enconding type: %v", blob.GetEncodingType()))
-	}
-}

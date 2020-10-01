@@ -23,8 +23,9 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/gocql/gocql"
 
@@ -731,7 +732,7 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.VisibilityWorkflowExe
 			TypeName:      typeName,
 			StartTime:     startTime,
 			ExecutionTime: executionTime,
-			Memo:          p.NewDataBlob(memo, types.EncodingType(encoding)),
+			Memo:          types.NewDataBlob(memo, types.EncodingType(encoding)),
 			TaskList:      taskList,
 		}
 		return record, true
@@ -761,7 +762,7 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*p.VisibilityWorkflowE
 			CloseTime:     closeTime,
 			Status:        &status,
 			HistoryLength: historyLength,
-			Memo:          p.NewDataBlob(memo, types.EncodingType(encoding)),
+			Memo:          types.NewDataBlob(memo, types.EncodingType(encoding)),
 			TaskList:      taskList,
 		}
 		return record, true

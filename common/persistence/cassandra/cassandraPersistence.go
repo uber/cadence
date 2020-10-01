@@ -23,9 +23,10 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/gocql/gocql"
 
@@ -992,9 +993,9 @@ func (d *cassandraPersistence) CreateShard(
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
+	markerData, markerEncoding := types.FromDataBlob(shardInfo.PendingFailoverMarkers)
+	transferPQS, transferPQSEncoding := types.FromDataBlob(shardInfo.TransferProcessingQueueStates)
+	timerPQS, timerPQSEncoding := types.FromDataBlob(shardInfo.TimerProcessingQueueStates)
 	query := d.session.Query(templateCreateShardQuery,
 		shardInfo.ShardID,
 		rowTypeShard,
@@ -1090,9 +1091,9 @@ func (d *cassandraPersistence) UpdateShard(
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
+	markerData, markerEncoding := types.FromDataBlob(shardInfo.PendingFailoverMarkers)
+	transferPQS, transferPQSEncoding := types.FromDataBlob(shardInfo.TransferProcessingQueueStates)
+	timerPQS, timerPQSEncoding := types.FromDataBlob(shardInfo.TimerProcessingQueueStates)
 
 	query := d.session.Query(templateUpdateShardQuery,
 		shardInfo.ShardID,
@@ -1369,7 +1370,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	state := &p.InternalWorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
-	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), types.EncodingType(result["version_histories_encoding"].(string)))
+	state.VersionHistories = types.NewDataBlob(result["version_histories"].([]byte), types.EncodingType(result["version_histories_encoding"].(string)))
 
 	activityInfos := make(map[int64]*p.InternalActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
@@ -1419,7 +1420,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	state.SignalRequestedIDs = signalRequestedIDs
 
 	eList := result["buffered_events_list"].([]map[string]interface{})
-	bufferedEventsBlobs := make([]*p.DataBlob, 0, len(eList))
+	bufferedEventsBlobs := make([]*types.DataBlob, 0, len(eList))
 	for _, v := range eList {
 		blob := createHistoryEventBatchBlob(v)
 		bufferedEventsBlobs = append(bufferedEventsBlobs, blob)
@@ -2181,7 +2182,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 		}
 		response.Executions = append(response.Executions, &p.InternalListConcreteExecutionsEntity{
 			ExecutionInfo:    createWorkflowExecutionInfo(result["execution"].(map[string]interface{})),
-			VersionHistories: p.NewDataBlob(result["version_histories"].([]byte), types.EncodingType(result["version_histories_encoding"].(string))),
+			VersionHistories: types.NewDataBlob(result["version_histories"].([]byte), types.EncodingType(result["version_histories_encoding"].(string))),
 		})
 		result = make(map[string]interface{})
 	}

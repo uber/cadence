@@ -23,6 +23,7 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/history"
@@ -36,36 +37,36 @@ type (
 	// It will only be used inside persistence, so that serialize/deserialize is transparent for application
 	PayloadSerializer interface {
 		// serialize/deserialize history events
-		SerializeBatchEvents(batch []*workflow.HistoryEvent, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error)
+		SerializeBatchEvents(batch []*workflow.HistoryEvent, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeBatchEvents(data *types.DataBlob) ([]*workflow.HistoryEvent, error)
 
 		// serialize/deserialize a single history event
-		SerializeEvent(event *workflow.HistoryEvent, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error)
+		SerializeEvent(event *workflow.HistoryEvent, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeEvent(data *types.DataBlob) (*workflow.HistoryEvent, error)
 
 		// serialize/deserialize visibility memo fields
-		SerializeVisibilityMemo(memo *workflow.Memo, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeVisibilityMemo(data *DataBlob) (*workflow.Memo, error)
+		SerializeVisibilityMemo(memo *workflow.Memo, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeVisibilityMemo(data *types.DataBlob) (*workflow.Memo, error)
 
 		// serialize/deserialize reset points
-		SerializeResetPoints(event *workflow.ResetPoints, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeResetPoints(data *DataBlob) (*workflow.ResetPoints, error)
+		SerializeResetPoints(event *workflow.ResetPoints, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeResetPoints(data *types.DataBlob) (*workflow.ResetPoints, error)
 
 		// serialize/deserialize bad binaries
-		SerializeBadBinaries(event *workflow.BadBinaries, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeBadBinaries(data *DataBlob) (*workflow.BadBinaries, error)
+		SerializeBadBinaries(event *workflow.BadBinaries, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeBadBinaries(data *types.DataBlob) (*workflow.BadBinaries, error)
 
 		// serialize/deserialize version histories
-		SerializeVersionHistories(histories *workflow.VersionHistories, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeVersionHistories(data *DataBlob) (*workflow.VersionHistories, error)
+		SerializeVersionHistories(histories *workflow.VersionHistories, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeVersionHistories(data *types.DataBlob) (*workflow.VersionHistories, error)
 
 		// serialize/deserialize pending failover markers
-		SerializePendingFailoverMarkers(markers []*replicator.FailoverMarkerAttributes, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializePendingFailoverMarkers(data *DataBlob) ([]*replicator.FailoverMarkerAttributes, error)
+		SerializePendingFailoverMarkers(markers []*replicator.FailoverMarkerAttributes, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializePendingFailoverMarkers(data *types.DataBlob) ([]*replicator.FailoverMarkerAttributes, error)
 
 		// serialize/deserialize processing queue states
-		SerializeProcessingQueueStates(states *history.ProcessingQueueStates, encodingType types.EncodingType) (*DataBlob, error)
-		DeserializeProcessingQueueStates(data *DataBlob) (*history.ProcessingQueueStates, error)
+		SerializeProcessingQueueStates(states *history.ProcessingQueueStates, encodingType types.EncodingType) (*types.DataBlob, error)
+		DeserializeProcessingQueueStates(data *types.DataBlob) (*history.ProcessingQueueStates, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -95,11 +96,11 @@ func NewPayloadSerializer() PayloadSerializer {
 	}
 }
 
-func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, encodingType types.EncodingType) (*types.DataBlob, error) {
 	return t.serialize(events, encodingType)
 }
 
-func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
+func (t *serializerImpl) DeserializeBatchEvents(data *types.DataBlob) ([]*workflow.HistoryEvent, error) {
 	if data == nil {
 		return nil, nil
 	}
@@ -111,14 +112,14 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.His
 	return events, err
 }
 
-func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType types.EncodingType) (*types.DataBlob, error) {
 	if event == nil {
 		return nil, nil
 	}
 	return t.serialize(event, encodingType)
 }
 
-func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error) {
+func (t *serializerImpl) DeserializeEvent(data *types.DataBlob) (*workflow.HistoryEvent, error) {
 	if data == nil {
 		return nil, nil
 	}
@@ -127,33 +128,33 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 	return &event, err
 }
 
-func (t *serializerImpl) SerializeResetPoints(rp *workflow.ResetPoints, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeResetPoints(rp *workflow.ResetPoints, encodingType types.EncodingType) (*types.DataBlob, error) {
 	if rp == nil {
 		rp = &workflow.ResetPoints{}
 	}
 	return t.serialize(rp, encodingType)
 }
 
-func (t *serializerImpl) DeserializeResetPoints(data *DataBlob) (*workflow.ResetPoints, error) {
+func (t *serializerImpl) DeserializeResetPoints(data *types.DataBlob) (*workflow.ResetPoints, error) {
 	var rp workflow.ResetPoints
 	err := t.deserialize(data, &rp)
 	return &rp, err
 }
 
-func (t *serializerImpl) SerializeBadBinaries(bb *workflow.BadBinaries, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeBadBinaries(bb *workflow.BadBinaries, encodingType types.EncodingType) (*types.DataBlob, error) {
 	if bb == nil {
 		bb = &workflow.BadBinaries{}
 	}
 	return t.serialize(bb, encodingType)
 }
 
-func (t *serializerImpl) DeserializeBadBinaries(data *DataBlob) (*workflow.BadBinaries, error) {
+func (t *serializerImpl) DeserializeBadBinaries(data *types.DataBlob) (*workflow.BadBinaries, error) {
 	var bb workflow.BadBinaries
 	err := t.deserialize(data, &bb)
 	return &bb, err
 }
 
-func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingType types.EncodingType) (*types.DataBlob, error) {
 	if memo == nil {
 		// Return nil here to be consistent with Event
 		// This check is not duplicate as check in following serialize
@@ -162,20 +163,20 @@ func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingTy
 	return t.serialize(memo, encodingType)
 }
 
-func (t *serializerImpl) DeserializeVisibilityMemo(data *DataBlob) (*workflow.Memo, error) {
+func (t *serializerImpl) DeserializeVisibilityMemo(data *types.DataBlob) (*workflow.Memo, error) {
 	var memo workflow.Memo
 	err := t.deserialize(data, &memo)
 	return &memo, err
 }
 
-func (t *serializerImpl) SerializeVersionHistories(histories *workflow.VersionHistories, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeVersionHistories(histories *workflow.VersionHistories, encodingType types.EncodingType) (*types.DataBlob, error) {
 	if histories == nil {
 		return nil, nil
 	}
 	return t.serialize(histories, encodingType)
 }
 
-func (t *serializerImpl) DeserializeVersionHistories(data *DataBlob) (*workflow.VersionHistories, error) {
+func (t *serializerImpl) DeserializeVersionHistories(data *types.DataBlob) (*workflow.VersionHistories, error) {
 	var histories workflow.VersionHistories
 	err := t.deserialize(data, &histories)
 	return &histories, err
@@ -184,7 +185,7 @@ func (t *serializerImpl) DeserializeVersionHistories(data *DataBlob) (*workflow.
 func (t *serializerImpl) SerializePendingFailoverMarkers(
 	markers []*replicator.FailoverMarkerAttributes,
 	encodingType types.EncodingType,
-) (*DataBlob, error) {
+) (*types.DataBlob, error) {
 
 	if markers == nil {
 		return nil, nil
@@ -193,7 +194,7 @@ func (t *serializerImpl) SerializePendingFailoverMarkers(
 }
 
 func (t *serializerImpl) DeserializePendingFailoverMarkers(
-	data *DataBlob,
+	data *types.DataBlob,
 ) ([]*replicator.FailoverMarkerAttributes, error) {
 
 	if data == nil {
@@ -210,7 +211,7 @@ func (t *serializerImpl) DeserializePendingFailoverMarkers(
 func (t *serializerImpl) SerializeProcessingQueueStates(
 	states *history.ProcessingQueueStates,
 	encodingType types.EncodingType,
-) (*DataBlob, error) {
+) (*types.DataBlob, error) {
 	if states == nil {
 		return nil, nil
 	}
@@ -218,7 +219,7 @@ func (t *serializerImpl) SerializeProcessingQueueStates(
 }
 
 func (t *serializerImpl) DeserializeProcessingQueueStates(
-	data *DataBlob,
+	data *types.DataBlob,
 ) (*history.ProcessingQueueStates, error) {
 	if data == nil {
 		return nil, nil
@@ -232,7 +233,7 @@ func (t *serializerImpl) DeserializeProcessingQueueStates(
 	return &states, err
 }
 
-func (t *serializerImpl) serialize(input interface{}, encodingType types.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) serialize(input interface{}, encodingType types.EncodingType) (*types.DataBlob, error) {
 	if input == nil {
 		return nil, nil
 	}
@@ -253,7 +254,7 @@ func (t *serializerImpl) serialize(input interface{}, encodingType types.Encodin
 	if err != nil {
 		return nil, NewCadenceSerializationError(err.Error())
 	}
-	return NewDataBlob(data, encodingType), nil
+	return types.NewDataBlob(data, encodingType), nil
 }
 
 func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
@@ -279,7 +280,7 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 	}
 }
 
-func (t *serializerImpl) deserialize(data *DataBlob, target interface{}) error {
+func (t *serializerImpl) deserialize(data *types.DataBlob, target interface{}) error {
 	if data == nil {
 		return nil
 	}

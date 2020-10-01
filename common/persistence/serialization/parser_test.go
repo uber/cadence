@@ -25,6 +25,8 @@ package serialization
 import (
 	"testing"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -32,7 +34,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	thriftParser, err := NewParser(common.EncodingTypeThriftRW, common.EncodingTypeThriftRW)
+	thriftParser, err := NewParser(types.EncodingTypeThriftRW, types.EncodingTypeThriftRW)
 	assert.NoError(t, err)
 	domainInfo := &sqlblobs.DomainInfo{
 		Name: common.StringPtr("test_name"),

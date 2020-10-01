@@ -24,10 +24,10 @@ package serialization
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/sqlblobs"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -57,8 +57,8 @@ func NewParser(encodingType types.EncodingType, decodingTypes ...types.EncodingT
 	}, nil
 }
 
-func (p *parser) ShardInfoToBlob(info *sqlblobs.ShardInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) ShardInfoToBlob(info *sqlblobs.ShardInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.shardInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -68,8 +68,8 @@ func (p *parser) ShardInfoToBlob(info *sqlblobs.ShardInfo) (persistence.DataBlob
 	return db, nil
 }
 
-func (p *parser) DomainInfoToBlob(info *sqlblobs.DomainInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) DomainInfoToBlob(info *sqlblobs.DomainInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.domainInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -79,8 +79,8 @@ func (p *parser) DomainInfoToBlob(info *sqlblobs.DomainInfo) (persistence.DataBl
 	return db, nil
 }
 
-func (p *parser) HistoryTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) HistoryTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.historyTreeInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -90,8 +90,8 @@ func (p *parser) HistoryTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) (persiste
 	return db, nil
 }
 
-func (p *parser) WorkflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) WorkflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.workflowExecutionInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -101,8 +101,8 @@ func (p *parser) WorkflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInf
 	return db, nil
 }
 
-func (p *parser) ActivityInfoToBlob(info *sqlblobs.ActivityInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) ActivityInfoToBlob(info *sqlblobs.ActivityInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.activityInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -112,8 +112,8 @@ func (p *parser) ActivityInfoToBlob(info *sqlblobs.ActivityInfo) (persistence.Da
 	return db, nil
 }
 
-func (p *parser) ChildExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) ChildExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.childExecutionInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -123,8 +123,8 @@ func (p *parser) ChildExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) (pe
 	return db, nil
 }
 
-func (p *parser) SignalInfoToBlob(info *sqlblobs.SignalInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) SignalInfoToBlob(info *sqlblobs.SignalInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.signalInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -134,8 +134,8 @@ func (p *parser) SignalInfoToBlob(info *sqlblobs.SignalInfo) (persistence.DataBl
 	return db, nil
 }
 
-func (p *parser) RequestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) RequestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.requestCancelInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -145,8 +145,8 @@ func (p *parser) RequestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) (pers
 	return db, nil
 }
 
-func (p *parser) TimerInfoToBlob(info *sqlblobs.TimerInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) TimerInfoToBlob(info *sqlblobs.TimerInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.timerInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -156,8 +156,8 @@ func (p *parser) TimerInfoToBlob(info *sqlblobs.TimerInfo) (persistence.DataBlob
 	return db, nil
 }
 
-func (p *parser) TaskInfoToBlob(info *sqlblobs.TaskInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) TaskInfoToBlob(info *sqlblobs.TaskInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.taskInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -167,8 +167,8 @@ func (p *parser) TaskInfoToBlob(info *sqlblobs.TaskInfo) (persistence.DataBlob, 
 	return db, nil
 }
 
-func (p *parser) TaskListInfoToBlob(info *sqlblobs.TaskListInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) TaskListInfoToBlob(info *sqlblobs.TaskListInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.taskListInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -178,8 +178,8 @@ func (p *parser) TaskListInfoToBlob(info *sqlblobs.TaskListInfo) (persistence.Da
 	return db, nil
 }
 
-func (p *parser) TransferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) TransferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.transferTaskInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -189,8 +189,8 @@ func (p *parser) TransferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) (persis
 	return db, nil
 }
 
-func (p *parser) TimerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) TimerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.timerTaskInfoToBlob(info)
 	if err != nil {
 		return db, err
@@ -200,8 +200,8 @@ func (p *parser) TimerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) (persistence.
 	return db, nil
 }
 
-func (p *parser) ReplicationTaskInfoToBlob(info *sqlblobs.ReplicationTaskInfo) (persistence.DataBlob, error) {
-	db := persistence.DataBlob{}
+func (p *parser) ReplicationTaskInfoToBlob(info *sqlblobs.ReplicationTaskInfo) (types.DataBlob, error) {
+	db := types.DataBlob{}
 	data, err := p.encoder.replicationTaskInfoToBlob(info)
 	if err != nil {
 		return db, err

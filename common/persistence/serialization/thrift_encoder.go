@@ -24,6 +24,7 @@ package serialization
 
 import (
 	"bytes"
+
 	"github.com/uber/cadence/common/types"
 
 	"go.uber.org/thriftrw/protocol"

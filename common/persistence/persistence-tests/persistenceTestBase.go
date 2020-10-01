@@ -22,11 +22,12 @@ package persistencetests
 
 import (
 	"context"
-	"github.com/uber/cadence/common/types"
 	"math"
 	"math/rand"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"

@@ -23,11 +23,11 @@
 package serialization
 
 import (
-	"github.com/uber/cadence/common/types"
 	"go.uber.org/thriftrw/wire"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/.gen/go/sqlblobs"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -35,20 +35,20 @@ type (
 	// a single encoder which encodes into one format and a collection of decoders.
 	// Parser selects the appropriate decoder for the provided blob.
 	Parser interface {
-		ShardInfoToBlob(*sqlblobs.ShardInfo) (persistence.DataBlob, error)
-		DomainInfoToBlob(*sqlblobs.DomainInfo) (persistence.DataBlob, error)
-		HistoryTreeInfoToBlob(*sqlblobs.HistoryTreeInfo) (persistence.DataBlob, error)
-		WorkflowExecutionInfoToBlob(*sqlblobs.WorkflowExecutionInfo) (persistence.DataBlob, error)
-		ActivityInfoToBlob(*sqlblobs.ActivityInfo) (persistence.DataBlob, error)
-		ChildExecutionInfoToBlob(*sqlblobs.ChildExecutionInfo) (persistence.DataBlob, error)
-		SignalInfoToBlob(*sqlblobs.SignalInfo) (persistence.DataBlob, error)
-		RequestCancelInfoToBlob(*sqlblobs.RequestCancelInfo) (persistence.DataBlob, error)
-		TimerInfoToBlob(*sqlblobs.TimerInfo) (persistence.DataBlob, error)
-		TaskInfoToBlob(*sqlblobs.TaskInfo) (persistence.DataBlob, error)
-		TaskListInfoToBlob(*sqlblobs.TaskListInfo) (persistence.DataBlob, error)
-		TransferTaskInfoToBlob(*sqlblobs.TransferTaskInfo) (persistence.DataBlob, error)
-		TimerTaskInfoToBlob(*sqlblobs.TimerTaskInfo) (persistence.DataBlob, error)
-		ReplicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) (persistence.DataBlob, error)
+		ShardInfoToBlob(*sqlblobs.ShardInfo) (types.DataBlob, error)
+		DomainInfoToBlob(*sqlblobs.DomainInfo) (types.DataBlob, error)
+		HistoryTreeInfoToBlob(*sqlblobs.HistoryTreeInfo) (types.DataBlob, error)
+		WorkflowExecutionInfoToBlob(*sqlblobs.WorkflowExecutionInfo) (types.DataBlob, error)
+		ActivityInfoToBlob(*sqlblobs.ActivityInfo) (types.DataBlob, error)
+		ChildExecutionInfoToBlob(*sqlblobs.ChildExecutionInfo) (types.DataBlob, error)
+		SignalInfoToBlob(*sqlblobs.SignalInfo) (types.DataBlob, error)
+		RequestCancelInfoToBlob(*sqlblobs.RequestCancelInfo) (types.DataBlob, error)
+		TimerInfoToBlob(*sqlblobs.TimerInfo) (types.DataBlob, error)
+		TaskInfoToBlob(*sqlblobs.TaskInfo) (types.DataBlob, error)
+		TaskListInfoToBlob(*sqlblobs.TaskListInfo) (types.DataBlob, error)
+		TransferTaskInfoToBlob(*sqlblobs.TransferTaskInfo) (types.DataBlob, error)
+		TimerTaskInfoToBlob(*sqlblobs.TimerTaskInfo) (types.DataBlob, error)
+		ReplicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) (types.DataBlob, error)
 
 		ShardInfoFromBlob([]byte, string) (*sqlblobs.ShardInfo, error)
 		DomainInfoFromBlob([]byte, string) (*sqlblobs.DomainInfo, error)

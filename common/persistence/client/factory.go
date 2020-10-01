@@ -21,8 +21,9 @@
 package client
 
 import (
-	"github.com/uber/cadence/common/types"
 	"sync"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/log/tag"
 

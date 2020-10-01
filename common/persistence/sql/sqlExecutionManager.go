@@ -26,9 +26,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"math"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -300,7 +301,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	}
 
 	if info.GetVersionHistories() != nil {
-		state.VersionHistories = p.NewDataBlob(
+		state.VersionHistories = types.NewDataBlob(
 			info.GetVersionHistories(),
 			types.EncodingType(info.GetVersionHistoriesEncoding()),
 		)
@@ -326,12 +327,12 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	}
 
 	if info.CompletionEvent != nil {
-		state.ExecutionInfo.CompletionEvent = p.NewDataBlob(info.CompletionEvent,
+		state.ExecutionInfo.CompletionEvent = types.NewDataBlob(info.CompletionEvent,
 			types.EncodingType(info.GetCompletionEventEncoding()))
 	}
 
 	if info.AutoResetPoints != nil {
-		state.ExecutionInfo.AutoResetPoints = p.NewDataBlob(info.AutoResetPoints,
+		state.ExecutionInfo.AutoResetPoints = types.NewDataBlob(info.AutoResetPoints,
 			types.EncodingType(info.GetAutoResetPointsEncoding()))
 	}
 

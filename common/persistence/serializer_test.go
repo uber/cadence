@@ -21,10 +21,11 @@
 package persistence
 
 import (
-	"github.com/uber/cadence/common/types"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/history"
 

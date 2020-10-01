@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -181,8 +182,8 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 		return &p.InternalReadHistoryBranchResponse{}, nil
 	}
 
-	history := make([]*p.DataBlob, 0, int(request.PageSize))
-	eventBlob := &p.DataBlob{}
+	history := make([]*types.DataBlob, 0, int(request.PageSize))
+	eventBlob := &types.DataBlob{}
 
 	for _, row := range rows {
 		eventBlob.Data = row.Data
@@ -226,7 +227,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 			lastTxnID = *row.TxnID
 			lastNodeID = row.NodeID
 			history = append(history, eventBlob)
-			eventBlob = &p.DataBlob{}
+			eventBlob = &types.DataBlob{}
 		}
 	}
 

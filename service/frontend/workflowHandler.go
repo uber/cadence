@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -3304,9 +3306,9 @@ func (wh *WorkflowHandler) getRawHistory(
 	var encoding *gen.EncodingType
 	for _, data := range resp.HistoryEventBlobs {
 		switch data.Encoding {
-		case common.EncodingTypeJSON:
+		case types.EncodingTypeJSON:
 			encoding = gen.EncodingTypeJSON.Ptr()
-		case common.EncodingTypeThriftRW:
+		case types.EncodingTypeThriftRW:
 			encoding = gen.EncodingTypeThriftRW.Ptr()
 		default:
 			panic(fmt.Sprintf("Invalid encoding type for raw history, encoding type: %s", data.Encoding))
@@ -3327,7 +3329,7 @@ func (wh *WorkflowHandler) getRawHistory(
 				tag.Error(err))
 		}
 		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(
-			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}, common.EncodingTypeThriftRW)
+			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}, types.EncodingTypeThriftRW)
 		if err != nil {
 			return nil, nil, err
 		}

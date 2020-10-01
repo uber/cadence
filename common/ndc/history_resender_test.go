@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -400,7 +402,7 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 }
 
 func (s *historyResenderSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
-	blob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	blob, err := s.serializer.SerializeBatchEvents(events, types.EncodingTypeThriftRW)
 	s.Nil(err)
 	return &shared.DataBlob{
 		EncodingType: shared.EncodingTypeThriftRW.Ptr(),
