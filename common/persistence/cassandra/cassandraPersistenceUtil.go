@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -30,7 +31,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/managers/shard"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -40,7 +40,7 @@ func applyWorkflowMutationBatch(
 	workflowMutation *p.InternalWorkflowMutation,
 ) error {
 
-	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestampMillis := stores.CassandraUnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowMutation.ExecutionInfo
 	versionHistories := workflowMutation.VersionHistories
@@ -154,7 +154,7 @@ func applyWorkflowSnapshotBatchAsReset(
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
 
-	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestampMillis := stores.CassandraUnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	versionHistories := workflowSnapshot.VersionHistories
@@ -260,7 +260,7 @@ func applyWorkflowSnapshotBatchAsNew(
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
 
-	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestampMillis := stores.CassandraUnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	versionHistories := workflowSnapshot.VersionHistories
@@ -376,10 +376,10 @@ func createExecution(
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
 
-	parentDomainID := emptyDomainID
+	parentDomainID := stores.CassandraEmptyDomainID
 	parentWorkflowID := ""
-	parentRunID := emptyRunID
-	initiatedID := emptyInitiatedID
+	parentRunID := stores.CassandraEmptyRunID
+	initiatedID := stores.CassandraEmptyInitiatedID
 	if executionInfo.ParentDomainID != "" {
 		parentDomainID = executionInfo.ParentDomainID
 		parentWorkflowID = executionInfo.ParentWorkflowID
@@ -388,8 +388,8 @@ func createExecution(
 	}
 
 	// TODO we should set the start time and last update time on business logic layer
-	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
-	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
+	executionInfo.StartTimestamp = time.Unix(0, stores.CassandraDBTimestampToUnixNano(cqlNowTimestampMillis))
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, stores.CassandraDBTimestampToUnixNano(cqlNowTimestampMillis))
 
 	completionData, completionEncoding := types.FromDataBlob(executionInfo.CompletionEvent)
 	if versionHistories == nil {
@@ -399,7 +399,7 @@ func createExecution(
 			domainID,
 			workflowID,
 			runID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
@@ -459,8 +459,8 @@ func createExecution(
 			executionInfo.SearchAttributes,
 			executionInfo.Memo,
 			executionInfo.NextEventID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			checksum.Version,
 			checksum.Flavor,
 			checksum.Value)
@@ -472,7 +472,7 @@ func createExecution(
 			domainID,
 			workflowID,
 			runID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
@@ -532,8 +532,8 @@ func createExecution(
 			executionInfo.SearchAttributes,
 			executionInfo.Memo,
 			executionInfo.NextEventID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			versionHistoriesData,
 			versionHistoriesEncoding,
 			checksum.Version,
@@ -565,10 +565,10 @@ func updateExecution(
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
 
-	parentDomainID := emptyDomainID
+	parentDomainID := stores.CassandraEmptyDomainID
 	parentWorkflowID := ""
-	parentRunID := emptyRunID
-	initiatedID := emptyInitiatedID
+	parentRunID := stores.CassandraEmptyRunID
+	initiatedID := stores.CassandraEmptyInitiatedID
 	if executionInfo.ParentDomainID != "" {
 		parentDomainID = executionInfo.ParentDomainID
 		parentWorkflowID = executionInfo.ParentWorkflowID
@@ -577,7 +577,7 @@ func updateExecution(
 	}
 
 	// TODO we should set the last update time on business logic layer
-	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, stores.CassandraDBTimestampToUnixNano(cqlNowTimestampMillis))
 
 	completionData, completionEncoding := types.FromDataBlob(executionInfo.CompletionEvent)
 	if versionHistories == nil {
@@ -646,12 +646,12 @@ func updateExecution(
 			checksum.Flavor,
 			checksum.Value,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			condition)
 	} else {
 		// TODO also need to set the start / current / last write version
@@ -722,12 +722,12 @@ func updateExecution(
 			checksum.Flavor,
 			checksum.Value,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			condition)
 	}
 
@@ -846,10 +846,10 @@ func createTransferTasks(
 
 		batch.Query(templateCreateTransferTaskQuery,
 			shardID,
-			rowTypeTransferTask,
-			rowTypeTransferDomainID,
-			rowTypeTransferWorkflowID,
-			rowTypeTransferRunID,
+			stores.CassandraRowTypeTransferTask,
+			stores.CassandraRowTypeTransferDomainID,
+			stores.CassandraRowTypeTransferWorkflowID,
+			stores.CassandraRowTypeTransferRunID,
 			domainID,
 			workflowID,
 			runID,
@@ -864,7 +864,7 @@ func createTransferTasks(
 			scheduleID,
 			recordVisibility,
 			task.GetVersion(),
-			defaultVisibilityTimestamp,
+			stores.CassandraDefaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
 
@@ -912,10 +912,10 @@ func createReplicationTasks(
 
 		batch.Query(templateCreateReplicationTaskQuery,
 			shardID,
-			rowTypeReplicationTask,
-			rowTypeReplicationDomainID,
-			rowTypeReplicationWorkflowID,
-			rowTypeReplicationRunID,
+			stores.CassandraRowTypeReplicationTask,
+			stores.CassandraRowTypeReplicationDomainID,
+			stores.CassandraRowTypeReplicationWorkflowID,
+			stores.CassandraRowTypeReplicationRunID,
 			domainID,
 			workflowID,
 			runID,
@@ -930,7 +930,7 @@ func createReplicationTasks(
 			p.EventStoreVersion,
 			newRunBranchToken,
 			task.GetVisibilityTimestamp().UnixNano(),
-			defaultVisibilityTimestamp,
+			stores.CassandraDefaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
 
@@ -987,14 +987,14 @@ func createTimerTasks(
 		}
 
 		// Ignoring possible type cast errors.
-		ts := p.UnixNanoToDBTimestamp(task.GetVisibilityTimestamp().UnixNano())
+		ts := stores.CassandraUnixNanoToDBTimestamp(task.GetVisibilityTimestamp().UnixNano())
 
 		batch.Query(templateCreateTimerTaskQuery,
 			shardID,
-			rowTypeTimerTask,
-			rowTypeTimerDomainID,
-			rowTypeTimerWorkflowID,
-			rowTypeTimerRunID,
+			stores.CassandraRowTypeTimerTask,
+			stores.CassandraRowTypeTimerDomainID,
+			stores.CassandraRowTypeTimerWorkflowID,
+			stores.CassandraRowTypeTimerRunID,
 			domainID,
 			workflowID,
 			runID,
@@ -1041,12 +1041,12 @@ func createOrUpdateCurrentExecution(
 			lastWriteVersion,
 			state,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
-			permanentRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraPermanentRunID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			previousRunID,
 		)
 	case p.CreateWorkflowModeWorkflowIDReuse:
@@ -1061,12 +1061,12 @@ func createOrUpdateCurrentExecution(
 			lastWriteVersion,
 			state,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
-			permanentRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraPermanentRunID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			previousRunID,
 			previousLastWriteVersion,
 			p.WorkflowStateCompleted,
@@ -1074,12 +1074,12 @@ func createOrUpdateCurrentExecution(
 	case p.CreateWorkflowModeBrandNew:
 		batch.Query(templateCreateCurrentWorkflowExecutionQuery,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
-			permanentRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraPermanentRunID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			runID,
 			runID,
 			createRequestID,
@@ -1152,24 +1152,24 @@ func updateActivityInfos(
 			a.LastFailureDetails,
 			scheduleEncoding,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 
 	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteActivityInfoQuery,
 			deleteInfo,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 	return nil
 }
@@ -1184,12 +1184,12 @@ func deleteBufferedEvents(
 
 	batch.Query(templateDeleteBufferedEventsQuery,
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 
 }
 
@@ -1210,12 +1210,12 @@ func resetActivityInfos(
 	batch.Query(templateResetActivityInfoQuery,
 		infoMap,
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 	return nil
 }
 
@@ -1238,24 +1238,24 @@ func updateTimerInfos(
 			a.ExpiryTime,
 			a.TaskStatus,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 
 	for _, t := range deleteInfos {
 		batch.Query(templateDeleteTimerInfoQuery,
 			t,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 }
 
@@ -1271,12 +1271,12 @@ func resetTimerInfos(
 	batch.Query(templateResetTimerInfoQuery,
 		resetTimerInfoMap(timerInfos),
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 }
 
 func updateChildExecutionInfos(
@@ -1296,7 +1296,7 @@ func updateChildExecutionInfos(
 			return p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", initiatedEncoding, startEncoding))
 		}
 
-		startedRunID := emptyRunID
+		startedRunID := stores.CassandraEmptyRunID
 		if c.StartedRunID != "" {
 			startedRunID = c.StartedRunID
 		}
@@ -1317,12 +1317,12 @@ func updateChildExecutionInfos(
 			c.WorkflowTypeName,
 			int32(c.ParentClosePolicy),
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 
 	// deleteInfo is the initiatedID for ChildInfo being deleted
@@ -1330,12 +1330,12 @@ func updateChildExecutionInfos(
 		batch.Query(templateDeleteChildExecutionInfoQuery,
 			*deleteInfo,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 	return nil
 }
@@ -1356,12 +1356,12 @@ func resetChildExecutionInfos(
 	batch.Query(templateResetChildExecutionInfoQuery,
 		infoMap,
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 	return nil
 }
 
@@ -1383,12 +1383,12 @@ func updateRequestCancelInfos(
 			c.InitiatedEventBatchID,
 			c.CancelRequestID,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 
 	// deleteInfo is the initiatedID for RequestCancelInfo being deleted
@@ -1396,12 +1396,12 @@ func updateRequestCancelInfos(
 		batch.Query(templateDeleteRequestCancelInfoQuery,
 			*deleteInfo,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 }
 
@@ -1417,12 +1417,12 @@ func resetRequestCancelInfos(
 	batch.Query(templateResetRequestCancelInfoQuery,
 		resetRequestCancelInfoMap(requestCancelInfos),
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 }
 
 func updateSignalInfos(
@@ -1446,12 +1446,12 @@ func updateSignalInfos(
 			c.Input,
 			c.Control,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 
 	// deleteInfo is the initiatedID for SignalInfo being deleted
@@ -1459,12 +1459,12 @@ func updateSignalInfos(
 		batch.Query(templateDeleteSignalInfoQuery,
 			*deleteInfo,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 }
 
@@ -1480,12 +1480,12 @@ func resetSignalInfos(
 	batch.Query(templateResetSignalInfoQuery,
 		resetSignalInfoMap(signalInfos),
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 }
 
 func updateSignalsRequested(
@@ -1502,12 +1502,12 @@ func updateSignalsRequested(
 		batch.Query(templateUpdateSignalRequestedQuery,
 			signalReqIDs,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 
 	if deleteSignalReqID != "" {
@@ -1515,12 +1515,12 @@ func updateSignalsRequested(
 		batch.Query(templateDeleteWorkflowExecutionSignalRequestedQuery,
 			req,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
 }
 
@@ -1536,12 +1536,12 @@ func resetSignalRequested(
 	batch.Query(templateResetSignalRequestedQuery,
 		signalRequested,
 		shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		domainID,
 		workflowID,
 		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 }
 
 func updateBufferedEvents(
@@ -1557,12 +1557,12 @@ func updateBufferedEvents(
 	if clearBufferedEvents {
 		batch.Query(templateDeleteBufferedEventsQuery,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	} else if newBufferedEvents != nil {
 		values := make(map[string]interface{})
 		values["encoding_type"] = newBufferedEvents.Encoding
@@ -1572,100 +1572,13 @@ func updateBufferedEvents(
 		batch.Query(templateAppendBufferedEventsQuery,
 			newEventValues,
 			shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID)
 	}
-}
-
-func createShardInfo(
-	currentCluster string,
-	result map[string]interface{},
-) *shard.Info {
-
-	var pendingFailoverMarkersRawData []byte
-	var pendingFailoverMarkersEncoding string
-	var transferProcessingQueueStatesRawData []byte
-	var transferProcessingQueueStatesEncoding string
-	var timerProcessingQueueStatesRawData []byte
-	var timerProcessingQueueStatesEncoding string
-	info := &shard.Info{}
-	for k, v := range result {
-		switch k {
-		case "shard_id":
-			info.ShardID = v.(int)
-		case "owner":
-			info.Owner = v.(string)
-		case "range_id":
-			info.RangeID = v.(int64)
-		case "stolen_since_renew":
-			info.StolenSinceRenew = v.(int)
-		case "updated_at":
-			info.UpdatedAt = v.(time.Time)
-		case "replication_ack_level":
-			info.ReplicationAckLevel = v.(int64)
-		case "transfer_ack_level":
-			info.TransferAckLevel = v.(int64)
-		case "timer_ack_level":
-			info.TimerAckLevel = v.(time.Time)
-		case "cluster_transfer_ack_level":
-			info.ClusterTransferAckLevel = v.(map[string]int64)
-		case "cluster_timer_ack_level":
-			info.ClusterTimerAckLevel = v.(map[string]time.Time)
-		case "transfer_processing_queue_states":
-			transferProcessingQueueStatesRawData = v.([]byte)
-		case "transfer_processing_queue_states_encoding":
-			transferProcessingQueueStatesEncoding = v.(string)
-		case "timer_processing_queue_states":
-			timerProcessingQueueStatesRawData = v.([]byte)
-		case "timer_processing_queue_states_encoding":
-			timerProcessingQueueStatesEncoding = v.(string)
-		case "domain_notification_version":
-			info.DomainNotificationVersion = v.(int64)
-		case "cluster_replication_level":
-			info.ClusterReplicationLevel = v.(map[string]int64)
-		case "replication_dlq_ack_level":
-			info.ReplicationDLQAckLevel = v.(map[string]int64)
-		case "pending_failover_markers":
-			pendingFailoverMarkersRawData = v.([]byte)
-		case "pending_failover_markers_encoding":
-			pendingFailoverMarkersEncoding = v.(string)
-		}
-	}
-
-	if info.ClusterTransferAckLevel == nil {
-		info.ClusterTransferAckLevel = map[string]int64{
-			currentCluster: info.TransferAckLevel,
-		}
-	}
-	if info.ClusterTimerAckLevel == nil {
-		info.ClusterTimerAckLevel = map[string]time.Time{
-			currentCluster: info.TimerAckLevel,
-		}
-	}
-	if info.ClusterReplicationLevel == nil {
-		info.ClusterReplicationLevel = make(map[string]int64)
-	}
-	if info.ReplicationDLQAckLevel == nil {
-		info.ReplicationDLQAckLevel = make(map[string]int64)
-	}
-	info.PendingFailoverMarkers = types.NewDataBlob(
-		pendingFailoverMarkersRawData,
-		types.EncodingType(pendingFailoverMarkersEncoding),
-	)
-	info.TransferProcessingQueueStates = types.NewDataBlob(
-		transferProcessingQueueStatesRawData,
-		types.EncodingType(transferProcessingQueueStatesEncoding),
-	)
-	info.TimerProcessingQueueStates = types.NewDataBlob(
-		timerProcessingQueueStatesRawData,
-		types.EncodingType(timerProcessingQueueStatesEncoding),
-	)
-
-	return info
 }
 
 func createWorkflowExecutionInfo(
@@ -1688,14 +1601,14 @@ func createWorkflowExecutionInfo(
 			info.RunID = v.(gocql.UUID).String()
 		case "parent_domain_id":
 			info.ParentDomainID = v.(gocql.UUID).String()
-			if info.ParentDomainID == emptyDomainID {
+			if info.ParentDomainID == stores.CassandraEmptyDomainID {
 				info.ParentDomainID = ""
 			}
 		case "parent_workflow_id":
 			info.ParentWorkflowID = v.(string)
 		case "parent_run_id":
 			info.ParentRunID = v.(gocql.UUID).String()
-			if info.ParentRunID == emptyRunID {
+			if info.ParentRunID == stores.CassandraEmptyRunID {
 				info.ParentRunID = ""
 			}
 		case "initiated_id":
@@ -2184,7 +2097,7 @@ func resetChildExecutionInfoMap(
 		cInfo["started_event"] = startedEventData
 		cInfo["create_request_id"] = c.CreateRequestID
 		cInfo["started_workflow_id"] = c.StartedWorkflowID
-		startedRunID := emptyRunID
+		startedRunID := stores.CassandraEmptyRunID
 		if c.StartedRunID != "" {
 			startedRunID = c.StartedRunID
 		}
@@ -2346,21 +2259,3 @@ func createChecksum(result map[string]interface{}) checksum.Checksum {
 	return csum
 }
 
-func isTimeoutError(err error) bool {
-	if err == gocql.ErrTimeoutNoResponse {
-		return true
-	}
-	if err == gocql.ErrConnectionClosed {
-		return true
-	}
-	_, ok := err.(*gocql.RequestErrWriteTimeout)
-	return ok
-}
-
-func isThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
-	}
-	return false
-}

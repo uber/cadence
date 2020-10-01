@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 	"sort"
 	"time"
 
@@ -30,7 +31,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -156,7 +156,7 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 	var rows []*nosqlplugin.HistoryTreeRow
 	row := &nosqlplugin.HistoryTreeRow{}
 	for iter.Scan(&row.TreeID, &row.BranchID, &createTime, &row.Info) {
-		row.CreateTimestampMilliseconds = p.UnixNanoToDBTimestamp(createTime.UnixNano())
+		row.CreateTimestampMilliseconds = stores.CassandraUnixNanoToDBTimestamp(createTime.UnixNano())
 		rows = append(rows, row)
 		row = &nosqlplugin.HistoryTreeRow{}
 	}

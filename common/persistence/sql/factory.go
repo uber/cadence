@@ -22,6 +22,7 @@ package sql
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores/shard"
 	"sync"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -80,7 +81,7 @@ func (f *Factory) NewTaskStore() (p.TaskStore, error) {
 }
 
 // NewShardStore returns a new shard store
-func (f *Factory) NewShardStore() (p.ShardStore, error) {
+func (f *Factory) NewShardStore() (shard.Store, error) {
 	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err

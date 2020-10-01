@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 
 	"github.com/uber/cadence/common/types"
 
@@ -160,10 +161,10 @@ type (
 // newMetadataPersistenceV2 is used to create an instance of HistoryManager implementation
 func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, logger log.Logger) (p.MetadataStore, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
+	cluster.ProtoVersion = stores.CassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
+	cluster.Timeout = stores.CassandraDefaultSessionTimeout
 
 	session, err := cluster.CreateSession()
 	if err != nil {

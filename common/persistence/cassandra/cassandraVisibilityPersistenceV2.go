@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 
 	"github.com/gocql/gocql"
 
@@ -77,10 +78,10 @@ type (
 // NewVisibilityPersistenceV2 create a wrapper of cassandra visibilityPersistence, with all list closed executions using v2 table
 func NewVisibilityPersistenceV2(persistence p.VisibilityStore, cfg *config.Cassandra, logger log.Logger) (p.VisibilityStore, error) {
 	cluster := cassandra.NewCassandraCluster(*cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
+	cluster.ProtoVersion = stores.CassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
+	cluster.Timeout = stores.CassandraDefaultSessionTimeout
 
 	session, err := cluster.CreateSession()
 	if err != nil {
@@ -162,8 +163,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutions(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime)).Consistency(v.lowConslevel)
+		stores.CassandraUnixNanoToDBTimestamp(request.EarliestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.LatestStartTime)).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -184,7 +185,7 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutions(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
 			}
@@ -204,8 +205,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByType(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByTypeV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.EarliestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.LatestStartTime),
 		request.WorkflowTypeName).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -227,7 +228,7 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByType(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
 			}
@@ -247,8 +248,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByWorkflo
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByIDV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.EarliestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.LatestStartTime),
 		request.WorkflowID).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -270,7 +271,7 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByWorkflo
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
 			}
@@ -290,8 +291,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatusV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.EarliestStartTime),
+		stores.CassandraUnixNanoToDBTimestamp(request.LatestStartTime),
 		request.Status).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -313,7 +314,7 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
 			}

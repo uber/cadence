@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 	"time"
 
 	"github.com/uber/cadence/common/types"
@@ -128,7 +129,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 			TreeID:                      branchInfo.GetTreeID(),
 			BranchID:                    branchInfo.GetBranchID(),
 			Ancestors:                   ancestors,
-			CreateTimestampMilliseconds: p.UnixNanoToDBTimestamp(time.Now().UnixNano()),
+			CreateTimestampMilliseconds: stores.CassandraUnixNanoToDBTimestamp(time.Now().UnixNano()),
 			Info:                        request.Info,
 		}
 	}
@@ -320,7 +321,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 		TreeID:                      treeID,
 		BranchID:                    request.NewBranchID,
 		Ancestors:                   ancestors,
-		CreateTimestampMilliseconds: p.UnixNanoToDBTimestamp(time.Now().UnixNano()),
+		CreateTimestampMilliseconds: stores.CassandraUnixNanoToDBTimestamp(time.Now().UnixNano()),
 		Info:                        request.Info,
 	}
 
@@ -421,7 +422,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 		branchDetail := p.HistoryBranchDetail{
 			TreeID:   branch.TreeID,
 			BranchID: branch.BranchID,
-			ForkTime: time.Unix(0, p.DBTimestampToUnixNano(branch.CreateTimestampMilliseconds)),
+			ForkTime: time.Unix(0, stores.CassandraDBTimestampToUnixNano(branch.CreateTimestampMilliseconds)),
 			Info:     branch.Info,
 		}
 		branchDetails = append(branchDetails, branchDetail)

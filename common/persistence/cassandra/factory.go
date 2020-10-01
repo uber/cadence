@@ -21,6 +21,8 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/common/persistence/stores"
+	"github.com/uber/cadence/common/persistence/stores/shard"
 	"sync"
 
 	"github.com/gocql/gocql"
@@ -62,7 +64,7 @@ func (f *Factory) NewTaskStore() (p.TaskStore, error) {
 }
 
 // NewShardStore returns a new shard store
-func (f *Factory) NewShardStore() (p.ShardStore, error) {
+func (f *Factory) NewShardStore() (shard.Store, error) {
 	return newShardPersistence(f.cfg, f.clusterName, f.logger)
 }
 
@@ -128,10 +130,10 @@ func (f *Factory) executionStoreFactory() (*executionStoreFactory, error) {
 // newExecutionStoreFactory is used to create an instance of ExecutionStoreFactory implementation
 func newExecutionStoreFactory(cfg config.Cassandra, logger log.Logger) (*executionStoreFactory, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
+	cluster.ProtoVersion = stores.CassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
+	cluster.Timeout = stores.CassandraDefaultSessionTimeout
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err

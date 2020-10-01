@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -76,10 +77,10 @@ func newQueue(
 	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
+	cluster.ProtoVersion = stores.CassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
+	cluster.Timeout = stores.CassandraDefaultSessionTimeout
 
 	session, err := cluster.CreateSession()
 	if err != nil {
@@ -162,7 +163,7 @@ func (q *cassandraQueue) tryEnqueue(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return emptyMessageID, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("Failed to enqueue message. Error: %v, Type: %v.", err, queueType),
 			}
@@ -189,7 +190,7 @@ func (q *cassandraQueue) getLastMessageID(
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return emptyMessageID, nil
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return emptyMessageID, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", queueType, err),
 			}

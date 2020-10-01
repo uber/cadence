@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 	"strings"
 	"time"
 
@@ -32,96 +33,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/managers/shard"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 )
 
-// Guidelines for creating new special UUID constants
-// Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
-// Where x is any hexadecimal value, E represents the entity type valid values are:
-// E = {DomainID = 1, WorkflowID = 2, RunID = 3}
-// R represents row type in executions table, valid values are:
-// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5}
 const (
-	cassandraProtoVersion = 4
-	defaultSessionTimeout = 10 * time.Second
-	// Special Domains related constants
-	emptyDomainID = "10000000-0000-f000-f000-000000000000"
-	// Special Run IDs
-	emptyRunID     = "30000000-0000-f000-f000-000000000000"
-	permanentRunID = "30000000-0000-f000-f000-000000000001"
-	// Row Constants for Shard Row
-	rowTypeShardDomainID   = "10000000-1000-f000-f000-000000000000"
-	rowTypeShardWorkflowID = "20000000-1000-f000-f000-000000000000"
-	rowTypeShardRunID      = "30000000-1000-f000-f000-000000000000"
-	// Row Constants for Transfer Task Row
-	rowTypeTransferDomainID   = "10000000-3000-f000-f000-000000000000"
-	rowTypeTransferWorkflowID = "20000000-3000-f000-f000-000000000000"
-	rowTypeTransferRunID      = "30000000-3000-f000-f000-000000000000"
-	// Row Constants for Timer Task Row
-	rowTypeTimerDomainID   = "10000000-4000-f000-f000-000000000000"
-	rowTypeTimerWorkflowID = "20000000-4000-f000-f000-000000000000"
-	rowTypeTimerRunID      = "30000000-4000-f000-f000-000000000000"
-	// Row Constants for Replication Task Row
-	rowTypeReplicationDomainID   = "10000000-5000-f000-f000-000000000000"
-	rowTypeReplicationWorkflowID = "20000000-5000-f000-f000-000000000000"
-	rowTypeReplicationRunID      = "30000000-5000-f000-f000-000000000000"
-	// Row Constants for Replication Task DLQ Row. Source cluster name will be used as WorkflowID.
-	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
-	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
-	// Special TaskId constants
-	rowTypeExecutionTaskID = int64(-10)
-	rowTypeShardTaskID     = int64(-11)
-	emptyInitiatedID       = int64(-7)
-
-	stickyTaskListTTL = int32(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
-)
-
-const (
-	// Row types for table executions
-	rowTypeShard = iota
-	rowTypeExecution
-	rowTypeTransferTask
-	rowTypeTimerTask
-	rowTypeReplicationTask
-	rowTypeDLQ
-)
-
-const (
-	// Row types for table tasks
-	rowTypeTask = iota
-	rowTypeTaskList
-)
-
-const (
-	taskListTaskID = -12345
-	initialRangeID = 1 // Id of the first range of a new task list
-)
-
-const (
-	templateShardType = `{` +
-		`shard_id: ?, ` +
-		`owner: ?, ` +
-		`range_id: ?, ` +
-		`stolen_since_renew: ?, ` +
-		`updated_at: ?, ` +
-		`replication_ack_level: ?, ` +
-		`transfer_ack_level: ?, ` +
-		`timer_ack_level: ?, ` +
-		`cluster_transfer_ack_level: ?, ` +
-		`cluster_timer_ack_level: ?, ` +
-		`transfer_processing_queue_states: ?, ` +
-		`transfer_processing_queue_states_encoding: ?, ` +
-		`timer_processing_queue_states: ?, ` +
-		`timer_processing_queue_states_encoding: ?, ` +
-		`domain_notification_version: ?, ` +
-		`cluster_replication_level: ?, ` +
-		`replication_dlq_ack_level: ?, ` +
-		`pending_failover_markers: ?, ` +
-		`pending_failover_markers_encoding: ? ` +
-		`}`
 
 	templateWorkflowExecutionType = `{` +
 		`domain_id: ?, ` +
@@ -338,31 +255,6 @@ const (
 		`flavor: ?, ` +
 		`value: ? ` +
 		`}`
-
-	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
-
-	templateGetShardQuery = `SELECT shard ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateUpdateShardQuery = `UPDATE executions ` +
-		`SET shard = ` + templateShardType + `, range_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
 		`SET current_run_id = ?,
@@ -899,11 +791,6 @@ workflow_state = ? ` +
 		`IF range_id = ?`
 )
 
-var (
-	defaultDateTime            = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
-	defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(defaultDateTime.UnixNano())
-)
-
 type (
 	cassandraStore struct {
 		session *gocql.Session
@@ -920,35 +807,6 @@ type (
 
 var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
-// newShardPersistence is used to create an instance of ShardManager implementation
-func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return nil, err
-	}
-
-	return &cassandraPersistence{
-		cassandraStore:     cassandraStore{session: session, logger: logger},
-		shardID:            -1,
-		currentClusterName: clusterName,
-	}, nil
-}
-
-// NewShardPersistence is used to create an instance of ShardManager implementation
-func NewShardPersistence(session *gocql.Session, clusterName string, logger log.Logger) p.ShardStore {
-	return &cassandraPersistence{
-		cassandraStore:     cassandraStore{session: session, logger: logger},
-		shardID:            -1,
-		currentClusterName: clusterName,
-	}
-}
-
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(
 	shardID int,
@@ -961,10 +819,10 @@ func NewWorkflowExecutionPersistence(
 // newTaskPersistence is used to create an instance of TaskManager implementation
 func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
+	cluster.ProtoVersion = stores.CassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
+	cluster.Timeout = stores.CassandraDefaultSessionTimeout
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err
@@ -973,7 +831,7 @@ func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, e
 }
 
 func (d *cassandraStore) GetName() string {
-	return cassandraPersistenceName
+	return stores.CassandraPersistenceName
 }
 
 // Close releases the underlying resources held by this object
@@ -985,173 +843,6 @@ func (d *cassandraStore) Close() {
 
 func (d *cassandraPersistence) GetShardID() int {
 	return d.shardID
-}
-
-func (d *cassandraPersistence) CreateShard(
-	_ context.Context,
-	request *shard.CreateShardRequest,
-) error {
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	shardInfo := request.ShardInfo
-	markerData, markerEncoding := types.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := types.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := types.FromDataBlob(shardInfo.TimerProcessingQueueStates)
-	query := d.session.Query(templateCreateShardQuery,
-		shardInfo.ShardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		shardInfo.ShardID,
-		shardInfo.Owner,
-		shardInfo.RangeID,
-		shardInfo.StolenSinceRenew,
-		cqlNowTimestamp,
-		shardInfo.ReplicationAckLevel,
-		shardInfo.TransferAckLevel,
-		shardInfo.TimerAckLevel,
-		shardInfo.ClusterTransferAckLevel,
-		shardInfo.ClusterTimerAckLevel,
-		transferPQS,
-		transferPQSEncoding,
-		timerPQS,
-		timerPQSEncoding,
-		shardInfo.DomainNotificationVersion,
-		shardInfo.ClusterReplicationLevel,
-		shardInfo.ReplicationDLQAckLevel,
-		markerData,
-		markerEncoding,
-		shardInfo.RangeID)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
-		}
-	}
-
-	if !applied {
-		shard := previous["shard"].(map[string]interface{})
-		return &p.ShardAlreadyExistError{
-			Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
-				shard["shard_id"], shard["range_id"]),
-		}
-	}
-
-	return nil
-}
-
-func (d *cassandraPersistence) GetShard(
-	_ context.Context,
-	request *shard.GetShardRequest,
-) (*shard.GetShardResponse, error) {
-	shardID := request.ShardID
-	query := d.session.Query(templateGetShardQuery,
-		shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
-			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
-			}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetShard operation failed. Error: %v", err),
-			}
-		}
-
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetShard operation failed. Error: %v", err),
-		}
-	}
-
-	info := createShardInfo(d.currentClusterName, result["shard"].(map[string]interface{}))
-
-	return &shard.GetShardResponse{ShardInfo: info}, nil
-}
-
-func (d *cassandraPersistence) UpdateShard(
-	_ context.Context,
-	request *shard.UpdateShardRequest,
-) error {
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	shardInfo := request.ShardInfo
-	markerData, markerEncoding := types.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := types.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := types.FromDataBlob(shardInfo.TimerProcessingQueueStates)
-
-	query := d.session.Query(templateUpdateShardQuery,
-		shardInfo.ShardID,
-		shardInfo.Owner,
-		shardInfo.RangeID,
-		shardInfo.StolenSinceRenew,
-		cqlNowTimestamp,
-		shardInfo.ReplicationAckLevel,
-		shardInfo.TransferAckLevel,
-		shardInfo.TimerAckLevel,
-		shardInfo.ClusterTransferAckLevel,
-		shardInfo.ClusterTimerAckLevel,
-		transferPQS,
-		transferPQSEncoding,
-		timerPQS,
-		timerPQSEncoding,
-		shardInfo.DomainNotificationVersion,
-		shardInfo.ClusterReplicationLevel,
-		shardInfo.ReplicationDLQAckLevel,
-		markerData,
-		markerEncoding,
-		shardInfo.RangeID,
-		shardInfo.ShardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.PreviousRangeID)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
-		}
-	}
-
-	if !applied {
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-		}
-
-		return &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
-				request.PreviousRangeID, strings.Join(columns, ",")),
-		}
-	}
-
-	return nil
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecution(
@@ -1209,12 +900,12 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	batch.Query(templateUpdateLeaseQuery,
 		request.RangeID,
 		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
+		stores.CassandraRowTypeShard,
+		stores.CassandraRowTypeShardDomainID,
+		stores.CassandraRowTypeShardWorkflowID,
+		stores.CassandraRowTypeShardRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeShardTaskID,
 		request.RangeID,
 	)
 
@@ -1227,11 +918,11 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
+		if stores.CassandraIsTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
 			return nil, &p.TimeoutError{Msg: fmt.Sprintf("CreateWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
 			}
@@ -1254,7 +945,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 			}
 			runID := previous["run_id"].(gocql.UUID).String()
 
-			if rowType == rowTypeShard {
+			if rowType == stores.CassandraRowTypeShard {
 				if rangeID, ok := previous["range_id"].(int64); ok && rangeID != request.RangeID {
 					// CreateWorkflowExecution failed because rangeID was modified
 					return nil, &p.ShardOwnershipLostError{
@@ -1264,7 +955,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 					}
 				}
 
-			} else if rowType == rowTypeExecution && runID == permanentRunID {
+			} else if rowType == stores.CassandraRowTypeExecution && runID == stores.CassandraPermanentRunID {
 				var columns []string
 				for k, v := range previous {
 					columns = append(columns, fmt.Sprintf("%s=%v", k, v))
@@ -1302,7 +993,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
 					executionInfo.WorkflowID, executionInfo.RunID, strings.Join(columns, ","))
 				return nil, &p.CurrentWorkflowConditionFailedError{Msg: msg}
-			} else if rowType == rowTypeExecution && runID == executionInfo.RunID {
+			} else if rowType == stores.CassandraRowTypeExecution && runID == executionInfo.RunID {
 				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
 					executionInfo.WorkflowID, executionInfo.RunID, request.RangeID)
 				replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
@@ -1342,12 +1033,12 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		request.DomainID,
 		*execution.WorkflowId,
 		*execution.RunId,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -1356,7 +1047,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
 					*execution.WorkflowId, *execution.RunId),
 			}
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("GetWorkflowExecution operation failed. Error: %v", err),
 			}
@@ -1511,12 +1202,12 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 				lastWriteVersion,
 				executionInfo.State,
 				d.shardID,
-				rowTypeExecution,
+				stores.CassandraRowTypeExecution,
 				domainID,
 				workflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
+				stores.CassandraPermanentRunID,
+				stores.CassandraDefaultVisibilityTimestamp,
+				stores.CassandraRowTypeExecutionTaskID,
 				runID,
 			)
 		}
@@ -1543,12 +1234,12 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	batch.Query(templateUpdateLeaseQuery,
 		request.RangeID,
 		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
+		stores.CassandraRowTypeShard,
+		stores.CassandraRowTypeShardDomainID,
+		stores.CassandraRowTypeShardWorkflowID,
+		stores.CassandraRowTypeShardRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeShardTaskID,
 		request.RangeID,
 	)
 
@@ -1561,11 +1252,11 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
+		if stores.CassandraIsTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
 			return &p.TimeoutError{Msg: fmt.Sprintf("UpdateWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
 			}
@@ -1617,12 +1308,12 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 		lastWriteVersion,
 		newExecutionInfo.State,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		newExecutionInfo.DomainID,
 		newExecutionInfo.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
+		stores.CassandraPermanentRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID,
 		currentRunID,
 	)
 
@@ -1633,12 +1324,12 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 		batch.Query(templateCheckWorkflowExecutionQuery,
 			baseRunNextEventID,
 			d.shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			request.BaseRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			baseRunNextEventID,
 		)
 	}
@@ -1652,12 +1343,12 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 		batch.Query(templateCheckWorkflowExecutionQuery,
 			currentRunNextEventID,
 			d.shardID,
-			rowTypeExecution,
+			stores.CassandraRowTypeExecution,
 			domainID,
 			workflowID,
 			currentRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
+			stores.CassandraDefaultVisibilityTimestamp,
+			stores.CassandraRowTypeExecutionTaskID,
 			currentRunNextEventID,
 		)
 	}
@@ -1670,12 +1361,12 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 	batch.Query(templateUpdateLeaseQuery,
 		request.RangeID,
 		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
+		stores.CassandraRowTypeShard,
+		stores.CassandraRowTypeShardDomainID,
+		stores.CassandraRowTypeShardWorkflowID,
+		stores.CassandraRowTypeShardRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeShardTaskID,
 		request.RangeID,
 	)
 
@@ -1688,11 +1379,11 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
+		if stores.CassandraIsTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
 			return &p.TimeoutError{Msg: fmt.Sprintf("ResetWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Error: %v", err),
 			}
@@ -1772,12 +1463,12 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 				lastWriteVersion,
 				state,
 				shardID,
-				rowTypeExecution,
+				stores.CassandraRowTypeExecution,
 				domainID,
 				workflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
+				stores.CassandraPermanentRunID,
+				stores.CassandraDefaultVisibilityTimestamp,
+				stores.CassandraRowTypeExecutionTaskID,
 				prevRunID,
 			)
 		} else {
@@ -1795,12 +1486,12 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 				lastWriteVersion,
 				state,
 				shardID,
-				rowTypeExecution,
+				stores.CassandraRowTypeExecution,
 				domainID,
 				workflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
+				stores.CassandraPermanentRunID,
+				stores.CassandraDefaultVisibilityTimestamp,
+				stores.CassandraRowTypeExecutionTaskID,
 				prevRunID,
 			)
 		}
@@ -1832,12 +1523,12 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	batch.Query(templateUpdateLeaseQuery,
 		request.RangeID,
 		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
+		stores.CassandraRowTypeShard,
+		stores.CassandraRowTypeShardDomainID,
+		stores.CassandraRowTypeShardWorkflowID,
+		stores.CassandraRowTypeShardRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeShardTaskID,
 		request.RangeID,
 	)
 
@@ -1850,11 +1541,11 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
+		if stores.CassandraIsTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
 			return &p.TimeoutError{Msg: fmt.Sprintf("ConflictResolveWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ConflictResolveWorkflowExecution operation failed. Error: %v", err),
 			}
@@ -1891,17 +1582,17 @@ GetFailureReasonLoop:
 
 		runID := previous["run_id"].(gocql.UUID).String()
 
-		if rowType == rowTypeShard {
+		if rowType == stores.CassandraRowTypeShard {
 			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
 				// UpdateWorkflowExecution failed because rangeID was modified
 				rangeIDUnmatch = true
 			}
-		} else if rowType == rowTypeExecution && runID == requestRunID {
+		} else if rowType == stores.CassandraRowTypeExecution && runID == requestRunID {
 			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
 				// UpdateWorkflowExecution failed because next event ID is unexpected
 				nextEventIDUnmatch = true
 			}
-		} else if rowType == rowTypeExecution && runID == permanentRunID {
+		} else if rowType == stores.CassandraRowTypeExecution && runID == stores.CassandraPermanentRunID {
 			// UpdateWorkflowExecution failed because current_run_id is unexpected
 			if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); actualCurrRunID != requestConditionalRunID {
 				// UpdateWorkflowExecution failed because next event ID is unexpected
@@ -1985,16 +1676,16 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(
 ) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		request.DomainID,
 		request.WorkflowID,
 		request.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
 			}
@@ -2013,17 +1704,17 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
 ) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		request.DomainID,
 		request.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
+		stores.CassandraPermanentRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID,
 		request.RunID)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("DeleteWorkflowCurrentRow operation failed. Error: %v", err),
 			}
@@ -2043,12 +1734,12 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	error) {
 	query := d.session.Query(templateGetCurrentExecutionQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		request.DomainID,
 		request.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraPermanentRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -2057,7 +1748,7 @@ func (d *cassandraPersistence) GetCurrentExecution(
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
 					request.WorkflowID),
 			}
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("GetCurrentExecution operation failed. Error: %v", err),
 			}
@@ -2087,7 +1778,7 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	query := d.session.Query(
 		templateListCurrentExecutionsQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 	).PageSize(request.PageSize).PageState(request.PageToken)
 
 	iter := query.Iter()
@@ -2100,14 +1791,14 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	result := make(map[string]interface{})
 	for iter.MapScan(result) {
 		runID := result["run_id"].(gocql.UUID).String()
-		if runID != permanentRunID {
+		if runID != stores.CassandraPermanentRunID {
 			result = make(map[string]interface{})
 			continue
 		}
 		response.Executions = append(response.Executions, &p.CurrentWorkflowExecution{
 			DomainID:     result["domain_id"].(gocql.UUID).String(),
 			WorkflowID:   result["workflow_id"].(string),
-			RunID:        permanentRunID,
+			RunID:        stores.CassandraPermanentRunID,
 			State:        result["workflow_state"].(int),
 			CurrentRunID: result["current_run_id"].(gocql.UUID).String(),
 		})
@@ -2131,18 +1822,18 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 ) (*p.IsWorkflowExecutionExistsResponse, error) {
 	query := d.session.Query(templateIsWorkflowExecutionExistsQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 		request.DomainID,
 		request.WorkflowID,
 		request.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeExecutionTaskID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		if err == gocql.ErrNotFound {
 			return &p.IsWorkflowExecutionExistsResponse{Exists: false}, nil
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("IsWorkflowExecutionExists operation failed. Error: %v", err),
 			}
@@ -2162,7 +1853,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	query := d.session.Query(
 		templateListWorkflowExecutionQuery,
 		d.shardID,
-		rowTypeExecution,
+		stores.CassandraRowTypeExecution,
 	).PageSize(request.PageSize).PageState(request.PageToken)
 
 	iter := query.Iter()
@@ -2176,7 +1867,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	result := make(map[string]interface{})
 	for iter.MapScan(result) {
 		runID := result["run_id"].(gocql.UUID).String()
-		if runID == permanentRunID {
+		if runID == stores.CassandraPermanentRunID {
 			result = make(map[string]interface{})
 			continue
 		}
@@ -2207,11 +1898,11 @@ func (d *cassandraPersistence) GetTransferTasks(
 	// Reading transfer tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetTransferTasksQuery,
 		d.shardID,
-		rowTypeTransferTask,
-		rowTypeTransferDomainID,
-		rowTypeTransferWorkflowID,
-		rowTypeTransferRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeTransferTask,
+		stores.CassandraRowTypeTransferDomainID,
+		stores.CassandraRowTypeTransferWorkflowID,
+		stores.CassandraRowTypeTransferRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
 	).PageSize(request.BatchSize).PageState(request.NextPageToken)
@@ -2253,11 +1944,11 @@ func (d *cassandraPersistence) GetReplicationTasks(
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetReplicationTasksQuery,
 		d.shardID,
-		rowTypeReplicationTask,
-		rowTypeReplicationDomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeReplicationTask,
+		stores.CassandraRowTypeReplicationDomainID,
+		stores.CassandraRowTypeReplicationWorkflowID,
+		stores.CassandraRowTypeReplicationRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
 	).PageSize(request.BatchSize).PageState(request.NextPageToken)
@@ -2303,16 +1994,16 @@ func (d *cassandraPersistence) CompleteTransferTask(
 ) error {
 	query := d.session.Query(templateCompleteTransferTaskQuery,
 		d.shardID,
-		rowTypeTransferTask,
-		rowTypeTransferDomainID,
-		rowTypeTransferWorkflowID,
-		rowTypeTransferRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeTransferTask,
+		stores.CassandraRowTypeTransferDomainID,
+		stores.CassandraRowTypeTransferWorkflowID,
+		stores.CassandraRowTypeTransferRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.TaskID)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CompleteTransferTask operation failed. Error: %v", err),
 			}
@@ -2331,18 +2022,18 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 ) error {
 	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
 		d.shardID,
-		rowTypeTransferTask,
-		rowTypeTransferDomainID,
-		rowTypeTransferWorkflowID,
-		rowTypeTransferRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeTransferTask,
+		stores.CassandraRowTypeTransferDomainID,
+		stores.CassandraRowTypeTransferWorkflowID,
+		stores.CassandraRowTypeTransferRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.ExclusiveBeginTaskID,
 		request.InclusiveEndTaskID,
 	)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("RangeCompleteTransferTask operation failed. Error: %v", err),
 			}
@@ -2361,16 +2052,16 @@ func (d *cassandraPersistence) CompleteReplicationTask(
 ) error {
 	query := d.session.Query(templateCompleteReplicationTaskQuery,
 		d.shardID,
-		rowTypeReplicationTask,
-		rowTypeReplicationDomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeReplicationTask,
+		stores.CassandraRowTypeReplicationDomainID,
+		stores.CassandraRowTypeReplicationWorkflowID,
+		stores.CassandraRowTypeReplicationRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.TaskID)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
 			}
@@ -2390,17 +2081,17 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 
 	query := d.session.Query(templateCompleteReplicationTaskBeforeQuery,
 		d.shardID,
-		rowTypeReplicationTask,
-		rowTypeReplicationDomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeReplicationTask,
+		stores.CassandraRowTypeReplicationDomainID,
+		stores.CassandraRowTypeReplicationWorkflowID,
+		stores.CassandraRowTypeReplicationRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.InclusiveEndTaskID,
 	)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("RangeCompleteReplicationTask operation failed. Error: %v", err),
 			}
@@ -2417,19 +2108,19 @@ func (d *cassandraPersistence) CompleteTimerTask(
 	_ context.Context,
 	request *p.CompleteTimerTaskRequest,
 ) error {
-	ts := p.UnixNanoToDBTimestamp(request.VisibilityTimestamp.UnixNano())
+	ts := stores.CassandraUnixNanoToDBTimestamp(request.VisibilityTimestamp.UnixNano())
 	query := d.session.Query(templateCompleteTimerTaskQuery,
 		d.shardID,
-		rowTypeTimerTask,
-		rowTypeTimerDomainID,
-		rowTypeTimerWorkflowID,
-		rowTypeTimerRunID,
+		stores.CassandraRowTypeTimerTask,
+		stores.CassandraRowTypeTimerDomainID,
+		stores.CassandraRowTypeTimerWorkflowID,
+		stores.CassandraRowTypeTimerRunID,
 		ts,
 		request.TaskID)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
 			}
@@ -2446,21 +2137,21 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 	_ context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
 ) error {
-	start := p.UnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
-	end := p.UnixNanoToDBTimestamp(request.ExclusiveEndTimestamp.UnixNano())
+	start := stores.CassandraUnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
+	end := stores.CassandraUnixNanoToDBTimestamp(request.ExclusiveEndTimestamp.UnixNano())
 	query := d.session.Query(templateRangeCompleteTimerTaskQuery,
 		d.shardID,
-		rowTypeTimerTask,
-		rowTypeTimerDomainID,
-		rowTypeTimerWorkflowID,
-		rowTypeTimerRunID,
+		stores.CassandraRowTypeTimerTask,
+		stores.CassandraRowTypeTimerDomainID,
+		stores.CassandraRowTypeTimerWorkflowID,
+		stores.CassandraRowTypeTimerRunID,
 		start,
 		end,
 	)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("RangeCompleteTimerTask operation failed. Error: %v", err),
 			}
@@ -2488,8 +2179,8 @@ func (d *cassandraPersistence) LeaseTaskList(
 		request.DomainID,
 		request.TaskList,
 		request.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
+		stores.CassandraRowTypeTaskList,
+		stores.CassandraTaskListTaskID,
 	)
 	var rangeID, ackLevel int64
 	var tlDB map[string]interface{}
@@ -2500,9 +2191,9 @@ func (d *cassandraPersistence) LeaseTaskList(
 				request.DomainID,
 				request.TaskList,
 				request.TaskType,
-				rowTypeTaskList,
-				taskListTaskID,
-				initialRangeID,
+				stores.CassandraRowTypeTaskList,
+				stores.CassandraTaskListTaskID,
+				stores.CassandraInitialRangeID,
 				request.DomainID,
 				request.TaskList,
 				request.TaskType,
@@ -2510,7 +2201,7 @@ func (d *cassandraPersistence) LeaseTaskList(
 				request.TaskListKind,
 				now,
 			)
-		} else if isThrottlingError(err) {
+		} else if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("LeaseTaskList operation failed. TaskList: %v, TaskType: %v, Error: %v",
 					request.TaskList, request.TaskType, err),
@@ -2544,15 +2235,15 @@ func (d *cassandraPersistence) LeaseTaskList(
 			request.DomainID,
 			&request.TaskList,
 			request.TaskType,
-			rowTypeTaskList,
-			taskListTaskID,
+			stores.CassandraRowTypeTaskList,
+			stores.CassandraTaskListTaskID,
 			rangeID,
 		)
 	}
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("LeaseTaskList operation failed. Error: %v", err),
 			}
@@ -2592,8 +2283,8 @@ func (d *cassandraPersistence) UpdateTaskList(
 			tli.DomainID,
 			&tli.Name,
 			tli.TaskType,
-			rowTypeTaskList,
-			taskListTaskID,
+			stores.CassandraRowTypeTaskList,
+			stores.CassandraTaskListTaskID,
 			tli.RangeID,
 			tli.DomainID,
 			&tli.Name,
@@ -2601,11 +2292,11 @@ func (d *cassandraPersistence) UpdateTaskList(
 			tli.AckLevel,
 			tli.Kind,
 			time.Now(),
-			stickyTaskListTTL,
+			stores.CassandraStickyTaskListTTL,
 		)
 		err := query.Exec()
 		if err != nil {
-			if isThrottlingError(err) {
+			if stores.CassandraIsThrottlingError(err) {
 				return nil, &workflow.ServiceBusyError{
 					Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
 				}
@@ -2628,15 +2319,15 @@ func (d *cassandraPersistence) UpdateTaskList(
 		tli.DomainID,
 		&tli.Name,
 		tli.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
+		stores.CassandraRowTypeTaskList,
+		stores.CassandraTaskListTaskID,
 		tli.RangeID,
 	)
 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
 			}
@@ -2675,11 +2366,11 @@ func (d *cassandraPersistence) DeleteTaskList(
 	request *p.DeleteTaskListRequest,
 ) error {
 	query := d.session.Query(templateDeleteTaskListQuery,
-		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
+		request.DomainID, request.TaskListName, request.TaskListType, stores.CassandraRowTypeTaskList, stores.CassandraTaskListTaskID, request.RangeID)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
 			}
@@ -2707,7 +2398,7 @@ func (d *cassandraPersistence) CreateTasks(
 	taskListType := request.TaskListInfo.TaskType
 	taskListKind := request.TaskListInfo.Kind
 	ackLevel := request.TaskListInfo.AckLevel
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestamp := stores.CassandraUnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
@@ -2717,7 +2408,7 @@ func (d *cassandraPersistence) CreateTasks(
 				domainID,
 				taskList,
 				taskListType,
-				rowTypeTask,
+				stores.CassandraRowTypeTask,
 				task.TaskID,
 				domainID,
 				task.Execution.GetWorkflowId(),
@@ -2732,7 +2423,7 @@ func (d *cassandraPersistence) CreateTasks(
 				domainID,
 				taskList,
 				taskListType,
-				rowTypeTask,
+				stores.CassandraRowTypeTask,
 				task.TaskID,
 				domainID,
 				task.Execution.GetWorkflowId(),
@@ -2755,15 +2446,15 @@ func (d *cassandraPersistence) CreateTasks(
 		domainID,
 		taskList,
 		taskListType,
-		rowTypeTaskList,
-		taskListTaskID,
+		stores.CassandraRowTypeTaskList,
+		stores.CassandraTaskListTaskID,
 		request.TaskListInfo.RangeID,
 	)
 
 	previous := make(map[string]interface{})
 	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CreateTasks operation failed. Error: %v", err),
 			}
@@ -2802,7 +2493,7 @@ func (d *cassandraPersistence) GetTasks(
 		request.DomainID,
 		request.TaskList,
 		request.TaskType,
-		rowTypeTask,
+		stores.CassandraRowTypeTask,
 		request.ReadLevel,
 		*request.MaxReadLevel,
 	).PageSize(request.BatchSize)
@@ -2850,12 +2541,12 @@ func (d *cassandraPersistence) CompleteTask(
 		tli.DomainID,
 		tli.Name,
 		tli.TaskType,
-		rowTypeTask,
+		stores.CassandraRowTypeTask,
 		request.TaskID)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CompleteTask operation failed. Error: %v", err),
 			}
@@ -2876,10 +2567,10 @@ func (d *cassandraPersistence) CompleteTasksLessThan(
 	request *p.CompleteTasksLessThanRequest,
 ) (int, error) {
 	query := d.session.Query(templateCompleteTasksLessThanQuery,
-		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
+		request.DomainID, request.TaskListName, request.TaskType, stores.CassandraRowTypeTask, request.TaskID)
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return 0, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
 			}
@@ -2896,14 +2587,14 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 	request *p.GetTimerIndexTasksRequest,
 ) (*p.GetTimerIndexTasksResponse, error) {
 	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
-	minTimestamp := p.UnixNanoToDBTimestamp(request.MinTimestamp.UnixNano())
-	maxTimestamp := p.UnixNanoToDBTimestamp(request.MaxTimestamp.UnixNano())
+	minTimestamp := stores.CassandraUnixNanoToDBTimestamp(request.MinTimestamp.UnixNano())
+	maxTimestamp := stores.CassandraUnixNanoToDBTimestamp(request.MaxTimestamp.UnixNano())
 	query := d.session.Query(templateGetTimerTasksQuery,
 		d.shardID,
-		rowTypeTimerTask,
-		rowTypeTimerDomainID,
-		rowTypeTimerWorkflowID,
-		rowTypeTimerRunID,
+		stores.CassandraRowTypeTimerTask,
+		stores.CassandraRowTypeTimerDomainID,
+		stores.CassandraRowTypeTimerWorkflowID,
+		stores.CassandraRowTypeTimerRunID,
 		minTimestamp,
 		maxTimestamp,
 	).PageSize(request.BatchSize).PageState(request.NextPageToken)
@@ -2929,7 +2620,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("GetTimerTasks operation failed. Error: %v", err),
 			}
@@ -2951,10 +2642,10 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 	// Use source cluster name as the workflow id for replication dlq
 	query := d.session.Query(templateCreateReplicationTaskQuery,
 		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
+		stores.CassandraRowTypeDLQ,
+		stores.CassandraRowTypeDLQDomainID,
 		request.SourceClusterName,
-		rowTypeDLQRunID,
+		stores.CassandraRowTypeDLQRunID,
 		task.DomainID,
 		task.WorkflowID,
 		task.RunID,
@@ -2968,13 +2659,13 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 		task.BranchToken,
 		p.EventStoreVersion,
 		task.NewRunBranchToken,
-		defaultVisibilityTimestamp,
-		defaultVisibilityTimestamp,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraDefaultVisibilityTimestamp,
 		task.GetTaskID())
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("PutReplicationTaskToDLQ operation failed. Error: %v", err),
 			}
@@ -2994,11 +2685,11 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetReplicationTasksQuery,
 		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
+		stores.CassandraRowTypeDLQ,
+		stores.CassandraRowTypeDLQDomainID,
 		request.SourceClusterName,
-		rowTypeDLQRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeDLQRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
 	).PageSize(request.BatchSize).PageState(request.NextPageToken)
@@ -3014,15 +2705,15 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetDLQSizeQuery,
 		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
+		stores.CassandraRowTypeDLQ,
+		stores.CassandraRowTypeDLQDomainID,
 		request.SourceClusterName,
-		rowTypeDLQRunID,
+		stores.CassandraRowTypeDLQRunID,
 	)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("GetReplicationDLQSize operation failed. Error: %v", err),
 			}
@@ -3045,17 +2736,17 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 
 	query := d.session.Query(templateCompleteReplicationTaskQuery,
 		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
+		stores.CassandraRowTypeDLQ,
+		stores.CassandraRowTypeDLQDomainID,
 		request.SourceClusterName,
-		rowTypeDLQRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeDLQRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.TaskID,
 	)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("DeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
 			}
@@ -3074,18 +2765,18 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 
 	query := d.session.Query(templateRangeCompleteReplicationTaskQuery,
 		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
+		stores.CassandraRowTypeDLQ,
+		stores.CassandraRowTypeDLQDomainID,
 		request.SourceClusterName,
-		rowTypeDLQRunID,
-		defaultVisibilityTimestamp,
+		stores.CassandraRowTypeDLQRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
 		request.ExclusiveBeginTaskID,
 		request.InclusiveEndTaskID,
 	)
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("RangeDeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
 			}
@@ -3110,8 +2801,8 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 			t,
 			d.shardID,
 			task.DomainID,
-			rowTypeReplicationWorkflowID,
-			rowTypeReplicationRunID,
+			stores.CassandraRowTypeReplicationWorkflowID,
+			stores.CassandraRowTypeReplicationRunID,
 		); err != nil {
 			return err
 		}
@@ -3121,12 +2812,12 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 	batch.Query(templateUpdateLeaseQuery,
 		request.RangeID,
 		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
+		stores.CassandraRowTypeShard,
+		stores.CassandraRowTypeShardDomainID,
+		stores.CassandraRowTypeShardWorkflowID,
+		stores.CassandraRowTypeShardRunID,
+		stores.CassandraDefaultVisibilityTimestamp,
+		stores.CassandraRowTypeShardTaskID,
 		request.RangeID,
 	)
 
@@ -3138,7 +2829,7 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 		}
 	}()
 	if err != nil {
-		if isThrottlingError(err) {
+		if stores.CassandraIsThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
 			}
@@ -3153,7 +2844,7 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 			// This should never happen, as all our rows have the type field.
 			panic("Encounter row type not found")
 		}
-		if rowType == rowTypeShard {
+		if rowType == stores.CassandraRowTypeShard {
 			if rangeID, ok := previous["range_id"].(int64); ok && rangeID != request.RangeID {
 				// CreateWorkflowExecution failed because rangeID was modified
 				return &p.ShardOwnershipLostError{

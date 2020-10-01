@@ -21,6 +21,7 @@
 package client
 
 import (
+	shard2 "github.com/uber/cadence/common/persistence/stores/shard"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
@@ -67,7 +68,7 @@ type (
 		// NewTaskStore returns a new task store
 		NewTaskStore() (p.TaskStore, error)
 		// NewShardStore returns a new shard store
-		NewShardStore() (p.ShardStore, error)
+		NewShardStore() (shard2.Store, error)
 		// NewHistoryV2Store returns a new historyV2 store
 		NewHistoryV2Store() (p.HistoryStore, error)
 		// NewMetadataStore returns a new metadata store

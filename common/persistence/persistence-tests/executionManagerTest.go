@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/stores"
 	"math"
 	"math/rand"
 	"os"
@@ -4864,7 +4865,7 @@ func copyExecutionStats(sourceStats *p.ExecutionStats) *p.ExecutionStats {
 func timestampConvertor(t time.Time) time.Time {
 	return time.Unix(
 		0,
-		p.DBTimestampToUnixNano(p.UnixNanoToDBTimestamp(t.UnixNano())),
+		stores.CassandraDBTimestampToUnixNano(stores.CassandraUnixNanoToDBTimestamp(t.UnixNano())),
 	).UTC()
 }
 
