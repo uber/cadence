@@ -3214,6 +3214,7 @@ func (e *historyEngineImpl) PurgeDLQMessages(
 ) error {
 
 	return e.replicationDLQHandler.PurgeMessages(
+		ctx,
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),
 	)

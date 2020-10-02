@@ -142,6 +142,7 @@ func (d *dlqMessageHandlerImpl) Merge(
 			return nil, &shared.InternalServiceError{Message: "Encounter non domain replication task in domain replication queue."}
 		}
 
+		// TODO:
 		if err := d.replicationHandler.Execute(
 			domainTask,
 		); err != nil {

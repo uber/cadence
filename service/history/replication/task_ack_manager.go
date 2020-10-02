@@ -147,7 +147,7 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.InstanceTag(strconv.Itoa(shardID)),
 	)
 	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
-	taskInfoList, hasMore, err := t.readTasksWithBatchSize(lastReadTaskID, t.fetchTasksBatchSize(shardID))
+	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, t.fetchTasksBatchSize(shardID))
 	if err != nil {
 		return nil, err
 	}
@@ -292,6 +292,7 @@ func (t *taskAckManagerImpl) processReplication(
 }
 
 func (t *taskAckManagerImpl) getEventsBlob(
+	ctx context.Context,
 	branchToken []byte,
 	firstEventID int64,
 	nextEventID int64,
@@ -309,7 +310,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	}
 
 	for {
-		resp, err := t.historyManager.ReadRawHistoryBranch(context.TODO(), req)
+		resp, err := t.historyManager.ReadRawHistoryBranch(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -359,12 +360,13 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 }
 
 func (t *taskAckManagerImpl) readTasksWithBatchSize(
+	ctx context.Context,
 	readLevel int64,
 	batchSize int,
 ) ([]task.Info, bool, error) {
 
 	response, err := t.executionManager.GetReplicationTasks(
-		context.TODO(),
+		ctx,
 		&persistence.GetReplicationTasksRequest{
 			ReadLevel:    readLevel,
 			MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
@@ -385,6 +387,7 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 }
 
 func (t *taskAckManagerImpl) getAllHistory(
+	ctx context.Context,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -396,6 +399,7 @@ func (t *taskAckManagerImpl) getAllHistory(
 	historySize := 0
 	iterator := collection.NewPagingIterator(
 		t.getPaginationFunc(
+			ctx,
 			firstEventID,
 			nextEventID,
 			branchToken,
@@ -418,6 +422,7 @@ func (t *taskAckManagerImpl) getAllHistory(
 }
 
 func (t *taskAckManagerImpl) getPaginationFunc(
+	ctx context.Context,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -427,7 +432,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 		events, _, pageToken, pageHistorySize, err := persistence.PaginateHistory(
-			context.TODO(),
+			ctx,
 			t.historyManager,
 			false,
 			branchToken,
@@ -552,6 +557,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			}
 
 			eventsBlob, err := t.getEventsBlob(
+				ctx,
 				task.BranchToken,
 				task.FirstEventID,
 				task.NextEventID,
@@ -564,6 +570,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			if len(task.NewRunBranchToken) != 0 {
 				// only get the first batch
 				newRunEventsBlob, err = t.getEventsBlob(
+					ctx,
 					task.NewRunBranchToken,
 					common.FirstEventID,
 					common.FirstEventID+1,

@@ -252,6 +252,7 @@ func (d *HandlerImpl) RegisterDomain(
 
 	if domainRequest.IsGlobalDomain {
 		err = d.domainReplicator.HandleTransmissionTask(
+			ctx,
 			replicator.DomainOperationCreate,
 			domainRequest.Info,
 			domainRequest.Config,
@@ -523,6 +524,7 @@ func (d *HandlerImpl) UpdateDomain(
 
 	if isGlobalDomain {
 		if err := d.domainReplicator.HandleTransmissionTask(
+			ctx,
 			replicator.DomainOperationUpdate,
 			info,
 			config,
