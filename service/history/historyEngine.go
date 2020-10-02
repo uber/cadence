@@ -290,6 +290,16 @@ func NewEngineWithShardContext(
 
 	var replicationTaskProcessors []replication.TaskProcessor
 	replicationTaskExecutors := make(map[string]replication.TaskExecutor)
+	// Intentionally use the raw client to create its own retry policy
+	historyRawClient := shard.GetService().GetClientBean().GetHistoryClient()
+	historyRetryableClient := hc.NewRetryableClient(
+		historyRawClient,
+		common.CreateReplicationServiceBusyRetryPolicy(),
+		common.IsServiceBusyError,
+	)
+	resendFunc := func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+		return historyRetryableClient.ReplicateEventsV2(ctx, request)
+	}
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()
 		// Intentionally use the raw client to create its own retry policy
@@ -299,26 +309,16 @@ func NewEngineWithShardContext(
 			common.CreateReplicationServiceBusyRetryPolicy(),
 			common.IsServiceBusyError,
 		)
-		// Intentionally use the raw client to create its own retry policy
-		historyClient := shard.GetService().GetClientBean().GetHistoryClient()
-		historyRetryableClient := hc.NewRetryableClient(
-			historyClient,
-			common.CreateReplicationServiceBusyRetryPolicy(),
-			common.IsServiceBusyError,
-		)
 		historyResender := cndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			adminRetryableClient,
-			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-				return historyRetryableClient.ReplicateEventsV2(ctx, request)
-			},
+			resendFunc,
 			shard.GetService().GetPayloadSerializer(),
 			nil,
 			openExecutionCheck,
 			shard.GetLogger(),
 		)
 		replicationTaskExecutor := replication.NewTaskExecutor(
-			sourceCluster,
 			shard,
 			shard.GetDomainCache(),
 			historyResender,
