@@ -61,21 +61,34 @@ func (m *metadataManagerImpl) CreateDomain(
 	if err != nil {
 		return nil, err
 	}
-	return m.persistence.CreateDomain(ctx, &InternalCreateDomainRequest{
+
+	internalRequest := &InternalCreateDomainRequest{
 		Info:              request.Info,
 		Config:            &dc,
 		ReplicationConfig: request.ReplicationConfig,
 		IsGlobalDomain:    request.IsGlobalDomain,
 		ConfigVersion:     request.ConfigVersion,
 		FailoverVersion:   request.FailoverVersion,
-	})
+	}
+
+	resp, err := m.persistence.CreateDomain(context.TODO(), internalRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &CreateDomainResponse{
+		ID: resp.ID,
+	}
+	return result, nil
+
 }
 
-func (m *metadataManagerImpl) GetDomain(
-	ctx context.Context,
-	request *GetDomainRequest,
-) (*GetDomainResponse, error) {
-	resp, err := m.persistence.GetDomain(ctx, request)
+func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
+	internalRequest := &InternalGetDomainRequest{
+		ID:   request.ID,
+		Name: request.Name,
+	}
+	resp, err := m.persistence.GetDomain(context.TODO(), internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -120,25 +133,24 @@ func (m *metadataManagerImpl) UpdateDomain(
 	})
 }
 
-func (m *metadataManagerImpl) DeleteDomain(
-	ctx context.Context,
-	request *DeleteDomainRequest,
-) error {
-	return m.persistence.DeleteDomain(ctx, request)
+func (m *metadataManagerImpl) DeleteDomain(request *DeleteDomainRequest) error {
+	return m.persistence.DeleteDomain(context.TODO(), &InternalDeleteDomainRequest{
+		ID: request.ID,
+	})
 }
 
-func (m *metadataManagerImpl) DeleteDomainByName(
-	ctx context.Context,
-	request *DeleteDomainByNameRequest,
-) error {
-	return m.persistence.DeleteDomainByName(ctx, request)
+func (m *metadataManagerImpl) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
+	return m.persistence.DeleteDomainByName(context.TODO(), &InternalDeleteDomainByNameRequest{
+		Name: request.Name,
+	})
 }
 
-func (m *metadataManagerImpl) ListDomains(
-	ctx context.Context,
-	request *ListDomainsRequest,
-) (*ListDomainsResponse, error) {
-	resp, err := m.persistence.ListDomains(ctx, request)
+func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error) {
+	internalRequest := &InternalListDomainRequest{
+		PageSize:      request.PageSize,
+		NextPageToken: request.NextPageToken,
+	}
+	resp, err := m.persistence.ListDomains(context.TODO(), internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -211,10 +223,14 @@ func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) 
 	}, nil
 }
 
-func (m *metadataManagerImpl) GetMetadata(
-	ctx context.Context,
-) (*GetMetadataResponse, error) {
-	return m.persistence.GetMetadata(ctx)
+func (m *metadataManagerImpl) GetMetadata() (*GetMetadataResponse, error) {
+	resp, err := m.persistence.GetMetadata(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	return &GetMetadataResponse{
+		NotificationVersion: resp.NotificationVersion,
+	}, nil
 }
 
 func (m *metadataManagerImpl) Close() {

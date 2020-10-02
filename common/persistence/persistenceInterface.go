@@ -52,13 +52,13 @@ type (
 	MetadataStore interface {
 		Closeable
 		GetName() string
-		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
-		GetDomain(ctx context.Context, request *GetDomainRequest) (*InternalGetDomainResponse, error)
+		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*InternalCreateDomainResponse, error)
+		GetDomain(ctx context.Context, request *InternalGetDomainRequest) (*InternalGetDomainResponse, error)
 		UpdateDomain(ctx context.Context, request *InternalUpdateDomainRequest) error
-		DeleteDomain(ctx context.Context, request *DeleteDomainRequest) error
-		DeleteDomainByName(ctx context.Context, request *DeleteDomainByNameRequest) error
-		ListDomains(ctx context.Context, request *ListDomainsRequest) (*InternalListDomainsResponse, error)
-		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
+		DeleteDomain(ctx context.Context, request *InternalDeleteDomainRequest) error
+		DeleteDomainByName(ctx context.Context, request *InternalDeleteDomainByNameRequest) error
+		ListDomains(ctx context.Context, request *InternalListDomainRequest) (*InternalListDomainsResponse, error)
+		GetMetadata(ctx context.Context) (*InternalGetMetadataResponse, error)
 	}
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
@@ -643,6 +643,17 @@ type (
 		FailoverVersion   int64
 	}
 
+	// InternalCreateDomainResponse is the response for the CreateDomain
+	InternalCreateDomainResponse struct {
+		ID string
+	}
+
+	// InternalGetDomainRequest is used to get domain
+	InternalGetDomainRequest struct {
+		ID   string
+		Name string
+	}
+
 	// InternalGetDomainResponse is the response for GetDomain
 	InternalGetDomainResponse struct {
 		Info                        *DomainInfo
@@ -668,6 +679,22 @@ type (
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
 		NotificationVersion         int64
+	}
+
+	// InternalDeleteDomainRequest is used to delete domain
+	InternalDeleteDomainRequest struct {
+		ID string
+	}
+
+	// InternalDeleteDomainByNameRequest is used to delete domain using name
+	InternalDeleteDomainByNameRequest struct {
+		Name string
+	}
+
+	// InternalListDomainRequest is used to list domains
+	InternalListDomainRequest struct {
+		PageSize      int
+		NextPageToken []byte
 	}
 
 	// InternalListDomainsResponse is the response for GetDomain
