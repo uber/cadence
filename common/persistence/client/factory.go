@@ -165,7 +165,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := p.NewShardManager(store, f.logger)
+	result := p.NewShardManager(store)
 	if ds.ratelimit != nil {
 		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}

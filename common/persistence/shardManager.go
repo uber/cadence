@@ -24,16 +24,11 @@ package persistence
 
 import (
 	"context"
-
-	"github.com/uber/cadence/common/codec"
-	"github.com/uber/cadence/common/log"
 )
 
 type (
 	shardManager struct {
-		persistence   ShardStore
-		logger        log.Logger
-		thriftEncoder codec.BinaryEncoder
+		persistence ShardStore
 	}
 )
 
@@ -42,12 +37,9 @@ var _ ShardManager = (*shardManager)(nil)
 // NewShardManager returns a new ShardManager
 func NewShardManager(
 	persistence ShardStore,
-	logger log.Logger,
 ) ShardManager {
 	return &shardManager{
-		persistence:   persistence,
-		logger:        logger,
-		thriftEncoder: codec.NewThriftRWEncoder(),
+		persistence: persistence,
 	}
 }
 
