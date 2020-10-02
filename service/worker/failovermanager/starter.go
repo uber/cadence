@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package failoverManager
+package failovermanager
 
 import (
 	"context"
@@ -94,7 +94,6 @@ func (s *FailoverManager) Start() error {
 		BackgroundActivityContext: ctx,
 		Tracer:                    opentracing.GlobalTracer(),
 	}
-	// TODO: change to global domain
 	failoverWorker := worker.New(s.svcClient, common.SystemLocalDomainName, TaskListName, workerOpts)
 	s.worker = failoverWorker
 	return failoverWorker.Start()

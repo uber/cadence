@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package failoverManager
+package failovermanager
 
 import (
 	"context"
@@ -62,9 +62,14 @@ const (
 	ResumeSignal = "resume"
 
 	// workflow states for query
-	wfRunning   = "running"
-	wfPaused    = "paused"
-	wfCompleted = "complete"
+	// WorkflowRunning state
+	WorkflowRunning = "running"
+	// WorkflowPaused state
+	WorkflowPaused = "paused"
+	// WorkflowCompleted state
+	WorkflowCompleted = "complete"
+	// WorkflowAborted state
+	WorkflowAborted = "aborted"
 )
 
 type (
@@ -137,7 +142,7 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	var failedDomains []string
 	var successDomains []string
 	var totalNumOfDomains int
-	wfState := wfRunning
+	wfState := WorkflowRunning
 	err = workflow.SetQueryHandler(ctx, QueryType, func(input []byte) (*QueryResult, error) {
 		return &QueryResult{
 			TotalDomains:   totalNumOfDomains,
@@ -181,24 +186,28 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		// check if need to pause
 		shouldPause = pauseCh.ReceiveAsync(nil)
 		if shouldPause {
-			wfState = wfPaused
+			wfState = WorkflowPaused
 			resumeCh.Receive(ctx, nil)
 		}
-		wfState = wfRunning
+		wfState = WorkflowRunning
 
 		failoverActivityParams := &FailoverActivityParams{
-			Domains:       domains[i*batchSize : min((i+1)*batchSize, totalNumOfDomains)],
+			Domains:       domains[i*batchSize : common.MinInt((i+1)*batchSize, totalNumOfDomains)],
 			TargetCluster: params.TargetCluster,
 		}
 		var actResult FailoverActivityResult
-		workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
-		successDomains = append(successDomains, actResult.SuccessDomains...)
-		failedDomains = append(failedDomains, actResult.FailedDomains...)
+		err = workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
+		if err != nil {
+			failedDomains = append(failedDomains, failoverActivityParams.Domains...)
+		} else {
+			successDomains = append(successDomains, actResult.SuccessDomains...)
+			failedDomains = append(failedDomains, actResult.FailedDomains...)
+		}
 
 		workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
 	}
 
-	wfState = wfCompleted
+	wfState = WorkflowCompleted
 	return &FailoverResult{
 		SuccessDomains: successDomains,
 		FailedDomains:  failedDomains,
@@ -227,14 +236,6 @@ func getFailoverActivityOptions() workflow.ActivityOptions {
 	return workflow.ActivityOptions{
 		ScheduleToStartTimeout: 10 * time.Second,
 		StartToCloseTimeout:    10 * time.Second,
-	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
 	}
 }
 

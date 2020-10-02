@@ -39,7 +39,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
-	"github.com/uber/cadence/service/worker/failoverManager"
+	"github.com/uber/cadence/service/worker/failovermanager"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 	"github.com/uber/cadence/service/worker/replicator"
@@ -67,7 +67,7 @@ type (
 		IndexerCfg                    *indexer.Config
 		ScannerCfg                    *scanner.Config
 		BatcherCfg                    *batcher.Config
-		failoverManagerCfg            *failoverManager.Config
+		failoverManagerCfg            *failovermanager.Config
 		ThrottledLogRPS               dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS       dynamicconfig.IntPropertyFn
 		PersistenceMaxQPS             dynamicconfig.IntPropertyFn
@@ -156,7 +156,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
-		failoverManagerCfg: &failoverManager.Config{
+		failoverManagerCfg: &failovermanager.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
@@ -325,7 +325,7 @@ func (s *Service) startArchiver() {
 }
 
 func (s *Service) startFailoverManager() {
-	params := &failoverManager.BootstrapParams{
+	params := &failovermanager.BootstrapParams{
 		Config:        *s.config.failoverManagerCfg,
 		ServiceClient: s.params.PublicClient,
 		MetricsClient: s.GetMetricsClient(),
@@ -333,7 +333,7 @@ func (s *Service) startFailoverManager() {
 		TallyScope:    s.params.MetricScope,
 		ClientBean:    s.GetClientBean(),
 	}
-	if err := failoverManager.New(params).Start(); err != nil {
+	if err := failovermanager.New(params).Start(); err != nil {
 		s.Stop()
 		s.GetLogger().Fatal("error starting failoverManager", tag.Error(err))
 	}

@@ -30,7 +30,7 @@ import (
 	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/service/worker/failoverManager"
+	"github.com/uber/cadence/service/worker/failovermanager"
 )
 
 const (
@@ -64,19 +64,19 @@ func failoverStart(c *cli.Context, params *startParams) {
 	defer cancel()
 
 	options := cclient.StartWorkflowOptions{
-		ID:                           failoverManager.WorkflowID,
+		ID:                           failovermanager.WorkflowID,
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		TaskList:                     failoverManager.TaskListName,
+		TaskList:                     failovermanager.TaskListName,
 		ExecutionStartToCloseTimeout: workflowTimeout,
 	}
-	foParams := failoverManager.FailoverParams{
+	foParams := failovermanager.FailoverParams{
 		TargetCluster:                  targetCluster,
 		SourceCluster:                  sourceCluster,
 		BatchFailoverSize:              batchFailoverSize,
 		BatchFailoverWaitTimeInSeconds: batchFailoverWaitTimeInSeconds,
 		Domains:                        domains,
 	}
-	wf, err := client.StartWorkflow(tcCtx, options, failoverManager.WorkflowTypeName, foParams)
+	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.WorkflowTypeName, foParams)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
@@ -142,15 +142,15 @@ func executePauseOrResume(c *cli.Context, isPause bool) error {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	runID := getRunID(c, client)
+	runID := getRunID(c)
 	var signalName string
 	if isPause {
-		signalName = failoverManager.PauseSignal
+		signalName = failovermanager.PauseSignal
 	} else {
-		signalName = failoverManager.ResumeSignal
+		signalName = failovermanager.ResumeSignal
 	}
 
-	return client.SignalWorkflow(tcCtx, failoverManager.WorkflowID, runID, signalName, nil)
+	return client.SignalWorkflow(tcCtx, failovermanager.WorkflowID, runID, signalName, nil)
 }
 
 // AdminFailoverQuery query a failover workflow
@@ -159,20 +159,9 @@ func AdminFailoverQuery(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	var runID string
-	var descResp *shared.DescribeWorkflowExecutionResponse
-	var err error
-	if c.IsSet(FlagRunID) {
-		runID = c.String(FlagRunID)
-	} else {
-		descResp, err = client.DescribeWorkflowExecution(tcCtx, failoverManager.WorkflowID, "")
-		if err != nil {
-			ErrorAndExit("Failed to get failover workflow runID", err)
-		}
-		runID = descResp.WorkflowExecutionInfo.Execution.GetRunId()
-	}
+	runID := getRunID(c)
 
-	queryResult, err := client.QueryWorkflow(tcCtx, failoverManager.WorkflowID, runID, failoverManager.QueryType)
+	queryResult, err := client.QueryWorkflow(tcCtx, failovermanager.WorkflowID, runID, failovermanager.QueryType)
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
 	}
@@ -180,17 +169,15 @@ func AdminFailoverQuery(c *cli.Context) {
 		ErrorAndExit("QueryResult has no value", nil)
 	}
 
-	var result failoverManager.QueryResult
+	var result failovermanager.QueryResult
 	queryResult.Get(&result)
 
-	if descResp == nil {
-		descResp, err = client.DescribeWorkflowExecution(tcCtx, failoverManager.WorkflowID, runID)
-		if err != nil {
-			ErrorAndExit("Failed to describe workflow", err)
-		}
+	descResp, err := client.DescribeWorkflowExecution(tcCtx, failovermanager.WorkflowID, runID)
+	if err != nil {
+		ErrorAndExit("Failed to describe workflow", err)
 	}
 	if descResp.WorkflowExecutionInfo.CloseStatus.Equals(shared.WorkflowExecutionCloseStatusTerminated) {
-		result.State = "aborted"
+		result.State = failovermanager.WorkflowAborted
 	}
 	prettyPrintJSONObject(result)
 }
@@ -205,9 +192,9 @@ func AdminFailoverAbort(c *cli.Context) {
 	if len(reason) == 0 {
 		reason = defaultAbortReason
 	}
-	runID := getRunID(c, client)
+	runID := getRunID(c)
 
-	err := client.TerminateWorkflow(tcCtx, failoverManager.WorkflowID, runID, reason, nil)
+	err := client.TerminateWorkflow(tcCtx, failovermanager.WorkflowID, runID, reason, nil)
 	if err != nil {
 		ErrorAndExit("Failed to abort failover workflow", err)
 	}
@@ -221,17 +208,24 @@ func AdminFailoverRollback(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	runID := getRunID(c, client)
+	runID := getRunID(c)
 
-	queryResp, err := client.QueryWorkflow(tcCtx, failoverManager.WorkflowID, runID, failoverManager.QueryType)
+	queryResp, err := client.QueryWorkflow(tcCtx, failovermanager.WorkflowID, runID, failovermanager.QueryType)
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
 	}
 	if !queryResp.HasValue() {
 		ErrorAndExit("QueryResult has no value", nil)
 	}
-	var queryResult failoverManager.QueryResult
+	var queryResult failovermanager.QueryResult
 	queryResp.Get(&queryResult)
+
+	if isWorkflowRunning(&queryResult) {
+		err := client.TerminateWorkflow(tcCtx, failovermanager.WorkflowID, runID, "Rollback", nil)
+		if err != nil {
+			ErrorAndExit("Failed to terminate failover workflow", err)
+		}
+	}
 
 	params := &startParams{
 		targetCluster:                  queryResult.SourceCluster,
@@ -244,9 +238,14 @@ func AdminFailoverRollback(c *cli.Context) {
 	failoverStart(c, params)
 }
 
+func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
+	return queryResult.State == failovermanager.WorkflowRunning ||
+		queryResult.State == failovermanager.WorkflowPaused
+}
+
 // AdminFailoverList list failover runs
 func AdminFailoverList(c *cli.Context) {
-	c.Set(FlagWorkflowID, failoverManager.WorkflowID)
+	c.Set(FlagWorkflowID, failovermanager.WorkflowID)
 	ListWorkflow(c)
 }
 
@@ -255,21 +254,9 @@ func getCadenceClient(c *cli.Context) cclient.Client {
 	return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
 }
 
-func getRunID(c *cli.Context, client cclient.Client) string {
-	var runID string
-
+func getRunID(c *cli.Context) string {
 	if c.IsSet(FlagRunID) {
-		runID = c.String(FlagRunID)
-	} else {
-		tcCtx, cancel := newContext(c)
-		defer cancel()
-
-		descResp, err := client.DescribeWorkflowExecution(tcCtx, failoverManager.WorkflowID, "")
-		if err != nil {
-			ErrorAndExit("Failed to get failover workflow runID", err)
-		}
-
-		runID = descResp.WorkflowExecutionInfo.Execution.GetRunId()
+		return c.String(FlagRunID)
 	}
-	return runID
+	return ""
 }
