@@ -41,6 +41,8 @@ import (
 
 const (
 	loadDomainEntryForTaskRetryDelay = 100 * time.Millisecond
+
+	activeTaskResubmitMaxAttempts = 10
 )
 
 var (
@@ -422,7 +424,8 @@ func (t *taskBase) shouldResubmitOnNack() bool {
 	// TODO: for now only resubmit active task on Nack()
 	// we can also consider resubmit standby tasks that fails due to certain error types
 	// this may require change the Nack() interface to Nack(error)
-	return t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer
+	return t.GetAttempt() < activeTaskResubmitMaxAttempts &&
+		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
 }
 
 // GetOrCreateDomainTaggedScope returns cached domain-tagged metrics scope if exists
