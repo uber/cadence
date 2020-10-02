@@ -1582,7 +1582,7 @@ func updateBufferedEvents(
 func createShardInfo(
 	currentCluster string,
 	result map[string]interface{},
-) *p.ShardInfo {
+) *p.InternalShardInfo {
 
 	var pendingFailoverMarkersRawData []byte
 	var pendingFailoverMarkersEncoding string
@@ -1590,7 +1590,7 @@ func createShardInfo(
 	var transferProcessingQueueStatesEncoding string
 	var timerProcessingQueueStatesRawData []byte
 	var timerProcessingQueueStatesEncoding string
-	info := &p.ShardInfo{}
+	info := &p.InternalShardInfo{}
 	for k, v := range result {
 		switch k {
 		case "shard_id":
