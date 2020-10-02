@@ -95,30 +95,36 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardI
 		ClusterTimerAckLevel:          shardInfo.ClusterTimerAckLevel,
 		TransferProcessingQueueStates: shardInfo.TransferProcessingQueueStates,
 		TimerProcessingQueueStates:    shardInfo.TimerProcessingQueueStates,
-		TransferFailoverLevels:        make(map[string]InternalTransferFailoverLevel),
-		TimerFailoverLevels:           make(map[string]InternalTimerFailoverLevel),
 		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     shardInfo.DomainNotificationVersion,
 		PendingFailoverMarkers:        shardInfo.PendingFailoverMarkers,
 	}
-	for k, v := range shardInfo.TransferFailoverLevels {
-		internalShardInfo.TransferFailoverLevels[k] = InternalTransferFailoverLevel{
-			StartTime:    v.StartTime,
-			MinLevel:     v.MinLevel,
-			CurrentLevel: v.CurrentLevel,
-			MaxLevel:     v.MaxLevel,
-			DomainIDs:    v.DomainIDs,
+	if shardInfo.TransferFailoverLevels != nil {
+		internalShardInfo.TransferFailoverLevels = make(map[string]InternalTransferFailoverLevel)
+		for k, v := range shardInfo.TransferFailoverLevels {
+			internalShardInfo.TransferFailoverLevels[k] = InternalTransferFailoverLevel{
+				StartTime:    v.StartTime,
+				MinLevel:     v.MinLevel,
+				CurrentLevel: v.CurrentLevel,
+				MaxLevel:     v.MaxLevel,
+				DomainIDs:    v.DomainIDs,
+			}
 		}
 	}
-	for k, v := range shardInfo.TimerFailoverLevels {
-		internalShardInfo.TimerFailoverLevels[k] = InternalTimerFailoverLevel{
-			StartTime:    v.StartTime,
-			MinLevel:     v.MinLevel,
-			CurrentLevel: v.CurrentLevel,
-			MaxLevel:     v.MaxLevel,
-			DomainIDs:    v.DomainIDs,
+
+	if shardInfo.TimerFailoverLevels != nil {
+		internalShardInfo.TimerFailoverLevels = make(map[string]InternalTimerFailoverLevel)
+		for k, v := range shardInfo.TimerFailoverLevels {
+			internalShardInfo.TimerFailoverLevels[k] = InternalTimerFailoverLevel{
+				StartTime:    v.StartTime,
+				MinLevel:     v.MinLevel,
+				CurrentLevel: v.CurrentLevel,
+				MaxLevel:     v.MaxLevel,
+				DomainIDs:    v.DomainIDs,
+			}
 		}
 	}
+
 	return internalShardInfo
 }
 
@@ -137,28 +143,33 @@ func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInf
 		ClusterTimerAckLevel:          internalShardInfo.ClusterTimerAckLevel,
 		TransferProcessingQueueStates: internalShardInfo.TransferProcessingQueueStates,
 		TimerProcessingQueueStates:    internalShardInfo.TimerProcessingQueueStates,
-		TransferFailoverLevels:        make(map[string]TransferFailoverLevel),
-		TimerFailoverLevels:           make(map[string]TimerFailoverLevel),
 		ClusterReplicationLevel:       internalShardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     internalShardInfo.DomainNotificationVersion,
 		PendingFailoverMarkers:        internalShardInfo.PendingFailoverMarkers,
 	}
-	for k, v := range internalShardInfo.TransferFailoverLevels {
-		shardInfo.TransferFailoverLevels[k] = TransferFailoverLevel{
-			StartTime:    v.StartTime,
-			MinLevel:     v.MinLevel,
-			CurrentLevel: v.CurrentLevel,
-			MaxLevel:     v.MaxLevel,
-			DomainIDs:    v.DomainIDs,
+	if internalShardInfo.TransferFailoverLevels != nil {
+		shardInfo.TransferFailoverLevels = make(map[string]TransferFailoverLevel)
+		for k, v := range internalShardInfo.TransferFailoverLevels {
+			shardInfo.TransferFailoverLevels[k] = TransferFailoverLevel{
+				StartTime:    v.StartTime,
+				MinLevel:     v.MinLevel,
+				CurrentLevel: v.CurrentLevel,
+				MaxLevel:     v.MaxLevel,
+				DomainIDs:    v.DomainIDs,
+			}
 		}
 	}
-	for k, v := range internalShardInfo.TimerFailoverLevels {
-		shardInfo.TimerFailoverLevels[k] = TimerFailoverLevel{
-			StartTime:    v.StartTime,
-			MinLevel:     v.MinLevel,
-			CurrentLevel: v.CurrentLevel,
-			MaxLevel:     v.MaxLevel,
-			DomainIDs:    v.DomainIDs,
+
+	if internalShardInfo.TimerFailoverLevels != nil {
+		shardInfo.TimerFailoverLevels = make(map[string]TimerFailoverLevel)
+		for k, v := range internalShardInfo.TimerFailoverLevels {
+			shardInfo.TimerFailoverLevels[k] = TimerFailoverLevel{
+				StartTime:    v.StartTime,
+				MinLevel:     v.MinLevel,
+				CurrentLevel: v.CurrentLevel,
+				MaxLevel:     v.MaxLevel,
+				DomainIDs:    v.DomainIDs,
+			}
 		}
 	}
 	return shardInfo
