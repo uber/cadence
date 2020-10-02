@@ -287,11 +287,11 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		return err
 	}
 	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return nil, err
-		}
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
+		}
+		if !common.IsPersistenceTransientError(err) {
+			return nil, err
 		}
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
 	}

@@ -26,16 +26,15 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/uber/cadence/common/archiver/gcloud/connector"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 var (
@@ -303,11 +302,11 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		return err
 	}
 	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return nil, err
-		}
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
+		}
+		if !common.IsPersistenceTransientError(err) {
+			return nil, err
 		}
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
 	}
