@@ -176,7 +176,7 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	// failover in batch
 	ao = workflow.WithActivityOptions(ctx, getFailoverActivityOptions())
 	batchSize := params.BatchFailoverSize
-	times := len(domains) / batchSize
+	times := len(domains)/batchSize + 1
 
 	pauseCh := workflow.GetSignalChannel(ctx, PauseSignal)
 	resumeCh := workflow.GetSignalChannel(ctx, ResumeSignal)
