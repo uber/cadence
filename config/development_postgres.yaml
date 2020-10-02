@@ -15,7 +15,7 @@ persistence:
         maxIdleConns: 20
         maxConnLifetime: "1h"
         encodingType: "thriftrw"
-        decodingType: [ "thriftrw" ]
+        decodingTypes: [ "thriftrw" ]
     postgres-visibility:
       sql:
         pluginName: "postgres"
@@ -28,7 +28,7 @@ persistence:
         maxIdleConns: 2
         maxConnLifetime: "1h"
         encodingType: "thriftrw"
-        decodingType: [ "thriftrw" ]
+        decodingTypes: [ "thriftrw" ]
 
 ringpop:
   name: cadence
