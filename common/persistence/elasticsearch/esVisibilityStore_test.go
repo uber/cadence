@@ -131,7 +131,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.TaskID = int64(111)
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
-	s.mockProducer.On("Publish", mock.MatchedBy(func(input *indexer.Message) bool {
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
 		s.Equal(request.WorkflowID, input.GetWorkflowID())
@@ -157,7 +157,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted_EmptyRequest() {
 	request := &p.InternalRecordWorkflowExecutionStartedRequest{
 		Memo: &p.DataBlob{},
 	}
-	s.mockProducer.On("Publish", mock.MatchedBy(func(input *indexer.Message) bool {
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		s.Equal(indexer.MessageTypeIndex, input.GetMessageType())
 		_, ok := input.Fields[es.Memo]
 		s.False(ok)
@@ -188,7 +188,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.CloseTimestamp = int64(999)
 	request.Status = workflow.WorkflowExecutionCloseStatusTerminated
 	request.HistoryLength = int64(20)
-	s.mockProducer.On("Publish", mock.MatchedBy(func(input *indexer.Message) bool {
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
 		s.Equal(request.WorkflowID, input.GetWorkflowID())
@@ -217,7 +217,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 	request := &p.InternalRecordWorkflowExecutionClosedRequest{
 		Memo: &p.DataBlob{},
 	}
-	s.mockProducer.On("Publish", mock.MatchedBy(func(input *indexer.Message) bool {
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		s.Equal(indexer.MessageTypeIndex, input.GetMessageType())
 		_, ok := input.Fields[es.Memo]
 		s.False(ok)

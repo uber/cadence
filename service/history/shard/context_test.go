@@ -135,7 +135,7 @@ func (s *contextTestSuite) TestRenewRangeLockedRetriesExceeded() {
 }
 
 func (s *contextTestSuite) TestReplicateFailoverMarkersSuccess() {
-	s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything).Once().Return(nil)
+	s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything, mock.Anything).Once().Return(nil)
 
 	markers := make([]*persistence.FailoverMarkerTask, 0)
 	err := s.context.ReplicateFailoverMarkers(markers)

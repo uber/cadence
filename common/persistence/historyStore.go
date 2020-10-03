@@ -76,6 +76,7 @@ func (m *historyV2ManagerImpl) GetName() string {
 
 // ForkHistoryBranch forks a new branch from a old branch
 func (m *historyV2ManagerImpl) ForkHistoryBranch(
+	ctx context.Context,
 	request *ForkHistoryBranchRequest,
 ) (*ForkHistoryBranchResponse, error) {
 
@@ -104,7 +105,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(
 		ShardID:        shardID,
 	}
 
-	resp, err := m.persistence.ForkHistoryBranch(context.TODO(), req)
+	resp, err := m.persistence.ForkHistoryBranch(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +122,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(
 
 // DeleteHistoryBranch removes a branch
 func (m *historyV2ManagerImpl) DeleteHistoryBranch(
+	ctx context.Context,
 	request *DeleteHistoryBranchRequest,
 ) error {
 
@@ -142,11 +144,12 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(
 		ShardID:    shardID,
 	}
 
-	return m.persistence.DeleteHistoryBranch(context.TODO(), req)
+	return m.persistence.DeleteHistoryBranch(ctx, req)
 }
 
 // GetHistoryTree returns all branch information of a tree
 func (m *historyV2ManagerImpl) GetHistoryTree(
+	ctx context.Context,
 	request *GetHistoryTreeRequest,
 ) (*GetHistoryTreeResponse, error) {
 
@@ -158,11 +161,12 @@ func (m *historyV2ManagerImpl) GetHistoryTree(
 		}
 		request.TreeID = branch.GetTreeID()
 	}
-	return m.persistence.GetHistoryTree(context.TODO(), request)
+	return m.persistence.GetHistoryTree(ctx, request)
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *historyV2ManagerImpl) AppendHistoryNodes(
+	ctx context.Context,
 	request *AppendHistoryNodesRequest,
 ) (*AppendHistoryNodesResponse, error) {
 
@@ -193,7 +197,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 		}
 		if *e.EventId != lastID+1 {
 			return nil, &InvalidPersistenceRequestError{
-				Msg: fmt.Sprintf("event ID must be continous"),
+				Msg: fmt.Sprintf("event ID must be continuous"),
 			}
 		}
 		lastID++
@@ -228,7 +232,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 		ShardID:       shardID,
 	}
 
-	err = m.persistence.AppendHistoryNodes(context.TODO(), req)
+	err = m.persistence.AppendHistoryNodes(ctx, req)
 
 	return &AppendHistoryNodesResponse{
 		Size: size,
@@ -238,12 +242,13 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 // ReadHistoryBranchByBatch returns history node data for a branch by batch
 // Pagination is implemented here, the actual minNodeID passing to persistence layer is calculated along with token's LastNodeID
 func (m *historyV2ManagerImpl) ReadHistoryBranchByBatch(
+	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) (*ReadHistoryBranchByBatchResponse, error) {
 
 	resp := &ReadHistoryBranchByBatchResponse{}
 	var err error
-	_, resp.History, resp.NextPageToken, resp.Size, resp.LastFirstEventID, err = m.readHistoryBranch(true, request)
+	_, resp.History, resp.NextPageToken, resp.Size, resp.LastFirstEventID, err = m.readHistoryBranch(ctx, true, request)
 	if err != nil {
 		return nil, err
 	}
@@ -253,12 +258,13 @@ func (m *historyV2ManagerImpl) ReadHistoryBranchByBatch(
 // ReadHistoryBranch returns history node data for a branch
 // Pagination is implemented here, the actual minNodeID passing to persistence layer is calculated along with token's LastNodeID
 func (m *historyV2ManagerImpl) ReadHistoryBranch(
+	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) (*ReadHistoryBranchResponse, error) {
 
 	resp := &ReadHistoryBranchResponse{}
 	var err error
-	resp.HistoryEvents, _, resp.NextPageToken, resp.Size, resp.LastFirstEventID, err = m.readHistoryBranch(false, request)
+	resp.HistoryEvents, _, resp.NextPageToken, resp.Size, resp.LastFirstEventID, err = m.readHistoryBranch(ctx, false, request)
 	if err != nil {
 		return nil, err
 	}
@@ -269,10 +275,11 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(
 // Pagination is implemented here, the actual minNodeID passing to persistence layer is calculated along with token's LastNodeID
 // NOTE: this API should only be used by 3+DC
 func (m *historyV2ManagerImpl) ReadRawHistoryBranch(
+	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) (*ReadRawHistoryBranchResponse, error) {
 
-	dataBlobs, token, dataSize, _, err := m.readRawHistoryBranch(request)
+	dataBlobs, token, dataSize, _, err := m.readRawHistoryBranch(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -290,13 +297,15 @@ func (m *historyV2ManagerImpl) ReadRawHistoryBranch(
 }
 
 func (m *historyV2ManagerImpl) GetAllHistoryTreeBranches(
+	ctx context.Context,
 	request *GetAllHistoryTreeBranchesRequest,
 ) (*GetAllHistoryTreeBranchesResponse, error) {
 
-	return m.persistence.GetAllHistoryTreeBranches(context.TODO(), request)
+	return m.persistence.GetAllHistoryTreeBranches(ctx, request)
 }
 
 func (m *historyV2ManagerImpl) readRawHistoryBranch(
+	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) ([]*DataBlob, *historyV2PagingToken, int, log.Logger, error) {
 
@@ -388,7 +397,7 @@ func (m *historyV2ManagerImpl) readRawHistoryBranch(
 		PageSize:          pageSize,
 	}
 
-	resp, err := m.persistence.ReadHistoryBranch(context.TODO(), req)
+	resp, err := m.persistence.ReadHistoryBranch(ctx, req)
 	if err != nil {
 		return nil, nil, 0, nil, err
 	}
@@ -414,11 +423,12 @@ func (m *historyV2ManagerImpl) readRawHistoryBranch(
 }
 
 func (m *historyV2ManagerImpl) readHistoryBranch(
+	ctx context.Context,
 	byBatch bool,
 	request *ReadHistoryBranchRequest,
 ) ([]*workflow.HistoryEvent, []*workflow.History, []byte, int, int64, error) {
 
-	dataBlobs, token, dataSize, logger, err := m.readRawHistoryBranch(request)
+	dataBlobs, token, dataSize, logger, err := m.readRawHistoryBranch(ctx, request)
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}

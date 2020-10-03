@@ -304,7 +304,7 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
 	if lowerAckLevel.VisibilityTimestamp.Before(upperAckLevel.VisibilityTimestamp) {
-		err := t.shard.GetExecutionManager().RangeCompleteTimerTask(&persistence.RangeCompleteTimerTaskRequest{
+		err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.TODO(), &persistence.RangeCompleteTimerTaskRequest{
 			InclusiveBeginTimestamp: lowerAckLevel.VisibilityTimestamp,
 			ExclusiveEndTimestamp:   upperAckLevel.VisibilityTimestamp,
 		})

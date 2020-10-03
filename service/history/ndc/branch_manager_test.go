@@ -134,7 +134,7 @@ func (s *branchManagerSuite) TestCreateNewBranch() {
 		RunID:      s.runID,
 	}).AnyTimes()
 
-	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
+	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.Anything, mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
 		input.Info = ""
 		s.Equal(&persistence.ForkHistoryBranchRequest{
 			ForkBranchToken: baseBranchToken,
@@ -307,7 +307,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMis
 		RunID:      s.runID,
 	}).AnyTimes()
 
-	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
+	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.Anything, mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
 		input.Info = ""
 		s.Equal(&persistence.ForkHistoryBranchRequest{
 			ForkBranchToken: baseBranchToken,

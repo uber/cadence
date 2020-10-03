@@ -309,7 +309,7 @@ func (c *Cache) getCurrentExecutionWithRetry(
 	var response *persistence.GetCurrentExecutionResponse
 	op := func() error {
 		var err error
-		response, err = c.executionManager.GetCurrentExecution(request)
+		response, err = c.executionManager.GetCurrentExecution(context.TODO(), request)
 
 		return err
 	}

@@ -383,7 +383,7 @@ func initializeDomainReplicator(
 ) domain.Replicator {
 
 	replicationMessageSink := &mocks.KafkaProducer{}
-	replicationMessageSink.On("Publish", mock.Anything).Return(nil)
+	replicationMessageSink.On("Publish", mock.Anything, mock.Anything).Return(nil)
 	return domain.NewDomainReplicator(replicationMessageSink, logger)
 }
 

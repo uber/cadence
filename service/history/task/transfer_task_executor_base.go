@@ -176,7 +176,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		SearchAttributes:   searchAttributes,
 	}
 
-	return t.visibilityMgr.RecordWorkflowExecutionStarted(request)
+	return t.visibilityMgr.RecordWorkflowExecutionStarted(context.TODO(), request)
 }
 
 func (t *transferTaskExecutorBase) upsertWorkflowExecution(
@@ -220,7 +220,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		SearchAttributes:   searchAttributes,
 	}
 
-	return t.visibilityMgr.UpsertWorkflowExecution(request)
+	return t.visibilityMgr.UpsertWorkflowExecution(context.TODO(), request)
 }
 
 func (t *transferTaskExecutorBase) recordWorkflowClosed(
@@ -266,7 +266,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	}
 
 	if recordWorkflowClose {
-		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
+		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(context.TODO(), &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
 			Execution: workflow.WorkflowExecution{

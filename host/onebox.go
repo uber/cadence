@@ -699,8 +699,10 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 }
 
 func (c *cadenceImpl) createSystemDomain() error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
+	defer cancel()
 
-	_, err := c.metadataMgr.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := c.metadataMgr.CreateDomain(ctx, &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        "cadence-system",

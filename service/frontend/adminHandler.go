@@ -443,7 +443,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		execution.GetWorkflowId(),
 		adh.numberOfHistoryShards,
 	)
-	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
+	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(context.TODO(), &persistence.ReadHistoryBranchRequest{
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
 		// ReadRawHistoryBranch is inclusive exclusive.
@@ -602,7 +602,7 @@ func (adh *AdminHandler) GetDomainReplicationMessages(
 	}
 
 	if lastMessageID == defaultLastMessageID {
-		clusterAckLevels, err := adh.GetDomainReplicationQueue().GetAckLevels()
+		clusterAckLevels, err := adh.GetDomainReplicationQueue().GetAckLevels(context.TODO())
 		if err == nil {
 			if ackLevel, ok := clusterAckLevels[request.GetClusterName()]; ok {
 				lastMessageID = ackLevel
@@ -611,7 +611,10 @@ func (adh *AdminHandler) GetDomainReplicationMessages(
 	}
 
 	replicationTasks, lastMessageID, err := adh.GetDomainReplicationQueue().GetReplicationMessages(
-		lastMessageID, getDomainReplicationMessageBatchSize)
+		context.TODO(),
+		lastMessageID,
+		getDomainReplicationMessageBatchSize,
+	)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -622,7 +625,7 @@ func (adh *AdminHandler) GetDomainReplicationMessages(
 	}
 
 	if lastProcessedMessageID != defaultLastMessageID {
-		err := adh.GetDomainReplicationQueue().UpdateAckLevel(lastProcessedMessageID, request.GetClusterName())
+		err := adh.GetDomainReplicationQueue().UpdateAckLevel(context.TODO(), lastProcessedMessageID, request.GetClusterName())
 		if err != nil {
 			adh.GetLogger().Warn("Failed to update domain replication queue ack level.",
 				tag.TaskID(int64(lastProcessedMessageID)),

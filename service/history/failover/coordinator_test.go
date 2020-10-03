@@ -30,6 +30,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -281,10 +282,10 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Suc
 		},
 	}
 
-	s.mockMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataManager.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: 1,
 	}, nil)
-	s.mockMetadataManager.On("GetDomain", &persistence.GetDomainRequest{
+	s.mockMetadataManager.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{
 		ID: domainID,
 	}).Return(&persistence.GetDomainResponse{
 		Info:                        info,
@@ -297,7 +298,7 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Suc
 		FailoverEndTime:             common.Int64Ptr(1),
 		NotificationVersion:         1,
 	}, nil).Times(1)
-	s.mockMetadataManager.On("UpdateDomain", &persistence.UpdateDomainRequest{
+	s.mockMetadataManager.On("UpdateDomain", mock.Anything, &persistence.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      domainConfig,
 		ReplicationConfig:           replicationConfig,
@@ -354,10 +355,10 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Err
 		},
 	}
 
-	s.mockMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataManager.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: 1,
 	}, nil)
-	s.mockMetadataManager.On("GetDomain", &persistence.GetDomainRequest{
+	s.mockMetadataManager.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{
 		ID: domainID,
 	}).Return(&persistence.GetDomainResponse{
 		Info:                        info,
@@ -370,7 +371,7 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Err
 		FailoverEndTime:             common.Int64Ptr(1),
 		NotificationVersion:         1,
 	}, nil).Times(1)
-	s.mockMetadataManager.On("UpdateDomain", &persistence.UpdateDomainRequest{
+	s.mockMetadataManager.On("UpdateDomain", mock.Anything, &persistence.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      domainConfig,
 		ReplicationConfig:           replicationConfig,

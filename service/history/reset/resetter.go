@@ -23,6 +23,7 @@
 package reset
 
 import (
+	context "context"
 	ctx "context"
 	"fmt"
 
@@ -413,7 +414,7 @@ func (r *workflowResetterImpl) forkAndGenerateBranchToken(
 ) ([]byte, error) {
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
-	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(context.TODO(), &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      forkNodeID,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, resetRunID),
@@ -587,6 +588,7 @@ func (r *workflowResetterImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, _, err := persistence.PaginateHistory(
+			context.TODO(),
 			r.historyV2Mgr,
 			true,
 			branchToken,

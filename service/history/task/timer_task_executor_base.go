@@ -217,7 +217,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 ) error {
 
 	op := func() error {
-		return t.shard.GetExecutionManager().DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+		return t.shard.GetExecutionManager().DeleteWorkflowExecution(context.TODO(), &persistence.DeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
@@ -231,7 +231,7 @@ func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
 ) error {
 
 	op := func() error {
-		return t.shard.GetExecutionManager().DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+		return t.shard.GetExecutionManager().DeleteCurrentWorkflowExecution(context.TODO(), &persistence.DeleteCurrentWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
@@ -250,7 +250,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowHistory(
 		if err != nil {
 			return err
 		}
-		return t.shard.GetHistoryManager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+		return t.shard.GetHistoryManager().DeleteHistoryBranch(context.TODO(), &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     common.IntPtr(t.shard.GetShardID()),
 		})
@@ -271,7 +271,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 			TaskID:     task.TaskID,
 		}
 		// TODO: expose GetVisibilityManager method on shardContext interface
-		return t.shard.GetService().GetVisibilityManager().DeleteWorkflowExecution(request) // delete from db
+		return t.shard.GetService().GetVisibilityManager().DeleteWorkflowExecution(context.TODO(), request) // delete from db
 	}
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }

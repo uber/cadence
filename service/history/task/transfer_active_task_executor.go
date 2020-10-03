@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	ctx "context"
 	"errors"
 	"fmt"
@@ -779,7 +780,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 	if !currentMutableState.IsWorkflowExecutionRunning() {
 		// it means this this might not be current anymore, we need to check
 		var resp *persistence.GetCurrentExecutionResponse
-		resp, err = t.shard.GetExecutionManager().GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+		resp, err = t.shard.GetExecutionManager().GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 		})
