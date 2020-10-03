@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"errors"
+	"github.com/uber/cadence/common/log"
 
 	"github.com/gocql/gocql"
 
@@ -36,25 +37,28 @@ var (
 
 // cdb represents a logical connection to Cassandra database
 type cdb struct {
+	logger  log.Logger
 	session *gocql.Session
 }
 
 var _ nosqlplugin.DB = (*cdb)(nil)
 
 // NewCassandraDBFromSession returns a DB from a session
-func NewCassandraDBFromSession(session *gocql.Session) nosqlplugin.DB {
+func NewCassandraDBFromSession(session *gocql.Session, logger log.Logger) nosqlplugin.DB {
 	return &cdb{
+		logger:  logger,
 		session: session,
 	}
 }
 
 // NewCassandraDB return a new DB
-func NewCassandraDB(cfg config.Cassandra) (nosqlplugin.DB, error) {
+func NewCassandraDB(cfg config.Cassandra, logger log.Logger) (nosqlplugin.DB, error) {
 	session, err := CreateSession(cfg)
 	if err != nil {
 		return nil, err
 	}
 	return &cdb{
+		logger:  logger,
 		session: session,
 	}, nil
 }

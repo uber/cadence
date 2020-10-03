@@ -44,6 +44,7 @@ type (
 	tableCRUD interface {
 		historyEventsCRUD
 		messageQueueCRUD
+		domainCRUD
 	}
 
 	// historyEventsCRUD is for History events storage system
@@ -101,6 +102,47 @@ type (
 		UpdateQueueMetadataCas(ctx context.Context, row QueueMetadataRow) error
 		// Read a QueueMetadata
 		SelectQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)
+	}
+
+	// domainCRUD is for domain + domain metadata storage system
+	// Ideally a domain operation should be implemented in transaction to be atomic if using multiple tables.
+	// For example, Cassandra uses two table, domains and domains_by_name_v2.
+	// But it is okay if not, as the nosqlMetadataManager will handle the edge cases.
+	//
+	// However, there is a special record as "domain metadata". Right now it is an integer number as notification version.
+	// The main purpose of it is to notify clusters that there is some changes in domains, so domain cache needs to refresh.
+	// It always increase by one, whenever a domain is updated or inserted.
+	// Updating this failover metadata with domain insert/update needs to be atomic.
+	// Because Batch LWTs is only allowed within one table and same partition.
+	// The Cassandra implementation stores it in the same table as domain in domains_by_name_v2.
+	domainCRUD interface {
+		// Insert a new record to domain, return error if failed or already exists
+		// Must return conditionFailed error if domainName already exists
+		InsertDomain(ctx context.Context, row *DomainRow) error
+		// Update domain data
+		UpdateDomain(ctx context.Context, row *DomainRow) error
+		// Get one domain data, either by domainID or domainName
+		SelectDomain(ctx context.Context, domainID *string, domainName *string) (*DomainRow, error)
+		// Get all domain data
+		SelectAllDomains(ctx context.Context, pageSize int, pageToken []byte) ([]*DomainRow, []byte, error)
+		//  Delete a domain, either by domainID or domainName
+		DeleteDomain(ctx context.Context, domainID *string, domainName *string) error
+		// right now domain metadata is just an integer as notification version
+		SelectDomainMetadata(ctx context.Context) (int64, error)
+	}
+
+	// QueueMessageRow defines the row struct for queue message
+	DomainRow struct {
+		Info                        *persistence.DomainInfo
+		Config                      *persistence.InternalDomainConfig
+		ReplicationConfig           *persistence.DomainReplicationConfig
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
+		FailoverEndTime             int64
+		NotificationVersion         int64
+		IsGlobalDomain              bool
 	}
 
 	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween
