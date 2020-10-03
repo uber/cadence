@@ -107,7 +107,7 @@ func (s *server) startService() common.Daemon {
 	var err error
 
 	params := service.BootstrapParams{}
-	params.Name = "cadence-" + s.name
+	params.Name = s.name
 	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
 	params.PersistenceConfig = s.cfg.Persistence
 
