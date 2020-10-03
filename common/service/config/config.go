@@ -271,7 +271,7 @@ type (
 		Enabled                bool  `yaml:"enabled"`
 		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
 		// RPCName indicate the remote service name
-		RPCName string `yaml:"rpcName"`
+		RPCName RPCName `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
 	}
@@ -419,6 +419,8 @@ type (
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode
 	BootstrapMode int
+
+	RPCName string
 )
 
 // Validate validates this config
