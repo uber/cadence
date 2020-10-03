@@ -378,3 +378,57 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 	s.NoError(actResult.Get(&result))
 	s.Equal([]string{"d1"}, result) // d3 filtered out because not managed
 }
+
+func (s *failoverWorkflowTestSuite) TestFailoverActivity() {
+	env, mockResource, controller := s.prepareTestActivityEnv()
+	defer controller.Finish()
+	defer mockResource.Finish(s.T())
+
+	domains := []string{"d1", "d2"}
+	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(len(domains))
+
+	params := &FailoverActivityParams{
+		Domains:       domains,
+		TargetCluster: "c2",
+	}
+
+	actResult, err := env.ExecuteActivity(failoverActivityName, params)
+	s.NoError(err)
+	var result FailoverActivityResult
+	s.NoError(actResult.Get(&result))
+	s.Equal(domains, result.SuccessDomains)
+}
+
+func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
+	env, mockResource, controller := s.prepareTestActivityEnv()
+	defer controller.Finish()
+	defer mockResource.Finish(s.T())
+
+	domains := []string{"d1", "d2"}
+	targetCluster := "c2"
+	replicationConfig := &shared.DomainReplicationConfiguration{
+		ActiveClusterName: common.StringPtr(targetCluster),
+	}
+	updateRequest1 := &shared.UpdateDomainRequest{
+		Name:                     common.StringPtr("d1"),
+		ReplicationConfiguration: replicationConfig,
+	}
+	updateRequest2 := &shared.UpdateDomainRequest{
+		Name:                     common.StringPtr("d2"),
+		ReplicationConfiguration: replicationConfig,
+	}
+	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil)
+	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, errors.New("mockErr"))
+
+	params := &FailoverActivityParams{
+		Domains:       domains,
+		TargetCluster: targetCluster,
+	}
+
+	actResult, err := env.ExecuteActivity(failoverActivityName, params)
+	s.NoError(err)
+	var result FailoverActivityResult
+	s.NoError(actResult.Get(&result))
+	s.Equal([]string{"d1"}, result.SuccessDomains)
+	s.Equal([]string{"d2"}, result.FailedDomains)
+}
