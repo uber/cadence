@@ -132,9 +132,6 @@ func (db *cdb) SelectMessagesBetween(
 	}
 
 	nextPageToken := iter.PageState()
-	// TODO? can we remove the below code 
-	//newPageToken := make([]byte, len(nextPageToken))
-	//copy(newPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
 		return nil, err
 	}
