@@ -77,7 +77,7 @@ clusterMetadata:
     standby:
       enabled: true
       initialFailoverVersion: 1
-      rpcName: "cadence-frontend"
+      rpcName: ""
       rpcAddress: "localhost:8933"
 
 dcRedirectionPolicy:

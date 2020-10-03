@@ -32,3 +32,11 @@ func TestToString(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cfg.String())
 }
+
+func TestDefaultRPCName(t *testing.T) {
+	var cfg Config
+	err := Load("", "../../../config", "", &cfg)
+	assert.NoError(t, err)
+	assert.Equal(t, "cadence-frontend", string(cfg.ClusterMetadata.ClusterInformation["active"].RPCName))
+	assert.Equal(t, "cadence-frontend", string(cfg.ClusterMetadata.ClusterInformation["standby"].RPCName))
+}
