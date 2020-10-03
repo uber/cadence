@@ -116,8 +116,8 @@ type (
 	// Because Batch LWTs is only allowed within one table and same partition.
 	// The Cassandra implementation stores it in the same table as domain in domains_by_name_v2.
 	//
-	// (TODO @longquanzheng: I think it's also okay to implement without atomic,
-	// if we can ensure notification version increased by one before insert/update)
+	// (TODO @longquanzheng: I think it's also okay to implement without atomic, as long as
+	// we can ensure notification version increased by one before insert/update)
 	domainCRUD interface {
 		// Insert a new record to domain, return error if failed or already exists
 		// Must return conditionFailed error if domainName already exists
