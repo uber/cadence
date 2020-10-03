@@ -25,8 +25,10 @@ package domain
 import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource"
 )
 
 var (
@@ -61,20 +63,21 @@ type (
 	}
 
 	domainReplicationTaskExecutorImpl struct {
-		metadataManagerV2 persistence.MetadataManager
-		logger            log.Logger
+		metadataManager persistence.MetadataManager
+		timeSource      clock.TimeSource
+		logger          log.Logger
 	}
 )
 
 // NewReplicationTaskExecutor create a new instance of domain replicator
 func NewReplicationTaskExecutor(
-	metadataManagerV2 persistence.MetadataManager,
-	logger log.Logger,
+	resource resource.Resource,
 ) ReplicationTaskExecutor {
 
 	return &domainReplicationTaskExecutorImpl{
-		metadataManagerV2: metadataManagerV2,
-		logger:            logger,
+		metadataManager: resource.GetMetadataManager(),
+		timeSource:      resource.GetTimeSource(),
+		logger:          resource.GetLogger(),
 	}
 }
 
@@ -126,16 +129,17 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 		IsGlobalDomain:  true, // local domain will not be replicated
 		ConfigVersion:   task.GetConfigVersion(),
 		FailoverVersion: task.GetFailoverVersion(),
+		LastUpdatedTime: h.timeSource.Now().UnixNano(),
 	}
 
-	_, err = h.metadataManagerV2.CreateDomain(request)
+	_, err = h.metadataManager.CreateDomain(request)
 	if err != nil {
 		// SQL and Cassandra handle domain UUID collision differently
 		// here, whenever seeing a error replicating a domain
 		// do a check if there is a name / UUID collision
 
 		recordExists := true
-		resp, getErr := h.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
+		resp, getErr := h.metadataManager.GetDomain(&persistence.GetDomainRequest{
 			Name: task.Info.GetName(),
 		})
 		switch getErr.(type) {
@@ -151,7 +155,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 			return err
 		}
 
-		resp, getErr = h.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
+		resp, getErr = h.metadataManager.GetDomain(&persistence.GetDomainRequest{
 			ID: task.GetID(),
 		})
 		switch getErr.(type) {
@@ -186,7 +190,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 	}
 
 	// first we need to get the current notification version since we need to it for conditional update
-	metadata, err := h.metadataManagerV2.GetMetadata()
+	metadata, err := h.metadataManager.GetMetadata()
 	if err != nil {
 		return err
 	}
@@ -194,7 +198,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
-	resp, err := h.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
+	resp, err := h.metadataManager.GetDomain(&persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
@@ -216,6 +220,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 		FailoverNotificationVersion: resp.FailoverNotificationVersion,
 		PreviousFailoverVersion:     resp.PreviousFailoverVersion,
 		NotificationVersion:         notificationVersion,
+		LastUpdatedTime:             h.timeSource.Now().UnixNano(),
 	}
 
 	if resp.ConfigVersion < task.GetConfigVersion() {
@@ -254,7 +259,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 		return nil
 	}
 
-	return h.metadataManagerV2.UpdateDomain(request)
+	return h.metadataManager.UpdateDomain(request)
 }
 
 func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {

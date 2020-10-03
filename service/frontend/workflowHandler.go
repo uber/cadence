@@ -175,14 +175,14 @@ func NewWorkflowHandler(
 		),
 		versionChecker: versionChecker,
 		domainHandler: domain.NewHandler(
-			config.MinRetentionDays(),
-			config.MaxBadBinaries,
+			config.domainConfig,
 			resource.GetLogger(),
 			resource.GetMetadataManager(),
 			resource.GetClusterMetadata(),
 			domain.NewDomainReplicator(replicationMessageSink, resource.GetLogger()),
 			resource.GetArchivalMetadata(),
 			resource.GetArchiverProvider(),
+			resource.GetTimeSource(),
 		),
 		visibilityQueryValidator: validator.NewQueryValidator(config.ValidSearchAttributes),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(

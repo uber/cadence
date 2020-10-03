@@ -65,6 +65,7 @@ func (m *metadataManagerImpl) CreateDomain(request *CreateDomainRequest) (*Creat
 		IsGlobalDomain:    request.IsGlobalDomain,
 		ConfigVersion:     request.ConfigVersion,
 		FailoverVersion:   request.FailoverVersion,
+		LastUpdatedTime:   request.LastUpdatedTime,
 	})
 }
 
@@ -89,6 +90,7 @@ func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainRe
 		FailoverNotificationVersion: resp.FailoverNotificationVersion,
 		PreviousFailoverVersion:     resp.PreviousFailoverVersion,
 		FailoverEndTime:             resp.FailoverEndTime,
+		LastUpdatedTime:             resp.LastUpdatedTime,
 		NotificationVersion:         resp.NotificationVersion,
 	}, nil
 }
@@ -107,6 +109,7 @@ func (m *metadataManagerImpl) UpdateDomain(request *UpdateDomainRequest) error {
 		FailoverNotificationVersion: request.FailoverNotificationVersion,
 		PreviousFailoverVersion:     request.PreviousFailoverVersion,
 		FailoverEndTime:             request.FailoverEndTime,
+		LastUpdatedTime:             request.LastUpdatedTime,
 		NotificationVersion:         request.NotificationVersion,
 	})
 }

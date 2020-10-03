@@ -635,6 +635,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
+		LastUpdatedTime   int64
 	}
 
 	// InternalGetDomainResponse is the response for GetDomain
@@ -648,6 +649,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -661,6 +663,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
