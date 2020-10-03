@@ -15,7 +15,7 @@ persistence:
 ringpop:
   name: cadence_other
   bootstrapMode: hosts
-  bootstrapHosts: ["127.0.0.1:9933", "127.0.0.1:9934", "127.0.0.1:9935", "127.0.0.1:9940"]
+  bootstrapHosts: [ "127.0.0.1:9933", "127.0.0.1:9934", "127.0.0.1:9935", "127.0.0.1:9940" ]
   maxJoinDuration: 30s
 
 services:
@@ -65,8 +65,6 @@ services:
 
 clusterMetadata:
   enableGlobalDomain: true
-  replicationConsumer:
-    type: kafka
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "other"
@@ -90,40 +88,6 @@ clusterMetadata:
 dcRedirectionPolicy:
   policy: "selected-apis-forwarding"
   toDC: ""
-
-kafka:
-  tls:
-    enabled: false
-    certFile: ""
-    keyFile: ""
-    caFile: ""
-  clusters:
-    test:
-      brokers:
-        - 127.0.0.1:9092
-  topics:
-    active:
-      cluster: test
-    active-dlq:
-      cluster: test
-    standby:
-      cluster: test
-    standby-dlq:
-      cluster: test
-    other:
-      cluster: test
-    other-dlq:
-      cluster: test
-  cadence-cluster-topics:
-    active:
-      topic: active
-      dlq-topic: active-dlq
-    standby:
-      topic: standby
-      dlq-topic: standby-dlq
-    other:
-      topic: other
-      dlq-topic: other-dlq
 
 archival:
   history:
