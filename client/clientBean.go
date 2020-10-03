@@ -117,13 +117,14 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			continue
 		}
 
-		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress)
+		name := string(info.RPCName)
+		dispatcher, err := dispatcherProvider.Get(name, info.RPCAddress)
 		if err != nil {
 			return nil, err
 		}
 
 		adminClient, err := factory.NewAdminClientWithTimeoutAndDispatcher(
-			info.RPCName,
+			name,
 			admin.DefaultTimeout,
 			admin.DefaultLargeTimeout,
 			dispatcher,
@@ -133,7 +134,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		}
 
 		frontendClient, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
-			info.RPCName,
+			name,
 			frontend.DefaultTimeout,
 			frontend.DefaultLongPollTimeout,
 			dispatcher,
