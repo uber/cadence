@@ -186,7 +186,7 @@ func (q *nosqlQueue) ReadMessages(
 	for _, msg := range messages {
 		result = append(result, &persistence.QueueMessage{
 			ID:        msg.ID,
-			QueueType: msg.QueueType,
+			QueueType: q.queueType,
 			Payload:   msg.Payload,
 		})
 	}
@@ -202,7 +202,7 @@ func (q *nosqlQueue) ReadMessagesFromDLQ(
 	pageToken []byte,
 ) ([]*persistence.QueueMessage, []byte, error) {
 	response, err := q.db.SelectMessagesBetween(ctx, nosqlplugin.SelectMessagesBetweenRequest{
-		QueueType:               q.queueType,
+		QueueType:               q.getDLQTypeFromQueueType(),
 		ExclusiveBeginMessageID: firstMessageID,
 		InclusiveEndMessageID:   lastMessageID,
 		PageSize:                pageSize,
@@ -236,7 +236,7 @@ func (q *nosqlQueue) DeleteMessageFromDLQ(
 	messageID int64,
 ) error {
 	// Use negative queue type as the dlq type
-	return q.db.DeleteMessage(ctx, q.queueType, messageID)
+	return q.db.DeleteMessage(ctx, q.getDLQTypeFromQueueType(), messageID)
 }
 
 func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
@@ -245,7 +245,7 @@ func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
 	lastMessageID int64,
 ) error {
 	// Use negative queue type as the dlq type
-	return q.db.DeleteMessagesInRange(ctx, q.queueType, firstMessageID, lastMessageID)
+	return q.db.DeleteMessagesInRange(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID)
 }
 
 func (q *nosqlQueue) insertInitialQueueMetadataRecord(
@@ -316,7 +316,6 @@ func (q *nosqlQueue) getQueueMetadata(
 func (q *nosqlQueue) updateQueueMetadata(
 	ctx context.Context,
 	metadata *nosqlplugin.QueueMetadataRow,
-	queueType persistence.QueueType,
 ) error {
 	err := q.db.UpdateQueueMetadataCas(ctx, *metadata)
 	if err != nil {
@@ -333,6 +332,7 @@ func (q *nosqlQueue) updateQueueMetadata(
 	return nil
 }
 
+// DLQ type of is the negative of number of the non-DLQ
 func (q *nosqlQueue) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }
@@ -360,7 +360,7 @@ func (q *nosqlQueue) updateAckLevel(
 	queueMetadata.Version++
 
 	// Use negative queue type as the dlq type
-	err = q.updateQueueMetadata(ctx, queueMetadata, queueType)
+	err = q.updateQueueMetadata(ctx, queueMetadata)
 	if err != nil {
 		return &shared.InternalServiceError{
 			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
