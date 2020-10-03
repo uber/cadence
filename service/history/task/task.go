@@ -41,6 +41,8 @@ import (
 
 const (
 	loadDomainEntryForTaskRetryDelay = 100 * time.Millisecond
+
+	activeTaskResubmitMaxAttempts = 10
 )
 
 var (
@@ -77,6 +79,7 @@ type (
 		scopeIdx      int
 		scope         metrics.Scope // initialized when processing task to make the initialization parallel
 		taskExecutor  Executor
+		taskProcessor Processor
 		maxRetryCount dynamicconfig.IntPropertyFn
 
 		// TODO: following three fields should be removed after new task lifecycle is implemented
@@ -111,6 +114,7 @@ func NewTimerTask(
 	logger log.Logger,
 	taskFilter Filter,
 	taskExecutor Executor,
+	taskProcessor Processor,
 	redispatchFn func(task Task),
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
@@ -125,6 +129,7 @@ func NewTimerTask(
 			logger,
 			taskFilter,
 			taskExecutor,
+			taskProcessor,
 			timeSource,
 			maxRetryCount,
 		),
@@ -141,6 +146,7 @@ func NewTransferTask(
 	logger log.Logger,
 	taskFilter Filter,
 	taskExecutor Executor,
+	taskProcessor Processor,
 	redispatchFn func(task Task),
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
@@ -155,6 +161,7 @@ func NewTransferTask(
 			logger,
 			taskFilter,
 			taskExecutor,
+			taskProcessor,
 			timeSource,
 			maxRetryCount,
 		),
@@ -171,6 +178,7 @@ func newQueueTaskBase(
 	logger log.Logger,
 	taskFilter Filter,
 	taskExecutor Executor,
+	taskProcessor Processor,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) *taskBase {
@@ -189,6 +197,7 @@ func newQueueTaskBase(
 		maxRetryCount: maxRetryCount,
 		taskFilter:    taskFilter,
 		taskExecutor:  taskExecutor,
+		taskProcessor: taskProcessor,
 	}
 }
 
@@ -208,8 +217,14 @@ func (t *timerTask) Ack() {
 func (t *timerTask) Nack() {
 	t.taskBase.Nack()
 
-	// don't move redispatchQueue to taskBase as we need to
-	// redispatch timeQueueTask, not taskBase
+	// don't move the following code to taskBase as we need to
+	// submit & redispatch timerTask, not taskBase
+	if t.shouldResubmitOnNack() {
+		if submitted, _ := t.taskProcessor.TrySubmit(t); submitted {
+			return
+		}
+	}
+
 	t.redispatchFn(t)
 }
 
@@ -224,8 +239,14 @@ func (t *transferTask) Ack() {
 func (t *transferTask) Nack() {
 	t.taskBase.Nack()
 
-	// don't move redispatchQueue to taskBase as we need to
-	// redispatch transferTask, not taskBase
+	// don't move the following code to taskBase as we need to
+	// submit & redispatch transferTask, not taskBase
+	if t.shouldResubmitOnNack() {
+		if submitted, _ := t.taskProcessor.TrySubmit(t); submitted {
+			return
+		}
+	}
+
 	t.redispatchFn(t)
 }
 
@@ -397,6 +418,14 @@ func (t *taskBase) GetAttempt() int {
 
 func (t *taskBase) GetQueueType() QueueType {
 	return t.queueType
+}
+
+func (t *taskBase) shouldResubmitOnNack() bool {
+	// TODO: for now only resubmit active task on Nack()
+	// we can also consider resubmit standby tasks that fails due to certain error types
+	// this may require change the Nack() interface to Nack(error)
+	return t.GetAttempt() < activeTaskResubmitMaxAttempts &&
+		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
 }
 
 // GetOrCreateDomainTaggedScope returns cached domain-tagged metrics scope if exists

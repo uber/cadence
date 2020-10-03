@@ -23,6 +23,7 @@
 package events
 
 import (
+	"context"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -235,7 +236,7 @@ func (e *cacheImpl) getHistoryEventFromStore(
 
 	var historyEvents []*shared.HistoryEvent
 
-	response, err := e.historyManager.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+	response, err := e.historyManager.ReadHistoryBranch(context.TODO(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    eventID + 1,

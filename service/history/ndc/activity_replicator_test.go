@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -137,7 +138,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(runID),
 	}
-	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),

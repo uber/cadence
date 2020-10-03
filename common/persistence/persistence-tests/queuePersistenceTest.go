@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -63,6 +64,9 @@ func (s *QueuePersistenceSuite) TearDownSuite() {
 
 // TestDomainReplicationQueue tests domain replication queue operations
 func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	numMessages := 100
 	concurrentSenders := 10
 
@@ -88,7 +92,7 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 		go func() {
 			defer wg.Done()
 			for message := range messageChan {
-				err := s.Publish(message)
+				err := s.Publish(ctx, message)
 				s.Nil(err, "Enqueue message failed.")
 			}
 		}()
@@ -96,7 +100,7 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 
 	wg.Wait()
 
-	result, lastRetrievedMessageID, err := s.GetReplicationMessages(-1, numMessages)
+	result, lastRetrievedMessageID, err := s.GetReplicationMessages(ctx, -1, numMessages)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.Len(result, numMessages)
 	s.Equal(int64(numMessages-1), lastRetrievedMessageID)
@@ -104,30 +108,33 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 
 // TestQueueMetadataOperations tests queue metadata operations
 func (s *QueuePersistenceSuite) TestQueueMetadataOperations() {
-	clusterAckLevels, err := s.GetAckLevels()
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	clusterAckLevels, err := s.GetAckLevels(ctx)
 	s.Require().NoError(err)
 	s.Assert().Len(clusterAckLevels, 0)
 
-	err = s.UpdateAckLevel(10, "test1")
+	err = s.UpdateAckLevel(ctx, 10, "test1")
 	s.Require().NoError(err)
 
-	clusterAckLevels, err = s.GetAckLevels()
+	clusterAckLevels, err = s.GetAckLevels(ctx)
 	s.Require().NoError(err)
 	s.Assert().Len(clusterAckLevels, 1)
 	s.Assert().Equal(int64(10), clusterAckLevels["test1"])
 
-	err = s.UpdateAckLevel(20, "test1")
+	err = s.UpdateAckLevel(ctx, 20, "test1")
 	s.Require().NoError(err)
 
-	clusterAckLevels, err = s.GetAckLevels()
+	clusterAckLevels, err = s.GetAckLevels(ctx)
 	s.Require().NoError(err)
 	s.Assert().Len(clusterAckLevels, 1)
 	s.Assert().Equal(int64(20), clusterAckLevels["test1"])
 
-	err = s.UpdateAckLevel(25, "test2")
+	err = s.UpdateAckLevel(ctx, 25, "test2")
 	s.Require().NoError(err)
 
-	clusterAckLevels, err = s.GetAckLevels()
+	clusterAckLevels, err = s.GetAckLevels(ctx)
 	s.Require().NoError(err)
 	s.Assert().Len(clusterAckLevels, 2)
 	s.Assert().Equal(int64(20), clusterAckLevels["test1"])
@@ -136,6 +143,9 @@ func (s *QueuePersistenceSuite) TestQueueMetadataOperations() {
 
 // TestDomainReplicationDLQ tests domain DLQ operations
 func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	maxMessageID := int64(100)
 	numMessages := 100
 	concurrentSenders := 10
@@ -162,7 +172,7 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 		go func() {
 			defer wg.Done()
 			for message := range messageChan {
-				err := s.PublishToDomainDLQ(message)
+				err := s.PublishToDomainDLQ(ctx, message)
 				s.Nil(err, "Enqueue message failed.")
 			}
 		}()
@@ -170,28 +180,28 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 
 	wg.Wait()
 
-	result1, token, err := s.GetMessagesFromDomainDLQ(-1, maxMessageID, numMessages/2, nil)
+	result1, token, err := s.GetMessagesFromDomainDLQ(ctx, -1, maxMessageID, numMessages/2, nil)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.NotNil(token)
-	result2, token, err := s.GetMessagesFromDomainDLQ(-1, maxMessageID, numMessages, token)
+	result2, token, err := s.GetMessagesFromDomainDLQ(ctx, -1, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 	s.Equal(len(result1)+len(result2), numMessages)
-	_, _, err = s.GetMessagesFromDomainDLQ(-1, 1<<63-1, numMessages, nil)
+	_, _, err = s.GetMessagesFromDomainDLQ(ctx, -1, 1<<63-1, numMessages, nil)
 	s.NoError(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 
 	lastMessageID := result2[len(result2)-1].SourceTaskId
-	err = s.DeleteMessageFromDomainDLQ(*lastMessageID)
+	err = s.DeleteMessageFromDomainDLQ(ctx, *lastMessageID)
 	s.NoError(err)
-	result3, token, err := s.GetMessagesFromDomainDLQ(-1, maxMessageID, numMessages, token)
+	result3, token, err := s.GetMessagesFromDomainDLQ(ctx, -1, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 	s.Equal(len(result3), numMessages-1)
 
-	err = s.RangeDeleteMessagesFromDomainDLQ(-1, *lastMessageID)
+	err = s.RangeDeleteMessagesFromDomainDLQ(ctx, -1, *lastMessageID)
 	s.NoError(err)
-	result4, token, err := s.GetMessagesFromDomainDLQ(-1, maxMessageID, numMessages, token)
+	result4, token, err := s.GetMessagesFromDomainDLQ(ctx, -1, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 	s.Equal(len(result4), 0)
@@ -199,21 +209,24 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 
 // TestDomainDLQMetadataOperations tests queue metadata operations
 func (s *QueuePersistenceSuite) TestDomainDLQMetadataOperations() {
-	ackLevel, err := s.GetDomainDLQAckLevel()
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	ackLevel, err := s.GetDomainDLQAckLevel(ctx)
 	s.Require().NoError(err)
 	s.Equal(int64(-1), ackLevel)
 
-	err = s.UpdateDomainDLQAckLevel(10)
+	err = s.UpdateDomainDLQAckLevel(ctx, 10)
 	s.NoError(err)
 
-	ackLevel, err = s.GetDomainDLQAckLevel()
+	ackLevel, err = s.GetDomainDLQAckLevel(ctx)
 	s.Require().NoError(err)
 	s.Equal(int64(10), ackLevel)
 
-	err = s.UpdateDomainDLQAckLevel(1)
+	err = s.UpdateDomainDLQAckLevel(ctx, 1)
 	s.NoError(err)
 
-	ackLevel, err = s.GetDomainDLQAckLevel()
+	ackLevel, err = s.GetDomainDLQAckLevel(ctx)
 	s.Require().NoError(err)
 	s.Equal(int64(10), ackLevel)
 }

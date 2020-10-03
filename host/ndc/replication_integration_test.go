@@ -21,17 +21,21 @@
 package ndc
 
 import (
+	"context"
 	"math"
 	"reflect"
 	"time"
-
-	"github.com/uber/cadence/common/persistence"
 
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 	test "github.com/uber/cadence/common/testing"
+)
+
+const (
+	defaultTestPersistenceTimeout = 5 * time.Second
 )
 
 func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
@@ -131,7 +135,10 @@ Loop:
 		var token []byte
 		for doPaging := true; doPaging; doPaging = len(token) > 0 {
 			request.NextPageToken = token
-			response, err := executionManager.GetReplicationTasksFromDLQ(request)
+
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
+			response, err := executionManager.GetReplicationTasksFromDLQ(ctx, request)
+			cancel()
 			if err != nil {
 				continue Loop
 			}

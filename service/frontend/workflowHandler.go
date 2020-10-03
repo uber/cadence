@@ -2543,6 +2543,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 			err = errNoPermission
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByWorkflowID(
+				context.TODO(),
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
@@ -2554,15 +2555,18 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
-				ListWorkflowExecutionsRequest: baseReq,
-				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
-			})
+			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByType(
+				context.TODO(),
+				&persistence.ListWorkflowExecutionsByTypeRequest{
+					ListWorkflowExecutionsRequest: baseReq,
+					WorkflowTypeName:              listRequest.TypeFilter.GetName(),
+				},
+			)
 		}
 		wh.GetLogger().Debug("List open workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
 	} else {
-		persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutions(&baseReq)
+		persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutions(context.TODO(), &baseReq)
 	}
 
 	if err != nil {
@@ -2756,10 +2760,12 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 			err = errNoPermission
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByWorkflowID(
+				context.TODO(),
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
-				})
+				},
+			)
 		}
 		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByID)
@@ -2767,10 +2773,13 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
-				ListWorkflowExecutionsRequest: baseReq,
-				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
-			})
+			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByType(
+				context.TODO(),
+				&persistence.ListWorkflowExecutionsByTypeRequest{
+					ListWorkflowExecutionsRequest: baseReq,
+					WorkflowTypeName:              listRequest.TypeFilter.GetName(),
+				},
+			)
 		}
 		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
@@ -2778,15 +2787,18 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
-				ListWorkflowExecutionsRequest: baseReq,
-				Status:                        listRequest.GetStatusFilter(),
-			})
+			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByStatus(
+				context.TODO(),
+				&persistence.ListClosedWorkflowExecutionsByStatusRequest{
+					ListWorkflowExecutionsRequest: baseReq,
+					Status:                        listRequest.GetStatusFilter(),
+				},
+			)
 		}
 		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByStatus)
 	} else {
-		persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutions(&baseReq)
+		persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutions(context.TODO(), &baseReq)
 	}
 
 	if err != nil {
@@ -2855,7 +2867,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		NextPageToken: listRequest.NextPageToken,
 		Query:         listRequest.GetQuery(),
 	}
-	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(req)
+	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(context.TODO(), req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2922,7 +2934,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		NextPageToken: listRequest.NextPageToken,
 		Query:         listRequest.GetQuery(),
 	}
-	persistenceResp, err := wh.GetVisibilityManager().ScanWorkflowExecutions(req)
+	persistenceResp, err := wh.GetVisibilityManager().ScanWorkflowExecutions(context.TODO(), req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2978,7 +2990,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		Domain:     domain,
 		Query:      countRequest.GetQuery(),
 	}
-	persistenceResp, err := wh.GetVisibilityManager().CountWorkflowExecutions(req)
+	persistenceResp, err := wh.GetVisibilityManager().CountWorkflowExecutions(context.TODO(), req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3289,7 +3301,7 @@ func (wh *WorkflowHandler) getRawHistory(
 	rawHistory := []*gen.DataBlob{}
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 
-	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
+	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(context.TODO(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -3357,7 +3369,7 @@ func (wh *WorkflowHandler) getHistory(
 	isFirstPage := len(nextPageToken) == 0
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 	var err error
-	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
+	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(context.TODO(), wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,

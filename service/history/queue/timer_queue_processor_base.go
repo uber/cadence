@@ -126,6 +126,7 @@ func newTimerQueueProcessorBase(
 				task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 				taskFilter,
 				taskExecutor,
+				taskProcessor,
 				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TimerTaskMaxRetryCount,
@@ -481,7 +482,7 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 	var response *persistence.GetTimerIndexTasksResponse
 	retryCount := t.shard.GetConfig().TimerProcessorGetFailureRetryCount()
 	for attempt := 0; attempt < retryCount; attempt++ {
-		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(request)
+		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(context.TODO(), request)
 		if err == nil {
 			return response.Timers, response.NextPageToken, nil
 		}

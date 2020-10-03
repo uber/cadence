@@ -470,7 +470,7 @@ func doRereplicate(
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
 
 	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
-	resp, err := exeMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
+	resp, err := exeMgr.GetWorkflowExecution(context.TODO(), &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),

@@ -21,6 +21,8 @@
 package history
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/shard"
@@ -68,7 +70,7 @@ func (t *transferQueueProcessorBase) readTasks(
 	readLevel int64,
 ) ([]task.Info, bool, error) {
 
-	response, err := t.executionManager.GetTransferTasks(&persistence.GetTransferTasksRequest{
+	response, err := t.executionManager.GetTransferTasks(context.TODO(), &persistence.GetTransferTasksRequest{
 		ReadLevel:    readLevel,
 		MaxReadLevel: t.maxReadAckLevel(),
 		BatchSize:    t.options.BatchSize(),

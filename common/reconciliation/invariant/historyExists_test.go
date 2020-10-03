@@ -131,8 +131,8 @@ func (s *HistoryExistsSuite) TestCheck() {
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		historyManager := &mocks.HistoryV2Manager{}
-		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getExecResp, tc.getExecErr)
-		historyManager.On("ReadHistoryBranch", mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
+		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
+		historyManager.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
 		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()))
 		result := i.Check(getOpenConcreteExecution())
 		s.Equal(tc.expectedResult, result)

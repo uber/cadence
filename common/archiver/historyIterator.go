@@ -21,6 +21,7 @@
 package archiver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
@@ -228,7 +229,7 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, er
 		PageSize:    i.historyPageSize,
 		ShardID:     common.IntPtr(i.request.ShardID),
 	}
-	historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(i.historyV2Manager, req)
+	historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(context.TODO(), i.historyV2Manager, req)
 	return historyBatches, err
 
 }

@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -29,11 +30,15 @@ import (
 // ReadFullPageV2Events reads a full page of history events from HistoryManager. Due to storage format of V2 History
 // it is not guaranteed that pageSize amount of data is returned. Function returns the list of history events, the size
 // of data read, the next page token, and an error if present.
-func ReadFullPageV2Events(historyV2Mgr HistoryManager, req *ReadHistoryBranchRequest) ([]*shared.HistoryEvent, int, []byte, error) {
+func ReadFullPageV2Events(
+	ctx context.Context,
+	historyV2Mgr HistoryManager,
+	req *ReadHistoryBranchRequest,
+) ([]*shared.HistoryEvent, int, []byte, error) {
 	historyEvents := []*shared.HistoryEvent{}
 	size := int(0)
 	for {
-		response, err := historyV2Mgr.ReadHistoryBranch(req)
+		response, err := historyV2Mgr.ReadHistoryBranch(ctx, req)
 		if err != nil {
 			return nil, 0, nil, err
 		}
@@ -49,12 +54,16 @@ func ReadFullPageV2Events(historyV2Mgr HistoryManager, req *ReadHistoryBranchReq
 // ReadFullPageV2EventsByBatch reads a full page of history events by batch from HistoryManager. Due to storage format of V2 History
 // it is not guaranteed that pageSize amount of data is returned. Function returns the list of history batches, the size
 // of data read, the next page token, and an error if present.
-func ReadFullPageV2EventsByBatch(historyV2Mgr HistoryManager, req *ReadHistoryBranchRequest) ([]*shared.History, int, []byte, error) {
+func ReadFullPageV2EventsByBatch(
+	ctx context.Context,
+	historyV2Mgr HistoryManager,
+	req *ReadHistoryBranchRequest,
+) ([]*shared.History, int, []byte, error) {
 	historyBatches := []*shared.History{}
 	eventsRead := 0
 	size := 0
 	for {
-		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
+		response, err := historyV2Mgr.ReadHistoryBranchByBatch(ctx, req)
 		if err != nil {
 			return nil, 0, nil, err
 		}
@@ -82,6 +91,7 @@ func GetBeginNodeID(bi shared.HistoryBranch) int64 {
 
 // PaginateHistory return paged history
 func PaginateHistory(
+	ctx context.Context,
 	historyV2Mgr HistoryManager,
 	byBatch bool,
 	branchToken []byte,
@@ -106,7 +116,7 @@ func PaginateHistory(
 		ShardID:       shardID,
 	}
 	if byBatch {
-		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
+		response, err := historyV2Mgr.ReadHistoryBranchByBatch(ctx, req)
 		if err != nil {
 			return nil, nil, nil, 0, err
 		}
@@ -117,7 +127,7 @@ func PaginateHistory(
 		tokenOut = response.NextPageToken
 
 	} else {
-		response, err := historyV2Mgr.ReadHistoryBranch(req)
+		response, err := historyV2Mgr.ReadHistoryBranch(ctx, req)
 		if err != nil {
 			return nil, nil, nil, 0, err
 		}

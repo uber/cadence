@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -191,7 +192,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 			TaskType:   persistence.ReplicationTaskTypeSyncActivity,
 		},
 	}
-	s.executionManager.On("PutReplicationTaskToDLQ", request).Return(nil)
+	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
 	err := s.taskProcessor.putReplicationTaskToDLQ(task)
 	s.NoError(err)
 }
@@ -233,7 +234,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 			Version:      1,
 		},
 	}
-	s.executionManager.On("PutReplicationTaskToDLQ", request).Return(nil)
+	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
 	err = s.taskProcessor.putReplicationTaskToDLQ(task)
 	s.NoError(err)
 }

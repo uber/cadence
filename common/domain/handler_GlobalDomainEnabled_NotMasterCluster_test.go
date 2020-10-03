@@ -493,7 +493,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -553,7 +553,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -632,7 +632,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -691,7 +691,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
