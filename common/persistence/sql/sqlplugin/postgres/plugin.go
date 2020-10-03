@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	
+
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 
@@ -36,7 +36,7 @@ import (
 const (
 	// PluginName is the name of the plugin
 	PluginName = "postgres"
-	dsnFmt = "postgres://%s@%s:%s/%s"
+	dsnFmt     = "postgres://%s@%s:%s/%s"
 )
 
 type plugin struct{}
@@ -95,32 +95,33 @@ func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	if cfg.MaxConnLifetime > 0 {
 		db.SetConnMaxLifetime(cfg.MaxConnLifetime)
 	}
-	
+
 	// Maps struct names in CamelCase to snake without need for db struct tags.
 	db.MapperFunc(strcase.ToSnake)
 	return db, nil
 }
 
 func buildDSN(cfg *config.SQL, host string, port string, sslParams url.Values) string {
-	generateCredentialString := func(user, password string) string {
-		userPass := cfg.User
-		if cfg.Password != "" {
-			userPass += ":" + cfg.PluginName
-		}
-		return userPass
-	}
-
 	dbName := cfg.DatabaseName
 	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
 	if dbName == "" {
 		dbName = "postgres"
 	}
 
-	dsn := fmt.Sprintf(dsnFmt, generateCredentialString(cfg.User, cfg.Password), host, port, dbName)
+	credentialString := generateCredentialString(cfg.User, cfg.Password)
+	dsn := fmt.Sprintf(dsnFmt, credentialString, host, port, dbName)
 	if attrs := sslParams.Encode(); attrs != "" {
 		dsn += "?" + attrs
 	}
 	return dsn
+}
+
+func generateCredentialString(user string, password string) string {
+	userPass := user
+	if password != "" {
+		userPass += ":" + password
+	}
+	return userPass
 }
 
 func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {

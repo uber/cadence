@@ -49,7 +49,7 @@ func getTestClusterOption() *pt.TestBaseOptions {
 	}
 
 	if os.Getenv("POSTGRES_PASSWORD") != "" {
-		testUser = os.Getenv("POSTGRES_PASSWORD")
+		testPassword = os.Getenv("POSTGRES_PASSWORD")
 	}
 
 	return &pt.TestBaseOptions{
