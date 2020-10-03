@@ -23,6 +23,7 @@
 package ndc
 
 import (
+	context "context"
 	ctx "context"
 
 	"github.com/pborman/uuid"
@@ -235,7 +236,7 @@ func (r *branchManagerImpl) createNewBranch(
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
 
-	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(context.TODO(), &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseBranchToken,
 		ForkNodeID:      baseBranchLastEventID + 1,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, uuid.New()),

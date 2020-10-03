@@ -116,6 +116,7 @@ func newTransferQueueProcessorBase(
 				task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 				taskFilter,
 				taskExecutor,
+				taskProcessor,
 				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TransferTaskMaxRetryCount,
@@ -426,7 +427,7 @@ func (t *transferQueueProcessorBase) readTasks(
 	var response *persistence.GetTransferTasksResponse
 	op := func() error {
 		var err error
-		response, err = t.shard.GetExecutionManager().GetTransferTasks(&persistence.GetTransferTasksRequest{
+		response, err = t.shard.GetExecutionManager().GetTransferTasks(context.TODO(), &persistence.GetTransferTasksRequest{
 			ReadLevel:    readLevel.(transferTaskKey).taskID,
 			MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 			BatchSize:    t.options.BatchSize(),

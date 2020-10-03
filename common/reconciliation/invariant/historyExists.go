@@ -23,6 +23,8 @@
 package invariant
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -65,7 +67,7 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 		NextPageToken: nil,
 		ShardID:       c.IntPtr(concreteExecution.ShardID),
 	}
-	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(readHistoryBranchReq)
+	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(context.TODO(), readHistoryBranchReq)
 	stillExists, existsCheckError := ExecutionStillExists(&concreteExecution.Execution, h.pr)
 	if existsCheckError != nil {
 		return CheckResult{
@@ -141,7 +143,7 @@ func ExecutionStillExists(
 			RunId:      &exec.RunID,
 		},
 	}
-	_, err := pr.GetWorkflowExecution(req)
+	_, err := pr.GetWorkflowExecution(context.TODO(), req)
 	if err == nil {
 		return true, nil
 	}

@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -79,7 +80,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 	s.timeSource = s.mockResource.GetTimeSource()
 	s.mockMetadataMgr = s.mockResource.MetadataMgr
 
-	s.mockMetadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: 1,
 	}, nil)
 
@@ -123,7 +124,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 		},
 	}
 
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{
 		ID: domainName,
 	}).Return(&persistence.GetDomainResponse{
 		Info:                        info,
@@ -141,7 +142,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 	err := CleanPendingActiveState(s.mockMetadataMgr, domainName, 1, s.watcher.retryPolicy)
 	s.NoError(err)
 
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{
 		ID: domainName,
 	}).Return(&persistence.GetDomainResponse{
 		Info:                        info,
@@ -159,7 +160,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 	err = CleanPendingActiveState(s.mockMetadataMgr, domainName, 5, s.watcher.retryPolicy)
 	s.NoError(err)
 
-	s.mockMetadataMgr.On("UpdateDomain", &persistence.UpdateDomainRequest{
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, &persistence.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      domainConfig,
 		ReplicationConfig:           replicationConfig,
@@ -169,7 +170,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 		FailoverEndTime:             nil,
 		NotificationVersion:         1,
 	}).Return(nil).Times(1)
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{
 		ID: domainName,
 	}).Return(&persistence.GetDomainResponse{
 		Info:                        info,
@@ -211,7 +212,7 @@ func (s *failoverWatcherSuite) TestHandleFailoverTimeout() {
 	}
 	endtime := common.Int64Ptr(s.timeSource.Now().UnixNano() - 1)
 
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{
 		ID: domainName,
 	}).Return(&persistence.GetDomainResponse{
 		Info:                        info,
@@ -224,7 +225,7 @@ func (s *failoverWatcherSuite) TestHandleFailoverTimeout() {
 		FailoverEndTime:             endtime,
 		NotificationVersion:         1,
 	}, nil).Times(1)
-	s.mockMetadataMgr.On("UpdateDomain", &persistence.UpdateDomainRequest{
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, &persistence.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      domainConfig,
 		ReplicationConfig:           replicationConfig,

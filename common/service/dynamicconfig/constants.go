@@ -52,7 +52,6 @@ var keys = map[Key]string{
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
-	EnableNDC:                           "system.enableNDC",
 	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
@@ -346,8 +345,6 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
-	// EnableNDC is key for enable N data center events replication
-	EnableNDC
 	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
@@ -910,10 +907,29 @@ const (
 type Filter int
 
 func (f Filter) String() string {
-	if f <= unknownFilter || f > ShardID {
+	if f <= unknownFilter || f > ClusterName {
 		return filters[unknownFilter]
 	}
 	return filters[f]
+}
+
+func parseFilter(filterName string) Filter {
+	switch filterName {
+	case "domainName":
+		return DomainName
+	case "domainID":
+		return DomainID
+	case "taskListName":
+		return TaskListName
+	case "taskType":
+		return TaskType
+	case "shardID":
+		return ShardID
+	case "clusterName":
+		return ClusterName
+	default:
+		return unknownFilter
+	}
 }
 
 var filters = []string{
@@ -923,6 +939,7 @@ var filters = []string{
 	"taskListName",
 	"taskType",
 	"shardID",
+	"clusterName",
 }
 
 const (
@@ -937,6 +954,8 @@ const (
 	TaskType
 	// ShardID is the shard id
 	ShardID
+	// ClusterName is the cluster name in a multi-region setup
+	ClusterName
 
 	// lastFilterTypeForTest must be the last one in this const group for testing purpose
 	lastFilterTypeForTest
@@ -977,5 +996,12 @@ func TaskTypeFilter(taskType int) FilterOption {
 func ShardIDFilter(shardID int) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[ShardID] = shardID
+	}
+}
+
+// ClusterNameFilter filters by cluster name
+func ClusterNameFilter(clusterName string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[ClusterName] = clusterName
 	}
 }

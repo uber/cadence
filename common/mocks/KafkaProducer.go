@@ -21,6 +21,8 @@
 package mocks
 
 import (
+	context "context"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common/messaging"
 )
@@ -44,13 +46,13 @@ func (_m *KafkaProducer) Close() error {
 	return r0
 }
 
-// Publish provides a mock function with given fields: msg
-func (_m *KafkaProducer) Publish(msg interface{}) error {
-	ret := _m.Called(msg)
+// Publish provides a mock function with given fields: ctx, message
+func (_m *KafkaProducer) Publish(ctx context.Context, message interface{}) error {
+	ret := _m.Called(ctx, message)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(interface{}) error); ok {
-		r0 = rf(msg)
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}) error); ok {
+		r0 = rf(ctx, message)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -23,6 +23,8 @@
 package fetcher
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -39,7 +41,7 @@ func CurrentExecution(retryer persistence.Retryer, request ExecutionRequest) (en
 		DomainID:   request.DomainID,
 		WorkflowID: request.WorkflowID,
 	}
-	e, err := retryer.GetCurrentExecution(&req)
+	e, err := retryer.GetCurrentExecution(context.TODO(), &req)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +69,7 @@ func getCurrentExecution(
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListCurrentExecutions(req)
+		resp, err := pr.ListCurrentExecutions(context.TODO(), req)
 		if err != nil {
 			return pagination.Page{}, err
 		}

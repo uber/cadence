@@ -309,7 +309,6 @@ func (r *historyReplicatorImpl) applyStartEvents(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		true,
 	)
 	if err != nil {
 		task.getLogger().Error(
@@ -414,7 +413,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsToCurrentBranch(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		true,
 	)
 	if err != nil {
 		task.getLogger().Error(
@@ -668,7 +666,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsResetWorkflow(
 		*task.getExecution(),
 		task.getEvents(),
 		task.getNewEvents(),
-		true,
 	)
 	if err != nil {
 		task.getLogger().Error(

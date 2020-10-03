@@ -2617,1304 +2617,6 @@ func (v *GetReplicationMessagesResponse) IsSetMessagesByShard() bool {
 	return v != nil && v.MessagesByShard != nil
 }
 
-type HistoryMetadataTaskAttributes struct {
-	TargetClusters []string `json:"targetClusters,omitempty"`
-	DomainId       *string  `json:"domainId,omitempty"`
-	WorkflowId     *string  `json:"workflowId,omitempty"`
-	RunId          *string  `json:"runId,omitempty"`
-	FirstEventId   *int64   `json:"firstEventId,omitempty"`
-	NextEventId    *int64   `json:"nextEventId,omitempty"`
-	Version        *int64   `json:"version,omitempty"`
-}
-
-type _List_String_ValueList []string
-
-func (v _List_String_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
-		w, err := wire.NewValueString(x), error(nil)
-		if err != nil {
-			return err
-		}
-		err = f(w)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (v _List_String_ValueList) Size() int {
-	return len(v)
-}
-
-func (_List_String_ValueList) ValueType() wire.Type {
-	return wire.TBinary
-}
-
-func (_List_String_ValueList) Close() {}
-
-// ToWire translates a HistoryMetadataTaskAttributes struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *HistoryMetadataTaskAttributes) ToWire() (wire.Value, error) {
-	var (
-		fields [7]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.TargetClusters != nil {
-		w, err = wire.NewValueList(_List_String_ValueList(v.TargetClusters)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 5, Value: w}
-		i++
-	}
-	if v.DomainId != nil {
-		w, err = wire.NewValueString(*(v.DomainId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.WorkflowId != nil {
-		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.RunId != nil {
-		w, err = wire.NewValueString(*(v.RunId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.FirstEventId != nil {
-		w, err = wire.NewValueI64(*(v.FirstEventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-	if v.NextEventId != nil {
-		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-	if v.Version != nil {
-		w, err = wire.NewValueI64(*(v.Version)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 60, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _List_String_Read(l wire.ValueList) ([]string, error) {
-	if l.ValueType() != wire.TBinary {
-		return nil, nil
-	}
-
-	o := make([]string, 0, l.Size())
-	err := l.ForEach(func(x wire.Value) error {
-		i, err := x.GetString(), error(nil)
-		if err != nil {
-			return err
-		}
-		o = append(o, i)
-		return nil
-	})
-	l.Close()
-	return o, err
-}
-
-// FromWire deserializes a HistoryMetadataTaskAttributes struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a HistoryMetadataTaskAttributes struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v HistoryMetadataTaskAttributes
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *HistoryMetadataTaskAttributes) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 5:
-			if field.Value.Type() == wire.TList {
-				v.TargetClusters, err = _List_String_Read(field.Value.GetList())
-				if err != nil {
-					return err
-				}
-
-			}
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.DomainId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.WorkflowId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.RunId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 40:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.FirstEventId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 50:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.NextEventId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 60:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.Version = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a HistoryMetadataTaskAttributes
-// struct.
-func (v *HistoryMetadataTaskAttributes) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [7]string
-	i := 0
-	if v.TargetClusters != nil {
-		fields[i] = fmt.Sprintf("TargetClusters: %v", v.TargetClusters)
-		i++
-	}
-	if v.DomainId != nil {
-		fields[i] = fmt.Sprintf("DomainId: %v", *(v.DomainId))
-		i++
-	}
-	if v.WorkflowId != nil {
-		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
-		i++
-	}
-	if v.RunId != nil {
-		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
-		i++
-	}
-	if v.FirstEventId != nil {
-		fields[i] = fmt.Sprintf("FirstEventId: %v", *(v.FirstEventId))
-		i++
-	}
-	if v.NextEventId != nil {
-		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
-		i++
-	}
-	if v.Version != nil {
-		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
-		i++
-	}
-
-	return fmt.Sprintf("HistoryMetadataTaskAttributes{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _List_String_Equals(lhs, rhs []string) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for i, lv := range lhs {
-		rv := rhs[i]
-		if !(lv == rv) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// Equals returns true if all the fields of this HistoryMetadataTaskAttributes match the
-// provided HistoryMetadataTaskAttributes.
-//
-// This function performs a deep comparison.
-func (v *HistoryMetadataTaskAttributes) Equals(rhs *HistoryMetadataTaskAttributes) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !((v.TargetClusters == nil && rhs.TargetClusters == nil) || (v.TargetClusters != nil && rhs.TargetClusters != nil && _List_String_Equals(v.TargetClusters, rhs.TargetClusters))) {
-		return false
-	}
-	if !_String_EqualsPtr(v.DomainId, rhs.DomainId) {
-		return false
-	}
-	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
-		return false
-	}
-	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.FirstEventId, rhs.FirstEventId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.Version, rhs.Version) {
-		return false
-	}
-
-	return true
-}
-
-type _List_String_Zapper []string
-
-// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
-// fast logging of _List_String_Zapper.
-func (l _List_String_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
-	for _, v := range l {
-		enc.AppendString(v)
-	}
-	return err
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of HistoryMetadataTaskAttributes.
-func (v *HistoryMetadataTaskAttributes) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.TargetClusters != nil {
-		err = multierr.Append(err, enc.AddArray("targetClusters", (_List_String_Zapper)(v.TargetClusters)))
-	}
-	if v.DomainId != nil {
-		enc.AddString("domainId", *v.DomainId)
-	}
-	if v.WorkflowId != nil {
-		enc.AddString("workflowId", *v.WorkflowId)
-	}
-	if v.RunId != nil {
-		enc.AddString("runId", *v.RunId)
-	}
-	if v.FirstEventId != nil {
-		enc.AddInt64("firstEventId", *v.FirstEventId)
-	}
-	if v.NextEventId != nil {
-		enc.AddInt64("nextEventId", *v.NextEventId)
-	}
-	if v.Version != nil {
-		enc.AddInt64("version", *v.Version)
-	}
-	return err
-}
-
-// GetTargetClusters returns the value of TargetClusters if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetTargetClusters() (o []string) {
-	if v != nil && v.TargetClusters != nil {
-		return v.TargetClusters
-	}
-
-	return
-}
-
-// IsSetTargetClusters returns true if TargetClusters is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetTargetClusters() bool {
-	return v != nil && v.TargetClusters != nil
-}
-
-// GetDomainId returns the value of DomainId if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetDomainId() (o string) {
-	if v != nil && v.DomainId != nil {
-		return *v.DomainId
-	}
-
-	return
-}
-
-// IsSetDomainId returns true if DomainId is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetDomainId() bool {
-	return v != nil && v.DomainId != nil
-}
-
-// GetWorkflowId returns the value of WorkflowId if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetWorkflowId() (o string) {
-	if v != nil && v.WorkflowId != nil {
-		return *v.WorkflowId
-	}
-
-	return
-}
-
-// IsSetWorkflowId returns true if WorkflowId is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetWorkflowId() bool {
-	return v != nil && v.WorkflowId != nil
-}
-
-// GetRunId returns the value of RunId if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetRunId() (o string) {
-	if v != nil && v.RunId != nil {
-		return *v.RunId
-	}
-
-	return
-}
-
-// IsSetRunId returns true if RunId is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetRunId() bool {
-	return v != nil && v.RunId != nil
-}
-
-// GetFirstEventId returns the value of FirstEventId if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetFirstEventId() (o int64) {
-	if v != nil && v.FirstEventId != nil {
-		return *v.FirstEventId
-	}
-
-	return
-}
-
-// IsSetFirstEventId returns true if FirstEventId is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetFirstEventId() bool {
-	return v != nil && v.FirstEventId != nil
-}
-
-// GetNextEventId returns the value of NextEventId if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetNextEventId() (o int64) {
-	if v != nil && v.NextEventId != nil {
-		return *v.NextEventId
-	}
-
-	return
-}
-
-// IsSetNextEventId returns true if NextEventId is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetNextEventId() bool {
-	return v != nil && v.NextEventId != nil
-}
-
-// GetVersion returns the value of Version if it is set or its
-// zero value if it is unset.
-func (v *HistoryMetadataTaskAttributes) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
-	}
-
-	return
-}
-
-// IsSetVersion returns true if Version is not nil.
-func (v *HistoryMetadataTaskAttributes) IsSetVersion() bool {
-	return v != nil && v.Version != nil
-}
-
-type HistoryTaskAttributes struct {
-	TargetClusters          []string                           `json:"targetClusters,omitempty"`
-	DomainId                *string                            `json:"domainId,omitempty"`
-	WorkflowId              *string                            `json:"workflowId,omitempty"`
-	RunId                   *string                            `json:"runId,omitempty"`
-	FirstEventId            *int64                             `json:"firstEventId,omitempty"`
-	NextEventId             *int64                             `json:"nextEventId,omitempty"`
-	Version                 *int64                             `json:"version,omitempty"`
-	ReplicationInfo         map[string]*shared.ReplicationInfo `json:"replicationInfo,omitempty"`
-	History                 *shared.History                    `json:"history,omitempty"`
-	NewRunHistory           *shared.History                    `json:"newRunHistory,omitempty"`
-	EventStoreVersion       *int32                             `json:"eventStoreVersion,omitempty"`
-	NewRunEventStoreVersion *int32                             `json:"newRunEventStoreVersion,omitempty"`
-	ResetWorkflow           *bool                              `json:"resetWorkflow,omitempty"`
-	NewRunNDC               *bool                              `json:"newRunNDC,omitempty"`
-}
-
-type _Map_String_ReplicationInfo_MapItemList map[string]*shared.ReplicationInfo
-
-func (m _Map_String_ReplicationInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
-	for k, v := range m {
-		if v == nil {
-			return fmt.Errorf("invalid [%v]: value is nil", k)
-		}
-		kw, err := wire.NewValueString(k), error(nil)
-		if err != nil {
-			return err
-		}
-
-		vw, err := v.ToWire()
-		if err != nil {
-			return err
-		}
-		err = f(wire.MapItem{Key: kw, Value: vw})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (m _Map_String_ReplicationInfo_MapItemList) Size() int {
-	return len(m)
-}
-
-func (_Map_String_ReplicationInfo_MapItemList) KeyType() wire.Type {
-	return wire.TBinary
-}
-
-func (_Map_String_ReplicationInfo_MapItemList) ValueType() wire.Type {
-	return wire.TStruct
-}
-
-func (_Map_String_ReplicationInfo_MapItemList) Close() {}
-
-// ToWire translates a HistoryTaskAttributes struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *HistoryTaskAttributes) ToWire() (wire.Value, error) {
-	var (
-		fields [14]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.TargetClusters != nil {
-		w, err = wire.NewValueList(_List_String_ValueList(v.TargetClusters)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 5, Value: w}
-		i++
-	}
-	if v.DomainId != nil {
-		w, err = wire.NewValueString(*(v.DomainId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.WorkflowId != nil {
-		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.RunId != nil {
-		w, err = wire.NewValueString(*(v.RunId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.FirstEventId != nil {
-		w, err = wire.NewValueI64(*(v.FirstEventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-	if v.NextEventId != nil {
-		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-	if v.Version != nil {
-		w, err = wire.NewValueI64(*(v.Version)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 60, Value: w}
-		i++
-	}
-	if v.ReplicationInfo != nil {
-		w, err = wire.NewValueMap(_Map_String_ReplicationInfo_MapItemList(v.ReplicationInfo)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 70, Value: w}
-		i++
-	}
-	if v.History != nil {
-		w, err = v.History.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 80, Value: w}
-		i++
-	}
-	if v.NewRunHistory != nil {
-		w, err = v.NewRunHistory.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 90, Value: w}
-		i++
-	}
-	if v.EventStoreVersion != nil {
-		w, err = wire.NewValueI32(*(v.EventStoreVersion)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 100, Value: w}
-		i++
-	}
-	if v.NewRunEventStoreVersion != nil {
-		w, err = wire.NewValueI32(*(v.NewRunEventStoreVersion)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 110, Value: w}
-		i++
-	}
-	if v.ResetWorkflow != nil {
-		w, err = wire.NewValueBool(*(v.ResetWorkflow)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 120, Value: w}
-		i++
-	}
-	if v.NewRunNDC != nil {
-		w, err = wire.NewValueBool(*(v.NewRunNDC)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 130, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _ReplicationInfo_Read(w wire.Value) (*shared.ReplicationInfo, error) {
-	var v shared.ReplicationInfo
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _Map_String_ReplicationInfo_Read(m wire.MapItemList) (map[string]*shared.ReplicationInfo, error) {
-	if m.KeyType() != wire.TBinary {
-		return nil, nil
-	}
-
-	if m.ValueType() != wire.TStruct {
-		return nil, nil
-	}
-
-	o := make(map[string]*shared.ReplicationInfo, m.Size())
-	err := m.ForEach(func(x wire.MapItem) error {
-		k, err := x.Key.GetString(), error(nil)
-		if err != nil {
-			return err
-		}
-
-		v, err := _ReplicationInfo_Read(x.Value)
-		if err != nil {
-			return err
-		}
-
-		o[k] = v
-		return nil
-	})
-	m.Close()
-	return o, err
-}
-
-func _History_Read(w wire.Value) (*shared.History, error) {
-	var v shared.History
-	err := v.FromWire(w)
-	return &v, err
-}
-
-// FromWire deserializes a HistoryTaskAttributes struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a HistoryTaskAttributes struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v HistoryTaskAttributes
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *HistoryTaskAttributes) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 5:
-			if field.Value.Type() == wire.TList {
-				v.TargetClusters, err = _List_String_Read(field.Value.GetList())
-				if err != nil {
-					return err
-				}
-
-			}
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.DomainId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.WorkflowId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.RunId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 40:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.FirstEventId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 50:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.NextEventId = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 60:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.Version = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 70:
-			if field.Value.Type() == wire.TMap {
-				v.ReplicationInfo, err = _Map_String_ReplicationInfo_Read(field.Value.GetMap())
-				if err != nil {
-					return err
-				}
-
-			}
-		case 80:
-			if field.Value.Type() == wire.TStruct {
-				v.History, err = _History_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 90:
-			if field.Value.Type() == wire.TStruct {
-				v.NewRunHistory, err = _History_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 100:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.EventStoreVersion = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 110:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.NewRunEventStoreVersion = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 120:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.ResetWorkflow = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 130:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.NewRunNDC = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a HistoryTaskAttributes
-// struct.
-func (v *HistoryTaskAttributes) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [14]string
-	i := 0
-	if v.TargetClusters != nil {
-		fields[i] = fmt.Sprintf("TargetClusters: %v", v.TargetClusters)
-		i++
-	}
-	if v.DomainId != nil {
-		fields[i] = fmt.Sprintf("DomainId: %v", *(v.DomainId))
-		i++
-	}
-	if v.WorkflowId != nil {
-		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
-		i++
-	}
-	if v.RunId != nil {
-		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
-		i++
-	}
-	if v.FirstEventId != nil {
-		fields[i] = fmt.Sprintf("FirstEventId: %v", *(v.FirstEventId))
-		i++
-	}
-	if v.NextEventId != nil {
-		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
-		i++
-	}
-	if v.Version != nil {
-		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
-		i++
-	}
-	if v.ReplicationInfo != nil {
-		fields[i] = fmt.Sprintf("ReplicationInfo: %v", v.ReplicationInfo)
-		i++
-	}
-	if v.History != nil {
-		fields[i] = fmt.Sprintf("History: %v", v.History)
-		i++
-	}
-	if v.NewRunHistory != nil {
-		fields[i] = fmt.Sprintf("NewRunHistory: %v", v.NewRunHistory)
-		i++
-	}
-	if v.EventStoreVersion != nil {
-		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
-		i++
-	}
-	if v.NewRunEventStoreVersion != nil {
-		fields[i] = fmt.Sprintf("NewRunEventStoreVersion: %v", *(v.NewRunEventStoreVersion))
-		i++
-	}
-	if v.ResetWorkflow != nil {
-		fields[i] = fmt.Sprintf("ResetWorkflow: %v", *(v.ResetWorkflow))
-		i++
-	}
-	if v.NewRunNDC != nil {
-		fields[i] = fmt.Sprintf("NewRunNDC: %v", *(v.NewRunNDC))
-		i++
-	}
-
-	return fmt.Sprintf("HistoryTaskAttributes{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _Map_String_ReplicationInfo_Equals(lhs, rhs map[string]*shared.ReplicationInfo) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for lk, lv := range lhs {
-		rv, ok := rhs[lk]
-		if !ok {
-			return false
-		}
-		if !lv.Equals(rv) {
-			return false
-		}
-	}
-	return true
-}
-
-func _I32_EqualsPtr(lhs, rhs *int32) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-func _Bool_EqualsPtr(lhs, rhs *bool) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-// Equals returns true if all the fields of this HistoryTaskAttributes match the
-// provided HistoryTaskAttributes.
-//
-// This function performs a deep comparison.
-func (v *HistoryTaskAttributes) Equals(rhs *HistoryTaskAttributes) bool {
-	if v == nil {
-		return rhs == nil
-	} else if rhs == nil {
-		return false
-	}
-	if !((v.TargetClusters == nil && rhs.TargetClusters == nil) || (v.TargetClusters != nil && rhs.TargetClusters != nil && _List_String_Equals(v.TargetClusters, rhs.TargetClusters))) {
-		return false
-	}
-	if !_String_EqualsPtr(v.DomainId, rhs.DomainId) {
-		return false
-	}
-	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
-		return false
-	}
-	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.FirstEventId, rhs.FirstEventId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.Version, rhs.Version) {
-		return false
-	}
-	if !((v.ReplicationInfo == nil && rhs.ReplicationInfo == nil) || (v.ReplicationInfo != nil && rhs.ReplicationInfo != nil && _Map_String_ReplicationInfo_Equals(v.ReplicationInfo, rhs.ReplicationInfo))) {
-		return false
-	}
-	if !((v.History == nil && rhs.History == nil) || (v.History != nil && rhs.History != nil && v.History.Equals(rhs.History))) {
-		return false
-	}
-	if !((v.NewRunHistory == nil && rhs.NewRunHistory == nil) || (v.NewRunHistory != nil && rhs.NewRunHistory != nil && v.NewRunHistory.Equals(rhs.NewRunHistory))) {
-		return false
-	}
-	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
-		return false
-	}
-	if !_I32_EqualsPtr(v.NewRunEventStoreVersion, rhs.NewRunEventStoreVersion) {
-		return false
-	}
-	if !_Bool_EqualsPtr(v.ResetWorkflow, rhs.ResetWorkflow) {
-		return false
-	}
-	if !_Bool_EqualsPtr(v.NewRunNDC, rhs.NewRunNDC) {
-		return false
-	}
-
-	return true
-}
-
-type _Map_String_ReplicationInfo_Zapper map[string]*shared.ReplicationInfo
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of _Map_String_ReplicationInfo_Zapper.
-func (m _Map_String_ReplicationInfo_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	for k, v := range m {
-		err = multierr.Append(err, enc.AddObject((string)(k), v))
-	}
-	return err
-}
-
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of HistoryTaskAttributes.
-func (v *HistoryTaskAttributes) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	if v == nil {
-		return nil
-	}
-	if v.TargetClusters != nil {
-		err = multierr.Append(err, enc.AddArray("targetClusters", (_List_String_Zapper)(v.TargetClusters)))
-	}
-	if v.DomainId != nil {
-		enc.AddString("domainId", *v.DomainId)
-	}
-	if v.WorkflowId != nil {
-		enc.AddString("workflowId", *v.WorkflowId)
-	}
-	if v.RunId != nil {
-		enc.AddString("runId", *v.RunId)
-	}
-	if v.FirstEventId != nil {
-		enc.AddInt64("firstEventId", *v.FirstEventId)
-	}
-	if v.NextEventId != nil {
-		enc.AddInt64("nextEventId", *v.NextEventId)
-	}
-	if v.Version != nil {
-		enc.AddInt64("version", *v.Version)
-	}
-	if v.ReplicationInfo != nil {
-		err = multierr.Append(err, enc.AddObject("replicationInfo", (_Map_String_ReplicationInfo_Zapper)(v.ReplicationInfo)))
-	}
-	if v.History != nil {
-		err = multierr.Append(err, enc.AddObject("history", v.History))
-	}
-	if v.NewRunHistory != nil {
-		err = multierr.Append(err, enc.AddObject("newRunHistory", v.NewRunHistory))
-	}
-	if v.EventStoreVersion != nil {
-		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
-	}
-	if v.NewRunEventStoreVersion != nil {
-		enc.AddInt32("newRunEventStoreVersion", *v.NewRunEventStoreVersion)
-	}
-	if v.ResetWorkflow != nil {
-		enc.AddBool("resetWorkflow", *v.ResetWorkflow)
-	}
-	if v.NewRunNDC != nil {
-		enc.AddBool("newRunNDC", *v.NewRunNDC)
-	}
-	return err
-}
-
-// GetTargetClusters returns the value of TargetClusters if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetTargetClusters() (o []string) {
-	if v != nil && v.TargetClusters != nil {
-		return v.TargetClusters
-	}
-
-	return
-}
-
-// IsSetTargetClusters returns true if TargetClusters is not nil.
-func (v *HistoryTaskAttributes) IsSetTargetClusters() bool {
-	return v != nil && v.TargetClusters != nil
-}
-
-// GetDomainId returns the value of DomainId if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetDomainId() (o string) {
-	if v != nil && v.DomainId != nil {
-		return *v.DomainId
-	}
-
-	return
-}
-
-// IsSetDomainId returns true if DomainId is not nil.
-func (v *HistoryTaskAttributes) IsSetDomainId() bool {
-	return v != nil && v.DomainId != nil
-}
-
-// GetWorkflowId returns the value of WorkflowId if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetWorkflowId() (o string) {
-	if v != nil && v.WorkflowId != nil {
-		return *v.WorkflowId
-	}
-
-	return
-}
-
-// IsSetWorkflowId returns true if WorkflowId is not nil.
-func (v *HistoryTaskAttributes) IsSetWorkflowId() bool {
-	return v != nil && v.WorkflowId != nil
-}
-
-// GetRunId returns the value of RunId if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetRunId() (o string) {
-	if v != nil && v.RunId != nil {
-		return *v.RunId
-	}
-
-	return
-}
-
-// IsSetRunId returns true if RunId is not nil.
-func (v *HistoryTaskAttributes) IsSetRunId() bool {
-	return v != nil && v.RunId != nil
-}
-
-// GetFirstEventId returns the value of FirstEventId if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetFirstEventId() (o int64) {
-	if v != nil && v.FirstEventId != nil {
-		return *v.FirstEventId
-	}
-
-	return
-}
-
-// IsSetFirstEventId returns true if FirstEventId is not nil.
-func (v *HistoryTaskAttributes) IsSetFirstEventId() bool {
-	return v != nil && v.FirstEventId != nil
-}
-
-// GetNextEventId returns the value of NextEventId if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetNextEventId() (o int64) {
-	if v != nil && v.NextEventId != nil {
-		return *v.NextEventId
-	}
-
-	return
-}
-
-// IsSetNextEventId returns true if NextEventId is not nil.
-func (v *HistoryTaskAttributes) IsSetNextEventId() bool {
-	return v != nil && v.NextEventId != nil
-}
-
-// GetVersion returns the value of Version if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
-	}
-
-	return
-}
-
-// IsSetVersion returns true if Version is not nil.
-func (v *HistoryTaskAttributes) IsSetVersion() bool {
-	return v != nil && v.Version != nil
-}
-
-// GetReplicationInfo returns the value of ReplicationInfo if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetReplicationInfo() (o map[string]*shared.ReplicationInfo) {
-	if v != nil && v.ReplicationInfo != nil {
-		return v.ReplicationInfo
-	}
-
-	return
-}
-
-// IsSetReplicationInfo returns true if ReplicationInfo is not nil.
-func (v *HistoryTaskAttributes) IsSetReplicationInfo() bool {
-	return v != nil && v.ReplicationInfo != nil
-}
-
-// GetHistory returns the value of History if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetHistory() (o *shared.History) {
-	if v != nil && v.History != nil {
-		return v.History
-	}
-
-	return
-}
-
-// IsSetHistory returns true if History is not nil.
-func (v *HistoryTaskAttributes) IsSetHistory() bool {
-	return v != nil && v.History != nil
-}
-
-// GetNewRunHistory returns the value of NewRunHistory if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetNewRunHistory() (o *shared.History) {
-	if v != nil && v.NewRunHistory != nil {
-		return v.NewRunHistory
-	}
-
-	return
-}
-
-// IsSetNewRunHistory returns true if NewRunHistory is not nil.
-func (v *HistoryTaskAttributes) IsSetNewRunHistory() bool {
-	return v != nil && v.NewRunHistory != nil
-}
-
-// GetEventStoreVersion returns the value of EventStoreVersion if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetEventStoreVersion() (o int32) {
-	if v != nil && v.EventStoreVersion != nil {
-		return *v.EventStoreVersion
-	}
-
-	return
-}
-
-// IsSetEventStoreVersion returns true if EventStoreVersion is not nil.
-func (v *HistoryTaskAttributes) IsSetEventStoreVersion() bool {
-	return v != nil && v.EventStoreVersion != nil
-}
-
-// GetNewRunEventStoreVersion returns the value of NewRunEventStoreVersion if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetNewRunEventStoreVersion() (o int32) {
-	if v != nil && v.NewRunEventStoreVersion != nil {
-		return *v.NewRunEventStoreVersion
-	}
-
-	return
-}
-
-// IsSetNewRunEventStoreVersion returns true if NewRunEventStoreVersion is not nil.
-func (v *HistoryTaskAttributes) IsSetNewRunEventStoreVersion() bool {
-	return v != nil && v.NewRunEventStoreVersion != nil
-}
-
-// GetResetWorkflow returns the value of ResetWorkflow if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetResetWorkflow() (o bool) {
-	if v != nil && v.ResetWorkflow != nil {
-		return *v.ResetWorkflow
-	}
-
-	return
-}
-
-// IsSetResetWorkflow returns true if ResetWorkflow is not nil.
-func (v *HistoryTaskAttributes) IsSetResetWorkflow() bool {
-	return v != nil && v.ResetWorkflow != nil
-}
-
-// GetNewRunNDC returns the value of NewRunNDC if it is set or its
-// zero value if it is unset.
-func (v *HistoryTaskAttributes) GetNewRunNDC() (o bool) {
-	if v != nil && v.NewRunNDC != nil {
-		return *v.NewRunNDC
-	}
-
-	return
-}
-
-// IsSetNewRunNDC returns true if NewRunNDC is not nil.
-func (v *HistoryTaskAttributes) IsSetNewRunNDC() bool {
-	return v != nil && v.NewRunNDC != nil
-}
-
 type HistoryTaskV2Attributes struct {
 	TaskId              *int64                       `json:"taskId,omitempty"`
 	DomainId            *string                      `json:"domainId,omitempty"`
@@ -4615,6 +3317,16 @@ func _DLQType_EqualsPtr(lhs, rhs *DLQType) bool {
 		x := *lhs
 		y := *rhs
 		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+func _I32_EqualsPtr(lhs, rhs *int32) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
 	}
 	return lhs == nil && rhs == nil
 }
@@ -5917,6 +4629,16 @@ func (v *ReplicationMessages) String() string {
 	return fmt.Sprintf("ReplicationMessages{%v}", strings.Join(fields[:i], ", "))
 }
 
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
 // Equals returns true if all the fields of this ReplicationMessages match the
 // provided ReplicationMessages.
 //
@@ -6028,10 +4750,8 @@ type ReplicationTask struct {
 	TaskType                      *ReplicationTaskType           `json:"taskType,omitempty"`
 	SourceTaskId                  *int64                         `json:"sourceTaskId,omitempty"`
 	DomainTaskAttributes          *DomainTaskAttributes          `json:"domainTaskAttributes,omitempty"`
-	HistoryTaskAttributes         *HistoryTaskAttributes         `json:"historyTaskAttributes,omitempty"`
 	SyncShardStatusTaskAttributes *SyncShardStatusTaskAttributes `json:"syncShardStatusTaskAttributes,omitempty"`
 	SyncActivityTaskAttributes    *SyncActivityTaskAttributes    `json:"syncActivityTaskAttributes,omitempty"`
-	HistoryMetadataTaskAttributes *HistoryMetadataTaskAttributes `json:"historyMetadataTaskAttributes,omitempty"`
 	HistoryTaskV2Attributes       *HistoryTaskV2Attributes       `json:"historyTaskV2Attributes,omitempty"`
 	FailoverMarkerAttributes      *FailoverMarkerAttributes      `json:"failoverMarkerAttributes,omitempty"`
 }
@@ -6053,7 +4773,7 @@ type ReplicationTask struct {
 //   }
 func (v *ReplicationTask) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -6083,14 +4803,6 @@ func (v *ReplicationTask) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
-	if v.HistoryTaskAttributes != nil {
-		w, err = v.HistoryTaskAttributes.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
 	if v.SyncShardStatusTaskAttributes != nil {
 		w, err = v.SyncShardStatusTaskAttributes.ToWire()
 		if err != nil {
@@ -6105,14 +4817,6 @@ func (v *ReplicationTask) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-	if v.HistoryMetadataTaskAttributes != nil {
-		w, err = v.HistoryMetadataTaskAttributes.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 	if v.HistoryTaskV2Attributes != nil {
@@ -6147,12 +4851,6 @@ func _DomainTaskAttributes_Read(w wire.Value) (*DomainTaskAttributes, error) {
 	return &v, err
 }
 
-func _HistoryTaskAttributes_Read(w wire.Value) (*HistoryTaskAttributes, error) {
-	var v HistoryTaskAttributes
-	err := v.FromWire(w)
-	return &v, err
-}
-
 func _SyncShardStatusTaskAttributes_Read(w wire.Value) (*SyncShardStatusTaskAttributes, error) {
 	var v SyncShardStatusTaskAttributes
 	err := v.FromWire(w)
@@ -6161,12 +4859,6 @@ func _SyncShardStatusTaskAttributes_Read(w wire.Value) (*SyncShardStatusTaskAttr
 
 func _SyncActivityTaskAttributes_Read(w wire.Value) (*SyncActivityTaskAttributes, error) {
 	var v SyncActivityTaskAttributes
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _HistoryMetadataTaskAttributes_Read(w wire.Value) (*HistoryMetadataTaskAttributes, error) {
-	var v HistoryMetadataTaskAttributes
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -6227,14 +4919,6 @@ func (v *ReplicationTask) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 30:
-			if field.Value.Type() == wire.TStruct {
-				v.HistoryTaskAttributes, err = _HistoryTaskAttributes_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
 		case 40:
 			if field.Value.Type() == wire.TStruct {
 				v.SyncShardStatusTaskAttributes, err = _SyncShardStatusTaskAttributes_Read(field.Value)
@@ -6246,14 +4930,6 @@ func (v *ReplicationTask) FromWire(w wire.Value) error {
 		case 50:
 			if field.Value.Type() == wire.TStruct {
 				v.SyncActivityTaskAttributes, err = _SyncActivityTaskAttributes_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 60:
-			if field.Value.Type() == wire.TStruct {
-				v.HistoryMetadataTaskAttributes, err = _HistoryMetadataTaskAttributes_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -6288,7 +4964,7 @@ func (v *ReplicationTask) String() string {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [7]string
 	i := 0
 	if v.TaskType != nil {
 		fields[i] = fmt.Sprintf("TaskType: %v", *(v.TaskType))
@@ -6302,20 +4978,12 @@ func (v *ReplicationTask) String() string {
 		fields[i] = fmt.Sprintf("DomainTaskAttributes: %v", v.DomainTaskAttributes)
 		i++
 	}
-	if v.HistoryTaskAttributes != nil {
-		fields[i] = fmt.Sprintf("HistoryTaskAttributes: %v", v.HistoryTaskAttributes)
-		i++
-	}
 	if v.SyncShardStatusTaskAttributes != nil {
 		fields[i] = fmt.Sprintf("SyncShardStatusTaskAttributes: %v", v.SyncShardStatusTaskAttributes)
 		i++
 	}
 	if v.SyncActivityTaskAttributes != nil {
 		fields[i] = fmt.Sprintf("SyncActivityTaskAttributes: %v", v.SyncActivityTaskAttributes)
-		i++
-	}
-	if v.HistoryMetadataTaskAttributes != nil {
-		fields[i] = fmt.Sprintf("HistoryMetadataTaskAttributes: %v", v.HistoryMetadataTaskAttributes)
 		i++
 	}
 	if v.HistoryTaskV2Attributes != nil {
@@ -6359,16 +5027,10 @@ func (v *ReplicationTask) Equals(rhs *ReplicationTask) bool {
 	if !((v.DomainTaskAttributes == nil && rhs.DomainTaskAttributes == nil) || (v.DomainTaskAttributes != nil && rhs.DomainTaskAttributes != nil && v.DomainTaskAttributes.Equals(rhs.DomainTaskAttributes))) {
 		return false
 	}
-	if !((v.HistoryTaskAttributes == nil && rhs.HistoryTaskAttributes == nil) || (v.HistoryTaskAttributes != nil && rhs.HistoryTaskAttributes != nil && v.HistoryTaskAttributes.Equals(rhs.HistoryTaskAttributes))) {
-		return false
-	}
 	if !((v.SyncShardStatusTaskAttributes == nil && rhs.SyncShardStatusTaskAttributes == nil) || (v.SyncShardStatusTaskAttributes != nil && rhs.SyncShardStatusTaskAttributes != nil && v.SyncShardStatusTaskAttributes.Equals(rhs.SyncShardStatusTaskAttributes))) {
 		return false
 	}
 	if !((v.SyncActivityTaskAttributes == nil && rhs.SyncActivityTaskAttributes == nil) || (v.SyncActivityTaskAttributes != nil && rhs.SyncActivityTaskAttributes != nil && v.SyncActivityTaskAttributes.Equals(rhs.SyncActivityTaskAttributes))) {
-		return false
-	}
-	if !((v.HistoryMetadataTaskAttributes == nil && rhs.HistoryMetadataTaskAttributes == nil) || (v.HistoryMetadataTaskAttributes != nil && rhs.HistoryMetadataTaskAttributes != nil && v.HistoryMetadataTaskAttributes.Equals(rhs.HistoryMetadataTaskAttributes))) {
 		return false
 	}
 	if !((v.HistoryTaskV2Attributes == nil && rhs.HistoryTaskV2Attributes == nil) || (v.HistoryTaskV2Attributes != nil && rhs.HistoryTaskV2Attributes != nil && v.HistoryTaskV2Attributes.Equals(rhs.HistoryTaskV2Attributes))) {
@@ -6396,17 +5058,11 @@ func (v *ReplicationTask) MarshalLogObject(enc zapcore.ObjectEncoder) (err error
 	if v.DomainTaskAttributes != nil {
 		err = multierr.Append(err, enc.AddObject("domainTaskAttributes", v.DomainTaskAttributes))
 	}
-	if v.HistoryTaskAttributes != nil {
-		err = multierr.Append(err, enc.AddObject("historyTaskAttributes", v.HistoryTaskAttributes))
-	}
 	if v.SyncShardStatusTaskAttributes != nil {
 		err = multierr.Append(err, enc.AddObject("syncShardStatusTaskAttributes", v.SyncShardStatusTaskAttributes))
 	}
 	if v.SyncActivityTaskAttributes != nil {
 		err = multierr.Append(err, enc.AddObject("syncActivityTaskAttributes", v.SyncActivityTaskAttributes))
-	}
-	if v.HistoryMetadataTaskAttributes != nil {
-		err = multierr.Append(err, enc.AddObject("historyMetadataTaskAttributes", v.HistoryMetadataTaskAttributes))
 	}
 	if v.HistoryTaskV2Attributes != nil {
 		err = multierr.Append(err, enc.AddObject("historyTaskV2Attributes", v.HistoryTaskV2Attributes))
@@ -6462,21 +5118,6 @@ func (v *ReplicationTask) IsSetDomainTaskAttributes() bool {
 	return v != nil && v.DomainTaskAttributes != nil
 }
 
-// GetHistoryTaskAttributes returns the value of HistoryTaskAttributes if it is set or its
-// zero value if it is unset.
-func (v *ReplicationTask) GetHistoryTaskAttributes() (o *HistoryTaskAttributes) {
-	if v != nil && v.HistoryTaskAttributes != nil {
-		return v.HistoryTaskAttributes
-	}
-
-	return
-}
-
-// IsSetHistoryTaskAttributes returns true if HistoryTaskAttributes is not nil.
-func (v *ReplicationTask) IsSetHistoryTaskAttributes() bool {
-	return v != nil && v.HistoryTaskAttributes != nil
-}
-
 // GetSyncShardStatusTaskAttributes returns the value of SyncShardStatusTaskAttributes if it is set or its
 // zero value if it is unset.
 func (v *ReplicationTask) GetSyncShardStatusTaskAttributes() (o *SyncShardStatusTaskAttributes) {
@@ -6505,21 +5146,6 @@ func (v *ReplicationTask) GetSyncActivityTaskAttributes() (o *SyncActivityTaskAt
 // IsSetSyncActivityTaskAttributes returns true if SyncActivityTaskAttributes is not nil.
 func (v *ReplicationTask) IsSetSyncActivityTaskAttributes() bool {
 	return v != nil && v.SyncActivityTaskAttributes != nil
-}
-
-// GetHistoryMetadataTaskAttributes returns the value of HistoryMetadataTaskAttributes if it is set or its
-// zero value if it is unset.
-func (v *ReplicationTask) GetHistoryMetadataTaskAttributes() (o *HistoryMetadataTaskAttributes) {
-	if v != nil && v.HistoryMetadataTaskAttributes != nil {
-		return v.HistoryMetadataTaskAttributes
-	}
-
-	return
-}
-
-// IsSetHistoryMetadataTaskAttributes returns true if HistoryMetadataTaskAttributes is not nil.
-func (v *ReplicationTask) IsSetHistoryMetadataTaskAttributes() bool {
-	return v != nil && v.HistoryMetadataTaskAttributes != nil
 }
 
 // GetHistoryTaskV2Attributes returns the value of HistoryTaskV2Attributes if it is set or its
@@ -8637,11 +7263,11 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "replicator",
 	Package:  "github.com/uber/cadence/.gen/go/replicator",
 	FilePath: "replicator.thrift",
-	SHA1:     "56a97e6a8eac4e7549ba3f121ab1b6671cd16d7e",
+	SHA1:     "c42f466651c7eef6f40ed0edccbd95e88c361f83",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n  HistoryV2\n  FailoverMarker\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n  70: optional i64 (js.type = \"Long\") previousFailoverVersion\n}\n\nstruct HistoryTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n  60: optional i64 (js.type = \"Long\") version\n  70: optional map<string, shared.ReplicationInfo> replicationInfo\n  80: optional shared.History history\n  90: optional shared.History newRunHistory\n  100: optional i32 eventStoreVersion\n  110: optional i32 newRunEventStoreVersion\n  120: optional bool resetWorkflow\n  130: optional bool newRunNDC\n}\n\nstruct HistoryMetadataTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n  60: optional i64 (js.type = \"Long\") version\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActivityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n  140: optional binary lastFailureDetails\n  150: optional shared.VersionHistory versionHistory\n}\n\nstruct HistoryTaskV2Attributes {\n  05: optional i64 (js.type = \"Long\") taskId\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional list<shared.VersionHistoryItem> versionHistoryItems\n  50: optional shared.DataBlob events\n  // new run events does not need version history since there is no prior events\n  70: optional shared.DataBlob newRunEvents\n}\n\nstruct FailoverMarkerAttributes{\n\t10: optional string domainID\n\t20: optional i64 (js.type = \"Long\") failoverVersion\n\t30: optional i64 (js.type = \"Long\") creationTime\n}\n\nstruct FailoverMarkers{\n\t10: optional list<FailoverMarkerAttributes> failoverMarkers\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  11: optional i64 (js.type = \"Long\") sourceTaskId\n  20: optional DomainTaskAttributes domainTaskAttributes\n  30: optional HistoryTaskAttributes historyTaskAttributes  // TODO deprecate once NDC migration is done\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActivityTaskAttributes syncActivityTaskAttributes\n  60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes // TODO deprecate once kafka deprecation is done\n  70: optional HistoryTaskV2Attributes historyTaskV2Attributes\n  80: optional FailoverMarkerAttributes failoverMarkerAttributes\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  // lastRetrivedMessageId is where the next fetch should begin with\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  30: optional i64 (js.type = \"Long\") lastProcessedMessageId\n}\n\nstruct SyncShardStatus {\n    10: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct ReplicationMessages {\n  10: optional list<ReplicationTask> replicationTasks\n  // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  30: optional bool hasMore // Hint for flow control\n  40: optional SyncShardStatus syncShardStatus\n}\n\nstruct ReplicationTaskInfo {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional i16 taskType\n  50: optional i64 (js.type = \"Long\") taskID\n  60: optional i64 (js.type = \"Long\") version\n  70: optional i64 (js.type = \"Long\") firstEventID\n  80: optional i64 (js.type = \"Long\") nextEventID\n  90: optional i64 (js.type = \"Long\") scheduledID\n}\n\nstruct GetReplicationMessagesRequest {\n  10: optional list<ReplicationToken> tokens\n  20: optional string clusterName\n}\n\nstruct GetReplicationMessagesResponse {\n  10: optional map<i32, ReplicationMessages> messagesByShard\n}\n\nstruct GetDomainReplicationMessagesRequest {\n  // lastRetrievedMessageId is where the next fetch should begin with\n  10: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  20: optional i64 (js.type = \"Long\") lastProcessedMessageId\n  // clusterName is the name of the pulling cluster\n  30: optional string clusterName\n}\n\nstruct GetDomainReplicationMessagesResponse {\n  10: optional ReplicationMessages messages\n}\n\nstruct GetDLQReplicationMessagesRequest {\n  10: optional list<ReplicationTaskInfo> taskInfos\n}\n\nstruct GetDLQReplicationMessagesResponse {\n  10: optional list<ReplicationTask> replicationTasks\n}\n\nenum DLQType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional DLQType type\n  20: optional list<ReplicationTask> replicationTasks\n  30: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n  HistoryV2\n  FailoverMarker\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n  70: optional i64 (js.type = \"Long\") previousFailoverVersion\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActivityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n  140: optional binary lastFailureDetails\n  150: optional shared.VersionHistory versionHistory\n}\n\nstruct HistoryTaskV2Attributes {\n  05: optional i64 (js.type = \"Long\") taskId\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional list<shared.VersionHistoryItem> versionHistoryItems\n  50: optional shared.DataBlob events\n  // new run events does not need version history since there is no prior events\n  70: optional shared.DataBlob newRunEvents\n}\n\nstruct FailoverMarkerAttributes{\n\t10: optional string domainID\n\t20: optional i64 (js.type = \"Long\") failoverVersion\n\t30: optional i64 (js.type = \"Long\") creationTime\n}\n\nstruct FailoverMarkers{\n\t10: optional list<FailoverMarkerAttributes> failoverMarkers\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  11: optional i64 (js.type = \"Long\") sourceTaskId\n  20: optional DomainTaskAttributes domainTaskAttributes\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActivityTaskAttributes syncActivityTaskAttributes\n  70: optional HistoryTaskV2Attributes historyTaskV2Attributes\n  80: optional FailoverMarkerAttributes failoverMarkerAttributes\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  // lastRetrivedMessageId is where the next fetch should begin with\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  30: optional i64 (js.type = \"Long\") lastProcessedMessageId\n}\n\nstruct SyncShardStatus {\n    10: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct ReplicationMessages {\n  10: optional list<ReplicationTask> replicationTasks\n  // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  30: optional bool hasMore // Hint for flow control\n  40: optional SyncShardStatus syncShardStatus\n}\n\nstruct ReplicationTaskInfo {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional i16 taskType\n  50: optional i64 (js.type = \"Long\") taskID\n  60: optional i64 (js.type = \"Long\") version\n  70: optional i64 (js.type = \"Long\") firstEventID\n  80: optional i64 (js.type = \"Long\") nextEventID\n  90: optional i64 (js.type = \"Long\") scheduledID\n}\n\nstruct GetReplicationMessagesRequest {\n  10: optional list<ReplicationToken> tokens\n  20: optional string clusterName\n}\n\nstruct GetReplicationMessagesResponse {\n  10: optional map<i32, ReplicationMessages> messagesByShard\n}\n\nstruct GetDomainReplicationMessagesRequest {\n  // lastRetrievedMessageId is where the next fetch should begin with\n  10: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  20: optional i64 (js.type = \"Long\") lastProcessedMessageId\n  // clusterName is the name of the pulling cluster\n  30: optional string clusterName\n}\n\nstruct GetDomainReplicationMessagesResponse {\n  10: optional ReplicationMessages messages\n}\n\nstruct GetDLQReplicationMessagesRequest {\n  10: optional list<ReplicationTaskInfo> taskInfos\n}\n\nstruct GetDLQReplicationMessagesResponse {\n  10: optional list<ReplicationTask> replicationTasks\n}\n\nenum DLQType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional DLQType type\n  20: optional list<ReplicationTask> replicationTasks\n  30: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}\n"

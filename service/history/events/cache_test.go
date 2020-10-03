@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -135,7 +136,7 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 	}
 
 	shardID := common.IntPtr(10)
-	s.mockHistoryManager.On("ReadHistoryBranch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryManager.On("ReadHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   []byte("store_token"),
 		MinEventID:    event1.GetEventId(),
 		MaxEventID:    event6.GetEventId() + 1,
@@ -161,7 +162,7 @@ func (s *eventsCacheSuite) TestEventsCacheMissV2Failure() {
 	shardID := common.IntPtr(10)
 
 	expectedErr := errors.New("persistence call failed")
-	s.mockHistoryManager.On("ReadHistoryBranch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryManager.On("ReadHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   []byte("store_token"),
 		MinEventID:    int64(11),
 		MaxEventID:    int64(15),
@@ -191,7 +192,7 @@ func (s *eventsCacheSuite) TestEventsCacheDisableSuccess() {
 		ActivityTaskStartedEventAttributes: &shared.ActivityTaskStartedEventAttributes{},
 	}
 
-	s.mockHistoryManager.On("ReadHistoryBranch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryManager.On("ReadHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   []byte("store_token"),
 		MinEventID:    event2.GetEventId(),
 		MaxEventID:    event2.GetEventId() + 1,

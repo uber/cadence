@@ -23,6 +23,7 @@
 package execution
 
 import (
+	"context"
 	ctx "context"
 	"fmt"
 	"time"
@@ -218,7 +219,6 @@ func (r *stateRebuilderImpl) applyEvents(
 		},
 		events,
 		nil, // no new run history when rebuilding mutable state
-		true,
 	)
 	if err != nil {
 		r.logger.Error("nDCStateRebuilder unable to rebuild mutable state.", tag.Error(err))
@@ -237,6 +237,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, size, err := persistence.PaginateHistory(
+			context.TODO(),
 			r.historyV2Mgr,
 			true,
 			branchToken,

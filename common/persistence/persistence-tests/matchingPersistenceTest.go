@@ -70,14 +70,17 @@ func (s *MatchingPersistenceSuite) SetupTest() {
 
 // TestCreateTask test
 func (s *MatchingPersistenceSuite) TestCreateTask() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("create-task-test"),
 		RunId: common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
-	task0, err0 := s.CreateDecisionTask(domainID, workflowExecution, "a5b38106793c", 5)
+	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, "a5b38106793c", 5)
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
-	tasks1, err1 := s.CreateActivityTasks(domainID, workflowExecution, map[int64]string{
+	tasks1, err1 := s.CreateActivityTasks(ctx, domainID, workflowExecution, map[int64]string{
 		10: "a5b38106793c"})
 	s.NoError(err1)
 	s.NotNil(tasks1, "Expected valid task identifiers.")
@@ -93,12 +96,12 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 		50: uuid.New(),
 		60: uuid.New(),
 	}
-	tasks2, err2 := s.CreateActivityTasks(domainID, workflowExecution, tasks)
+	tasks2, err2 := s.CreateActivityTasks(ctx, domainID, workflowExecution, tasks)
 	s.NoError(err2)
 	s.Equal(5, len(tasks2), "expected single valid task identifier.")
 
 	for sid, tlName := range tasks {
-		resp, err := s.GetTasks(domainID, tlName, p.TaskListTypeActivity, 100)
+		resp, err := s.GetTasks(ctx, domainID, tlName, p.TaskListTypeActivity, 100)
 		s.NoError(err)
 		s.Equal(1, len(resp.Tasks))
 		s.Equal(domainID, resp.Tasks[0].DomainID)
@@ -116,15 +119,18 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 
 // TestGetDecisionTasks test
 func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
 		RunId: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
 	taskList := "d8b886738e05"
-	task0, err0 := s.CreateDecisionTask(domainID, workflowExecution, taskList, 5)
+	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, taskList, 5)
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
-	tasks1Response, err1 := s.GetTasks(domainID, taskList, p.TaskListTypeDecision, 1)
+	tasks1Response, err1 := s.GetTasks(ctx, domainID, taskList, p.TaskListTypeDecision, 1)
 	s.NoError(err1)
 	s.NotNil(tasks1Response.Tasks, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1Response.Tasks), "Expected 1 decision task.")
@@ -133,6 +139,9 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 
 // TestGetTasksWithNoMaxReadLevel test
 func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	if s.TaskMgr.GetName() == "cassandra" {
 		//this test is not applicable for cassandra persistence
 		return
@@ -141,7 +150,7 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
 		RunId: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
 	taskList := "48b07ec1915d"
-	_, err0 := s.CreateActivityTasks(domainID, workflowExecution, map[int64]string{
+	_, err0 := s.CreateActivityTasks(ctx, domainID, workflowExecution, map[int64]string{
 		10: taskList,
 		20: taskList,
 		30: taskList,
@@ -163,9 +172,6 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 		{5, firstTaskID + 2, []int64{firstTaskID + 3, firstTaskID + 4}},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
 	for _, tc := range testCases {
 		s.Run(fmt.Sprintf("tc_%v_%v", tc.batchSz, tc.readLevel), func() {
 			response, err := s.TaskMgr.GetTasks(ctx, &p.GetTasksRequest{
@@ -186,11 +192,14 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 
 // TestCompleteDecisionTask test
 func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
 		RunId: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
 	taskList := "48b07ec1915d"
-	tasks0, err0 := s.CreateActivityTasks(domainID, workflowExecution, map[int64]string{
+	tasks0, err0 := s.CreateActivityTasks(ctx, domainID, workflowExecution, map[int64]string{
 		10: taskList,
 		20: taskList,
 		30: taskList,
@@ -204,7 +213,7 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 		s.NotEmpty(t, "Expected non empty task identifier.")
 	}
 
-	tasksWithID1Response, err1 := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 5)
+	tasksWithID1Response, err1 := s.GetTasks(ctx, domainID, taskList, p.TaskListTypeActivity, 5)
 
 	s.NoError(err1)
 	tasksWithID1 := tasksWithID1Response.Tasks
@@ -217,20 +226,23 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 		s.Equal(*workflowExecution.RunId, t.RunID)
 		s.True(t.TaskID > 0)
 
-		err2 := s.CompleteTask(domainID, taskList, p.TaskListTypeActivity, t.TaskID, 100)
+		err2 := s.CompleteTask(ctx, domainID, taskList, p.TaskListTypeActivity, t.TaskID, 100)
 		s.NoError(err2)
 	}
 }
 
 // TestCompleteTasksLessThan test
 func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	domainID := uuid.New()
 	taskList := "range-complete-task-tl0"
 	wfExec := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("range-complete-task-test"),
 		RunId:      common.StringPtr(uuid.New()),
 	}
-	_, err := s.CreateActivityTasks(domainID, wfExec, map[int64]string{
+	_, err := s.CreateActivityTasks(ctx, domainID, wfExec, map[int64]string{
 		10: taskList,
 		20: taskList,
 		30: taskList,
@@ -240,7 +252,7 @@ func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 	})
 	s.NoError(err)
 
-	resp, err := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 10)
+	resp, err := s.GetTasks(ctx, domainID, taskList, p.TaskListTypeActivity, 10)
 	s.NoError(err)
 	s.NotNil(resp.Tasks)
 	s.Equal(6, len(resp.Tasks), "getTasks returned wrong number of tasks")
@@ -272,15 +284,12 @@ func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 	remaining := len(resp.Tasks)
 	req := &p.CompleteTasksLessThanRequest{DomainID: domainID, TaskListName: taskList, TaskType: p.TaskListTypeActivity, Limit: 1}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
 	for _, tc := range testCases {
 		req.TaskID = tc.taskID
 		req.Limit = tc.limit
 		nRows, err := s.TaskMgr.CompleteTasksLessThan(ctx, req)
 		s.NoError(err)
-		resp, err := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 10)
+		resp, err := s.GetTasks(ctx, domainID, taskList, p.TaskListTypeActivity, 10)
 		s.NoError(err)
 		if nRows == p.UnknownNumRowsAffected {
 			s.Equal(0, len(resp.Tasks), "expected all tasks to be deleted")

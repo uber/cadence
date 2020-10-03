@@ -88,7 +88,11 @@ var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ Queue = (*queueRateLimitedPersistenceClient)(nil)
 
 // NewShardPersistenceRateLimitedClient creates a client to manage shards
-func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter quotas.Limiter, logger log.Logger) ShardManager {
+func NewShardPersistenceRateLimitedClient(
+	persistence ShardManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) ShardManager {
 	return &shardRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -97,7 +101,11 @@ func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter 
 }
 
 // NewWorkflowExecutionPersistenceRateLimitedClient creates a client to manage executions
-func NewWorkflowExecutionPersistenceRateLimitedClient(persistence ExecutionManager, rateLimiter quotas.Limiter, logger log.Logger) ExecutionManager {
+func NewWorkflowExecutionPersistenceRateLimitedClient(
+	persistence ExecutionManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) ExecutionManager {
 	return &workflowExecutionRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -106,7 +114,11 @@ func NewWorkflowExecutionPersistenceRateLimitedClient(persistence ExecutionManag
 }
 
 // NewTaskPersistenceRateLimitedClient creates a client to manage tasks
-func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter quotas.Limiter, logger log.Logger) TaskManager {
+func NewTaskPersistenceRateLimitedClient(
+	persistence TaskManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) TaskManager {
 	return &taskRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -115,7 +127,11 @@ func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter qu
 }
 
 // NewHistoryV2PersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryManager, rateLimiter quotas.Limiter, logger log.Logger) HistoryManager {
+func NewHistoryV2PersistenceRateLimitedClient(
+	persistence HistoryManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) HistoryManager {
 	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -124,7 +140,11 @@ func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryManager, rateLi
 }
 
 // NewMetadataPersistenceRateLimitedClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceRateLimitedClient(persistence MetadataManager, rateLimiter quotas.Limiter, logger log.Logger) MetadataManager {
+func NewMetadataPersistenceRateLimitedClient(
+	persistence MetadataManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) MetadataManager {
 	return &metadataRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -133,7 +153,11 @@ func NewMetadataPersistenceRateLimitedClient(persistence MetadataManager, rateLi
 }
 
 // NewVisibilityPersistenceRateLimitedClient creates a client to manage visibility
-func NewVisibilityPersistenceRateLimitedClient(persistence VisibilityManager, rateLimiter quotas.Limiter, logger log.Logger) VisibilityManager {
+func NewVisibilityPersistenceRateLimitedClient(
+	persistence VisibilityManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) VisibilityManager {
 	return &visibilityRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -142,7 +166,11 @@ func NewVisibilityPersistenceRateLimitedClient(persistence VisibilityManager, ra
 }
 
 // NewQueuePersistenceRateLimitedClient creates a client to manage queue
-func NewQueuePersistenceRateLimitedClient(persistence Queue, rateLimiter quotas.Limiter, logger log.Logger) Queue {
+func NewQueuePersistenceRateLimitedClient(
+	persistence Queue,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) Queue {
 	return &queueRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -202,242 +230,310 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetShardID() int {
 	return p.persistence.GetShardID()
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) CreateWorkflowExecution(
+	ctx context.Context,
+	request *CreateWorkflowExecutionRequest,
+) (*CreateWorkflowExecutionResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.CreateWorkflowExecution(request)
+	response, err := p.persistence.CreateWorkflowExecution(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) GetWorkflowExecution(
+	ctx context.Context,
+	request *GetWorkflowExecutionRequest,
+) (*GetWorkflowExecutionResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetWorkflowExecution(request)
+	response, err := p.persistence.GetWorkflowExecution(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) UpdateWorkflowExecution(
+	ctx context.Context,
+	request *UpdateWorkflowExecutionRequest,
+) (*UpdateWorkflowExecutionResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	resp, err := p.persistence.UpdateWorkflowExecution(request)
+	resp, err := p.persistence.UpdateWorkflowExecution(ctx, request)
 	return resp, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowExecution(request *ConflictResolveWorkflowExecutionRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowExecution(
+	ctx context.Context,
+	request *ConflictResolveWorkflowExecutionRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.ConflictResolveWorkflowExecution(request)
+	err := p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(
+	ctx context.Context,
+	request *ResetWorkflowExecutionRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.ResetWorkflowExecution(request)
+	err := p.persistence.ResetWorkflowExecution(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
+	ctx context.Context,
+	request *DeleteWorkflowExecutionRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.DeleteWorkflowExecution(request)
+	err := p.persistence.DeleteWorkflowExecution(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExecution(
+	ctx context.Context,
+	request *DeleteCurrentWorkflowExecutionRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.DeleteCurrentWorkflowExecution(request)
+	err := p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) GetCurrentExecution(
+	ctx context.Context,
+	request *GetCurrentExecutionRequest,
+) (*GetCurrentExecutionResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetCurrentExecution(request)
+	response, err := p.persistence.GetCurrentExecution(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ListCurrentExecutions(request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) ListCurrentExecutions(
+	ctx context.Context,
+	request *ListCurrentExecutionsRequest,
+) (*ListCurrentExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListCurrentExecutions(request)
+	response, err := p.persistence.ListCurrentExecutions(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) IsWorkflowExecutionExists(request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) IsWorkflowExecutionExists(
+	ctx context.Context,
+	request *IsWorkflowExecutionExistsRequest,
+) (*IsWorkflowExecutionExistsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.IsWorkflowExecutionExists(request)
+	response, err := p.persistence.IsWorkflowExecutionExists(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ListConcreteExecutions(request *ListConcreteExecutionsRequest) (*ListConcreteExecutionsResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) ListConcreteExecutions(
+	ctx context.Context,
+	request *ListConcreteExecutionsRequest,
+) (*ListConcreteExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListConcreteExecutions(request)
+	response, err := p.persistence.ListConcreteExecutions(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) GetTransferTasks(
+	ctx context.Context,
+	request *GetTransferTasksRequest,
+) (*GetTransferTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetTransferTasks(request)
+	response, err := p.persistence.GetTransferTasks(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasks(
+	ctx context.Context,
+	request *GetReplicationTasksRequest,
+) (*GetReplicationTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetReplicationTasks(request)
+	response, err := p.persistence.GetReplicationTasks(ctx, request)
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTransferTask(request *CompleteTransferTaskRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTransferTask(
+	ctx context.Context,
+	request *CompleteTransferTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CompleteTransferTask(request)
+	err := p.persistence.CompleteTransferTask(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTransferTask(
+	ctx context.Context,
+	request *RangeCompleteTransferTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteTransferTask(request)
+	err := p.persistence.RangeCompleteTransferTask(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(request *CompleteReplicationTaskRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(
+	ctx context.Context,
+	request *CompleteReplicationTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CompleteReplicationTask(request)
+	err := p.persistence.CompleteReplicationTask(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteReplicationTask(
+	ctx context.Context,
+	request *RangeCompleteReplicationTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteReplicationTask(request)
+	err := p.persistence.RangeCompleteReplicationTask(ctx, request)
 	return err
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) PutReplicationTaskToDLQ(
+	ctx context.Context,
 	request *PutReplicationTaskToDLQRequest,
 ) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.PutReplicationTaskToDLQ(request)
+	return p.persistence.PutReplicationTaskToDLQ(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasksFromDLQ(
+	ctx context.Context,
 	request *GetReplicationTasksFromDLQRequest,
 ) (*GetReplicationTasksFromDLQResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.GetReplicationTasksFromDLQ(request)
+	return p.persistence.GetReplicationTasksFromDLQ(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationDLQSize(
+	ctx context.Context,
 	request *GetReplicationDLQSizeRequest,
 ) (*GetReplicationDLQSizeResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.GetReplicationDLQSize(request)
+	return p.persistence.GetReplicationDLQSize(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) DeleteReplicationTaskFromDLQ(
+	ctx context.Context,
 	request *DeleteReplicationTaskFromDLQRequest,
 ) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.DeleteReplicationTaskFromDLQ(request)
+	return p.persistence.DeleteReplicationTaskFromDLQ(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
+	ctx context.Context,
 	request *RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.RangeDeleteReplicationTaskFromDLQ(request)
+	return p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) CreateFailoverMarkerTasks(
+	ctx context.Context,
+	request *CreateFailoverMarkersRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CreateFailoverMarkerTasks(request)
+	err := p.persistence.CreateFailoverMarkerTasks(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error) {
+func (p *workflowExecutionRateLimitedPersistenceClient) GetTimerIndexTasks(
+	ctx context.Context,
+	request *GetTimerIndexTasksRequest,
+) (*GetTimerIndexTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	resonse, err := p.persistence.GetTimerIndexTasks(request)
-	return resonse, err
+	response, err := p.persistence.GetTimerIndexTasks(ctx, request)
+	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTimerTask(request *CompleteTimerTaskRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTimerTask(
+	ctx context.Context,
+	request *CompleteTimerTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.CompleteTimerTask(request)
+	err := p.persistence.CompleteTimerTask(ctx, request)
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTimerTask(
+	ctx context.Context,
+	request *RangeCompleteTimerTaskRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteTimerTask(request)
+	err := p.persistence.RangeCompleteTimerTask(ctx, request)
 	return err
 }
 
@@ -547,66 +643,86 @@ func (p *metadataRateLimitedPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *metadataRateLimitedPersistenceClient) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
+func (p *metadataRateLimitedPersistenceClient) CreateDomain(
+	ctx context.Context,
+	request *CreateDomainRequest,
+) (*CreateDomainResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.CreateDomain(request)
+	response, err := p.persistence.CreateDomain(ctx, request)
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
+func (p *metadataRateLimitedPersistenceClient) GetDomain(
+	ctx context.Context,
+	request *GetDomainRequest,
+) (*GetDomainResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetDomain(request)
+	response, err := p.persistence.GetDomain(ctx, request)
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) UpdateDomain(request *UpdateDomainRequest) error {
+func (p *metadataRateLimitedPersistenceClient) UpdateDomain(
+	ctx context.Context,
+	request *UpdateDomainRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.UpdateDomain(request)
+	err := p.persistence.UpdateDomain(ctx, request)
 	return err
 }
 
-func (p *metadataRateLimitedPersistenceClient) DeleteDomain(request *DeleteDomainRequest) error {
+func (p *metadataRateLimitedPersistenceClient) DeleteDomain(
+	ctx context.Context,
+	request *DeleteDomainRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.DeleteDomain(request)
+	err := p.persistence.DeleteDomain(ctx, request)
 	return err
 }
 
-func (p *metadataRateLimitedPersistenceClient) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
+func (p *metadataRateLimitedPersistenceClient) DeleteDomainByName(
+	ctx context.Context,
+	request *DeleteDomainByNameRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.DeleteDomainByName(request)
+	err := p.persistence.DeleteDomainByName(ctx, request)
 	return err
 }
 
-func (p *metadataRateLimitedPersistenceClient) ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error) {
+func (p *metadataRateLimitedPersistenceClient) ListDomains(
+	ctx context.Context,
+	request *ListDomainsRequest,
+) (*ListDomainsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListDomains(request)
+	response, err := p.persistence.ListDomains(ctx, request)
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) GetMetadata() (*GetMetadataResponse, error) {
+func (p *metadataRateLimitedPersistenceClient) GetMetadata(
+	ctx context.Context,
+) (*GetMetadataResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetMetadata()
+	response, err := p.persistence.GetMetadata(ctx)
 	return response, err
 }
 
@@ -618,131 +734,176 @@ func (p *visibilityRateLimitedPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionStarted(request *RecordWorkflowExecutionStartedRequest) error {
+func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionStarted(
+	ctx context.Context,
+	request *RecordWorkflowExecutionStartedRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RecordWorkflowExecutionStarted(request)
+	err := p.persistence.RecordWorkflowExecutionStarted(ctx, request)
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error {
+func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionClosed(
+	ctx context.Context,
+	request *RecordWorkflowExecutionClosedRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RecordWorkflowExecutionClosed(request)
+	err := p.persistence.RecordWorkflowExecutionClosed(ctx, request)
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) UpsertWorkflowExecution(request *UpsertWorkflowExecutionRequest) error {
+func (p *visibilityRateLimitedPersistenceClient) UpsertWorkflowExecution(
+	ctx context.Context,
+	request *UpsertWorkflowExecutionRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.UpsertWorkflowExecution(request)
+	err := p.persistence.UpsertWorkflowExecution(ctx, request)
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListOpenWorkflowExecutions(request)
+	response, err := p.persistence.ListOpenWorkflowExecutions(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListClosedWorkflowExecutions(request)
+	response, err := p.persistence.ListClosedWorkflowExecutions(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByType(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByTypeRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListOpenWorkflowExecutionsByType(request)
+	response, err := p.persistence.ListOpenWorkflowExecutionsByType(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByType(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByTypeRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListClosedWorkflowExecutionsByType(request)
+	response, err := p.persistence.ListClosedWorkflowExecutionsByType(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByWorkflowID(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByWorkflowIDRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListOpenWorkflowExecutionsByWorkflowID(request)
+	response, err := p.persistence.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByWorkflowID(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByWorkflowIDRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListClosedWorkflowExecutionsByWorkflowID(request)
+	response, err := p.persistence.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByStatus(
+	ctx context.Context,
+	request *ListClosedWorkflowExecutionsByStatusRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.ListClosedWorkflowExecutionsByStatus(request)
+	response, err := p.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) GetClosedWorkflowExecution(
+	ctx context.Context,
+	request *GetClosedWorkflowExecutionRequest,
+) (*GetClosedWorkflowExecutionResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 
-	response, err := p.persistence.GetClosedWorkflowExecution(request)
+	response, err := p.persistence.GetClosedWorkflowExecution(ctx, request)
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error {
+func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
-	return p.persistence.DeleteWorkflowExecution(request)
+	return p.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequestV2,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.ListWorkflowExecutions(request)
+	return p.persistence.ListWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequestV2,
+) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.ScanWorkflowExecutions(request)
+	return p.persistence.ScanWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+func (p *visibilityRateLimitedPersistenceClient) CountWorkflowExecutions(
+	ctx context.Context,
+	request *CountWorkflowExecutionsRequest,
+) (*CountWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.CountWorkflowExecutions(request)
+	return p.persistence.CountWorkflowExecutions(ctx, request)
 }
 
 func (p *visibilityRateLimitedPersistenceClient) Close() {
@@ -758,72 +919,96 @@ func (p *historyV2RateLimitedPersistenceClient) Close() {
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyV2RateLimitedPersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) AppendHistoryNodes(
+	ctx context.Context,
+	request *AppendHistoryNodesRequest,
+) (*AppendHistoryNodesResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.AppendHistoryNodes(request)
+	return p.persistence.AppendHistoryNodes(ctx, request)
 }
 
 // ReadHistoryBranch returns history node data for a branch
-func (p *historyV2RateLimitedPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) ReadHistoryBranch(
+	ctx context.Context,
+	request *ReadHistoryBranchRequest,
+) (*ReadHistoryBranchResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	response, err := p.persistence.ReadHistoryBranch(request)
+	response, err := p.persistence.ReadHistoryBranch(ctx, request)
 	return response, err
 }
 
 // ReadHistoryBranchByBatch returns history node data for a branch
-func (p *historyV2RateLimitedPersistenceClient) ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) ReadHistoryBranchByBatch(
+	ctx context.Context,
+	request *ReadHistoryBranchRequest,
+) (*ReadHistoryBranchByBatchResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	response, err := p.persistence.ReadHistoryBranchByBatch(request)
+	response, err := p.persistence.ReadHistoryBranchByBatch(ctx, request)
 	return response, err
 }
 
 // ReadHistoryBranchByBatch returns history node data for a branch
-func (p *historyV2RateLimitedPersistenceClient) ReadRawHistoryBranch(request *ReadHistoryBranchRequest) (*ReadRawHistoryBranchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) ReadRawHistoryBranch(
+	ctx context.Context,
+	request *ReadHistoryBranchRequest,
+) (*ReadRawHistoryBranchResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	response, err := p.persistence.ReadRawHistoryBranch(request)
+	response, err := p.persistence.ReadRawHistoryBranch(ctx, request)
 	return response, err
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
-func (p *historyV2RateLimitedPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) ForkHistoryBranch(
+	ctx context.Context,
+	request *ForkHistoryBranchRequest,
+) (*ForkHistoryBranchResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	response, err := p.persistence.ForkHistoryBranch(request)
+	response, err := p.persistence.ForkHistoryBranch(ctx, request)
 	return response, err
 }
 
 // DeleteHistoryBranch removes a branch
-func (p *historyV2RateLimitedPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+func (p *historyV2RateLimitedPersistenceClient) DeleteHistoryBranch(
+	ctx context.Context,
+	request *DeleteHistoryBranchRequest,
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
-	err := p.persistence.DeleteHistoryBranch(request)
+	err := p.persistence.DeleteHistoryBranch(ctx, request)
 	return err
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(
+	ctx context.Context,
+	request *GetHistoryTreeRequest,
+) (*GetHistoryTreeResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	response, err := p.persistence.GetHistoryTree(request)
+	response, err := p.persistence.GetHistoryTree(ctx, request)
 	return response, err
 }
 
-func (p *historyV2RateLimitedPersistenceClient) GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) GetAllHistoryTreeBranches(
+	ctx context.Context,
+	request *GetAllHistoryTreeBranchesRequest,
+) (*GetAllHistoryTreeBranchesResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	response, err := p.persistence.GetAllHistoryTreeBranches(request)
+	response, err := p.persistence.GetAllHistoryTreeBranches(ctx, request)
 	return response, err
 }
 

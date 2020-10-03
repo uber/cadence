@@ -216,11 +216,9 @@ const (
 		`first_event_id: ?,` +
 		`next_event_id: ?,` +
 		`version: ?,` +
-		`last_replication_info: ?, ` +
 		`scheduled_id: ?, ` +
 		`event_store_version: ?, ` +
 		`branch_token: ?, ` +
-		`reset_workflow: ?, ` +
 		`new_run_event_store_version: ?, ` +
 		`new_run_branch_token: ?, ` +
 		`created_time: ? ` +
@@ -1370,17 +1368,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	state := &p.InternalWorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
-
-	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
-	state.ReplicationState = replicationState
-
 	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
-
-	if state.VersionHistories != nil && state.ReplicationState != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetWorkflowExecution operation failed. VersionHistories and ReplicationState both are set."),
-		}
-	}
 
 	activityInfos := make(map[int64]*p.InternalActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
@@ -1768,33 +1756,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 		state := executionInfo.State
 		closeStatus := executionInfo.CloseStatus
 
-		if request.CurrentWorkflowCAS != nil {
-			prevRunID = request.CurrentWorkflowCAS.PrevRunID
-			prevLastWriteVersion := request.CurrentWorkflowCAS.PrevLastWriteVersion
-			prevState := request.CurrentWorkflowCAS.PrevState
-
-			batch.Query(templateUpdateCurrentWorkflowExecutionForNewQuery,
-				runID,
-				runID,
-				createRequestID,
-				state,
-				closeStatus,
-				startVersion,
-				lastWriteVersion,
-				lastWriteVersion,
-				state,
-				shardID,
-				rowTypeExecution,
-				domainID,
-				workflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
-				prevRunID,
-				prevLastWriteVersion,
-				prevState,
-			)
-		} else if currentWorkflow != nil {
+		if currentWorkflow != nil {
 			prevRunID = currentWorkflow.ExecutionInfo.RunID
 
 			batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
@@ -2999,11 +2961,9 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 		task.FirstEventID,
 		task.NextEventID,
 		task.Version,
-		task.LastReplicationInfo,
 		task.ScheduledID,
 		p.EventStoreVersion,
 		task.BranchToken,
-		task.ResetWorkflow,
 		p.EventStoreVersion,
 		task.NewRunBranchToken,
 		defaultVisibilityTimestamp,
@@ -3223,4 +3183,35 @@ func newShardOwnershipLostError(
 		Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
 			rangeID, strings.Join(columns, ",")),
 	}
+}
+
+func createReplicationState(
+	result map[string]interface{},
+) *p.ReplicationState {
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	info := &p.ReplicationState{}
+	for k, v := range result {
+		switch k {
+		case "current_version":
+			info.CurrentVersion = v.(int64)
+		case "start_version":
+			info.StartVersion = v.(int64)
+		case "last_write_version":
+			info.LastWriteVersion = v.(int64)
+		case "last_write_event_id":
+			info.LastWriteEventID = v.(int64)
+		case "last_replication_info":
+			info.LastReplicationInfo = make(map[string]*p.ReplicationInfo)
+			replicationInfoMap := v.(map[string]map[string]interface{})
+			for key, value := range replicationInfoMap {
+				info.LastReplicationInfo[key] = createReplicationInfo(value)
+			}
+		}
+	}
+
+	return info
 }

@@ -21,6 +21,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -96,9 +97,9 @@ var errCloseParams = errors.New("missing one of {closeStatus, closeTime, history
 
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
-func (pdb *db) InsertIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, error) {
+func (pdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.VisibilityRow) (sql.Result, error) {
 	row.StartTime = pdb.converter.ToPostgresDateTime(row.StartTime)
-	return pdb.conn.Exec(templateCreateWorkflowExecutionStarted,
+	return pdb.conn.ExecContext(ctx, templateCreateWorkflowExecutionStarted,
 		row.DomainID,
 		row.WorkflowID,
 		row.RunID,
@@ -110,12 +111,12 @@ func (pdb *db) InsertIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, e
 }
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
-func (pdb *db) ReplaceIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, error) {
+func (pdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.VisibilityRow) (sql.Result, error) {
 	switch {
 	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:
 		row.StartTime = pdb.converter.ToPostgresDateTime(row.StartTime)
 		closeTime := pdb.converter.ToPostgresDateTime(*row.CloseTime)
-		return pdb.conn.Exec(templateCreateWorkflowExecutionClosed,
+		return pdb.conn.ExecContext(ctx, templateCreateWorkflowExecutionClosed,
 			row.DomainID,
 			row.WorkflowID,
 			row.RunID,
@@ -133,12 +134,12 @@ func (pdb *db) ReplaceIntoVisibility(row *sqlplugin.VisibilityRow) (sql.Result, 
 }
 
 // DeleteFromVisibility deletes a row from visibility table if it exist
-func (pdb *db) DeleteFromVisibility(filter *sqlplugin.VisibilityFilter) (sql.Result, error) {
-	return pdb.conn.Exec(templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
+func (pdb *db) DeleteFromVisibility(ctx context.Context, filter *sqlplugin.VisibilityFilter) (sql.Result, error) {
+	return pdb.conn.ExecContext(ctx, templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
 }
 
 // SelectFromVisibility reads one or more rows from visibility table
-func (pdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlplugin.VisibilityRow, error) {
+func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.VisibilityFilter) ([]sqlplugin.VisibilityRow, error) {
 	var err error
 	var rows []sqlplugin.VisibilityRow
 	if filter.MinStartTime != nil {
@@ -150,7 +151,7 @@ func (pdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqlplugin.VisibilityRow
-		err = pdb.conn.Get(&row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
+		err = pdb.conn.GetContext(ctx, &row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
 		if err == nil {
 			rows = append(rows, row)
 		}
@@ -159,7 +160,7 @@ func (pdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByID
 		}
-		err = pdb.conn.Select(&rows,
+		err = pdb.conn.SelectContext(ctx, &rows,
 			qry,
 			*filter.WorkflowID,
 			filter.DomainID,
@@ -173,7 +174,7 @@ func (pdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByType
 		}
-		err = pdb.conn.Select(&rows,
+		err = pdb.conn.SelectContext(ctx, &rows,
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
@@ -183,7 +184,7 @@ func (pdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 			*filter.MaxStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
-		err = pdb.conn.Select(&rows,
+		err = pdb.conn.SelectContext(ctx, &rows,
 			templateGetClosedWorkflowExecutionsByStatus,
 			*filter.CloseStatus,
 			filter.DomainID,
@@ -199,7 +200,7 @@ func (pdb *db) SelectFromVisibility(filter *sqlplugin.VisibilityFilter) ([]sqlpl
 		}
 		minSt := pdb.converter.ToPostgresDateTime(*filter.MinStartTime)
 		maxSt := pdb.converter.ToPostgresDateTime(*filter.MaxStartTime)
-		err = pdb.conn.Select(&rows,
+		err = pdb.conn.SelectContext(ctx, &rows,
 			qry,
 			filter.DomainID,
 			minSt,

@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -124,7 +125,7 @@ func getMockExecutionManager(pages int, countPerPage int) persistence.ExecutionM
 		if i == pages-1 {
 			resp.PageToken = nil
 		}
-		execManager.On("ListConcreteExecutions", req).Return(resp, nil)
+		execManager.On("ListConcreteExecutions", mock.Anything, req).Return(resp, nil)
 		execManager.On("GetShardID").Return(testShardID)
 	}
 	return execManager

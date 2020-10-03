@@ -139,7 +139,6 @@ type (
 		GetPendingChildExecutionInfos() map[int64]*persistence.ChildExecutionInfo
 		GetPendingRequestCancelExternalInfos() map[int64]*persistence.RequestCancelInfo
 		GetPendingSignalExternalInfos() map[int64]*persistence.SignalInfo
-		GetReplicationState() *persistence.ReplicationState
 		GetRequestCancelInfo(int64) (*persistence.RequestCancelInfo, bool)
 		GetRetryBackoffDuration(errReason string) time.Duration
 		GetCronBackoffDuration() (time.Duration, error)
@@ -212,8 +211,6 @@ type (
 		UpdateActivity(*persistence.ActivityInfo) error
 		UpdateActivityProgress(ai *persistence.ActivityInfo, request *workflow.RecordActivityTaskHeartbeatRequest)
 		UpdateDecision(*DecisionInfo)
-		UpdateReplicationStateVersion(int64, bool)
-		UpdateReplicationStateLastEventID(int64, int64)
 		UpdateUserTimer(*persistence.TimerInfo) error
 		UpdateCurrentVersion(version int64, forceUpdate bool) error
 		UpdateWorkflowStateCloseStatus(state int, closeStatus int) error

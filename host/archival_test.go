@@ -22,6 +22,7 @@ package host
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"strconv"
@@ -177,8 +178,10 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 		ShardID: common.IntPtr(shardID),
 	}
 	for i := 0; i < retryLimit; i++ {
-		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(request)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
+		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(ctx, request)
 		s.Nil(err)
+		cancel()
 		if len(resp.Branches) == 0 {
 			return true
 		}
@@ -194,11 +197,14 @@ func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *wor
 	}
 
 	for i := 0; i < retryLimit; i++ {
-		_, err := s.testCluster.testBase.ExecutionManager.GetWorkflowExecution(request)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
+		_, err := s.testCluster.testBase.ExecutionManager.GetWorkflowExecution(ctx, request)
+		cancel()
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			return true
 		}
 		time.Sleep(retryBackoffTime)
+
 	}
 	return false
 }

@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -118,7 +119,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 	}
 	isGlobalDomain := true
 
-	s.kafkaProducer.On("Publish", &replicator.ReplicationTask{
+	s.kafkaProducer.On("Publish", mock.Anything, &replicator.ReplicationTask{
 		TaskType: &taskType,
 		DomainTaskAttributes: &replicator.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
@@ -277,7 +278,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 	}
 	isGlobalDomain := true
 
-	s.kafkaProducer.On("Publish", &replicator.ReplicationTask{
+	s.kafkaProducer.On("Publish", mock.Anything, &replicator.ReplicationTask{
 		TaskType: &taskType,
 		DomainTaskAttributes: &replicator.DomainTaskAttributes{
 			DomainOperation: &domainOperation,

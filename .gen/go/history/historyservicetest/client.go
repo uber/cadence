@@ -776,37 +776,6 @@ func (mr *_MockClientRecorder) RemoveTask(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RemoveTask", args...)
 }
 
-// ReplicateEvents responds to a ReplicateEvents call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().ReplicateEvents(gomock.Any(), ...).Return(...)
-// 	... := client.ReplicateEvents(...)
-func (m *MockClient) ReplicateEvents(
-	ctx context.Context,
-	_ReplicateRequest *history.ReplicateEventsRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := []interface{}{ctx, _ReplicateRequest}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "ReplicateEvents", args...)
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) ReplicateEvents(
-	ctx interface{},
-	_ReplicateRequest interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _ReplicateRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateEvents", args...)
-}
-
 // ReplicateEventsV2 responds to a ReplicateEventsV2 call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -836,37 +805,6 @@ func (mr *_MockClientRecorder) ReplicateEventsV2(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _ReplicateV2Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateEventsV2", args...)
-}
-
-// ReplicateRawEvents responds to a ReplicateRawEvents call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().ReplicateRawEvents(gomock.Any(), ...).Return(...)
-// 	... := client.ReplicateRawEvents(...)
-func (m *MockClient) ReplicateRawEvents(
-	ctx context.Context,
-	_ReplicateRequest *history.ReplicateRawEventsRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := []interface{}{ctx, _ReplicateRequest}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "ReplicateRawEvents", args...)
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) ReplicateRawEvents(
-	ctx interface{},
-	_ReplicateRequest interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _ReplicateRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateRawEvents", args...)
 }
 
 // RequestCancelWorkflowExecution responds to a RequestCancelWorkflowExecution call based on the mock expectations. This

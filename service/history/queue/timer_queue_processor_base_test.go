@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -138,7 +139,7 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_More() {
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	timers, token, err := timerQueueProcessBase.getTimerTasks(readLevel, maxReadLevel, request.NextPageToken, batchSize)
@@ -177,7 +178,7 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_NoMore() {
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	timers, token, err := timerQueueProcessBase.getTimerTasks(readLevel, maxReadLevel, request.NextPageToken, batchSize)
@@ -220,7 +221,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadLookAheadTask() {
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	lookAheadTask, err := timerQueueProcessBase.readLookAheadTask(readLevel, maxReadLevel)
@@ -267,8 +268,8 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_NoNext
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
-	mockExecutionMgr.On("GetTimerIndexTasks", lookAheadRequest).Return(&persistence.GetTimerIndexTasksResponse{}, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, lookAheadRequest).Return(&persistence.GetTimerIndexTasksResponse{}, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
@@ -310,7 +311,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNex
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
@@ -363,7 +364,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNex
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
@@ -416,7 +417,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNe
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
@@ -569,7 +570,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_HasNextPage() {
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 
@@ -662,7 +663,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_HasLookAhead(
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 
@@ -761,8 +762,8 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead()
 	}
 
 	mockExecutionMgr := s.mockShard.Resource.ExecutionMgr
-	mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
-	mockExecutionMgr.On("GetTimerIndexTasks", lookAheadRequest).Return(&persistence.GetTimerIndexTasksResponse{}, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
+	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, lookAheadRequest).Return(&persistence.GetTimerIndexTasksResponse{}, nil).Once()
 
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 

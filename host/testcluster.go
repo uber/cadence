@@ -21,8 +21,10 @@
 package host
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
@@ -71,7 +73,6 @@ type (
 	// TestClusterConfig are config for a test cluster
 	TestClusterConfig struct {
 		FrontendAddress       string
-		EnableNDC             bool
 		EnableArchival        bool
 		IsMasterCluster       bool
 		ClusterNo             int
@@ -98,7 +99,10 @@ type (
 	}
 )
 
-const defaultTestValueOfESIndexMaxResultWindow = 5
+const (
+	defaultTestValueOfESIndexMaxResultWindow = 5
+	defaultTestPersistenceTimeout            = 5 * time.Second
+)
 
 // NewCluster creates and sets up the test cluster
 func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, error) {
@@ -184,7 +188,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		VisibilityMgr:                 visibilityMgr,
 		Logger:                        logger,
 		ClusterNo:                     options.ClusterNo,
-		EnableNDC:                     options.EnableNDC,
 		ESConfig:                      options.ESConfig,
 		ESClient:                      esClient,
 		ArchiverMetadata:              archiverBase.metadata,
@@ -205,10 +208,13 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < numHistoryShards; shardID++ {
-		err := testBase.CreateShard(shardID, "", 0)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
+		err := testBase.CreateShard(ctx, shardID, "", 0)
 		if err != nil {
+			cancel()
 			logger.Fatal("Failed to create shard", tag.Error(err))
 		}
+		cancel()
 	}
 }
 
@@ -264,9 +270,8 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 	if config == nil || config.UseMock {
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
-	checkCluster := len(config.KafkaConfig.ClusterToTopic) != 0
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkCluster, checkApp)
+	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster

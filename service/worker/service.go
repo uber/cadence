@@ -23,6 +23,7 @@
 package worker
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 
@@ -109,7 +110,11 @@ func NewService(
 
 // NewConfig builds the new Config for cadence-worker service
 func NewConfig(params *service.BootstrapParams) *Config {
-	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
+	dc := dynamicconfig.NewCollection(
+		params.DynamicConfig,
+		params.Logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+	)
 	config := &Config{
 		ArchiverConfig: &archiver.Config{
 			ArchiverConcurrency:           dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
@@ -310,7 +315,7 @@ func (s *Service) startArchiver() {
 }
 
 func (s *Service) ensureSystemDomainExists() {
-	_, err := s.GetMetadataManager().GetDomain(&persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
+	_, err := s.GetMetadataManager().GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
 	switch err.(type) {
 	case nil:
 		// noop
@@ -325,7 +330,7 @@ func (s *Service) ensureSystemDomainExists() {
 func (s *Service) registerSystemDomain() {
 
 	currentClusterName := s.GetClusterMetadata().GetCurrentClusterName()
-	_, err := s.GetMetadataManager().CreateDomain(&persistence.CreateDomainRequest{
+	_, err := s.GetMetadataManager().CreateDomain(context.TODO(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          common.SystemDomainID,
 			Name:        common.SystemLocalDomainName,

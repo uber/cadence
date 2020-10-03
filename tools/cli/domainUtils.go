@@ -299,7 +299,6 @@ func initializeMetadataMgr(
 	pFactory := client.NewFactory(
 		&pConfig,
 		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
-		nil, // TODO propagate abstract datastore factory from the CLI.
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
 		logger,
@@ -384,7 +383,7 @@ func initializeDomainReplicator(
 ) domain.Replicator {
 
 	replicationMessageSink := &mocks.KafkaProducer{}
-	replicationMessageSink.On("Publish", mock.Anything).Return(nil)
+	replicationMessageSink.On("Publish", mock.Anything, mock.Anything).Return(nil)
 	return domain.NewDomainReplicator(replicationMessageSink, logger)
 }
 
