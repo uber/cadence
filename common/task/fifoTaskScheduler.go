@@ -30,13 +30,14 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
 	// FIFOTaskSchedulerOptions configs FIFO task scheduler
 	FIFOTaskSchedulerOptions struct {
 		QueueSize       int
-		WorkerCount     int
+		WorkerCount     dynamicconfig.IntPropertyFn
 		DispatcherCount int
 		RetryPolicy     backoff.RetryPolicy
 	}
@@ -106,6 +107,8 @@ func (f *fifoTaskSchedulerImpl) Stop() {
 
 	f.processor.Stop()
 
+	f.drainAndNackTasks()
+
 	if success := common.AwaitWaitGroup(&f.dispatcherWG, time.Minute); !success {
 		f.logger.Warn("FIFO task scheduler timedout on shutdown.")
 	}
@@ -120,8 +123,15 @@ func (f *fifoTaskSchedulerImpl) Submit(
 	sw := f.metricsScope.StartTimer(metrics.ParallelTaskSubmitLatency)
 	defer sw.Stop()
 
+	if f.isStopped() {
+		return ErrTaskSchedulerClosed
+	}
+
 	select {
 	case f.taskCh <- task:
+		if f.isStopped() {
+			f.drainAndNackTasks()
+		}
 		return nil
 	case <-f.shutdownCh:
 		return ErrTaskSchedulerClosed
@@ -131,9 +141,16 @@ func (f *fifoTaskSchedulerImpl) Submit(
 func (f *fifoTaskSchedulerImpl) TrySubmit(
 	task PriorityTask,
 ) (bool, error) {
+	if f.isStopped() {
+		return false, ErrTaskSchedulerClosed
+	}
+
 	select {
 	case f.taskCh <- task:
 		f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
+		if f.isStopped() {
+			f.drainAndNackTasks()
+		}
 		return true, nil
 	case <-f.shutdownCh:
 		return false, ErrTaskSchedulerClosed
@@ -153,6 +170,21 @@ func (f *fifoTaskSchedulerImpl) dispatcher() {
 				task.Nack()
 			}
 		case <-f.shutdownCh:
+			return
+		}
+	}
+}
+
+func (f *fifoTaskSchedulerImpl) isStopped() bool {
+	return atomic.LoadInt32(&f.status) == common.DaemonStatusStopped
+}
+
+func (f *fifoTaskSchedulerImpl) drainAndNackTasks() {
+	for {
+		select {
+		case task := <-f.taskCh:
+			task.Nack()
+		default:
 			return
 		}
 	}
