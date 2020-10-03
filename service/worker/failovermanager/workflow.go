@@ -112,7 +112,7 @@ type (
 		FailedDomains  []string
 	}
 
-	// QueryResult ..
+	// QueryResult for failover progress
 	QueryResult struct {
 		TotalDomains   int
 		Success        int
@@ -293,6 +293,9 @@ func validateTargetAndSourceCluster(targetCluster, sourceCluster string) error {
 }
 
 func shouldFailover(domain *shared.DescribeDomainResponse, sourceCluster string) bool {
+	if !domain.GetIsGlobalDomain() {
+		return false
+	}
 	currentActiveCluster := domain.ReplicationConfiguration.GetActiveClusterName()
 	isDomainTarget := currentActiveCluster == sourceCluster
 	return isDomainTarget && isDomainFailoverManagedByCadence(domain)
@@ -313,7 +316,7 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*shared.Descr
 	feClient := getClient(ctx)
 	var res []*shared.DescribeDomainResponse
 
-	isTargetDomainsProvided := len(targetDomains) == 0
+	isTargetDomainsProvided := len(targetDomains) > 0
 	targetDomainsSet := make(map[string]struct{})
 	if isTargetDomainsProvided {
 		for _, domain := range targetDomains {

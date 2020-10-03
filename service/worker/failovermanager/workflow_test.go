@@ -21,9 +21,18 @@
 package failovermanager
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"go.uber.org/cadence/worker"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/resource"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -198,4 +207,174 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 	var res QueryResult
 	s.NoError(queryResult.Get(&res))
 	s.Equal(expectedState, res.State)
+}
+
+var clusters = []*shared.ClusterReplicationConfiguration{
+	{
+		ClusterName: common.StringPtr("c1"),
+	},
+	{
+		ClusterName: common.StringPtr("c2"),
+	},
+}
+
+func (s *failoverWorkflowTestSuite) TestShouldFailover() {
+
+	tests := []struct {
+		domain        *shared.DescribeDomainResponse
+		sourceCluster string
+		expected      bool
+	}{
+		{
+			domain: &shared.DescribeDomainResponse{
+				IsGlobalDomain: common.BoolPtr(false),
+			},
+			sourceCluster: "c1",
+			expected:      false,
+		},
+		{
+			domain: &shared.DescribeDomainResponse{
+				IsGlobalDomain: common.BoolPtr(true),
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c1"),
+					Clusters:          clusters,
+				},
+			},
+			sourceCluster: "c2",
+			expected:      false,
+		},
+		{
+			domain: &shared.DescribeDomainResponse{
+				IsGlobalDomain: common.BoolPtr(true),
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c2"),
+					Clusters:          clusters,
+				},
+			},
+			sourceCluster: "c2",
+			expected:      false,
+		},
+		{
+			domain: &shared.DescribeDomainResponse{
+				IsGlobalDomain: common.BoolPtr(true),
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c2"),
+					Clusters:          clusters,
+				},
+				DomainInfo: &shared.DomainInfo{
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover: "true",
+					},
+				},
+			},
+			sourceCluster: "c2",
+			expected:      true,
+		},
+	}
+	for _, t := range tests {
+		s.Equal(t.expected, shouldFailover(t.domain, t.sourceCluster))
+	}
+}
+
+func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test, *gomock.Controller) {
+	env := s.NewTestActivityEnvironment()
+	controller := gomock.NewController(s.T())
+	mockResource := resource.NewTest(controller, metrics.Worker)
+
+	ctx := &FailoverManager{
+		svcClient:  mockResource.GetSDKClient(),
+		clientBean: mockResource.ClientBean,
+	}
+	env.SetTestTimeout(time.Second * 5)
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), failoverManagerContextKey, ctx),
+	})
+	return env, mockResource, controller
+}
+func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
+	env, mockResource, controller := s.prepareTestActivityEnv()
+	defer controller.Finish()
+	defer mockResource.Finish(s.T())
+
+	domains := &shared.ListDomainsResponse{
+		Domains: []*shared.DescribeDomainResponse{
+			{
+				DomainInfo: &shared.DomainInfo{
+					Name: common.StringPtr("d1"),
+					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
+				},
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c1"),
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: common.BoolPtr(true),
+			},
+		},
+	}
+	mockResource.FrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(domains, nil)
+
+	params := &GetDomainsActivityParams{
+		TargetCluster: "c2",
+		SourceCluster: "c1",
+	}
+	actResult, err := env.ExecuteActivity(getDomainsActivityName, params)
+	s.NoError(err)
+	var result []string
+	s.NoError(actResult.Get(&result))
+	s.Equal([]string{"d1"}, result)
+}
+
+func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
+	env, mockResource, controller := s.prepareTestActivityEnv()
+	defer controller.Finish()
+	defer mockResource.Finish(s.T())
+
+	domains := &shared.ListDomainsResponse{
+		Domains: []*shared.DescribeDomainResponse{
+			{
+				DomainInfo: &shared.DomainInfo{
+					Name: common.StringPtr("d1"),
+					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
+				},
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c1"),
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: common.BoolPtr(true),
+			},
+			{
+				DomainInfo: &shared.DomainInfo{
+					Name: common.StringPtr("d2"),
+					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
+				},
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c1"),
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: common.BoolPtr(true),
+			},
+			{
+				DomainInfo: &shared.DomainInfo{
+					Name: common.StringPtr("d3"),
+				},
+				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+					ActiveClusterName: common.StringPtr("c1"),
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: common.BoolPtr(true),
+			},
+		},
+	}
+	mockResource.FrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(domains, nil)
+
+	params := &GetDomainsActivityParams{
+		TargetCluster: "c2",
+		SourceCluster: "c1",
+		Domains:       []string{"d1", "d3"}, // only target d1 and d3
+	}
+	actResult, err := env.ExecuteActivity(getDomainsActivityName, params)
+	s.NoError(err)
+	var result []string
+	s.NoError(actResult.Get(&result))
+	s.Equal([]string{"d1"}, result) // d3 filtered out because not managed
 }
