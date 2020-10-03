@@ -79,6 +79,11 @@ clusterMetadata:
       initialFailoverVersion: 1
       rpcName: ""
       rpcAddress: "localhost:8933"
+    test:
+      enabled: false
+      initialFailoverVersion: 0
+      rpcName: "test"
+      rpcAddress: "localhost:7934"
 
 dcRedirectionPolicy:
   policy: "noop"

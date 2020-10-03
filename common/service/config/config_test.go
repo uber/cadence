@@ -39,4 +39,5 @@ func TestDefaultRPCName(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "cadence-frontend", string(cfg.ClusterMetadata.ClusterInformation["active"].RPCName))
 	assert.Equal(t, "cadence-frontend", string(cfg.ClusterMetadata.ClusterInformation["standby"].RPCName))
+	assert.Equal(t, "test", string(cfg.ClusterMetadata.ClusterInformation["test"].RPCName))
 }
