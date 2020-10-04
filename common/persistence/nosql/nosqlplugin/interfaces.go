@@ -115,9 +115,6 @@ type (
 	// Updating this failover metadata with domain insert/update needs to be atomic.
 	// Because Batch LWTs is only allowed within one table and same partition.
 	// The Cassandra implementation stores it in the same table as domain in domains_by_name_v2.
-	//
-	// (TODO @longquanzheng: I think it's also okay to implement without atomic, as long as
-	// we can ensure notification version increased by one before insert/update)
 	domainCRUD interface {
 		// Insert a new record to domain, return error if failed or already exists
 		// Must return conditionFailed error if domainName already exists
@@ -127,9 +124,11 @@ type (
 		// Get one domain data, either by domainID or domainName
 		SelectDomain(ctx context.Context, domainID *string, domainName *string) (*DomainRow, error)
 		// Get all domain data
-		SelectAllDomains(ctx context.Context, pageToken []byte) ([]*DomainRow, []byte, error)
+		SelectAllDomains(ctx context.Context, pageSize int, pageToken []byte) ([]*DomainRow, []byte, error)
 		//  Delete a domain, either by domainID or domainName
 		DeleteDomain(ctx context.Context, domainID *string, domainName *string) error
+		// right now domain metadata is just an integer as notification version
+		SelectDomainMetadata(ctx context.Context) (int64, error)
 	}
 
 	// QueueMessageRow defines the row struct for queue message
@@ -141,8 +140,9 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
+		FailoverEndTime             int64
 		NotificationVersion         int64
+		IsGlobalDomain              bool
 	}
 
 	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween
