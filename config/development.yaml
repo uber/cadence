@@ -64,7 +64,7 @@ services:
       port: 7940
 
 clusterMetadata:
-  enableGlobalDomain: true
+  enableGlobalDomain: false
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
