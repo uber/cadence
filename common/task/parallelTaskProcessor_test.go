@@ -22,7 +22,8 @@ package task
 
 import (
 	"errors"
-	"sync/atomic"
+	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -68,7 +70,7 @@ func (s *parallelTaskProcessorSuite) SetupTest() {
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   0,
-			WorkerCount: 1,
+			WorkerCount: dynamicconfig.GetIntPropertyFn(1),
 			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
 	).(*parallelTaskProcessorImpl)
@@ -100,7 +102,10 @@ func (s *parallelTaskProcessorSuite) TestTaskWorker() {
 	numTasks := 5
 
 	done := make(chan struct{})
-	s.processor.workerWG.Add(1)
+
+	s.processor.shutdownWG.Add(1)
+	workerShutdownCh := make(chan struct{})
+	s.processor.workerShutdownCh = append(s.processor.workerShutdownCh, workerShutdownCh)
 
 	go func() {
 		for i := 0; i != numTasks; i++ {
@@ -110,11 +115,11 @@ func (s *parallelTaskProcessorSuite) TestTaskWorker() {
 			err := s.processor.Submit(mockTask)
 			s.NoError(err)
 		}
-		close(s.processor.shutdownCh)
+		close(workerShutdownCh)
 		close(done)
 	}()
 
-	s.processor.taskWorker()
+	s.processor.taskWorker(workerShutdownCh)
 	<-done
 }
 
@@ -131,7 +136,7 @@ func (s *parallelTaskProcessorSuite) TestExecuteTask_RetryableError() {
 		mockTask.EXPECT().Ack(),
 	)
 
-	s.processor.executeTask(mockTask)
+	s.processor.executeTask(mockTask, make(chan struct{}))
 }
 
 func (s *parallelTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
@@ -143,22 +148,159 @@ func (s *parallelTaskProcessorSuite) TestExecuteTask_NonRetryableError() {
 		mockTask.EXPECT().Nack(),
 	)
 
-	s.processor.executeTask(mockTask)
+	s.processor.executeTask(mockTask, make(chan struct{}))
 }
 
-func (s *parallelTaskProcessorSuite) TestExecuteTask_ProcessorStopped() {
+func (s *parallelTaskProcessorSuite) TestExecuteTask_WorkerStopped() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().Execute().Return(errRetryable).AnyTimes()
 	mockTask.EXPECT().HandleErr(errRetryable).Return(errRetryable).AnyTimes()
 	mockTask.EXPECT().RetryErr(errRetryable).Return(true).AnyTimes()
+	mockTask.EXPECT().Nack().Times(1)
 
 	done := make(chan struct{})
+	workerShutdownCh := make(chan struct{})
 	go func() {
-		s.processor.executeTask(mockTask)
+		s.processor.executeTask(mockTask, workerShutdownCh)
 		close(done)
 	}()
 
 	time.Sleep(100 * time.Millisecond)
-	atomic.StoreInt32(&s.processor.status, common.DaemonStatusStopped)
+	close(workerShutdownCh)
 	<-done
+}
+
+func (s *parallelTaskProcessorSuite) TestAddWorker() {
+	newWorkerCount := 10
+
+	s.processor.addWorker(newWorkerCount)
+	s.Len(s.processor.workerShutdownCh, newWorkerCount)
+
+	s.processor.addWorker(-1)
+	s.Len(s.processor.workerShutdownCh, newWorkerCount)
+
+	for _, shutdownCh := range s.processor.workerShutdownCh {
+		close(shutdownCh)
+	}
+
+	s.processor.shutdownWG.Wait()
+}
+
+func (s *parallelTaskProcessorSuite) TestRemoveWorker() {
+	currentWorkerCount := 10
+	removeWorkerCount := 4
+
+	s.processor.addWorker(currentWorkerCount)
+
+	s.processor.removeWorker(removeWorkerCount)
+	s.Len(s.processor.workerShutdownCh, currentWorkerCount-removeWorkerCount)
+
+	s.processor.removeWorker(-1)
+	s.Len(s.processor.workerShutdownCh, currentWorkerCount-removeWorkerCount)
+
+	for _, shutdownCh := range s.processor.workerShutdownCh {
+		close(shutdownCh)
+	}
+
+	s.processor.shutdownWG.Wait()
+}
+
+func (s *parallelTaskProcessorSuite) TestMonitor() {
+	workerCount := 5
+
+	s.processor.shutdownWG.Add(1) // for monitor
+	dcClient := dynamicconfig.NewInMemoryClient()
+	dcCollection := dynamicconfig.NewCollection(dcClient, s.processor.logger)
+	s.processor.options.WorkerCount = dcCollection.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, workerCount)
+
+	testMonitorTickerDuration := 100 * time.Millisecond
+	go s.processor.workerMonitor(testMonitorTickerDuration)
+
+	time.Sleep(2 * testMonitorTickerDuration)
+	// note we can't check the length of the workerShutdownCh directly
+	// as that will lead to race condition. Instead we check the current
+	// size of shutdownWG chan, which should be workerCount + 1
+	for i := 0; i != workerCount+1; i++ {
+		s.processor.shutdownWG.Done()
+	}
+	s.processor.shutdownWG.Wait()
+	s.processor.shutdownWG.Add(workerCount + 1)
+
+	newWorkerCount := 3
+	dcClient.UpdateValue(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
+
+	time.Sleep(2 * testMonitorTickerDuration)
+	for i := 0; i != newWorkerCount+1; i++ {
+		s.processor.shutdownWG.Done()
+	}
+	s.processor.shutdownWG.Wait()
+	s.processor.shutdownWG.Add(newWorkerCount + 1)
+
+	close(s.processor.shutdownCh)
+
+	time.Sleep(2 * testMonitorTickerDuration)
+	s.processor.shutdownWG.Wait()
+}
+
+func (s *parallelTaskProcessorSuite) TestProcessorContract() {
+	numTasks := 10000
+	var taskWG sync.WaitGroup
+
+	tasks := []Task{}
+	taskStatusLock := &sync.Mutex{}
+	taskStatus := make(map[Task]State)
+	for i := 0; i != numTasks; i++ {
+		mockTask := NewMockTask(s.controller)
+		taskStatus[mockTask] = TaskStatePending
+		mockTask.EXPECT().Execute().Return(nil).MaxTimes(1)
+		mockTask.EXPECT().Ack().Do(func() {
+			taskStatusLock.Lock()
+			defer taskStatusLock.Unlock()
+
+			s.Equal(TaskStatePending, taskStatus[mockTask])
+			taskStatus[mockTask] = TaskStateAcked
+			taskWG.Done()
+		}).MaxTimes(1)
+		mockTask.EXPECT().Nack().Do(func() {
+			taskStatusLock.Lock()
+			defer taskStatusLock.Unlock()
+
+			s.Equal(TaskStatePending, taskStatus[mockTask])
+			taskStatus[mockTask] = TaskStateNacked
+			taskWG.Done()
+		}).MaxTimes(1)
+		tasks = append(tasks, mockTask)
+		taskWG.Add(1)
+	}
+
+	processor := NewParallelTaskProcessor(
+		loggerimpl.NewDevelopmentForTest(s.Suite),
+		metrics.NewClient(tally.NoopScope, metrics.Common),
+		&ParallelTaskProcessorOptions{
+			QueueSize:   100,
+			WorkerCount: dynamicconfig.GetIntPropertyFn(10),
+			RetryPolicy: backoff.NewExponentialRetryPolicy(time.Millisecond),
+		},
+	).(*parallelTaskProcessorImpl)
+
+	processor.Start()
+	go func() {
+		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+		processor.Stop()
+	}()
+
+	for _, task := range tasks {
+		if err := processor.Submit(task); err != nil {
+			taskWG.Done()
+			taskStatusLock.Lock()
+			delete(taskStatus, task)
+			taskStatusLock.Unlock()
+		}
+	}
+	s.True(common.AwaitWaitGroup(&taskWG, 10*time.Second))
+	<-processor.shutdownCh
+
+	for _, status := range taskStatus {
+		s.NotEqual(TaskStatePending, status)
+	}
 }

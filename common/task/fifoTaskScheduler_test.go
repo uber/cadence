@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -66,7 +67,7 @@ func (s *fifoTaskSchedulerSuite) SetupTest() {
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&FIFOTaskSchedulerOptions{
 			QueueSize:       s.queueSize,
-			WorkerCount:     1,
+			WorkerCount:     dynamicconfig.GetIntPropertyFn(1),
 			DispatcherCount: 1,
 			RetryPolicy:     backoff.NewExponentialRetryPolicy(time.Millisecond),
 		},
@@ -120,4 +121,8 @@ func (s *fifoTaskSchedulerSuite) TestTrySubmit() {
 	submitted, err := s.scheduler.TrySubmit(mockTask)
 	s.NoError(err)
 	s.False(submitted)
+}
+
+func (s *fifoTaskSchedulerSuite) TestSchedulerContract() {
+	testSchedulerContract(s.Assertions, s.controller, s.scheduler)
 }
