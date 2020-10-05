@@ -63,15 +63,15 @@ func (m *metadataManagerImpl) CreateDomain(
 	}
 
 	internalRequest := &InternalCreateDomainRequest{
-		Info:              request.Info,
+		Info:              m.toInternalDomainInfo(request.Info),
 		Config:            &dc,
-		ReplicationConfig: request.ReplicationConfig,
+		ReplicationConfig: m.toInternalDomainReplicationConfig(request.ReplicationConfig),
 		IsGlobalDomain:    request.IsGlobalDomain,
 		ConfigVersion:     request.ConfigVersion,
 		FailoverVersion:   request.FailoverVersion,
 	}
 
-	resp, err := m.persistence.CreateDomain(context.TODO(), internalRequest)
+	resp, err := m.persistence.CreateDomain(ctx, internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -83,12 +83,15 @@ func (m *metadataManagerImpl) CreateDomain(
 
 }
 
-func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
+func (m *metadataManagerImpl) GetDomain(
+	ctx context.Context,
+	request *GetDomainRequest,
+) (*GetDomainResponse, error) {
 	internalRequest := &InternalGetDomainRequest{
 		ID:   request.ID,
 		Name: request.Name,
 	}
-	resp, err := m.persistence.GetDomain(context.TODO(), internalRequest)
+	resp, err := m.persistence.GetDomain(ctx, internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +102,9 @@ func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainRe
 	}
 
 	return &GetDomainResponse{
-		Info:                        resp.Info,
+		Info:                        m.fromInternalDomainInfo(resp.Info),
 		Config:                      &dc,
-		ReplicationConfig:           resp.ReplicationConfig,
+		ReplicationConfig:           m.fromInternalDomainReplicationConfig(resp.ReplicationConfig),
 		IsGlobalDomain:              resp.IsGlobalDomain,
 		ConfigVersion:               resp.ConfigVersion,
 		FailoverVersion:             resp.FailoverVersion,
@@ -121,9 +124,9 @@ func (m *metadataManagerImpl) UpdateDomain(
 		return err
 	}
 	return m.persistence.UpdateDomain(ctx, &InternalUpdateDomainRequest{
-		Info:                        request.Info,
+		Info:                        m.toInternalDomainInfo(request.Info),
 		Config:                      &dc,
-		ReplicationConfig:           request.ReplicationConfig,
+		ReplicationConfig:           m.toInternalDomainReplicationConfig(request.ReplicationConfig),
 		ConfigVersion:               request.ConfigVersion,
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: request.FailoverNotificationVersion,
@@ -133,24 +136,33 @@ func (m *metadataManagerImpl) UpdateDomain(
 	})
 }
 
-func (m *metadataManagerImpl) DeleteDomain(request *DeleteDomainRequest) error {
-	return m.persistence.DeleteDomain(context.TODO(), &InternalDeleteDomainRequest{
+func (m *metadataManagerImpl) DeleteDomain(
+	ctx context.Context,
+	request *DeleteDomainRequest,
+) error {
+	return m.persistence.DeleteDomain(ctx, &InternalDeleteDomainRequest{
 		ID: request.ID,
 	})
 }
 
-func (m *metadataManagerImpl) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
-	return m.persistence.DeleteDomainByName(context.TODO(), &InternalDeleteDomainByNameRequest{
+func (m *metadataManagerImpl) DeleteDomainByName(
+	ctx context.Context,
+	request *DeleteDomainByNameRequest,
+) error {
+	return m.persistence.DeleteDomainByName(ctx, &InternalDeleteDomainByNameRequest{
 		Name: request.Name,
 	})
 }
 
-func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error) {
+func (m *metadataManagerImpl) ListDomains(
+	ctx context.Context,
+	request *ListDomainsRequest,
+) (*ListDomainsResponse, error) {
 	internalRequest := &InternalListDomainRequest{
 		PageSize:      request.PageSize,
 		NextPageToken: request.NextPageToken,
 	}
-	resp, err := m.persistence.ListDomains(context.TODO(), internalRequest)
+	resp, err := m.persistence.ListDomains(ctx, internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -161,9 +173,9 @@ func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDom
 			return nil, err
 		}
 		domains = append(domains, &GetDomainResponse{
-			Info:                        d.Info,
+			Info:                        m.fromInternalDomainInfo(d.Info),
 			Config:                      &dc,
-			ReplicationConfig:           d.ReplicationConfig,
+			ReplicationConfig:           m.fromInternalDomainReplicationConfig(d.ReplicationConfig),
 			IsGlobalDomain:              d.IsGlobalDomain,
 			ConfigVersion:               d.ConfigVersion,
 			FailoverVersion:             d.FailoverVersion,
@@ -177,6 +189,54 @@ func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDom
 		Domains:       domains,
 		NextPageToken: resp.NextPageToken,
 	}, nil
+}
+
+func (m *metadataManagerImpl) toInternalDomainInfo(domainInfo *DomainInfo) *InternalDomainInfo {
+	return &InternalDomainInfo{
+		ID:          domainInfo.ID,
+		Name:        domainInfo.Name,
+		Status:      domainInfo.Status,
+		Description: domainInfo.Description,
+		OwnerEmail:  domainInfo.OwnerEmail,
+		Data:        domainInfo.Data,
+	}
+}
+
+func (m *metadataManagerImpl) fromInternalDomainInfo(internalDomainInfo *InternalDomainInfo) *DomainInfo {
+	return &DomainInfo{
+		ID:          internalDomainInfo.ID,
+		Name:        internalDomainInfo.Name,
+		Status:      internalDomainInfo.Status,
+		Description: internalDomainInfo.Description,
+		OwnerEmail:  internalDomainInfo.OwnerEmail,
+		Data:        internalDomainInfo.Data,
+	}
+}
+
+func (m *metadataManagerImpl) toInternalDomainReplicationConfig(domainReplicationConfig *DomainReplicationConfig) *InternalDomainReplicationConfig {
+	var internalClusters []*InternalClusterReplicationConfig
+	for _, cluster := range domainReplicationConfig.Clusters {
+		internalClusters = append(internalClusters, &InternalClusterReplicationConfig{
+			ClusterName: cluster.ClusterName,
+		})
+	}
+	return &InternalDomainReplicationConfig{
+		ActiveClusterName: domainReplicationConfig.ActiveClusterName,
+		Clusters:          internalClusters,
+	}
+}
+
+func (m *metadataManagerImpl) fromInternalDomainReplicationConfig(internalDomainReplicationConfig *InternalDomainReplicationConfig) *DomainReplicationConfig {
+	var internalClusters []*ClusterReplicationConfig
+	for _, cluster := range internalDomainReplicationConfig.Clusters {
+		internalClusters = append(internalClusters, &ClusterReplicationConfig{
+			ClusterName: cluster.ClusterName,
+		})
+	}
+	return &DomainReplicationConfig{
+		ActiveClusterName: internalDomainReplicationConfig.ActiveClusterName,
+		Clusters:          internalClusters,
+	}
 }
 
 func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
@@ -223,8 +283,10 @@ func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) 
 	}, nil
 }
 
-func (m *metadataManagerImpl) GetMetadata() (*GetMetadataResponse, error) {
-	resp, err := m.persistence.GetMetadata(context.TODO())
+func (m *metadataManagerImpl) GetMetadata(
+	ctx context.Context,
+) (*GetMetadataResponse, error) {
+	resp, err := m.persistence.GetMetadata(ctx)
 	if err != nil {
 		return nil, err
 	}

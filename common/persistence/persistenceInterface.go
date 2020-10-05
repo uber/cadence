@@ -619,6 +619,16 @@ type (
 		SearchAttributes   map[string][]byte
 	}
 
+	// InternalDomainInfo describes the domain entity
+	InternalDomainInfo struct {
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+		Data        map[string]string
+	}
+
 	// InternalDomainConfig describes the domain configuration
 	InternalDomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
@@ -633,11 +643,22 @@ type (
 		BadBinaries              *DataBlob
 	}
 
+	// InternalDomainReplicationConfig describes the cross DC domain replication configuration
+	InternalDomainReplicationConfig struct {
+		ActiveClusterName string
+		Clusters          []*InternalClusterReplicationConfig
+	}
+
+	// InternalClusterReplicationConfig describes the cross DC cluster replication configuration
+	InternalClusterReplicationConfig struct {
+		ClusterName string
+	}
+
 	// InternalCreateDomainRequest is used to create the domain
 	InternalCreateDomainRequest struct {
-		Info              *DomainInfo
+		Info              *InternalDomainInfo
 		Config            *InternalDomainConfig
-		ReplicationConfig *DomainReplicationConfig
+		ReplicationConfig *InternalDomainReplicationConfig
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
@@ -656,9 +677,9 @@ type (
 
 	// InternalGetDomainResponse is the response for GetDomain
 	InternalGetDomainResponse struct {
-		Info                        *DomainInfo
+		Info                        *InternalDomainInfo
 		Config                      *InternalDomainConfig
-		ReplicationConfig           *DomainReplicationConfig
+		ReplicationConfig           *InternalDomainReplicationConfig
 		IsGlobalDomain              bool
 		ConfigVersion               int64
 		FailoverVersion             int64
@@ -670,9 +691,9 @@ type (
 
 	// InternalUpdateDomainRequest is used to update domain
 	InternalUpdateDomainRequest struct {
-		Info                        *DomainInfo
+		Info                        *InternalDomainInfo
 		Config                      *InternalDomainConfig
-		ReplicationConfig           *DomainReplicationConfig
+		ReplicationConfig           *InternalDomainReplicationConfig
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
@@ -701,6 +722,11 @@ type (
 	InternalListDomainsResponse struct {
 		Domains       []*InternalGetDomainResponse
 		NextPageToken []byte
+	}
+
+	// InternalGetMetadataResponse is the response for GetMetadata
+	InternalGetMetadataResponse struct {
+		NotificationVersion int64
 	}
 
 	// InternalTransferFailoverLevel contains corresponding start / end level
@@ -764,6 +790,38 @@ type (
 		ShardInfo *InternalShardInfo
 	}
 )
+
+// SerializeInternalClusterConfigs makes an array of *InternalClusterReplicationConfig serializable
+// by flattening them into map[string]interface{}
+func SerializeInternalClusterConfigs(internalReplicationConfigs []*InternalClusterReplicationConfig) []map[string]interface{} {
+	seriaizedInternalReplicationConfigs := []map[string]interface{}{}
+	for index := range internalReplicationConfigs {
+		seriaizedInternalReplicationConfigs = append(seriaizedInternalReplicationConfigs, internalReplicationConfigs[index].serialize())
+	}
+	return seriaizedInternalReplicationConfigs
+}
+
+// DeserializeInternalClusterConfigs creates an array of InternalClusterReplicationConfig from an array of map representations
+func DeserializeInternalClusterConfigs(replicationConfigs []map[string]interface{}) []*InternalClusterReplicationConfig {
+	deseriaizedReplicationConfigs := []*InternalClusterReplicationConfig{}
+	for index := range replicationConfigs {
+		deseriaizedReplicationConfig := &InternalClusterReplicationConfig{}
+		deseriaizedReplicationConfig.deserialize(replicationConfigs[index])
+		deseriaizedReplicationConfigs = append(deseriaizedReplicationConfigs, deseriaizedReplicationConfig)
+	}
+
+	return deseriaizedReplicationConfigs
+}
+
+func (config *InternalClusterReplicationConfig) serialize() map[string]interface{} {
+	output := make(map[string]interface{})
+	output["cluster_name"] = config.ClusterName
+	return output
+}
+
+func (config *InternalClusterReplicationConfig) deserialize(input map[string]interface{}) {
+	config.ClusterName = input["cluster_name"].(string)
+}
 
 // NewDataBlob returns a new DataBlob
 func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {

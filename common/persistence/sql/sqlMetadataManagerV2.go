@@ -220,9 +220,9 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		return nil, err
 	}
 
-	clusters := make([]*persistence.ClusterReplicationConfig, len(domainInfo.Clusters))
+	clusters := make([]*persistence.InternalClusterReplicationConfig, len(domainInfo.Clusters))
 	for i := range domainInfo.Clusters {
-		clusters[i] = &persistence.ClusterReplicationConfig{ClusterName: domainInfo.Clusters[i]}
+		clusters[i] = &persistence.InternalClusterReplicationConfig{ClusterName: domainInfo.Clusters[i]}
 	}
 
 	var badBinaries *persistence.DataBlob
@@ -236,7 +236,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 	}
 
 	return &persistence.InternalGetDomainResponse{
-		Info: &persistence.DomainInfo{
+		Info: &persistence.InternalDomainInfo{
 			ID:          row.ID.String(),
 			Name:        row.Name,
 			Status:      int(domainInfo.GetStatus()),
@@ -255,9 +255,9 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			VisibilityArchivalURI:    domainInfo.GetVisibilityArchivalURI(),
 			BadBinaries:              badBinaries,
 		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
+		ReplicationConfig: &persistence.InternalDomainReplicationConfig{
 			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
-			Clusters:          persistence.GetOrUseDefaultClusters(m.activeClusterName, clusters),
+			Clusters:          persistence.InternalGetOrUseDefaultClusters(m.activeClusterName, clusters),
 		},
 		IsGlobalDomain:              row.IsGlobal,
 		FailoverVersion:             domainInfo.GetFailoverVersion(),
