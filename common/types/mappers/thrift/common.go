@@ -83,52 +83,61 @@ func ToActivityType(at *thrift.ActivityType) types.ActivityType {
 }
 
 // FromHeader converts internal Header type to thrift
-func FromHeader(h types.Header) *thrift.Header {
+func FromHeader(h *types.Header) *thrift.Header {
+	if h == nil {
+		return nil
+	}
 	return &thrift.Header{
 		Fields: h.Fields,
 	}
 }
 
 // ToHeader converts thrift Header type to internal
-func ToHeader(h *thrift.Header) types.Header {
+func ToHeader(h *thrift.Header) *types.Header {
 	if h == nil {
-		return types.Header{}
+		return nil
 	}
-	return types.Header{
+	return &types.Header{
 		Fields: h.Fields,
 	}
 }
 
 // FromMemo converts internal Memo type to thrift
-func FromMemo(h types.Memo) *thrift.Memo {
+func FromMemo(m *types.Memo) *thrift.Memo {
+	if m == nil {
+		return nil
+	}
 	return &thrift.Memo{
-		Fields: h.Fields,
+		Fields: m.Fields,
 	}
 }
 
 // ToMemo converts thrift Memo type to internal
-func ToMemo(h *thrift.Memo) types.Memo {
-	if h == nil {
-		return types.Memo{}
+func ToMemo(m *thrift.Memo) *types.Memo {
+	if m == nil {
+		return nil
 	}
-	return types.Memo{
-		Fields: h.Fields,
+	return &types.Memo{
+		Fields: m.Fields,
 	}
 }
 
 // FromSearchAttributes converts internal SearchAttributes type to thrift
-func FromSearchAttributes(sa types.SearchAttributes) *thrift.SearchAttributes {
+func FromSearchAttributes(sa *types.SearchAttributes) *thrift.SearchAttributes {
+	if sa == nil {
+		return nil
+	}
 	return &thrift.SearchAttributes{
 		IndexedFields: sa.IndexedFields,
 	}
 }
 
 // ToSearchAttributes converts thrift SearchAttributes type to internal
-func ToSearchAttributes(sa *thrift.SearchAttributes) types.SearchAttributes {
+func ToSearchAttributes(sa *thrift.SearchAttributes) *types.SearchAttributes {
 	if sa == nil {
-		return types.SearchAttributes{}
+		return nil
 	}
-	return types.SearchAttributes{
+	return &types.SearchAttributes{
 		IndexedFields: sa.IndexedFields,
 	}
 }

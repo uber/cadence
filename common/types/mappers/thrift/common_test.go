@@ -99,41 +99,44 @@ func Test_ToActivityType(t *testing.T) {
 
 func Test_FromHeader(t *testing.T) {
 	fields := map[string][]byte{"A": {1, 2, 3}}
-	assert.Equal(t, &thrift.Header{}, FromHeader(types.Header{}))
-	assert.Equal(t, &thrift.Header{Fields: fields}, FromHeader(types.Header{Fields: fields}))
+	assert.Equal(t, (*thrift.Header)(nil), FromHeader(nil))
+	assert.Equal(t, &thrift.Header{}, FromHeader(&types.Header{}))
+	assert.Equal(t, &thrift.Header{Fields: fields}, FromHeader(&types.Header{Fields: fields}))
 }
 
 func Test_ToHeader(t *testing.T) {
 	fields := map[string][]byte{"A": {1, 2, 3}}
-	assert.Equal(t, types.Header{}, ToHeader(nil))
-	assert.Equal(t, types.Header{}, ToHeader(&thrift.Header{}))
-	assert.Equal(t, types.Header{Fields: fields}, ToHeader(&thrift.Header{Fields: fields}))
+	assert.Equal(t, (*types.Header)(nil), ToHeader(nil))
+	assert.Equal(t, &types.Header{}, ToHeader(&thrift.Header{}))
+	assert.Equal(t, &types.Header{Fields: fields}, ToHeader(&thrift.Header{Fields: fields}))
 }
 
 func Test_FromMemo(t *testing.T) {
 	fields := map[string][]byte{"A": {1, 2, 3}}
-	assert.Equal(t, &thrift.Memo{}, FromMemo(types.Memo{}))
-	assert.Equal(t, &thrift.Memo{Fields: fields}, FromMemo(types.Memo{Fields: fields}))
+	assert.Equal(t, (*thrift.Memo)(nil), FromMemo(nil))
+	assert.Equal(t, &thrift.Memo{}, FromMemo(&types.Memo{}))
+	assert.Equal(t, &thrift.Memo{Fields: fields}, FromMemo(&types.Memo{Fields: fields}))
 }
 
 func Test_ToMemo(t *testing.T) {
 	fields := map[string][]byte{"A": {1, 2, 3}}
-	assert.Equal(t, types.Memo{}, ToMemo(nil))
-	assert.Equal(t, types.Memo{}, ToMemo(&thrift.Memo{}))
-	assert.Equal(t, types.Memo{Fields: fields}, ToMemo(&thrift.Memo{Fields: fields}))
+	assert.Equal(t, (*types.Memo)(nil), ToMemo(nil))
+	assert.Equal(t, &types.Memo{}, ToMemo(&thrift.Memo{}))
+	assert.Equal(t, &types.Memo{Fields: fields}, ToMemo(&thrift.Memo{Fields: fields}))
 }
 
 func Test_FromSearchAttributes(t *testing.T) {
 	fields := map[string][]byte{"A": {1, 2, 3}}
-	assert.Equal(t, &thrift.SearchAttributes{}, FromSearchAttributes(types.SearchAttributes{}))
-	assert.Equal(t, &thrift.SearchAttributes{IndexedFields: fields}, FromSearchAttributes(types.SearchAttributes{IndexedFields: fields}))
+	assert.Equal(t, (*thrift.SearchAttributes)(nil), FromSearchAttributes(nil))
+	assert.Equal(t, &thrift.SearchAttributes{}, FromSearchAttributes(&types.SearchAttributes{}))
+	assert.Equal(t, &thrift.SearchAttributes{IndexedFields: fields}, FromSearchAttributes(&types.SearchAttributes{IndexedFields: fields}))
 }
 
 func Test_ToSearchAttributes(t *testing.T) {
 	fields := map[string][]byte{"A": {1, 2, 3}}
-	assert.Equal(t, types.SearchAttributes{}, ToSearchAttributes(nil))
-	assert.Equal(t, types.SearchAttributes{}, ToSearchAttributes(&thrift.SearchAttributes{}))
-	assert.Equal(t, types.SearchAttributes{IndexedFields: fields}, ToSearchAttributes(&thrift.SearchAttributes{IndexedFields: fields}))
+	assert.Equal(t, (*types.SearchAttributes)(nil), ToSearchAttributes(nil))
+	assert.Equal(t, &types.SearchAttributes{}, ToSearchAttributes(&thrift.SearchAttributes{}))
+	assert.Equal(t, &types.SearchAttributes{IndexedFields: fields}, ToSearchAttributes(&thrift.SearchAttributes{IndexedFields: fields}))
 }
 
 func Test_FromRetryPolicy(t *testing.T) {
