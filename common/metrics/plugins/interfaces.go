@@ -24,13 +24,15 @@ import (
 	"fmt"
 
 	"github.com/uber-go/tally"
-
-	"github.com/uber/cadence/common/service/config"
 )
 
 type (
 	MetricReporterPlugin interface {
-		NewTallyScope(cfg config.Metrics) (tally.Scope, error)
+		NewTallyScope(
+			configKVs map[string]string,
+			tags map[string]string,
+			metricPrefix string,
+		) (tally.Scope, error)
 	}
 )
 
@@ -44,12 +46,17 @@ func RegisterPlugin(pluginName string, plugin MetricReporterPlugin) {
 	supportedPlugins[pluginName] = plugin
 }
 
-func NewThirdPartyReporter(cfg config.Metrics) (tally.Scope, error) {
-	plugin, ok := supportedPlugins[cfg.ThirdParty.PluginName]
+func NewThirdPartyReporter(
+	pluginName string,
+	configKVs map[string]string,
+	tags map[string]string,
+	metricPrefix string,
+) (tally.Scope, error) {
+	plugin, ok := supportedPlugins[pluginName]
 
 	if !ok {
-		return nil, fmt.Errorf("not supported plugin %v, only supported: %v", cfg.ThirdParty.PluginName, supportedPlugins)
+		return nil, fmt.Errorf("not supported plugin %v, only supported: %v", pluginName, supportedPlugins)
 	}
 
-	return plugin.NewTallyScope(cfg)
+	return plugin.NewTallyScope(configKVs, tags, metricPrefix)
 }

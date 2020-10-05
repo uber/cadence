@@ -105,7 +105,7 @@ func (c *Metrics) newM3Scope(logger log.Logger) tally.Scope {
 
 // newThirdPartyScope return a new scope based on third party metric reporter plugin
 func (c *Metrics) newThirdPartyScope(logger log.Logger) tally.Scope {
-	scope, err := plugins.NewThirdPartyReporter(*c)
+	scope, err := plugins.NewThirdPartyReporter(c.ThirdParty.PluginName, c.ThirdParty.ConfigKVs, c.Tags, c.Prefix)
 	if err != nil {
 		logger.Fatal("error creating third party metric client", tag.Error(err))
 		return tally.NoopScope
