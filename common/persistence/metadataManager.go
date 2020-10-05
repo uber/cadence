@@ -76,11 +76,9 @@ func (m *metadataManagerImpl) CreateDomain(
 		return nil, err
 	}
 
-	result := &CreateDomainResponse{
+	return &CreateDomainResponse{
 		ID: resp.ID,
-	}
-	return result, nil
-
+	}, nil
 }
 
 func (m *metadataManagerImpl) GetDomain(
@@ -192,6 +190,9 @@ func (m *metadataManagerImpl) ListDomains(
 }
 
 func (m *metadataManagerImpl) toInternalDomainInfo(domainInfo *DomainInfo) *InternalDomainInfo {
+	if domainInfo == nil {
+		return nil
+	}
 	return &InternalDomainInfo{
 		ID:          domainInfo.ID,
 		Name:        domainInfo.Name,
@@ -203,6 +204,9 @@ func (m *metadataManagerImpl) toInternalDomainInfo(domainInfo *DomainInfo) *Inte
 }
 
 func (m *metadataManagerImpl) fromInternalDomainInfo(internalDomainInfo *InternalDomainInfo) *DomainInfo {
+	if internalDomainInfo == nil {
+		return nil
+	}
 	return &DomainInfo{
 		ID:          internalDomainInfo.ID,
 		Name:        internalDomainInfo.Name,
@@ -214,6 +218,9 @@ func (m *metadataManagerImpl) fromInternalDomainInfo(internalDomainInfo *Interna
 }
 
 func (m *metadataManagerImpl) toInternalDomainReplicationConfig(domainReplicationConfig *DomainReplicationConfig) *InternalDomainReplicationConfig {
+	if domainReplicationConfig == nil {
+		return nil
+	}
 	var internalClusters []*InternalClusterReplicationConfig
 	for _, cluster := range domainReplicationConfig.Clusters {
 		internalClusters = append(internalClusters, &InternalClusterReplicationConfig{
@@ -227,6 +234,9 @@ func (m *metadataManagerImpl) toInternalDomainReplicationConfig(domainReplicatio
 }
 
 func (m *metadataManagerImpl) fromInternalDomainReplicationConfig(internalDomainReplicationConfig *InternalDomainReplicationConfig) *DomainReplicationConfig {
+	if internalDomainReplicationConfig == nil {
+		return nil
+	}
 	var internalClusters []*ClusterReplicationConfig
 	for _, cluster := range internalDomainReplicationConfig.Clusters {
 		internalClusters = append(internalClusters, &ClusterReplicationConfig{
