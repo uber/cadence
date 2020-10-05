@@ -152,7 +152,6 @@ func (m *historyV2ManagerImpl) GetHistoryTree(
 	ctx context.Context,
 	request *GetHistoryTreeRequest,
 ) (*GetHistoryTreeResponse, error) {
-
 	if len(request.TreeID) == 0 {
 		var branch workflow.HistoryBranch
 		err := m.thriftEncoder.Decode(request.BranchToken, &branch)
@@ -161,7 +160,18 @@ func (m *historyV2ManagerImpl) GetHistoryTree(
 		}
 		request.TreeID = branch.GetTreeID()
 	}
-	return m.persistence.GetHistoryTree(ctx, request)
+	internalRequest := &InternalGetHistoryTreeRequest{
+		TreeID:      request.TreeID,
+		ShardID:     request.ShardID,
+		BranchToken: request.BranchToken,
+	}
+	resp, err := m.persistence.GetHistoryTree(ctx, internalRequest)
+	if err != nil {
+		return nil, err
+	}
+	return &GetHistoryTreeResponse{
+		Branches: resp.Branches,
+	}, nil
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
@@ -300,8 +310,31 @@ func (m *historyV2ManagerImpl) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *GetAllHistoryTreeBranchesRequest,
 ) (*GetAllHistoryTreeBranchesResponse, error) {
+	internalRequest := &InternalGetAllHistoryTreeBranchesRequest{
+		NextPageToken: request.NextPageToken,
+		PageSize:      request.PageSize,
+	}
+	resp, err := m.persistence.GetAllHistoryTreeBranches(ctx, internalRequest)
+	if err != nil {
+		return nil, err
+	}
+	var historyBranches []HistoryBranchDetail
+	for _, branch := range resp.Branches {
+		historyBranches = append(historyBranches, m.fromInternalHistoryBranchDetail(branch))
+	}
+	return &GetAllHistoryTreeBranchesResponse{
+		NextPageToken: resp.NextPageToken,
+		Branches:      historyBranches,
+	}, nil
+}
 
-	return m.persistence.GetAllHistoryTreeBranches(ctx, request)
+func (m *historyV2ManagerImpl) fromInternalHistoryBranchDetail(branch InternalHistoryBranchDetail) HistoryBranchDetail {
+	return HistoryBranchDetail{
+		TreeID:   branch.TreeID,
+		BranchID: branch.BranchID,
+		ForkTime: branch.ForkTime,
+		Info:     branch.Info,
+	}
 }
 
 func (m *historyV2ManagerImpl) readRawHistoryBranch(

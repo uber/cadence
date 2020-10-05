@@ -344,7 +344,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := h.GetHistoryTree(context.TODO(), &p.GetHistoryTreeRequest{
+	rsp, err := h.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: &request.ShardID,
 	})
@@ -405,18 +405,18 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 
 func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 	ctx context.Context,
-	request *p.GetAllHistoryTreeBranchesRequest,
-) (*p.GetAllHistoryTreeBranchesResponse, error) {
+	request *p.InternalGetAllHistoryTreeBranchesRequest,
+) (*p.InternalGetAllHistoryTreeBranchesResponse, error) {
 	dbBranches, pagingToken, err := h.db.SelectAllHistoryTrees(ctx, request.NextPageToken, request.PageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	branchDetails := make([]p.HistoryBranchDetail, 0, int(request.PageSize))
+	branchDetails := make([]p.InternalHistoryBranchDetail, 0, int(request.PageSize))
 
 	for _, branch := range dbBranches {
 
-		branchDetail := p.HistoryBranchDetail{
+		branchDetail := p.InternalHistoryBranchDetail{
 			TreeID:   branch.TreeID,
 			BranchID: branch.BranchID,
 			ForkTime: time.Unix(0, p.DBTimestampToUnixNano(branch.CreateTimestampMilliseconds)),
@@ -425,7 +425,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 		branchDetails = append(branchDetails, branchDetail)
 	}
 
-	response := &p.GetAllHistoryTreeBranchesResponse{
+	response := &p.InternalGetAllHistoryTreeBranchesResponse{
 		Branches:      branchDetails,
 		NextPageToken: pagingToken,
 	}
@@ -436,8 +436,8 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 // GetHistoryTree returns all branch information of a tree
 func (h *nosqlHistoryManager) GetHistoryTree(
 	ctx context.Context,
-	request *p.GetHistoryTreeRequest,
-) (*p.GetHistoryTreeResponse, error) {
+	request *p.InternalGetHistoryTreeRequest,
+) (*p.InternalGetHistoryTreeResponse, error) {
 
 	treeID := request.TreeID
 
@@ -459,7 +459,7 @@ func (h *nosqlHistoryManager) GetHistoryTree(
 		}
 		branches = append(branches, br)
 	}
-	return &p.GetHistoryTreeResponse{
+	return &p.InternalGetHistoryTreeResponse{
 		Branches: branches,
 	}, nil
 }

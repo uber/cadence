@@ -121,9 +121,9 @@ type (
 		// DeleteHistoryBranch removes a branch
 		DeleteHistoryBranch(ctx context.Context, request *InternalDeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
-		GetHistoryTree(ctx context.Context, request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		GetHistoryTree(ctx context.Context, request *InternalGetHistoryTreeRequest) (*InternalGetHistoryTreeResponse, error)
 		// GetAllHistoryTreeBranches returns all branches of all trees
-		GetAllHistoryTreeBranches(ctx context.Context, request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
+		GetAllHistoryTreeBranches(ctx context.Context, request *InternalGetAllHistoryTreeBranchesRequest) (*InternalGetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// VisibilityStore is the store interface for visibility
@@ -541,6 +541,46 @@ type (
 		LastNodeID int64
 		// LastTransactionID is the last known transaction ID attached to a history node
 		LastTransactionID int64
+	}
+
+	// InternalGetHistoryTreeRequest is used to get history tree
+	InternalGetHistoryTreeRequest struct {
+		// A UUID of a tree
+		TreeID string
+		// Get data from this shard
+		ShardID *int
+		// optional: can provide treeID via branchToken if treeID is empty
+		BranchToken []byte
+	}
+
+	// InternalGetHistoryTreeResponse is the response to GetHistoryTree
+	InternalGetHistoryTreeResponse struct {
+		// all branches of a tree
+		Branches []*workflow.HistoryBranch
+	}
+
+	// InternalGetAllHistoryTreeBranchesRequest is used to get history tree branches
+	InternalGetAllHistoryTreeBranchesRequest struct {
+		// pagination token
+		NextPageToken []byte
+		// maximum number of branches returned per page
+		PageSize int
+	}
+
+	// InternalGetAllHistoryTreeBranchesResponse is the response to GetAllHistoryTreeBranches
+	InternalGetAllHistoryTreeBranchesResponse struct {
+		// pagination token
+		NextPageToken []byte
+		// all branches of all trees
+		Branches []InternalHistoryBranchDetail
+	}
+
+	// InternalHistoryBranchDetail contains information of a branch
+	InternalHistoryBranchDetail struct {
+		TreeID   string
+		BranchID string
+		ForkTime time.Time
+		Info     string
 	}
 
 	// VisibilityWorkflowExecutionInfo is visibility info for internal response
