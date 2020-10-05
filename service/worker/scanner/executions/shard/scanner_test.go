@@ -97,7 +97,7 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(4)
 	scanner := &scanner{
@@ -127,7 +127,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeCorrupted,
 	}).Times(1)
 	corruptedWriter := store.NewMockExecutionWriter(s.controller)
@@ -160,7 +160,7 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(gomock.Any()).Return(invariant.ManagerCheckResult{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeFailed,
 	}).Times(1)
 	failedWriter := store.NewMockExecutionWriter(s.controller)
@@ -287,14 +287,14 @@ func (s *ScannerSuite) TestScan_Success() {
 		}
 	}).Times(10)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), &entity.ConcreteExecution{
 		Execution: entity.Execution{
 			DomainID: "healthy",
 		},
 	}).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(4)
-	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), &entity.ConcreteExecution{
 		Execution: entity.Execution{
 			DomainID: "history_missing",
 			State:    persistence.WorkflowStateCompleted,
@@ -310,7 +310,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			},
 		},
 	}).Times(3)
-	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), &entity.ConcreteExecution{
 		Execution: entity.Execution{
 			DomainID: "orphan_execution",
 			State:    persistence.WorkflowStateCreated,
@@ -329,7 +329,7 @@ func (s *ScannerSuite) TestScan_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunChecks(&entity.ConcreteExecution{
+	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), &entity.ConcreteExecution{
 		Execution: entity.Execution{
 			DomainID: "failed",
 		}}).Return(invariant.ManagerCheckResult{

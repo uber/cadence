@@ -24,6 +24,7 @@ package pagination
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -86,7 +87,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 		s.Equal(expectedKey, flushedKeys[i].(string))
 	}
 
-	fetchFn := func(token PageToken) (Page, error) {
+	fetchFn := func(_ context.Context, token PageToken) (Page, error) {
 		key := flushedKeys[token.(int)]
 		data := store[key.(string)]
 		dataBlobs := bytes.Split(data, separator)
@@ -112,7 +113,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 		}, nil
 	}
 
-	itr := NewIterator(0, fetchFn)
+	itr := NewIterator(context.Background(), 0, fetchFn)
 	itrCount := 0
 	for itr.HasNext() {
 		val, err := itr.Next()

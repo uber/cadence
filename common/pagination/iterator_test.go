@@ -23,6 +23,7 @@
 package pagination
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -52,7 +53,7 @@ func (s *IteratorSuite) SetupTest() {
 }
 
 func (s *IteratorSuite) TestInitializedToEmpty() {
-	fetchFn := func(token PageToken) (Page, error) {
+	fetchFn := func(_ context.Context, token PageToken) (Page, error) {
 		if token.(int) == 2 {
 			return Page{
 				CurrentToken: token,
@@ -66,14 +67,14 @@ func (s *IteratorSuite) TestInitializedToEmpty() {
 			Entities:     fetchMap[token],
 		}, nil
 	}
-	itr := NewIterator(0, fetchFn)
+	itr := NewIterator(context.Background(), 0, fetchFn)
 	s.False(itr.HasNext())
 	_, err := itr.Next()
 	s.Equal(ErrIteratorFinished, err)
 }
 
 func (s *IteratorSuite) TestNonEmptyNoErrors() {
-	fetchFn := func(token PageToken) (Page, error) {
+	fetchFn := func(_ context.Context, token PageToken) (Page, error) {
 		var nextPageToken interface{} = token.(int) + 1
 		if nextPageToken.(int) == 5 {
 			nextPageToken = nil
@@ -84,7 +85,7 @@ func (s *IteratorSuite) TestNonEmptyNoErrors() {
 			Entities:     fetchMap[token],
 		}, nil
 	}
-	itr := NewIterator(0, fetchFn)
+	itr := NewIterator(context.Background(), 0, fetchFn)
 	expectedResults := []string{"one", "two", "three", "four", "five", "six", "seven", "eight"}
 	i := 0
 	for itr.HasNext() {
@@ -99,7 +100,7 @@ func (s *IteratorSuite) TestNonEmptyNoErrors() {
 }
 
 func (s *IteratorSuite) TestNonEmptyWithErrors() {
-	fetchFn := func(token PageToken) (Page, error) {
+	fetchFn := func(_ context.Context, token PageToken) (Page, error) {
 		if token.(int) == 4 {
 			return Page{}, errors.New("got error")
 		}
@@ -109,7 +110,7 @@ func (s *IteratorSuite) TestNonEmptyWithErrors() {
 			Entities:     fetchMap[token],
 		}, nil
 	}
-	itr := NewIterator(0, fetchFn)
+	itr := NewIterator(context.Background(), 0, fetchFn)
 	expectedResults := []string{"one", "two", "three", "four", "five", "six", "seven"}
 	i := 0
 	for itr.HasNext() {
