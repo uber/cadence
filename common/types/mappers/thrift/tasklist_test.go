@@ -33,14 +33,14 @@ import (
 func Test_FromTaskListKind(t *testing.T) {
 	assert.Equal(t, taskListKindPtr(thrift.TaskListKindNormal), FromTaskListKind(types.TaskListKindNormal))
 	assert.Equal(t, taskListKindPtr(thrift.TaskListKindSticky), FromTaskListKind(types.TaskListKindSticky))
-	assert.Panics(t, func() { FromTaskListKind(types.TaskListKind(99)) })
+	assert.Equal(t, taskListKindPtr(99), FromTaskListKind(types.TaskListKind(99)))
 }
 
 func Test_ToTaskListKind(t *testing.T) {
 	assert.Equal(t, types.TaskListKindNormal, ToTaskListKind(nil))
 	assert.Equal(t, types.TaskListKindNormal, ToTaskListKind(taskListKindPtr(thrift.TaskListKindNormal)))
 	assert.Equal(t, types.TaskListKindSticky, ToTaskListKind(taskListKindPtr(thrift.TaskListKindSticky)))
-	assert.Panics(t, func() { ToTaskListKind(taskListKindPtr(thrift.TaskListKind(99))) })
+	assert.Equal(t, types.TaskListKind(99), ToTaskListKind(taskListKindPtr(thrift.TaskListKind(99))))
 }
 
 func Test_FromTaskList(t *testing.T) {
@@ -82,4 +82,8 @@ func Test_ToTaskList(t *testing.T) {
 			Kind: taskListKindPtr(thrift.TaskListKindSticky),
 		}),
 	)
+}
+
+func taskListKindPtr(kind thrift.TaskListKind) *thrift.TaskListKind {
+	return &kind
 }

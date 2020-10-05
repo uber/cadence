@@ -29,14 +29,8 @@ import (
 
 // FromTaskListKind converts internal TaskListKind type to thrift
 func FromTaskListKind(kind types.TaskListKind) *thrift.TaskListKind {
-	switch kind {
-	case types.TaskListKindNormal:
-		return taskListKindPtr(thrift.TaskListKindNormal)
-	case types.TaskListKindSticky:
-		return taskListKindPtr(thrift.TaskListKindSticky)
-	}
-
-	panic("unexpected TaskListKind value")
+	k := thrift.TaskListKind(kind)
+	return &k
 }
 
 // ToTaskListKind converts thrift TaskListKind type to internal
@@ -44,21 +38,13 @@ func ToTaskListKind(kind *thrift.TaskListKind) types.TaskListKind {
 	if kind == nil {
 		return types.TaskListKindNormal
 	}
-
-	switch *kind {
-	case thrift.TaskListKindNormal:
-		return types.TaskListKindNormal
-	case thrift.TaskListKindSticky:
-		return types.TaskListKindSticky
-	}
-
-	panic("unexpected TaskListKind value")
+	return types.TaskListKind(*kind)
 }
 
 // FromTaskList converts internal TaskList type to thrift
 func FromTaskList(tl types.TaskList) *thrift.TaskList {
 	return &thrift.TaskList{
-		Name: stringPtr(tl.Name),
+		Name: &tl.Name,
 		Kind: FromTaskListKind(tl.Kind),
 	}
 }
@@ -69,11 +55,7 @@ func ToTaskList(tl *thrift.TaskList) types.TaskList {
 		return types.TaskList{}
 	}
 	return types.TaskList{
-		Name: stringVal(tl.Name),
+		Name: tl.GetName(),
 		Kind: ToTaskListKind(tl.Kind),
 	}
-}
-
-func taskListKindPtr(kind thrift.TaskListKind) *thrift.TaskListKind {
-	return &kind
 }

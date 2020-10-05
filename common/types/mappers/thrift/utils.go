@@ -26,31 +26,10 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-func stringVal(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
 func int32Ptr(i int32) *int32 {
 	return &i
 }
 
-func int32Val(i *int32) int32 {
-	if i == nil {
-		return 0
-	}
-	return *i
-}
-
 func float64Ptr(f float64) *float64 {
 	return &f
-}
-
-func float64Val(f *float64) float64 {
-	if f == nil {
-		return 0.0
-	}
-	return *f
 }

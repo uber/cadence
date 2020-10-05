@@ -32,8 +32,8 @@ import (
 // FromWorkflowExecution converts internal WorkflowExectution type to thrift
 func FromWorkflowExecution(we types.WorkflowExecution) *thrift.WorkflowExecution {
 	return &thrift.WorkflowExecution{
-		WorkflowId: stringPtr(we.WorkflowId),
-		RunId:      stringPtr(we.RunId),
+		WorkflowId: &we.WorkflowId,
+		RunId:      &we.RunId,
 	}
 }
 
@@ -43,15 +43,15 @@ func ToWorkflowExecution(we *thrift.WorkflowExecution) types.WorkflowExecution {
 		return types.WorkflowExecution{}
 	}
 	return types.WorkflowExecution{
-		WorkflowId: stringVal(we.WorkflowId),
-		RunId:      stringVal(we.RunId),
+		WorkflowId: we.GetWorkflowId(),
+		RunId:      we.GetRunId(),
 	}
 }
 
 // FromWorkflowType converts internal WorkflowType type to thrift
 func FromWorkflowType(wt types.WorkflowType) *thrift.WorkflowType {
 	return &thrift.WorkflowType{
-		Name: stringPtr(wt.Name),
+		Name: &wt.Name,
 	}
 }
 
@@ -61,14 +61,14 @@ func ToWorkflowType(wt *thrift.WorkflowType) types.WorkflowType {
 		return types.WorkflowType{}
 	}
 	return types.WorkflowType{
-		Name: stringVal(wt.Name),
+		Name: wt.GetName(),
 	}
 }
 
 // FromActivityType converts internal ActivityType type to thrift
 func FromActivityType(at types.ActivityType) *thrift.ActivityType {
 	return &thrift.ActivityType{
-		Name: stringPtr(at.Name),
+		Name: &at.Name,
 	}
 }
 
@@ -78,7 +78,7 @@ func ToActivityType(at *thrift.ActivityType) types.ActivityType {
 		return types.ActivityType{}
 	}
 	return types.ActivityType{
-		Name: stringVal(at.Name),
+		Name: at.GetName(),
 	}
 }
 
@@ -139,12 +139,12 @@ func FromRetryPolicy(rp *types.RetryPolicy) *thrift.RetryPolicy {
 		return nil
 	}
 	return &thrift.RetryPolicy{
-		InitialIntervalInSeconds:    int32Ptr(int32(rp.InitialInterval.Seconds())),
-		BackoffCoefficient:          float64Ptr(rp.BackoffCoefficient),
-		MaximumIntervalInSeconds:    int32Ptr(int32(rp.MaximumInterval.Seconds())),
-		MaximumAttempts:             int32Ptr(rp.MaximumAttempts),
+		InitialIntervalInSeconds:    durationToSeconds(rp.InitialInterval),
+		BackoffCoefficient:          &rp.BackoffCoefficient,
+		MaximumIntervalInSeconds:    durationToSeconds(rp.MaximumInterval),
+		MaximumAttempts:             &rp.MaximumAttempts,
 		NonRetriableErrorReasons:    rp.NonRetriableErrorReasons,
-		ExpirationIntervalInSeconds: int32Ptr(int32(rp.ExpirationInterval.Seconds())),
+		ExpirationIntervalInSeconds: durationToSeconds(rp.ExpirationInterval),
 	}
 }
 
@@ -154,11 +154,20 @@ func ToRetryPolicy(rp *thrift.RetryPolicy) *types.RetryPolicy {
 		return nil
 	}
 	return &types.RetryPolicy{
-		InitialInterval:          time.Second * time.Duration(int32Val(rp.InitialIntervalInSeconds)),
-		BackoffCoefficient:       float64Val(rp.BackoffCoefficient),
-		MaximumInterval:          time.Second * time.Duration(int32Val(rp.MaximumIntervalInSeconds)),
-		MaximumAttempts:          int32Val(rp.MaximumAttempts),
+		InitialInterval:          secondsToDuration(rp.GetInitialIntervalInSeconds()),
+		BackoffCoefficient:       rp.GetBackoffCoefficient(),
+		MaximumInterval:          secondsToDuration(rp.GetMaximumIntervalInSeconds()),
+		MaximumAttempts:          rp.GetMaximumAttempts(),
 		NonRetriableErrorReasons: rp.NonRetriableErrorReasons,
-		ExpirationInterval:       time.Second * time.Duration(int32Val(rp.ExpirationIntervalInSeconds)),
+		ExpirationInterval:       secondsToDuration(rp.GetExpirationIntervalInSeconds()),
 	}
+}
+
+func durationToSeconds(d time.Duration) *int32 {
+	seconds := int32(d.Seconds())
+	return &seconds
+}
+
+func secondsToDuration(s int32) time.Duration {
+	return time.Duration(s) * time.Second
 }
