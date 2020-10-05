@@ -31,30 +31,30 @@ import (
 )
 
 func Test_FromTaskListKind(t *testing.T) {
-	assert.Equal(t, taskListKindPtr(thrift.TaskListKindNormal), FromTaskListKind(types.TaskListKindNormal))
-	assert.Equal(t, taskListKindPtr(thrift.TaskListKindSticky), FromTaskListKind(types.TaskListKindSticky))
-	assert.Equal(t, taskListKindPtr(99), FromTaskListKind(types.TaskListKind(99)))
+	assert.Equal(t, thrift.TaskListKindNormal.Ptr(), FromTaskListKind(types.TaskListKindNormal))
+	assert.Equal(t, thrift.TaskListKindSticky.Ptr(), FromTaskListKind(types.TaskListKindSticky))
+	assert.Equal(t, thrift.TaskListKind(99).Ptr(), FromTaskListKind(types.TaskListKind(99)))
 }
 
 func Test_ToTaskListKind(t *testing.T) {
 	assert.Equal(t, types.TaskListKindNormal, ToTaskListKind(nil))
-	assert.Equal(t, types.TaskListKindNormal, ToTaskListKind(taskListKindPtr(thrift.TaskListKindNormal)))
-	assert.Equal(t, types.TaskListKindSticky, ToTaskListKind(taskListKindPtr(thrift.TaskListKindSticky)))
-	assert.Equal(t, types.TaskListKind(99), ToTaskListKind(taskListKindPtr(thrift.TaskListKind(99))))
+	assert.Equal(t, types.TaskListKindNormal, ToTaskListKind(thrift.TaskListKindNormal.Ptr()))
+	assert.Equal(t, types.TaskListKindSticky, ToTaskListKind(thrift.TaskListKindSticky.Ptr()))
+	assert.Equal(t, types.TaskListKind(99), ToTaskListKind(thrift.TaskListKind(99).Ptr()))
 }
 
 func Test_FromTaskList(t *testing.T) {
 	assert.Equal(t,
 		&thrift.TaskList{
 			Name: stringPtr(""),
-			Kind: taskListKindPtr(thrift.TaskListKindNormal),
+			Kind: thrift.TaskListKindNormal.Ptr(),
 		},
 		FromTaskList(types.TaskList{}),
 	)
 	assert.Equal(t,
 		&thrift.TaskList{
 			Name: stringPtr("Name"),
-			Kind: taskListKindPtr(thrift.TaskListKindSticky),
+			Kind: thrift.TaskListKindSticky.Ptr(),
 		},
 		FromTaskList(types.TaskList{
 			Name: "Name",
@@ -79,11 +79,7 @@ func Test_ToTaskList(t *testing.T) {
 		},
 		ToTaskList(&thrift.TaskList{
 			Name: stringPtr("Name"),
-			Kind: taskListKindPtr(thrift.TaskListKindSticky),
+			Kind: thrift.TaskListKindSticky.Ptr(),
 		}),
 	)
-}
-
-func taskListKindPtr(kind thrift.TaskListKind) *thrift.TaskListKind {
-	return &kind
 }
