@@ -987,7 +987,7 @@ func (d *cassandraPersistence) GetShardID() int {
 
 func (d *cassandraPersistence) CreateShard(
 	_ context.Context,
-	request *p.CreateShardRequest,
+	request *p.InternalCreateShardRequest,
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
@@ -1049,8 +1049,8 @@ func (d *cassandraPersistence) CreateShard(
 
 func (d *cassandraPersistence) GetShard(
 	_ context.Context,
-	request *p.GetShardRequest,
-) (*p.GetShardResponse, error) {
+	request *p.InternalGetShardRequest,
+) (*p.InternalGetShardResponse, error) {
 	shardID := request.ShardID
 	query := d.session.Query(templateGetShardQuery,
 		shardID,
@@ -1080,12 +1080,12 @@ func (d *cassandraPersistence) GetShard(
 
 	info := createShardInfo(d.currentClusterName, result["shard"].(map[string]interface{}))
 
-	return &p.GetShardResponse{ShardInfo: info}, nil
+	return &p.InternalGetShardResponse{ShardInfo: info}, nil
 }
 
 func (d *cassandraPersistence) UpdateShard(
 	_ context.Context,
-	request *p.UpdateShardRequest,
+	request *p.InternalUpdateShardRequest,
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
