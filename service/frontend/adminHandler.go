@@ -100,7 +100,11 @@ func NewAdminHandler(
 	config *Config,
 ) *AdminHandler {
 
-	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(resource)
+	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
+		resource.GetMetadataManager(),
+		resource.GetTimeSource(),
+		resource.GetLogger(),
+	)
 	return &AdminHandler{
 		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,

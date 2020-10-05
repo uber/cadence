@@ -106,7 +106,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	domainConfig := Config{
 		MinRetentionDays:  dc.GetIntPropertyFn(s.minRetentionDays),
 		MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
-		FailoverCoolDown:  dc.GetDurationPropertyFnFilteredByDomain(1 * time.Second),
+		FailoverCoolDown:  dc.GetDurationPropertyFnFilteredByDomain(0 * time.Second),
 	}
 	s.handler = NewHandler(
 		domainConfig,

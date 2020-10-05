@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/resource"
 )
 
 var (
@@ -71,13 +70,15 @@ type (
 
 // NewReplicationTaskExecutor create a new instance of domain replicator
 func NewReplicationTaskExecutor(
-	resource resource.Resource,
+	metadataMgr persistence.MetadataManager,
+	timeSource clock.TimeSource,
+	logger log.Logger,
 ) ReplicationTaskExecutor {
 
 	return &domainReplicationTaskExecutorImpl{
-		metadataManager: resource.GetMetadataManager(),
-		timeSource:      resource.GetTimeSource(),
-		logger:          resource.GetLogger(),
+		metadataManager: metadataMgr,
+		timeSource:      timeSource,
+		logger:          logger,
 	}
 }
 

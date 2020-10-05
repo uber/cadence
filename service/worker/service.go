@@ -261,7 +261,11 @@ func (s *Service) startScanner() {
 }
 
 func (s *Service) startReplicator() {
-	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(s.Resource)
+	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
+		s.Resource.GetMetadataManager(),
+		s.Resource.GetTimeSource(),
+		s.Resource.GetLogger(),
+	)
 	msgReplicator := replicator.NewReplicator(
 		s.GetClusterMetadata(),
 		s.GetClientBean(),
