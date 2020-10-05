@@ -62,6 +62,7 @@ const (
 	ResumeSignal = "resume"
 
 	// workflow states for query
+
 	// WorkflowRunning state
 	WorkflowRunning = "running"
 	// WorkflowPaused state
@@ -120,8 +121,8 @@ type (
 		State          string
 		TargetCluster  string
 		SourceCluster  string
-		SuccessDomains []string
-		FailedDomains  []string
+		SuccessDomains []string // SuccessDomains are guaranteed succeed processed
+		FailedDomains  []string // FailedDomains contains false positive
 	}
 )
 
@@ -198,6 +199,8 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		var actResult FailoverActivityResult
 		err = workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
 		if err != nil {
+			// Domains in failed activity can be either failovered or not, but we treated them as failed.
+			// This makes the query result for FailedDomains contains false positive results.
 			failedDomains = append(failedDomains, failoverActivityParams.Domains...)
 		} else {
 			successDomains = append(successDomains, actResult.SuccessDomains...)

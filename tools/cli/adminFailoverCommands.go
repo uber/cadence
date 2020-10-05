@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -161,16 +162,7 @@ func AdminFailoverQuery(c *cli.Context) {
 
 	runID := getRunID(c)
 
-	queryResult, err := client.QueryWorkflow(tcCtx, failovermanager.WorkflowID, runID, failovermanager.QueryType)
-	if err != nil {
-		ErrorAndExit("Failed to query failover workflow", err)
-	}
-	if !queryResult.HasValue() {
-		ErrorAndExit("QueryResult has no value", nil)
-	}
-
-	var result failovermanager.QueryResult
-	queryResult.Get(&result)
+	result := query(tcCtx, client, runID)
 
 	descResp, err := client.DescribeWorkflowExecution(tcCtx, failovermanager.WorkflowID, runID)
 	if err != nil {
@@ -210,6 +202,32 @@ func AdminFailoverRollback(c *cli.Context) {
 
 	runID := getRunID(c)
 
+	queryResult := query(tcCtx, client, runID)
+	if isWorkflowRunning(queryResult) {
+		err := client.TerminateWorkflow(tcCtx, failovermanager.WorkflowID, runID, "Rollback", nil)
+		if err != nil {
+			ErrorAndExit("Failed to terminate failover workflow", err)
+		}
+	}
+	// query again
+	queryResult = query(tcCtx, client, runID)
+	var rollbackDomains []string
+	// rollback includes both success and failed domains to make sure no leftover domains
+	rollbackDomains = append(rollbackDomains, queryResult.SuccessDomains...)
+	rollbackDomains = append(rollbackDomains, queryResult.FailedDomains...)
+
+	params := &startParams{
+		targetCluster:                  queryResult.SourceCluster,
+		sourceCluster:                  queryResult.TargetCluster,
+		domains:                        rollbackDomains,
+		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
+		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
+		failoverTimeout:                c.Int(FlagFailoverTimeout),
+	}
+	failoverStart(c, params)
+}
+
+func query(tcCtx context.Context, client cclient.Client, runID string) *failovermanager.QueryResult {
 	queryResp, err := client.QueryWorkflow(tcCtx, failovermanager.WorkflowID, runID, failovermanager.QueryType)
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
@@ -219,23 +237,7 @@ func AdminFailoverRollback(c *cli.Context) {
 	}
 	var queryResult failovermanager.QueryResult
 	queryResp.Get(&queryResult)
-
-	if isWorkflowRunning(&queryResult) {
-		err := client.TerminateWorkflow(tcCtx, failovermanager.WorkflowID, runID, "Rollback", nil)
-		if err != nil {
-			ErrorAndExit("Failed to terminate failover workflow", err)
-		}
-	}
-
-	params := &startParams{
-		targetCluster:                  queryResult.SourceCluster,
-		sourceCluster:                  queryResult.TargetCluster,
-		domains:                        queryResult.SuccessDomains,
-		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
-		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
-		failoverTimeout:                c.Int(FlagFailoverTimeout),
-	}
-	failoverStart(c, params)
+	return &queryResult
 }
 
 func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
