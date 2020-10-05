@@ -152,6 +152,7 @@ func newTimerQueueProcessorBase(
 			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			taskFilter,
 			taskExecutor,
+			queueTaskProcessor,
 			base.redispatcher.AddTask,
 			shard.GetTimeSource(),
 			config.TimerTaskMaxRetryCount,

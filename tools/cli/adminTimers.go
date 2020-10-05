@@ -257,10 +257,11 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 		resp := &persistence.GetTimerIndexTasksResponse{}
 
 		op := func() error {
-			var err error
 			ctx, cancel := newContext(cl.ctx)
+			defer cancel()
+
+			var err error
 			resp, err = ratelimitedClient.GetTimerIndexTasks(ctx, &req)
-			cancel()
 			return err
 		}
 
