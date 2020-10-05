@@ -24,6 +24,7 @@ import (
 	"os"
 
 	"github.com/uber/cadence/cmd/server/cadence"
+	_ "github.com/uber/cadence/common/metrics/plugins/statsd"             // needed to load statsd plugin
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"    // needed to load mysql plugin
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
 )
