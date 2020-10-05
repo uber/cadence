@@ -35,7 +35,6 @@ type (
 	// Persistence interface is a lower layer of dataInterface.
 	// The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
-	// TaskManager are the same.
 	//////////////////////////////////////////////////////////////////////
 
 	// ShardStore is the lower level of ShardManager
@@ -46,8 +45,30 @@ type (
 		GetShard(ctx context.Context, request *InternalGetShardRequest) (*InternalGetShardResponse, error)
 		UpdateShard(ctx context.Context, request *InternalUpdateShardRequest) error
 	}
+
 	// TaskStore is a lower level of TaskManager
-	TaskStore = TaskManager
+	TaskStore interface {
+		Closeable
+		GetName() string
+		LeaseTaskList(ctx context.Context, request *InternalLeaseTaskListRequest) (*InternalLeaseTaskListResponse, error)
+		UpdateTaskList(ctx context.Context, request *InternalUpdateTaskListRequest) (*InternalUpdateTaskListResponse, error)
+		ListTaskList(ctx context.Context, request *InternalListTaskListRequest) (*InternalListTaskListResponse, error)
+		DeleteTaskList(ctx context.Context, request *InternalDeleteTaskListRequest) error
+		CreateTasks(ctx context.Context, request *InternalCreateTasksRequest) (*InternalCreateTasksResponse, error)
+		GetTasks(ctx context.Context, request *InternalGetTasksRequest) (*InternalGetTasksResponse, error)
+		CompleteTask(ctx context.Context, request *InternalCompleteTaskRequest) error
+		// CompleteTasksLessThan completes tasks less than or equal to the given task id
+		// This API takes a limit parameter which specifies the count of maxRows that
+		// can be deleted. This parameter may be ignored by the underlying storage, but
+		// its mandatory to specify it. On success this method returns the number of rows
+		// actually deleted. If the underlying storage doesn't support "limit", all rows
+		// less than or equal to taskID will be deleted.
+		// On success, this method returns:
+		//  - number of rows actually deleted, if limit is honored
+		//  - UnknownNumRowsDeleted, when all rows below value are deleted
+		CompleteTasksLessThan(ctx context.Context, request *InternalCompleteTasksLessThanRequest) (int, error)
+	}
+
 	// MetadataStore is a lower level of MetadataManager
 	MetadataStore interface {
 		Closeable
@@ -735,6 +756,120 @@ type (
 	// InternalGetShardResponse is the response to GetShard
 	InternalGetShardResponse struct {
 		ShardInfo *InternalShardInfo
+	}
+
+	// InternalTaskListInfo describes a TaskList
+	InternalTaskListInfo struct {
+		DomainID    string
+		Name        string
+		TaskType    int
+		RangeID     int64
+		AckLevel    int64
+		Kind        int
+		Expiry      time.Time
+		LastUpdated time.Time
+	}
+
+	// InternalTaskInfo describes a Task
+	InternalTaskInfo struct {
+		DomainID               string
+		WorkflowID             string
+		RunID                  string
+		TaskID                 int64
+		ScheduleID             int64
+		ScheduleToStartTimeout int32
+		Expiry                 time.Time
+		CreatedTime            time.Time
+	}
+
+	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
+	InternalCreateTasksInfo struct {
+		Execution workflow.WorkflowExecution
+		Data      *InternalTaskInfo
+		TaskID    int64
+	}
+
+	// InternalLeaseTaskListRequest is request to LeaseTaskList
+	InternalLeaseTaskListRequest struct {
+		DomainID     string
+		TaskList     string
+		TaskType     int
+		TaskListKind int
+		RangeID      int64
+	}
+
+	// InternalLeaseTaskListResponse is response from LeaseTaskList
+	InternalLeaseTaskListResponse struct {
+		TaskListInfo *InternalTaskListInfo
+	}
+
+	// InternalUpdateTaskListRequest is request to UpdateTaskList
+	InternalUpdateTaskListRequest struct {
+		TaskListInfo *InternalTaskListInfo
+	}
+
+	// InternalUpdateTaskListResponse is response from UpdateTaskList
+	InternalUpdateTaskListResponse struct {
+	}
+
+	// InternalListTaskListRequest is request to ListTaskList
+	InternalListTaskListRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// InternalListTaskListResponse is response from ListTaskList
+	InternalListTaskListResponse struct {
+		Items         []InternalTaskListInfo
+		NextPageToken []byte
+	}
+
+	// InternalDeleteTaskListRequest is request to DeleteTaskList
+	InternalDeleteTaskListRequest struct {
+		DomainID     string
+		TaskListName string
+		TaskListType int
+		RangeID      int64
+	}
+
+	// InternalCreateTasksRequest is request to CreateTasks
+	InternalCreateTasksRequest struct {
+		TaskListInfo *InternalTaskListInfo
+		Tasks        []*InternalCreateTasksInfo
+	}
+
+	// InternalCreateTasksResponse is response from CreateTasks
+	InternalCreateTasksResponse struct {
+	}
+
+	// InternalGetTasksRequest is request to GetTasks
+	InternalGetTasksRequest struct {
+		DomainID     string
+		TaskList     string
+		TaskType     int
+		ReadLevel    int64  // range exclusive
+		MaxReadLevel *int64 // optional: range inclusive when specified
+		BatchSize    int
+	}
+
+	// InternalGetTasksResponse is response from GetTasks
+	InternalGetTasksResponse struct {
+		Tasks []*InternalTaskInfo
+	}
+
+	// InternalCompleteTaskRequest is request to CompleteTask
+	InternalCompleteTaskRequest struct {
+		TaskList *InternalTaskListInfo
+		TaskID   int64
+	}
+
+	// InternalCompleteTasksLessThanRequest is request to CompleteTasksLessThan
+	InternalCompleteTasksLessThanRequest struct {
+		DomainID     string
+		TaskListName string
+		TaskType     int
+		TaskID       int64 // Tasks less than or equal to this ID will be completed
+		Limit        int   // Limit on the max number of tasks that can be completed. Required param
 	}
 )
 

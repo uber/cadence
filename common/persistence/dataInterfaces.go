@@ -1579,15 +1579,6 @@ type (
 		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
-		// CompleteTasksLessThan completes tasks less than or equal to the given task id
-		// This API takes a limit parameter which specifies the count of maxRows that
-		// can be deleted. This parameter may be ignored by the underlying storage, but
-		// its mandatory to specify it. On success this method returns the number of rows
-		// actually deleted. If the underlying storage doesn't support "limit", all rows
-		// less than or equal to taskID will be deleted.
-		// On success, this method returns:
-		//  - number of rows actually deleted, if limit is honored
-		//  - UnknownNumRowsDeleted, when all rows below value are deleted
 		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
 	}
 

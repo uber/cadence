@@ -2474,8 +2474,8 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 // From TaskManager interface
 func (d *cassandraPersistence) LeaseTaskList(
 	_ context.Context,
-	request *p.LeaseTaskListRequest,
-) (*p.LeaseTaskListResponse, error) {
+	request *p.InternalLeaseTaskListRequest,
+) (*p.InternalLeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
@@ -2566,7 +2566,7 @@ func (d *cassandraPersistence) LeaseTaskList(
 				request.TaskList, request.TaskType, rangeID, previousRangeID),
 		}
 	}
-	tli := &p.TaskListInfo{
+	tli := &p.InternalTaskListInfo{
 		DomainID:    request.DomainID,
 		Name:        request.TaskList,
 		TaskType:    request.TaskType,
@@ -2575,14 +2575,14 @@ func (d *cassandraPersistence) LeaseTaskList(
 		Kind:        request.TaskListKind,
 		LastUpdated: now,
 	}
-	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
+	return &p.InternalLeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
 // From TaskManager interface
 func (d *cassandraPersistence) UpdateTaskList(
 	_ context.Context,
-	request *p.UpdateTaskListRequest,
-) (*p.UpdateTaskListResponse, error) {
+	request *p.InternalUpdateTaskListRequest,
+) (*p.InternalUpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
@@ -2612,7 +2612,7 @@ func (d *cassandraPersistence) UpdateTaskList(
 				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
 			}
 		}
-		return &p.UpdateTaskListResponse{}, nil
+		return &p.InternalUpdateTaskListResponse{}, nil
 	}
 
 	query := d.session.Query(templateUpdateTaskListQuery,
@@ -2656,13 +2656,13 @@ func (d *cassandraPersistence) UpdateTaskList(
 		}
 	}
 
-	return &p.UpdateTaskListResponse{}, nil
+	return &p.InternalUpdateTaskListResponse{}, nil
 }
 
 func (d *cassandraPersistence) ListTaskList(
 	_ context.Context,
-	request *p.ListTaskListRequest,
-) (*p.ListTaskListResponse, error) {
+	request *p.InternalListTaskListRequest,
+) (*p.InternalListTaskListResponse, error) {
 	return nil, &workflow.InternalServiceError{
 		Message: fmt.Sprintf("unsupported operation"),
 	}
@@ -2670,7 +2670,7 @@ func (d *cassandraPersistence) ListTaskList(
 
 func (d *cassandraPersistence) DeleteTaskList(
 	_ context.Context,
-	request *p.DeleteTaskListRequest,
+	request *p.InternalDeleteTaskListRequest,
 ) error {
 	query := d.session.Query(templateDeleteTaskListQuery,
 		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
@@ -2697,8 +2697,8 @@ func (d *cassandraPersistence) DeleteTaskList(
 // From TaskManager interface
 func (d *cassandraPersistence) CreateTasks(
 	_ context.Context,
-	request *p.CreateTasksRequest,
-) (*p.CreateTasksResponse, error) {
+	request *p.InternalCreateTasksRequest,
+) (*p.InternalCreateTasksResponse, error) {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	domainID := request.TaskListInfo.DomainID
 	taskList := request.TaskListInfo.Name
@@ -2778,21 +2778,21 @@ func (d *cassandraPersistence) CreateTasks(
 		}
 	}
 
-	return &p.CreateTasksResponse{}, nil
+	return &p.InternalCreateTasksResponse{}, nil
 }
 
 // From TaskManager interface
 func (d *cassandraPersistence) GetTasks(
 	_ context.Context,
-	request *p.GetTasksRequest,
-) (*p.GetTasksResponse, error) {
+	request *p.InternalGetTasksRequest,
+) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
 		return nil, &workflow.InternalServiceError{
 			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
 		}
 	}
 	if request.ReadLevel > *request.MaxReadLevel {
-		return &p.GetTasksResponse{}, nil
+		return &p.InternalGetTasksResponse{}, nil
 	}
 
 	// Reading tasklist tasks need to be quorum level consistent, otherwise we could loose task
@@ -2812,7 +2812,7 @@ func (d *cassandraPersistence) GetTasks(
 		}
 	}
 
-	response := &p.GetTasksResponse{}
+	response := &p.InternalGetTasksResponse{}
 	task := make(map[string]interface{})
 PopulateTasks:
 	for iter.MapScan(task) {
@@ -2841,7 +2841,7 @@ PopulateTasks:
 // From TaskManager interface
 func (d *cassandraPersistence) CompleteTask(
 	_ context.Context,
-	request *p.CompleteTaskRequest,
+	request *p.InternalCompleteTaskRequest,
 ) error {
 	tli := request.TaskList
 	query := d.session.Query(templateCompleteTaskQuery,
@@ -2871,7 +2871,7 @@ func (d *cassandraPersistence) CompleteTask(
 // be returned to the caller
 func (d *cassandraPersistence) CompleteTasksLessThan(
 	_ context.Context,
-	request *p.CompleteTasksLessThanRequest,
+	request *p.InternalCompleteTasksLessThanRequest,
 ) (int, error) {
 	query := d.session.Query(templateCompleteTasksLessThanQuery,
 		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
