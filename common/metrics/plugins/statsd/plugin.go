@@ -56,14 +56,24 @@ func (p *plugin) NewTallyScope(
 		return nil, fmt.Errorf("hostPort is missing")
 	}
 	statsdPrefix := configKVs["prefix"]
-	flushInterval, err := time.ParseDuration(configKVs["flushInterval"])
-	if err != nil {
-		return nil, err
+
+	var err error
+	var flushInterval time.Duration
+	if configKVs["flushInterval"] != ""{
+		flushInterval, err = time.ParseDuration(configKVs["flushInterval"])
+		if err != nil {
+			return nil, err
+		}
 	}
-	flushBytes, err := strconv.Atoi(configKVs["flushBytes"])
-	if err != nil {
-		return nil, err
+
+	var flushBytes int
+	if configKVs["flushInterval"] != ""{
+		flushBytes, err = strconv.Atoi(configKVs["flushBytes"])
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	statter, err := statsd.NewBufferedClient(hostPort, statsdPrefix, flushInterval, flushBytes)
 	if err != nil {
 		return tally.NoopScope, fmt.Errorf("error creating statsd client %v", err)
