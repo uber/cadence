@@ -291,6 +291,8 @@ type (
 
 	// Metrics contains the config items for metrics subsystem
 	Metrics struct {
+		// ThirdParty is for metric reporter loaded from plugins
+		ThirdParty *ThirdPartyMetricReporterConfiguration `yaml:"thirdParty"`
 		// M3 is the configuration for m3 metrics reporter
 		M3 *m3.Configuration `yaml:"m3"`
 		// Statsd is the configuration for statsd reporter
@@ -302,6 +304,14 @@ type (
 		Tags map[string]string `yaml:"tags"`
 		// Prefix sets the prefix to all outgoing metrics
 		Prefix string `yaml:"prefix"`
+	}
+
+	// ThirdPartyMetricReporterConfiguration contains the config for any third party metric reporter
+	ThirdPartyMetricReporterConfiguration struct {
+		// PluginName is the name of third party metric reporter plugin
+		PluginName string `yaml:"pluginName" validate:"nonzero"`
+		// All the config values for this plugin
+		ConfigKVs map[string]string `yaml:"configKVs"`
 	}
 
 	// Statsd contains the config items for statsd metrics reporter
