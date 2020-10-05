@@ -31,7 +31,6 @@ import (
 
 	"github.com/uber/cadence/common/metrics/plugins"
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
-	"github.com/uber/cadence/common/service/config"
 )
 
 const (
@@ -47,13 +46,16 @@ func init() {
 	plugins.RegisterPlugin(PluginName, &plugin{})
 }
 
-func (p *plugin) NewTallyScope(cfg config.Metrics) (tally.Scope, error) {
-	configKVs := cfg.ThirdParty.ConfigKVs
+func (p *plugin) NewTallyScope(
+	configKVs map[string]string,
+	tags map[string]string,
+	metricPrefix string,
+) (tally.Scope, error) {
 	hostPort := configKVs["hostPort"]
 	if hostPort == "" {
 		return nil, fmt.Errorf("hostPort is missing")
 	}
-	prefix := configKVs["prefix"]
+	statsdPrefix := configKVs["prefix"]
 	flushInterval, err := time.ParseDuration(configKVs["flushInterval"])
 	if err != nil {
 		return nil, err
@@ -62,7 +64,7 @@ func (p *plugin) NewTallyScope(cfg config.Metrics) (tally.Scope, error) {
 	if err != nil {
 		return nil, err
 	}
-	statter, err := statsd.NewBufferedClient(hostPort, prefix, flushInterval, flushBytes)
+	statter, err := statsd.NewBufferedClient(hostPort, statsdPrefix, flushInterval, flushBytes)
 	if err != nil {
 		return tally.NoopScope, fmt.Errorf("error creating statsd client %v", err)
 	}
@@ -71,9 +73,9 @@ func (p *plugin) NewTallyScope(cfg config.Metrics) (tally.Scope, error) {
 	// Therefore, we implement Tally interface to have a statsd reporter that can support tagging
 	reporter := statsdreporter.NewReporter(statter, tallystatsdreporter.Options{})
 	scopeOpts := tally.ScopeOptions{
-		Tags:     cfg.Tags,
+		Tags:     tags,
 		Reporter: reporter,
-		Prefix:   cfg.Prefix,
+		Prefix:   metricPrefix,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope, nil
