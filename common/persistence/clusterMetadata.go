@@ -39,15 +39,3 @@ func GetOrUseDefaultClusters(currentClusterName string, clusters []*ClusterRepli
 	}
 	return clusters
 }
-
-// InternalGetOrUseDefaultClusters return the current cluster or use the input if valid
-func InternalGetOrUseDefaultClusters(currentClusterName string, clusters []*InternalClusterReplicationConfig) []*InternalClusterReplicationConfig {
-	if len(clusters) == 0 {
-		return []*InternalClusterReplicationConfig{
-			{
-				ClusterName: currentClusterName,
-			},
-		}
-	}
-	return clusters
-}
