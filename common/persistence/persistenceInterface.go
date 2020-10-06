@@ -52,13 +52,13 @@ type (
 	MetadataStore interface {
 		Closeable
 		GetName() string
-		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*InternalCreateDomainResponse, error)
-		GetDomain(ctx context.Context, request *InternalGetDomainRequest) (*InternalGetDomainResponse, error)
+		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomain(ctx context.Context, request *GetDomainRequest) (*InternalGetDomainResponse, error)
 		UpdateDomain(ctx context.Context, request *InternalUpdateDomainRequest) error
-		DeleteDomain(ctx context.Context, request *InternalDeleteDomainRequest) error
-		DeleteDomainByName(ctx context.Context, request *InternalDeleteDomainByNameRequest) error
-		ListDomains(ctx context.Context, request *InternalListDomainRequest) (*InternalListDomainsResponse, error)
-		GetMetadata(ctx context.Context) (*InternalGetMetadataResponse, error)
+		DeleteDomain(ctx context.Context, request *DeleteDomainRequest) error
+		DeleteDomainByName(ctx context.Context, request *DeleteDomainByNameRequest) error
+		ListDomains(ctx context.Context, request *ListDomainsRequest) (*InternalListDomainsResponse, error)
+		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
 	}
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
@@ -619,16 +619,6 @@ type (
 		SearchAttributes   map[string][]byte
 	}
 
-	// InternalDomainInfo describes the domain entity
-	InternalDomainInfo struct {
-		ID          string
-		Name        string
-		Status      int
-		Description string
-		OwnerEmail  string
-		Data        map[string]string
-	}
-
 	// InternalDomainConfig describes the domain configuration
 	InternalDomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
@@ -643,43 +633,21 @@ type (
 		BadBinaries              *DataBlob
 	}
 
-	// InternalDomainReplicationConfig describes the cross DC domain replication configuration
-	InternalDomainReplicationConfig struct {
-		ActiveClusterName string
-		Clusters          []*InternalClusterReplicationConfig
-	}
-
-	// InternalClusterReplicationConfig describes the cross DC cluster replication configuration
-	InternalClusterReplicationConfig struct {
-		ClusterName string
-	}
-
 	// InternalCreateDomainRequest is used to create the domain
 	InternalCreateDomainRequest struct {
-		Info              *InternalDomainInfo
+		Info              *DomainInfo
 		Config            *InternalDomainConfig
-		ReplicationConfig *InternalDomainReplicationConfig
+		ReplicationConfig *DomainReplicationConfig
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
 	}
 
-	// InternalCreateDomainResponse is the response for the CreateDomain
-	InternalCreateDomainResponse struct {
-		ID string
-	}
-
-	// InternalGetDomainRequest is used to get domain
-	InternalGetDomainRequest struct {
-		ID   string
-		Name string
-	}
-
 	// InternalGetDomainResponse is the response for GetDomain
 	InternalGetDomainResponse struct {
-		Info                        *InternalDomainInfo
+		Info                        *DomainInfo
 		Config                      *InternalDomainConfig
-		ReplicationConfig           *InternalDomainReplicationConfig
+		ReplicationConfig           *DomainReplicationConfig
 		IsGlobalDomain              bool
 		ConfigVersion               int64
 		FailoverVersion             int64
@@ -691,9 +659,9 @@ type (
 
 	// InternalUpdateDomainRequest is used to update domain
 	InternalUpdateDomainRequest struct {
-		Info                        *InternalDomainInfo
+		Info                        *DomainInfo
 		Config                      *InternalDomainConfig
-		ReplicationConfig           *InternalDomainReplicationConfig
+		ReplicationConfig           *DomainReplicationConfig
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
@@ -702,31 +670,10 @@ type (
 		NotificationVersion         int64
 	}
 
-	// InternalDeleteDomainRequest is used to delete domain
-	InternalDeleteDomainRequest struct {
-		ID string
-	}
-
-	// InternalDeleteDomainByNameRequest is used to delete domain using name
-	InternalDeleteDomainByNameRequest struct {
-		Name string
-	}
-
-	// InternalListDomainRequest is used to list domains
-	InternalListDomainRequest struct {
-		PageSize      int
-		NextPageToken []byte
-	}
-
 	// InternalListDomainsResponse is the response for GetDomain
 	InternalListDomainsResponse struct {
 		Domains       []*InternalGetDomainResponse
 		NextPageToken []byte
-	}
-
-	// InternalGetMetadataResponse is the response for GetMetadata
-	InternalGetMetadataResponse struct {
-		NotificationVersion int64
 	}
 
 	// InternalTransferFailoverLevel contains corresponding start / end level
@@ -790,38 +737,6 @@ type (
 		ShardInfo *InternalShardInfo
 	}
 )
-
-// SerializeInternalClusterConfigs makes an array of *InternalClusterReplicationConfig serializable
-// by flattening them into map[string]interface{}
-func SerializeInternalClusterConfigs(internalReplicationConfigs []*InternalClusterReplicationConfig) []map[string]interface{} {
-	seriaizedInternalReplicationConfigs := []map[string]interface{}{}
-	for index := range internalReplicationConfigs {
-		seriaizedInternalReplicationConfigs = append(seriaizedInternalReplicationConfigs, internalReplicationConfigs[index].serialize())
-	}
-	return seriaizedInternalReplicationConfigs
-}
-
-// DeserializeInternalClusterConfigs creates an array of InternalClusterReplicationConfig from an array of map representations
-func DeserializeInternalClusterConfigs(replicationConfigs []map[string]interface{}) []*InternalClusterReplicationConfig {
-	deseriaizedReplicationConfigs := []*InternalClusterReplicationConfig{}
-	for index := range replicationConfigs {
-		deseriaizedReplicationConfig := &InternalClusterReplicationConfig{}
-		deseriaizedReplicationConfig.deserialize(replicationConfigs[index])
-		deseriaizedReplicationConfigs = append(deseriaizedReplicationConfigs, deseriaizedReplicationConfig)
-	}
-
-	return deseriaizedReplicationConfigs
-}
-
-func (config *InternalClusterReplicationConfig) serialize() map[string]interface{} {
-	output := make(map[string]interface{})
-	output["cluster_name"] = config.ClusterName
-	return output
-}
-
-func (config *InternalClusterReplicationConfig) deserialize(input map[string]interface{}) {
-	config.ClusterName = input["cluster_name"].(string)
-}
 
 // NewDataBlob returns a new DataBlob
 func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {

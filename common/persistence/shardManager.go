@@ -81,9 +81,6 @@ func (m *shardManager) UpdateShard(ctx context.Context, request *UpdateShardRequ
 }
 
 func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardInfo {
-	if shardInfo == nil {
-		return nil
-	}
 	internalShardInfo := &InternalShardInfo{
 		ShardID:                       shardInfo.ShardID,
 		Owner:                         shardInfo.Owner,
@@ -132,9 +129,6 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardI
 }
 
 func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInfo) *ShardInfo {
-	if internalShardInfo == nil {
-		return nil
-	}
 	shardInfo := &ShardInfo{
 		ShardID:                       internalShardInfo.ShardID,
 		Owner:                         internalShardInfo.Owner,
