@@ -67,7 +67,7 @@ type (
 		GetName() string
 		GetShardID() int
 		//The below three APIs are related to serialization/deserialization
-		GetWorkflowExecution(ctx context.Context, request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
+		GetWorkflowExecution(ctx context.Context, request *InternalGetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
 		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error
 		ResetWorkflowExecution(ctx context.Context, request *InternalResetWorkflowExecutionRequest) error
@@ -84,11 +84,11 @@ type (
 		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
 
 		// Replication task related methods
-		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
+		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*InternalGetReplicationTasksResponse, error)
 		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
 		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) error
-		PutReplicationTaskToDLQ(ctx context.Context, request *PutReplicationTaskToDLQRequest) error
-		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
+		PutReplicationTaskToDLQ(ctx context.Context, request *InternalPutReplicationTaskToDLQRequest) error
+		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*InternalGetReplicationTasksFromDLQResponse, error)
 		GetReplicationDLQSize(ctx context.Context, request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
 		DeleteReplicationTaskFromDLQ(ctx context.Context, request *DeleteReplicationTaskFromDLQRequest) error
 		RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) error
@@ -188,6 +188,37 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot InternalWorkflowSnapshot
+	}
+
+	// InternalGetReplicationTasksResponse is the response to GetReplicationTask
+	InternalGetReplicationTasksResponse struct {
+		Tasks         []*InternalReplicationTaskInfo
+		NextPageToken []byte
+	}
+
+	// InternalPutReplicationTaskToDLQRequest is used to put a replication task to dlq
+	InternalPutReplicationTaskToDLQRequest struct {
+		SourceClusterName string
+		TaskInfo          *InternalReplicationTaskInfo
+	}
+
+	// InternalGetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
+	InternalGetReplicationTasksFromDLQResponse = InternalGetReplicationTasksResponse
+
+	// InternalReplicationTaskInfo describes the replication task created for replication of history events
+	InternalReplicationTaskInfo struct {
+		DomainID          string
+		WorkflowID        string
+		RunID             string
+		TaskID            int64
+		TaskType          int
+		FirstEventID      int64
+		NextEventID       int64
+		Version           int64
+		ScheduledID       int64
+		BranchToken       []byte
+		NewRunBranchToken []byte
+		CreationTime      int64
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -454,7 +485,13 @@ type (
 		ShardID int
 	}
 
-	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecution for Persistence Interface
+	// InternalGetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
+	InternalGetWorkflowExecutionRequest struct {
+		DomainID  string
+		Execution workflow.WorkflowExecution
+	}
+
+	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
 	InternalGetWorkflowExecutionResponse struct {
 		State *InternalWorkflowMutableState
 	}
