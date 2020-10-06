@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
+	"github.com/uber/cadence/service/worker/failovermanager"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 	"github.com/uber/cadence/service/worker/replicator"
@@ -67,11 +68,13 @@ type (
 		IndexerCfg                    *indexer.Config
 		ScannerCfg                    *scanner.Config
 		BatcherCfg                    *batcher.Config
+		failoverManagerCfg            *failovermanager.Config
 		ThrottledLogRPS               dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS       dynamicconfig.IntPropertyFn
 		PersistenceMaxQPS             dynamicconfig.IntPropertyFn
 		EnableBatcher                 dynamicconfig.BoolPropertyFn
 		EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
+		EnableFailoverManager         dynamicconfig.BoolPropertyFn
 	}
 )
 
@@ -154,8 +157,13 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
+		failoverManagerCfg: &failovermanager.Config{
+			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
+			ClusterMetadata:     params.ClusterMetadata,
+		},
 		EnableBatcher:                 dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		EnableParentClosePolicyWorker: dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		EnableFailoverManager:         dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
 		ThrottledLogRPS:               dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 		PersistenceGlobalMaxQPS:       dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
 		PersistenceMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
@@ -204,6 +212,9 @@ func (s *Service) Start() {
 	}
 	if s.config.EnableParentClosePolicyWorker() {
 		s.startParentClosePolicyProcessor()
+	}
+	if s.config.EnableFailoverManager() {
+		s.startFailoverManager()
 	}
 
 	logger.Info("worker started", tag.ComponentWorker)
@@ -311,6 +322,21 @@ func (s *Service) startArchiver() {
 	if err := clientWorker.Start(); err != nil {
 		clientWorker.Stop()
 		s.GetLogger().Fatal("failed to start archiver", tag.Error(err))
+	}
+}
+
+func (s *Service) startFailoverManager() {
+	params := &failovermanager.BootstrapParams{
+		Config:        *s.config.failoverManagerCfg,
+		ServiceClient: s.params.PublicClient,
+		MetricsClient: s.GetMetricsClient(),
+		Logger:        s.GetLogger(),
+		TallyScope:    s.params.MetricScope,
+		ClientBean:    s.GetClientBean(),
+	}
+	if err := failovermanager.New(params).Start(); err != nil {
+		s.Stop()
+		s.GetLogger().Fatal("error starting failoverManager", tag.Error(err))
 	}
 }
 
