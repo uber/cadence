@@ -138,6 +138,25 @@ func newAdminShardManagementCommands() []cli.Command {
 			},
 		},
 		{
+			Name:    "setRangeID",
+			Aliases: []string{"srid"},
+			Usage:   "Force update shard rangeID",
+			Flags: append(
+				getDBFlags(),
+				cli.IntFlag{
+					Name:  FlagShardIDWithAlias,
+					Usage: "ID of the shard to reset",
+				},
+				cli.Int64Flag{
+					Name:  FlagRangeIDWithAlias,
+					Usage: "new shard rangeID",
+				},
+			),
+			Action: func(c *cli.Context) {
+				AdminSetShardRangeID(c)
+			},
+		},
+		{
 			Name:    "closeShard",
 			Aliases: []string{"clsh"},
 			Usage:   "close a shard given a shard id",
