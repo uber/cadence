@@ -145,10 +145,11 @@ func NewFactory(
 // NewTaskManager returns a new task manager
 func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 	ds := f.datastores[storeTypeTask]
-	result, err := ds.factory.NewTaskStore()
+	store, err := ds.factory.NewTaskStore()
 	if err != nil {
 		return nil, err
 	}
+	result := p.NewTaskManager(store)
 	if ds.ratelimit != nil {
 		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}

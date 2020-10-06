@@ -54,7 +54,7 @@ func newTaskPersistence(
 	nShards int,
 	log log.Logger,
 	parser serialization.Parser,
-) (persistence.TaskManager, error) {
+) (persistence.TaskStore, error) {
 	return &sqlTaskManager{
 		sqlStore: sqlStore{
 			db:     db,
@@ -347,7 +347,7 @@ func (m *sqlTaskManager) DeleteTaskList(
 
 func (m *sqlTaskManager) CreateTasks(
 	ctx context.Context,
-	request *persistence.CreateTasksRequest,
+	request *persistence.InternalCreateTasksRequest,
 ) (*persistence.CreateTasksResponse, error) {
 	tasksRows := make([]sqlplugin.TasksRow, len(request.Tasks))
 	for i, v := range request.Tasks {
@@ -397,7 +397,7 @@ func (m *sqlTaskManager) CreateTasks(
 func (m *sqlTaskManager) GetTasks(
 	ctx context.Context,
 	request *persistence.GetTasksRequest,
-) (*persistence.GetTasksResponse, error) {
+) (*persistence.InternalGetTasksResponse, error) {
 	rows, err := m.db.SelectFromTasks(ctx, &sqlplugin.TasksFilter{
 		DomainID:     sqlplugin.MustParseUUID(request.DomainID),
 		TaskListName: request.TaskList,
@@ -412,13 +412,13 @@ func (m *sqlTaskManager) GetTasks(
 		}
 	}
 
-	var tasks = make([]*persistence.TaskInfo, len(rows))
+	var tasks = make([]*persistence.InternalTaskInfo, len(rows))
 	for i, v := range rows {
 		info, err := m.parser.TaskInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
-		tasks[i] = &persistence.TaskInfo{
+		tasks[i] = &persistence.InternalTaskInfo{
 			DomainID:    request.DomainID,
 			WorkflowID:  info.GetWorkflowID(),
 			RunID:       sqlplugin.UUID(info.RunID).String(),
@@ -429,7 +429,7 @@ func (m *sqlTaskManager) GetTasks(
 		}
 	}
 
-	return &persistence.GetTasksResponse{Tasks: tasks}, nil
+	return &persistence.InternalGetTasksResponse{Tasks: tasks}, nil
 }
 
 func (m *sqlTaskManager) CompleteTask(
