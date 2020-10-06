@@ -81,7 +81,10 @@ func (m *shardManager) UpdateShard(ctx context.Context, request *UpdateShardRequ
 }
 
 func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardInfo {
-	internalShardInfo := &InternalShardInfo{
+	if shardInfo == nil {
+		return nil
+	}
+	return &InternalShardInfo{
 		ShardID:                       shardInfo.ShardID,
 		Owner:                         shardInfo.Owner,
 		RangeID:                       shardInfo.RangeID,
@@ -98,38 +101,16 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardI
 		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     shardInfo.DomainNotificationVersion,
 		PendingFailoverMarkers:        shardInfo.PendingFailoverMarkers,
+		TransferFailoverLevels:        shardInfo.TransferFailoverLevels,
+		TimerFailoverLevels:           shardInfo.TimerFailoverLevels,
 	}
-	if shardInfo.TransferFailoverLevels != nil {
-		internalShardInfo.TransferFailoverLevels = make(map[string]InternalTransferFailoverLevel)
-		for k, v := range shardInfo.TransferFailoverLevels {
-			internalShardInfo.TransferFailoverLevels[k] = InternalTransferFailoverLevel{
-				StartTime:    v.StartTime,
-				MinLevel:     v.MinLevel,
-				CurrentLevel: v.CurrentLevel,
-				MaxLevel:     v.MaxLevel,
-				DomainIDs:    v.DomainIDs,
-			}
-		}
-	}
-
-	if shardInfo.TimerFailoverLevels != nil {
-		internalShardInfo.TimerFailoverLevels = make(map[string]InternalTimerFailoverLevel)
-		for k, v := range shardInfo.TimerFailoverLevels {
-			internalShardInfo.TimerFailoverLevels[k] = InternalTimerFailoverLevel{
-				StartTime:    v.StartTime,
-				MinLevel:     v.MinLevel,
-				CurrentLevel: v.CurrentLevel,
-				MaxLevel:     v.MaxLevel,
-				DomainIDs:    v.DomainIDs,
-			}
-		}
-	}
-
-	return internalShardInfo
 }
 
 func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInfo) *ShardInfo {
-	shardInfo := &ShardInfo{
+	if internalShardInfo == nil {
+		return nil
+	}
+	return &ShardInfo{
 		ShardID:                       internalShardInfo.ShardID,
 		Owner:                         internalShardInfo.Owner,
 		RangeID:                       internalShardInfo.RangeID,
@@ -146,31 +127,7 @@ func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInf
 		ClusterReplicationLevel:       internalShardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     internalShardInfo.DomainNotificationVersion,
 		PendingFailoverMarkers:        internalShardInfo.PendingFailoverMarkers,
+		TransferFailoverLevels:        internalShardInfo.TransferFailoverLevels,
+		TimerFailoverLevels:           internalShardInfo.TimerFailoverLevels,
 	}
-	if internalShardInfo.TransferFailoverLevels != nil {
-		shardInfo.TransferFailoverLevels = make(map[string]TransferFailoverLevel)
-		for k, v := range internalShardInfo.TransferFailoverLevels {
-			shardInfo.TransferFailoverLevels[k] = TransferFailoverLevel{
-				StartTime:    v.StartTime,
-				MinLevel:     v.MinLevel,
-				CurrentLevel: v.CurrentLevel,
-				MaxLevel:     v.MaxLevel,
-				DomainIDs:    v.DomainIDs,
-			}
-		}
-	}
-
-	if internalShardInfo.TimerFailoverLevels != nil {
-		shardInfo.TimerFailoverLevels = make(map[string]TimerFailoverLevel)
-		for k, v := range internalShardInfo.TimerFailoverLevels {
-			shardInfo.TimerFailoverLevels[k] = TimerFailoverLevel{
-				StartTime:    v.StartTime,
-				MinLevel:     v.MinLevel,
-				CurrentLevel: v.CurrentLevel,
-				MaxLevel:     v.MaxLevel,
-				DomainIDs:    v.DomainIDs,
-			}
-		}
-	}
-	return shardInfo
 }
