@@ -36,12 +36,8 @@ import (
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
 )
 
-type (
-	contextKey int
-)
-
 const (
-	scannerContextKey = contextKey(0)
+	scannerContextKey = "scannerContextKey"
 
 	maxConcurrentActivityExecutionSize     = 10
 	maxConcurrentDecisionTaskExecutionSize = 10
