@@ -443,6 +443,8 @@ func AdminSetShardRangeID(c *cli.Context) {
 	}); err != nil {
 		ErrorAndExit("Failed to reset shard rangeID.", err)
 	}
+
+	fmt.Printf("Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
 }
 
 // AdminCloseShard closes shard by shard id
