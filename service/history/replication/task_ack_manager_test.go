@@ -130,7 +130,7 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	event := &workflow.HistoryEvent{
 		EventId: common.Int64Ptr(1),
 	}
-	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
+	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*workflow.HistoryEvent{event},
 		NextPageToken:    pageToken,
 		Size:             1,
@@ -152,7 +152,7 @@ func (s *taskAckManagerSuite) TestGetAllHistory_OK() {
 		EventId: common.Int64Ptr(1),
 	}
 
-	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
+	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*workflow.HistoryEvent{event},
 		NextPageToken:    nil,
 		Size:             1,
@@ -169,7 +169,7 @@ func (s *taskAckManagerSuite) TestGetAllHistory_Error() {
 	firstEventID := int64(0)
 	nextEventID := int64(1)
 	var branchToken []byte
-	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything).Return(nil, errors.New("test"))
+	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
 
 	history, err := s.ackManager.getAllHistory(firstEventID, nextEventID, branchToken)
 	s.Error(err)
@@ -180,7 +180,7 @@ func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_OK() {
 	task := &persistence.ReplicationTaskInfo{
 		DomainID: uuid.New(),
 	}
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything).Return(&persistence.GetReplicationTasksResponse{
+	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
 		Tasks:         []*persistence.ReplicationTaskInfo{task},
 		NextPageToken: []byte{1},
 	}, nil)
@@ -193,7 +193,7 @@ func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_OK() {
 }
 
 func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_Error() {
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything).Return(nil, errors.New("test"))
+	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
 
 	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(0, 1)
 	s.Error(err)
@@ -314,7 +314,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 	firstEventID := int64(1)
 	nextEventID := int64(2)
 
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
 				{
@@ -333,7 +333,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 	firstEventID := int64(1)
 	nextEventID := int64(2)
 
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{},
 			Size:              0,
@@ -341,7 +341,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 	_, err := s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
 	s.Error(err)
 
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
 				{
@@ -358,7 +358,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 	_, err = s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
 	s.Error(err)
 
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(nil, errors.New("test"))
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
 	_, err = s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
 	s.Error(err)
 }
@@ -724,7 +724,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 		1,
 		nil,
 	), nil).AnyTimes()
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
 				{
@@ -893,7 +893,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 		1,
 		nil,
 	), nil).AnyTimes()
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything).Return(
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
 				{
@@ -926,7 +926,7 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 		FirstEventID: 6,
 		Version:      1,
 	}
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything).Return(&persistence.GetReplicationTasksResponse{
+	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
 		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
 		NextPageToken: []byte{1},
 	}, nil)

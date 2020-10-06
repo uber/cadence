@@ -23,6 +23,7 @@
 package execution
 
 import (
+	"context"
 	ctx "context"
 	"fmt"
 	"time"
@@ -236,6 +237,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, size, err := persistence.PaginateHistory(
+			context.TODO(),
 			r.historyV2Mgr,
 			true,
 			branchToken,

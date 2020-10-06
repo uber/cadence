@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -180,7 +181,7 @@ func (s *workflowResetterSuite) TestResetWorkflow_NoError() {
 		gomock.Any(),
 	).Return(s.mockRebuiltMutableState, rebuiltHistorySize, nil).Times(1)
 
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", &persistence.ForkHistoryBranchRequest{
+	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything, &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: branchToken,
 		ForkNodeID:      baseEventID + 1,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(s.domainID, s.workflowID, s.newRunID),

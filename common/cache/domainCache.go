@@ -23,6 +23,7 @@
 package cache
 
 import (
+	"context"
 	"hash/fnv"
 	"sort"
 	"strconv"
@@ -424,7 +425,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 
 	// first load the metadata record, then load domains
 	// this can guarantee that domains in the cache are not updated more than metadata record
-	metadata, err := c.metadataMgr.GetMetadata()
+	metadata, err := c.metadataMgr.GetMetadata(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -436,7 +437,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 
 	for continuePage {
 		request.NextPageToken = token
-		response, err := c.metadataMgr.ListDomains(request)
+		response, err := c.metadataMgr.ListDomains(context.TODO(), request)
 		if err != nil {
 			return err
 		}
@@ -511,7 +512,7 @@ func (c *domainCache) checkDomainExists(
 	id string,
 ) error {
 
-	_, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: name, ID: id})
+	_, err := c.metadataMgr.GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: name, ID: id})
 	return err
 }
 

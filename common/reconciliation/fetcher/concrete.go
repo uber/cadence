@@ -23,6 +23,8 @@
 package fetcher
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
@@ -46,7 +48,7 @@ func ConcreteExecution(retryer persistence.Retryer, request ExecutionRequest) (e
 			RunId:      common.StringPtr(request.RunID),
 		},
 	}
-	e, err := retryer.GetWorkflowExecution(&req)
+	e, err := retryer.GetWorkflowExecution(context.TODO(), &req)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +81,7 @@ func getConcreteExecutions(
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListConcreteExecutions(req)
+		resp, err := pr.ListConcreteExecutions(context.TODO(), req)
 		if err != nil {
 			return pagination.Page{}, err
 		}

@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -130,7 +131,7 @@ func (s *dlqHandlerSuite) TestReadMessages_OK() {
 			},
 		},
 	}
-	s.executionManager.On("GetReplicationTasksFromDLQ", &persistence.GetReplicationTasksFromDLQRequest{
+	s.executionManager.On("GetReplicationTasksFromDLQ", mock.Anything, &persistence.GetReplicationTasksFromDLQRequest{
 		SourceClusterName: s.sourceCluster,
 		GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
 			ReadLevel:     -1,
@@ -154,7 +155,7 @@ func (s *dlqHandlerSuite) TestPurgeMessages_OK() {
 	sourceCluster := "test"
 	lastMessageID := int64(1)
 
-	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ",
+	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ", mock.Anything,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,
 			ExclusiveBeginTaskID: -1,
@@ -182,7 +183,7 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 			},
 		},
 	}
-	s.executionManager.On("GetReplicationTasksFromDLQ", &persistence.GetReplicationTasksFromDLQRequest{
+	s.executionManager.On("GetReplicationTasksFromDLQ", mock.Anything, &persistence.GetReplicationTasksFromDLQRequest{
 		SourceClusterName: s.sourceCluster,
 		GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
 			ReadLevel:     -1,
@@ -205,7 +206,7 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 			},
 		}, nil)
 	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
-	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ",
+	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ", mock.Anything,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    s.sourceCluster,
 			ExclusiveBeginTaskID: -1,

@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -67,11 +68,11 @@ func (m *MetadataPersistenceSuiteV2) SetupTest() {
 	pageSize := 10
 ListLoop:
 	for {
-		resp, err := m.ListDomains(pageSize, token)
+		resp, err := m.ListDomains(context.Background(), pageSize, token)
 		m.NoError(err)
 		token = resp.NextPageToken
 		for _, domain := range resp.Domains {
-			m.NoError(m.DeleteDomain(domain.Info.ID, ""))
+			m.NoError(m.DeleteDomain(context.Background(), domain.Info.ID, ""))
 		}
 		if len(token) == 0 {
 			break ListLoop
@@ -90,6 +91,9 @@ func (m *MetadataPersistenceSuiteV2) TearDownSuite() {
 
 // TestCreateDomain test
 func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	id := uuid.New()
 	name := "create-domain-test-name"
 	status := p.DomainStatusRegistered
@@ -108,6 +112,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	failoverVersion := int64(0)
 
 	resp0, err0 := m.CreateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          id,
 			Name:        name,
@@ -136,7 +141,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 
 	// for domain which do not have replication config set, will default to
 	// use current cluster as active, with current cluster as all clusters
-	resp1, err1 := m.GetDomain(id, "")
+	resp1, err1 := m.GetDomain(ctx, id, "")
 	m.NoError(err1)
 	m.NotNil(resp1)
 	m.Equal(id, resp1.Info.ID)
@@ -164,6 +169,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.NotEqual(0, resp1.LastUpdatedTime)
 
 	resp2, err2 := m.CreateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          uuid.New(),
 			Name:        name,
@@ -192,6 +198,9 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 
 // TestGetDomain test
 func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	id := uuid.New()
 	name := "get-domain-test-name"
 	status := p.DomainStatusRegistered
@@ -219,7 +228,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 		},
 	}
 
-	resp0, err0 := m.GetDomain("", "does-not-exist")
+	resp0, err0 := m.GetDomain(ctx, "", "does-not-exist")
 	m.Nil(resp0)
 	m.Error(err0)
 	m.IsType(&gen.EntityNotExistsError{}, err0)
@@ -234,6 +243,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	}
 
 	resp1, err1 := m.CreateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          id,
 			Name:        name,
@@ -263,7 +273,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.NotNil(resp1)
 	m.Equal(id, resp1.ID)
 
-	resp2, err2 := m.GetDomain(id, "")
+	resp2, err2 := m.GetDomain(ctx, id, "")
 	m.NoError(err2)
 	m.NotNil(resp2)
 	m.Equal(id, resp2.Info.ID)
@@ -292,7 +302,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.Nil(resp2.FailoverEndTime)
 	m.NotEqual(0, resp2.LastUpdatedTime)
 
-	resp3, err3 := m.GetDomain("", name)
+	resp3, err3 := m.GetDomain(ctx, "", name)
 	m.NoError(err3)
 	m.NotNil(resp3)
 	m.Equal(id, resp3.Info.ID)
@@ -319,18 +329,21 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(p.InitialFailoverNotificationVersion, resp3.FailoverNotificationVersion)
 	m.NotEqual(0, resp3.LastUpdatedTime)
 
-	resp4, err4 := m.GetDomain(id, name)
+	resp4, err4 := m.GetDomain(ctx, id, name)
 	m.Error(err4)
 	m.IsType(&gen.BadRequestError{}, err4)
 	m.Nil(resp4)
 
-	resp5, err5 := m.GetDomain("", "")
+	resp5, err5 := m.GetDomain(ctx, "", "")
 	m.Nil(resp5)
 	m.IsType(&gen.BadRequestError{}, err5)
 }
 
 // TestConcurrentCreateDomain test
 func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	id := uuid.New()
 
 	name := "concurrent-create-domain-test-name"
@@ -374,7 +387,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 		newValue := fmt.Sprintf("v-%v", i)
 		wg.Add(1)
 		go func(data map[string]string) {
-			_, err1 := m.CreateDomain(
+			_, err1 := m.CreateDomain(ctx,
 				&p.DomainInfo{
 					ID:          id,
 					Name:        name,
@@ -409,7 +422,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	wg.Wait()
 	m.Equal(int32(1), successCount)
 
-	resp, err3 := m.GetDomain("", name)
+	resp, err3 := m.GetDomain(ctx, "", name)
 	m.NoError(err3)
 	m.NotNil(resp)
 	m.Equal(name, resp.Info.Name)
@@ -443,6 +456,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 
 // TestConcurrentUpdateDomain test
 func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	id := uuid.New()
 	name := "concurrent-update-domain-test-name"
 	status := p.DomainStatusRegistered
@@ -471,7 +487,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		},
 	}
 
-	resp1, err1 := m.CreateDomain(
+	resp1, err1 := m.CreateDomain(ctx,
 		&p.DomainInfo{
 			ID:          id,
 			Name:        name,
@@ -500,10 +516,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	m.NoError(err1)
 	m.Equal(id, resp1.ID)
 
-	resp2, err2 := m.GetDomain(id, "")
+	resp2, err2 := m.GetDomain(ctx, id, "")
 	m.NoError(err2)
 	m.Equal(badBinaries, resp2.Config.BadBinaries)
-	metadata, err := m.MetadataManager.GetMetadata()
+	metadata, err := m.MetadataManager.GetMetadata(ctx)
 	m.NoError(err)
 	notificationVersion := metadata.NotificationVersion
 
@@ -524,6 +540,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		wg.Add(1)
 		go func(updatedData map[string]string) {
 			err3 := m.UpdateDomain(
+				ctx,
 				&p.DomainInfo{
 					ID:          resp2.Info.ID,
 					Name:        resp2.Info.Name,
@@ -561,7 +578,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	wg.Wait()
 	m.Equal(int32(1), successCount)
 
-	resp3, err3 := m.GetDomain("", name)
+	resp3, err3 := m.GetDomain(ctx, "", name)
 	m.NoError(err3)
 	m.NotNil(resp3)
 	m.Equal(id, resp3.Info.ID)
@@ -598,6 +615,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 
 // TestUpdateDomain test
 func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	id := uuid.New()
 	name := "update-domain-test-name"
 	status := p.DomainStatusRegistered
@@ -627,6 +647,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 
 	resp1, err1 := m.CreateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          id,
 			Name:        name,
@@ -654,10 +675,10 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.NoError(err1)
 	m.Equal(id, resp1.ID)
 
-	resp2, err2 := m.GetDomain(id, "")
+	resp2, err2 := m.GetDomain(ctx, id, "")
 	m.NoError(err2)
 	m.Nil(resp2.FailoverEndTime)
-	metadata, err := m.MetadataManager.GetMetadata()
+	metadata, err := m.MetadataManager.GetMetadata(ctx)
 	m.NoError(err)
 	notificationVersion := metadata.NotificationVersion
 
@@ -698,6 +719,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 
 	err3 := m.UpdateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          resp2.Info.ID,
 			Name:        resp2.Info.Name,
@@ -728,7 +750,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	)
 	m.NoError(err3)
 
-	resp4, err4 := m.GetDomain("", name)
+	resp4, err4 := m.GetDomain(ctx, "", name)
 	m.NoError(err4)
 	m.NotNil(resp4)
 	m.Equal(id, resp4.Info.ID)
@@ -757,7 +779,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(notificationVersion, resp4.NotificationVersion)
 	m.Equal(&failoverEndTime, resp4.FailoverEndTime)
 
-	resp5, err5 := m.GetDomain(id, "")
+	resp5, err5 := m.GetDomain(ctx, id, "")
 	m.NoError(err5)
 	m.NotNil(resp5)
 	m.Equal(id, resp5.Info.ID)
@@ -787,6 +809,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 
 	notificationVersion++
 	err6 := m.UpdateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          resp2.Info.ID,
 			Name:        resp2.Info.Name,
@@ -817,7 +840,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	)
 	m.NoError(err6)
 
-	resp6, err6 := m.GetDomain("", name)
+	resp6, err6 := m.GetDomain(ctx, "", name)
 	m.NoError(err6)
 	m.NotNil(resp6)
 	m.Equal(id, resp6.Info.ID)
@@ -849,6 +872,9 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 
 // TestDeleteDomain test
 func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	id := uuid.New()
 	name := "delete-domain-test-name"
 	status := p.DomainStatusRegistered
@@ -877,6 +903,7 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	}
 
 	resp1, err1 := m.CreateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          id,
 			Name:        name,
@@ -904,25 +931,26 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	m.NoError(err1)
 	m.Equal(id, resp1.ID)
 
-	resp2, err2 := m.GetDomain("", name)
+	resp2, err2 := m.GetDomain(ctx, "", name)
 	m.NoError(err2)
 	m.NotNil(resp2)
 
-	err3 := m.DeleteDomain("", name)
+	err3 := m.DeleteDomain(ctx, "", name)
 	m.NoError(err3)
 
-	resp4, err4 := m.GetDomain("", name)
+	resp4, err4 := m.GetDomain(ctx, "", name)
 	m.Error(err4)
 	m.IsType(&gen.EntityNotExistsError{}, err4)
 	m.Nil(resp4)
 
-	resp5, err5 := m.GetDomain(id, "")
+	resp5, err5 := m.GetDomain(ctx, id, "")
 	m.Error(err5)
 	m.IsType(&gen.EntityNotExistsError{}, err5)
 	m.Nil(resp5)
 
 	id = uuid.New()
 	resp6, err6 := m.CreateDomain(
+		ctx,
 		&p.DomainInfo{
 			ID:          id,
 			Name:        name,
@@ -950,15 +978,15 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	m.NoError(err6)
 	m.Equal(id, resp6.ID)
 
-	err7 := m.DeleteDomain(id, "")
+	err7 := m.DeleteDomain(ctx, id, "")
 	m.NoError(err7)
 
-	resp8, err8 := m.GetDomain("", name)
+	resp8, err8 := m.GetDomain(ctx, "", name)
 	m.Error(err8)
 	m.IsType(&gen.EntityNotExistsError{}, err8)
 	m.Nil(resp8)
 
-	resp9, err9 := m.GetDomain(id, "")
+	resp9, err9 := m.GetDomain(ctx, id, "")
 	m.Error(err9)
 	m.IsType(&gen.EntityNotExistsError{}, err9)
 	m.Nil(resp9)
@@ -966,6 +994,9 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 
 // TestListDomains test
 func (m *MetadataPersistenceSuiteV2) TestListDomains() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	clusterActive1 := "some random active cluster name"
 	clusterStandby1 := "some random standby cluster name"
 	clusters1 := []*p.ClusterReplicationConfig{
@@ -1065,6 +1096,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 	}
 	for _, domain := range inputDomains {
 		_, err := m.CreateDomain(
+			ctx,
 			domain.Info,
 			domain.Config,
 			domain.ReplicationConfig,
@@ -1080,7 +1112,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 	outputDomains := make(map[string]*p.GetDomainResponse)
 ListLoop:
 	for {
-		resp, err := m.ListDomains(pageSize, token)
+		resp, err := m.ListDomains(ctx, pageSize, token)
 		m.NoError(err)
 		token = resp.NextPageToken
 		for _, domain := range resp.Domains {
@@ -1102,6 +1134,7 @@ ListLoop:
 
 // CreateDomain helper method
 func (m *MetadataPersistenceSuiteV2) CreateDomain(
+	ctx context.Context,
 	info *p.DomainInfo,
 	config *p.DomainConfig,
 	replicationConfig *p.DomainReplicationConfig,
@@ -1110,7 +1143,7 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(
 	failoverVersion int64,
 ) (*p.CreateDomainResponse, error) {
 
-	return m.MetadataManager.CreateDomain(&p.CreateDomainRequest{
+	return m.MetadataManager.CreateDomain(ctx, &p.CreateDomainRequest{
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
@@ -1121,8 +1154,8 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(
 }
 
 // GetDomain helper method
-func (m *MetadataPersistenceSuiteV2) GetDomain(id, name string) (*p.GetDomainResponse, error) {
-	return m.MetadataManager.GetDomain(&p.GetDomainRequest{
+func (m *MetadataPersistenceSuiteV2) GetDomain(ctx context.Context, id, name string) (*p.GetDomainResponse, error) {
+	return m.MetadataManager.GetDomain(ctx, &p.GetDomainRequest{
 		ID:   id,
 		Name: name,
 	})
@@ -1130,6 +1163,7 @@ func (m *MetadataPersistenceSuiteV2) GetDomain(id, name string) (*p.GetDomainRes
 
 // UpdateDomain helper method
 func (m *MetadataPersistenceSuiteV2) UpdateDomain(
+	ctx context.Context,
 	info *p.DomainInfo,
 	config *p.DomainConfig,
 	replicationConfig *p.DomainReplicationConfig,
@@ -1141,7 +1175,7 @@ func (m *MetadataPersistenceSuiteV2) UpdateDomain(
 	notificationVersion int64,
 ) error {
 
-	return m.MetadataManager.UpdateDomain(&p.UpdateDomainRequest{
+	return m.MetadataManager.UpdateDomain(ctx, &p.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
@@ -1155,16 +1189,16 @@ func (m *MetadataPersistenceSuiteV2) UpdateDomain(
 }
 
 // DeleteDomain helper method
-func (m *MetadataPersistenceSuiteV2) DeleteDomain(id, name string) error {
+func (m *MetadataPersistenceSuiteV2) DeleteDomain(ctx context.Context, id, name string) error {
 	if len(id) > 0 {
-		return m.MetadataManager.DeleteDomain(&p.DeleteDomainRequest{ID: id})
+		return m.MetadataManager.DeleteDomain(ctx, &p.DeleteDomainRequest{ID: id})
 	}
-	return m.MetadataManager.DeleteDomainByName(&p.DeleteDomainByNameRequest{Name: name})
+	return m.MetadataManager.DeleteDomainByName(ctx, &p.DeleteDomainByNameRequest{Name: name})
 }
 
 // ListDomains helper method
-func (m *MetadataPersistenceSuiteV2) ListDomains(pageSize int, pageToken []byte) (*p.ListDomainsResponse, error) {
-	return m.MetadataManager.ListDomains(&p.ListDomainsRequest{
+func (m *MetadataPersistenceSuiteV2) ListDomains(ctx context.Context, pageSize int, pageToken []byte) (*p.ListDomainsResponse, error) {
+	return m.MetadataManager.ListDomains(ctx, &p.ListDomainsRequest{
 		PageSize:      pageSize,
 		NextPageToken: pageToken,
 	})

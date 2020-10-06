@@ -626,7 +626,7 @@ Create_Loop:
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
 
-		response, err := s.executionManager.CreateWorkflowExecution(request)
+		response, err := s.executionManager.CreateWorkflowExecution(context.TODO(), request)
 		if err != nil {
 			switch err.(type) {
 			case *shared.WorkflowExecutionAlreadyStartedError,
@@ -732,7 +732,7 @@ Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		resp, err := s.executionManager.UpdateWorkflowExecution(request)
+		resp, err := s.executionManager.UpdateWorkflowExecution(context.TODO(), request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -829,7 +829,7 @@ Reset_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		err := s.executionManager.ResetWorkflowExecution(request)
+		err := s.executionManager.ResetWorkflowExecution(context.TODO(), request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -941,7 +941,7 @@ Conflict_Resolve_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		err := s.executionManager.ConflictResolveWorkflowExecution(request)
+		err := s.executionManager.ConflictResolveWorkflowExecution(context.TODO(), request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -1029,7 +1029,7 @@ func (s *contextImpl) AppendHistoryV2Events(
 				tag.WorkflowHistorySizeBytes(size))
 		}
 	}()
-	resp, err0 := s.GetHistoryManager().AppendHistoryNodes(request)
+	resp, err0 := s.GetHistoryManager().AppendHistoryNodes(context.TODO(), request)
 	if resp != nil {
 		size = resp.Size
 	}
@@ -1414,6 +1414,7 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 Retry_Loop:
 	for attempt := int32(0); attempt < conditionalRetryCount; attempt++ {
 		err = s.executionManager.CreateFailoverMarkerTasks(
+			context.TODO(),
 			&persistence.CreateFailoverMarkersRequest{
 				RangeID: s.getRangeID(),
 				Markers: markers,

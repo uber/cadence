@@ -964,7 +964,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	var resp *persistence.GetWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.executionManager.GetWorkflowExecution(request)
+		resp, err = c.executionManager.GetWorkflowExecution(context.TODO(), request)
 
 		return err
 	}

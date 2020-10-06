@@ -60,7 +60,10 @@ func (v *visibilityManagerImpl) GetName() string {
 	return v.persistence.GetName()
 }
 
-func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(request *RecordWorkflowExecutionStartedRequest) error {
+func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
+	ctx context.Context,
+	request *RecordWorkflowExecutionStartedRequest,
+) error {
 	req := &InternalRecordWorkflowExecutionStartedRequest{
 		DomainUUID:         request.DomainUUID,
 		WorkflowID:         request.Execution.GetWorkflowId(),
@@ -74,10 +77,13 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(request *RecordWo
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		SearchAttributes:   request.SearchAttributes,
 	}
-	return v.persistence.RecordWorkflowExecutionStarted(context.TODO(), req)
+	return v.persistence.RecordWorkflowExecutionStarted(ctx, req)
 }
 
-func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error {
+func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
+	ctx context.Context,
+	request *RecordWorkflowExecutionClosedRequest,
+) error {
 	req := &InternalRecordWorkflowExecutionClosedRequest{
 		DomainUUID:         request.DomainUUID,
 		WorkflowID:         request.Execution.GetWorkflowId(),
@@ -94,10 +100,13 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWor
 		HistoryLength:      request.HistoryLength,
 		RetentionSeconds:   request.RetentionSeconds,
 	}
-	return v.persistence.RecordWorkflowExecutionClosed(context.TODO(), req)
+	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
 }
 
-func (v *visibilityManagerImpl) UpsertWorkflowExecution(request *UpsertWorkflowExecutionRequest) error {
+func (v *visibilityManagerImpl) UpsertWorkflowExecution(
+	ctx context.Context,
+	request *UpsertWorkflowExecutionRequest,
+) error {
 	req := &InternalUpsertWorkflowExecutionRequest{
 		DomainUUID:         request.DomainUUID,
 		WorkflowID:         request.Execution.GetWorkflowId(),
@@ -110,95 +119,131 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(request *UpsertWorkflowE
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
 	}
-	return v.persistence.UpsertWorkflowExecution(context.TODO(), req)
+	return v.persistence.UpsertWorkflowExecution(ctx, req)
 }
 
-func (v *visibilityManagerImpl) ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListOpenWorkflowExecutions(context.TODO(), request)
+func (v *visibilityManagerImpl) ListOpenWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListOpenWorkflowExecutions(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutions(context.TODO(), request)
+func (v *visibilityManagerImpl) ListClosedWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListClosedWorkflowExecutions(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByType(context.TODO(), request)
+func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByType(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByTypeRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByType(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByType(context.TODO(), request)
+func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByType(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByTypeRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByType(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByWorkflowID(context.TODO(), request)
+func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByWorkflowID(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByWorkflowIDRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByWorkflowID(context.TODO(), request)
+func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByWorkflowID(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByWorkflowIDRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByStatus(context.TODO(), request)
+func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(
+	ctx context.Context,
+	request *ListClosedWorkflowExecutionsByStatusRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error) {
-	internalResp, err := v.persistence.GetClosedWorkflowExecution(context.TODO(), request)
+func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
+	ctx context.Context,
+	request *GetClosedWorkflowExecutionRequest,
+) (*GetClosedWorkflowExecutionResponse, error) {
+	internalResp, err := v.persistence.GetClosedWorkflowExecution(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalGetResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error {
-	return v.persistence.DeleteWorkflowExecution(context.TODO(), request)
+func (v *visibilityManagerImpl) DeleteWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	return v.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
-func (v *visibilityManagerImpl) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ListWorkflowExecutions(context.TODO(), request)
+func (v *visibilityManagerImpl) ListWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequestV2,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListWorkflowExecutions(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
-	internalResp, err := v.persistence.ScanWorkflowExecutions(context.TODO(), request)
+func (v *visibilityManagerImpl) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequestV2,
+) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ScanWorkflowExecutions(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
-	return v.persistence.CountWorkflowExecutions(context.TODO(), request)
+func (v *visibilityManagerImpl) CountWorkflowExecutions(
+	ctx context.Context,
+	request *CountWorkflowExecutionsRequest,
+) (*CountWorkflowExecutionsResponse, error) {
+	return v.persistence.CountWorkflowExecutions(ctx, request)
 }
 
 func (v *visibilityManagerImpl) convertInternalGetResponse(internalResp *InternalGetClosedWorkflowExecutionResponse) *GetClosedWorkflowExecutionResponse {

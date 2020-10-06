@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -60,7 +61,7 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 			InvariantName:   o.Name(),
 		}
 	}
-	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
 		DomainID:   concreteExecution.DomainID,
 		WorkflowID: concreteExecution.WorkflowID,
 	})
@@ -139,7 +140,7 @@ func ExecutionStillOpen(
 			RunId:      &exec.RunID,
 		},
 	}
-	resp, err := pr.GetWorkflowExecution(req)
+	resp, err := pr.GetWorkflowExecution(context.TODO(), req)
 	if err != nil {
 		switch err.(type) {
 		case *shared.EntityNotExistsError:

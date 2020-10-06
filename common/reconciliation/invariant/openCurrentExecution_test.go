@@ -171,8 +171,8 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
-		execManager.On("GetWorkflowExecution", mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
-		execManager.On("GetCurrentExecution", mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
+		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
+		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
 		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()))
 		s.Equal(tc.expectedResult, o.Check(tc.execution))
 	}

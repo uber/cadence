@@ -141,7 +141,7 @@ func (d *handlerImpl) RegisterDomain(
 	}
 
 	// first check if the name is already registered as the local domain
-	_, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: registerRequest.GetName()})
+	_, err := d.metadataMgr.GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: registerRequest.GetName()})
 	switch err.(type) {
 	case nil:
 		// domain already exists, cannot proceed
@@ -260,7 +260,7 @@ func (d *handlerImpl) RegisterDomain(
 		LastUpdatedTime:   d.timeSource.Now().UnixNano(),
 	}
 
-	domainResponse, err := d.metadataMgr.CreateDomain(domainRequest)
+	domainResponse, err := d.metadataMgr.CreateDomain(context.TODO(), domainRequest)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func (d *handlerImpl) ListDomains(
 		pageSize = int(listRequest.GetPageSize())
 	}
 
-	resp, err := d.metadataMgr.ListDomains(&persistence.ListDomainsRequest{
+	resp, err := d.metadataMgr.ListDomains(context.TODO(), &persistence.ListDomainsRequest{
 		PageSize:      pageSize,
 		NextPageToken: listRequest.NextPageToken,
 	})
@@ -338,7 +338,7 @@ func (d *handlerImpl) DescribeDomain(
 		Name: describeRequest.GetName(),
 		ID:   describeRequest.GetUUID(),
 	}
-	resp, err := d.metadataMgr.GetDomain(req)
+	resp, err := d.metadataMgr.GetDomain(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -361,12 +361,12 @@ func (d *handlerImpl) UpdateDomain(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := d.metadataMgr.GetMetadata()
+	metadata, err := d.metadataMgr.GetMetadata(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: updateRequest.GetName()})
+	getResponse, err := d.metadataMgr.GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: updateRequest.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +442,7 @@ func (d *handlerImpl) UpdateDomain(
 		return nil, err
 	}
 
-	//Update replication config
+	// Update replication config
 	replicationConfig, replicationConfigChanged, activeClusterChanged, err := d.updateReplicationConfig(
 		replicationConfig,
 		updateRequest.ReplicationConfiguration,
@@ -536,7 +536,7 @@ func (d *handlerImpl) UpdateDomain(
 			LastUpdatedTime:             lastUpdatedTime.UnixNano(),
 			NotificationVersion:         notificationVersion,
 		}
-		err = d.metadataMgr.UpdateDomain(updateReq)
+		err = d.metadataMgr.UpdateDomain(context.TODO(), updateReq)
 		if err != nil {
 			return nil, err
 		}
@@ -586,12 +586,12 @@ func (d *handlerImpl) DeprecateDomain(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := d.metadataMgr.GetMetadata()
+	metadata, err := d.metadataMgr.GetMetadata(context.TODO())
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
+	getResponse, err := d.metadataMgr.GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
 	if err != nil {
 		return err
 	}
@@ -607,7 +607,7 @@ func (d *handlerImpl) DeprecateDomain(
 		FailoverNotificationVersion: getResponse.FailoverNotificationVersion,
 		NotificationVersion:         notificationVersion,
 	}
-	err = d.metadataMgr.UpdateDomain(updateReq)
+	err = d.metadataMgr.UpdateDomain(context.TODO(), updateReq)
 	if err != nil {
 		return err
 	}

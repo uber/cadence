@@ -23,6 +23,8 @@
 package domain
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
@@ -133,14 +135,14 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 		LastUpdatedTime: h.timeSource.Now().UnixNano(),
 	}
 
-	_, err = h.metadataManager.CreateDomain(request)
+	_, err = h.metadataManager.CreateDomain(context.TODO(), request)
 	if err != nil {
 		// SQL and Cassandra handle domain UUID collision differently
 		// here, whenever seeing a error replicating a domain
 		// do a check if there is a name / UUID collision
 
 		recordExists := true
-		resp, getErr := h.metadataManager.GetDomain(&persistence.GetDomainRequest{
+		resp, getErr := h.metadataManager.GetDomain(context.TODO(), &persistence.GetDomainRequest{
 			Name: task.Info.GetName(),
 		})
 		switch getErr.(type) {
@@ -156,7 +158,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 			return err
 		}
 
-		resp, getErr = h.metadataManager.GetDomain(&persistence.GetDomainRequest{
+		resp, getErr = h.metadataManager.GetDomain(context.TODO(), &persistence.GetDomainRequest{
 			ID: task.GetID(),
 		})
 		switch getErr.(type) {
@@ -191,7 +193,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 	}
 
 	// first we need to get the current notification version since we need to it for conditional update
-	metadata, err := h.metadataManager.GetMetadata()
+	metadata, err := h.metadataManager.GetMetadata(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -199,7 +201,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
-	resp, err := h.metadataManager.GetDomain(&persistence.GetDomainRequest{
+	resp, err := h.metadataManager.GetDomain(context.TODO(), &persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
@@ -260,7 +262,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ta
 		return nil
 	}
 
-	return h.metadataManager.UpdateDomain(request)
+	return h.metadataManager.UpdateDomain(context.TODO(), request)
 }
 
 func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {

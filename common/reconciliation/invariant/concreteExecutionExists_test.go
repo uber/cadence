@@ -153,8 +153,8 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
-		execManager.On("IsWorkflowExecutionExists", mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
-		execManager.On("GetCurrentExecution", mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
+		execManager.On("IsWorkflowExecutionExists", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
+		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
 		o := NewConcreteExecutionExists(persistence.NewPersistenceRetryer(execManager, nil, c.CreatePersistenceRetryPolicy()))
 		s.Equal(tc.expectedResult, o.Check(tc.execution))
 	}

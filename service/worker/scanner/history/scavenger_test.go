@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
@@ -75,7 +76,7 @@ func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manag
 func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
 	db, _, scvgr, controller := s.createTestScavenger(100)
 	defer controller.Finish()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
 		NextPageToken: []byte("page1"),
@@ -95,7 +96,7 @@ func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
 		},
 	}, nil).Once()
 
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize:      pageSize,
 		NextPageToken: []byte("page1"),
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -127,7 +128,7 @@ func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
 func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 	db, _, scvgr, controller := s.createTestScavenger(100)
 	defer controller.Finish()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
 		NextPageToken: []byte("page1"),
@@ -147,7 +148,7 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 		},
 	}, nil).Once()
 
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize:      pageSize,
 		NextPageToken: []byte("page1"),
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -179,7 +180,7 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 	db, client, scvgr, controller := s.createTestScavenger(100)
 	defer controller.Finish()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
 		NextPageToken: []byte("page1"),
@@ -199,7 +200,7 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 		},
 	}, nil).Once()
 
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize:      pageSize,
 		NextPageToken: []byte("page1"),
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -260,7 +261,7 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 	db, client, scvgr, controller := s.createTestScavenger(100)
 	defer controller.Finish()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
 		NextPageToken: []byte("page1"),
@@ -279,7 +280,7 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 			},
 		},
 	}, nil).Once()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize:      pageSize,
 		NextPageToken: []byte("page1"),
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -330,25 +331,25 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 
 	branchToken1, err := p.NewHistoryBranchTokenByBranchID("treeID1", "branchID1")
 	s.Nil(err)
-	db.On("DeleteHistoryBranch", &p.DeleteHistoryBranchRequest{
+	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken1,
 		ShardID:     common.IntPtr(1),
 	}).Return(nil).Once()
 	branchToken2, err := p.NewHistoryBranchTokenByBranchID("treeID2", "branchID2")
 	s.Nil(err)
-	db.On("DeleteHistoryBranch", &p.DeleteHistoryBranchRequest{
+	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken2,
 		ShardID:     common.IntPtr(1),
 	}).Return(nil).Once()
 	branchToken3, err := p.NewHistoryBranchTokenByBranchID("treeID3", "branchID3")
 	s.Nil(err)
-	db.On("DeleteHistoryBranch", &p.DeleteHistoryBranchRequest{
+	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken3,
 		ShardID:     common.IntPtr(1),
 	}).Return(nil).Once()
 	branchToken4, err := p.NewHistoryBranchTokenByBranchID("treeID4", "branchID4")
 	s.Nil(err)
-	db.On("DeleteHistoryBranch", &p.DeleteHistoryBranchRequest{
+	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken4,
 		ShardID:     common.IntPtr(1),
 	}).Return(nil).Once()
@@ -365,7 +366,7 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 func (s *ScavengerTestSuite) TestMixesTwoPages() {
 	db, client, scvgr, controller := s.createTestScavenger(100)
 	defer controller.Finish()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
 		NextPageToken: []byte("page1"),
@@ -386,7 +387,7 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 			},
 		},
 	}, nil).Once()
-	db.On("GetAllHistoryTreeBranches", &p.GetAllHistoryTreeBranchesRequest{
+	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize:      pageSize,
 		NextPageToken: []byte("page1"),
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -440,14 +441,14 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 
 	branchToken3, err := p.NewHistoryBranchTokenByBranchID("treeID3", "branchID3")
 	s.Nil(err)
-	db.On("DeleteHistoryBranch", &p.DeleteHistoryBranchRequest{
+	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken3,
 		ShardID:     common.IntPtr(1),
 	}).Return(nil).Once()
 
 	branchToken4, err := p.NewHistoryBranchTokenByBranchID("treeID4", "branchID4")
 	s.Nil(err)
-	db.On("DeleteHistoryBranch", &p.DeleteHistoryBranchRequest{
+	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken4,
 		ShardID:     common.IntPtr(1),
 	}).Return(fmt.Errorf("failed to delete history")).Once()
