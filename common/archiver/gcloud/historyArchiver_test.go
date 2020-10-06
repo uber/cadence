@@ -191,7 +191,7 @@ func (h *historyArchiverSuite) TestArchive_Fail_ErrorOnReadHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(nil, errors.New("some random error")),
+		historyIterator.EXPECT().Next().Return(nil, errors.New("some random error")),
 	)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -219,7 +219,7 @@ func (h *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(nil, &shared.ServiceBusyError{}),
+		historyIterator.EXPECT().Next().Return(nil, &shared.ServiceBusyError{}),
 	)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -265,7 +265,7 @@ func (h *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(historyBlob, nil),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 	)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -295,7 +295,7 @@ func (h *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(nil, errors.New("upload non-retriable error")),
+		historyIterator.EXPECT().Next().Return(nil, errors.New("upload non-retriable error")),
 	)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -356,7 +356,7 @@ func (h *historyArchiverSuite) TestArchive_Success() {
 	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(historyBlob, nil),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 		historyIterator.EXPECT().HasNext().Return(false),
 	)
 

@@ -39,7 +39,7 @@ const (
 type (
 	// HistoryIterator is used to get history batches
 	HistoryIterator interface {
-		Next(context.Context) (*HistoryBlob, error)
+		Next() (*HistoryBlob, error)
 		HasNext() bool
 		GetState() ([]byte, error)
 	}
@@ -72,6 +72,7 @@ type (
 	historyIterator struct {
 		historyIteratorState
 
+		ctx                   context.Context
 		request               *ArchiveHistoryRequest
 		historyV2Manager      persistence.HistoryManager
 		sizeEstimator         SizeEstimator
@@ -86,21 +87,23 @@ var (
 
 // NewHistoryIterator returns a new HistoryIterator
 func NewHistoryIterator(
+	ctx context.Context,
 	request *ArchiveHistoryRequest,
 	historyV2Manager persistence.HistoryManager,
 	targetHistoryBlobSize int,
 ) HistoryIterator {
-	return newHistoryIterator(request, historyV2Manager, targetHistoryBlobSize)
+	return newHistoryIterator(ctx, request, historyV2Manager, targetHistoryBlobSize)
 }
 
 // NewHistoryIteratorFromState returns a new HistoryIterator with specified state
 func NewHistoryIteratorFromState(
+	ctx context.Context,
 	request *ArchiveHistoryRequest,
 	historyV2Manager persistence.HistoryManager,
 	targetHistoryBlobSize int,
 	initialState []byte,
 ) (HistoryIterator, error) {
-	it := newHistoryIterator(request, historyV2Manager, targetHistoryBlobSize)
+	it := newHistoryIterator(ctx, request, historyV2Manager, targetHistoryBlobSize)
 	if initialState == nil {
 		return it, nil
 	}
@@ -111,6 +114,7 @@ func NewHistoryIteratorFromState(
 }
 
 func newHistoryIterator(
+	ctx context.Context,
 	request *ArchiveHistoryRequest,
 	historyV2Manager persistence.HistoryManager,
 	targetHistoryBlobSize int,
@@ -120,6 +124,7 @@ func newHistoryIterator(
 			NextEventID:       common.FirstEventID,
 			FinishedIteration: false,
 		},
+		ctx:                   ctx,
 		request:               request,
 		historyV2Manager:      historyV2Manager,
 		historyPageSize:       historyPageSize,
@@ -128,12 +133,12 @@ func newHistoryIterator(
 	}
 }
 
-func (i *historyIterator) Next(ctx context.Context) (*HistoryBlob, error) {
+func (i *historyIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		return nil, errIteratorDepleted
 	}
 
-	historyBatches, newIterState, err := i.readHistoryBatches(ctx, i.NextEventID)
+	historyBatches, newIterState, err := i.readHistoryBatches(i.ctx, i.NextEventID)
 	if err != nil {
 		return nil, err
 	}

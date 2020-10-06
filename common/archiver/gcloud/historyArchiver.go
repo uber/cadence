@@ -296,9 +296,9 @@ func (h *historyArchiver) validateURI(URI archiver.URI) (err error) {
 }
 
 func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIterator) (*archiver.HistoryBlob, error) {
-	historyBlob, err := historyIterator.Next(ctx)
+	historyBlob, err := historyIterator.Next()
 	op := func() error {
-		historyBlob, err = historyIterator.Next(ctx)
+		historyBlob, err = historyIterator.Next()
 		return err
 	}
 	for err != nil {
@@ -371,7 +371,7 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 
 	defer func() {
 		if err != nil || historyIterator == nil {
-			historyIterator, err = archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, nil)
+			historyIterator, err = archiver.NewHistoryIteratorFromState(ctx, request, historyManager, targetHistoryBlobSize, nil)
 		}
 	}()
 
@@ -379,7 +379,7 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 		if featureCatalog.ProgressManager.HasProgress(ctx) {
 			err = featureCatalog.ProgressManager.LoadProgress(ctx, &progress)
 			if err == nil {
-				historyIterator, err = archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, progress.IteratorState)
+				historyIterator, err = archiver.NewHistoryIteratorFromState(ctx, request, historyManager, targetHistoryBlobSize, progress.IteratorState)
 			}
 		}
 

@@ -160,7 +160,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_ErrorOnReadHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(nil, errors.New("some random error")),
+		historyIterator.EXPECT().Next().Return(nil, errors.New("some random error")),
 	)
 
 	historyArchiver := s.newTestHistoryArchiver(historyIterator)
@@ -183,7 +183,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(nil, &shared.ServiceBusyError{}),
+		historyIterator.EXPECT().Next().Return(nil, &shared.ServiceBusyError{}),
 	)
 
 	historyArchiver := s.newTestHistoryArchiver(historyIterator)
@@ -223,7 +223,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(historyBlob, nil),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 	)
 
 	historyArchiver := s.newTestHistoryArchiver(historyIterator)
@@ -246,7 +246,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(nil, errors.New("some random error")),
+		historyIterator.EXPECT().Next().Return(nil, errors.New("some random error")),
 	)
 
 	historyArchiver := s.newTestHistoryArchiver(historyIterator)
@@ -301,7 +301,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(historyBlob, nil),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 		historyIterator.EXPECT().HasNext().Return(false),
 	)
 
@@ -483,7 +483,7 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next(gomock.Any()).Return(historyBlob, nil),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 		historyIterator.EXPECT().HasNext().Return(false),
 	)
 

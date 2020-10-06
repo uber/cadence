@@ -138,7 +138,7 @@ func (h *historyArchiver) Archive(
 
 	historyIterator := h.historyIterator
 	if historyIterator == nil { // will only be set by testing code
-		historyIterator = archiver.NewHistoryIterator(request, h.container.HistoryV2Manager, targetHistoryBlobSize)
+		historyIterator = archiver.NewHistoryIterator(ctx, request, h.container.HistoryV2Manager, targetHistoryBlobSize)
 	}
 
 	historyBatches := []*shared.History{}
@@ -281,9 +281,9 @@ func (h *historyArchiver) ValidateURI(URI archiver.URI) error {
 }
 
 func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIterator) (*archiver.HistoryBlob, error) {
-	historyBlob, err := historyIterator.Next(ctx)
+	historyBlob, err := historyIterator.Next()
 	op := func() error {
-		historyBlob, err = historyIterator.Next(ctx)
+		historyBlob, err = historyIterator.Next()
 		return err
 	}
 	for err != nil {

@@ -28,7 +28,6 @@
 package archiver
 
 import (
-	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -58,18 +57,18 @@ func (m *MockHistoryIterator) EXPECT() *MockHistoryIteratorMockRecorder {
 }
 
 // Next mocks base method
-func (m *MockHistoryIterator) Next(arg0 context.Context) (*HistoryBlob, error) {
+func (m *MockHistoryIterator) Next() (*HistoryBlob, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Next", arg0)
+	ret := m.ctrl.Call(m, "Next")
 	ret0, _ := ret[0].(*HistoryBlob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Next indicates an expected call of Next
-func (mr *MockHistoryIteratorMockRecorder) Next(arg0 interface{}) *gomock.Call {
+func (mr *MockHistoryIteratorMockRecorder) Next() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockHistoryIterator)(nil).Next), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockHistoryIterator)(nil).Next))
 }
 
 // HasNext mocks base method
