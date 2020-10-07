@@ -227,7 +227,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(
 	if internalListRequest != nil {
 		internalRequest.InternalListWorkflowExecutionsRequest = *internalListRequest
 	}
-	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
+	internalResp, err := v.persistence.ListClosedWorkflowExecutionsByStatus(ctx, internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,12 @@ func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *GetClosedWorkflowExecutionRequest,
 ) (*GetClosedWorkflowExecutionResponse, error) {
-	internalResp, err := v.persistence.GetClosedWorkflowExecution(ctx, request)
+	internalReq := &InternalGetClosedWorkflowExecutionRequest{
+		DomainUUID: request.DomainUUID,
+		Domain: request.Domain,
+		Execution: request.Execution,
+	}
+	internalResp, err := v.persistence.GetClosedWorkflowExecution(ctx, internalReq)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +331,7 @@ func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{})
 	}, nil
 }
 
-func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *VisibilityWorkflowExecutionInfo) *shared.WorkflowExecutionInfo {
+func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *InternalVisibilityWorkflowExecutionInfo) *shared.WorkflowExecutionInfo {
 	// special handling of ExecutionTime for cron or retry
 	if execution.ExecutionTime.UnixNano() == 0 {
 		execution.ExecutionTime = execution.StartTime

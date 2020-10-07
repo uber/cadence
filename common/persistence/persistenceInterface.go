@@ -23,7 +23,6 @@ package persistence
 import (
 	"context"
 	"fmt"
-	s "go.uber.org/cadence/.gen/go/shared"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -646,13 +645,13 @@ type (
 	InternalGetClosedWorkflowExecutionRequest struct {
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
-		Execution  s.WorkflowExecution
+		Execution  workflow.WorkflowExecution
 	}
 
 	// InternalListClosedWorkflowExecutionsByStatusRequest is used to list executions that have specific close status
 	InternalListClosedWorkflowExecutionsByStatusRequest struct {
 		InternalListWorkflowExecutionsRequest
-		Status s.WorkflowExecutionCloseStatus
+		Status workflow.WorkflowExecutionCloseStatus
 	}
 
 	// InternalListWorkflowExecutionsByWorkflowIDRequest is used to list executions that have specific WorkflowID in a domain
