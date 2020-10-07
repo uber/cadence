@@ -2255,9 +2255,9 @@ func createHistoryEventBatchBlob(
 
 func createTaskInfo(
 	result map[string]interface{},
-) *p.TaskInfo {
+) *p.InternalTaskInfo {
 
-	info := &p.TaskInfo{}
+	info := &p.InternalTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
