@@ -177,14 +177,14 @@ func (q *nosqlQueue) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
-) ([]*persistence.QueueMessage, error) {
+) ([]*persistence.InternalQueueMessage, error) {
 	messages, err := q.db.SelectMessagesFrom(ctx, q.queueType, lastMessageID, maxCount)
 	if err != nil {
 		return nil, err
 	}
-	var result []*persistence.QueueMessage
+	var result []*persistence.InternalQueueMessage
 	for _, msg := range messages {
-		result = append(result, &persistence.QueueMessage{
+		result = append(result, &persistence.InternalQueueMessage{
 			ID:        msg.ID,
 			QueueType: q.queueType,
 			Payload:   msg.Payload,
@@ -200,7 +200,7 @@ func (q *nosqlQueue) ReadMessagesFromDLQ(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*persistence.QueueMessage, []byte, error) {
+) ([]*persistence.InternalQueueMessage, []byte, error) {
 	response, err := q.db.SelectMessagesBetween(ctx, nosqlplugin.SelectMessagesBetweenRequest{
 		QueueType:               q.getDLQTypeFromQueueType(),
 		ExclusiveBeginMessageID: firstMessageID,
@@ -211,9 +211,9 @@ func (q *nosqlQueue) ReadMessagesFromDLQ(
 	if err != nil {
 		return nil, nil, err
 	}
-	var result []*persistence.QueueMessage
+	var result []*persistence.InternalQueueMessage
 	for _, msg := range response.Rows {
-		result = append(result, &persistence.QueueMessage{
+		result = append(result, &persistence.InternalQueueMessage{
 			ID:        msg.ID,
 			QueueType: msg.QueueType,
 			Payload:   msg.Payload,

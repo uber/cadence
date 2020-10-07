@@ -74,7 +74,7 @@ type (
 
 	queueRateLimitedPersistenceClient struct {
 		rateLimiter quotas.Limiter
-		persistence Queue
+		persistence QueueManager
 		logger      log.Logger
 	}
 )
@@ -85,7 +85,7 @@ var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
 var _ HistoryManager = (*historyV2RateLimitedPersistenceClient)(nil)
 var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
-var _ Queue = (*queueRateLimitedPersistenceClient)(nil)
+var _ QueueManager = (*queueRateLimitedPersistenceClient)(nil)
 
 // NewShardPersistenceRateLimitedClient creates a client to manage shards
 func NewShardPersistenceRateLimitedClient(
@@ -167,10 +167,10 @@ func NewVisibilityPersistenceRateLimitedClient(
 
 // NewQueuePersistenceRateLimitedClient creates a client to manage queue
 func NewQueuePersistenceRateLimitedClient(
-	persistence Queue,
+	persistence QueueManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
-) Queue {
+) QueueManager {
 	return &queueRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,

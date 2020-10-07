@@ -258,10 +258,12 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 
 func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, error) {
 	ds := f.datastores[storeTypeQueue]
-	result, err := ds.factory.NewQueue(p.DomainReplicationQueueType)
+	store, err := ds.factory.NewQueue(p.DomainReplicationQueueType)
 	if err != nil {
 		return nil, err
 	}
+
+	result := p.NewQueueManager(store)
 	if ds.ratelimit != nil {
 		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
