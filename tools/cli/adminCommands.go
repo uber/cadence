@@ -414,6 +414,39 @@ func AdminDescribeShard(c *cli.Context) {
 	prettyPrintJSONObject(shard)
 }
 
+// AdminSetShardRangeID set shard rangeID by shard id
+func AdminSetShardRangeID(c *cli.Context) {
+	sid := getRequiredIntOption(c, FlagShardID)
+	rid := getRequiredInt64Option(c, FlagRangeID)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	session := connectToCassandra(c)
+	shardStore := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+	shardManager := persistence.NewShardManager(shardStore)
+
+	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
+	if err != nil {
+		ErrorAndExit("Failed to get shardInfo.", err)
+	}
+
+	previousRangeID := getShardResp.ShardInfo.RangeID
+	updatedShardInfo := getShardResp.ShardInfo
+	updatedShardInfo.RangeID = rid
+	updatedShardInfo.StolenSinceRenew++
+	updatedShardInfo.Owner = ""
+	updatedShardInfo.UpdatedAt = time.Now()
+
+	if err := shardManager.UpdateShard(ctx, &persistence.UpdateShardRequest{
+		PreviousRangeID: previousRangeID,
+		ShardInfo:       updatedShardInfo,
+	}); err != nil {
+		ErrorAndExit("Failed to reset shard rangeID.", err)
+	}
+
+	fmt.Printf("Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
+}
+
 // AdminCloseShard closes shard by shard id
 func AdminCloseShard(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
