@@ -83,8 +83,8 @@ COPY --from=builder /cadence/cadence-server /usr/local/bin
 COPY --from=builder /cadence/schema /etc/cadence/schema
 
 COPY docker/entrypoint.sh /docker-entrypoint.sh
-COPY config/dynamicconfig /etc/cadence/dynamicconfig
-COPY docker/config_template.yaml /etc/cadence
+COPY config/dynamicconfig /etc/cadence/config/dynamicconfig
+COPY docker/config_template.yaml /etc/cadence/config
 COPY docker/start-cadence.sh /start-cadence.sh
 
 WORKDIR /etc/cadence
