@@ -1851,9 +1851,9 @@ func createTransferTaskInfo(
 
 func createReplicationTaskInfo(
 	result map[string]interface{},
-) *p.ReplicationTaskInfo {
+) *p.InternalReplicationTaskInfo {
 
-	info := &p.ReplicationTaskInfo{}
+	info := &p.InternalReplicationTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
