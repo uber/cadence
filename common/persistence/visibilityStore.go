@@ -240,8 +240,8 @@ func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
 ) (*GetClosedWorkflowExecutionResponse, error) {
 	internalReq := &InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: request.DomainUUID,
-		Domain: request.Domain,
-		Execution: request.Execution,
+		Domain:     request.Domain,
+		Execution:  request.Execution,
 	}
 	internalResp, err := v.persistence.GetClosedWorkflowExecution(ctx, internalReq)
 	if err != nil {
@@ -398,12 +398,12 @@ func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(intern
 		return nil
 	}
 	return &ListWorkflowExecutionsRequest{
-		DomainUUID: internalReq.DomainUUID,
-		Domain: internalReq.Domain,
+		DomainUUID:        internalReq.DomainUUID,
+		Domain:            internalReq.Domain,
 		EarliestStartTime: internalReq.EarliestStartTime,
-		LatestStartTime: internalReq.LatestStartTime,
-		PageSize: internalReq.PageSize,
-		NextPageToken: internalReq.NextPageToken,
+		LatestStartTime:   internalReq.LatestStartTime,
+		PageSize:          internalReq.PageSize,
+		NextPageToken:     internalReq.NextPageToken,
 	}
 }
 
@@ -412,11 +412,11 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 		return nil
 	}
 	return &InternalListWorkflowExecutionsRequest{
-		DomainUUID: req.DomainUUID,
-		Domain: req.Domain,
+		DomainUUID:        req.DomainUUID,
+		Domain:            req.Domain,
 		EarliestStartTime: req.EarliestStartTime,
-		LatestStartTime: req.LatestStartTime,
-		PageSize: req.PageSize,
-		NextPageToken: req.NextPageToken,
+		LatestStartTime:   req.LatestStartTime,
+		PageSize:          req.PageSize,
+		NextPageToken:     req.NextPageToken,
 	}
 }
