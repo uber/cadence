@@ -344,7 +344,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := h.GetHistoryTree(context.TODO(), &p.GetHistoryTreeRequest{
+	rsp, err := h.GetHistoryTree(context.TODO(), &p.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: &request.ShardID,
 	})
@@ -436,8 +436,8 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 // GetHistoryTree returns all branch information of a tree
 func (h *nosqlHistoryManager) GetHistoryTree(
 	ctx context.Context,
-	request *p.GetHistoryTreeRequest,
-) (*p.GetHistoryTreeResponse, error) {
+	request *p.InternalGetHistoryTreeRequest,
+) (*p.InternalGetHistoryTreeResponse, error) {
 
 	treeID := request.TreeID
 
@@ -459,7 +459,7 @@ func (h *nosqlHistoryManager) GetHistoryTree(
 		}
 		branches = append(branches, br)
 	}
-	return &p.GetHistoryTreeResponse{
+	return &p.InternalGetHistoryTreeResponse{
 		Branches: branches,
 	}, nil
 }
