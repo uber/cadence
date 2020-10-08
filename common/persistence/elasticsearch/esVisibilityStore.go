@@ -179,7 +179,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 	_ context.Context,
-	request *p.ListWorkflowExecutionsRequest,
+	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	token, err := v.getNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -194,7 +194,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		startTime := rec.StartTime.UnixNano()
 		return request.EarliestStartTime <= startTime && startTime <= request.LatestStartTime
 	}
@@ -204,7 +204,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 	_ context.Context,
-	request *p.ListWorkflowExecutionsRequest,
+	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
@@ -220,7 +220,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
 		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
 	}
@@ -230,7 +230,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 	_ context.Context,
-	request *p.ListWorkflowExecutionsByTypeRequest,
+	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
@@ -240,14 +240,14 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 
 	isOpen := true
 	matchQuery := elastic.NewMatchQuery(es.WorkflowType, request.WorkflowTypeName)
-	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	searchResult, err := v.getSearchResult(&request.InternalListWorkflowExecutionsRequest, token, matchQuery, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType failed. Error: %v", err),
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		startTime := rec.StartTime.UnixNano()
 		return request.EarliestStartTime <= startTime && startTime <= request.LatestStartTime
 	}
@@ -257,7 +257,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 	_ context.Context,
-	request *p.ListWorkflowExecutionsByTypeRequest,
+	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
@@ -267,14 +267,14 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 
 	isOpen := false
 	matchQuery := elastic.NewMatchQuery(es.WorkflowType, request.WorkflowTypeName)
-	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	searchResult, err := v.getSearchResult(&request.InternalListWorkflowExecutionsRequest, token, matchQuery, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType failed. Error: %v", err),
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
 		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
 	}
@@ -284,7 +284,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 	_ context.Context,
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
+	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
@@ -294,14 +294,14 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 
 	isOpen := true
 	matchQuery := elastic.NewMatchQuery(es.WorkflowID, request.WorkflowID)
-	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	searchResult, err := v.getSearchResult(&request.InternalListWorkflowExecutionsRequest, token, matchQuery, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID failed. Error: %v", err),
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		startTime := rec.StartTime.UnixNano()
 		return request.EarliestStartTime <= startTime && startTime <= request.LatestStartTime
 	}
@@ -311,7 +311,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 	_ context.Context,
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
+	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
@@ -321,14 +321,14 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 
 	isOpen := false
 	matchQuery := elastic.NewMatchQuery(es.WorkflowID, request.WorkflowID)
-	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	searchResult, err := v.getSearchResult(&request.InternalListWorkflowExecutionsRequest, token, matchQuery, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID failed. Error: %v", err),
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
 		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
 	}
@@ -338,7 +338,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	_ context.Context,
-	request *p.ListClosedWorkflowExecutionsByStatusRequest,
+	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	token, err := v.getNextPageToken(request.NextPageToken)
@@ -348,14 +348,14 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 
 	isOpen := false
 	matchQuery := elastic.NewMatchQuery(es.CloseStatus, int32(request.Status))
-	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	searchResult, err := v.getSearchResult(&request.InternalListWorkflowExecutionsRequest, token, matchQuery, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus failed. Error: %v", err),
 		}
 	}
 
-	isRecordValid := func(rec *p.VisibilityWorkflowExecutionInfo) bool {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
 		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
 	}
@@ -365,7 +365,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 
 func (v *esVisibilityStore) GetClosedWorkflowExecution(
 	_ context.Context,
-	request *p.GetClosedWorkflowExecutionRequest,
+	request *p.InternalGetClosedWorkflowExecutionRequest,
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 
 	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
@@ -770,7 +770,7 @@ func (v *esVisibilityStore) getNextPageToken(token []byte) (*esVisibilityPageTok
 	return result, nil
 }
 
-func (v *esVisibilityStore) getSearchResult(request *p.ListWorkflowExecutionsRequest, token *esVisibilityPageToken,
+func (v *esVisibilityStore) getSearchResult(request *p.InternalListWorkflowExecutionsRequest, token *esVisibilityPageToken,
 	matchQuery *elastic.MatchQuery, isOpen bool) (*elastic.SearchResult, error) {
 
 	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
@@ -835,7 +835,7 @@ func (v *esVisibilityStore) getScanWorkflowExecutionsResponse(searchHits *elasti
 	actualHits := searchHits.Hits
 	numOfActualHits := len(actualHits)
 
-	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
 	for i := 0; i < numOfActualHits; i++ {
 		workflowExecutionInfo := v.convertSearchResultToVisibilityRecord(actualHits[i])
 		response.Executions = append(response.Executions, workflowExecutionInfo)
@@ -854,13 +854,13 @@ func (v *esVisibilityStore) getScanWorkflowExecutionsResponse(searchHits *elasti
 }
 
 func (v *esVisibilityStore) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
-	token *esVisibilityPageToken, pageSize int, isRecordValid func(rec *p.VisibilityWorkflowExecutionInfo) bool) (*p.InternalListWorkflowExecutionsResponse, error) {
+	token *esVisibilityPageToken, pageSize int, isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	actualHits := searchHits.Hits
 	numOfActualHits := len(actualHits)
 
-	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
 	for i := 0; i < numOfActualHits; i++ {
 		workflowExecutionInfo := v.convertSearchResultToVisibilityRecord(actualHits[i])
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
@@ -920,7 +920,7 @@ func (v *esVisibilityStore) serializePageToken(token *esVisibilityPageToken) ([]
 	return data, nil
 }
 
-func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit) *p.VisibilityWorkflowExecutionInfo {
+func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit) *p.InternalVisibilityWorkflowExecutionInfo {
 	var source *visibilityRecord
 	err := json.Unmarshal(*hit.Source, &source)
 	if err != nil { // log and skip error
@@ -929,7 +929,7 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 		return nil
 	}
 
-	record := &p.VisibilityWorkflowExecutionInfo{
+	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,

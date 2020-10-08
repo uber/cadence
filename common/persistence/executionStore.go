@@ -68,7 +68,11 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 	request *GetWorkflowExecutionRequest,
 ) (*GetWorkflowExecutionResponse, error) {
 
-	response, err := m.persistence.GetWorkflowExecution(ctx, request)
+	internalRequest := &InternalGetWorkflowExecutionRequest{
+		DomainID:  request.DomainID,
+		Execution: request.Execution,
+	}
+	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -845,7 +849,15 @@ func (m *executionManagerImpl) GetReplicationTasks(
 	ctx context.Context,
 	request *GetReplicationTasksRequest,
 ) (*GetReplicationTasksResponse, error) {
-	return m.persistence.GetReplicationTasks(ctx, request)
+	resp, err := m.persistence.GetReplicationTasks(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetReplicationTasksResponse{
+		Tasks:         m.fromInternalReplicationTaskInfos(resp.Tasks),
+		NextPageToken: resp.NextPageToken,
+	}, nil
 }
 
 func (m *executionManagerImpl) CompleteReplicationTask(
@@ -866,14 +878,25 @@ func (m *executionManagerImpl) PutReplicationTaskToDLQ(
 	ctx context.Context,
 	request *PutReplicationTaskToDLQRequest,
 ) error {
-	return m.persistence.PutReplicationTaskToDLQ(ctx, request)
+	internalRequest := &InternalPutReplicationTaskToDLQRequest{
+		SourceClusterName: request.SourceClusterName,
+		TaskInfo:          m.toInternalReplicationTaskInfo(request.TaskInfo),
+	}
+	return m.persistence.PutReplicationTaskToDLQ(ctx, internalRequest)
 }
 
 func (m *executionManagerImpl) GetReplicationTasksFromDLQ(
 	ctx context.Context,
 	request *GetReplicationTasksFromDLQRequest,
 ) (*GetReplicationTasksFromDLQResponse, error) {
-	return m.persistence.GetReplicationTasksFromDLQ(ctx, request)
+	resp, err := m.persistence.GetReplicationTasksFromDLQ(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return &GetReplicationTasksFromDLQResponse{
+		Tasks:         m.fromInternalReplicationTaskInfos(resp.Tasks),
+		NextPageToken: resp.NextPageToken,
+	}, nil
 }
 
 func (m *executionManagerImpl) GetReplicationDLQSize(
@@ -928,6 +951,68 @@ func (m *executionManagerImpl) RangeCompleteTimerTask(
 
 func (m *executionManagerImpl) Close() {
 	m.persistence.Close()
+}
+
+func (m *executionManagerImpl) fromInternalReplicationTaskInfos(internalInfos []*InternalReplicationTaskInfo) []*ReplicationTaskInfo {
+	if internalInfos == nil {
+		return nil
+	}
+	infos := make([]*ReplicationTaskInfo, len(internalInfos), len(internalInfos))
+	for i := 0; i < len(internalInfos); i++ {
+		infos[i] = m.fromInternalReplicationTaskInfo(internalInfos[i])
+	}
+	return infos
+}
+
+func (m *executionManagerImpl) fromInternalReplicationTaskInfo(internalInfo *InternalReplicationTaskInfo) *ReplicationTaskInfo {
+	if internalInfo == nil {
+		return nil
+	}
+	return &ReplicationTaskInfo{
+		DomainID:          internalInfo.DomainID,
+		WorkflowID:        internalInfo.WorkflowID,
+		RunID:             internalInfo.RunID,
+		TaskID:            internalInfo.TaskID,
+		TaskType:          internalInfo.TaskType,
+		FirstEventID:      internalInfo.FirstEventID,
+		NextEventID:       internalInfo.NextEventID,
+		Version:           internalInfo.Version,
+		ScheduledID:       internalInfo.ScheduledID,
+		BranchToken:       internalInfo.BranchToken,
+		NewRunBranchToken: internalInfo.NewRunBranchToken,
+		CreationTime:      internalInfo.CreationTime,
+	}
+}
+
+func (m *executionManagerImpl) toInternalReplicationTaskInfos(infos []*ReplicationTaskInfo) []*InternalReplicationTaskInfo {
+	if infos == nil {
+		return nil
+	}
+	internalInfos := make([]*InternalReplicationTaskInfo, len(infos), len(infos))
+	for i := 0; i < len(infos); i++ {
+		internalInfos[i] = m.toInternalReplicationTaskInfo(infos[i])
+	}
+	return internalInfos
+}
+
+func (m *executionManagerImpl) toInternalReplicationTaskInfo(info *ReplicationTaskInfo) *InternalReplicationTaskInfo {
+	if info == nil {
+		return nil
+	}
+	return &InternalReplicationTaskInfo{
+		DomainID:          info.DomainID,
+		WorkflowID:        info.WorkflowID,
+		RunID:             info.RunID,
+		TaskID:            info.TaskID,
+		TaskType:          info.TaskType,
+		FirstEventID:      info.FirstEventID,
+		NextEventID:       info.NextEventID,
+		Version:           info.Version,
+		ScheduledID:       info.ScheduledID,
+		BranchToken:       info.BranchToken,
+		NewRunBranchToken: info.NewRunBranchToken,
+		CreationTime:      info.CreationTime,
+	}
 }
 
 func getStartVersion(
