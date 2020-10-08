@@ -107,14 +107,6 @@ func (q *queueManager) GetDLQAckLevels(ctx context.Context) (map[string]int64, e
 	return q.GetAckLevels(ctx)
 }
 
-func (q *queueManager) toInternalQueueMessage(message *QueueMessage) *InternalQueueMessage {
-	return &InternalQueueMessage{
-		ID:        message.ID,
-		QueueType: message.QueueType,
-		Payload:   message.Payload,
-	}
-}
-
 func (q *queueManager) fromInternalQueueMessage(message *InternalQueueMessage) *QueueMessage {
 	return &QueueMessage{
 		ID:        message.ID,
