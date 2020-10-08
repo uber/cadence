@@ -256,7 +256,7 @@ type Config struct {
 	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
 
 	// Activity dispatch optimization
-	EnableRequestActivityStartByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableRequestActivityLocalDispatchByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 const (
@@ -466,7 +466,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 
-		EnableRequestActivityStartByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRequestActivityStartByDomain, false),
+		EnableRequestActivityLocalDispatchByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRequestActivityLocalDispatchByDomain, false),
 	}
 
 	return cfg

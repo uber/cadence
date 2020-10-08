@@ -280,7 +280,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerInterval:                          "history.NotifyFailoverMarkerInterval",
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
-	EnableRequestActivityStartByDomain:                    "history.enableRequestActivityStartByDomain",
+	EnableRequestActivityLocalDispatchByDomain:            "history.enableRequestActivityLocalDispatchByDomain",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -906,8 +906,8 @@ const (
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
 
-	// EnableRequestActivityStartByDomain indicates if client can request to start activity immediately (on RespondDecisionTaskCompleted response)
-	EnableRequestActivityStartByDomain
+	// EnableRequestActivityLocalDispatchByDomain indicates if client can request to start activity locally
+	EnableRequestActivityLocalDispatchByDomain
 )
 
 // Filter represents a filter on the dynamic config key

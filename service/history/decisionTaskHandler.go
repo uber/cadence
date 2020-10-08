@@ -220,7 +220,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		return err
 	}
 
-	dispatchLocally := handler.config.EnableRequestActivityStartByDomain(handler.domainEntry.GetInfo().Name) &&
+	dispatchLocally := handler.config.EnableRequestActivityLocalDispatchByDomain(handler.domainEntry.GetInfo().Name) &&
 		common.BoolDefault(attr.RequestLocalDispatch)
 	event, ai, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr, dispatchLocally)
 	switch err.(type) {
