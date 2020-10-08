@@ -64,7 +64,7 @@ func (q *queueManager) ReadMessages(ctx context.Context, lastMessageID int64, ma
 }
 
 func (q *queueManager) DeleteMessagesBefore(ctx context.Context, messageID int64) error {
-	return q.persistence.DeleteMessageFromDLQ(ctx, messageID)
+	return q.persistence.DeleteMessagesBefore(ctx, messageID)
 }
 
 func (q *queueManager) UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error {
@@ -100,11 +100,11 @@ func (q *queueManager) RangeDeleteMessagesFromDLQ(ctx context.Context, firstMess
 }
 
 func (q *queueManager) UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error {
-	return q.UpdateAckLevel(ctx, messageID, clusterName)
+	return q.UpdateDLQAckLevel(ctx, messageID, clusterName)
 }
 
 func (q *queueManager) GetDLQAckLevels(ctx context.Context) (map[string]int64, error) {
-	return q.GetAckLevels(ctx)
+	return q.GetDLQAckLevels(ctx)
 }
 
 func (q *queueManager) fromInternalQueueMessage(message *InternalQueueMessage) *QueueMessage {
