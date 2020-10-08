@@ -155,14 +155,14 @@ type (
 		RecordWorkflowExecutionStarted(ctx context.Context, request *InternalRecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(ctx context.Context, request *InternalRecordWorkflowExecutionClosedRequest) error
 		UpsertWorkflowExecution(ctx context.Context, request *InternalUpsertWorkflowExecutionRequest) error
-		ListOpenWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListOpenWorkflowExecutionsByType(ctx context.Context, request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByType(ctx context.Context, request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByWorkflowID(ctx context.Context, request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *ListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
-		GetClosedWorkflowExecution(ctx context.Context, request *GetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
+		ListOpenWorkflowExecutions(ctx context.Context, request *InternalListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(ctx context.Context, request *InternalListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByType(ctx context.Context, request *InternalListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByType(ctx context.Context, request *InternalListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *InternalListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByWorkflowID(ctx context.Context, request *InternalListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *InternalListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
+		GetClosedWorkflowExecution(ctx context.Context, request *InternalGetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
 		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
 		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
@@ -618,8 +618,8 @@ type (
 		Branches []*workflow.HistoryBranch
 	}
 
-	// VisibilityWorkflowExecutionInfo is visibility info for internal response
-	VisibilityWorkflowExecutionInfo struct {
+	// InternalVisibilityWorkflowExecutionInfo is visibility info for internal response
+	InternalVisibilityWorkflowExecutionInfo struct {
 		WorkflowID       string
 		RunID            string
 		TypeName         string
@@ -635,15 +635,40 @@ type (
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
 	InternalListWorkflowExecutionsResponse struct {
-		Executions []*VisibilityWorkflowExecutionInfo
+		Executions []*InternalVisibilityWorkflowExecutionInfo
 		// Token to read next page if there are more workflow executions beyond page size.
 		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
 		NextPageToken []byte
 	}
 
+	// InternalGetClosedWorkflowExecutionRequest is used retrieve the record for a specific execution
+	InternalGetClosedWorkflowExecutionRequest struct {
+		DomainUUID string
+		Domain     string // domain name is not persisted, but used as config filter key
+		Execution  workflow.WorkflowExecution
+	}
+
+	// InternalListClosedWorkflowExecutionsByStatusRequest is used to list executions that have specific close status
+	InternalListClosedWorkflowExecutionsByStatusRequest struct {
+		InternalListWorkflowExecutionsRequest
+		Status workflow.WorkflowExecutionCloseStatus
+	}
+
+	// InternalListWorkflowExecutionsByWorkflowIDRequest is used to list executions that have specific WorkflowID in a domain
+	InternalListWorkflowExecutionsByWorkflowIDRequest struct {
+		InternalListWorkflowExecutionsRequest
+		WorkflowID string
+	}
+
+	// InternalListWorkflowExecutionsByTypeRequest is used to list executions of a specific type in a domain
+	InternalListWorkflowExecutionsByTypeRequest struct {
+		InternalListWorkflowExecutionsRequest
+		WorkflowTypeName string
+	}
+
 	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution
 	InternalGetClosedWorkflowExecutionResponse struct {
-		Execution *VisibilityWorkflowExecutionInfo
+		Execution *InternalVisibilityWorkflowExecutionInfo
 	}
 
 	// InternalRecordWorkflowExecutionStartedRequest request to RecordWorkflowExecutionStarted
@@ -692,6 +717,19 @@ type (
 		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
+	}
+
+	// InternalListWorkflowExecutionsRequest is used to list executions in a domain
+	InternalListWorkflowExecutionsRequest struct {
+		DomainUUID        string
+		Domain            string // domain name is not persisted, but used as config filter key
+		EarliestStartTime int64
+		LatestStartTime   int64
+		// Maximum number of workflow executions per page
+		PageSize int
+		// Token to continue reading next page of workflow executions.
+		// Pass in empty slice for first page.
+		NextPageToken []byte
 	}
 
 	// InternalDomainConfig describes the domain configuration

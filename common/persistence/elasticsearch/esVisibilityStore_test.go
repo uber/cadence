@@ -73,7 +73,7 @@ var (
 	testRunID        = "1601da05-4db9-4eeb-89e4-da99481bdfc9"
 	testCloseStatus  = 1
 
-	testRequest = &p.ListWorkflowExecutionsRequest{
+	testRequest = &p.InternalListWorkflowExecutionsRequest{
 		DomainUUID:        testDomainID,
 		Domain:            testDomain,
 		PageSize:          testPageSize,
@@ -283,8 +283,8 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
 		WorkflowTypeName:              testWorkflowType,
 	}
 
@@ -310,8 +310,8 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
 		WorkflowTypeName:              testWorkflowType,
 	}
 
@@ -337,8 +337,8 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
 		WorkflowID:                    testWorkflowID,
 	}
 
@@ -364,8 +364,8 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
 		WorkflowID:                    testWorkflowID,
 	}
 
@@ -391,8 +391,8 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
+	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
 		Status:                        workflow.WorkflowExecutionCloseStatus(testCloseStatus),
 	}
 
@@ -418,7 +418,7 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
 		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
 		return true
 	})).Return(testSearchResult, nil).Once()
-	request := &p.GetClosedWorkflowExecutionRequest{
+	request := &p.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
 		Execution: workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(testWorkflowID),
@@ -448,7 +448,7 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 		s.False(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
 		return true
 	})).Return(testSearchResult, nil).Once()
-	request := &p.GetClosedWorkflowExecutionRequest{
+	request := &p.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
 		Execution: workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(testWorkflowID),
