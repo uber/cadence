@@ -123,6 +123,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisions(
 		}
 	}
 
+	// TODO return the list with ActivityLocalDispatchInfo's inside
 	handler.mutableState.GetExecutionInfo().ExecutionContext = executionContext
 	return nil
 }
@@ -219,15 +220,16 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		return err
 	}
 
-	startRequested := handler.config.EnableRequestActivityStartByDomain(handler.domainEntry.GetInfo().Name) &&
-		common.BoolDefault(attr.RequestStart)
-	event, ai, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr, startRequested)
+	dispatchLocally := handler.config.EnableRequestActivityStartByDomain(handler.domainEntry.GetInfo().Name) &&
+		common.BoolDefault(attr.RequestLocalDispatch)
+	event, ai, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr, dispatchLocally)
 	switch err.(type) {
 	case nil:
-		if startRequested {
+		if dispatchLocally {
 			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
 				return err1
 			}
+			// TODO introduce a new struct to contain ActivityLocalDispatchInfo's inside to be returned here
 		}
 		return nil
 	case *workflow.BadRequestError:

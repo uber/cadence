@@ -571,7 +571,7 @@ Update_History_Loop:
 		}
 
 		resp = &h.RespondDecisionTaskCompletedResponse{}
-		resp.RequestActivityStartEnabled = common.BoolPtr(handler.config.EnableRequestActivityStartByDomain(domainEntry.GetInfo().Name))
+		// TODO populate here the response with ActivityLocalDispatchInfo's returned from handleDecisions()
 		if request.GetReturnNewDecisionTask() && createNewDecisionTask {
 			decision, _ := msBuilder.GetDecisionInfo(newDecisionTaskScheduledID)
 			resp.StartedResponse, err = handler.createRecordDecisionTaskStartedResponse(domainID, msBuilder, decision, request.GetIdentity())
