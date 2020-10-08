@@ -81,14 +81,14 @@ func (q *queueManager) EnqueueMessageToDLQ(ctx context.Context, messagePayload [
 
 func (q *queueManager) ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error) {
 	resp, data, err := q.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
-	if err != nil {
-		return nil, nil, err
+	if resp == nil {
+		return nil, data, err
 	}
 	var output []*QueueMessage
 	for _, message := range resp {
 		output = append(output, q.fromInternalQueueMessage(message))
 	}
-	return output, data, nil
+	return output, data, err
 }
 
 func (q *queueManager) DeleteMessageFromDLQ(ctx context.Context, messageID int64) error {
@@ -100,11 +100,11 @@ func (q *queueManager) RangeDeleteMessagesFromDLQ(ctx context.Context, firstMess
 }
 
 func (q *queueManager) UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error {
-	return q.UpdateDLQAckLevel(ctx, messageID, clusterName)
+	return q.persistence.UpdateDLQAckLevel(ctx, messageID, clusterName)
 }
 
 func (q *queueManager) GetDLQAckLevels(ctx context.Context) (map[string]int64, error) {
-	return q.GetDLQAckLevels(ctx)
+	return q.persistence.GetDLQAckLevels(ctx)
 }
 
 func (q *queueManager) fromInternalQueueMessage(message *InternalQueueMessage) *QueueMessage {
