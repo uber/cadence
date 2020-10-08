@@ -46,8 +46,30 @@ type (
 		GetShard(ctx context.Context, request *InternalGetShardRequest) (*InternalGetShardResponse, error)
 		UpdateShard(ctx context.Context, request *InternalUpdateShardRequest) error
 	}
+
 	// TaskStore is a lower level of TaskManager
-	TaskStore = TaskManager
+	TaskStore interface {
+		Closeable
+		GetName() string
+		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
+		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		CreateTasks(ctx context.Context, request *InternalCreateTasksRequest) (*CreateTasksResponse, error)
+		GetTasks(ctx context.Context, request *GetTasksRequest) (*InternalGetTasksResponse, error)
+		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
+		// CompleteTasksLessThan completes tasks less than or equal to the given task id
+		// This API takes a limit parameter which specifies the count of maxRows that
+		// can be deleted. This parameter may be ignored by the underlying storage, but
+		// its mandatory to specify it. On success this method returns the number of rows
+		// actually deleted. If the underlying storage doesn't support "limit", all rows
+		// less than or equal to taskID will be deleted.
+		// On success, this method returns:
+		//  - number of rows actually deleted, if limit is honored
+		//  - UnknownNumRowsDeleted, when all rows below value are deleted
+		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
+	}
+
 	// MetadataStore is a lower level of MetadataManager
 	MetadataStore interface {
 		Closeable
@@ -770,6 +792,36 @@ type (
 	// InternalGetShardResponse is the response to GetShard
 	InternalGetShardResponse struct {
 		ShardInfo *InternalShardInfo
+	}
+
+	// InternalTaskInfo describes a Task
+	InternalTaskInfo struct {
+		DomainID               string
+		WorkflowID             string
+		RunID                  string
+		TaskID                 int64
+		ScheduleID             int64
+		ScheduleToStartTimeout int32
+		Expiry                 time.Time
+		CreatedTime            time.Time
+	}
+
+	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
+	InternalCreateTasksInfo struct {
+		Execution workflow.WorkflowExecution
+		Data      *InternalTaskInfo
+		TaskID    int64
+	}
+
+	// InternalCreateTasksRequest is request to CreateTasks
+	InternalCreateTasksRequest struct {
+		TaskListInfo *TaskListInfo
+		Tasks        []*InternalCreateTasksInfo
+	}
+
+	// InternalGetTasksResponse is response from GetTasks
+	InternalGetTasksResponse struct {
+		Tasks []*InternalTaskInfo
 	}
 )
 

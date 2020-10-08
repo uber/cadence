@@ -2697,7 +2697,7 @@ func (d *cassandraPersistence) DeleteTaskList(
 // From TaskManager interface
 func (d *cassandraPersistence) CreateTasks(
 	_ context.Context,
-	request *p.CreateTasksRequest,
+	request *p.InternalCreateTasksRequest,
 ) (*p.CreateTasksResponse, error) {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	domainID := request.TaskListInfo.DomainID
@@ -2785,14 +2785,14 @@ func (d *cassandraPersistence) CreateTasks(
 func (d *cassandraPersistence) GetTasks(
 	_ context.Context,
 	request *p.GetTasksRequest,
-) (*p.GetTasksResponse, error) {
+) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
 		return nil, &workflow.InternalServiceError{
 			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
 		}
 	}
 	if request.ReadLevel > *request.MaxReadLevel {
-		return &p.GetTasksResponse{}, nil
+		return &p.InternalGetTasksResponse{}, nil
 	}
 
 	// Reading tasklist tasks need to be quorum level consistent, otherwise we could loose task
@@ -2812,7 +2812,7 @@ func (d *cassandraPersistence) GetTasks(
 		}
 	}
 
-	response := &p.GetTasksResponse{}
+	response := &p.InternalGetTasksResponse{}
 	task := make(map[string]interface{})
 PopulateTasks:
 	for iter.MapScan(task) {
