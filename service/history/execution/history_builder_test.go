@@ -841,7 +841,8 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 			HeartbeatTimeoutSeconds:       common.Int32Ptr(hearbeatTimeout),
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
 			RetryPolicy:                   retryPolicy,
-		})
+		},
+		false)
 	s.Nil(err)
 	return event, ai
 }

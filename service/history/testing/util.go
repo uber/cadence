@@ -156,7 +156,8 @@ func AddActivityTaskScheduledEvent(
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
-	})
+	},
+		false)
 
 	return event, ai
 }
@@ -186,7 +187,8 @@ func AddActivityTaskScheduledEventWithRetry(
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
 		RetryPolicy:                   retryPolicy,
-	})
+	},
+		false)
 
 	return event, ai
 }

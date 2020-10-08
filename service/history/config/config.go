@@ -254,6 +254,9 @@ type Config struct {
 	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
 	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
 	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
+
+	// Activity dispatch optimization
+	EnableRequestActivityStartByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 const (
@@ -462,6 +465,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		NotifyFailoverMarkerInterval:               dc.GetDurationProperty(dynamicconfig.NotifyFailoverMarkerInterval, 5*time.Second),
 		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
+
+		EnableRequestActivityStartByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRequestActivityStartByDomain, false),
 	}
 
 	return cfg

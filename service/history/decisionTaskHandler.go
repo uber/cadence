@@ -219,9 +219,16 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		return err
 	}
 
-	_, _, err = handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
+	startRequested := handler.config.EnableRequestActivityStartByDomain(handler.domainEntry.GetInfo().Name) &&
+		common.BoolDefault(attr.RequestStart)
+	event, ai, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr, startRequested)
 	switch err.(type) {
 	case nil:
+		if startRequested {
+			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
+				return err1
+			}
+		}
 		return nil
 	case *workflow.BadRequestError:
 		return handler.handlerFailDecision(

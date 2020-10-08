@@ -126,9 +126,9 @@ func (mr *MockMutableStateMockRecorder) AddActivityTaskFailedEvent(arg0, arg1, a
 }
 
 // AddActivityTaskScheduledEvent mocks base method
-func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *shared.ScheduleActivityTaskDecisionAttributes) (*shared.HistoryEvent, *persistence.ActivityInfo, error) {
+func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *shared.ScheduleActivityTaskDecisionAttributes, arg2 bool) (*shared.HistoryEvent, *persistence.ActivityInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddActivityTaskScheduledEvent", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddActivityTaskScheduledEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(*persistence.ActivityInfo)
 	ret2, _ := ret[2].(error)
@@ -136,9 +136,9 @@ func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *share
 }
 
 // AddActivityTaskScheduledEvent indicates an expected call of AddActivityTaskScheduledEvent
-func (mr *MockMutableStateMockRecorder) AddActivityTaskScheduledEvent(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) AddActivityTaskScheduledEvent(arg0, arg1 interface{}, arg2 bool) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddActivityTaskScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).AddActivityTaskScheduledEvent), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddActivityTaskScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).AddActivityTaskScheduledEvent), arg0, arg1, arg2)
 }
 
 // AddActivityTaskStartedEvent mocks base method

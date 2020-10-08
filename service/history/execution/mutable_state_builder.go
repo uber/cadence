@@ -2052,6 +2052,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	decisionCompletedEventID int64,
 	attributes *workflow.ScheduleActivityTaskDecisionAttributes,
+	requestStart bool,
 ) (*workflow.HistoryEvent, *persistence.ActivityInfo, error) {
 
 	opTag := tag.WorkflowActionActivityTaskScheduled
@@ -2079,12 +2080,14 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	)
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateActivityTransferTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
-		event,
-	); err != nil {
-		return nil, nil, err
+	if !requestStart {
+		// TODO merge active & passive task generation
+		if err := e.taskGenerator.GenerateActivityTransferTasks(
+			e.unixNanoToTime(event.GetTimestamp()),
+			event,
+		); err != nil {
+			return nil, nil, err
+		}
 	}
 	return event, ai, err
 }

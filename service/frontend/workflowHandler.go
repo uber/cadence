@@ -1511,6 +1511,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 
 	completedResp := &gen.RespondDecisionTaskCompletedResponse{}
+	completedResp.RequestActivityStartEnabled = histResp.RequestActivityStartEnabled
 	if completeRequest.GetReturnNewDecisionTask() && histResp != nil && histResp.StartedResponse != nil {
 		taskToken := &common.TaskToken{
 			DomainID:        taskToken.DomainID,
