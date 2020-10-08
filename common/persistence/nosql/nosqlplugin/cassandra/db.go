@@ -21,11 +21,17 @@
 package cassandra
 
 import (
+	"errors"
+
 	"github.com/gocql/gocql"
 
 	"github.com/uber/cadence/common/service/config"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+)
+
+var (
+	errConditionFailed = errors.New("internal condition fail error")
 )
 
 // cdb represents a logical connection to Cassandra database
@@ -82,6 +88,13 @@ func (db *cdb) IsThrottlingError(err error) bool {
 	if req, ok := err.(gocql.RequestError); ok {
 		// gocql does not expose the constant errOverloaded = 0x1001
 		return req.Code() == 0x1001
+	}
+	return false
+}
+
+func (db *cdb) IsConditionFailedError(err error) bool {
+	if err == errConditionFailed {
+		return true
 	}
 	return false
 }

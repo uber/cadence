@@ -64,7 +64,7 @@ services:
       port: 7940
 
 clusterMetadata:
-  enableGlobalDomain: true
+  enableGlobalDomain: false
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
@@ -74,11 +74,6 @@ clusterMetadata:
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:7933"
-    standby:
-      enabled: true
-      initialFailoverVersion: 1
-      rpcName: "cadence-frontend"
-      rpcAddress: "localhost:8933"
 
 dcRedirectionPolicy:
   policy: "noop"

@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -33,13 +34,16 @@ type (
 		IsNotFoundError(err error) bool
 		IsTimeoutError(err error) bool
 		IsThrottlingError(err error) bool
+		IsConditionFailedError(err error) bool
 		Close()
 
 		tableCRUD
 	}
 	// tableCRUD defines the API for interacting with the database tables
+	// NOTE: All SELECT interfaces require strong consistency. Using eventual consistency will not work.
 	tableCRUD interface {
 		historyEventsCRUD
+		messageQueueCRUD
 	}
 
 	// historyEventsCRUD is for History events storage system
@@ -68,6 +72,64 @@ type (
 		// SelectFromHistoryTree read branch records for a tree.
 		// It returns without pagination, because we assume one tree won't have too many branches.
 		SelectFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) ([]*HistoryTreeRow, error)
+	}
+
+	// messageQueueCRUD is for the message queue storage system
+	// Typically two tables(queue_message,and queue_metadata) are needed to implement this interface
+	messageQueueCRUD interface {
+		//Insert message into queue, return error if failed or already exists
+		// Must return conditionFailed error if row already exists
+		InsertIntoQueue(ctx context.Context, row *QueueMessageRow) error
+		// Get the ID of last message inserted into the queue
+		SelectLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error)
+		// Read queue messages starting from the exclusiveBeginMessageID
+		SelectMessagesFrom(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, maxRows int) ([]*QueueMessageRow, error)
+		// Read queue message starting from exclusiveBeginMessageID int64, inclusiveEndMessageID int64
+		SelectMessagesBetween(ctx context.Context, request SelectMessagesBetweenRequest) (*SelectMessagesBetweenResponse, error)
+		// Delete all messages before exclusiveBeginMessageID
+		DeleteMessagesBefore(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64) error
+		// Delete all messages in a range between exclusiveBeginMessageID and inclusiveEndMessageID
+		DeleteMessagesInRange(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, inclusiveEndMessageID int64) error
+		// Delete one message
+		DeleteMessage(ctx context.Context, queueType persistence.QueueType, messageID int64) error
+
+		// Insert an empty metadata row, starting from a version
+		InsertQueueMetadata(ctx context.Context, queueType persistence.QueueType, version int64) error
+		// **Conditionally** update a queue metadata row, if current version is matched(meaning current == row.Version - 1),
+		// then the current version will increase by one when updating the metadata row
+		// Must return conditionFailed error if the condition is not met
+		UpdateQueueMetadataCas(ctx context.Context, row QueueMetadataRow) error
+		// Read a QueueMetadata
+		SelectQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)
+	}
+
+	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween
+	SelectMessagesBetweenRequest struct {
+		QueueType               persistence.QueueType
+		ExclusiveBeginMessageID int64
+		InclusiveEndMessageID   int64
+		PageSize                int
+		NextPageToken           []byte
+	}
+
+	// SelectMessagesBetweenResponse is a response struct for SelectMessagesBetween
+	SelectMessagesBetweenResponse struct {
+		Rows          []QueueMessageRow
+		NextPageToken []byte
+	}
+
+	// QueueMessageRow defines the row struct for queue message
+	QueueMessageRow struct {
+		QueueType persistence.QueueType
+		ID        int64
+		Payload   []byte
+	}
+
+	// QueueMetadataRow defines the row struct for metadata
+	QueueMetadataRow struct {
+		QueueType        persistence.QueueType
+		ClusterAckLevels map[string]int64
+		Version          int64
 	}
 
 	// HistoryNodeRow represents a row in history_node table

@@ -118,8 +118,10 @@ func New(
 
 // Start starts the scanner
 func (s *Scanner) Start() error {
+	ctx := context.WithValue(context.Background(), scannerContextKey, s.context)
+
 	backgroundActivityContext, taskListNames :=
-		s.startExecutionWorkflowWithRetry(context.Background(), executions.ConcreteScannerContextKey, executions.ConcreteFixerContextKey,
+		s.startExecutionWorkflowWithRetry(ctx, executions.ConcreteScannerContextKey, executions.ConcreteFixerContextKey,
 			s.context.cfg.ConcreteExecutionScannerConfig, concreteExecutionsScannerTaskListName, concreteExecutionsFixerTaskListName,
 			concreteExecutionsScannerWFTypeName, concreteExecutionsScannerWFStartOptions, executions.ConcreteExecutionType)
 	backgroundActivityContext, workerTaskListNames :=
