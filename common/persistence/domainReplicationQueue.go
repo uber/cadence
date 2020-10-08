@@ -48,7 +48,7 @@ var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
 
 // NewDomainReplicationQueue creates a new DomainReplicationQueue instance
 func NewDomainReplicationQueue(
-	queue Queue,
+	queue QueueManager,
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
@@ -67,7 +67,7 @@ func NewDomainReplicationQueue(
 
 type (
 	domainReplicationQueueImpl struct {
-		queue               Queue
+		queue               QueueManager
 		clusterName         string
 		metricsClient       metrics.Client
 		logger              log.Logger
