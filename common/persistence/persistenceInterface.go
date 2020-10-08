@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
@@ -846,7 +848,7 @@ type (
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
 	InternalCreateTasksInfo struct {
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 		Data      *InternalTaskInfo
 		TaskID    int64
 	}

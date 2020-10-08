@@ -285,7 +285,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowTypeName:              testWorkflowType,
+		WorkflowTypeName:                      testWorkflowType,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -312,7 +312,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowTypeName:              testWorkflowType,
+		WorkflowTypeName:                      testWorkflowType,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -339,7 +339,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowID:                    testWorkflowID,
+		WorkflowID:                            testWorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -366,7 +366,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowID:                    testWorkflowID,
+		WorkflowID:                            testWorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -393,7 +393,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		Status:                        workflow.WorkflowExecutionCloseStatus(testCloseStatus),
+		Status:                                workflow.WorkflowExecutionCloseStatus(testCloseStatus),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
