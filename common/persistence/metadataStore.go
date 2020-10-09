@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -181,9 +182,9 @@ func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDo
 	return InternalDomainConfig{
 		Retention:                c.Retention,
 		EmitMetric:               c.EmitMetric,
-		HistoryArchivalStatus:    c.HistoryArchivalStatus,
+		HistoryArchivalStatus:    *thrift.ToArchivalStatus(&c.HistoryArchivalStatus),
 		HistoryArchivalURI:       c.HistoryArchivalURI,
-		VisibilityArchivalStatus: c.VisibilityArchivalStatus,
+		VisibilityArchivalStatus: *thrift.ToArchivalStatus(&c.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
 		BadBinaries:              badBinaries,
 	}, nil
@@ -203,9 +204,9 @@ func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) 
 	return DomainConfig{
 		Retention:                ic.Retention,
 		EmitMetric:               ic.EmitMetric,
-		HistoryArchivalStatus:    ic.HistoryArchivalStatus,
+		HistoryArchivalStatus:    *thrift.FromArchivalStatus(&ic.HistoryArchivalStatus),
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
-		VisibilityArchivalStatus: ic.VisibilityArchivalStatus,
+		VisibilityArchivalStatus: *thrift.FromArchivalStatus(&ic.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
 		BadBinaries:              *badBinaries,
 	}, nil

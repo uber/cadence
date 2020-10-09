@@ -25,6 +25,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -248,10 +250,10 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			Retention:                int32(domainInfo.GetRetentionDays()),
 			EmitMetric:               domainInfo.GetEmitMetric(),
 			ArchivalBucket:           domainInfo.GetArchivalBucket(),
-			ArchivalStatus:           workflow.ArchivalStatus(domainInfo.GetArchivalStatus()),
-			HistoryArchivalStatus:    workflow.ArchivalStatus(domainInfo.GetHistoryArchivalStatus()),
+			ArchivalStatus:           types.ArchivalStatus(*domainInfo.ArchivalStatus),
+			HistoryArchivalStatus:    types.ArchivalStatus(*domainInfo.HistoryArchivalStatus),
 			HistoryArchivalURI:       domainInfo.GetHistoryArchivalURI(),
-			VisibilityArchivalStatus: workflow.ArchivalStatus(domainInfo.GetVisibilityArchivalStatus()),
+			VisibilityArchivalStatus: types.ArchivalStatus(*domainInfo.VisibilityArchivalStatus),
 			VisibilityArchivalURI:    domainInfo.GetVisibilityArchivalURI(),
 			BadBinaries:              badBinaries,
 		},
