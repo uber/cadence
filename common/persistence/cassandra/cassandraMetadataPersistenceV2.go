@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -380,6 +379,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 			identity = ID
 		}
 		if err == gocql.ErrNotFound {
+			fmt.Println("Return entity not exist error")
 			return &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
@@ -429,7 +429,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 		&failoverEndTime,
 		&notificationVersion,
 	)
-
+	fmt.Println("Get domain complete", err, info.ID)
 	if err != nil {
 		return nil, handleError(request.Name, request.ID, err)
 	}
@@ -578,10 +578,12 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(
 	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
+			fmt.Println("not able to get domain")
 			return nil
 		}
 		return err
 	}
+	fmt.Println("able to get domain id", ID)
 	return m.deleteDomain(request.Name, ID)
 }
 
@@ -631,6 +633,6 @@ func (m *cassandraMetadataPersistenceV2) deleteDomain(name, ID string) error {
 			Message: fmt.Sprintf("DeleteDomain operation failed. Error %v", err),
 		}
 	}
-
+	fmt.Println("Delete domain completed", name, ID)
 	return nil
 }
