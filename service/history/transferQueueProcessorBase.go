@@ -70,7 +70,7 @@ func (t *transferQueueProcessorBase) readTasks(
 	readLevel int64,
 ) ([]task.Info, bool, error) {
 
-	response, err := t.executionManager.GetTransferTasks(context.TODO(), &persistence.GetTransferTasksRequest{
+	response, err := t.executionManager.GetTransferTasks(context.Background(), &persistence.GetTransferTasksRequest{
 		ReadLevel:    readLevel,
 		MaxReadLevel: t.maxReadAckLevel(),
 		BatchSize:    t.options.BatchSize(),

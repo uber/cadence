@@ -23,8 +23,7 @@
 package ndc
 
 import (
-	context "context"
-	ctx "context"
+	"context"
 
 	"github.com/pborman/uuid"
 
@@ -45,7 +44,7 @@ const (
 type (
 	branchManager interface {
 		prepareVersionHistory(
-			ctx ctx.Context,
+			ctx context.Context,
 			incomingVersionHistory *persistence.VersionHistory,
 			incomingFirstEventID int64,
 			incomingFirstEventVersion int64,
@@ -86,7 +85,7 @@ func newBranchManager(
 }
 
 func (r *branchManagerImpl) prepareVersionHistory(
-	ctx ctx.Context,
+	ctx context.Context,
 	incomingVersionHistory *persistence.VersionHistory,
 	incomingFirstEventID int64,
 	incomingFirstEventVersion int64,
@@ -147,7 +146,7 @@ func (r *branchManagerImpl) prepareVersionHistory(
 }
 
 func (r *branchManagerImpl) flushBufferedEvents(
-	ctx ctx.Context,
+	ctx context.Context,
 	incomingVersionHistory *persistence.VersionHistory,
 ) (int, *persistence.VersionHistoryItem, error) {
 
@@ -192,7 +191,7 @@ func (r *branchManagerImpl) flushBufferedEvents(
 }
 
 func (r *branchManagerImpl) verifyEventsOrder(
-	ctx ctx.Context,
+	ctx context.Context,
 	localVersionHistory *persistence.VersionHistory,
 	incomingFirstEventID int64,
 	incomingFirstEventVersion int64,
@@ -225,7 +224,7 @@ func (r *branchManagerImpl) verifyEventsOrder(
 }
 
 func (r *branchManagerImpl) createNewBranch(
-	ctx ctx.Context,
+	ctx context.Context,
 	baseBranchToken []byte,
 	baseBranchLastEventID int64,
 	newVersionHistory *persistence.VersionHistory,
@@ -236,7 +235,7 @@ func (r *branchManagerImpl) createNewBranch(
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
 
-	resp, err := r.historyV2Mgr.ForkHistoryBranch(context.TODO(), &persistence.ForkHistoryBranchRequest{
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(ctx, &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseBranchToken,
 		ForkNodeID:      baseBranchLastEventID + 1,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, uuid.New()),

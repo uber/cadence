@@ -21,6 +21,7 @@
 package domain
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -97,7 +98,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages() {
 	s.mockReplicationQueue.EXPECT().GetMessagesFromDLQ(gomock.Any(), ackLevel, lastMessageID, pageSize, pageToken).
 		Return(tasks, nil, nil).Times(1)
 
-	resp, token, err := s.dlqMessageHandler.Read(lastMessageID, pageSize, pageToken)
+	resp, token, err := s.dlqMessageHandler.Read(context.Background(), lastMessageID, pageSize, pageToken)
 
 	s.NoError(err)
 	s.Equal(tasks, resp)
@@ -120,7 +121,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
 	s.mockReplicationQueue.EXPECT().GetMessagesFromDLQ(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(tasks, nil, nil).Times(0)
 
-	_, _, err := s.dlqMessageHandler.Read(lastMessageID, pageSize, pageToken)
+	_, _, err := s.dlqMessageHandler.Read(context.Background(), lastMessageID, pageSize, pageToken)
 
 	s.Equal(testError, err)
 }
@@ -136,7 +137,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnReadMessages() {
 	s.mockReplicationQueue.EXPECT().GetMessagesFromDLQ(gomock.Any(), ackLevel, lastMessageID, pageSize, pageToken).
 		Return(nil, nil, testError).Times(1)
 
-	_, _, err := s.dlqMessageHandler.Read(lastMessageID, pageSize, pageToken)
+	_, _, err := s.dlqMessageHandler.Read(context.Background(), lastMessageID, pageSize, pageToken)
 
 	s.Equal(testError, err)
 }
@@ -148,7 +149,7 @@ func (s *dlqMessageHandlerSuite) TestPurgeMessages() {
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel(gomock.Any()).Return(ackLevel, nil).Times(1)
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), ackLevel, lastMessageID).Return(nil).Times(1)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), lastMessageID).Return(nil).Times(1)
-	err := s.dlqMessageHandler.Purge(lastMessageID)
+	err := s.dlqMessageHandler.Purge(context.Background(), lastMessageID)
 
 	s.NoError(err)
 }
@@ -160,7 +161,7 @@ func (s *dlqMessageHandlerSuite) TestPurgeMessages_ThrowErrorOnGetDLQAckLevel() 
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel(gomock.Any()).Return(int64(-1), testError).Times(1)
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), gomock.Any()).Times(0)
-	err := s.dlqMessageHandler.Purge(lastMessageID)
+	err := s.dlqMessageHandler.Purge(context.Background(), lastMessageID)
 
 	s.Equal(testError, err)
 }
@@ -173,7 +174,7 @@ func (s *dlqMessageHandlerSuite) TestPurgeMessages_ThrowErrorOnPurgeMessages() {
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel(gomock.Any()).Return(ackLevel, nil).Times(1)
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), ackLevel, lastMessageID).Return(testError).Times(1)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), gomock.Any()).Times(0)
-	err := s.dlqMessageHandler.Purge(lastMessageID)
+	err := s.dlqMessageHandler.Purge(context.Background(), lastMessageID)
 
 	s.Equal(testError, err)
 }
@@ -203,7 +204,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), messageID).Return(nil).Times(1)
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), ackLevel, messageID).Return(nil).Times(1)
 
-	token, err := s.dlqMessageHandler.Merge(lastMessageID, pageSize, pageToken)
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
 }
@@ -232,7 +233,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 	s.mockReplicationQueue.EXPECT().DeleteMessageFromDLQ(gomock.Any(), gomock.Any()).Times(0)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), gomock.Any()).Times(0)
 
-	token, err := s.dlqMessageHandler.Merge(lastMessageID, pageSize, pageToken)
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.Equal(testError, err)
 	s.Nil(token)
 }
@@ -251,7 +252,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQMessages() 
 	s.mockReplicationQueue.EXPECT().DeleteMessageFromDLQ(gomock.Any(), gomock.Any()).Times(0)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), gomock.Any()).Times(0)
 
-	token, err := s.dlqMessageHandler.Merge(lastMessageID, pageSize, pageToken)
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.Equal(testError, err)
 	s.Nil(token)
 }
@@ -291,7 +292,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 	s.mockReplicationQueue.EXPECT().DeleteMessageFromDLQ(gomock.Any(), messageID2).Times(0)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), messageID1).Return(nil).Times(1)
 
-	token, err := s.dlqMessageHandler.Merge(lastMessageID, pageSize, pageToken)
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.Equal(testError, err)
 	s.Nil(token)
 }
@@ -330,7 +331,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), ackLevel, messageID2).Return(testError).Times(1)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), messageID1).Return(nil).Times(1)
 
-	token, err := s.dlqMessageHandler.Merge(lastMessageID, pageSize, pageToken)
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.Error(err)
 	s.Nil(token)
 }
@@ -360,7 +361,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	s.mockReplicationQueue.EXPECT().RangeDeleteMessagesFromDLQ(gomock.Any(), ackLevel, messageID).Return(nil).Times(1)
 	s.mockReplicationQueue.EXPECT().UpdateDLQAckLevel(gomock.Any(), messageID).Return(testError).Times(1)
 
-	token, err := s.dlqMessageHandler.Merge(lastMessageID, pageSize, pageToken)
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
 }

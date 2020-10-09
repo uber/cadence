@@ -35,13 +35,13 @@ import (
 
 const (
 	// ConcreteScannerContextKey is the key used to access ScannerContext in activities for concrete executions
-	ConcreteScannerContextKey = ContextKey(0)
+	ConcreteScannerContextKey = "ConcreteScannerContextKey"
 	// ConcreteFixerContextKey is the key used to access FixerContext in activities for concrete executions
-	ConcreteFixerContextKey = ContextKey(1)
+	ConcreteFixerContextKey = "ConcreteFixerContextKey"
 	// CurrentScannerContextKey is the key used to access ScannerContext in activities for current executions
-	CurrentScannerContextKey = ContextKey(2)
+	CurrentScannerContextKey = "CurrentScannerContextKey"
 	// CurrentFixerContextKey is the key used to access FixerContext in activities for current executions
-	CurrentFixerContextKey = ContextKey(3)
+	CurrentFixerContextKey = "CurrentFixerContextKey"
 
 	// ShardReportQuery is the query name for the query used to get a single shard's report
 	ShardReportQuery = "shard_report"
@@ -82,9 +82,6 @@ var ScanTypeFixerContextKeyMap = map[ScanType]interface{}{
 }
 
 type (
-	// ContextKey is the type which identifies context keys
-	ContextKey int
-
 	// ScannerContext is the resource that is available in activities under ConcreteScannerContextKey context key
 	ScannerContext struct {
 		Resource                     resource.Resource

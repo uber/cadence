@@ -426,7 +426,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 
 	t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	if err := t.shard.GetExecutionManager().RangeCompleteTransferTask(context.TODO(), &persistence.RangeCompleteTransferTaskRequest{
+	if err := t.shard.GetExecutionManager().RangeCompleteTransferTask(context.Background(), &persistence.RangeCompleteTransferTaskRequest{
 		ExclusiveBeginTaskID: t.ackLevel,
 		InclusiveEndTaskID:   newAckLevelTaskID,
 	}); err != nil {

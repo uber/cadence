@@ -180,12 +180,13 @@ func CleanPendingActiveState(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := metadataMgr.GetMetadata(context.TODO())
+	metadata, err := metadataMgr.GetMetadata(context.Background())
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := metadataMgr.GetDomain(context.TODO(), &persistence.GetDomainRequest{ID: domainID})
+
+	getResponse, err := metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{ID: domainID})
 	if err != nil {
 		return err
 	}
@@ -206,7 +207,7 @@ func CleanPendingActiveState(
 			NotificationVersion:         notificationVersion,
 		}
 		op := func() error {
-			return metadataMgr.UpdateDomain(context.TODO(), updateReq)
+			return metadataMgr.UpdateDomain(context.Background(), updateReq)
 		}
 		if err := backoff.Retry(
 			op,

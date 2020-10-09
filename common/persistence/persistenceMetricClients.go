@@ -68,7 +68,7 @@ type (
 
 	queuePersistenceClient struct {
 		metricClient metrics.Client
-		persistence  Queue
+		persistence  QueueManager
 		logger       log.Logger
 	}
 )
@@ -79,7 +79,7 @@ var _ TaskManager = (*taskPersistenceClient)(nil)
 var _ HistoryManager = (*historyV2PersistenceClient)(nil)
 var _ MetadataManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
-var _ Queue = (*queuePersistenceClient)(nil)
+var _ QueueManager = (*queuePersistenceClient)(nil)
 
 // NewShardPersistenceMetricsClient creates a client to manage shards
 func NewShardPersistenceMetricsClient(
@@ -161,10 +161,10 @@ func NewVisibilityPersistenceMetricsClient(
 
 // NewQueuePersistenceMetricsClient creates a client to manage queue
 func NewQueuePersistenceMetricsClient(
-	persistence Queue,
+	persistence QueueManager,
 	metricClient metrics.Client,
 	logger log.Logger,
-) Queue {
+) QueueManager {
 	return &queuePersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,

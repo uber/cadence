@@ -36,12 +36,8 @@ import (
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
 )
 
-type (
-	contextKey int
-)
-
 const (
-	scannerContextKey = contextKey(0)
+	scannerContextKey = "scannerContextKey"
 
 	maxConcurrentActivityExecutionSize     = 10
 	maxConcurrentDecisionTaskExecutionSize = 10
@@ -190,7 +186,7 @@ func TaskListScavengerActivity(
 ) error {
 
 	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
-	scavenger := tasklist.NewScavenger(ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
+	scavenger := tasklist.NewScavenger(activityCtx, ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
 	ctx.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {

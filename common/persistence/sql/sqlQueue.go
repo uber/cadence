@@ -87,16 +87,16 @@ func (q *sqlQueue) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
-) ([]*persistence.QueueMessage, error) {
+) ([]*persistence.InternalQueueMessage, error) {
 
 	rows, err := q.db.GetMessagesFromQueue(ctx, q.queueType, lastMessageID, maxCount)
 	if err != nil {
 		return nil, err
 	}
 
-	var messages []*persistence.QueueMessage
+	var messages []*persistence.InternalQueueMessage
 	for _, row := range rows {
-		messages = append(messages, &persistence.QueueMessage{ID: row.MessageID, Payload: row.MessagePayload})
+		messages = append(messages, &persistence.InternalQueueMessage{ID: row.MessageID, Payload: row.MessagePayload})
 	}
 	return messages, nil
 }
@@ -206,7 +206,7 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*persistence.QueueMessage, []byte, error) {
+) ([]*persistence.InternalQueueMessage, []byte, error) {
 
 	if pageToken != nil && len(pageToken) != 0 {
 		lastReadMessageID, err := deserializePageToken(pageToken)
@@ -224,9 +224,9 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 		}
 	}
 
-	var messages []*persistence.QueueMessage
+	var messages []*persistence.InternalQueueMessage
 	for _, row := range rows {
-		messages = append(messages, &persistence.QueueMessage{ID: row.MessageID, Payload: row.MessagePayload})
+		messages = append(messages, &persistence.InternalQueueMessage{ID: row.MessageID, Payload: row.MessagePayload})
 	}
 
 	var newPagingToken []byte

@@ -1334,7 +1334,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 
 func (d *cassandraPersistence) GetWorkflowExecution(
 	_ context.Context,
-	request *p.GetWorkflowExecutionRequest,
+	request *p.InternalGetWorkflowExecutionRequest,
 ) (
 	*p.InternalGetWorkflowExecutionResponse, error) {
 	execution := request.Execution
@@ -2246,7 +2246,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 func (d *cassandraPersistence) GetReplicationTasks(
 	_ context.Context,
 	request *p.GetReplicationTasksRequest,
-) (*p.GetReplicationTasksResponse, error) {
+) (*p.InternalGetReplicationTasksResponse, error) {
 
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetReplicationTasksQuery,
@@ -2265,7 +2265,7 @@ func (d *cassandraPersistence) GetReplicationTasks(
 
 func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 	query *gocql.Query,
-) (*p.GetReplicationTasksResponse, error) {
+) (*p.InternalGetReplicationTasksResponse, error) {
 	iter := query.Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
@@ -2273,7 +2273,7 @@ func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 		}
 	}
 
-	response := &p.GetReplicationTasksResponse{}
+	response := &p.InternalGetReplicationTasksResponse{}
 	task := make(map[string]interface{})
 	for iter.MapScan(task) {
 		t := createReplicationTaskInfo(task["replication"].(map[string]interface{}))
@@ -2697,7 +2697,7 @@ func (d *cassandraPersistence) DeleteTaskList(
 // From TaskManager interface
 func (d *cassandraPersistence) CreateTasks(
 	_ context.Context,
-	request *p.CreateTasksRequest,
+	request *p.InternalCreateTasksRequest,
 ) (*p.CreateTasksResponse, error) {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	domainID := request.TaskListInfo.DomainID
@@ -2785,14 +2785,14 @@ func (d *cassandraPersistence) CreateTasks(
 func (d *cassandraPersistence) GetTasks(
 	_ context.Context,
 	request *p.GetTasksRequest,
-) (*p.GetTasksResponse, error) {
+) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
 		return nil, &workflow.InternalServiceError{
 			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
 		}
 	}
 	if request.ReadLevel > *request.MaxReadLevel {
-		return &p.GetTasksResponse{}, nil
+		return &p.InternalGetTasksResponse{}, nil
 	}
 
 	// Reading tasklist tasks need to be quorum level consistent, otherwise we could loose task
@@ -2812,7 +2812,7 @@ func (d *cassandraPersistence) GetTasks(
 		}
 	}
 
-	response := &p.GetTasksResponse{}
+	response := &p.InternalGetTasksResponse{}
 	task := make(map[string]interface{})
 PopulateTasks:
 	for iter.MapScan(task) {
@@ -2942,7 +2942,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 
 func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 	_ context.Context,
-	request *p.PutReplicationTaskToDLQRequest,
+	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 	task := request.TaskInfo
 
@@ -2968,7 +2968,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 		task.NewRunBranchToken,
 		defaultVisibilityTimestamp,
 		defaultVisibilityTimestamp,
-		task.GetTaskID())
+		task.TaskID)
 
 	err := query.Exec()
 	if err != nil {
@@ -2988,7 +2988,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 	_ context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
-) (*p.GetReplicationTasksFromDLQResponse, error) {
+) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetReplicationTasksQuery,
 		d.shardID,
