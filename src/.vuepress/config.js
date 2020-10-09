@@ -13,7 +13,7 @@ module.exports = {
   plugins: [
     '@vuepress/back-to-top',
     'code-switcher',
-    'flexsearch',
+    'fulltext-search',
     'reading-progress',
     'vuepress-plugin-code-copy',
     'vuepress-plugin-glossary',
