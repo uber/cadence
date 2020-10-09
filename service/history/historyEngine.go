@@ -2446,7 +2446,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}
 
 	// also load the current run of the workflow, it can be different from the base runID
-	resp, err := e.executionManager.GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
+	resp, err := e.executionManager.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
 	})
@@ -3214,6 +3214,7 @@ func (e *historyEngineImpl) PurgeDLQMessages(
 ) error {
 
 	return e.replicationDLQHandler.PurgeMessages(
+		ctx,
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),
 	)
@@ -3340,7 +3341,7 @@ func (e *historyEngineImpl) loadWorkflow(
 
 		// workflow not running, need to check current record
 		resp, err := e.shard.GetExecutionManager().GetCurrentExecution(
-			context.TODO(),
+			ctx,
 			&persistence.GetCurrentExecutionRequest{
 				DomainID:   domainID,
 				WorkflowID: workflowID,

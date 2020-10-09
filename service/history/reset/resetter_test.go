@@ -314,7 +314,7 @@ func (s *workflowResetterSuite) TestGenerateBranchToken() {
 	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
 
 	newBranchToken, err := s.workflowResetter.forkAndGenerateBranchToken(
-		s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
+		context.Background(), s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
 	)
 	s.NoError(err)
 	s.Equal(resetBranchToken, newBranchToken)
@@ -517,6 +517,7 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	mutableState := execution.NewMockMutableState(s.controller)
 
 	nextRunID, err := s.workflowResetter.reapplyWorkflowEvents(
+		context.Background(),
 		mutableState,
 		firstEventID,
 		nextEventID,
@@ -625,7 +626,7 @@ func (s *workflowResetterSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.workflowResetter.getPaginationFn(firstEventID, nextEventID, branchToken)
+	paginationFn := s.workflowResetter.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*shared.History{}
