@@ -140,7 +140,10 @@ func checkExecution(
 		common.CreatePersistenceRetryPolicy(),
 	)
 
-	execution, err := fetcher(pr, req)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	execution, err := fetcher(ctx, pr, req)
 
 	if err != nil {
 		return nil, invariant.ManagerCheckResult{}
@@ -152,5 +155,5 @@ func checkExecution(
 		ivs = append(ivs, fn(pr))
 	}
 
-	return execution, invariant.NewInvariantManager(ivs).RunChecks(execution)
+	return execution, invariant.NewInvariantManager(ivs).RunChecks(ctx, execution)
 }

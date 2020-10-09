@@ -30,10 +30,11 @@ import (
 )
 
 func checkBeforeFix(
+	ctx context.Context,
 	invariant Invariant,
 	execution interface{},
 ) (*FixResult, *CheckResult) {
-	checkResult := invariant.Check(execution)
+	checkResult := invariant.Check(ctx, execution)
 	if checkResult.CheckResultType == CheckResultTypeHealthy {
 		return &FixResult{
 			FixResultType: FixResultTypeSkipped,
@@ -78,11 +79,12 @@ func getExecution(execution interface{}) *entity.Execution {
 // DeleteExecution deletes concrete execution and
 // current execution conditionally on matching runID.
 func DeleteExecution(
+	ctx context.Context,
 	exec interface{},
 	pr persistence.Retryer,
 ) *FixResult {
 	execution := getExecution(exec)
-	if err := pr.DeleteWorkflowExecution(context.TODO(), &persistence.DeleteWorkflowExecutionRequest{
+	if err := pr.DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
@@ -93,7 +95,7 @@ func DeleteExecution(
 			InfoDetails:   err.Error(),
 		}
 	}
-	if err := pr.DeleteCurrentWorkflowExecution(context.TODO(), &persistence.DeleteCurrentWorkflowExecutionRequest{
+	if err := pr.DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
@@ -107,4 +109,36 @@ func DeleteExecution(
 	return &FixResult{
 		FixResultType: FixResultTypeFixed,
 	}
+}
+
+func validateCheckContext(
+	ctx context.Context,
+	invariantName Name,
+) *CheckResult {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return &CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   invariantName,
+			Info:            "failed to check: context expired or cancelled",
+			InfoDetails:     ctxErr.Error(),
+		}
+	}
+
+	return nil
+}
+
+func validateFixContext(
+	ctx context.Context,
+	invariantName Name,
+) *FixResult {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
+			InvariantName: invariantName,
+			Info:          "failed to check: context expired or cancelled",
+			InfoDetails:   ctxErr.Error(),
+		}
+	}
+
+	return nil
 }

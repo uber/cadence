@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -229,13 +230,13 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 		invariants := make([]Invariant, len(tc.checkResults), len(tc.checkResults))
 		for i := 0; i < len(tc.checkResults); i++ {
 			mockInvariant := NewMockInvariant(s.controller)
-			mockInvariant.EXPECT().Check(gomock.Any()).Return(tc.checkResults[i])
+			mockInvariant.EXPECT().Check(gomock.Any(), gomock.Any()).Return(tc.checkResults[i])
 			invariants[i] = mockInvariant
 		}
 		manager := &invariantManager{
 			invariants: invariants,
 		}
-		s.Equal(tc.expected, manager.RunChecks(entity.Execution{}))
+		s.Equal(tc.expected, manager.RunChecks(context.Background(), entity.Execution{}))
 	}
 }
 
@@ -638,12 +639,12 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 		invariants := make([]Invariant, len(tc.fixResults), len(tc.fixResults))
 		for i := 0; i < len(tc.fixResults); i++ {
 			mockInvariant := NewMockInvariant(s.controller)
-			mockInvariant.EXPECT().Fix(gomock.Any()).Return(tc.fixResults[i])
+			mockInvariant.EXPECT().Fix(gomock.Any(), gomock.Any()).Return(tc.fixResults[i])
 			invariants[i] = mockInvariant
 		}
 		manager := &invariantManager{
 			invariants: invariants,
 		}
-		s.Equal(tc.expected, manager.RunFixes(entity.Execution{}))
+		s.Equal(tc.expected, manager.RunFixes(context.Background(), entity.Execution{}))
 	}
 }

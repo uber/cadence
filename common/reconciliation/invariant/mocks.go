@@ -28,6 +28,7 @@
 package invariant
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -56,31 +57,31 @@ func (m *MockInvariant) EXPECT() *MockInvariantMockRecorder {
 }
 
 // Check mocks base method
-func (m *MockInvariant) Check(arg0 interface{}) CheckResult {
+func (m *MockInvariant) Check(arg0 context.Context, arg1 interface{}) CheckResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Check", arg0)
+	ret := m.ctrl.Call(m, "Check", arg0, arg1)
 	ret0, _ := ret[0].(CheckResult)
 	return ret0
 }
 
 // Check indicates an expected call of Check
-func (mr *MockInvariantMockRecorder) Check(arg0 interface{}) *gomock.Call {
+func (mr *MockInvariantMockRecorder) Check(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockInvariant)(nil).Check), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockInvariant)(nil).Check), arg0, arg1)
 }
 
 // Fix mocks base method
-func (m *MockInvariant) Fix(arg0 interface{}) FixResult {
+func (m *MockInvariant) Fix(arg0 context.Context, arg1 interface{}) FixResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Fix", arg0)
+	ret := m.ctrl.Call(m, "Fix", arg0, arg1)
 	ret0, _ := ret[0].(FixResult)
 	return ret0
 }
 
 // Fix indicates an expected call of Fix
-func (mr *MockInvariantMockRecorder) Fix(arg0 interface{}) *gomock.Call {
+func (mr *MockInvariantMockRecorder) Fix(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fix", reflect.TypeOf((*MockInvariant)(nil).Fix), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fix", reflect.TypeOf((*MockInvariant)(nil).Fix), arg0, arg1)
 }
 
 // Name mocks base method
@@ -121,29 +122,29 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // RunChecks mocks base method
-func (m *MockManager) RunChecks(arg0 interface{}) ManagerCheckResult {
+func (m *MockManager) RunChecks(arg0 context.Context, arg1 interface{}) ManagerCheckResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunChecks", arg0)
+	ret := m.ctrl.Call(m, "RunChecks", arg0, arg1)
 	ret0, _ := ret[0].(ManagerCheckResult)
 	return ret0
 }
 
 // RunChecks indicates an expected call of RunChecks
-func (mr *MockManagerMockRecorder) RunChecks(arg0 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) RunChecks(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunChecks", reflect.TypeOf((*MockManager)(nil).RunChecks), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunChecks", reflect.TypeOf((*MockManager)(nil).RunChecks), arg0, arg1)
 }
 
 // RunFixes mocks base method
-func (m *MockManager) RunFixes(arg0 interface{}) ManagerFixResult {
+func (m *MockManager) RunFixes(arg0 context.Context, arg1 interface{}) ManagerFixResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunFixes", arg0)
+	ret := m.ctrl.Call(m, "RunFixes", arg0, arg1)
 	ret0, _ := ret[0].(ManagerFixResult)
 	return ret0
 }
 
 // RunFixes indicates an expected call of RunFixes
-func (mr *MockManagerMockRecorder) RunFixes(arg0 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) RunFixes(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunFixes", reflect.TypeOf((*MockManager)(nil).RunFixes), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunFixes", reflect.TypeOf((*MockManager)(nil).RunFixes), arg0, arg1)
 }
