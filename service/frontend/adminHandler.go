@@ -443,7 +443,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistoryV2(
 		execution.GetWorkflowId(),
 		adh.numberOfHistoryShards,
 	)
-	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(context.TODO(), &persistence.ReadHistoryBranchRequest{
+	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
 		// ReadRawHistoryBranch is inclusive exclusive.
@@ -602,7 +602,7 @@ func (adh *AdminHandler) GetDomainReplicationMessages(
 	}
 
 	if lastMessageID == defaultLastMessageID {
-		clusterAckLevels, err := adh.GetDomainReplicationQueue().GetAckLevels(context.TODO())
+		clusterAckLevels, err := adh.GetDomainReplicationQueue().GetAckLevels(ctx)
 		if err == nil {
 			if ackLevel, ok := clusterAckLevels[request.GetClusterName()]; ok {
 				lastMessageID = ackLevel
@@ -611,7 +611,7 @@ func (adh *AdminHandler) GetDomainReplicationMessages(
 	}
 
 	replicationTasks, lastMessageID, err := adh.GetDomainReplicationQueue().GetReplicationMessages(
-		context.TODO(),
+		ctx,
 		lastMessageID,
 		getDomainReplicationMessageBatchSize,
 	)
@@ -625,7 +625,7 @@ func (adh *AdminHandler) GetDomainReplicationMessages(
 	}
 
 	if lastProcessedMessageID != defaultLastMessageID {
-		err := adh.GetDomainReplicationQueue().UpdateAckLevel(context.TODO(), lastProcessedMessageID, request.GetClusterName())
+		err := adh.GetDomainReplicationQueue().UpdateAckLevel(ctx, lastProcessedMessageID, request.GetClusterName())
 		if err != nil {
 			adh.GetLogger().Warn("Failed to update domain replication queue ack level.",
 				tag.TaskID(int64(lastProcessedMessageID)),
@@ -745,6 +745,7 @@ func (adh *AdminHandler) ReadDLQMessages(
 			default:
 				var err error
 				tasks, token, err = adh.domainDLQHandler.Read(
+					ctx,
 					request.GetInclusiveEndMessageID(),
 					int(request.GetMaximumPageSize()),
 					request.GetNextPageToken())
@@ -798,6 +799,7 @@ func (adh *AdminHandler) PurgeDLQMessages(
 				return ctx.Err()
 			default:
 				return adh.domainDLQHandler.Purge(
+					ctx,
 					request.GetInclusiveEndMessageID(),
 				)
 			}
@@ -849,6 +851,7 @@ func (adh *AdminHandler) MergeDLQMessages(
 			default:
 				var err error
 				token, err = adh.domainDLQHandler.Merge(
+					ctx,
 					request.GetInclusiveEndMessageID(),
 					int(request.GetMaximumPageSize()),
 					request.GetNextPageToken(),

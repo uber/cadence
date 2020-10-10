@@ -40,12 +40,13 @@ type (
 
 // NewBlobstoreIterator constructs a new iterator backed by blobstore.
 func NewBlobstoreIterator(
+	ctx context.Context,
 	client blobstore.Client,
 	keys Keys,
 	entity entity.Entity,
 ) ScanOutputIterator {
 	return &blobstoreIterator{
-		itr: pagination.NewIterator(keys.MinPage, getBlobstoreFetchPageFn(client, keys, entity)),
+		itr: pagination.NewIterator(ctx, keys.MinPage, getBlobstoreFetchPageFn(client, keys, entity)),
 	}
 }
 
@@ -68,11 +69,9 @@ func getBlobstoreFetchPageFn(
 	keys Keys,
 	entity entity.Entity,
 ) pagination.FetchFn {
-	return func(token pagination.PageToken) (pagination.Page, error) {
+	return func(ctx context.Context, token pagination.PageToken) (pagination.Page, error) {
 		index := token.(int)
 		key := pageNumberToKey(keys.UUID, keys.Extension, index)
-		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-		defer cancel()
 		req := &blobstore.GetRequest{
 			Key: key,
 		}

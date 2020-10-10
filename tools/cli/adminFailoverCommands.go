@@ -36,9 +36,9 @@ import (
 
 const (
 	defaultAbortReason                    = "Failover aborted through admin CLI"
-	defaultBatchFailoverSize              = 10
-	defaultBatchFailoverWaitTimeInSeconds = 10
-	defaultFailoverTimeoutInSeconds       = 600
+	defaultBatchFailoverSize              = 20
+	defaultBatchFailoverWaitTimeInSeconds = 30
+	defaultFailoverTimeoutInSeconds       = 1200
 )
 
 type startParams struct {
@@ -248,6 +248,7 @@ func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
 // AdminFailoverList list failover runs
 func AdminFailoverList(c *cli.Context) {
 	c.Set(FlagWorkflowID, failovermanager.WorkflowID)
+	c.GlobalSet(FlagDomain, common.SystemLocalDomainName)
 	ListWorkflow(c)
 }
 

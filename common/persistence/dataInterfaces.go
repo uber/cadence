@@ -1623,6 +1623,29 @@ type (
 		ListDomains(ctx context.Context, request *ListDomainsRequest) (*ListDomainsResponse, error)
 		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
 	}
+
+	// QueueManager is used to manage queue store
+	QueueManager interface {
+		Closeable
+		EnqueueMessage(ctx context.Context, messagePayload []byte) error
+		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error)
+		DeleteMessagesBefore(ctx context.Context, messageID int64) error
+		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetAckLevels(ctx context.Context) (map[string]int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
+		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
+		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
+		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+	}
+
+	// QueueMessage is the message that stores in the queue
+	QueueMessage struct {
+		ID        int64     `json:"message_id"`
+		QueueType QueueType `json:"queue_type"`
+		Payload   []byte    `json:"message_payload"`
+	}
 )
 
 func (e *InvalidPersistenceRequestError) Error() string {

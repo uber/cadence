@@ -25,6 +25,8 @@
 
 package invariant
 
+import "context"
+
 const (
 	// CheckResultTypeFailed indicates a failure occurred while attempting to run check
 	CheckResultTypeFailed CheckResultType = "failed"
@@ -71,16 +73,16 @@ type (
 // It can be used to check that the execution satisfies the invariant.
 // It can also be used to fix the invariant for an execution.
 type Invariant interface {
-	Check(interface{}) CheckResult
-	Fix(interface{}) FixResult
+	Check(context.Context, interface{}) CheckResult
+	Fix(context.Context, interface{}) FixResult
 	Name() Name
 }
 
 // Manager represents a manager of several invariants.
 // It can be used to run a group of invariant checks or fixes.
 type Manager interface {
-	RunChecks(interface{}) ManagerCheckResult
-	RunFixes(interface{}) ManagerFixResult
+	RunChecks(context.Context, interface{}) ManagerCheckResult
+	RunFixes(context.Context, interface{}) ManagerFixResult
 }
 
 // ManagerCheckResult is the result of running a list of checks

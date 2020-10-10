@@ -26,16 +26,15 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/uber/cadence/common/archiver/gcloud/connector"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 var (
@@ -303,11 +302,11 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		return err
 	}
 	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return nil, err
-		}
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
+		}
+		if !common.IsPersistenceTransientError(err) {
+			return nil, err
 		}
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
 	}
@@ -372,7 +371,7 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 
 	defer func() {
 		if err != nil || historyIterator == nil {
-			historyIterator, err = archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, nil)
+			historyIterator, err = archiver.NewHistoryIteratorFromState(ctx, request, historyManager, targetHistoryBlobSize, nil)
 		}
 	}()
 
@@ -380,7 +379,7 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 		if featureCatalog.ProgressManager.HasProgress(ctx) {
 			err = featureCatalog.ProgressManager.LoadProgress(ctx, &progress)
 			if err == nil {
-				historyIterator, err = archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, progress.IteratorState)
+				historyIterator, err = archiver.NewHistoryIteratorFromState(ctx, request, historyManager, targetHistoryBlobSize, progress.IteratorState)
 			}
 		}
 

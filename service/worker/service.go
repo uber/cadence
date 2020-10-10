@@ -341,7 +341,7 @@ func (s *Service) startFailoverManager() {
 }
 
 func (s *Service) ensureSystemDomainExists() {
-	_, err := s.GetMetadataManager().GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
+	_, err := s.GetMetadataManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
 	switch err.(type) {
 	case nil:
 		// noop
@@ -356,7 +356,7 @@ func (s *Service) ensureSystemDomainExists() {
 func (s *Service) registerSystemDomain() {
 
 	currentClusterName := s.GetClusterMetadata().GetCurrentClusterName()
-	_, err := s.GetMetadataManager().CreateDomain(context.TODO(), &persistence.CreateDomainRequest{
+	_, err := s.GetMetadataManager().CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          common.SystemDomainID,
 			Name:        common.SystemLocalDomainName,

@@ -46,7 +46,14 @@ func NewOpenCurrentExecution(
 	}
 }
 
-func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
+func (o *openCurrentExecution) Check(
+	ctx context.Context,
+	execution interface{},
+) CheckResult {
+	if checkResult := validateCheckContext(ctx, o.Name()); checkResult != nil {
+		return *checkResult
+	}
+
 	concreteExecution, ok := execution.(*entity.ConcreteExecution)
 	if !ok {
 		return CheckResult{
@@ -61,11 +68,11 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 			InvariantName:   o.Name(),
 		}
 	}
-	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
+	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   concreteExecution.DomainID,
 		WorkflowID: concreteExecution.WorkflowID,
 	})
-	stillOpen, stillOpenErr := ExecutionStillOpen(&concreteExecution.Execution, o.pr)
+	stillOpen, stillOpenErr := ExecutionStillOpen(ctx, &concreteExecution.Execution, o.pr)
 	if stillOpenErr != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -112,12 +119,19 @@ func (o *openCurrentExecution) Check(execution interface{}) CheckResult {
 	}
 }
 
-func (o *openCurrentExecution) Fix(execution interface{}) FixResult {
-	fixResult, checkResult := checkBeforeFix(o, execution)
+func (o *openCurrentExecution) Fix(
+	ctx context.Context,
+	execution interface{},
+) FixResult {
+	if fixResult := validateFixContext(ctx, o.Name()); fixResult != nil {
+		return *fixResult
+	}
+
+	fixResult, checkResult := checkBeforeFix(ctx, o, execution)
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(&execution, o.pr)
+	fixResult = DeleteExecution(ctx, &execution, o.pr)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = o.Name()
 	return *fixResult
@@ -130,6 +144,7 @@ func (o *openCurrentExecution) Name() Name {
 // ExecutionStillOpen returns true if execution in persistence exists and is open, false otherwise.
 // Returns error on failure to confirm.
 func ExecutionStillOpen(
+	ctx context.Context,
 	exec *entity.Execution,
 	pr persistence.Retryer,
 ) (bool, error) {
@@ -140,7 +155,7 @@ func ExecutionStillOpen(
 			RunId:      &exec.RunID,
 		},
 	}
-	resp, err := pr.GetWorkflowExecution(context.TODO(), req)
+	resp, err := pr.GetWorkflowExecution(ctx, req)
 	if err != nil {
 		switch err.(type) {
 		case *shared.EntityNotExistsError:
