@@ -830,7 +830,7 @@ func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(scheduleID, startedI
 func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID int64, activityID, activityType,
 	taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32, retryPolicy *workflow.RetryPolicy) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
-	event, ai, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
+	event, ai, _, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&workflow.ScheduleActivityTaskDecisionAttributes{
 			ActivityId:                    common.StringPtr(activityID),
 			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
@@ -842,7 +842,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
 			RetryPolicy:                   retryPolicy,
 		},
-		false)
+	)
 	s.Nil(err)
 	return event, ai
 }

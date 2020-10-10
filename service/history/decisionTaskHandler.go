@@ -63,6 +63,10 @@ type (
 		metricsClient metrics.Client
 		config        *config.Config
 	}
+
+	decisionResult struct {
+		result interface{}
+	}
 )
 
 func newDecisionTaskHandler(
@@ -107,76 +111,78 @@ func newDecisionTaskHandler(
 func (handler *decisionTaskHandlerImpl) handleDecisions(
 	executionContext []byte,
 	decisions []*workflow.Decision,
-) error {
+) ([]*decisionResult, error) {
 
 	// overall workflow size / count check
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowSizeExceedsLimit()
 	if err != nil || failWorkflow {
-		return err
+		return nil, err
 	}
 
+	var results []*decisionResult
 	for _, decision := range decisions {
 
-		err = handler.handleDecision(decision)
+		result, err := handler.handleDecision(decision)
 		if err != nil || handler.stopProcessing {
-			return err
+			return nil, err
+		} else if result != nil {
+			results = append(results, result)
 		}
-	}
 
-	// TODO return the list with ActivityLocalDispatchInfo's inside
+	}
 	handler.mutableState.GetExecutionInfo().ExecutionContext = executionContext
-	return nil
+	return results, nil
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decision) error {
+func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decision) (*decisionResult, error) {
 	switch decision.GetDecisionType() {
 	case workflow.DecisionTypeScheduleActivityTask:
 		return handler.handleDecisionScheduleActivity(decision.ScheduleActivityTaskDecisionAttributes)
 
 	case workflow.DecisionTypeCompleteWorkflowExecution:
-		return handler.handleDecisionCompleteWorkflow(decision.CompleteWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionCompleteWorkflow(decision.CompleteWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeFailWorkflowExecution:
-		return handler.handleDecisionFailWorkflow(decision.FailWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionFailWorkflow(decision.FailWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeCancelWorkflowExecution:
-		return handler.handleDecisionCancelWorkflow(decision.CancelWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionCancelWorkflow(decision.CancelWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeStartTimer:
-		return handler.handleDecisionStartTimer(decision.StartTimerDecisionAttributes)
+		return nil, handler.handleDecisionStartTimer(decision.StartTimerDecisionAttributes)
 
 	case workflow.DecisionTypeRequestCancelActivityTask:
-		return handler.handleDecisionRequestCancelActivity(decision.RequestCancelActivityTaskDecisionAttributes)
+		return nil, handler.handleDecisionRequestCancelActivity(decision.RequestCancelActivityTaskDecisionAttributes)
 
 	case workflow.DecisionTypeCancelTimer:
-		return handler.handleDecisionCancelTimer(decision.CancelTimerDecisionAttributes)
+		return nil, handler.handleDecisionCancelTimer(decision.CancelTimerDecisionAttributes)
 
 	case workflow.DecisionTypeRecordMarker:
-		return handler.handleDecisionRecordMarker(decision.RecordMarkerDecisionAttributes)
+		return nil, handler.handleDecisionRecordMarker(decision.RecordMarkerDecisionAttributes)
 
 	case workflow.DecisionTypeRequestCancelExternalWorkflowExecution:
-		return handler.handleDecisionRequestCancelExternalWorkflow(decision.RequestCancelExternalWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionRequestCancelExternalWorkflow(decision.RequestCancelExternalWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeSignalExternalWorkflowExecution:
-		return handler.handleDecisionSignalExternalWorkflow(decision.SignalExternalWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionSignalExternalWorkflow(decision.SignalExternalWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeContinueAsNewWorkflowExecution:
-		return handler.handleDecisionContinueAsNewWorkflow(decision.ContinueAsNewWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionContinueAsNewWorkflow(decision.ContinueAsNewWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeStartChildWorkflowExecution:
-		return handler.handleDecisionStartChildWorkflow(decision.StartChildWorkflowExecutionDecisionAttributes)
+		return nil, handler.handleDecisionStartChildWorkflow(decision.StartChildWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeUpsertWorkflowSearchAttributes:
-		return handler.handleDecisionUpsertWorkflowSearchAttributes(decision.UpsertWorkflowSearchAttributesDecisionAttributes)
+		return nil, handler.handleDecisionUpsertWorkflowSearchAttributes(decision.UpsertWorkflowSearchAttributesDecisionAttributes)
 
 	default:
-		return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", decision.GetDecisionType())}
+		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", decision.GetDecisionType())}
 	}
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	attr *workflow.ScheduleActivityTaskDecisionAttributes,
-) error {
+) (*decisionResult, error) {
 
 	handler.metricsClient.IncCounter(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -189,7 +195,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	if attr.GetDomain() != "" {
 		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
 		if err != nil {
-			return &workflow.InternalServiceError{
+			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Unable to schedule activity across domain %v.", attr.GetDomain()),
 			}
 		}
@@ -207,7 +213,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		},
 		workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes,
 	); err != nil || handler.stopProcessing {
-		return err
+		return nil, err
 	}
 
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
@@ -217,27 +223,25 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	)
 	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return err
+		return nil, err
 	}
 
-	dispatchLocally := handler.config.EnableActivityLocalDispatchByDomain(handler.domainEntry.GetInfo().Name) &&
-		common.BoolDefault(attr.RequestLocalDispatch)
-	event, ai, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr, dispatchLocally)
+	event, ai, activityDispatchInfo, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
 	switch err.(type) {
 	case nil:
-		if dispatchLocally {
+		if activityDispatchInfo != nil {
 			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
-				return err1
+				return nil, err1
 			}
-			// TODO introduce a new struct to contain ActivityLocalDispatchInfo's inside to be returned here
+			return &decisionResult{result: activityDispatchInfo}, nil
 		}
-		return nil
+		return nil, nil
 	case *workflow.BadRequestError:
-		return handler.handlerFailDecision(
+		return nil, handler.handlerFailDecision(
 			workflow.DecisionTaskFailedCauseScheduleActivityDuplicateID, "",
 		)
 	default:
-		return err
+		return nil, err
 	}
 }
 

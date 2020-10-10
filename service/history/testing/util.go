@@ -147,7 +147,7 @@ func AddActivityTaskScheduledEvent(
 ) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
 
-	event, ai, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
+	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
 		ActivityId:                    common.StringPtr(activityID),
 		ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
 		TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
@@ -157,7 +157,7 @@ func AddActivityTaskScheduledEvent(
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
 	},
-		false)
+	)
 
 	return event, ai
 }
@@ -177,7 +177,7 @@ func AddActivityTaskScheduledEventWithRetry(
 	retryPolicy *workflow.RetryPolicy,
 ) (*workflow.HistoryEvent, *persistence.ActivityInfo) {
 
-	event, ai, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
+	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
 		ActivityId:                    common.StringPtr(activityID),
 		ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
 		TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
@@ -188,7 +188,7 @@ func AddActivityTaskScheduledEventWithRetry(
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
 		RetryPolicy:                   retryPolicy,
 	},
-		false)
+	)
 
 	return event, ai
 }
