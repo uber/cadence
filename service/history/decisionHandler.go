@@ -573,8 +573,8 @@ Update_History_Loop:
 		resp = &h.RespondDecisionTaskCompletedResponse{}
 		activitiesToDispatchLocally := make(map[string]*workflow.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
-			if val, ok := dr.result.(*workflow.ActivityLocalDispatchInfo); ok {
-				activitiesToDispatchLocally[*val.ActivityId] = val
+			if dr.activityDispatchInfo != nil {
+				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityId] = dr.activityDispatchInfo
 			}
 		}
 		resp.ActivitiesToDispatchLocally = activitiesToDispatchLocally

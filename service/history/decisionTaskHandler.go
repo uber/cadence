@@ -65,7 +65,7 @@ type (
 	}
 
 	decisionResult struct {
-		result interface{}
+		activityDispatchInfo *workflow.ActivityLocalDispatchInfo
 	}
 )
 
@@ -233,7 +233,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
 				return nil, err1
 			}
-			return &decisionResult{result: activityDispatchInfo}, nil
+			return &decisionResult{activityDispatchInfo: activityDispatchInfo}, nil
 		}
 		return nil, nil
 	case *workflow.BadRequestError:
