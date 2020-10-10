@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
@@ -198,7 +197,7 @@ func (s *Service) Start() {
 
 	s.Resource.Start()
 
-	s.ensureSystemDomainExists(common.SystemLocalDomainName)
+	s.ensureDomainExists(common.SystemLocalDomainName)
 	s.startScanner()
 	if s.config.IndexerCfg != nil {
 		s.startIndexer()
@@ -211,7 +210,7 @@ func (s *Service) Start() {
 		s.startArchiver()
 	}
 	if s.config.EnableBatcher() {
-		s.ensureSystemDomainExists(common.BatcherLocalDomainName)
+		s.ensureDomainExists(common.BatcherLocalDomainName)
 		s.startBatcher()
 	}
 	if s.config.EnableParentClosePolicyWorker() {
@@ -344,16 +343,16 @@ func (s *Service) startFailoverManager() {
 	}
 }
 
-func (s *Service) ensureSystemDomainExists(domain string) {
+func (s *Service) ensureDomainExists(domain string) {
 	_, err := s.GetMetadataManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
 	switch err.(type) {
 	case nil:
 		// noop
 	case *shared.EntityNotExistsError:
-		s.GetLogger().Info(fmt.Sprintf("cadence system %s does not exist, attempting to register domain", domain))
+		s.GetLogger().Info(fmt.Sprintf("domain %s does not exist, attempting to register domain", domain))
 		s.registerSystemDomain(domain)
 	default:
-		s.GetLogger().Fatal("failed to verify if cadence system domain exists", tag.Error(err))
+		s.GetLogger().Fatal("failed to verify if system domain exists", tag.Error(err))
 	}
 }
 
