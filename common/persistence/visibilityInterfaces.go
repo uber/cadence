@@ -86,10 +86,12 @@ type (
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain
 	ListWorkflowExecutionsRequest struct {
-		DomainUUID        string
-		Domain            string // domain name is not persisted, but used as config filter key
-		EarliestStartTime int64
-		LatestStartTime   int64
+		DomainUUID   string
+		Domain       string // domain name is not persisted, but used as config filter key
+		// The earliest end of the time range
+		EarliestTime int64
+		// The latest end of the time range
+		LatestTime   int64
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.
@@ -97,8 +99,8 @@ type (
 		NextPageToken []byte
 	}
 
-	// ListWorkflowExecutionsRequestV2 is used to list executions in a domain
-	ListWorkflowExecutionsRequestV2 struct {
+	// ListWorkflowExecutionsByQueryRequest is used to list executions in a domain
+	ListWorkflowExecutionsByQueryRequest struct {
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
 		PageSize   int    // Maximum number of workflow executions per page
@@ -185,8 +187,8 @@ type (
 		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error)
 		GetClosedWorkflowExecution(ctx context.Context, request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
-		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error)
-		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error)
+		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*ListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*ListWorkflowExecutionsResponse, error)
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 )

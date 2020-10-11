@@ -162,8 +162,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutions(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime),
+		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -204,8 +204,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByType(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByTypeV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime),
+		p.UnixNanoToDBTimestamp(request.LatestTime),
 		request.WorkflowTypeName).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -247,8 +247,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByWorkflo
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByIDV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime),
+		p.UnixNanoToDBTimestamp(request.LatestTime),
 		request.WorkflowID).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -290,8 +290,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatusV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestStartTime),
-		p.UnixNanoToDBTimestamp(request.LatestStartTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime),
+		p.UnixNanoToDBTimestamp(request.LatestTime),
 		request.Status).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -328,14 +328,14 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 
 func (v *cassandraVisibilityPersistenceV2) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequestV2,
+	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return v.persistence.ListWorkflowExecutions(ctx, request)
 }
 
 func (v *cassandraVisibilityPersistenceV2) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequestV2,
+	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return v.persistence.ScanWorkflowExecutions(ctx, request)
 }
