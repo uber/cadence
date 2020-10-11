@@ -126,7 +126,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 	sw := c.metricsClient.StartTimer(scope, metrics.CacheLatency)
 	defer sw.Stop()
 
-	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
+	if err := c.validateWorkflowExecutionInfo(ctx, domainID, &execution); err != nil {
 		c.metricsClient.IncCounter(scope, metrics.CacheFailures)
 		return nil, nil, nil, false, err
 	}
@@ -190,7 +190,7 @@ func (c *Cache) GetOrCreateWorkflowExecution(
 	sw := c.metricsClient.StartTimer(scope, metrics.CacheLatency)
 	defer sw.Stop()
 
-	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
+	if err := c.validateWorkflowExecutionInfo(ctx, domainID, &execution); err != nil {
 		c.metricsClient.IncCounter(scope, metrics.CacheFailures)
 		return nil, nil, err
 	}
@@ -246,6 +246,7 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 }
 
 func (c *Cache) validateWorkflowExecutionInfo(
+	ctx context.Context,
 	domainID string,
 	execution *workflow.WorkflowExecution,
 ) error {
@@ -256,7 +257,7 @@ func (c *Cache) validateWorkflowExecutionInfo(
 
 	// RunID is not provided, lets try to retrieve the RunID for current active execution
 	if execution.GetRunId() == "" {
-		response, err := c.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
+		response, err := c.getCurrentExecutionWithRetry(ctx, &persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
 			WorkflowID: execution.GetWorkflowId(),
 		})
@@ -299,6 +300,7 @@ func (c *Cache) makeReleaseFunc(
 }
 
 func (c *Cache) getCurrentExecutionWithRetry(
+	ctx context.Context,
 	request *persistence.GetCurrentExecutionRequest,
 ) (*persistence.GetCurrentExecutionResponse, error) {
 
@@ -309,7 +311,7 @@ func (c *Cache) getCurrentExecutionWithRetry(
 	var response *persistence.GetCurrentExecutionResponse
 	op := func() error {
 		var err error
-		response, err = c.executionManager.GetCurrentExecution(context.TODO(), request)
+		response, err = c.executionManager.GetCurrentExecution(ctx, request)
 
 		return err
 	}
