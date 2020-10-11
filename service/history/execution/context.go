@@ -239,7 +239,7 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 	}
 
 	if c.mutableState == nil {
-		response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
+		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
 			Execution: c.workflowExecution,
 		})
@@ -326,7 +326,7 @@ func (c *contextImpl) LoadWorkflowExecution(
 	}
 
 	if c.mutableState == nil {
-		response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
+		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
 			Execution: c.workflowExecution,
 		})
@@ -991,13 +991,14 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 }
 
 func (c *contextImpl) getWorkflowExecutionWithRetry(
+	ctx context.Context,
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
 
 	var resp *persistence.GetWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.executionManager.GetWorkflowExecution(context.TODO(), request)
+		resp, err = c.executionManager.GetWorkflowExecution(ctx, request)
 
 		return err
 	}
