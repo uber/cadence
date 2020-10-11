@@ -176,7 +176,7 @@ func (t *timerTaskExecutorBase) archiveWorkflow(
 		CallerService:        common.HistoryServiceName,
 		AttemptArchiveInline: false, // archive in workflow by default
 	}
-	executionStats, err := workflowContext.LoadExecutionStats()
+	executionStats, err := workflowContext.LoadExecutionStats(context.TODO())
 	if err == nil && executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit()) {
 		req.AttemptArchiveInline = true
 	}

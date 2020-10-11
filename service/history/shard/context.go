@@ -112,8 +112,8 @@ type (
 		GetDomainNotificationVersion() int64
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
 
-		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
+		CreateWorkflowExecution(ctx context.Context, request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(ctx context.Context, request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(request *persistence.ConflictResolveWorkflowExecutionRequest) error
 		ResetWorkflowExecution(request *persistence.ResetWorkflowExecutionRequest) error
 		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
@@ -593,6 +593,7 @@ func (s *contextImpl) UpdateTimerMaxReadLevel(cluster string) time.Time {
 }
 
 func (s *contextImpl) CreateWorkflowExecution(
+	ctx context.Context,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
@@ -626,7 +627,9 @@ Create_Loop:
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
 
-		response, err := s.executionManager.CreateWorkflowExecution(context.TODO(), request)
+		// if context is done return error
+
+		response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
 		if err != nil {
 			switch err.(type) {
 			case *shared.WorkflowExecutionAlreadyStartedError,
@@ -687,6 +690,7 @@ func (s *contextImpl) getDefaultEncoding(domainEntry *cache.DomainCacheEntry) co
 }
 
 func (s *contextImpl) UpdateWorkflowExecution(
+	ctx context.Context,
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
 
@@ -732,7 +736,10 @@ Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		resp, err := s.executionManager.UpdateWorkflowExecution(context.TODO(), request)
+
+		// TODO: if ctx is done, return
+
+		resp, err := s.executionManager.UpdateWorkflowExecution(ctx, request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -1112,7 +1119,7 @@ func (s *contextImpl) renewRangeLocked(isStealing bool) error {
 	var attempt int32
 Retry_Loop:
 	for attempt = 0; attempt < conditionalRetryCount; attempt++ {
-		err = s.GetShardManager().UpdateShard(context.TODO(), &persistence.UpdateShardRequest{
+		err = s.GetShardManager().UpdateShard(context.Background(), &persistence.UpdateShardRequest{
 			ShardInfo:       updatedShardInfo,
 			PreviousRangeID: s.shardInfo.RangeID})
 		switch err.(type) {
@@ -1193,7 +1200,7 @@ func (s *contextImpl) persistShardInfoLocked(
 	updatedShardInfo := copyShardInfo(s.shardInfo)
 	s.emitShardInfoMetricsLogsLocked()
 
-	err = s.GetShardManager().UpdateShard(context.TODO(), &persistence.UpdateShardRequest{
+	err = s.GetShardManager().UpdateShard(context.Background(), &persistence.UpdateShardRequest{
 		ShardInfo:       updatedShardInfo,
 		PreviousRangeID: s.shardInfo.RangeID,
 	})
@@ -1543,7 +1550,7 @@ func acquireShard(
 	}
 
 	getShard := func() error {
-		resp, err := shardItem.GetShardManager().GetShard(context.TODO(), &persistence.GetShardRequest{
+		resp, err := shardItem.GetShardManager().GetShard(context.Background(), &persistence.GetShardRequest{
 			ShardID: shardItem.shardID,
 		})
 		if err == nil {
@@ -1560,7 +1567,7 @@ func acquireShard(
 			RangeID:          0,
 			TransferAckLevel: 0,
 		}
-		return shardItem.GetShardManager().CreateShard(context.TODO(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
+		return shardItem.GetShardManager().CreateShard(context.Background(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
 	}
 
 	err := backoff.Retry(getShard, retryPolicy, retryPredicate)

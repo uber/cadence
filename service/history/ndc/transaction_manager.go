@@ -256,6 +256,7 @@ func (r *transactionManagerImpl) backfillWorkflow(
 	}
 
 	return targetWorkflow.GetContext().UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		updateMode,
 		nil,
@@ -445,7 +446,7 @@ func (r *transactionManagerImpl) loadNDCWorkflow(
 		return nil, err
 	}
 
-	msBuilder, err := context.LoadWorkflowExecution()
+	msBuilder, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
 		// no matter what error happen, we need to retry
 		release(err)

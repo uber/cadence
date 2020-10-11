@@ -93,6 +93,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	targetMutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(true).AnyTimes()
 
 	targetContext.EXPECT().UpdateWorkflowExecutionWithNewAsPassive(
+		gomock.Any(),
 		now,
 		newContext,
 		newMutableState,
@@ -334,6 +335,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	newWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
 	targetContext.EXPECT().UpdateWorkflowExecutionWithNew(
+		gomock.Any(),
 		now,
 		persistence.UpdateWorkflowModeBypassCurrent,
 		newContext,
@@ -405,6 +407,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	newWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
 	targetContext.EXPECT().UpdateWorkflowExecutionWithNew(
+		gomock.Any(),
 		now,
 		persistence.UpdateWorkflowModeBypassCurrent,
 		(execution.Context)(nil),

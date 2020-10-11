@@ -291,7 +291,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
 	clientImpl := call.Header(common.ClientImplHeaderName)
 
-	context, release, err := handler.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	wfContext, release, err := handler.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
 	if err != nil {
 		return nil, err
 	}
@@ -299,14 +299,14 @@ func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		msBuilder, err := context.LoadWorkflowExecution()
+		msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 		if err != nil {
 			return nil, err
 		}
 		if !msBuilder.IsWorkflowExecutionRunning() {
 			return nil, ErrWorkflowCompleted
 		}
-		executionStats, err := context.LoadExecutionStats()
+		executionStats, err := wfContext.LoadExecutionStats(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +321,7 @@ Update_History_Loop:
 		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
-			context.Clear()
+			wfContext.Clear()
 			continue Update_History_Loop
 		}
 
@@ -453,7 +453,7 @@ Update_History_Loop:
 				tag.WorkflowID(token.WorkflowID),
 				tag.WorkflowRunID(token.RunID),
 				tag.WorkflowDomainID(domainID))
-			msBuilder, err = handler.historyEngine.failDecision(context, scheduleID, startedID, failCause, []byte(failMessage), request)
+			msBuilder, err = handler.historyEngine.failDecision(ctx, wfContext, scheduleID, startedID, failCause, []byte(failMessage), request)
 			if err != nil {
 				return nil, err
 			}
@@ -500,7 +500,8 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			continueAsNewExecutionInfo := continueAsNewBuilder.GetExecutionInfo()
-			updateErr = context.UpdateWorkflowExecutionWithNewAsActive(
+			updateErr = wfContext.UpdateWorkflowExecutionWithNewAsActive(
+				ctx,
 				handler.shard.GetTimeSource().Now(),
 				execution.NewContext(
 					continueAsNewExecutionInfo.DomainID,
@@ -515,7 +516,7 @@ Update_History_Loop:
 				continueAsNewBuilder,
 			)
 		} else {
-			updateErr = context.UpdateWorkflowExecutionAsActive(handler.shard.GetTimeSource().Now())
+			updateErr = wfContext.UpdateWorkflowExecutionAsActive(ctx, handler.shard.GetTimeSource().Now())
 		}
 
 		if updateErr != nil {
@@ -529,7 +530,7 @@ Update_History_Loop:
 			case *persistence.TransactionSizeLimitError:
 				// must reload mutable state because the first call to updateWorkflowExecutionWithContext or continueAsNewWorkflowExecution
 				// clears mutable state if error is returned
-				msBuilder, err = context.LoadWorkflowExecution()
+				msBuilder, err = wfContext.LoadWorkflowExecution(ctx)
 				if err != nil {
 					return nil, err
 				}
@@ -544,7 +545,8 @@ Update_History_Loop:
 				); err != nil {
 					return nil, err
 				}
-				if err := context.UpdateWorkflowExecutionAsActive(
+				if err := wfContext.UpdateWorkflowExecutionAsActive(
+					ctx,
 					handler.shard.GetTimeSource().Now(),
 				); err != nil {
 					return nil, err

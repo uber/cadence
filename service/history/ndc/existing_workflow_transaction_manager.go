@@ -231,10 +231,11 @@ func (r *transactionManagerForExistingWorkflowImpl) updateAsCurrent(
 ) error {
 
 	if newWorkflow == nil {
-		return targetWorkflow.GetContext().UpdateWorkflowExecutionAsPassive(now)
+		return targetWorkflow.GetContext().UpdateWorkflowExecutionAsPassive(ctx, now)
 	}
 
 	return targetWorkflow.GetContext().UpdateWorkflowExecutionWithNewAsPassive(
+		ctx,
 		now,
 		newWorkflow.GetContext(),
 		newWorkflow.GetMutableState(),
@@ -308,6 +309,7 @@ func (r *transactionManagerForExistingWorkflowImpl) updateAsZombie(
 	currentWorkflow = nil
 
 	return targetWorkflow.GetContext().UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		persistence.UpdateWorkflowModeBypassCurrent,
 		newContext,

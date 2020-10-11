@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -177,7 +178,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 	// the overall solution is to attempt to generate a new activity timer task whenever the
 	// task passed in is safe to be throw away.
 
-	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		timerSequence := t.getTimerSequence(mutableState)
 		updateMutableState := false
@@ -245,7 +246,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 			return nil, err
 		}
 
-		err = context.UpdateWorkflowExecutionAsPassive(now)
+		err = wfContext.UpdateWorkflowExecutionAsPassive(context.TODO(), now)
 		return nil, err
 	}
 

@@ -149,6 +149,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 	defer resetWorkflow.GetReleaseFn()(retError)
 
 	return r.persistToDB(
+		ctx,
 		currentWorkflowTerminated,
 		currentWorkflow,
 		resetWorkflow,
@@ -258,6 +259,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 }
 
 func (r *workflowResetterImpl) persistToDB(
+	ctx context.Context,
 	currentWorkflowTerminated bool,
 	currentWorkflow execution.Workflow,
 	resetWorkflow execution.Workflow,
@@ -265,6 +267,7 @@ func (r *workflowResetterImpl) persistToDB(
 
 	if currentWorkflowTerminated {
 		return currentWorkflow.GetContext().UpdateWorkflowExecutionWithNewAsActive(
+			ctx,
 			r.shard.GetTimeSource().Now(),
 			resetWorkflow.GetContext(),
 			resetWorkflow.GetMutableState(),
@@ -297,6 +300,7 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
+		ctx,
 		resetWorkflowSnapshot,
 		resetHistorySize,
 		now,
@@ -486,7 +490,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 		}
 		defer func() { release(retError) }()
 
-		mutableState, err := context.LoadWorkflowExecution()
+		mutableState, err := context.LoadWorkflowExecution(ctx)
 		if err != nil {
 			// no matter what error happen, we need to retry
 			return 0, nil, err
