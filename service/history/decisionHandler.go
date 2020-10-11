@@ -370,8 +370,8 @@ Update_History_Loop:
 			failMessage                 string
 			activityNotStartedCancelled bool
 			continueAsNewBuilder        execution.MutableState
-			decisionResults             []*decisionResult
 			hasUnhandledEvents          bool
+			decisionResults             []*decisionResult
 		)
 		hasUnhandledEvents = msBuilder.HasBufferedEvents()
 
