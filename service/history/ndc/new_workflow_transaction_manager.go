@@ -158,6 +158,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 	}
 
 	targetWorkflowHistorySize, err := targetWorkflow.GetContext().PersistFirstWorkflowEvents(
+		ctx,
 		targetWorkflowEventsSeq[0],
 	)
 	if err != nil {
@@ -227,6 +228,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 	}
 
 	targetWorkflowHistorySize, err := targetWorkflow.GetContext().PersistFirstWorkflowEvents(
+		ctx,
 		targetWorkflowEventsSeq[0],
 	)
 	if err != nil {

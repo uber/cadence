@@ -490,6 +490,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 
 			if len(failoverMarkerTasks) > 0 {
 				if err := e.shard.ReplicateFailoverMarkers(
+					context.Background(),
 					failoverMarkerTasks,
 				); err != nil {
 					e.logger.Error("Failed to insert failover marker to replication queue.", tag.Error(err))
@@ -671,7 +672,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	if err != nil {
 		return nil, err
 	}
-	historySize, err := wfContext.PersistFirstWorkflowEvents(newWorkflowEventsSeq[0])
+	historySize, err := wfContext.PersistFirstWorkflowEvents(ctx, newWorkflowEventsSeq[0])
 	if err != nil {
 		return nil, err
 	}

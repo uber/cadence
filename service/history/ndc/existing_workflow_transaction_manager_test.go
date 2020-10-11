@@ -189,6 +189,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	targetWorkflow.EXPECT().Revive().Return(nil).Times(1)
 
 	targetContext.EXPECT().ConflictResolveWorkflowExecution(
+		gomock.Any(),
 		now,
 		persistence.ConflictResolveWorkflowModeUpdateCurrent,
 		targetMutableState,
@@ -262,6 +263,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	targetWorkflow.EXPECT().Revive().Return(nil).Times(1)
 
 	targetContext.EXPECT().ConflictResolveWorkflowExecution(
+		gomock.Any(),
 		now,
 		persistence.ConflictResolveWorkflowModeUpdateCurrent,
 		targetMutableState,
@@ -460,6 +462,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(targetRunID, nil).Times(1)
 
 	targetContext.EXPECT().ConflictResolveWorkflowExecution(
+		gomock.Any(),
 		now,
 		persistence.ConflictResolveWorkflowModeUpdateCurrent,
 		targetMutableState,
@@ -531,6 +534,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	targetWorkflow.EXPECT().Revive().Return(nil).Times(1)
 
 	targetContext.EXPECT().ConflictResolveWorkflowExecution(
+		gomock.Any(),
 		now,
 		persistence.ConflictResolveWorkflowModeUpdateCurrent,
 		targetMutableState,
@@ -603,6 +607,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	newWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
 	targetContext.EXPECT().ConflictResolveWorkflowExecution(
+		gomock.Any(),
 		now,
 		persistence.ConflictResolveWorkflowModeBypassCurrent,
 		targetMutableState,
@@ -675,6 +680,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 	newWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
 	targetContext.EXPECT().ConflictResolveWorkflowExecution(
+		gomock.Any(),
 		now,
 		persistence.ConflictResolveWorkflowModeBypassCurrent,
 		targetMutableState,

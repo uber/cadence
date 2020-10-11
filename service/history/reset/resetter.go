@@ -294,7 +294,7 @@ func (r *workflowResetterImpl) persistToDB(
 			Message: "there should be EXACTLY one batch of events for reset",
 		}
 	}
-	resetHistorySize, err := resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(resetWorkflowEventsSeq[0])
+	resetHistorySize, err := resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(ctx, resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}

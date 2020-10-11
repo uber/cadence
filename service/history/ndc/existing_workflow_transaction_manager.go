@@ -353,6 +353,7 @@ func (r *transactionManagerForExistingWorkflowImpl) suppressCurrentAndUpdateAsCu
 	}
 
 	return targetWorkflow.GetContext().ConflictResolveWorkflowExecution(
+		ctx,
 		now,
 		persistence.ConflictResolveWorkflowModeUpdateCurrent,
 		targetWorkflow.GetMutableState(),
@@ -379,6 +380,7 @@ func (r *transactionManagerForExistingWorkflowImpl) conflictResolveAsCurrent(
 	}
 
 	return targetWorkflow.GetContext().ConflictResolveWorkflowExecution(
+		ctx,
 		now,
 		persistence.ConflictResolveWorkflowModeUpdateCurrent,
 		targetWorkflow.GetMutableState(),
@@ -454,6 +456,7 @@ func (r *transactionManagerForExistingWorkflowImpl) conflictResolveAsZombie(
 	currentWorkflow = nil
 
 	return targetWorkflow.GetContext().ConflictResolveWorkflowExecution(
+		ctx,
 		now,
 		persistence.ConflictResolveWorkflowModeBypassCurrent,
 		targetWorkflow.GetMutableState(),

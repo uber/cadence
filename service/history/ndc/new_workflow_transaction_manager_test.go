@@ -124,6 +124,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Brand
 	).Return("", nil).Times(1)
 
 	context.EXPECT().PersistFirstWorkflowEvents(
+		gomock.Any(),
 		workflowEventsSeq[0],
 	).Return(workflowHistorySize, nil).Times(1)
 	context.EXPECT().CreateWorkflowExecution(
@@ -193,6 +194,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	currentWorkflow.EXPECT().GetVectorClock().Return(currentLastWriteVersion, int64(0), nil)
 
 	targetContext.EXPECT().PersistFirstWorkflowEvents(
+		gomock.Any(),
 		targetWorkflowEventsSeq[0],
 	).Return(targetWorkflowHistorySize, nil).Times(1)
 	targetContext.EXPECT().CreateWorkflowExecution(
@@ -259,6 +261,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
 	targetContext.EXPECT().PersistFirstWorkflowEvents(
+		gomock.Any(),
 		targetWorkflowEventsSeq[0],
 	).Return(targetWorkflowHistorySize, nil).Times(1)
 	targetContext.EXPECT().CreateWorkflowExecution(
@@ -326,6 +329,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
 	targetContext.EXPECT().PersistFirstWorkflowEvents(
+		gomock.Any(),
 		targetWorkflowEventsSeq[0],
 	).Return(targetWorkflowHistorySize, nil).Times(1)
 	targetContext.EXPECT().CreateWorkflowExecution(

@@ -253,33 +253,33 @@ func (mr *MockContextMockRecorder) ReapplyEvents(eventBatches interface{}) *gomo
 }
 
 // PersistFirstWorkflowEvents mocks base method
-func (m *MockContext) PersistFirstWorkflowEvents(workflowEvents *persistence.WorkflowEvents) (int64, error) {
+func (m *MockContext) PersistFirstWorkflowEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PersistFirstWorkflowEvents", workflowEvents)
+	ret := m.ctrl.Call(m, "PersistFirstWorkflowEvents", ctx, workflowEvents)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PersistFirstWorkflowEvents indicates an expected call of PersistFirstWorkflowEvents
-func (mr *MockContextMockRecorder) PersistFirstWorkflowEvents(workflowEvents interface{}) *gomock.Call {
+func (mr *MockContextMockRecorder) PersistFirstWorkflowEvents(ctx, workflowEvents interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistFirstWorkflowEvents", reflect.TypeOf((*MockContext)(nil).PersistFirstWorkflowEvents), workflowEvents)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistFirstWorkflowEvents", reflect.TypeOf((*MockContext)(nil).PersistFirstWorkflowEvents), ctx, workflowEvents)
 }
 
 // PersistNonFirstWorkflowEvents mocks base method
-func (m *MockContext) PersistNonFirstWorkflowEvents(workflowEvents *persistence.WorkflowEvents) (int64, error) {
+func (m *MockContext) PersistNonFirstWorkflowEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PersistNonFirstWorkflowEvents", workflowEvents)
+	ret := m.ctrl.Call(m, "PersistNonFirstWorkflowEvents", ctx, workflowEvents)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PersistNonFirstWorkflowEvents indicates an expected call of PersistNonFirstWorkflowEvents
-func (mr *MockContextMockRecorder) PersistNonFirstWorkflowEvents(workflowEvents interface{}) *gomock.Call {
+func (mr *MockContextMockRecorder) PersistNonFirstWorkflowEvents(ctx, workflowEvents interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistNonFirstWorkflowEvents", reflect.TypeOf((*MockContext)(nil).PersistNonFirstWorkflowEvents), workflowEvents)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistNonFirstWorkflowEvents", reflect.TypeOf((*MockContext)(nil).PersistNonFirstWorkflowEvents), ctx, workflowEvents)
 }
 
 // CreateWorkflowExecution mocks base method
@@ -297,17 +297,17 @@ func (mr *MockContextMockRecorder) CreateWorkflowExecution(ctx, newWorkflow, his
 }
 
 // ConflictResolveWorkflowExecution mocks base method
-func (m *MockContext) ConflictResolveWorkflowExecution(now time.Time, conflictResolveMode persistence.ConflictResolveWorkflowMode, resetMutableState MutableState, newContext Context, newMutableState MutableState, currentContext Context, currentMutableState MutableState, currentTransactionPolicy *TransactionPolicy) error {
+func (m *MockContext) ConflictResolveWorkflowExecution(ctx context.Context, now time.Time, conflictResolveMode persistence.ConflictResolveWorkflowMode, resetMutableState MutableState, newContext Context, newMutableState MutableState, currentContext Context, currentMutableState MutableState, currentTransactionPolicy *TransactionPolicy) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConflictResolveWorkflowExecution", now, conflictResolveMode, resetMutableState, newContext, newMutableState, currentContext, currentMutableState, currentTransactionPolicy)
+	ret := m.ctrl.Call(m, "ConflictResolveWorkflowExecution", ctx, now, conflictResolveMode, resetMutableState, newContext, newMutableState, currentContext, currentMutableState, currentTransactionPolicy)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ConflictResolveWorkflowExecution indicates an expected call of ConflictResolveWorkflowExecution
-func (mr *MockContextMockRecorder) ConflictResolveWorkflowExecution(now, conflictResolveMode, resetMutableState, newContext, newMutableState, currentContext, currentMutableState, currentTransactionPolicy interface{}) *gomock.Call {
+func (mr *MockContextMockRecorder) ConflictResolveWorkflowExecution(ctx, now, conflictResolveMode, resetMutableState, newContext, newMutableState, currentContext, currentMutableState, currentTransactionPolicy interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConflictResolveWorkflowExecution", reflect.TypeOf((*MockContext)(nil).ConflictResolveWorkflowExecution), now, conflictResolveMode, resetMutableState, newContext, newMutableState, currentContext, currentMutableState, currentTransactionPolicy)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConflictResolveWorkflowExecution", reflect.TypeOf((*MockContext)(nil).ConflictResolveWorkflowExecution), ctx, now, conflictResolveMode, resetMutableState, newContext, newMutableState, currentContext, currentMutableState, currentTransactionPolicy)
 }
 
 // UpdateWorkflowExecutionAsActive mocks base method
