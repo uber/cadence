@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -34,24 +35,52 @@ type (
 	// Persistence interface is a lower layer of dataInterface.
 	// The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
-	// ShardManager/TaskManager/MetadataManager are the same.
+	// TaskManager are the same.
 	//////////////////////////////////////////////////////////////////////
 
-	// ShardStore is a lower level of ShardManager
-	ShardStore = ShardManager
+	// ShardStore is the lower level of ShardManager
+	ShardStore interface {
+		Closeable
+		GetName() string
+		CreateShard(ctx context.Context, request *InternalCreateShardRequest) error
+		GetShard(ctx context.Context, request *InternalGetShardRequest) (*InternalGetShardResponse, error)
+		UpdateShard(ctx context.Context, request *InternalUpdateShardRequest) error
+	}
+
 	// TaskStore is a lower level of TaskManager
-	TaskStore = TaskManager
+	TaskStore interface {
+		Closeable
+		GetName() string
+		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
+		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		CreateTasks(ctx context.Context, request *InternalCreateTasksRequest) (*CreateTasksResponse, error)
+		GetTasks(ctx context.Context, request *GetTasksRequest) (*InternalGetTasksResponse, error)
+		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
+		// CompleteTasksLessThan completes tasks less than or equal to the given task id
+		// This API takes a limit parameter which specifies the count of maxRows that
+		// can be deleted. This parameter may be ignored by the underlying storage, but
+		// its mandatory to specify it. On success this method returns the number of rows
+		// actually deleted. If the underlying storage doesn't support "limit", all rows
+		// less than or equal to taskID will be deleted.
+		// On success, this method returns:
+		//  - number of rows actually deleted, if limit is honored
+		//  - UnknownNumRowsDeleted, when all rows below value are deleted
+		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
+	}
+
 	// MetadataStore is a lower level of MetadataManager
 	MetadataStore interface {
 		Closeable
 		GetName() string
-		CreateDomain(request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
-		GetDomain(request *GetDomainRequest) (*InternalGetDomainResponse, error)
-		UpdateDomain(request *InternalUpdateDomainRequest) error
-		DeleteDomain(request *DeleteDomainRequest) error
-		DeleteDomainByName(request *DeleteDomainByNameRequest) error
-		ListDomains(request *ListDomainsRequest) (*InternalListDomainsResponse, error)
-		GetMetadata() (*GetMetadataResponse, error)
+		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomain(ctx context.Context, request *GetDomainRequest) (*InternalGetDomainResponse, error)
+		UpdateDomain(ctx context.Context, request *InternalUpdateDomainRequest) error
+		DeleteDomain(ctx context.Context, request *DeleteDomainRequest) error
+		DeleteDomainByName(ctx context.Context, request *DeleteDomainByNameRequest) error
+		ListDomains(ctx context.Context, request *ListDomainsRequest) (*InternalListDomainsResponse, error)
+		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
 	}
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
@@ -60,41 +89,41 @@ type (
 		GetName() string
 		GetShardID() int
 		//The below three APIs are related to serialization/deserialization
-		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *InternalUpdateWorkflowExecutionRequest) error
-		ConflictResolveWorkflowExecution(request *InternalConflictResolveWorkflowExecutionRequest) error
-		ResetWorkflowExecution(request *InternalResetWorkflowExecutionRequest) error
+		GetWorkflowExecution(ctx context.Context, request *InternalGetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
+		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error
+		ResetWorkflowExecution(ctx context.Context, request *InternalResetWorkflowExecutionRequest) error
 
-		CreateWorkflowExecution(request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
-		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
-		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
-		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
-		IsWorkflowExecutionExists(request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
+		CreateWorkflowExecution(ctx context.Context, request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(ctx context.Context, request *DeleteCurrentWorkflowExecutionRequest) error
+		GetCurrentExecution(ctx context.Context, request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		IsWorkflowExecutionExists(ctx context.Context, request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
 
 		// Transfer task related methods
-		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
-		CompleteTransferTask(request *CompleteTransferTaskRequest) error
-		RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error
+		GetTransferTasks(ctx context.Context, request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
+		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
+		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
 
 		// Replication task related methods
-		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
-		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
-		RangeCompleteReplicationTask(request *RangeCompleteReplicationTaskRequest) error
-		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
-		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
-		GetReplicationDLQSize(request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
-		DeleteReplicationTaskFromDLQ(request *DeleteReplicationTaskFromDLQRequest) error
-		RangeDeleteReplicationTaskFromDLQ(request *RangeDeleteReplicationTaskFromDLQRequest) error
-		CreateFailoverMarkerTasks(request *CreateFailoverMarkersRequest) error
+		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*InternalGetReplicationTasksResponse, error)
+		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
+		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) error
+		PutReplicationTaskToDLQ(ctx context.Context, request *InternalPutReplicationTaskToDLQRequest) error
+		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*InternalGetReplicationTasksFromDLQResponse, error)
+		GetReplicationDLQSize(ctx context.Context, request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
+		DeleteReplicationTaskFromDLQ(ctx context.Context, request *DeleteReplicationTaskFromDLQRequest) error
+		RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) error
+		CreateFailoverMarkerTasks(ctx context.Context, request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
-		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
-		CompleteTimerTask(request *CompleteTimerTaskRequest) error
-		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+		GetTimerIndexTasks(ctx context.Context, request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
+		CompleteTimerTask(ctx context.Context, request *CompleteTimerTaskRequest) error
+		RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) error
 
 		// Scan related methods
-		ListConcreteExecutions(request *ListConcreteExecutionsRequest) (*InternalListConcreteExecutionsResponse, error)
-		ListCurrentExecutions(request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
+		ListConcreteExecutions(ctx context.Context, request *ListConcreteExecutionsRequest) (*InternalListConcreteExecutionsResponse, error)
+		ListCurrentExecutions(ctx context.Context, request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
 	}
 
 	// HistoryStore is to manager workflow history events
@@ -106,58 +135,58 @@ type (
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 
 		// AppendHistoryNodes add(or override) a node to a history branch
-		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
+		AppendHistoryNodes(ctx context.Context, request *InternalAppendHistoryNodesRequest) error
 		// ReadHistoryBranch returns history node data for a branch
-		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
+		ReadHistoryBranch(ctx context.Context, request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
-		ForkHistoryBranch(request *InternalForkHistoryBranchRequest) (*InternalForkHistoryBranchResponse, error)
+		ForkHistoryBranch(ctx context.Context, request *InternalForkHistoryBranchRequest) (*InternalForkHistoryBranchResponse, error)
 		// DeleteHistoryBranch removes a branch
-		DeleteHistoryBranch(request *InternalDeleteHistoryBranchRequest) error
+		DeleteHistoryBranch(ctx context.Context, request *InternalDeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
-		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		GetHistoryTree(ctx context.Context, request *InternalGetHistoryTreeRequest) (*InternalGetHistoryTreeResponse, error)
 		// GetAllHistoryTreeBranches returns all branches of all trees
-		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
+		GetAllHistoryTreeBranches(ctx context.Context, request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// VisibilityStore is the store interface for visibility
 	VisibilityStore interface {
 		Closeable
 		GetName() string
-		RecordWorkflowExecutionStarted(request *InternalRecordWorkflowExecutionStartedRequest) error
-		RecordWorkflowExecutionClosed(request *InternalRecordWorkflowExecutionClosedRequest) error
-		UpsertWorkflowExecution(request *InternalUpsertWorkflowExecutionRequest) error
-		ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
-		GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
-		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
-		ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
-		ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
-		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
+		RecordWorkflowExecutionStarted(ctx context.Context, request *InternalRecordWorkflowExecutionStartedRequest) error
+		RecordWorkflowExecutionClosed(ctx context.Context, request *InternalRecordWorkflowExecutionClosedRequest) error
+		UpsertWorkflowExecution(ctx context.Context, request *InternalUpsertWorkflowExecutionRequest) error
+		ListOpenWorkflowExecutions(ctx context.Context, request *InternalListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(ctx context.Context, request *InternalListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByType(ctx context.Context, request *InternalListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByType(ctx context.Context, request *InternalListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *InternalListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByWorkflowID(ctx context.Context, request *InternalListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *InternalListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
+		GetClosedWorkflowExecution(ctx context.Context, request *InternalGetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
+		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
 	// Queue is a store to enqueue and get messages
 	Queue interface {
 		Closeable
-		EnqueueMessage(messagePayload []byte) error
-		ReadMessages(lastMessageID int64, maxCount int) ([]*QueueMessage, error)
-		DeleteMessagesBefore(messageID int64) error
-		UpdateAckLevel(messageID int64, clusterName string) error
-		GetAckLevels() (map[string]int64, error)
-		EnqueueMessageToDLQ(messagePayload []byte) (int64, error)
-		ReadMessagesFromDLQ(firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
-		DeleteMessageFromDLQ(messageID int64) error
-		RangeDeleteMessagesFromDLQ(firstMessageID int64, lastMessageID int64) error
-		UpdateDLQAckLevel(messageID int64, clusterName string) error
-		GetDLQAckLevels() (map[string]int64, error)
+		EnqueueMessage(ctx context.Context, messagePayload []byte) error
+		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*InternalQueueMessage, error)
+		DeleteMessagesBefore(ctx context.Context, messageID int64) error
+		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetAckLevels(ctx context.Context) (map[string]int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*InternalQueueMessage, []byte, error)
+		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
+		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
+		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
 	}
 
 	// QueueMessage is the message that stores in the queue
-	QueueMessage struct {
+	InternalQueueMessage struct {
 		ID        int64     `json:"message_id"`
 		QueueType QueueType `json:"queue_type"`
 		Payload   []byte    `json:"message_payload"`
@@ -181,6 +210,37 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot InternalWorkflowSnapshot
+	}
+
+	// InternalGetReplicationTasksResponse is the response to GetReplicationTask
+	InternalGetReplicationTasksResponse struct {
+		Tasks         []*InternalReplicationTaskInfo
+		NextPageToken []byte
+	}
+
+	// InternalPutReplicationTaskToDLQRequest is used to put a replication task to dlq
+	InternalPutReplicationTaskToDLQRequest struct {
+		SourceClusterName string
+		TaskInfo          *InternalReplicationTaskInfo
+	}
+
+	// InternalGetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
+	InternalGetReplicationTasksFromDLQResponse = InternalGetReplicationTasksResponse
+
+	// InternalReplicationTaskInfo describes the replication task created for replication of history events
+	InternalReplicationTaskInfo struct {
+		DomainID          string
+		WorkflowID        string
+		RunID             string
+		TaskID            int64
+		TaskType          int
+		FirstEventID      int64
+		NextEventID       int64
+		Version           int64
+		ScheduledID       int64
+		BranchToken       []byte
+		NewRunBranchToken []byte
+		CreationTime      int64
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -248,7 +308,6 @@ type (
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
 	InternalWorkflowMutableState struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
 		ActivityInfos    map[int64]*InternalActivityInfo
 
@@ -343,10 +402,6 @@ type (
 
 		// current workflow
 		CurrentWorkflowMutation *InternalWorkflowMutation
-
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS *CurrentWorkflowCAS
 	}
 
 	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
@@ -371,7 +426,6 @@ type (
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
 	InternalWorkflowMutation struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
 		StartVersion     int64
 		LastWriteVersion int64
@@ -403,7 +457,6 @@ type (
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
 	InternalWorkflowSnapshot struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
-		ReplicationState *ReplicationState
 		VersionHistories *DataBlob
 		StartVersion     int64
 		LastWriteVersion int64
@@ -454,7 +507,13 @@ type (
 		ShardID int
 	}
 
-	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecution for Persistence Interface
+	// InternalGetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
+	InternalGetWorkflowExecutionRequest struct {
+		DomainID  string
+		Execution workflow.WorkflowExecution
+	}
+
+	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
 	InternalGetWorkflowExecutionResponse struct {
 		State *InternalWorkflowMutableState
 	}
@@ -543,8 +602,24 @@ type (
 		LastTransactionID int64
 	}
 
-	// VisibilityWorkflowExecutionInfo is visibility info for internal response
-	VisibilityWorkflowExecutionInfo struct {
+	// InternalGetHistoryTreeRequest is used to get history tree
+	InternalGetHistoryTreeRequest struct {
+		// A UUID of a tree
+		TreeID string
+		// Get data from this shard
+		ShardID *int
+		// optional: can provide treeID via branchToken if treeID is empty
+		BranchToken []byte
+	}
+
+	// InternalGetHistoryTreeResponse is the response to GetHistoryTree
+	InternalGetHistoryTreeResponse struct {
+		// all branches of a tree
+		Branches []*workflow.HistoryBranch
+	}
+
+	// InternalVisibilityWorkflowExecutionInfo is visibility info for internal response
+	InternalVisibilityWorkflowExecutionInfo struct {
 		WorkflowID       string
 		RunID            string
 		TypeName         string
@@ -560,15 +635,40 @@ type (
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
 	InternalListWorkflowExecutionsResponse struct {
-		Executions []*VisibilityWorkflowExecutionInfo
+		Executions []*InternalVisibilityWorkflowExecutionInfo
 		// Token to read next page if there are more workflow executions beyond page size.
 		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
 		NextPageToken []byte
 	}
 
+	// InternalGetClosedWorkflowExecutionRequest is used retrieve the record for a specific execution
+	InternalGetClosedWorkflowExecutionRequest struct {
+		DomainUUID string
+		Domain     string // domain name is not persisted, but used as config filter key
+		Execution  workflow.WorkflowExecution
+	}
+
+	// InternalListClosedWorkflowExecutionsByStatusRequest is used to list executions that have specific close status
+	InternalListClosedWorkflowExecutionsByStatusRequest struct {
+		InternalListWorkflowExecutionsRequest
+		Status workflow.WorkflowExecutionCloseStatus
+	}
+
+	// InternalListWorkflowExecutionsByWorkflowIDRequest is used to list executions that have specific WorkflowID in a domain
+	InternalListWorkflowExecutionsByWorkflowIDRequest struct {
+		InternalListWorkflowExecutionsRequest
+		WorkflowID string
+	}
+
+	// InternalListWorkflowExecutionsByTypeRequest is used to list executions of a specific type in a domain
+	InternalListWorkflowExecutionsByTypeRequest struct {
+		InternalListWorkflowExecutionsRequest
+		WorkflowTypeName string
+	}
+
 	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution
 	InternalGetClosedWorkflowExecutionResponse struct {
-		Execution *VisibilityWorkflowExecutionInfo
+		Execution *InternalVisibilityWorkflowExecutionInfo
 	}
 
 	// InternalRecordWorkflowExecutionStartedRequest request to RecordWorkflowExecutionStarted
@@ -617,6 +717,19 @@ type (
 		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
+	}
+
+	// InternalListWorkflowExecutionsRequest is used to list executions in a domain
+	InternalListWorkflowExecutionsRequest struct {
+		DomainUUID        string
+		Domain            string // domain name is not persisted, but used as config filter key
+		EarliestStartTime int64
+		LatestStartTime   int64
+		// Maximum number of workflow executions per page
+		PageSize int
+		// Token to continue reading next page of workflow executions.
+		// Pass in empty slice for first page.
+		NextPageToken []byte
 	}
 
 	// InternalDomainConfig describes the domain configuration
@@ -674,6 +787,79 @@ type (
 	InternalListDomainsResponse struct {
 		Domains       []*InternalGetDomainResponse
 		NextPageToken []byte
+	}
+
+	// InternalShardInfo describes a shard
+	InternalShardInfo struct {
+		ShardID                       int                              `json:"shard_id"`
+		Owner                         string                           `json:"owner"`
+		RangeID                       int64                            `json:"range_id"`
+		StolenSinceRenew              int                              `json:"stolen_since_renew"`
+		UpdatedAt                     time.Time                        `json:"updated_at"`
+		ReplicationAckLevel           int64                            `json:"replication_ack_level"`
+		ReplicationDLQAckLevel        map[string]int64                 `json:"replication_dlq_ack_level"`
+		TransferAckLevel              int64                            `json:"transfer_ack_level"`
+		TimerAckLevel                 time.Time                        `json:"timer_ack_level"`
+		ClusterTransferAckLevel       map[string]int64                 `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel          map[string]time.Time             `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates *DataBlob                        `json:"transfer_processing_queue_states"`
+		TimerProcessingQueueStates    *DataBlob                        `json:"timer_processing_queue_states"`
+		TransferFailoverLevels        map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
+		TimerFailoverLevels           map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel       map[string]int64                 `json:"cluster_replication_level"`
+		DomainNotificationVersion     int64                            `json:"domain_notification_version"`
+		PendingFailoverMarkers        *DataBlob                        `json:"pending_failover_markers"`
+	}
+
+	// InternalCreateShardRequest is request to CreateShard
+	InternalCreateShardRequest struct {
+		ShardInfo *InternalShardInfo
+	}
+
+	// InternalGetShardRequest is used to get shard information
+	InternalGetShardRequest struct {
+		ShardID int
+	}
+
+	// InternalUpdateShardRequest  is used to update shard information
+	InternalUpdateShardRequest struct {
+		ShardInfo       *InternalShardInfo
+		PreviousRangeID int64
+	}
+
+	// InternalGetShardResponse is the response to GetShard
+	InternalGetShardResponse struct {
+		ShardInfo *InternalShardInfo
+	}
+
+	// InternalTaskInfo describes a Task
+	InternalTaskInfo struct {
+		DomainID               string
+		WorkflowID             string
+		RunID                  string
+		TaskID                 int64
+		ScheduleID             int64
+		ScheduleToStartTimeout int32
+		Expiry                 time.Time
+		CreatedTime            time.Time
+	}
+
+	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
+	InternalCreateTasksInfo struct {
+		Execution workflow.WorkflowExecution
+		Data      *InternalTaskInfo
+		TaskID    int64
+	}
+
+	// InternalCreateTasksRequest is request to CreateTasks
+	InternalCreateTasksRequest struct {
+		TaskListInfo *TaskListInfo
+		Tasks        []*InternalCreateTasksInfo
+	}
+
+	// InternalGetTasksResponse is response from GetTasks
+	InternalGetTasksResponse struct {
+		Tasks []*InternalTaskInfo
 	}
 )
 

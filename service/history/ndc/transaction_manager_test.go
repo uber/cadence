@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -232,7 +233,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		workflowEvents.Events,
 	).Return(nil).Times(1)
 
-	s.mockExecutionManager.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
@@ -314,7 +315,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_C
 		RunID:      runID,
 	}).AnyTimes()
 
-	s.mockExecutionManager.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
@@ -369,7 +370,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active
 		RunID:      runID,
 	}).AnyTimes()
 
-	s.mockExecutionManager.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: currentRunID}, nil).Once()
@@ -423,7 +424,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passiv
 		RunID:      runID,
 	}).AnyTimes()
 
-	s.mockExecutionManager.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: currentRunID}, nil).Once()
@@ -443,7 +444,7 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesNotExists() {
 	workflowID := "some random workflow ID"
 	runID := "some random run ID"
 
-	s.mockExecutionManager.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -462,7 +463,7 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesExists() {
 	workflowID := "some random workflow ID"
 	runID := "some random run ID"
 
-	s.mockExecutionManager.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
@@ -480,7 +481,7 @@ func (s *transactionManagerSuite) TestGetWorkflowCurrentRunID_Missing() {
 	domainID := "some random domain ID"
 	workflowID := "some random workflow ID"
 
-	s.mockExecutionManager.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(nil, &shared.EntityNotExistsError{}).Once()
@@ -496,7 +497,7 @@ func (s *transactionManagerSuite) TestGetWorkflowCurrentRunID_Exists() {
 	workflowID := "some random workflow ID"
 	runID := "some random run ID"
 
-	s.mockExecutionManager.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
+	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()

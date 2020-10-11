@@ -40,7 +40,7 @@ type (
 	WeightedRoundRobinTaskSchedulerOptions struct {
 		Weights         dynamicconfig.MapPropertyFn
 		QueueSize       int
-		WorkerCount     int
+		WorkerCount     dynamicconfig.IntPropertyFn
 		DispatcherCount int
 		RetryPolicy     backoff.RetryPolicy
 	}
@@ -135,6 +135,12 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Stop() {
 
 	w.processor.Stop()
 
+	w.RLock()
+	for _, taskCh := range w.taskChs {
+		drainAndNackPriorityTask(taskCh)
+	}
+	w.RUnlock()
+
 	if success := common.AwaitWaitGroup(&w.dispatcherWG, time.Minute); !success {
 		w.logger.Warn("Weighted round robin task scheduler timedout on shutdown.")
 	}
@@ -147,6 +153,10 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Submit(task PriorityTask) error {
 	sw := w.metricsScope.StartTimer(metrics.PriorityTaskSubmitLatency)
 	defer sw.Stop()
 
+	if w.isStopped() {
+		return ErrTaskSchedulerClosed
+	}
+
 	taskCh, err := w.getOrCreateTaskChan(task.Priority())
 	if err != nil {
 		return err
@@ -155,6 +165,9 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Submit(task PriorityTask) error {
 	select {
 	case taskCh <- task:
 		w.notifyDispatcher()
+		if w.isStopped() {
+			drainAndNackPriorityTask(taskCh)
+		}
 		return nil
 	case <-w.shutdownCh:
 		return ErrTaskSchedulerClosed
@@ -164,6 +177,10 @@ func (w *weightedRoundRobinTaskSchedulerImpl) Submit(task PriorityTask) error {
 func (w *weightedRoundRobinTaskSchedulerImpl) TrySubmit(
 	task PriorityTask,
 ) (bool, error) {
+	if w.isStopped() {
+		return false, ErrTaskSchedulerClosed
+	}
+
 	taskCh, err := w.getOrCreateTaskChan(task.Priority())
 	if err != nil {
 		return false, err
@@ -172,7 +189,11 @@ func (w *weightedRoundRobinTaskSchedulerImpl) TrySubmit(
 	select {
 	case taskCh <- task:
 		w.metricsScope.IncCounter(metrics.PriorityTaskSubmitRequest)
-		w.notifyDispatcher()
+		if w.isStopped() {
+			drainAndNackPriorityTask(taskCh)
+		} else {
+			w.notifyDispatcher()
+		}
 		return true, nil
 	case <-w.shutdownCh:
 		return false, ErrTaskSchedulerClosed
@@ -285,6 +306,21 @@ func (w *weightedRoundRobinTaskSchedulerImpl) updateWeights() {
 			}
 		case <-w.shutdownCh:
 			ticker.Stop()
+			return
+		}
+	}
+}
+
+func (w *weightedRoundRobinTaskSchedulerImpl) isStopped() bool {
+	return atomic.LoadInt32(&w.status) == common.DaemonStatusStopped
+}
+
+func drainAndNackPriorityTask(taskCh <-chan PriorityTask) {
+	for {
+		select {
+		case task := <-taskCh:
+			task.Nack()
+		default:
 			return
 		}
 	}

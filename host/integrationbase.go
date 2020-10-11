@@ -212,6 +212,9 @@ func (s *IntegrationBase) getHistory(domain string, execution *workflow.Workflow
 // and request will be rejected by frontend. Here we make a call directly to persistence to register
 // the domain.
 func (s *IntegrationBase) registerArchivalDomain() error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
+	defer cancel()
+
 	s.archivalDomainName = s.randomizeStr("integration-archival-enabled-domain")
 	currentClusterName := s.testCluster.testBase.ClusterMetadata.GetCurrentClusterName()
 	domainRequest := &persistence.CreateDomainRequest{
@@ -237,11 +240,12 @@ func (s *IntegrationBase) registerArchivalDomain() error {
 		IsGlobalDomain:  false,
 		FailoverVersion: common.EmptyVersion,
 	}
-	response, err := s.testCluster.testBase.MetadataManager.CreateDomain(domainRequest)
-
-	s.Logger.Info("Register domain succeeded",
-		tag.WorkflowDomainName(s.archivalDomainName),
-		tag.WorkflowDomainID(response.ID),
-	)
+	response, err := s.testCluster.testBase.MetadataManager.CreateDomain(ctx, domainRequest)
+	if err == nil {
+		s.Logger.Info("Register domain succeeded",
+			tag.WorkflowDomainName(s.archivalDomainName),
+			tag.WorkflowDomainID(response.ID),
+		)
+	}
 	return err
 }

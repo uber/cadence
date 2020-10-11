@@ -92,12 +92,6 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetReplicationMessagesResponse, error)
 
-	GetWorkflowExecutionRawHistory(
-		ctx context.Context,
-		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
-		opts ...yarpc.CallOption,
-	) (*admin.GetWorkflowExecutionRawHistoryResponse, error)
-
 	GetWorkflowExecutionRawHistoryV2(
 		ctx context.Context,
 		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
@@ -380,29 +374,6 @@ func (c client) GetReplicationMessages(
 	}
 
 	success, err = admin.AdminService_GetReplicationMessages_Helper.UnwrapResponse(&result)
-	return
-}
-
-func (c client) GetWorkflowExecutionRawHistory(
-	ctx context.Context,
-	_GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
-	opts ...yarpc.CallOption,
-) (success *admin.GetWorkflowExecutionRawHistoryResponse, err error) {
-
-	args := admin.AdminService_GetWorkflowExecutionRawHistory_Helper.Args(_GetRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result admin.AdminService_GetWorkflowExecutionRawHistory_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	success, err = admin.AdminService_GetWorkflowExecutionRawHistory_Helper.UnwrapResponse(&result)
 	return
 }
 

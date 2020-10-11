@@ -162,6 +162,39 @@ services:
         aliases:
           - integration-test
 
+  integration-test-postgres:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    command:
+      - /bin/sh
+      - -e
+      - -c
+      - |
+        make cover_integration_profile
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+    environment:
+      - "POSTGRES_SEEDS=postgres"
+      - "PERSISTENCE_PLUGIN=postgres"
+      - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
+      - "PERSISTENCE_TYPE=sql"
+      - "TEST_TAG=esintegration"
+    depends_on:
+      - postgres
+      - elasticsearch
+      - kafka
+    volumes:
+      - ../../:/cadence
+    networks:
+      services-network:
+        aliases:
+          - integration-test
+
   integration-test-v2:
     build:
       context: ../../
@@ -193,7 +226,7 @@ services:
         aliases:
           - integration-test
 
-  integration-test-xdc-cassandra:
+  integration-test-ndc-cassandra:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -202,7 +235,7 @@ services:
       - -e
       - -c
       - |
-        make cover_xdc_profile
+        make cover_ndc_profile
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -222,9 +255,9 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
-  integration-test-xdc-mysql:
+  integration-test-ndc-mysql:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
@@ -233,7 +266,7 @@ services:
       - -e
       - -c
       - |
-        make cover_xdc_profile
+        make cover_ndc_profile
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -254,7 +287,7 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
 networks:
   services-network:

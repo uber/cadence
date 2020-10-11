@@ -21,6 +21,7 @@
 package matching
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 
@@ -80,7 +81,7 @@ func (db *taskListDB) RangeID() int64 {
 func (db *taskListDB) RenewLease() (taskListState, error) {
 	db.Lock()
 	defer db.Unlock()
-	resp, err := db.store.LeaseTaskList(&persistence.LeaseTaskListRequest{
+	resp, err := db.store.LeaseTaskList(context.Background(), &persistence.LeaseTaskListRequest{
 		DomainID:     db.domainID,
 		TaskList:     db.taskListName,
 		TaskType:     db.taskType,
@@ -99,7 +100,7 @@ func (db *taskListDB) RenewLease() (taskListState, error) {
 func (db *taskListDB) UpdateState(ackLevel int64) error {
 	db.Lock()
 	defer db.Unlock()
-	_, err := db.store.UpdateTaskList(&persistence.UpdateTaskListRequest{
+	_, err := db.store.UpdateTaskList(context.Background(), &persistence.UpdateTaskListRequest{
 		TaskListInfo: &persistence.TaskListInfo{
 			DomainID: db.domainID,
 			Name:     db.taskListName,
@@ -119,7 +120,7 @@ func (db *taskListDB) UpdateState(ackLevel int64) error {
 func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persistence.CreateTasksResponse, error) {
 	db.Lock()
 	defer db.Unlock()
-	return db.store.CreateTasks(&persistence.CreateTasksRequest{
+	return db.store.CreateTasks(context.Background(), &persistence.CreateTasksRequest{
 		TaskListInfo: &persistence.TaskListInfo{
 			DomainID: db.domainID,
 			Name:     db.taskListName,
@@ -134,7 +135,7 @@ func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persist
 
 // GetTasks returns a batch of tasks between the given range
 func (db *taskListDB) GetTasks(minTaskID int64, maxTaskID int64, batchSize int) (*persistence.GetTasksResponse, error) {
-	return db.store.GetTasks(&persistence.GetTasksRequest{
+	return db.store.GetTasks(context.Background(), &persistence.GetTasksRequest{
 		DomainID:     db.domainID,
 		TaskList:     db.taskListName,
 		TaskType:     db.taskType,
@@ -146,7 +147,7 @@ func (db *taskListDB) GetTasks(minTaskID int64, maxTaskID int64, batchSize int) 
 
 // CompleteTask deletes a single task from this task list
 func (db *taskListDB) CompleteTask(taskID int64) error {
-	err := db.store.CompleteTask(&persistence.CompleteTaskRequest{
+	err := db.store.CompleteTask(context.Background(), &persistence.CompleteTaskRequest{
 		TaskList: &persistence.TaskListInfo{
 			DomainID: db.domainID,
 			Name:     db.taskListName,
@@ -169,7 +170,7 @@ func (db *taskListDB) CompleteTask(taskID int64) error {
 // the upper bound of number of tasks that can be deleted by this method. It may
 // or may not be honored
 func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error) {
-	n, err := db.store.CompleteTasksLessThan(&persistence.CompleteTasksLessThanRequest{
+	n, err := db.store.CompleteTasksLessThan(context.Background(), &persistence.CompleteTasksLessThanRequest{
 		DomainID:     db.domainID,
 		TaskListName: db.taskListName,
 		TaskType:     db.taskType,

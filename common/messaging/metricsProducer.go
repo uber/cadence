@@ -21,6 +21,8 @@
 package messaging
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -32,19 +34,21 @@ type (
 )
 
 // NewMetricProducer creates a new instance of producer that emits metrics
-func NewMetricProducer(producer Producer,
-	metricsClient metrics.Client) Producer {
+func NewMetricProducer(
+	producer Producer,
+	metricsClient metrics.Client,
+) Producer {
 	return &metricsProducer{
 		producer:      producer,
 		metricsClient: metricsClient,
 	}
 }
 
-func (p *metricsProducer) Publish(msg interface{}) error {
+func (p *metricsProducer) Publish(ctx context.Context, msg interface{}) error {
 	p.metricsClient.IncCounter(metrics.MessagingClientPublishScope, metrics.CadenceClientRequests)
 
 	sw := p.metricsClient.StartTimer(metrics.MessagingClientPublishScope, metrics.CadenceClientLatency)
-	err := p.producer.Publish(msg)
+	err := p.producer.Publish(ctx, msg)
 	sw.Stop()
 
 	if err != nil {

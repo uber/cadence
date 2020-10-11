@@ -52,12 +52,14 @@ func AdminShowWorkflow(c *cli.Context) {
 	sid := c.Int(FlagShardID)
 	outputFileName := c.String(FlagOutputFilename)
 
+	ctx, cancel := newContext(c)
+	defer cancel()
 	session := connectToCassandra(c)
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
 		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
-		resp, err := histV2.ReadHistoryBranch(&persistence.InternalReadHistoryBranchRequest{
+		resp, err := histV2.ReadHistoryBranch(ctx, &persistence.InternalReadHistoryBranchRequest{
 			TreeID:    tid,
 			BranchID:  bid,
 			MinNodeID: 1,
@@ -186,6 +188,9 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	}
 	domainID := ms.ExecutionInfo.DomainID
 	skipError := c.Bool(FlagSkipErrorMode)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
 	session := connectToCassandra(c)
 	shardID := resp.GetShardId()
 	shardIDInt, err := strconv.Atoi(shardID)
@@ -212,7 +217,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		fmt.Println("deleting history events for ...")
 		prettyPrintJSONObject(branchInfo)
 		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
-		err = histV2.DeleteHistoryBranch(&persistence.InternalDeleteHistoryBranchRequest{
+		err = histV2.DeleteHistoryBranch(ctx, &persistence.InternalDeleteHistoryBranchRequest{
 			BranchInfo: branchInfo,
 			ShardID:    shardIDInt,
 		})
@@ -232,7 +237,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		RunID:      rid,
 	}
 
-	err = exeStore.DeleteWorkflowExecution(req)
+	err = exeStore.DeleteWorkflowExecution(ctx, req)
 	if err != nil {
 		if skipError {
 			fmt.Println("delete mutableState row failed, ", err)
@@ -248,7 +253,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		RunID:      rid,
 	}
 
-	err = exeStore.DeleteCurrentWorkflowExecution(deleteCurrentReq)
+	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
 	if err != nil {
 		if skipError {
 			fmt.Println("delete current row failed, ", err)
@@ -393,16 +398,53 @@ func AdminRemoveTask(c *cli.Context) {
 // AdminDescribeShard describes shard by shard id
 func AdminDescribeShard(c *cli.Context) {
 	sid := getRequiredIntOption(c, FlagShardID)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
 	session := connectToCassandra(c)
-	shardManager := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+	shardStore := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+	shardManager := persistence.NewShardManager(shardStore)
 
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
-	shard, err := shardManager.GetShard(getShardReq)
+	shard, err := shardManager.GetShard(ctx, getShardReq)
 	if err != nil {
 		ErrorAndExit("Failed to describe shard.", err)
 	}
 
 	prettyPrintJSONObject(shard)
+}
+
+// AdminSetShardRangeID set shard rangeID by shard id
+func AdminSetShardRangeID(c *cli.Context) {
+	sid := getRequiredIntOption(c, FlagShardID)
+	rid := getRequiredInt64Option(c, FlagRangeID)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	session := connectToCassandra(c)
+	shardStore := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+	shardManager := persistence.NewShardManager(shardStore)
+
+	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
+	if err != nil {
+		ErrorAndExit("Failed to get shardInfo.", err)
+	}
+
+	previousRangeID := getShardResp.ShardInfo.RangeID
+	updatedShardInfo := getShardResp.ShardInfo
+	updatedShardInfo.RangeID = rid
+	updatedShardInfo.StolenSinceRenew++
+	updatedShardInfo.Owner = ""
+	updatedShardInfo.UpdatedAt = time.Now()
+
+	if err := shardManager.UpdateShard(ctx, &persistence.UpdateShardRequest{
+		PreviousRangeID: previousRangeID,
+		ShardInfo:       updatedShardInfo,
+	}); err != nil {
+		ErrorAndExit("Failed to reset shard rangeID.", err)
+	}
+
+	fmt.Printf("Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
 }
 
 // AdminCloseShard closes shard by shard id

@@ -54,8 +54,8 @@ var _ Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
 func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.Logger, logger log.Logger, metricScope tally.Scope,
-	checkCluster, checkApp bool) Client {
-	kc.Validate(checkCluster, checkApp)
+	checkApp bool) Client {
+	kc.Validate(checkApp)
 
 	// mapping from cluster name to list of broker ip addresses
 	brokers := map[string][]string{}
@@ -102,19 +102,6 @@ func (c *kafkaClient) NewConsumer(app, consumerName string, concurrency int) (Co
 	return c.newConsumerHelper(topic, dlq, consumerName, concurrency)
 }
 
-// NewConsumerWithClusterName is used to create a Kafka consumer for consuming replication tasks
-func (c *kafkaClient) NewConsumerWithClusterName(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error) {
-	currentTopics := c.config.getTopicsForCadenceCluster(currentCluster)
-	sourceTopics := c.config.getTopicsForCadenceCluster(sourceCluster)
-	kafkaClusterNameForTopic := c.config.getKafkaClusterForTopic(sourceTopics.Topic)
-	kafkaClusterNameForDLQTopic := c.config.getKafkaClusterForTopic(currentTopics.DLQTopic)
-
-	topic := createUberKafkaTopic(sourceTopics.Topic, kafkaClusterNameForTopic)
-	dlq := createUberKafkaTopic(currentTopics.DLQTopic, kafkaClusterNameForDLQTopic)
-
-	return c.newConsumerHelper(topic, dlq, consumerName, concurrency)
-}
-
 func createUberKafkaTopic(name, cluster string) *uberKafka.Topic {
 	return &uberKafka.Topic{
 		Name:    name,
@@ -144,12 +131,6 @@ func (c *kafkaClient) newConsumerHelper(topic, dlq *uberKafka.Topic, consumerNam
 // NewProducer is used to create a Kafka producer
 func (c *kafkaClient) NewProducer(app string) (Producer, error) {
 	topics := c.config.getTopicsForApplication(app)
-	return c.newProducerHelper(topics.Topic)
-}
-
-// NewProducerWithClusterName is used to create a Kafka producer for shipping replication tasks
-func (c *kafkaClient) NewProducerWithClusterName(sourceCluster string) (Producer, error) {
-	topics := c.config.getTopicsForCadenceCluster(sourceCluster)
 	return c.newProducerHelper(topics.Topic)
 }
 

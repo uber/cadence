@@ -21,9 +21,12 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -38,19 +41,28 @@ type sqlShardManager struct {
 	currentClusterName string
 }
 
-// newShardPersistence creates an instance of ShardManager
-func newShardPersistence(db sqlplugin.DB, currentClusterName string, log log.Logger) (persistence.ShardManager, error) {
+// newShardPersistence creates an instance of ShardStore
+func newShardPersistence(
+	db sqlplugin.DB,
+	currentClusterName string,
+	log log.Logger,
+	parser serialization.Parser,
+) (persistence.ShardStore, error) {
 	return &sqlShardManager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
+			parser: parser,
 		},
 		currentClusterName: currentClusterName,
 	}, nil
 }
 
-func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) error {
-	if _, err := m.GetShard(&persistence.GetShardRequest{
+func (m *sqlShardManager) CreateShard(
+	ctx context.Context,
+	request *persistence.InternalCreateShardRequest,
+) error {
+	if _, err := m.GetShard(ctx, &persistence.InternalGetShardRequest{
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
@@ -58,14 +70,14 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 		}
 	}
 
-	row, err := shardInfoToShardsRow(*request.ShardInfo)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
 		}
 	}
 
-	if _, err := m.db.InsertIntoShards(row); err != nil {
+	if _, err := m.db.InsertIntoShards(ctx, row); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Failed to insert into shards table. Error: %v", err),
 		}
@@ -74,8 +86,11 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 	return nil
 }
 
-func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persistence.GetShardResponse, error) {
-	row, err := m.db.SelectFromShards(&sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
+func (m *sqlShardManager) GetShard(
+	ctx context.Context,
+	request *persistence.InternalGetShardRequest,
+) (*persistence.InternalGetShardResponse, error) {
+	row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, &workflow.EntityNotExistsError{
@@ -87,7 +102,7 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		}
 	}
 
-	shardInfo, err := shardInfoFromBlob(row.Data, row.DataEncoding)
+	shardInfo, err := m.parser.ShardInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +147,7 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		}
 	}
 
-	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
+	resp := &persistence.InternalGetShardResponse{ShardInfo: &persistence.InternalShardInfo{
 		ShardID:                       int(row.ShardID),
 		RangeID:                       row.RangeID,
 		Owner:                         shardInfo.GetOwner(),
@@ -153,18 +168,21 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 	return resp, nil
 }
 
-func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) error {
-	row, err := shardInfoToShardsRow(*request.ShardInfo)
+func (m *sqlShardManager) UpdateShard(
+	ctx context.Context,
+	request *persistence.InternalUpdateShardRequest,
+) error {
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
 		}
 	}
-	return m.txExecute("UpdateShard", func(tx sqlplugin.Tx) error {
-		if err := lockShard(tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
+	return m.txExecute(ctx, "UpdateShard", func(tx sqlplugin.Tx) error {
+		if err := lockShard(ctx, tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
 			return err
 		}
-		result, err := tx.UpdateShards(row)
+		result, err := tx.UpdateShards(ctx, row)
 		if err != nil {
 			return err
 		}
@@ -180,8 +198,8 @@ func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) e
 }
 
 // initiated by the owning shard
-func lockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.WriteLockShards(&sqlplugin.ShardsFilter{ShardID: int64(shardID)})
+func lockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
+	rangeID, err := tx.WriteLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &workflow.InternalServiceError{
@@ -204,8 +222,8 @@ func lockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
 }
 
 // initiated by the owning shard
-func readLockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.ReadLockShards(&sqlplugin.ShardsFilter{ShardID: int64(shardID)})
+func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
+	rangeID, err := tx.ReadLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &workflow.InternalServiceError{
@@ -226,7 +244,7 @@ func readLockShard(tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
 	return nil
 }
 
-func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error) {
+func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
 	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
 	for k, v := range s.ClusterTimerAckLevel {
 		timerAckLevels[k] = v.UnixNano()
@@ -273,7 +291,7 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqlplugin.ShardsRow, error)
 		PendingFailoverMarkersEncoding:        common.StringPtr(markerEncoding),
 	}
 
-	blob, err := shardInfoToBlob(shardInfo)
+	blob, err := parser.ShardInfoToBlob(shardInfo)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,8 @@
 package persistence
 
 import (
+	"context"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -62,10 +64,15 @@ func (m *executionManagerImpl) GetShardID() int {
 
 // The below three APIs are related to serialization/deserialization
 func (m *executionManagerImpl) GetWorkflowExecution(
+	ctx context.Context,
 	request *GetWorkflowExecutionRequest,
 ) (*GetWorkflowExecutionResponse, error) {
 
-	response, err := m.persistence.GetWorkflowExecution(request)
+	internalRequest := &InternalGetWorkflowExecutionRequest{
+		DomainID:  request.DomainID,
+		Execution: request.Execution,
+	}
+	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +82,6 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 			RequestCancelInfos: response.State.RequestCancelInfos,
 			SignalInfos:        response.State.SignalInfos,
 			SignalRequestedIDs: response.State.SignalRequestedIDs,
-			ReplicationState:   response.State.ReplicationState,
 			Checksum:           response.State.Checksum,
 		},
 	}
@@ -301,6 +307,7 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 }
 
 func (m *executionManagerImpl) UpdateWorkflowExecution(
+	ctx context.Context,
 	request *UpdateWorkflowExecutionRequest,
 ) (*UpdateWorkflowExecutionResponse, error) {
 
@@ -325,7 +332,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 		NewWorkflowSnapshot:    serializedNewWorkflowSnapshot,
 	}
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
-	err1 := m.persistence.UpdateWorkflowExecution(newRequest)
+	err1 := m.persistence.UpdateWorkflowExecution(ctx, newRequest)
 	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, err1
 }
 
@@ -501,6 +508,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 }
 
 func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
+	ctx context.Context,
 	request *ConflictResolveWorkflowExecutionRequest,
 ) error {
 
@@ -523,12 +531,6 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 		}
 	}
 
-	if request.CurrentWorkflowMutation != nil && request.CurrentWorkflowCAS != nil {
-		return &workflow.InternalServiceError{
-			Message: "ConflictResolveWorkflowExecution: current workflow & current workflow CAS both set",
-		}
-	}
-
 	newRequest := &InternalConflictResolveWorkflowExecutionRequest{
 		RangeID: request.RangeID,
 
@@ -539,15 +541,12 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 		NewWorkflowSnapshot: serializedNewWorkflowMutation,
 
 		CurrentWorkflowMutation: serializedCurrentWorkflowMutation,
-
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS: request.CurrentWorkflowCAS,
 	}
-	return m.persistence.ConflictResolveWorkflowExecution(newRequest)
+	return m.persistence.ConflictResolveWorkflowExecution(ctx, newRequest)
 }
 
 func (m *executionManagerImpl) ResetWorkflowExecution(
+	ctx context.Context,
 	request *ResetWorkflowExecutionRequest,
 ) error {
 
@@ -576,10 +575,11 @@ func (m *executionManagerImpl) ResetWorkflowExecution(
 
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
 	}
-	return m.persistence.ResetWorkflowExecution(newRequest)
+	return m.persistence.ResetWorkflowExecution(ctx, newRequest)
 }
 
 func (m *executionManagerImpl) CreateWorkflowExecution(
+	ctx context.Context,
 	request *CreateWorkflowExecutionRequest,
 ) (*CreateWorkflowExecutionResponse, error) {
 
@@ -601,7 +601,7 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
 	}
 
-	return m.persistence.CreateWorkflowExecution(newRequest)
+	return m.persistence.CreateWorkflowExecution(ctx, newRequest)
 }
 
 func (m *executionManagerImpl) SerializeWorkflowMutation(
@@ -637,18 +637,17 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		}
 	}
 
-	startVersion, err := getStartVersion(input.VersionHistories, input.ReplicationState)
+	startVersion, err := getStartVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
-	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories, input.ReplicationState)
+	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
 
 	return &InternalWorkflowMutation{
 		ExecutionInfo:    serializedExecutionInfo,
-		ReplicationState: input.ReplicationState,
 		VersionHistories: serializedVersionHistories,
 		StartVersion:     startVersion,
 		LastWriteVersion: lastWriteVersion,
@@ -703,18 +702,17 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		return nil, err
 	}
 
-	startVersion, err := getStartVersion(input.VersionHistories, input.ReplicationState)
+	startVersion, err := getStartVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
-	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories, input.ReplicationState)
+	lastWriteVersion, err := getLastWriteVersion(input.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
 
 	return &InternalWorkflowSnapshot{
 		ExecutionInfo:    serializedExecutionInfo,
-		ReplicationState: input.ReplicationState,
 		VersionHistories: serializedVersionHistories,
 		StartVersion:     startVersion,
 		LastWriteVersion: lastWriteVersion,
@@ -761,39 +759,45 @@ func (m *executionManagerImpl) DeserializeVersionHistories(
 }
 
 func (m *executionManagerImpl) DeleteWorkflowExecution(
+	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,
 ) error {
-	return m.persistence.DeleteWorkflowExecution(request)
+	return m.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
 func (m *executionManagerImpl) DeleteCurrentWorkflowExecution(
+	ctx context.Context,
 	request *DeleteCurrentWorkflowExecutionRequest,
 ) error {
-	return m.persistence.DeleteCurrentWorkflowExecution(request)
+	return m.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 }
 
 func (m *executionManagerImpl) GetCurrentExecution(
+	ctx context.Context,
 	request *GetCurrentExecutionRequest,
 ) (*GetCurrentExecutionResponse, error) {
-	return m.persistence.GetCurrentExecution(request)
+	return m.persistence.GetCurrentExecution(ctx, request)
 }
 
 func (m *executionManagerImpl) ListCurrentExecutions(
+	ctx context.Context,
 	request *ListCurrentExecutionsRequest,
 ) (*ListCurrentExecutionsResponse, error) {
-	return m.persistence.ListCurrentExecutions(request)
+	return m.persistence.ListCurrentExecutions(ctx, request)
 }
 
 func (m *executionManagerImpl) IsWorkflowExecutionExists(
+	ctx context.Context,
 	request *IsWorkflowExecutionExistsRequest,
 ) (*IsWorkflowExecutionExistsResponse, error) {
-	return m.persistence.IsWorkflowExecutionExists(request)
+	return m.persistence.IsWorkflowExecutionExists(ctx, request)
 }
 
 func (m *executionManagerImpl) ListConcreteExecutions(
+	ctx context.Context,
 	request *ListConcreteExecutionsRequest,
 ) (*ListConcreteExecutionsResponse, error) {
-	response, err := m.persistence.ListConcreteExecutions(request)
+	response, err := m.persistence.ListConcreteExecutions(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -820,112 +824,203 @@ func (m *executionManagerImpl) ListConcreteExecutions(
 
 // Transfer task related methods
 func (m *executionManagerImpl) GetTransferTasks(
+	ctx context.Context,
 	request *GetTransferTasksRequest,
 ) (*GetTransferTasksResponse, error) {
-	return m.persistence.GetTransferTasks(request)
+	return m.persistence.GetTransferTasks(ctx, request)
 }
 
 func (m *executionManagerImpl) CompleteTransferTask(
+	ctx context.Context,
 	request *CompleteTransferTaskRequest,
 ) error {
-	return m.persistence.CompleteTransferTask(request)
+	return m.persistence.CompleteTransferTask(ctx, request)
 }
 
 func (m *executionManagerImpl) RangeCompleteTransferTask(
+	ctx context.Context,
 	request *RangeCompleteTransferTaskRequest,
 ) error {
-	return m.persistence.RangeCompleteTransferTask(request)
+	return m.persistence.RangeCompleteTransferTask(ctx, request)
 }
 
 // Replication task related methods
 func (m *executionManagerImpl) GetReplicationTasks(
+	ctx context.Context,
 	request *GetReplicationTasksRequest,
 ) (*GetReplicationTasksResponse, error) {
-	return m.persistence.GetReplicationTasks(request)
+	resp, err := m.persistence.GetReplicationTasks(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetReplicationTasksResponse{
+		Tasks:         m.fromInternalReplicationTaskInfos(resp.Tasks),
+		NextPageToken: resp.NextPageToken,
+	}, nil
 }
 
 func (m *executionManagerImpl) CompleteReplicationTask(
+	ctx context.Context,
 	request *CompleteReplicationTaskRequest,
 ) error {
-	return m.persistence.CompleteReplicationTask(request)
+	return m.persistence.CompleteReplicationTask(ctx, request)
 }
 
 func (m *executionManagerImpl) RangeCompleteReplicationTask(
+	ctx context.Context,
 	request *RangeCompleteReplicationTaskRequest,
 ) error {
-	return m.persistence.RangeCompleteReplicationTask(request)
+	return m.persistence.RangeCompleteReplicationTask(ctx, request)
 }
 
 func (m *executionManagerImpl) PutReplicationTaskToDLQ(
+	ctx context.Context,
 	request *PutReplicationTaskToDLQRequest,
 ) error {
-	return m.persistence.PutReplicationTaskToDLQ(request)
+	internalRequest := &InternalPutReplicationTaskToDLQRequest{
+		SourceClusterName: request.SourceClusterName,
+		TaskInfo:          m.toInternalReplicationTaskInfo(request.TaskInfo),
+	}
+	return m.persistence.PutReplicationTaskToDLQ(ctx, internalRequest)
 }
 
 func (m *executionManagerImpl) GetReplicationTasksFromDLQ(
+	ctx context.Context,
 	request *GetReplicationTasksFromDLQRequest,
 ) (*GetReplicationTasksFromDLQResponse, error) {
-	return m.persistence.GetReplicationTasksFromDLQ(request)
+	resp, err := m.persistence.GetReplicationTasksFromDLQ(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return &GetReplicationTasksFromDLQResponse{
+		Tasks:         m.fromInternalReplicationTaskInfos(resp.Tasks),
+		NextPageToken: resp.NextPageToken,
+	}, nil
 }
 
 func (m *executionManagerImpl) GetReplicationDLQSize(
+	ctx context.Context,
 	request *GetReplicationDLQSizeRequest,
 ) (*GetReplicationDLQSizeResponse, error) {
-	return m.persistence.GetReplicationDLQSize(request)
+	return m.persistence.GetReplicationDLQSize(ctx, request)
 }
 
 func (m *executionManagerImpl) DeleteReplicationTaskFromDLQ(
+	ctx context.Context,
 	request *DeleteReplicationTaskFromDLQRequest,
 ) error {
-	return m.persistence.DeleteReplicationTaskFromDLQ(request)
+	return m.persistence.DeleteReplicationTaskFromDLQ(ctx, request)
 }
 
 func (m *executionManagerImpl) RangeDeleteReplicationTaskFromDLQ(
+	ctx context.Context,
 	request *RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
-	return m.persistence.RangeDeleteReplicationTaskFromDLQ(request)
+	return m.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 }
 
 func (m *executionManagerImpl) CreateFailoverMarkerTasks(
+	ctx context.Context,
 	request *CreateFailoverMarkersRequest,
 ) error {
-	return m.persistence.CreateFailoverMarkerTasks(request)
+	return m.persistence.CreateFailoverMarkerTasks(ctx, request)
 }
 
 // Timer related methods.
 func (m *executionManagerImpl) GetTimerIndexTasks(
+	ctx context.Context,
 	request *GetTimerIndexTasksRequest,
 ) (*GetTimerIndexTasksResponse, error) {
-	return m.persistence.GetTimerIndexTasks(request)
+	return m.persistence.GetTimerIndexTasks(ctx, request)
 }
 
 func (m *executionManagerImpl) CompleteTimerTask(
+	ctx context.Context,
 	request *CompleteTimerTaskRequest,
 ) error {
-	return m.persistence.CompleteTimerTask(request)
+	return m.persistence.CompleteTimerTask(ctx, request)
 }
 
 func (m *executionManagerImpl) RangeCompleteTimerTask(
+	ctx context.Context,
 	request *RangeCompleteTimerTaskRequest,
 ) error {
-	return m.persistence.RangeCompleteTimerTask(request)
+	return m.persistence.RangeCompleteTimerTask(ctx, request)
 }
 
 func (m *executionManagerImpl) Close() {
 	m.persistence.Close()
 }
 
+func (m *executionManagerImpl) fromInternalReplicationTaskInfos(internalInfos []*InternalReplicationTaskInfo) []*ReplicationTaskInfo {
+	if internalInfos == nil {
+		return nil
+	}
+	infos := make([]*ReplicationTaskInfo, len(internalInfos), len(internalInfos))
+	for i := 0; i < len(internalInfos); i++ {
+		infos[i] = m.fromInternalReplicationTaskInfo(internalInfos[i])
+	}
+	return infos
+}
+
+func (m *executionManagerImpl) fromInternalReplicationTaskInfo(internalInfo *InternalReplicationTaskInfo) *ReplicationTaskInfo {
+	if internalInfo == nil {
+		return nil
+	}
+	return &ReplicationTaskInfo{
+		DomainID:          internalInfo.DomainID,
+		WorkflowID:        internalInfo.WorkflowID,
+		RunID:             internalInfo.RunID,
+		TaskID:            internalInfo.TaskID,
+		TaskType:          internalInfo.TaskType,
+		FirstEventID:      internalInfo.FirstEventID,
+		NextEventID:       internalInfo.NextEventID,
+		Version:           internalInfo.Version,
+		ScheduledID:       internalInfo.ScheduledID,
+		BranchToken:       internalInfo.BranchToken,
+		NewRunBranchToken: internalInfo.NewRunBranchToken,
+		CreationTime:      internalInfo.CreationTime,
+	}
+}
+
+func (m *executionManagerImpl) toInternalReplicationTaskInfos(infos []*ReplicationTaskInfo) []*InternalReplicationTaskInfo {
+	if infos == nil {
+		return nil
+	}
+	internalInfos := make([]*InternalReplicationTaskInfo, len(infos), len(infos))
+	for i := 0; i < len(infos); i++ {
+		internalInfos[i] = m.toInternalReplicationTaskInfo(infos[i])
+	}
+	return internalInfos
+}
+
+func (m *executionManagerImpl) toInternalReplicationTaskInfo(info *ReplicationTaskInfo) *InternalReplicationTaskInfo {
+	if info == nil {
+		return nil
+	}
+	return &InternalReplicationTaskInfo{
+		DomainID:          info.DomainID,
+		WorkflowID:        info.WorkflowID,
+		RunID:             info.RunID,
+		TaskID:            info.TaskID,
+		TaskType:          info.TaskType,
+		FirstEventID:      info.FirstEventID,
+		NextEventID:       info.NextEventID,
+		Version:           info.Version,
+		ScheduledID:       info.ScheduledID,
+		BranchToken:       info.BranchToken,
+		NewRunBranchToken: info.NewRunBranchToken,
+		CreationTime:      info.CreationTime,
+	}
+}
+
 func getStartVersion(
 	versionHistories *VersionHistories,
-	replicationState *ReplicationState,
 ) (int64, error) {
 
-	if replicationState == nil && versionHistories == nil {
+	if versionHistories == nil {
 		return common.EmptyVersion, nil
-	}
-
-	if replicationState != nil {
-		return replicationState.StartVersion, nil
 	}
 
 	versionHistory, err := versionHistories.GetCurrentVersionHistory()
@@ -941,15 +1036,10 @@ func getStartVersion(
 
 func getLastWriteVersion(
 	versionHistories *VersionHistories,
-	replicationState *ReplicationState,
 ) (int64, error) {
 
-	if replicationState == nil && versionHistories == nil {
+	if versionHistories == nil {
 		return common.EmptyVersion, nil
-	}
-
-	if replicationState != nil {
-		return replicationState.LastWriteVersion, nil
 	}
 
 	versionHistory, err := versionHistories.GetCurrentVersionHistory()

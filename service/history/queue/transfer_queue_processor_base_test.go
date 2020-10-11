@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -123,7 +124,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 		},
 	}
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
-	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+	mockExecutionManager.On("GetTransferTasks", mock.Anything, &persistence.GetTransferTasksRequest{
 		ReadLevel:    ackLevel.(transferTaskKey).taskID,
 		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
@@ -137,6 +138,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 	processorBase := s.newTestTransferQueueProcessorBase(
 		processingQueueStates,
 		updateMaxReadLevel,
+		nil,
 		nil,
 		nil,
 	)
@@ -187,7 +189,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 		},
 	}
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
-	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+	mockExecutionManager.On("GetTransferTasks", mock.Anything, &persistence.GetTransferTasksRequest{
 		ReadLevel:    ackLevel.(transferTaskKey).taskID,
 		MaxReadLevel: shardMaxLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
@@ -201,6 +203,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 	processorBase := s.newTestTransferQueueProcessorBase(
 		processingQueueStates,
 		updateMaxReadLevel,
+		nil,
 		nil,
 		nil,
 	)
@@ -255,7 +258,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPa
 		},
 	}
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
-	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+	mockExecutionManager.On("GetTransferTasks", mock.Anything, &persistence.GetTransferTasksRequest{
 		ReadLevel:    ackLevel.(transferTaskKey).taskID,
 		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
@@ -269,6 +272,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPa
 	processorBase := s.newTestTransferQueueProcessorBase(
 		processingQueueStates,
 		updateMaxReadLevel,
+		nil,
 		nil,
 		nil,
 	)
@@ -298,13 +302,14 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_NoNextPage() {
 		Tasks:         []*persistence.TransferTaskInfo{{}, {}, {}},
 		NextPageToken: nil,
 	}
-	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+	mockExecutionManager.On("GetTransferTasks", mock.Anything, &persistence.GetTransferTasksRequest{
 		ReadLevel:    readLevel.(transferTaskKey).taskID,
 		MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
 	processorBase := s.newTestTransferQueueProcessorBase(
+		nil,
 		nil,
 		nil,
 		nil,
@@ -326,13 +331,14 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_WithNextPage() {
 		Tasks:         []*persistence.TransferTaskInfo{{}, {}, {}},
 		NextPageToken: []byte{1, 2, 3},
 	}
-	mockExecutionManager.On("GetTransferTasks", &persistence.GetTransferTasksRequest{
+	mockExecutionManager.On("GetTransferTasks", mock.Anything, &persistence.GetTransferTasksRequest{
 		ReadLevel:    readLevel.(transferTaskKey).taskID,
 		MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
 	}).Return(getTransferTaskResponse, nil).Once()
 
 	processorBase := s.newTestTransferQueueProcessorBase(
+		nil,
 		nil,
 		nil,
 		nil,
@@ -348,7 +354,8 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_WithNextPage() {
 func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessorBase(
 	processingQueueStates []ProcessingQueueState,
 	maxReadLevel updateMaxReadLevelFn,
-	updateTransferAckLevel updateClusterAckLevelFn,
+	updateClusterAckLevel updateClusterAckLevelFn,
+	updateProcessingQueueStates updateProcessingQueueStatesFn,
 	transferQueueShutdown queueShutdownFn,
 ) *transferQueueProcessorBase {
 	return newTransferQueueProcessorBase(
@@ -357,7 +364,8 @@ func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessorBase(
 		s.mockTaskProcessor,
 		newTransferQueueProcessorOptions(s.mockShard.GetConfig(), true, false),
 		maxReadLevel,
-		updateTransferAckLevel,
+		updateClusterAckLevel,
+		updateProcessingQueueStates,
 		transferQueueShutdown,
 		nil,
 		nil,

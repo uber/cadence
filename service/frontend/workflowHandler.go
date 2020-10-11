@@ -94,7 +94,6 @@ type (
 		PersistenceToken  []byte
 		TransientDecision *gen.TransientDecisionInfo
 		BranchToken       []byte
-		ReplicationInfo   map[string]*gen.ReplicationInfo
 	}
 
 	domainGetter interface {
@@ -467,14 +466,14 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if len(pollRequest.GetDomain()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(pollRequest.GetDomain(), scope) {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
 	if err := wh.validateTaskList(pollRequest.TaskList, scope); err != nil {
 		return nil, err
 	}
-	if len(pollRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(pollRequest.GetIdentity(), scope) {
 		return nil, wh.error(errIdentityTooLong, scope)
 	}
 
@@ -551,11 +550,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope, tagsForErrorLog...)
 	}
-	if len(pollRequest.GetDomain()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(pollRequest.GetDomain(), scope) {
 		return nil, wh.error(errDomainTooLong, scope, tagsForErrorLog...)
 	}
 
-	if len(pollRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(pollRequest.GetIdentity(), scope) {
 		return nil, wh.error(errIdentityTooLong, scope, tagsForErrorLog...)
 	}
 
@@ -894,7 +893,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	if err != nil {
 		return wh.error(err, scope)
 	}
-	if len(completeRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -994,7 +993,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(errActivityIDNotSet, scope)
 	}
 
-	if len(completeRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1112,7 +1111,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		return errShuttingDown
 	}
 
-	if len(failedRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1187,7 +1186,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	if activityID == "" {
 		return wh.error(errActivityIDNotSet, scope)
 	}
-	if len(failedRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1294,7 +1293,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		return errShuttingDown
 	}
 
-	if len(cancelRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(cancelRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1381,7 +1380,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	if activityID == "" {
 		return wh.error(errActivityIDNotSet, scope)
 	}
-	if len(cancelRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(cancelRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1507,7 +1506,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(err, scope)
 	}
 
-	if len(completeRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope) {
 		return nil, wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1584,7 +1583,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		return errShuttingDown
 	}
 
-	if len(failedRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1736,7 +1735,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if len(domainName) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(domainName, scope) {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
@@ -1744,7 +1743,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errWorkflowIDNotSet, scope)
 	}
 
-	if len(startRequest.GetWorkflowId()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(startRequest.GetWorkflowId(), scope) {
 		return nil, wh.error(errWorkflowIDTooLong, scope)
 	}
 
@@ -1764,7 +1763,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errWorkflowTypeNotSet, scope)
 	}
 
-	if len(startRequest.WorkflowType.GetName()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(startRequest.WorkflowType.GetName(), scope) {
 		return nil, wh.error(errWorkflowTypeTooLong, scope)
 	}
 
@@ -1784,7 +1783,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errRequestIDNotSet, scope)
 	}
 
-	if len(startRequest.GetRequestId()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(startRequest.GetRequestId(), scope) {
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
@@ -1994,6 +1993,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	getHistory := func(firstEventID, nextEventID int64, nextPageToken []byte) error {
 		if isRawHistoryEnabled {
 			historyBlob, token.PersistenceToken, err = wh.getRawHistory(
+				ctx,
 				scope,
 				domainID,
 				*execution,
@@ -2006,6 +2006,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			)
 		} else {
 			history, token.PersistenceToken, err = wh.getHistory(
+				ctx,
 				scope,
 				domainID,
 				*execution,
@@ -2104,7 +2105,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(signalRequest.GetDomain()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalRequest.GetDomain(), scope) {
 		return wh.error(errDomainTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2117,11 +2118,11 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(signalRequest.GetSignalName()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalRequest.GetSignalName(), scope) {
 		return wh.error(errSignalNameTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(signalRequest.GetRequestId()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalRequest.GetRequestId(), scope) {
 		return wh.error(errRequestIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2196,7 +2197,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(domainName) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(domainName, scope) {
 		return nil, wh.error(errDomainTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2205,7 +2206,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(signalWithStartRequest.GetWorkflowId()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalWithStartRequest.GetWorkflowId(), scope) {
 		return nil, wh.error(errWorkflowIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2214,7 +2215,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(signalWithStartRequest.GetSignalName()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalWithStartRequest.GetSignalName(), scope) {
 		return nil, wh.error(errSignalNameTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2223,7 +2224,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if len(signalWithStartRequest.WorkflowType.GetName()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalWithStartRequest.WorkflowType.GetName(), scope) {
 		return nil, wh.error(errWorkflowTypeTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2231,7 +2232,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, err
 	}
 
-	if len(signalWithStartRequest.GetRequestId()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(signalWithStartRequest.GetRequestId(), scope) {
 		return nil, wh.error(errRequestIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2544,6 +2545,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 			err = errNoPermission
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByWorkflowID(
+				ctx,
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
@@ -2555,15 +2557,18 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
-				ListWorkflowExecutionsRequest: baseReq,
-				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
-			})
+			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByType(
+				ctx,
+				&persistence.ListWorkflowExecutionsByTypeRequest{
+					ListWorkflowExecutionsRequest: baseReq,
+					WorkflowTypeName:              listRequest.TypeFilter.GetName(),
+				},
+			)
 		}
 		wh.GetLogger().Debug("List open workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
 	} else {
-		persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutions(&baseReq)
+		persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutions(ctx, &baseReq)
 	}
 
 	if err != nil {
@@ -2757,10 +2762,12 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 			err = errNoPermission
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByWorkflowID(
+				ctx,
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
-				})
+				},
+			)
 		}
 		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByID)
@@ -2768,10 +2775,13 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
-				ListWorkflowExecutionsRequest: baseReq,
-				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
-			})
+			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByType(
+				ctx,
+				&persistence.ListWorkflowExecutionsByTypeRequest{
+					ListWorkflowExecutionsRequest: baseReq,
+					WorkflowTypeName:              listRequest.TypeFilter.GetName(),
+				},
+			)
 		}
 		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
@@ -2779,15 +2789,18 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
-				ListWorkflowExecutionsRequest: baseReq,
-				Status:                        listRequest.GetStatusFilter(),
-			})
+			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByStatus(
+				ctx,
+				&persistence.ListClosedWorkflowExecutionsByStatusRequest{
+					ListWorkflowExecutionsRequest: baseReq,
+					Status:                        listRequest.GetStatusFilter(),
+				},
+			)
 		}
 		wh.GetLogger().Debug("List closed workflow with filter",
 			tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByStatus)
 	} else {
-		persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutions(&baseReq)
+		persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutions(ctx, &baseReq)
 	}
 
 	if err != nil {
@@ -2856,7 +2869,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		NextPageToken: listRequest.NextPageToken,
 		Query:         listRequest.GetQuery(),
 	}
-	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(req)
+	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(ctx, req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2923,7 +2936,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		NextPageToken: listRequest.NextPageToken,
 		Query:         listRequest.GetQuery(),
 	}
-	persistenceResp, err := wh.GetVisibilityManager().ScanWorkflowExecutions(req)
+	persistenceResp, err := wh.GetVisibilityManager().ScanWorkflowExecutions(ctx, req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2979,7 +2992,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		Domain:     domain,
 		Query:      countRequest.GetQuery(),
 	}
-	persistenceResp, err := wh.GetVisibilityManager().CountWorkflowExecutions(req)
+	persistenceResp, err := wh.GetVisibilityManager().CountWorkflowExecutions(ctx, req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3277,6 +3290,7 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 }
 
 func (wh *WorkflowHandler) getRawHistory(
+	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
 	execution gen.WorkflowExecution,
@@ -3290,7 +3304,7 @@ func (wh *WorkflowHandler) getRawHistory(
 	rawHistory := []*gen.DataBlob{}
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 
-	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(&persistence.ReadHistoryBranchRequest{
+	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -3342,6 +3356,7 @@ func (wh *WorkflowHandler) getRawHistory(
 }
 
 func (wh *WorkflowHandler) getHistory(
+	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
 	execution gen.WorkflowExecution,
@@ -3358,7 +3373,7 @@ func (wh *WorkflowHandler) getHistory(
 	isFirstPage := len(nextPageToken) == 0
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 	var err error
-	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
+	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -3517,7 +3532,7 @@ func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope metrics.Scope
 	if t == nil || t.Name == nil || t.GetName() == "" {
 		return wh.error(errTaskListNotSet, scope)
 	}
-	if len(t.GetName()) > wh.config.MaxIDLengthLimit() {
+	if !wh.validIDLength(t.GetName(), scope) {
 		return wh.error(errTaskListTooLong, scope)
 	}
 	return nil
@@ -3588,6 +3603,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		}
 		scope = scope.Tagged(metrics.DomainTag(domain.GetInfo().Name))
 		history, persistenceToken, err = wh.getHistory(
+			ctx,
 			scope,
 			domainID,
 			*matchingResp.WorkflowExecution,
@@ -3858,6 +3874,14 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		NextPageToken: resp.NextPageToken,
 		Archived:      common.BoolPtr(true),
 	}, nil
+}
+
+func (wh *WorkflowHandler) validIDLength(id string, scope metrics.Scope) bool {
+	valid := len(id) <= wh.config.MaxIDLengthLimit()
+	if len(id) > wh.config.MaxIDLengthWarnLimit() {
+		scope.IncCounter(metrics.CadenceErrIDLengthExceededWarnLimit)
+	}
+	return valid
 }
 
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {

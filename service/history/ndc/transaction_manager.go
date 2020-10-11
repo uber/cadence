@@ -23,7 +23,7 @@
 package ndc
 
 import (
-	ctx "context"
+	"context"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -107,37 +107,37 @@ const (
 type (
 	transactionManager interface {
 		createWorkflow(
-			ctx ctx.Context,
+			ctx context.Context,
 			now time.Time,
 			targetWorkflow execution.Workflow,
 		) error
 		updateWorkflow(
-			ctx ctx.Context,
+			ctx context.Context,
 			now time.Time,
 			isWorkflowRebuilt bool,
 			targetWorkflow execution.Workflow,
 			newWorkflow execution.Workflow,
 		) error
 		backfillWorkflow(
-			ctx ctx.Context,
+			ctx context.Context,
 			now time.Time,
 			targetWorkflow execution.Workflow,
 			targetWorkflowEvents *persistence.WorkflowEvents,
 		) error
 
 		checkWorkflowExists(
-			ctx ctx.Context,
+			ctx context.Context,
 			domainID string,
 			workflowID string,
 			runID string,
 		) (bool, error)
 		getCurrentWorkflowRunID(
-			ctx ctx.Context,
+			ctx context.Context,
 			domainID string,
 			workflowID string,
 		) (string, error)
 		loadNDCWorkflow(
-			ctx ctx.Context,
+			ctx context.Context,
 			domainID string,
 			workflowID string,
 			runID string,
@@ -195,7 +195,7 @@ func newTransactionManager(
 }
 
 func (r *transactionManagerImpl) createWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	now time.Time,
 	targetWorkflow execution.Workflow,
 ) error {
@@ -208,7 +208,7 @@ func (r *transactionManagerImpl) createWorkflow(
 }
 
 func (r *transactionManagerImpl) updateWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	now time.Time,
 	isWorkflowRebuilt bool,
 	targetWorkflow execution.Workflow,
@@ -225,7 +225,7 @@ func (r *transactionManagerImpl) updateWorkflow(
 }
 
 func (r *transactionManagerImpl) backfillWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	now time.Time,
 	targetWorkflow execution.Workflow,
 	targetWorkflowEvents *persistence.WorkflowEvents,
@@ -266,7 +266,7 @@ func (r *transactionManagerImpl) backfillWorkflow(
 }
 
 func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
-	ctx ctx.Context,
+	ctx context.Context,
 	targetWorkflow execution.Workflow,
 	targetWorkflowEvents *persistence.WorkflowEvents,
 ) (persistence.UpdateWorkflowMode, execution.TransactionPolicy, error) {
@@ -374,13 +374,14 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 }
 
 func (r *transactionManagerImpl) checkWorkflowExists(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
 ) (bool, error) {
 
 	_, err := r.shard.GetExecutionManager().GetWorkflowExecution(
+		ctx,
 		&persistence.GetWorkflowExecutionRequest{
 			DomainID: domainID,
 			Execution: shared.WorkflowExecution{
@@ -401,12 +402,13 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 }
 
 func (r *transactionManagerImpl) getCurrentWorkflowRunID(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 ) (string, error) {
 
 	resp, err := r.shard.GetExecutionManager().GetCurrentExecution(
+		ctx,
 		&persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
 			WorkflowID: workflowID,
@@ -424,7 +426,7 @@ func (r *transactionManagerImpl) getCurrentWorkflowRunID(
 }
 
 func (r *transactionManagerImpl) loadNDCWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -453,7 +455,7 @@ func (r *transactionManagerImpl) loadNDCWorkflow(
 }
 
 func (r *transactionManagerImpl) isWorkflowCurrent(
-	ctx ctx.Context,
+	ctx context.Context,
 	targetWorkflow execution.Workflow,
 ) (bool, error) {
 

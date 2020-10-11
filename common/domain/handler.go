@@ -127,7 +127,7 @@ func (d *HandlerImpl) RegisterDomain(
 	}
 
 	// first check if the name is already registered as the local domain
-	_, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: registerRequest.GetName()})
+	_, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: registerRequest.GetName()})
 	switch err.(type) {
 	case nil:
 		// domain already exists, cannot proceed
@@ -245,13 +245,14 @@ func (d *HandlerImpl) RegisterDomain(
 		FailoverVersion:   failoverVersion,
 	}
 
-	domainResponse, err := d.metadataMgr.CreateDomain(domainRequest)
+	domainResponse, err := d.metadataMgr.CreateDomain(ctx, domainRequest)
 	if err != nil {
 		return err
 	}
 
 	if domainRequest.IsGlobalDomain {
 		err = d.domainReplicator.HandleTransmissionTask(
+			ctx,
 			replicator.DomainOperationCreate,
 			domainRequest.Info,
 			domainRequest.Config,
@@ -285,7 +286,7 @@ func (d *HandlerImpl) ListDomains(
 		pageSize = int(listRequest.GetPageSize())
 	}
 
-	resp, err := d.metadataMgr.ListDomains(&persistence.ListDomainsRequest{
+	resp, err := d.metadataMgr.ListDomains(ctx, &persistence.ListDomainsRequest{
 		PageSize:      pageSize,
 		NextPageToken: listRequest.NextPageToken,
 	})
@@ -323,7 +324,7 @@ func (d *HandlerImpl) DescribeDomain(
 		Name: describeRequest.GetName(),
 		ID:   describeRequest.GetUUID(),
 	}
-	resp, err := d.metadataMgr.GetDomain(req)
+	resp, err := d.metadataMgr.GetDomain(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -346,12 +347,12 @@ func (d *HandlerImpl) UpdateDomain(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := d.metadataMgr.GetMetadata()
+	metadata, err := d.metadataMgr.GetMetadata(ctx)
 	if err != nil {
 		return nil, err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: updateRequest.GetName()})
+	getResponse, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +427,7 @@ func (d *HandlerImpl) UpdateDomain(
 		return nil, err
 	}
 
-	//Update replication config
+	// Update replication config
 	replicationConfig, replicationConfigChanged, activeClusterChanged, err := d.updateReplicationConfig(
 		replicationConfig,
 		updateRequest.ReplicationConfiguration,
@@ -454,6 +455,7 @@ func (d *HandlerImpl) UpdateDomain(
 		}
 		endTime := time.Now().UTC().Add(time.Duration(updateRequest.GetFailoverTimeoutInSeconds()) * time.Second).UnixNano()
 		gracefulFailoverEndTime = &endTime
+		previousFailoverVersion = failoverVersion
 	}
 
 	configurationChanged = historyArchivalConfigChanged || visibilityArchivalConfigChanged || domainInfoChanged || domainConfigChanged || deleteBinaryChanged || replicationConfigChanged
@@ -494,8 +496,8 @@ func (d *HandlerImpl) UpdateDomain(
 			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
 				// force failover cleanup graceful failover state
 				gracefulFailoverEndTime = nil
+				previousFailoverVersion = common.InitialPreviousFailoverVersion
 			}
-			previousFailoverVersion = failoverVersion
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
 				failoverVersion,
@@ -514,7 +516,7 @@ func (d *HandlerImpl) UpdateDomain(
 			PreviousFailoverVersion:     previousFailoverVersion,
 			NotificationVersion:         notificationVersion,
 		}
-		err = d.metadataMgr.UpdateDomain(updateReq)
+		err = d.metadataMgr.UpdateDomain(ctx, updateReq)
 		if err != nil {
 			return nil, err
 		}
@@ -522,6 +524,7 @@ func (d *HandlerImpl) UpdateDomain(
 
 	if isGlobalDomain {
 		if err := d.domainReplicator.HandleTransmissionTask(
+			ctx,
 			replicator.DomainOperationUpdate,
 			info,
 			config,
@@ -564,12 +567,12 @@ func (d *HandlerImpl) DeprecateDomain(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := d.metadataMgr.GetMetadata()
+	metadata, err := d.metadataMgr.GetMetadata(ctx)
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
+	getResponse, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
 	if err != nil {
 		return err
 	}
@@ -585,7 +588,7 @@ func (d *HandlerImpl) DeprecateDomain(
 		FailoverNotificationVersion: getResponse.FailoverNotificationVersion,
 		NotificationVersion:         notificationVersion,
 	}
-	err = d.metadataMgr.UpdateDomain(updateReq)
+	err = d.metadataMgr.UpdateDomain(ctx, updateReq)
 	if err != nil {
 		return err
 	}

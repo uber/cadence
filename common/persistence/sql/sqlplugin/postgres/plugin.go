@@ -24,13 +24,17 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
+	"runtime"
 
-	"github.com/iancoleman/strcase"
-	"github.com/jmoiron/sqlx"
-
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
+  
+	"github.com/iancoleman/strcase"
+	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -136,4 +140,36 @@ func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {
 		sslParams.Set("sslmode", "disable")
 	}
 	return
+}
+
+const (
+	testSchemaDir = "schema/postgres"
+)
+
+// GetTestClusterOption return test options
+func GetTestClusterOption() *pt.TestBaseOptions {
+	testUser := "postgres"
+	testPassword := "cadence"
+
+	if runtime.GOOS == "darwin" {
+		testUser = os.Getenv("USER")
+		testPassword = ""
+	}
+
+	if os.Getenv("POSTGRES_USER") != "" {
+		testUser = os.Getenv("POSTGRES_USER")
+	}
+
+	if os.Getenv("POSTGRES_PASSWORD") != "" {
+		testUser = os.Getenv("POSTGRES_PASSWORD")
+	}
+
+	return &pt.TestBaseOptions{
+		SQLDBPluginName: PluginName,
+		DBUsername:      testUser,
+		DBPassword:      testPassword,
+		DBHost:          environment.GetPostgresAddress(),
+		DBPort:          environment.GetPostgresPort(),
+		SchemaDir:       testSchemaDir,
+	}
 }

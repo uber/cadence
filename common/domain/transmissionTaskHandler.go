@@ -21,6 +21,8 @@
 package domain
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -36,6 +38,7 @@ type (
 	// Replicator is the interface which can replicate the domain
 	Replicator interface {
 		HandleTransmissionTask(
+			ctx context.Context,
 			domainOperation replicator.DomainOperation,
 			info *persistence.DomainInfo,
 			config *persistence.DomainConfig,
@@ -63,6 +66,7 @@ func NewDomainReplicator(replicationMessageSink messaging.Producer, logger log.L
 
 // HandleTransmissionTask handle transmission of the domain replication task
 func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
+	ctx context.Context,
 	domainOperation replicator.DomainOperation,
 	info *persistence.DomainInfo,
 	config *persistence.DomainConfig,
@@ -113,6 +117,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
 	}
 
 	return domainReplicator.replicationMessageSink.Publish(
+		ctx,
 		&replicator.ReplicationTask{
 			TaskType:             &taskType,
 			DomainTaskAttributes: task,

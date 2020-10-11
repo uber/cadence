@@ -52,7 +52,6 @@ var keys = map[Key]string{
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
-	EnableNDC:                           "system.enableNDC",
 	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
@@ -70,6 +69,7 @@ var keys = map[Key]string{
 	DisallowQuery:                       "system.disallowQuery",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
+	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
 	EnableAuthorization:                 "system.enableAuthorization",
@@ -82,6 +82,7 @@ var keys = map[Key]string{
 	HistoryCountLimitError: "limit.historyCount.error",
 	HistoryCountLimitWarn:  "limit.historyCount.warn",
 	MaxIDLengthLimit:       "limit.maxIDLength",
+	MaxIDLengthWarnLimit:   "limit.maxIDWarnLength",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
@@ -181,6 +182,8 @@ var keys = map[Key]string{
 	QueueProcessorSplitLookAheadDurationByDomainID:        "history.queueProcessorSplitLookAheadDurationByDomainID",
 	QueueProcessorPollBackoffInterval:                     "history.queueProcessorPollBackoffInterval",
 	QueueProcessorPollBackoffIntervalJitterCoefficient:    "history.queueProcessorPollBackoffIntervalJitterCoefficient",
+	QueueProcessorEnablePersistQueueStates:                "history.queueProcessorEnablePersistQueueStates",
+	QueueProcessorEnableLoadQueueStates:                   "history.queueProcessorEnableLoadQueueStates",
 	TimerTaskBatchSize:                                    "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                  "history.timerTaskWorkerCount",
 	TimerTaskMaxRetryCount:                                "history.timerTaskMaxRetryCount",
@@ -343,8 +346,6 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
-	// EnableNDC is key for enable N data center events replication
-	EnableNDC
 	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
@@ -401,6 +402,9 @@ const (
 	// MaxIDLengthLimit is the length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
 	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	MaxIDLengthLimit
+	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
+	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
+	MaxIDLengthWarnLimit
 
 	// key for frontend
 
@@ -596,6 +600,10 @@ const (
 	QueueProcessorPollBackoffInterval
 	// QueueProcessorPollBackoffIntervalJitterCoefficient backoff interval jitter coefficient
 	QueueProcessorPollBackoffIntervalJitterCoefficient
+	// QueueProcessorEnablePersistQueueStates indicates whether processing queue states should be persisted
+	QueueProcessorEnablePersistQueueStates
+	// QueueProcessorEnableLoadQueueStates indicates whether processing queue states should be loaded
+	QueueProcessorEnableLoadQueueStates
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	TimerTaskBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
@@ -838,6 +846,8 @@ const (
 	EnableParentClosePolicyWorker
 	// EnableStickyQuery indicates if sticky query should be enabled per domain
 	EnableStickyQuery
+	// EnableFailoverManager indicates if failover manager is enabled
+	EnableFailoverManager
 
 	//ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks
 	ReplicationTaskFetcherParallelism
@@ -900,10 +910,29 @@ const (
 type Filter int
 
 func (f Filter) String() string {
-	if f <= unknownFilter || f > ShardID {
+	if f <= unknownFilter || f > ClusterName {
 		return filters[unknownFilter]
 	}
 	return filters[f]
+}
+
+func parseFilter(filterName string) Filter {
+	switch filterName {
+	case "domainName":
+		return DomainName
+	case "domainID":
+		return DomainID
+	case "taskListName":
+		return TaskListName
+	case "taskType":
+		return TaskType
+	case "shardID":
+		return ShardID
+	case "clusterName":
+		return ClusterName
+	default:
+		return unknownFilter
+	}
 }
 
 var filters = []string{
@@ -913,6 +942,7 @@ var filters = []string{
 	"taskListName",
 	"taskType",
 	"shardID",
+	"clusterName",
 }
 
 const (
@@ -927,6 +957,8 @@ const (
 	TaskType
 	// ShardID is the shard id
 	ShardID
+	// ClusterName is the cluster name in a multi-region setup
+	ClusterName
 
 	// lastFilterTypeForTest must be the last one in this const group for testing purpose
 	lastFilterTypeForTest
@@ -967,5 +999,12 @@ func TaskTypeFilter(taskType int) FilterOption {
 func ShardIDFilter(shardID int) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[ShardID] = shardID
+	}
+}
+
+// ClusterNameFilter filters by cluster name
+func ClusterNameFilter(clusterName string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[ClusterName] = clusterName
 	}
 }

@@ -261,6 +261,7 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
+		context.Background(),
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
 		},
@@ -453,7 +454,7 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *r.Replicati
 	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
 	return backoff.Retry(func() error {
-		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(request)
+		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.Background(), request)
 		if err != nil {
 			p.logger.Error("Failed to put replication task to DLQ.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationTaskFetcherScope, metrics.ReplicationDLQFailed)
@@ -480,26 +481,8 @@ func (p *taskProcessorImpl) generateDLQRequest(
 			},
 		}, nil
 
-	case r.ReplicationTaskTypeHistory:
-		taskAttributes := replicationTask.GetHistoryTaskAttributes()
-		return &persistence.PutReplicationTaskToDLQRequest{
-			SourceClusterName: p.sourceCluster,
-			TaskInfo: &persistence.ReplicationTaskInfo{
-				DomainID:            taskAttributes.GetDomainId(),
-				WorkflowID:          taskAttributes.GetWorkflowId(),
-				RunID:               taskAttributes.GetRunId(),
-				TaskID:              replicationTask.GetSourceTaskId(),
-				TaskType:            persistence.ReplicationTaskTypeHistory,
-				FirstEventID:        taskAttributes.GetFirstEventId(),
-				NextEventID:         taskAttributes.GetNextEventId() + 1,
-				Version:             taskAttributes.GetVersion(),
-				LastReplicationInfo: toPersistenceReplicationInfo(taskAttributes.GetReplicationInfo()),
-				ResetWorkflow:       taskAttributes.GetResetWorkflow(),
-			},
-		}, nil
 	case r.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
-
 		eventsDataBlob := persistence.NewDataBlobFromThrift(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
@@ -542,7 +525,7 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 	for {
 		select {
 		case <-timer.C:
-			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(staticRequest)
+			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(context.Background(), staticRequest)
 			timer.Reset(backoff.JitDuration(
 				dlqMetricsEmitTimerInterval,
 				dlqMetricsEmitTimerCoefficient,
@@ -587,20 +570,6 @@ func (p *taskProcessorImpl) shouldRetryDLQ(err error) bool {
 	}
 }
 
-func toPersistenceReplicationInfo(
-	info map[string]*shared.ReplicationInfo,
-) map[string]*persistence.ReplicationInfo {
-	replicationInfoMap := make(map[string]*persistence.ReplicationInfo)
-	for k, v := range info {
-		replicationInfoMap[k] = &persistence.ReplicationInfo{
-			Version:     v.GetVersion(),
-			LastEventID: v.GetLastEventId(),
-		}
-	}
-
-	return replicationInfoMap
-}
-
 func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 	// Always update failure counter for all replicator errors
 	p.metricsClient.IncCounter(scope, metrics.ReplicatorFailures)
@@ -619,8 +588,6 @@ func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *shared.LimitExceededError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
-	case *shared.RetryTaskError:
-		p.metricsClient.IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
 	case *yarpcerrors.Status:
 		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
 			p.metricsClient.IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)

@@ -21,6 +21,8 @@
 package persistence
 
 import (
+	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -51,12 +53,15 @@ func (m *metadataManagerImpl) GetName() string {
 	return m.persistence.GetName()
 }
 
-func (m *metadataManagerImpl) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
+func (m *metadataManagerImpl) CreateDomain(
+	ctx context.Context,
+	request *CreateDomainRequest,
+) (*CreateDomainResponse, error) {
 	dc, err := m.serializeDomainConfig(request.Config)
 	if err != nil {
 		return nil, err
 	}
-	return m.persistence.CreateDomain(&InternalCreateDomainRequest{
+	return m.persistence.CreateDomain(ctx, &InternalCreateDomainRequest{
 		Info:              request.Info,
 		Config:            &dc,
 		ReplicationConfig: request.ReplicationConfig,
@@ -66,8 +71,11 @@ func (m *metadataManagerImpl) CreateDomain(request *CreateDomainRequest) (*Creat
 	})
 }
 
-func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
-	resp, err := m.persistence.GetDomain(request)
+func (m *metadataManagerImpl) GetDomain(
+	ctx context.Context,
+	request *GetDomainRequest,
+) (*GetDomainResponse, error) {
+	resp, err := m.persistence.GetDomain(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +99,15 @@ func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainRe
 	}, nil
 }
 
-func (m *metadataManagerImpl) UpdateDomain(request *UpdateDomainRequest) error {
+func (m *metadataManagerImpl) UpdateDomain(
+	ctx context.Context,
+	request *UpdateDomainRequest,
+) error {
 	dc, err := m.serializeDomainConfig(request.Config)
 	if err != nil {
 		return err
 	}
-	return m.persistence.UpdateDomain(&InternalUpdateDomainRequest{
+	return m.persistence.UpdateDomain(ctx, &InternalUpdateDomainRequest{
 		Info:                        request.Info,
 		Config:                      &dc,
 		ReplicationConfig:           request.ReplicationConfig,
@@ -109,16 +120,25 @@ func (m *metadataManagerImpl) UpdateDomain(request *UpdateDomainRequest) error {
 	})
 }
 
-func (m *metadataManagerImpl) DeleteDomain(request *DeleteDomainRequest) error {
-	return m.persistence.DeleteDomain(request)
+func (m *metadataManagerImpl) DeleteDomain(
+	ctx context.Context,
+	request *DeleteDomainRequest,
+) error {
+	return m.persistence.DeleteDomain(ctx, request)
 }
 
-func (m *metadataManagerImpl) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
-	return m.persistence.DeleteDomainByName(request)
+func (m *metadataManagerImpl) DeleteDomainByName(
+	ctx context.Context,
+	request *DeleteDomainByNameRequest,
+) error {
+	return m.persistence.DeleteDomainByName(ctx, request)
 }
 
-func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error) {
-	resp, err := m.persistence.ListDomains(request)
+func (m *metadataManagerImpl) ListDomains(
+	ctx context.Context,
+	request *ListDomainsRequest,
+) (*ListDomainsResponse, error) {
+	resp, err := m.persistence.ListDomains(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -191,8 +211,10 @@ func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) 
 	}, nil
 }
 
-func (m *metadataManagerImpl) GetMetadata() (*GetMetadataResponse, error) {
-	return m.persistence.GetMetadata()
+func (m *metadataManagerImpl) GetMetadata(
+	ctx context.Context,
+) (*GetMetadataResponse, error) {
+	return m.persistence.GetMetadata(ctx)
 }
 
 func (m *metadataManagerImpl) Close() {

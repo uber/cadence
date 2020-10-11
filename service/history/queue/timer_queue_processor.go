@@ -34,9 +34,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
-	checks "github.com/uber/cadence/common/reconciliation/common"
-	"github.com/uber/cadence/common/xdc"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -78,7 +78,7 @@ func NewTimerQueueProcessor(
 	taskProcessor task.Processor,
 	executionCache *execution.Cache,
 	archivalClient archiver.Client,
-	executionCheck checks.Invariant,
+	executionCheck invariant.Invariant,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTimerQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
@@ -106,27 +106,12 @@ func NewTimerQueueProcessor(
 
 	standbyQueueProcessors := make(map[string]*timerQueueProcessorBase)
 	standbyQueueTimerGates := make(map[string]RemoteTimerGate)
-	rereplicatorLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
-	resenderLogger := shard.GetLogger().WithTags(tag.ComponentHistoryResender)
-
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled || clusterName == currentClusterName {
 			continue
 		}
 
-		historyRereplicator := xdc.NewHistoryRereplicator(
-			currentClusterName,
-			shard.GetDomainCache(),
-			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-			func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
-				return historyEngine.ReplicateRawEvents(ctx, request)
-			},
-			shard.GetService().GetPayloadSerializer(),
-			historyReplicationTimeout,
-			config.StandbyTaskReReplicationContextTimeout,
-			rereplicatorLogger,
-		)
-		nDCHistoryResender := xdc.NewNDCHistoryResender(
+		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
@@ -135,14 +120,13 @@ func NewTimerQueueProcessor(
 			shard.GetService().GetPayloadSerializer(),
 			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
-			resenderLogger,
+			shard.GetLogger().WithTags(tag.ComponentHistoryResender),
 		)
 		standbyTaskExecutor := task.NewTimerStandbyTaskExecutor(
 			shard,
 			archivalClient,
 			executionCache,
-			historyRereplicator,
-			nDCHistoryResender,
+			historyResender,
 			logger,
 			shard.GetMetricsClient(),
 			clusterName,
@@ -429,7 +413,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 
 	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	if err := t.shard.GetExecutionManager().RangeCompleteTimerTask(&persistence.RangeCompleteTimerTaskRequest{
+	if err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
 		InclusiveBeginTimestamp: t.ackLevel,
 		ExclusiveEndTimestamp:   newAckLevelTimestamp,
 	}); err != nil {
@@ -463,7 +447,7 @@ func newTimerQueueActiveProcessor(
 		return taskAllocator.VerifyActiveTask(timer.DomainID, timer)
 	}
 
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return newTimerTaskKey(shard.UpdateTimerMaxReadLevel(clusterName), 0)
 	}
 
@@ -471,32 +455,26 @@ func newTimerQueueActiveProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.(timerTaskKey).visibilityTimestamp)
 	}
 
-	timerQueueShutdown := func() error {
-		return nil
+	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
+		pStates := convertToPersistenceTimerProcessingQueueStates(states)
+		return shard.UpdateTimerProcessingQueueStates(clusterName, pStates)
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
-	ackLevel := newTimerTaskKey(shard.GetTimerClusterAckLevel(clusterName), 0)
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			defaultProcessingQueueLevel,
-			ackLevel,
-			maximumTimerTaskKey,
-			NewDomainFilter(nil, true),
-		),
+	queueShutdown := func() error {
+		return nil
 	}
 
 	return newTimerQueueProcessorBase(
 		clusterName,
 		shard,
-		processingQueueStates,
+		loadTimerProcessingQueueStates(clusterName, shard, options, logger),
 		taskProcessor,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
-		maxReadLevel,
+		updateMaxReadLevel,
 		updateClusterAckLevel,
-		timerQueueShutdown,
+		updateProcessingQueueStates,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
@@ -526,7 +504,7 @@ func newTimerQueueStandbyProcessor(
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return newTimerTaskKey(shard.UpdateTimerMaxReadLevel(clusterName), 0)
 	}
 
@@ -534,20 +512,13 @@ func newTimerQueueStandbyProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.(timerTaskKey).visibilityTimestamp)
 	}
 
-	timerQueueShutdown := func() error {
-		return nil
+	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
+		pStates := convertToPersistenceTimerProcessingQueueStates(states)
+		return shard.UpdateTimerProcessingQueueStates(clusterName, pStates)
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
-	ackLevel := newTimerTaskKey(shard.GetTimerClusterAckLevel(clusterName), 0)
-	processingQueueStates := []ProcessingQueueState{
-		NewProcessingQueueState(
-			defaultProcessingQueueLevel,
-			ackLevel,
-			maximumTimerTaskKey,
-			NewDomainFilter(nil, true),
-		),
+	queueShutdown := func() error {
+		return nil
 	}
 
 	remoteTimerGate := NewRemoteTimerGate()
@@ -556,13 +527,14 @@ func newTimerQueueStandbyProcessor(
 	return newTimerQueueProcessorBase(
 		clusterName,
 		shard,
-		processingQueueStates,
+		loadTimerProcessingQueueStates(clusterName, shard, options, logger),
 		taskProcessor,
 		remoteTimerGate,
 		options,
-		maxReadLevel,
+		updateMaxReadLevel,
 		updateClusterAckLevel,
-		timerQueueShutdown,
+		updateProcessingQueueStates,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
@@ -602,7 +574,7 @@ func newTimerQueueFailoverProcessor(
 	}
 
 	maxReadLevelTaskKey := newTimerTaskKey(maxLevel, 0)
-	maxReadLevel := func() task.Key {
+	updateMaxReadLevel := func() task.Key {
 		return maxReadLevelTaskKey // this is a const
 	}
 
@@ -619,12 +591,10 @@ func newTimerQueueFailoverProcessor(
 		)
 	}
 
-	timerQueueShutdown := func() error {
+	queueShutdown := func() error {
 		return shard.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
-	// TODO: once persistency layer is implemented for multi-cursor queue,
-	// initialize queue states with data loaded from DB.
 	processingQueueStates := []ProcessingQueueState{
 		NewProcessingQueueState(
 			defaultProcessingQueueLevel,
@@ -641,12 +611,42 @@ func newTimerQueueFailoverProcessor(
 		taskProcessor,
 		NewLocalTimerGate(shard.GetTimeSource()),
 		options,
-		maxReadLevel,
+		updateMaxReadLevel,
 		updateClusterAckLevel,
-		timerQueueShutdown,
+		nil,
+		queueShutdown,
 		taskFilter,
 		taskExecutor,
 		logger,
 		shard.GetMetricsClient(),
 	)
+}
+
+func loadTimerProcessingQueueStates(
+	clusterName string,
+	shard shard.Context,
+	options *queueProcessorOptions,
+	logger log.Logger,
+) []ProcessingQueueState {
+	ackLevel := shard.GetTimerClusterAckLevel(clusterName)
+	if options.EnableLoadQueueStates() {
+		pStates := shard.GetTimerProcessingQueueStates(clusterName)
+		if validateProcessingQueueStates(pStates, ackLevel) {
+			return convertFromPersistenceTimerProcessingQueueStates(pStates)
+		}
+
+		logger.Error("Incompatible processing queue states and ackLevel",
+			tag.Value(pStates),
+			tag.ShardTimerAcks(ackLevel),
+		)
+	}
+
+	return []ProcessingQueueState{
+		NewProcessingQueueState(
+			defaultProcessingQueueLevel,
+			newTimerTaskKey(ackLevel, 0),
+			maximumTimerTaskKey,
+			NewDomainFilter(nil, true),
+		),
+	}
 }

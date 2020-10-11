@@ -107,7 +107,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			err = cadence.NewCustomError(err.Error())
 		}
 	}()
-	err = container.HistoryV2Manager.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+	err = container.HistoryV2Manager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 		BranchToken: request.BranchToken,
 		ShardID:     common.IntPtr(request.ShardID),
 	})

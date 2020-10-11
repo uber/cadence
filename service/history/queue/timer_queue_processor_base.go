@@ -90,6 +90,7 @@ func newTimerQueueProcessorBase(
 	options *queueProcessorOptions,
 	updateMaxReadLevel updateMaxReadLevelFn,
 	updateClusterAckLevel updateClusterAckLevelFn,
+	updateProcessingQueueStates updateProcessingQueueStatesFn,
 	queueShutdown queueShutdownFn,
 	taskFilter task.Filter,
 	taskExecutor task.Executor,
@@ -103,6 +104,7 @@ func newTimerQueueProcessorBase(
 		options,
 		updateMaxReadLevel,
 		updateClusterAckLevel,
+		updateProcessingQueueStates,
 		queueShutdown,
 		logger.WithTags(tag.ComponentTimerQueue),
 		metricsClient,
@@ -124,6 +126,7 @@ func newTimerQueueProcessorBase(
 				task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 				taskFilter,
 				taskExecutor,
+				taskProcessor,
 				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TimerTaskMaxRetryCount,
@@ -479,7 +482,7 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 	var response *persistence.GetTimerIndexTasksResponse
 	retryCount := t.shard.GetConfig().TimerProcessorGetFailureRetryCount()
 	for attempt := 0; attempt < retryCount; attempt++ {
-		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(request)
+		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(context.Background(), request)
 		if err == nil {
 			return response.Timers, response.NextPageToken, nil
 		}
@@ -640,6 +643,10 @@ func newTimerQueueProcessorOptions(
 	if isFailover {
 		// disable queue split for failover processor
 		options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
+
+		// disable persist and load processing queue states for failover processor as it will never be split
+		options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(false)
+		options.EnableLoadQueueStates = dynamicconfig.GetBoolPropertyFn(false)
 	} else {
 		options.EnableSplit = config.QueueProcessorEnableSplit
 		options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
@@ -650,6 +657,9 @@ func newTimerQueueProcessorOptions(
 		options.EnableStuckTaskSplitByDomainID = config.QueueProcessorEnableStuckTaskSplitByDomainID
 		options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
 		options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
+
+		options.EnablePersistQueueStates = config.QueueProcessorEnablePersistQueueStates
+		options.EnableLoadQueueStates = config.QueueProcessorEnableLoadQueueStates
 	}
 
 	if isActive {

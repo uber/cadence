@@ -109,7 +109,7 @@ func (s *contextTestSuite) TearDownTest() {
 }
 
 func (s *contextTestSuite) TestRenewRangeLockedSuccess() {
-	s.mockShardManager.On("UpdateShard", mock.Anything).Once().Return(nil)
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
 
 	err := s.context.renewRangeLocked(false)
 	s.NoError(err)
@@ -118,8 +118,8 @@ func (s *contextTestSuite) TestRenewRangeLockedSuccess() {
 func (s *contextTestSuite) TestRenewRangeLockedSuccessAfterRetries() {
 	retryCount := conditionalRetryCount
 	someError := errors.New("some error")
-	s.mockShardManager.On("UpdateShard", mock.Anything).Times(retryCount - 1).Return(someError)
-	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Times(retryCount - 1).Return(someError)
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
 
 	err := s.context.renewRangeLocked(false)
 	s.NoError(err)
@@ -128,14 +128,14 @@ func (s *contextTestSuite) TestRenewRangeLockedSuccessAfterRetries() {
 func (s *contextTestSuite) TestRenewRangeLockedRetriesExceeded() {
 	retryCount := conditionalRetryCount
 	someError := errors.New("some error")
-	s.mockShardManager.On("UpdateShard", mock.Anything).Times(retryCount).Return(someError)
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Times(retryCount).Return(someError)
 
 	err := s.context.renewRangeLocked(false)
 	s.Error(err)
 }
 
 func (s *contextTestSuite) TestReplicateFailoverMarkersSuccess() {
-	s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything).Once().Return(nil)
+	s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything, mock.Anything).Once().Return(nil)
 
 	markers := make([]*persistence.FailoverMarkerTask, 0)
 	err := s.context.ReplicateFailoverMarkers(markers)

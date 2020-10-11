@@ -52,6 +52,7 @@ type (
 			pageToken []byte,
 		) ([]*replicator.ReplicationTask, []byte, error)
 		PurgeMessages(
+			ctx context.Context,
 			sourceCluster string,
 			lastMessageID int64,
 		) error
@@ -115,15 +116,18 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	pageToken []byte,
 ) ([]*replicator.ReplicationTask, []byte, error) {
 
-	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(&persistence.GetReplicationTasksFromDLQRequest{
-		SourceClusterName: sourceCluster,
-		GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
-			ReadLevel:     defaultBeginningMessageID,
-			MaxReadLevel:  lastMessageID,
-			BatchSize:     pageSize,
-			NextPageToken: pageToken,
+	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(
+		ctx,
+		&persistence.GetReplicationTasksFromDLQRequest{
+			SourceClusterName: sourceCluster,
+			GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
+				ReadLevel:     defaultBeginningMessageID,
+				MaxReadLevel:  lastMessageID,
+				BatchSize:     pageSize,
+				NextPageToken: pageToken,
+			},
 		},
-	})
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -164,11 +168,13 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 }
 
 func (r *dlqHandlerImpl) PurgeMessages(
+	ctx context.Context,
 	sourceCluster string,
 	lastMessageID int64,
 ) error {
 
 	err := r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
+		ctx,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,
 			ExclusiveBeginTaskID: defaultBeginningMessageID,
@@ -216,6 +222,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 	}
 
 	err = r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
+		ctx,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,
 			ExclusiveBeginTaskID: defaultBeginningMessageID,

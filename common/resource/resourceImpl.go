@@ -157,7 +157,11 @@ func New(
 		return nil, err
 	}
 
-	dynamicCollection := dynamicconfig.NewCollection(params.DynamicConfig, logger)
+	dynamicCollection := dynamicconfig.NewCollection(
+		params.DynamicConfig,
+		logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+	)
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(
 			params.RPCFactory,
@@ -206,7 +210,6 @@ func New(
 			}
 			return persistenceMaxQPS()
 		},
-		params.AbstractDatastoreFactory,
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,

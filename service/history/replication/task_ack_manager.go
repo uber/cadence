@@ -25,6 +25,7 @@
 package replication
 
 import (
+	"context"
 	ctx "context"
 	"errors"
 	"strconv"
@@ -146,7 +147,7 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.InstanceTag(strconv.Itoa(shardID)),
 	)
 	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
-	taskInfoList, hasMore, err := t.readTasksWithBatchSize(lastReadTaskID, t.fetchTasksBatchSize(shardID))
+	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, t.fetchTasksBatchSize(shardID))
 	if err != nil {
 		return nil, err
 	}
@@ -291,6 +292,7 @@ func (t *taskAckManagerImpl) processReplication(
 }
 
 func (t *taskAckManagerImpl) getEventsBlob(
+	ctx context.Context,
 	branchToken []byte,
 	firstEventID int64,
 	nextEventID int64,
@@ -298,17 +300,18 @@ func (t *taskAckManagerImpl) getEventsBlob(
 
 	var eventBatchBlobs []*persistence.DataBlob
 	var pageToken []byte
+	batchSize := t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize()
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize(),
+		PageSize:      batchSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(t.shard.GetShardID()),
 	}
 
 	for {
-		resp, err := t.historyManager.ReadRawHistoryBranch(req)
+		resp, err := t.historyManager.ReadRawHistoryBranch(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -358,15 +361,19 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 }
 
 func (t *taskAckManagerImpl) readTasksWithBatchSize(
+	ctx context.Context,
 	readLevel int64,
 	batchSize int,
 ) ([]task.Info, bool, error) {
 
-	response, err := t.executionManager.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
-		ReadLevel:    readLevel,
-		MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
-		BatchSize:    batchSize,
-	})
+	response, err := t.executionManager.GetReplicationTasks(
+		ctx,
+		&persistence.GetReplicationTasksRequest{
+			ReadLevel:    readLevel,
+			MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
+			BatchSize:    batchSize,
+		},
+	)
 
 	if err != nil {
 		return nil, false, err
@@ -381,6 +388,7 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 }
 
 func (t *taskAckManagerImpl) getAllHistory(
+	ctx context.Context,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -392,6 +400,7 @@ func (t *taskAckManagerImpl) getAllHistory(
 	historySize := 0
 	iterator := collection.NewPagingIterator(
 		t.getPaginationFunc(
+			ctx,
 			firstEventID,
 			nextEventID,
 			branchToken,
@@ -414,6 +423,7 @@ func (t *taskAckManagerImpl) getAllHistory(
 }
 
 func (t *taskAckManagerImpl) getPaginationFunc(
+	ctx context.Context,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -423,6 +433,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 		events, _, pageToken, pageHistorySize, err := persistence.PaginateHistory(
+			ctx,
 			t.historyManager,
 			false,
 			branchToken,
@@ -442,63 +453,6 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 		}
 		return paginateItems, pageToken, nil
 	}
-}
-
-func (t *taskAckManagerImpl) generateReplicationTask(
-	targetClusters []string,
-	task *persistence.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, string, error) {
-
-	history, err := t.getAllHistory(
-		task.FirstEventID,
-		task.NextEventID,
-		task.BranchToken,
-	)
-	if err != nil {
-		return nil, "", err
-	}
-	for _, event := range history.Events {
-		if task.Version != event.GetVersion() {
-			return nil, "", nil
-		}
-	}
-
-	var newRunID string
-	var newRunHistory *shared.History
-	events := history.Events
-	if len(events) > 0 {
-		lastEvent := events[len(events)-1]
-		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
-			// Check if this is replication task for ContinueAsNew event, then retrieve the history for new execution
-			newRunID = lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-			newRunHistory, err = t.getAllHistory(
-				common.FirstEventID,
-				common.FirstEventID+1, // [common.FirstEventID to common.FirstEventID+1) will get the first batch
-				task.NewRunBranchToken,
-			)
-			if err != nil {
-				return nil, "", err
-			}
-		}
-	}
-
-	ret := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
-		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			TargetClusters:  targetClusters,
-			DomainId:        common.StringPtr(task.DomainID),
-			WorkflowId:      common.StringPtr(task.WorkflowID),
-			RunId:           common.StringPtr(task.RunID),
-			FirstEventId:    common.Int64Ptr(task.FirstEventID),
-			NextEventId:     common.Int64Ptr(task.NextEventID),
-			Version:         common.Int64Ptr(task.Version),
-			ReplicationInfo: convertLastReplicationInfo(task.LastReplicationInfo),
-			History:         history,
-			NewRunHistory:   newRunHistory,
-			ResetWorkflow:   common.BoolPtr(task.ResetWorkflow),
-		},
-	}
-	return ret, newRunID, nil
 }
 
 func (t *taskAckManagerImpl) generateFailoverMarkerTask(
@@ -589,37 +543,6 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
 		) (*replicator.ReplicationTask, error) {
-			// TODO when 3+DC migration is done, remove this block of code
-			if versionHistories == nil {
-				domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.DomainID)
-				if err != nil {
-					return nil, err
-				}
-
-				var targetClusters []string
-				for _, cluster := range domainEntry.GetReplicationConfig().Clusters {
-					targetClusters = append(targetClusters, cluster.ClusterName)
-				}
-
-				replicationTask, newRunID, err := t.generateReplicationTask(
-					targetClusters,
-					task,
-				)
-				if err != nil {
-					return nil, err
-				}
-				if newRunID != "" {
-					isNDCWorkflow, err := t.isNewRunNDCEnabled(ctx, task.DomainID, task.WorkflowID, newRunID)
-					if err != nil {
-						return nil, err
-					}
-					replicationTask.HistoryTaskAttributes.NewRunNDC = common.BoolPtr(isNDCWorkflow)
-				}
-
-				return replicationTask, err
-			}
-
-			// NDC workflow
 			versionHistoryItems, branchToken, err := getVersionHistoryItems(
 				versionHistories,
 				task.FirstEventID,
@@ -635,6 +558,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			}
 
 			eventsBlob, err := t.getEventsBlob(
+				ctx,
 				task.BranchToken,
 				task.FirstEventID,
 				task.NextEventID,
@@ -647,6 +571,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			if len(task.NewRunBranchToken) != 0 {
 				// only get the first batch
 				newRunEventsBlob, err = t.getEventsBlob(
+					ctx,
 					task.NewRunBranchToken,
 					common.FirstEventID,
 					common.FirstEventID+1,
@@ -700,17 +625,4 @@ func getVersionHistoryItems(
 		return nil, nil, err
 	}
 	return versionHistory.ToThrift().Items, versionHistory.GetBranchToken(), nil
-}
-
-// TODO deprecate when 3+DC is released
-func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) map[string]*shared.ReplicationInfo {
-	replicationInfoMap := make(map[string]*shared.ReplicationInfo)
-	for k, v := range info {
-		replicationInfoMap[k] = &shared.ReplicationInfo{
-			Version:     common.Int64Ptr(v.Version),
-			LastEventId: common.Int64Ptr(v.LastEventID),
-		}
-	}
-
-	return replicationInfoMap
 }

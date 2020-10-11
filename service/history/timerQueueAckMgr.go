@@ -21,6 +21,7 @@
 package history
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -400,7 +401,7 @@ func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestam
 
 	retryCount := t.config.TimerProcessorGetFailureRetryCount()
 	for attempt := 0; attempt < retryCount; attempt++ {
-		response, err := t.executionMgr.GetTimerIndexTasks(request)
+		response, err := t.executionMgr.GetTimerIndexTasks(context.Background(), request)
 		if err == nil {
 			return response.Timers, response.NextPageToken, nil
 		}

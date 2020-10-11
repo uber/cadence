@@ -80,18 +80,12 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 	numTasks := 5
 
 	successfullyRedispatched := 3
-	stoppedCh := make(chan struct{})
-	for i := 0; i != successfullyRedispatched-1; i++ {
-		s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(1)
-	}
+	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(successfullyRedispatched)
 	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).DoAndReturn(func(_ interface{}) (bool, error) {
 		go func() {
 			s.redispatcher.Stop()
-			close(stoppedCh)
 		}()
-		return true, nil
-	}).Times(1)
-	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).DoAndReturn(func(_ interface{}) (bool, error) {
+
 		<-s.redispatcher.shutdownCh
 		return false, errors.New("processor shutdown")
 	}).Times(1)
@@ -103,9 +97,7 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 	}
 
 	s.Equal(numTasks, s.redispatcher.Size())
-
-	// redispatch will be triggered by the background redispatch loop
-	<-stoppedCh
+	<-s.redispatcher.shutdownCh
 
 	s.Equal(numTasks-successfullyRedispatched-1, s.redispatcher.Size())
 }

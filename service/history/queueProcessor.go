@@ -151,6 +151,7 @@ func newQueueProcessorBase(
 				task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 				taskFilter,
 				taskExecutor,
+				queueTaskProcessor,
 				p.redispatcher.AddTask,
 				p.timeSource,
 				options.MaxRetryCount,

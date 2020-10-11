@@ -21,6 +21,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -43,19 +44,19 @@ const (
 )
 
 // InsertIntoShards inserts one or more rows into shards table
-func (mdb *db) InsertIntoShards(row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return mdb.conn.Exec(createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
+func (mdb *db) InsertIntoShards(ctx context.Context, row *sqlplugin.ShardsRow) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
 }
 
 // UpdateShards updates one or more rows into shards table
-func (mdb *db) UpdateShards(row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return mdb.conn.Exec(updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
+func (mdb *db) UpdateShards(ctx context.Context, row *sqlplugin.ShardsRow) (sql.Result, error) {
+	return mdb.conn.ExecContext(ctx, updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
 }
 
 // SelectFromShards reads one or more rows from shards table
-func (mdb *db) SelectFromShards(filter *sqlplugin.ShardsFilter) (*sqlplugin.ShardsRow, error) {
+func (mdb *db) SelectFromShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (*sqlplugin.ShardsRow, error) {
 	var row sqlplugin.ShardsRow
-	err := mdb.conn.Get(&row, getShardQry, filter.ShardID)
+	err := mdb.conn.GetContext(ctx, &row, getShardQry, filter.ShardID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,15 +64,15 @@ func (mdb *db) SelectFromShards(filter *sqlplugin.ShardsFilter) (*sqlplugin.Shar
 }
 
 // ReadLockShards acquires a read lock on a single row in shards table
-func (mdb *db) ReadLockShards(filter *sqlplugin.ShardsFilter) (int, error) {
+func (mdb *db) ReadLockShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (int, error) {
 	var rangeID int
-	err := mdb.conn.Get(&rangeID, readLockShardQry, filter.ShardID)
+	err := mdb.conn.GetContext(ctx, &rangeID, readLockShardQry, filter.ShardID)
 	return rangeID, err
 }
 
 // WriteLockShards acquires a write lock on a single row in shards table
-func (mdb *db) WriteLockShards(filter *sqlplugin.ShardsFilter) (int, error) {
+func (mdb *db) WriteLockShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (int, error) {
 	var rangeID int
-	err := mdb.conn.Get(&rangeID, lockShardQry, filter.ShardID)
+	err := mdb.conn.GetContext(ctx, &rangeID, lockShardQry, filter.ShardID)
 	return rangeID, err
 }

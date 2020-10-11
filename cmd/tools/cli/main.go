@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/uber/cadence/tools/cli"
@@ -30,8 +31,8 @@ import (
 // See cadence/tools/cli/README.md for usage
 func main() {
 	app := cli.NewCliApp()
-	err := app.Run(os.Args)
-	if err != nil {
-		panic(err)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
 }

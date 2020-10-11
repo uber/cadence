@@ -446,7 +446,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 		})
 	}
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 
 	retention := int32(1)
 	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
@@ -509,7 +509,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 
 	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
@@ -577,7 +577,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	s.True(len(clusters) > 1)
 	isGlobalDomain := true
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 
 	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
@@ -662,7 +662,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	s.True(len(clusters) > 1)
 	isGlobalDomain := true
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 
 	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
@@ -773,7 +773,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	s.True(len(clusters) > 1)
 	isGlobalDomain := true
 
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Twice()
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 
 	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),

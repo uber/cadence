@@ -21,9 +21,12 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -33,6 +36,7 @@ import (
 )
 
 func updateActivityInfos(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	activityInfos []*persistence.InternalActivityInfo,
 	deleteInfos []int64,
@@ -40,6 +44,7 @@ func updateActivityInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(activityInfos) > 0 {
@@ -81,7 +86,7 @@ func updateActivityInfos(
 				RetryLastWorkerIdentity:       &v.LastWorkerIdentity,
 				RetryLastFailureDetails:       v.LastFailureDetails,
 			}
-			blob, err := activityInfoToBlob(info)
+			blob, err := parser.ActivityInfoToBlob(info)
 			if err != nil {
 				return err
 			}
@@ -98,7 +103,7 @@ func updateActivityInfos(
 			}
 		}
 
-		if _, err := tx.ReplaceIntoActivityInfoMaps(rows); err != nil {
+		if _, err := tx.ReplaceIntoActivityInfoMaps(ctx, rows); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update activity info. Failed to execute update query. Error: %v", err),
 			}
@@ -107,7 +112,7 @@ func updateActivityInfos(
 
 	if len(deleteInfos) > 0 {
 		for _, v := range deleteInfos {
-			result, err := tx.DeleteFromActivityInfoMaps(&sqlplugin.ActivityInfoMapsFilter{
+			result, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
 				ShardID:    int64(shardID),
 				DomainID:   domainID,
 				WorkflowID: workflowID,
@@ -137,14 +142,16 @@ func updateActivityInfos(
 }
 
 func getActivityInfoMap(
+	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.InternalActivityInfo, error) {
 
-	rows, err := db.SelectFromActivityInfoMaps(&sqlplugin.ActivityInfoMapsFilter{
+	rows, err := db.SelectFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -158,7 +165,7 @@ func getActivityInfoMap(
 
 	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range rows {
-		decoded, err := activityInfoFromBlob(v.Data, v.DataEncoding)
+		decoded, err := parser.ActivityInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -206,6 +213,7 @@ func getActivityInfoMap(
 }
 
 func deleteActivityInfoMap(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -213,7 +221,7 @@ func deleteActivityInfoMap(
 	runID sqlplugin.UUID,
 ) error {
 
-	if _, err := tx.DeleteFromActivityInfoMaps(&sqlplugin.ActivityInfoMapsFilter{
+	if _, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -227,6 +235,7 @@ func deleteActivityInfoMap(
 }
 
 func updateTimerInfos(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	timerInfos []*persistence.TimerInfo,
 	deleteInfos []string,
@@ -234,12 +243,13 @@ func updateTimerInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(timerInfos) > 0 {
 		rows := make([]sqlplugin.TimerInfoMapsRow, len(timerInfos))
 		for i, v := range timerInfos {
-			blob, err := timerInfoToBlob(&sqlblobs.TimerInfo{
+			blob, err := parser.TimerInfoToBlob(&sqlblobs.TimerInfo{
 				Version:         &v.Version,
 				StartedID:       &v.StartedID,
 				ExpiryTimeNanos: common.Int64Ptr(v.ExpiryTime.UnixNano()),
@@ -261,7 +271,7 @@ func updateTimerInfos(
 				DataEncoding: string(blob.Encoding),
 			}
 		}
-		if _, err := tx.ReplaceIntoTimerInfoMaps(rows); err != nil {
+		if _, err := tx.ReplaceIntoTimerInfoMaps(ctx, rows); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update timer info. Failed to execute update query. Error: %v", err),
 			}
@@ -269,7 +279,7 @@ func updateTimerInfos(
 	}
 	if len(deleteInfos) > 0 {
 		for _, v := range deleteInfos {
-			result, err := tx.DeleteFromTimerInfoMaps(&sqlplugin.TimerInfoMapsFilter{
+			result, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 				ShardID:    int64(shardID),
 				DomainID:   domainID,
 				WorkflowID: workflowID,
@@ -298,14 +308,16 @@ func updateTimerInfos(
 }
 
 func getTimerInfoMap(
+	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[string]*persistence.TimerInfo, error) {
 
-	rows, err := db.SelectFromTimerInfoMaps(&sqlplugin.TimerInfoMapsFilter{
+	rows, err := db.SelectFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -318,7 +330,7 @@ func getTimerInfoMap(
 	}
 	ret := make(map[string]*persistence.TimerInfo)
 	for _, v := range rows {
-		info, err := timerInfoFromBlob(v.Data, v.DataEncoding)
+		info, err := parser.TimerInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -338,6 +350,7 @@ func getTimerInfoMap(
 }
 
 func deleteTimerInfoMap(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -345,7 +358,7 @@ func deleteTimerInfoMap(
 	runID sqlplugin.UUID,
 ) error {
 
-	if _, err := tx.DeleteFromTimerInfoMaps(&sqlplugin.TimerInfoMapsFilter{
+	if _, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -359,6 +372,7 @@ func deleteTimerInfoMap(
 }
 
 func updateChildExecutionInfos(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	childExecutionInfos []*persistence.InternalChildExecutionInfo,
 	deleteInfos *int64,
@@ -366,6 +380,7 @@ func updateChildExecutionInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(childExecutionInfos) > 0 {
@@ -389,7 +404,7 @@ func updateChildExecutionInfos(
 				WorkflowTypeName:       &v.WorkflowTypeName,
 				ParentClosePolicy:      common.Int32Ptr(int32(v.ParentClosePolicy)),
 			}
-			blob, err := childExecutionInfoToBlob(info)
+			blob, err := parser.ChildExecutionInfoToBlob(info)
 			if err != nil {
 				return err
 			}
@@ -403,14 +418,14 @@ func updateChildExecutionInfos(
 				DataEncoding: string(blob.Encoding),
 			}
 		}
-		if _, err := tx.ReplaceIntoChildExecutionInfoMaps(rows); err != nil {
+		if _, err := tx.ReplaceIntoChildExecutionInfoMaps(ctx, rows); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update child execution info. Failed to execute update query. Error: %v", err),
 			}
 		}
 	}
 	if deleteInfos != nil {
-		if _, err := tx.DeleteFromChildExecutionInfoMaps(&sqlplugin.ChildExecutionInfoMapsFilter{
+		if _, err := tx.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
 			ShardID:     int64(shardID),
 			DomainID:    domainID,
 			WorkflowID:  workflowID,
@@ -427,14 +442,16 @@ func updateChildExecutionInfos(
 }
 
 func getChildExecutionInfoMap(
+	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.InternalChildExecutionInfo, error) {
 
-	rows, err := db.SelectFromChildExecutionInfoMaps(&sqlplugin.ChildExecutionInfoMapsFilter{
+	rows, err := db.SelectFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -448,7 +465,7 @@ func getChildExecutionInfoMap(
 
 	ret := make(map[int64]*persistence.InternalChildExecutionInfo)
 	for _, v := range rows {
-		rowInfo, err := childExecutionInfoFromBlob(v.Data, v.DataEncoding)
+		rowInfo, err := parser.ChildExecutionInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -477,6 +494,7 @@ func getChildExecutionInfoMap(
 }
 
 func deleteChildExecutionInfoMap(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -484,7 +502,7 @@ func deleteChildExecutionInfoMap(
 	runID sqlplugin.UUID,
 ) error {
 
-	if _, err := tx.DeleteFromChildExecutionInfoMaps(&sqlplugin.ChildExecutionInfoMapsFilter{
+	if _, err := tx.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -498,6 +516,7 @@ func deleteChildExecutionInfoMap(
 }
 
 func updateRequestCancelInfos(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	requestCancelInfos []*persistence.RequestCancelInfo,
 	deleteInfo *int64,
@@ -505,12 +524,13 @@ func updateRequestCancelInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(requestCancelInfos) > 0 {
 		rows := make([]sqlplugin.RequestCancelInfoMapsRow, len(requestCancelInfos))
 		for i, v := range requestCancelInfos {
-			blob, err := requestCancelInfoToBlob(&sqlblobs.RequestCancelInfo{
+			blob, err := parser.RequestCancelInfoToBlob(&sqlblobs.RequestCancelInfo{
 				Version:               &v.Version,
 				InitiatedEventBatchID: &v.InitiatedEventBatchID,
 				CancelRequestID:       &v.CancelRequestID,
@@ -529,7 +549,7 @@ func updateRequestCancelInfos(
 			}
 		}
 
-		if _, err := tx.ReplaceIntoRequestCancelInfoMaps(rows); err != nil {
+		if _, err := tx.ReplaceIntoRequestCancelInfoMaps(ctx, rows); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update request cancel info. Failed to execute update query. Error: %v", err),
 			}
@@ -538,7 +558,7 @@ func updateRequestCancelInfos(
 	if deleteInfo == nil {
 		return nil
 	}
-	result, err := tx.DeleteFromRequestCancelInfoMaps(&sqlplugin.RequestCancelInfoMapsFilter{
+	result, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
 		ShardID:     int64(shardID),
 		DomainID:    domainID,
 		WorkflowID:  workflowID,
@@ -565,14 +585,16 @@ func updateRequestCancelInfos(
 }
 
 func getRequestCancelInfoMap(
+	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.RequestCancelInfo, error) {
 
-	rows, err := db.SelectFromRequestCancelInfoMaps(&sqlplugin.RequestCancelInfoMapsFilter{
+	rows, err := db.SelectFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -586,7 +608,7 @@ func getRequestCancelInfoMap(
 
 	ret := make(map[int64]*persistence.RequestCancelInfo)
 	for _, v := range rows {
-		rowInfo, err := requestCancelInfoFromBlob(v.Data, v.DataEncoding)
+		rowInfo, err := parser.RequestCancelInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -602,6 +624,7 @@ func getRequestCancelInfoMap(
 }
 
 func deleteRequestCancelInfoMap(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -609,7 +632,7 @@ func deleteRequestCancelInfoMap(
 	runID sqlplugin.UUID,
 ) error {
 
-	if _, err := tx.DeleteFromRequestCancelInfoMaps(&sqlplugin.RequestCancelInfoMapsFilter{
+	if _, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -623,6 +646,7 @@ func deleteRequestCancelInfoMap(
 }
 
 func updateSignalInfos(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	signalInfos []*persistence.SignalInfo,
 	deleteInfo *int64,
@@ -630,12 +654,13 @@ func updateSignalInfos(
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(signalInfos) > 0 {
 		rows := make([]sqlplugin.SignalInfoMapsRow, len(signalInfos))
 		for i, v := range signalInfos {
-			blob, err := signalInfoToBlob(&sqlblobs.SignalInfo{
+			blob, err := parser.SignalInfoToBlob(&sqlblobs.SignalInfo{
 				Version:               &v.Version,
 				InitiatedEventBatchID: &v.InitiatedEventBatchID,
 				RequestID:             &v.SignalRequestID,
@@ -657,7 +682,7 @@ func updateSignalInfos(
 			}
 		}
 
-		if _, err := tx.ReplaceIntoSignalInfoMaps(rows); err != nil {
+		if _, err := tx.ReplaceIntoSignalInfoMaps(ctx, rows); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signal info. Failed to execute update query. Error: %v", err),
 			}
@@ -666,7 +691,7 @@ func updateSignalInfos(
 	if deleteInfo == nil {
 		return nil
 	}
-	result, err := tx.DeleteFromSignalInfoMaps(&sqlplugin.SignalInfoMapsFilter{
+	result, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
 		ShardID:     int64(shardID),
 		DomainID:    domainID,
 		WorkflowID:  workflowID,
@@ -693,14 +718,16 @@ func updateSignalInfos(
 }
 
 func getSignalInfoMap(
+	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
 	runID sqlplugin.UUID,
+	parser serialization.Parser,
 ) (map[int64]*persistence.SignalInfo, error) {
 
-	rows, err := db.SelectFromSignalInfoMaps(&sqlplugin.SignalInfoMapsFilter{
+	rows, err := db.SelectFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -714,7 +741,7 @@ func getSignalInfoMap(
 
 	ret := make(map[int64]*persistence.SignalInfo)
 	for _, v := range rows {
-		rowInfo, err := signalInfoFromBlob(v.Data, v.DataEncoding)
+		rowInfo, err := parser.SignalInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -733,6 +760,7 @@ func getSignalInfoMap(
 }
 
 func deleteSignalInfoMap(
+	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
 	domainID sqlplugin.UUID,
@@ -740,7 +768,7 @@ func deleteSignalInfoMap(
 	runID sqlplugin.UUID,
 ) error {
 
-	if _, err := tx.DeleteFromSignalInfoMaps(&sqlplugin.SignalInfoMapsFilter{
+	if _, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,

@@ -20,9 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination mocks.go -self_package github.com/uber/cadence/common/pagination
+
 package pagination
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 // ErrIteratorFinished indicates that Next was called on a finished iterator
 var ErrIteratorFinished = errors.New("iterator has reached end")
@@ -50,7 +55,7 @@ type (
 	ShouldFlushFn func(Page) bool
 	// FetchFn fetches Page from PageToken.
 	// Once a page with nil NextToken is returned no more pages will be fetched.
-	FetchFn func(PageToken) (Page, error)
+	FetchFn func(context.Context, PageToken) (Page, error)
 )
 
 type (

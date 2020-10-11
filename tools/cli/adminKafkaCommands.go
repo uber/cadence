@@ -140,14 +140,14 @@ func AdminKafkaParse(c *cli.Context) {
 func buildFilterFn(workflowID, runID string) filterFn {
 	return func(task *replicator.ReplicationTask) bool {
 		if len(workflowID) != 0 || len(runID) != 0 {
-			if task.GetHistoryTaskAttributes() == nil {
+			if task.GetHistoryTaskV2Attributes() == nil {
 				return false
 			}
 		}
-		if len(workflowID) != 0 && *task.HistoryTaskAttributes.WorkflowId != workflowID {
+		if len(workflowID) != 0 && *task.GetHistoryTaskV2Attributes().WorkflowId != workflowID {
 			return false
 		}
-		if len(runID) != 0 && *task.HistoryTaskAttributes.RunId != runID {
+		if len(runID) != 0 && *task.GetHistoryTaskV2Attributes().RunId != runID {
 			return false
 		}
 		return true
@@ -164,27 +164,6 @@ func buildFilterFnForVisibility(workflowID, runID string) filterFnForVisibility 
 		}
 		return true
 	}
-}
-
-func getInputFile(inputFile string) *os.File {
-	if len(inputFile) == 0 {
-		info, err := os.Stdin.Stat()
-		if err != nil {
-			ErrorAndExit("Failed to stat stdin file handle", err)
-		}
-		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
-			fmt.Println("Misuse of pipe mode")
-			os.Exit(1)
-		}
-		return os.Stdin
-	}
-	// This code is executed from the CLI. All user input is from a CLI user.
-	// #nosec
-	f, err := os.Open(inputFile)
-	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
-	}
-	return f
 }
 
 func getOutputFile(outputFile string) *os.File {
@@ -293,12 +272,10 @@ Loop:
 					outStr = string(jsonStr)
 				} else {
 					outStr = fmt.Sprintf(
-						"%v, %v, %v, %v, %v",
-						*task.HistoryTaskAttributes.DomainId,
-						*task.HistoryTaskAttributes.WorkflowId,
-						*task.HistoryTaskAttributes.RunId,
-						*task.HistoryTaskAttributes.FirstEventId,
-						*task.HistoryTaskAttributes.NextEventId,
+						"%v, %v, %v",
+						*task.GetHistoryTaskV2Attributes().DomainId,
+						*task.GetHistoryTaskV2Attributes().WorkflowId,
+						*task.GetHistoryTaskV2Attributes().RunId,
 					)
 				}
 				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
@@ -493,7 +470,7 @@ func doRereplicate(
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
 
 	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
-	resp, err := exeMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
+	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),

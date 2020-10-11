@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -152,9 +153,9 @@ func (s *domainCacheSuite) TestListDomain() {
 
 	pageToken := []byte("some random page token")
 
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{
@@ -162,7 +163,7 @@ func (s *domainCacheSuite) TestListDomain() {
 		NextPageToken: pageToken,
 	}, nil).Once()
 
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: pageToken,
 	}).Return(&persistence.ListDomainsResponse{
@@ -198,7 +199,7 @@ func (s *domainCacheSuite) TestListDomain() {
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	domainRecord := &persistence.GetDomainResponse{
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
@@ -222,8 +223,8 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 	}
 	entry := s.buildEntryFromRecord(domainRecord)
 
-	s.metadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: entry.info.Name}).Return(domainRecord, nil).Once()
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{Name: entry.info.Name}).Return(domainRecord, nil).Once()
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{
@@ -242,7 +243,7 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	domainRecord := &persistence.GetDomainResponse{
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
@@ -261,8 +262,8 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
 	}
 	entry := s.buildEntryFromRecord(domainRecord)
 
-	s.metadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: entry.info.ID}).Return(domainRecord, nil).Once()
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{ID: entry.info.ID}).Return(domainRecord, nil).Once()
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{
@@ -324,9 +325,9 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 	entry2 := s.buildEntryFromRecord(domainRecord2)
 	domainNotificationVersion++
 
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{
@@ -407,9 +408,9 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 	entry2Old := s.buildEntryFromRecord(domainRecord2Old)
 	domainNotificationVersion++
 
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{
@@ -476,8 +477,8 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 	s.Empty(entriesOld)
 	s.Empty(entriesNew)
 
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{
@@ -500,7 +501,7 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 func (s *domainCacheSuite) TestGetTriggerListAndUpdateCache_ConcurrentAccess() {
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
-	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	id := uuid.New()
 	domainRecordOld := &persistence.GetDomainResponse{
 		Info: &persistence.DomainInfo{ID: id, Name: "some random domain name", Data: make(map[string]string)},
@@ -521,8 +522,8 @@ func (s *domainCacheSuite) TestGetTriggerListAndUpdateCache_ConcurrentAccess() {
 	}
 	entryOld := s.buildEntryFromRecord(domainRecordOld)
 
-	s.metadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: id}).Return(domainRecordOld, nil).Maybe()
-	s.metadataMgr.On("ListDomains", &persistence.ListDomainsRequest{
+	s.metadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{ID: id}).Return(domainRecordOld, nil).Maybe()
+	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.ListDomainsResponse{

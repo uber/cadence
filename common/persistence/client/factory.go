@@ -23,6 +23,11 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/log/tag"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
@@ -74,11 +79,6 @@ type (
 		NewVisibilityStore() (p.VisibilityStore, error)
 		NewQueue(queueType p.QueueType) (p.Queue, error)
 	}
-	// AbstractDataStoreFactory creates a DataStoreFactory, can be used to implement custom datastore support outside
-	// of the cadence core.
-	AbstractDataStoreFactory interface {
-		NewFactory(cfg config.CustomDatastoreConfig, clusterName string, logger log.Logger) DataStoreFactory
-	}
 
 	// Datastore represents a datastore
 	Datastore struct {
@@ -87,12 +87,11 @@ type (
 	}
 	factoryImpl struct {
 		sync.RWMutex
-		config                   *config.Persistence
-		abstractDataStoreFactory AbstractDataStoreFactory
-		metricsClient            metrics.Client
-		logger                   log.Logger
-		datastores               map[storeType]Datastore
-		clusterName              string
+		config        *config.Persistence
+		metricsClient metrics.Client
+		logger        log.Logger
+		datastores    map[storeType]Datastore
+		clusterName   string
 	}
 
 	storeType int
@@ -128,17 +127,15 @@ var storeTypes = []storeType{
 func NewFactory(
 	cfg *config.Persistence,
 	persistenceMaxQPS dynamicconfig.IntPropertyFn,
-	abstractDataStoreFactory AbstractDataStoreFactory,
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) Factory {
 	factory := &factoryImpl{
-		config:                   cfg,
-		abstractDataStoreFactory: abstractDataStoreFactory,
-		metricsClient:            metricsClient,
-		logger:                   logger,
-		clusterName:              clusterName,
+		config:        cfg,
+		metricsClient: metricsClient,
+		logger:        logger,
+		clusterName:   clusterName,
 	}
 	limiters := buildRatelimiters(cfg, persistenceMaxQPS)
 	factory.init(clusterName, limiters)
@@ -148,10 +145,11 @@ func NewFactory(
 // NewTaskManager returns a new task manager
 func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 	ds := f.datastores[storeTypeTask]
-	result, err := ds.factory.NewTaskStore()
+	store, err := ds.factory.NewTaskStore()
 	if err != nil {
 		return nil, err
 	}
+	result := p.NewTaskManager(store)
 	if ds.ratelimit != nil {
 		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -164,10 +162,11 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 // NewShardManager returns a new shard manager
 func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	ds := f.datastores[storeTypeShard]
-	result, err := ds.factory.NewShardStore()
+	store, err := ds.factory.NewShardStore()
 	if err != nil {
 		return nil, err
 	}
+	result := p.NewShardManager(store)
 	if ds.ratelimit != nil {
 		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -259,10 +258,12 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 
 func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, error) {
 	ds := f.datastores[storeTypeQueue]
-	result, err := ds.factory.NewQueue(p.DomainReplicationQueueType)
+	store, err := ds.factory.NewQueue(p.DomainReplicationQueueType)
 	if err != nil {
 		return nil, err
 	}
+
+	result := p.NewQueueManager(store)
 	if ds.ratelimit != nil {
 		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -297,9 +298,15 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case defaultCfg.Cassandra != nil:
 		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
-		defaultDataStore.factory = sql.NewFactory(*defaultCfg.SQL, clusterName, f.logger)
-	case defaultCfg.CustomDataStoreConfig != nil:
-		defaultDataStore.factory = f.abstractDataStoreFactory.NewFactory(*defaultCfg.CustomDataStoreConfig, clusterName, f.logger)
+		var decodingTypes []common.EncodingType
+		for _, dt := range defaultCfg.SQL.DecodingTypes {
+			decodingTypes = append(decodingTypes, common.EncodingType(dt))
+		}
+		defaultDataStore.factory = sql.NewFactory(
+			*defaultCfg.SQL,
+			clusterName,
+			f.logger,
+			getSQLParser(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
@@ -316,12 +323,28 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	case visibilityCfg.Cassandra != nil:
 		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
-		visibilityDataStore.factory = sql.NewFactory(*visibilityCfg.SQL, clusterName, f.logger)
+		var decodingTypes []common.EncodingType
+		for _, dt := range visibilityCfg.SQL.DecodingTypes {
+			decodingTypes = append(decodingTypes, common.EncodingType(dt))
+		}
+		visibilityDataStore.factory = sql.NewFactory(
+			*visibilityCfg.SQL,
+			clusterName,
+			f.logger,
+			getSQLParser(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType), decodingTypes...))
 	default:
 		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
 
 	f.datastores[storeTypeVisibility] = visibilityDataStore
+}
+
+func getSQLParser(logger log.Logger, encodingType common.EncodingType, decodingTypes ...common.EncodingType) serialization.Parser {
+	parser, err := serialization.NewParser(encodingType, decodingTypes...)
+	if err != nil {
+		logger.Fatal("failed to construct sql parser", tag.Error(err))
+	}
+	return parser
 }
 
 func buildRatelimiters(cfg *config.Persistence, maxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {

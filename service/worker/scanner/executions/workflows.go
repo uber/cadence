@@ -28,19 +28,20 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/reconciliation/common"
+	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/service/worker/scanner/executions/shard"
 )
 
 const (
 	// ConcreteScannerContextKey is the key used to access ScannerContext in activities for concrete executions
-	ConcreteScannerContextKey = ContextKey(0)
+	ConcreteScannerContextKey = "ConcreteScannerContextKey"
 	// ConcreteFixerContextKey is the key used to access FixerContext in activities for concrete executions
-	ConcreteFixerContextKey = ContextKey(1)
+	ConcreteFixerContextKey = "ConcreteFixerContextKey"
 	// CurrentScannerContextKey is the key used to access ScannerContext in activities for current executions
-	CurrentScannerContextKey = ContextKey(2)
+	CurrentScannerContextKey = "CurrentScannerContextKey"
 	// CurrentFixerContextKey is the key used to access FixerContext in activities for current executions
-	CurrentFixerContextKey = ContextKey(3)
+	CurrentFixerContextKey = "CurrentFixerContextKey"
 
 	// ShardReportQuery is the query name for the query used to get a single shard's report
 	ShardReportQuery = "shard_report"
@@ -69,21 +70,18 @@ const (
 )
 
 // ScanTypeScannerContextKeyMap maps execution type to the context key used by scanner
-var ScanTypeScannerContextKeyMap = map[common.ScanType]interface{}{
-	common.ConcreteExecutionType: ConcreteScannerContextKey,
-	common.CurrentExecutionType:  CurrentScannerContextKey,
+var ScanTypeScannerContextKeyMap = map[ScanType]interface{}{
+	ConcreteExecutionType: ConcreteScannerContextKey,
+	CurrentExecutionType:  CurrentScannerContextKey,
 }
 
 // ScanTypeFixerContextKeyMap maps execution type to the context key used by fixer
-var ScanTypeFixerContextKeyMap = map[common.ScanType]interface{}{
-	common.ConcreteExecutionType: ConcreteFixerContextKey,
-	common.CurrentExecutionType:  CurrentFixerContextKey,
+var ScanTypeFixerContextKeyMap = map[ScanType]interface{}{
+	ConcreteExecutionType: ConcreteFixerContextKey,
+	CurrentExecutionType:  CurrentFixerContextKey,
 }
 
 type (
-	// ContextKey is the type which identifies context keys
-	ContextKey int
-
 	// ScannerContext is the resource that is available in activities under ConcreteScannerContextKey context key
 	ScannerContext struct {
 		Resource                     resource.Resource
@@ -101,7 +99,7 @@ type (
 	ScannerWorkflowParams struct {
 		Shards                          Shards
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
-		ScanType                        common.ScanType
+		ScanType                        ScanType
 	}
 
 	// FixerWorkflowParams are the parameters to the fix workflow
@@ -109,7 +107,7 @@ type (
 		ScannerWorkflowWorkflowID     string
 		ScannerWorkflowRunID          string
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
-		ScanType                      common.ScanType
+		ScanType                      ScanType
 	}
 
 	// Shards identify the shards that should be scanned.
@@ -133,14 +131,14 @@ type (
 
 	// AggregateScanReportResult indicates the result of summing together all
 	// shard reports which have finished scan.
-	AggregateScanReportResult common.ShardScanStats
+	AggregateScanReportResult shard.ScanStats
 
 	// AggregateFixReportResult indicates the result of summing together all
 	// shard reports that have finished for fix.
-	AggregateFixReportResult common.ShardFixStats
+	AggregateFixReportResult shard.FixStats
 
 	// ShardCorruptKeysResult is a map of all shards which have finished scan successfully and have at least one corruption
-	ShardCorruptKeysResult map[int]common.Keys
+	ShardCorruptKeysResult map[int]store.Keys
 
 	// ShardStatus is the type which indicates the status of a shard scan.
 	ShardStatus string
@@ -148,14 +146,14 @@ type (
 	// ScanReportError is a type that is used to send either error or report on a channel.
 	// Exactly one of Report and ErrorStr should be non-nil.
 	ScanReportError struct {
-		Reports  []common.ShardScanReport
+		Reports  []shard.ScanReport
 		ErrorStr *string
 	}
 
 	// FixReportError is a type that is used to send either error or report on a channel.
 	// Exactly one of Report and ErrorStr should be non-nil.
 	FixReportError struct {
-		Reports  []common.ShardFixReport
+		Reports  []shard.FixReport
 		ErrorStr *string
 	}
 
@@ -264,7 +262,7 @@ func ScannerWorkflow(
 	}
 	shards, minShard, maxShard := params.Shards.Flatten()
 	aggregator := newShardScanResultAggregator(shards, minShard, maxShard)
-	if err := workflow.SetQueryHandler(ctx, ShardReportQuery, func(shardID int) (*common.ShardScanReport, error) {
+	if err := workflow.SetQueryHandler(ctx, ShardReportQuery, func(shardID int) (*shard.ScanReport, error) {
 		return aggregator.getReport(shardID)
 	}); err != nil {
 		return err
@@ -315,7 +313,7 @@ func ScannerWorkflow(
 			batches := getShardBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, shards, idx)
 			for _, batch := range batches {
 				activityCtx = getLongActivityContext(ctx)
-				var reports []common.ShardScanReport
+				var reports []shard.ScanReport
 				if err := workflow.ExecuteActivity(activityCtx, ScannerScanShardActivityName, ScanShardActivityParams{
 					Shards:                  batch,
 					ExecutionsPageSize:      resolvedConfig.ExecutionsPageSize,
@@ -370,7 +368,7 @@ func FixerWorkflow(
 	params FixerWorkflowParams,
 ) error {
 	var aggregator *shardFixResultAggregator
-	if err := workflow.SetQueryHandler(ctx, ShardReportQuery, func(shardID int) (*common.ShardFixReport, error) {
+	if err := workflow.SetQueryHandler(ctx, ShardReportQuery, func(shardID int) (*shard.FixReport, error) {
 		if aggregator == nil {
 			return nil, errQueryNotReady
 		}
@@ -419,7 +417,7 @@ func FixerWorkflow(
 			batches := getCorruptedKeysBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, corruptKeys.CorruptedKeys, idx)
 			for _, batch := range batches {
 				activityCtx := getLongActivityContext(ctx)
-				var reports []common.ShardFixReport
+				var reports []shard.FixReport
 				if err := workflow.ExecuteActivity(activityCtx, FixerFixShardActivityName, FixShardActivityParams{
 					CorruptedKeysEntries:        batch,
 					ResolvedFixerWorkflowConfig: resolvedConfig,

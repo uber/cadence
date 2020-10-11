@@ -26,13 +26,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/auth"
-
-	"github.com/uber/cadence/common/service/config"
-
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/common/cassandra"
+	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/common/schema"
 )
 

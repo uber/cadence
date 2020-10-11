@@ -21,12 +21,13 @@
 package execution
 
 import (
-	ctx "context"
+	"context"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -146,7 +147,6 @@ func (s *stateRebuilderSuite) TestApplyEvents() {
 		},
 		events,
 		[]*shared.HistoryEvent(nil),
-		true,
 	).Return(nil, nil).Times(1)
 
 	err := s.nDCStateRebuilder.applyEvents(workflowIdentifier, mockStateBuilder, events, requestID)
@@ -184,7 +184,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 	history := append(history1, history2...)
 	pageToken := []byte("some random token")
 
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -196,7 +196,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		NextPageToken: pageToken,
 		Size:          12345,
 	}, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -209,7 +209,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.nDCStateRebuilder.getPaginationFn(workflowIdentifier, firstEventID, nextEventID, branchToken)
+	paginationFn := s.nDCStateRebuilder.getPaginationFn(context.Background(), workflowIdentifier, firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*shared.History{}
@@ -266,7 +266,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 
 	historySize1 := 12345
 	historySize2 := 67890
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -278,7 +278,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		NextPageToken: pageToken,
 		Size:          historySize1,
 	}, nil).Once()
-	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", &persistence.ReadHistoryBranchRequest{
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -307,7 +307,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	s.mockTaskRefresher.EXPECT().RefreshTasks(now, gomock.Any()).Return(nil).Times(1)
 
 	rebuildMutableState, rebuiltHistorySize, err := s.nDCStateRebuilder.Rebuild(
-		ctx.Background(),
+		context.Background(),
 		now,
 		definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID),
 		branchToken,

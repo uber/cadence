@@ -257,12 +257,19 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 		resp := &persistence.GetTimerIndexTasksResponse{}
 
 		op := func() error {
+			ctx, cancel := newContext(cl.ctx)
+			defer cancel()
+
 			var err error
-			resp, err = ratelimitedClient.GetTimerIndexTasks(&req)
+			resp, err = ratelimitedClient.GetTimerIndexTasks(ctx, &req)
 			return err
 		}
 
-		err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+		isRetryable := func(err error) bool {
+			return common.IsPersistenceTransientError(err) || common.IsContextTimeoutError(err)
+		}
+
+		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), isRetryable)
 
 		if err != nil {
 			ErrorAndExit("cannot get timer tasks for shard", err)
