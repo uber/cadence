@@ -61,7 +61,7 @@ type (
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) (*workflow.HistoryEvent, error)
 		AddActivityTaskCompletedEvent(int64, int64, *workflow.RespondActivityTaskCompletedRequest) (*workflow.HistoryEvent, error)
 		AddActivityTaskFailedEvent(int64, int64, *workflow.RespondActivityTaskFailedRequest) (*workflow.HistoryEvent, error)
-		AddActivityTaskScheduledEvent(int64, *workflow.ScheduleActivityTaskDecisionAttributes) (*workflow.HistoryEvent, *persistence.ActivityInfo, error)
+		AddActivityTaskScheduledEvent(int64, *workflow.ScheduleActivityTaskDecisionAttributes) (*workflow.HistoryEvent, *persistence.ActivityInfo, *workflow.ActivityLocalDispatchInfo, error)
 		AddActivityTaskStartedEvent(*persistence.ActivityInfo, int64, string, string) (*workflow.HistoryEvent, error)
 		AddActivityTaskTimedOutEvent(int64, int64, workflow.TimeoutType, []uint8) (*workflow.HistoryEvent, error)
 		AddCancelTimerFailedEvent(int64, *workflow.CancelTimerDecisionAttributes, string) (*workflow.HistoryEvent, error)

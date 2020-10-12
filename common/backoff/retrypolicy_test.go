@@ -202,8 +202,13 @@ func (s *RetryPolicySuite) TestUnbounded() {
 	}
 }
 
-func (s *RetryPolicySuite) TestTwoPhaseRetryPolicy() {
-	policy := NewTwoPhaseRetryPolicy()
+func (s *RetryPolicySuite) TestMultiPhasesRetryPolicy() {
+	firstPolicy := NewExponentialRetryPolicy(50 * time.Millisecond)
+	firstPolicy.SetMaximumAttempts(3)
+	secondPolicy := NewExponentialRetryPolicy(2 * time.Second)
+	secondPolicy.SetMaximumInterval(128 * time.Second)
+	secondPolicy.SetExpirationInterval(5 * time.Minute)
+	policy := NewMultiPhasesRetryPolicy(firstPolicy, secondPolicy)
 
 	r, clock := createRetrier(policy)
 	expectedResult := []time.Duration{

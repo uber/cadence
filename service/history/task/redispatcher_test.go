@@ -72,7 +72,9 @@ func (s *redispatcherSuite) SetupTest() {
 
 func (s *redispatcherSuite) TearDownTest() {
 	s.redispatcher.Stop()
+	s.redispatcher.Lock()
 	s.Nil(s.redispatcher.redispatchTimer)
+	s.redispatcher.Unlock()
 	s.controller.Finish()
 }
 
