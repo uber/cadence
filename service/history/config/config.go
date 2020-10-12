@@ -257,6 +257,9 @@ type Config struct {
 	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
 	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
 	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
+
+	// Allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
+	EnableActivityLocalDispatchByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 const (
@@ -468,6 +471,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		NotifyFailoverMarkerInterval:               dc.GetDurationProperty(dynamicconfig.NotifyFailoverMarkerInterval, 5*time.Second),
 		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
+
+		EnableActivityLocalDispatchByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, false),
 	}
 
 	return cfg
@@ -483,6 +488,7 @@ func NewForTest() *Config {
 	config.ReplicationTaskProcessorHostQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorHostQPS, 10000)
 	config.ReplicationTaskProcessorShardQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS, 10000)
 	config.ReplicationTaskProcessorStartWait = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond)
+	config.EnableActivityLocalDispatchByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, true)
 	return config
 }
 

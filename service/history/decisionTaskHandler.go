@@ -63,6 +63,10 @@ type (
 		metricsClient metrics.Client
 		config        *config.Config
 	}
+
+	decisionResult struct {
+		activityDispatchInfo *workflow.ActivityLocalDispatchInfo
+	}
 )
 
 func newDecisionTaskHandler(
@@ -107,30 +111,40 @@ func newDecisionTaskHandler(
 func (handler *decisionTaskHandlerImpl) handleDecisions(
 	executionContext []byte,
 	decisions []*workflow.Decision,
-) error {
+) ([]*decisionResult, error) {
 
 	// overall workflow size / count check
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowSizeExceedsLimit()
 	if err != nil || failWorkflow {
-		return err
+		return nil, err
 	}
 
+	var results []*decisionResult
 	for _, decision := range decisions {
 
-		err = handler.handleDecision(decision)
+		result, err := handler.handleDecisionWithResult(decision)
 		if err != nil || handler.stopProcessing {
-			return err
+			return nil, err
+		} else if result != nil {
+			results = append(results, result)
 		}
-	}
 
+	}
 	handler.mutableState.GetExecutionInfo().ExecutionContext = executionContext
-	return nil
+	return results, nil
+}
+
+func (handler *decisionTaskHandlerImpl) handleDecisionWithResult(decision *workflow.Decision) (*decisionResult, error) {
+	switch decision.GetDecisionType() {
+	case workflow.DecisionTypeScheduleActivityTask:
+		return handler.handleDecisionScheduleActivity(decision.ScheduleActivityTaskDecisionAttributes)
+	default:
+		return nil, handler.handleDecision(decision)
+	}
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decision) error {
 	switch decision.GetDecisionType() {
-	case workflow.DecisionTypeScheduleActivityTask:
-		return handler.handleDecisionScheduleActivity(decision.ScheduleActivityTaskDecisionAttributes)
 
 	case workflow.DecisionTypeCompleteWorkflowExecution:
 		return handler.handleDecisionCompleteWorkflow(decision.CompleteWorkflowExecutionDecisionAttributes)
@@ -175,7 +189,7 @@ func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decisi
 
 func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	attr *workflow.ScheduleActivityTaskDecisionAttributes,
-) error {
+) (*decisionResult, error) {
 
 	handler.metricsClient.IncCounter(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -188,7 +202,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	if attr.GetDomain() != "" {
 		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
 		if err != nil {
-			return &workflow.InternalServiceError{
+			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Unable to schedule activity across domain %v.", attr.GetDomain()),
 			}
 		}
@@ -206,7 +220,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		},
 		workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes,
 	); err != nil || handler.stopProcessing {
-		return err
+		return nil, err
 	}
 
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
@@ -216,19 +230,25 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	)
 	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return err
+		return nil, err
 	}
 
-	_, _, err = handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
+	event, ai, activityDispatchInfo, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
 	switch err.(type) {
 	case nil:
-		return nil
+		if activityDispatchInfo != nil {
+			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
+				return nil, err1
+			}
+			return &decisionResult{activityDispatchInfo: activityDispatchInfo}, nil
+		}
+		return nil, nil
 	case *workflow.BadRequestError:
-		return handler.handlerFailDecision(
+		return nil, handler.handlerFailDecision(
 			workflow.DecisionTaskFailedCauseScheduleActivityDuplicateID, "",
 		)
 	default:
-		return err
+		return nil, err
 	}
 }
 
