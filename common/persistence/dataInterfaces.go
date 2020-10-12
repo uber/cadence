@@ -1220,6 +1220,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
+		LastUpdatedTime   int64
 	}
 
 	// CreateDomainResponse is the response for CreateDomain
@@ -1244,6 +1245,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -1257,6 +1259,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 

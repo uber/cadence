@@ -91,6 +91,7 @@ var keys = map[Key]string{
 	FrontendVisibilityListMaxQPS:                "frontend.visibilityListMaxQPS",
 	FrontendESVisibilityListMaxQPS:              "frontend.esVisibilityListMaxQPS",
 	FrontendMaxBadBinaries:                      "frontend.maxBadBinaries",
+	FrontendFailoverCoolDown:                    "frontend.failoverCoolDown",
 	FrontendESIndexMaxResultWindow:              "frontend.esIndexMaxResultWindow",
 	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
 	FrontendRPS:                                 "frontend.rps",
@@ -443,6 +444,8 @@ const (
 
 	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	FrontendMaxBadBinaries
+	// FrontendFailoverCoolDown is the duration between two domain failvoers
+	FrontendFailoverCoolDown
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes
 	// SendRawWorkflowHistory is whether to enable raw history retrieving
