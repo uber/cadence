@@ -122,7 +122,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisions(
 	var results []*decisionResult
 	for _, decision := range decisions {
 
-		result, err := handler.handleDecision(decision)
+		result, err := handler.handleDecisionWithResult(decision)
 		if err != nil || handler.stopProcessing {
 			return nil, err
 		} else if result != nil {
@@ -134,49 +134,56 @@ func (handler *decisionTaskHandlerImpl) handleDecisions(
 	return results, nil
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decision) (*decisionResult, error) {
+func (handler *decisionTaskHandlerImpl) handleDecisionWithResult(decision *workflow.Decision) (*decisionResult, error) {
 	switch decision.GetDecisionType() {
 	case workflow.DecisionTypeScheduleActivityTask:
 		return handler.handleDecisionScheduleActivity(decision.ScheduleActivityTaskDecisionAttributes)
+	default:
+		return nil, handler.handleDecision(decision)
+	}
+}
+
+func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decision) error {
+	switch decision.GetDecisionType() {
 
 	case workflow.DecisionTypeCompleteWorkflowExecution:
-		return nil, handler.handleDecisionCompleteWorkflow(decision.CompleteWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionCompleteWorkflow(decision.CompleteWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeFailWorkflowExecution:
-		return nil, handler.handleDecisionFailWorkflow(decision.FailWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionFailWorkflow(decision.FailWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeCancelWorkflowExecution:
-		return nil, handler.handleDecisionCancelWorkflow(decision.CancelWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionCancelWorkflow(decision.CancelWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeStartTimer:
-		return nil, handler.handleDecisionStartTimer(decision.StartTimerDecisionAttributes)
+		return handler.handleDecisionStartTimer(decision.StartTimerDecisionAttributes)
 
 	case workflow.DecisionTypeRequestCancelActivityTask:
-		return nil, handler.handleDecisionRequestCancelActivity(decision.RequestCancelActivityTaskDecisionAttributes)
+		return handler.handleDecisionRequestCancelActivity(decision.RequestCancelActivityTaskDecisionAttributes)
 
 	case workflow.DecisionTypeCancelTimer:
-		return nil, handler.handleDecisionCancelTimer(decision.CancelTimerDecisionAttributes)
+		return handler.handleDecisionCancelTimer(decision.CancelTimerDecisionAttributes)
 
 	case workflow.DecisionTypeRecordMarker:
-		return nil, handler.handleDecisionRecordMarker(decision.RecordMarkerDecisionAttributes)
+		return handler.handleDecisionRecordMarker(decision.RecordMarkerDecisionAttributes)
 
 	case workflow.DecisionTypeRequestCancelExternalWorkflowExecution:
-		return nil, handler.handleDecisionRequestCancelExternalWorkflow(decision.RequestCancelExternalWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionRequestCancelExternalWorkflow(decision.RequestCancelExternalWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeSignalExternalWorkflowExecution:
-		return nil, handler.handleDecisionSignalExternalWorkflow(decision.SignalExternalWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionSignalExternalWorkflow(decision.SignalExternalWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeContinueAsNewWorkflowExecution:
-		return nil, handler.handleDecisionContinueAsNewWorkflow(decision.ContinueAsNewWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionContinueAsNewWorkflow(decision.ContinueAsNewWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeStartChildWorkflowExecution:
-		return nil, handler.handleDecisionStartChildWorkflow(decision.StartChildWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionStartChildWorkflow(decision.StartChildWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeUpsertWorkflowSearchAttributes:
-		return nil, handler.handleDecisionUpsertWorkflowSearchAttributes(decision.UpsertWorkflowSearchAttributesDecisionAttributes)
+		return handler.handleDecisionUpsertWorkflowSearchAttributes(decision.UpsertWorkflowSearchAttributesDecisionAttributes)
 
 	default:
-		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", decision.GetDecisionType())}
+		return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", decision.GetDecisionType())}
 	}
 }
 
