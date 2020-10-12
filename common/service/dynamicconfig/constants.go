@@ -283,6 +283,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerInterval:                          "history.NotifyFailoverMarkerInterval",
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
+	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -913,6 +914,9 @@ const (
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
+
+	// EnableActivityLocalDispatchByDomain allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
+	EnableActivityLocalDispatchByDomain
 )
 
 // Filter represents a filter on the dynamic config key
