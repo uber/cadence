@@ -34,6 +34,22 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
+type (
+	cassandraStore struct {
+		session *gocql.Session
+		logger  log.Logger
+	}
+
+	// Implements ExecutionManager
+	cassandraPersistence struct {
+		cassandraStore
+		shardID            int
+		currentClusterName string
+	}
+)
+
+var _ p.ExecutionStore = (*cassandraPersistence)(nil)
+
 // Guidelines for creating new special UUID constants
 // Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
 // Where x is any hexadecimal value, E represents the entity type valid values are:
@@ -727,20 +743,6 @@ var (
 	defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(defaultDateTime.UnixNano())
 )
 
-type (
-	cassandraStore struct {
-		session *gocql.Session
-		logger  log.Logger
-	}
-
-	// Implements ExecutionManager
-	cassandraPersistence struct {
-		cassandraStore
-		shardID            int
-		currentClusterName string
-	}
-)
-
 func (d *cassandraStore) GetName() string {
 	return cassandraPersistenceName
 }
@@ -751,8 +753,6 @@ func (d *cassandraStore) Close() {
 		d.session.Close()
 	}
 }
-
-var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(
