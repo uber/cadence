@@ -69,10 +69,31 @@ import (
 )
 `))
 
+/**
+// GetStartedEventId returns the value of StartedEventId if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetStartedEventId() (o int64) {
+	if v != nil && v.StartedEventId != nil {
+		return *v.StartedEventId
+	}
+
+	return
+}
+ */
+
 var structTemplate = template.Must(template.New("struct type").Parse(`
 type {{.Type.Name}} struct {
 {{range .Fields}}	{{.Name}} {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Name}}
 {{end}}}
+
+{{range .Fields}}func (v *{{$.Type.Name}}) Get{{.Name}}() (o {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer | and (not .Type.IsPrimitive) | and (not .Type.IsEnum)}}*{{end}}{{.Type.Name}}) {
+	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{.Name}} != nil{{end}} {
+		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{.Name}}
+	}
+	return
+}
+
+{{end}}
 `))
 
 var enumTemplate = template.Must(template.New("enum type").Parse(`
@@ -183,6 +204,7 @@ func To{{.Type.Name}}(t {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{
 
 var requiredArrayMappers = map[string]struct{}{}
 var requiredMapMappers = map[string]struct{}{}
+var enumTypes = map[string]struct{}{}
 
 type (
 	// Renderer can render internal type and its mappings
@@ -200,6 +222,7 @@ type (
 		IsArray           bool
 		IsMap             bool
 		IsPointer         bool
+		IsEnum            bool
 	}
 
 	// Fields describe a field within a struct
@@ -287,9 +310,10 @@ func newType(fullName string) Type {
 		name := fullName[pos+1:]
 		pos = strings.LastIndexByte(pkg, '/')
 		short := pkg[pos+1:]
-		return Type{pkg, short, name, false, isArray, isMap, isPointer}
+		_, ok := enumTypes[name]
+		return Type{pkg, short, name, false, isArray, isMap, isPointer, ok}
 	} else {
-		return Type{"", "", fullName, true, isArray, isMap, isPointer}
+		return Type{"", "", fullName, true, isArray, isMap, isPointer, false}
 	}
 }
 
@@ -298,10 +322,12 @@ func newStruct(obj types.Object) *Struct {
 	fields := make([]Field, u.NumFields())
 	for i := 0; i < u.NumFields(); i++ {
 		f := u.Field(i)
+
 		field := Field{
 			Name: f.Name(),
 			Type: newType(f.Type().String()),
 		}
+
 		if field.Type.IsArray && !field.Type.IsPrimitive {
 			requiredArrayMappers[f.Type().String()] = struct{}{}
 		}
@@ -409,6 +435,20 @@ func main() {
 		pkg, err := importer.Default().Import(p.ThriftPackage)
 		if err != nil {
 			panic(err)
+		}
+
+		for _, name := range pkg.Scope().Names() {
+			obj := pkg.Scope().Lookup(name)
+			if !obj.Exported() {
+				continue
+			}
+
+			switch obj.Type().Underlying().(type) {
+			case *types.Basic:
+				if !isEnumValue(obj, obj.Type()) {
+					enumTypes[obj.Name()] = struct{}{}
+				}
+			}
 		}
 
 		for _, name := range pkg.Scope().Names() {
