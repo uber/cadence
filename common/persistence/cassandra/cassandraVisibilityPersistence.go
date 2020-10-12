@@ -145,7 +145,11 @@ type (
 )
 
 // newVisibilityPersistence is used to create an instance of VisibilityManager implementation
-func newVisibilityPersistence(cfg config.Cassandra, logger log.Logger) (p.VisibilityStore, error) {
+func newVisibilityPersistence(
+	listClosedOrderingByCloseTime bool,
+	cfg config.Cassandra,
+	logger log.Logger,
+) (p.VisibilityStore, error) {
 	cluster := cassandra.NewCassandraCluster(cfg)
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum

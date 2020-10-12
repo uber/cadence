@@ -75,8 +75,10 @@ type (
 		NewMetadataStore() (p.MetadataStore, error)
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
-		// NewVisibilityStore returns a new visibility store
-		NewVisibilityStore() (p.VisibilityStore, error)
+		// NewVisibilityStore returns a new visibility store,
+		// TODO We temporarily using listClosedExecutionsOrderingByCloseTime to determine whether or not ListByCloseExecutions should
+		// be ordering by CloseTime. This will be removed when implementing https://github.com/uber/cadence/issues/3621
+		NewVisibilityStore(listClosedOrderingByCloseTime bool) (p.VisibilityStore, error)
 		NewQueue(queueType p.QueueType) (p.Queue, error)
 	}
 
@@ -232,14 +234,18 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 
 // NewVisibilityManager returns a new visibility manager
 func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
+	visConfig := f.config.VisibilityConfig
+	enableReadFromClosedExecutionV2 := false
+	if visConfig != nil && visConfig.EnableReadFromClosedExecutionV2 != nil {
+		enableReadFromClosedExecutionV2 = visConfig.EnableReadFromClosedExecutionV2()
+	} else {
+		f.logger.Warn("missing visibility and EnableReadFromClosedExecutionV2 config", tag.Value(visConfig))
+	}
+
 	ds := f.datastores[storeTypeVisibility]
-	store, err := ds.factory.NewVisibilityStore()
+	store, err := ds.factory.NewVisibilityStore(enableReadFromClosedExecutionV2)
 	if err != nil {
 		return nil, err
-	}
-	visConfig := f.config.VisibilityConfig
-	if visConfig != nil && visConfig.EnableReadFromClosedExecutionV2() && f.isCassandra() {
-		store, err = cassandra.NewVisibilityPersistenceV2(store, f.getCassandraConfig(), f.logger)
 	}
 
 	result := p.NewVisibilityManagerImpl(store, f.logger)
@@ -278,16 +284,6 @@ func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, err
 func (f *factoryImpl) Close() {
 	ds := f.datastores[storeTypeExecution]
 	ds.factory.Close()
-}
-
-func (f *factoryImpl) isCassandra() bool {
-	cfg := f.config
-	return cfg.DataStores[cfg.VisibilityStore].SQL == nil
-}
-
-func (f *factoryImpl) getCassandraConfig() *config.Cassandra {
-	cfg := f.config
-	return cfg.DataStores[cfg.VisibilityStore].Cassandra
 }
 
 func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limiter) {

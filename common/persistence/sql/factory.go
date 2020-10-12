@@ -116,7 +116,8 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 }
 
 // NewVisibilityStore returns a visibility store
-func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
+// TODO listClosedExecutionsOrderingByCloseTime will be removed and implemented for https://github.com/uber/cadence/issues/3621
+func (f *Factory) NewVisibilityStore(listClosedOrderingByCloseTime bool) (p.VisibilityStore, error) {
 	return NewSQLVisibilityStore(f.cfg, f.logger)
 }
 
