@@ -28,7 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
@@ -361,7 +360,7 @@ func (s *Service) registerSystemDomain(domain string) {
 	currentClusterName := s.GetClusterMetadata().GetCurrentClusterName()
 	_, err := s.GetMetadataManager().CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
-			ID:          uuid.New().String(),
+			ID:          getDomainID(domain),
 			Name:        domain,
 			Description: "Cadence internal system domain",
 		},
@@ -382,4 +381,15 @@ func (s *Service) registerSystemDomain(domain string) {
 		}
 		s.GetLogger().Fatal("failed to register system domain", tag.Error(err))
 	}
+}
+
+func getDomainID(domain string) string {
+	var domainID string
+	switch domain {
+	case common.SystemLocalDomainName:
+		domainID = common.SystemDomainID
+	case common.BatcherLocalDomainName:
+		domainID = common.BatcherDomainID
+	}
+	return domainID
 }
